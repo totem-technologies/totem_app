@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:totem_app/core/services/observer_service.dart';
 
 import 'app/totem_app.dart';
 import 'core/services/analytics_service.dart';
@@ -32,7 +33,7 @@ Future<void> main() async {
   await _setupErrorHandling();
 
   // Run the app with Riverpod
-  runApp(const ProviderScope(child: TotemApp()));
+  runApp(ProviderScope(observers: [ObserverService()], child: TotemApp()));
 }
 
 /// Initialize services required before app starts

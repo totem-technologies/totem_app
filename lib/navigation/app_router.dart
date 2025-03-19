@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,6 +29,7 @@ GoRouter createRouter(WidgetRef ref) {
       ref.read(authControllerProvider.notifier).authStateChanges,
     ),
     redirect: (context, state) {
+      debugPrint("Router State Change: $state");
       // Get current auth state
       final isLoggedIn = authController.isAuthenticated;
       final isOnboardingCompleted = authController.isOnboardingCompleted;
@@ -54,10 +56,7 @@ GoRouter createRouter(WidgetRef ref) {
 
       // If we're logged in but haven't completed onboarding, and we're not
       // on the onboarding screen, redirect to onboarding
-      if (isLoggedIn &&
-          !isOnboardingCompleted &&
-          !isOnboardingRoute &&
-          !isAuthRoute) {
+      if (isLoggedIn && !isOnboardingCompleted && !isOnboardingRoute) {
         return '/onboarding';
       }
 
