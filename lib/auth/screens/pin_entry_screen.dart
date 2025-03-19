@@ -59,7 +59,11 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
       await ref
           .read(authControllerProvider.notifier)
           .verifyPin(widget.email, _pinController.text.trim());
-
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          context.go('/');
+        }
+      });
       // If we reach here, PIN verification was successful
     } catch (e) {
       if (mounted) {

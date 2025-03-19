@@ -61,10 +61,13 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             firstName: _firstNameController.text.trim(),
             profileImagePath: _profileImage?.path,
           );
-
       if (mounted) {
-        // Navigate to spaces discovery screen
-        context.go('/spaces');
+        // Navigate to home
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted) {
+            context.go('/spaces');
+          }
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -116,7 +119,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       radius: 50,
                       backgroundColor: Theme.of(
                         context,
-                      ).colorScheme.primary.withOpacity(0.1),
+                      ).colorScheme.primary.withValues(alpha: 0.1),
                       child:
                           _profileImage != null
                               ? Icon(
