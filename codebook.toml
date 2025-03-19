@@ -1,5 +1,5 @@
 dictionaries = []
-words = ["signup"]
+words = ["signup", "dio", "riverpod", "autofill"]
 flag_words = []
 ignore_paths = []
 ignore_patterns = []

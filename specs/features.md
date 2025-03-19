@@ -41,7 +41,7 @@ The Totem App is a cross-platform Flutter application (desktop, Android, iOS) de
   - Simple, one-click joining process for video sessions.
 - **LiveKit Requirements:**
   - Address technical needs like video quality, latency, and error handling.
-  - Consider moderator/host controls (e.g., muting participants).
+  - Moderator/host controls (e.g., muting participants).
 
 #### Notifications
 - **Types of Notifications:**
@@ -62,6 +62,7 @@ The Totem App is a cross-platform Flutter application (desktop, Android, iOS) de
 
 #### Routing & Navigation
 - **Robust Router:**
+  - Using type-safe GoRouter
   - Manage transitions between sign-up, discovery, video sessions, profile, and settings.
   - Support deep linking for sharing or returning directly to specific spaces or sessions.
   - Ensure consistent navigation patterns across desktop and mobile platforms.
@@ -70,6 +71,11 @@ The Totem App is a cross-platform Flutter application (desktop, Android, iOS) de
 #### Frontend & Framework
 - **Technology:**
   - Built using Flutter to support desktop, Android, and iOS platforms.
+  - GoRouter
+  - RiverPod for state
+  - LiveKit for video groups
+  - All the normal popular Flutter packages, as needed.
+  - "forui" for widgets
 - **Responsive Design:**
   - Ensure UI components are flexible to accommodate future accessibility improvements.
 
