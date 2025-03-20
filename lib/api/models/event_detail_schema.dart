@@ -4,6 +4,8 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'event_space_schema.dart';
+
 part 'event_detail_schema.g.dart';
 
 @JsonSerializable()
@@ -11,6 +13,7 @@ class EventDetailSchema {
   const EventDetailSchema({
     required this.slug,
     required this.title,
+    required this.space,
     required this.spaceTitle,
     required this.description,
     required this.price,
@@ -37,6 +40,7 @@ class EventDetailSchema {
   
   final String slug;
   final String title;
+  final EventSpaceSchema space;
   @JsonKey(name: 'space_title')
   final String spaceTitle;
   final String description;

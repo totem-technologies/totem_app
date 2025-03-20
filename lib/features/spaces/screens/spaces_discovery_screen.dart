@@ -1,8 +1,11 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
+import 'package:totem_app/core/config/app_config.dart';
+
 import '../repositories/space_repository.dart';
 
 // Provider to track the selected category filter
@@ -232,12 +235,12 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
         children: [
           // Space image if available
           if (space.imageLink != null)
-            Image.network(
-              space.imageLink!,
+            CachedNetworkImage(
+              imageUrl: getFullUrl(space.imageLink!),
               height: 120,
               width: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder:
+              errorWidget:
                   (context, error, stackTrace) => Container(
                     height: 120,
                     color: Colors.grey[300],
@@ -297,7 +300,9 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                       radius: 12,
                       backgroundImage:
                           space.author.profileImage != null
-                              ? NetworkImage(space.author.profileImage!)
+                              ? CachedNetworkImageProvider(
+                                getFullUrl(space.author.profileImage!),
+                              )
                               : null,
                       child:
                           space.author.profileImage == null
@@ -368,7 +373,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
           // Action button
           InkWell(
             onTap: () {
-              context.push('/spaces/${space.slug}');
+              context.push('/spaces/${space.nextEvent.slug}');
             },
             child: Container(
               width: double.infinity,
@@ -394,4 +399,27 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+String getFullUrl(String url) {
+  if (url.isEmpty) {
+    return '';
+  }
+
+  // Check if URL is already fully qualified
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+
+  // Ensure the URL and base path are properly joined
+  final baseUrl = AppConfig.apiUrl;
+  // Remove trailing slash from base URL if any
+  final normalizedBaseUrl =
+      baseUrl.endsWith('/')
+          ? baseUrl.substring(0, baseUrl.length - 1)
+          : baseUrl;
+  // Ensure url starts with a slash
+  final normalizedUrl = url.startsWith('/') ? url : '/$url';
+
+  return '$normalizedBaseUrl$normalizedUrl';
 }

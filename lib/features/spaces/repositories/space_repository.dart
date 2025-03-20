@@ -13,3 +13,10 @@ Future<List<SpaceDetailSchema>> listSpaces(Ref ref) async {
   // Finally, we convert the Map into an Activity instance.
   return await apiService.spaces.totemCirclesApiListSpaces();
 }
+
+@riverpod
+Future<EventDetailSchema> event(Ref ref, String eventId) async {
+  final apiService = ref.watch(apiServiceProvider);
+  // Finally, we convert the Map into an Activity instance.
+  return await apiService.events.totemCirclesApiEventDetail(eventSlug: eventId);
+}

@@ -22,6 +22,7 @@ export 'models/author_filter_schema.dart';
 export 'models/category_filter_schema.dart';
 export 'models/filter_options_schema.dart';
 export 'models/event_detail_schema.dart';
+export 'models/event_space_schema.dart';
 export 'models/event_calendar_filter_schema.dart';
 export 'models/event_calendar_schema.dart';
 export 'models/webflow_events_filter_schema.dart';

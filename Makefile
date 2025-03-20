@@ -1,3 +1,7 @@
+run:
+	@echo "Running app..."
+	flutter run
+
 clean:
 	@echo "Cleaning build artifacts..."
 	flutter clean
@@ -31,3 +35,6 @@ lint:
 format:
 	@echo "Formatting code..."
 	dart format lib/ test/
+
+generate_api_models:
+	dart run swagger_parser

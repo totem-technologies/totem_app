@@ -8,12 +8,12 @@ import '../auth/controllers/auth_controller.dart';
 import '../auth/screens/login_screen.dart';
 import '../auth/screens/pin_entry_screen.dart';
 import '../auth/screens/profile_setup_screen.dart';
+import '../features/notifications/screens/notification_settings_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
-import '../features/spaces/screens/spaces_discovery_screen.dart';
 import '../features/spaces/screens/space_detail_screen.dart';
+import '../features/spaces/screens/spaces_discovery_screen.dart';
 import '../features/video_sessions/screens/pre_join_screen.dart';
 import '../features/video_sessions/screens/video_room_screen.dart';
-import '../features/notifications/screens/notification_settings_screen.dart';
 import 'route_names.dart';
 
 /// Creates and configures the app router with routes and navigation logic
@@ -110,11 +110,11 @@ GoRouter createRouter(WidgetRef ref) {
         builder: (context, state) => const SpacesDiscoveryScreen(),
       ),
       GoRoute(
-        path: '/spaces/:id',
+        path: '/spaces/:event_slug',
         name: RouteNames.spaceDetail,
         builder: (context, state) {
-          final spaceId = state.pathParameters['id'] ?? '';
-          return SpaceDetailScreen(spaceId: spaceId);
+          final eventSlug = state.pathParameters['event_slug'] ?? '';
+          return EventDetailScreen(eventSlug: eventSlug);
         },
       ),
       GoRoute(

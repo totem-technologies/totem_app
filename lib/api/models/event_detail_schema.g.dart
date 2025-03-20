@@ -10,6 +10,7 @@ EventDetailSchema _$EventDetailSchemaFromJson(Map<String, dynamic> json) =>
     EventDetailSchema(
       slug: json['slug'] as String,
       title: json['title'] as String,
+      space: EventSpaceSchema.fromJson(json['space'] as Map<String, dynamic>),
       spaceTitle: json['space_title'] as String,
       description: json['description'] as String,
       price: (json['price'] as num).toInt(),
@@ -36,6 +37,7 @@ Map<String, dynamic> _$EventDetailSchemaToJson(EventDetailSchema instance) =>
     <String, dynamic>{
       'slug': instance.slug,
       'title': instance.title,
+      'space': instance.space,
       'space_title': instance.spaceTitle,
       'description': instance.description,
       'price': instance.price,
