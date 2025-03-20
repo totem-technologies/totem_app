@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../repositories/space_repository.dart';
+
 class SpacesDiscoveryScreen extends ConsumerWidget {
-  const SpacesDiscoveryScreen({Key? key}) : super(key: key);
+  const SpacesDiscoveryScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    var spaces = ref.watch(listSpacesProvider);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Discover Spaces'),
@@ -33,14 +36,25 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
             // Stub for spaces list
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32.0),
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  _buildSpaceCard(context, 'space-1', 'Wellness Space'),
-                  _buildSpaceCard(context, 'space-2', 'Tech Talks'),
-                  _buildSpaceCard(context, 'space-3', 'Book Club'),
-                ],
-              ),
+              child: switch (spaces) {
+                AsyncData(:final value) => ListView(
+                  shrinkWrap: true,
+                  children:
+                      value
+                          .map(
+                            (space) => _buildSpaceCard(
+                              context,
+                              space.slug,
+                              space.title,
+                            ),
+                          )
+                          .toList(),
+                ),
+                AsyncError() => const Text(
+                  'Oops, something unexpected happened',
+                ),
+                _ => const CircularProgressIndicator(),
+              },
             ),
           ],
         ),

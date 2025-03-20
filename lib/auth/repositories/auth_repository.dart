@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_app/api/export.dart';
 import 'dart:async';
 
 import '../models/user.dart';
@@ -14,9 +15,9 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 
 /// Repository responsible for authentication-related API operations
 class AuthRepository {
-  final ApiService _apiService;
+  final RestClient _apiService;
 
-  AuthRepository({required ApiService apiService}) : _apiService = apiService;
+  AuthRepository({required RestClient apiService}) : _apiService = apiService;
 
   /// Request a magic link to be sent to email
   Future<void> requestMagicLink(String email) async {
