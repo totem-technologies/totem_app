@@ -1,3 +1,5 @@
+import 'package:totem_app/core/config/app_config.dart';
+
 /// Constants for API endpoints used throughout the app
 class ApiEndpoints {
   // Private constructor to prevent instantiation
@@ -6,7 +8,7 @@ class ApiEndpoints {
   // Base URL for the API
   static String get baseUrl {
     // In a real implementation, this would come from environment configs
-    return 'https://api.totem.org/v1';
+    return AppConfig.apiUrl;
   }
 
   // Auth endpoints
