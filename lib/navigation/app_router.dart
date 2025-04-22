@@ -16,6 +16,39 @@ import '../features/video_sessions/screens/pre_join_screen.dart';
 import '../features/video_sessions/screens/video_room_screen.dart';
 import 'route_names.dart';
 
+/// Bottom navigation scaffold that wraps the main app routes
+class BottomNavScaffold extends StatelessWidget {
+  final Widget child;
+  final String currentPath;
+
+  const BottomNavScaffold({
+    super.key,
+    required this.child,
+    required this.currentPath,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: child,
+      bottomNavigationBar: NavigationBar(
+        onDestinationSelected: (index) {
+          if (index == 0 && !currentPath.startsWith('/spaces')) {
+            context.go('/spaces');
+          } else if (index == 1 && !currentPath.startsWith('/profile')) {
+            context.go('/profile');
+          }
+        },
+        selectedIndex: currentPath.startsWith('/spaces') ? 0 : 1,
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.explore), label: 'Spaces'),
+          NavigationDestination(icon: Icon(Icons.person), label: 'Profile'),
+        ],
+      ),
+    );
+  }
+}
+
 /// Creates and configures the app router with routes and navigation logic
 GoRouter createRouter(WidgetRef ref) {
   // Get the auth controller to check authentication state
@@ -71,7 +104,7 @@ GoRouter createRouter(WidgetRef ref) {
       return null;
     },
     routes: [
-      // Auth routes
+      // Auth routes (no bottom nav)
       GoRoute(
         path: '/auth/login',
         name: RouteNames.login,
@@ -96,27 +129,76 @@ GoRouter createRouter(WidgetRef ref) {
         },
       ),
 
-      // Onboarding
+      // Onboarding (no bottom nav)
       GoRoute(
         path: '/onboarding',
         name: RouteNames.onboarding,
         builder: (context, state) => const ProfileSetupScreen(),
       ),
 
-      // Main app routes
-      GoRoute(
-        path: '/spaces',
-        name: RouteNames.spacesDiscovery,
-        builder: (context, state) => const SpacesDiscoveryScreen(),
-      ),
-      GoRoute(
-        path: '/spaces/:event_slug',
-        name: RouteNames.spaceDetail,
-        builder: (context, state) {
-          final eventSlug = state.pathParameters['event_slug'] ?? '';
-          return EventDetailScreen(eventSlug: eventSlug);
+      // Shell route for screens with bottom navigation
+      ShellRoute(
+        builder: (context, state, child) {
+          return BottomNavScaffold(
+            currentPath: state.matchedLocation,
+            child: child,
+          );
         },
+        routes: [
+          // Spaces tab and its sub-routes with fade transition
+          GoRoute(
+            path: '/spaces',
+            name: RouteNames.spacesDiscovery,
+            pageBuilder:
+                (context, state) => CustomTransitionPage(
+                  key: state.pageKey,
+                  child: const SpacesDiscoveryScreen(),
+                  transitionsBuilder: (
+                    context,
+                    animation,
+                    secondaryAnimation,
+                    child,
+                  ) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                  transitionDuration: const Duration(milliseconds: 200),
+                ),
+            routes: [
+              // Nested route under /spaces
+              GoRoute(
+                path: ':event_slug',
+                name: RouteNames.spaceDetail,
+                builder: (context, state) {
+                  final eventSlug = state.pathParameters['event_slug'] ?? '';
+                  return EventDetailScreen(eventSlug: eventSlug);
+                },
+              ),
+            ],
+          ),
+
+          // Profile tab with fade transition
+          GoRoute(
+            path: '/profile',
+            name: RouteNames.profile,
+            pageBuilder:
+                (context, state) => CustomTransitionPage(
+                  key: state.pageKey,
+                  child: const ProfileScreen(),
+                  transitionsBuilder: (
+                    context,
+                    animation,
+                    secondaryAnimation,
+                    child,
+                  ) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                  transitionDuration: const Duration(milliseconds: 200),
+                ),
+          ),
+        ],
       ),
+
+      // Routes that don't show bottom nav
       GoRoute(
         path: '/sessions/:id/pre-join',
         name: RouteNames.preJoinSession,
@@ -132,11 +214,6 @@ GoRouter createRouter(WidgetRef ref) {
           final sessionId = state.pathParameters['id'] ?? '';
           return VideoRoomScreen(sessionId: sessionId);
         },
-      ),
-      GoRoute(
-        path: '/profile',
-        name: RouteNames.profile,
-        builder: (context, state) => const ProfileScreen(),
       ),
       GoRoute(
         path: '/notifications/settings',

@@ -1,6 +1,3 @@
-import 'dart:developer';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
@@ -23,10 +20,10 @@ final apiServiceProvider = Provider<RestClient>((ref) {
 
 /// Initialize Dio instance with interceptors and base configuration
 Dio _initDio(Ref ref) {
-  var _dio = Dio();
+  var dio = Dio();
 
   // Add auth interceptor to inject API key
-  _dio.interceptors.add(
+  dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
         // Only add auth header if the request doesn't already have one
@@ -59,11 +56,9 @@ Dio _initDio(Ref ref) {
 
   // Add logging interceptor in debug mode
   if (AppConfig.isDevelopment) {
-    _dio.interceptors.add(
-      LogInterceptor(requestBody: true, responseBody: true),
-    );
+    dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
   }
-  return _dio;
+  return dio;
 }
 
 /// Handle Dio errors and convert them to app-specific exceptions
