@@ -8,12 +8,11 @@ part 'token_out.g.dart';
 
 @JsonSerializable()
 class TokenOut {
-  const TokenOut({
-    required this.key,
-  });
-  
-  factory TokenOut.fromJson(Map<String, Object?> json) => _$TokenOutFromJson(json);
-  
+  const TokenOut({required this.key});
+
+  factory TokenOut.fromJson(Map<String, Object?> json) =>
+      _$TokenOutFromJson(json);
+
   final String key;
 
   Map<String, Object?> toJson() => _$TokenOutToJson(this);

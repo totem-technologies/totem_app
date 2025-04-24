@@ -8,12 +8,11 @@ part 'webflow_events_filter_schema.g.dart';
 
 @JsonSerializable()
 class WebflowEventsFilterSchema {
-  const WebflowEventsFilterSchema({
-    this.keeperUsername,
-  });
-  
-  factory WebflowEventsFilterSchema.fromJson(Map<String, Object?> json) => _$WebflowEventsFilterSchemaFromJson(json);
-  
+  const WebflowEventsFilterSchema({this.keeperUsername});
+
+  factory WebflowEventsFilterSchema.fromJson(Map<String, Object?> json) =>
+      _$WebflowEventsFilterSchemaFromJson(json);
+
   /// Filter by Keeper's username
   @JsonKey(name: 'keeper_username')
   final String? keeperUsername;

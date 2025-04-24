@@ -10,13 +10,11 @@ part 'paged_event_list_schema.g.dart';
 
 @JsonSerializable()
 class PagedEventListSchema {
-  const PagedEventListSchema({
-    required this.items,
-    required this.count,
-  });
-  
-  factory PagedEventListSchema.fromJson(Map<String, Object?> json) => _$PagedEventListSchemaFromJson(json);
-  
+  const PagedEventListSchema({required this.items, required this.count});
+
+  factory PagedEventListSchema.fromJson(Map<String, Object?> json) =>
+      _$PagedEventListSchemaFromJson(json);
+
   final List<EventListSchema> items;
   final int count;
 

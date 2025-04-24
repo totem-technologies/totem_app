@@ -19,9 +19,10 @@ class EventListSchema {
     this.slug,
     this.title,
   });
-  
-  factory EventListSchema.fromJson(Map<String, Object?> json) => _$EventListSchemaFromJson(json);
-  
+
+  factory EventListSchema.fromJson(Map<String, Object?> json) =>
+      _$EventListSchemaFromJson(json);
+
   final SpaceSchema space;
   final String url;
   final DateTime start;

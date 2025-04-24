@@ -8,12 +8,11 @@ part 'login_out.g.dart';
 
 @JsonSerializable()
 class LoginOut {
-  const LoginOut({
-    required this.login,
-  });
-  
-  factory LoginOut.fromJson(Map<String, Object?> json) => _$LoginOutFromJson(json);
-  
+  const LoginOut({required this.login});
+
+  factory LoginOut.fromJson(Map<String, Object?> json) =>
+      _$LoginOutFromJson(json);
+
   final bool login;
 
   Map<String, Object?> toJson() => _$LoginOutToJson(this);

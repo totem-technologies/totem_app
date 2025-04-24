@@ -31,4 +31,3 @@ export 'models/next_event_schema.dart';
 export 'models/space_detail_schema.dart';
 // Root client
 export 'rest_client.dart';
-

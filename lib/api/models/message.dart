@@ -8,12 +8,11 @@ part 'message.g.dart';
 
 @JsonSerializable()
 class Message {
-  const Message({
-    required this.message,
-  });
-  
-  factory Message.fromJson(Map<String, Object?> json) => _$MessageFromJson(json);
-  
+  const Message({required this.message});
+
+  factory Message.fromJson(Map<String, Object?> json) =>
+      _$MessageFromJson(json);
+
   final String message;
 
   Map<String, Object?> toJson() => _$MessageToJson(this);

@@ -13,9 +13,10 @@ class EventCalendarFilterSchema {
     this.month = 3,
     this.year = 2025,
   });
-  
-  factory EventCalendarFilterSchema.fromJson(Map<String, Object?> json) => _$EventCalendarFilterSchemaFromJson(json);
-  
+
+  factory EventCalendarFilterSchema.fromJson(Map<String, Object?> json) =>
+      _$EventCalendarFilterSchemaFromJson(json);
+
   /// Space slug
   @JsonKey(name: 'space_slug')
   final String spaceSlug;

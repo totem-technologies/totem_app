@@ -25,15 +25,11 @@ abstract class ClientClient {
 
   /// Login
   @POST('/api/v1/auth/login')
-  Future<LoginOut> totemApiApiLogin({
-    @Query('email') required String email,
-  });
+  Future<LoginOut> totemApiApiLogin({@Query('email') required String email});
 
   /// Token
   @POST('/api/v1/auth/token')
-  Future<TokenOut> totemApiApiToken({
-    @Query('token') required String token,
-  });
+  Future<TokenOut> totemApiApiToken({@Query('token') required String token});
 
   /// Current User
   @GET('/api/v1/auth/currentuser')

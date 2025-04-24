@@ -18,9 +18,10 @@ class SpaceSchema {
     required this.subtitle,
     this.slug,
   });
-  
-  factory SpaceSchema.fromJson(Map<String, Object?> json) => _$SpaceSchemaFromJson(json);
-  
+
+  factory SpaceSchema.fromJson(Map<String, Object?> json) =>
+      _$SpaceSchemaFromJson(json);
+
   final UserSchema author;
   final String title;
   final String? slug;
