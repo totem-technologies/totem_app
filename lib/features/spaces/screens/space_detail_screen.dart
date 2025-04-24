@@ -168,7 +168,7 @@ class EventDetailScreen extends ConsumerWidget {
                   children: [
                     Chip(
                       avatar: const Icon(Icons.groups, size: 16),
-                      label: Text('Hosted by ${event.spaceTitle}'),
+                      label: Text('Hosted by ${event.space.author.name}'),
                       backgroundColor: Colors.blue.withValues(alpha: 0.1),
                       padding: const EdgeInsets.all(4),
                     ),

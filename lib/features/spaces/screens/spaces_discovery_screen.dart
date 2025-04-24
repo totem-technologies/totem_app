@@ -38,10 +38,8 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
               return _buildEmptyState();
             }
 
-            // Extract unique categories from spaces
             final allCategories = _extractCategories(spacesList);
 
-            // Filter spaces by selected category
             final filteredSpaces =
                 selectedCategory == null
                     ? spacesList
@@ -51,7 +49,6 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
 
             return Column(
               children: [
-                // Category filter
                 _buildCategoryFilter(
                   context,
                   ref,
@@ -59,7 +56,6 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                   selectedCategory,
                 ),
 
-                // Spaces list
                 Expanded(
                   child:
                       filteredSpaces.isEmpty
@@ -91,10 +87,9 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
             .where((category) => category != null)
             .cast<String>()
             .toSet()
-            .toList();
+            .toList()
+          ..sort();
 
-    // Sort categories alphabetically
-    categories.sort();
     return categories;
   }
 
@@ -121,7 +116,6 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          // "All" filter option
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: InkWell(
@@ -131,7 +125,6 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(16),
               child: Chip(
                 label: const Text('All'),
-                avatar: const Icon(Icons.apps, size: 16),
                 backgroundColor:
                     selectedCategory == null
                         ? Theme.of(
@@ -233,7 +226,6 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Space image if available
           if (space.imageLink != null)
             CachedNetworkImage(
               imageUrl: getFullUrl(space.imageLink!),
@@ -255,7 +247,6 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title and category
                 Row(
                   children: [
                     Expanded(
@@ -311,7 +302,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Created by ${space.author.name}',
+                      '${space.author.name}',
                       style: const TextStyle(fontSize: 12),
                     ),
                   ],
@@ -319,52 +310,35 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
 
                 const SizedBox(height: 12),
 
-                // Next event info if available
                 if (space.nextEvent.link.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.event,
-                              size: 16,
-                              color: Colors.amber,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Next: ${space.nextEvent.title ?? "Upcoming Event"}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (space.nextEvent.start.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(
-                              top: 4.0,
-                              left: 24.0,
-                            ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
                             child: Text(
-                              _formatEventDateTime(space.nextEvent.start),
+                              'Next event: ${space.nextEvent.title ?? "Upcoming Event"}',
                               style: const TextStyle(
-                                fontSize: 11,
-                                color: Colors.black87,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
-                      ],
-                    ),
+                        ],
+                      ),
+                      if (space.nextEvent.start.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            _formatEventDateTime(space.nextEvent.start),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
               ],
             ),
@@ -379,16 +353,18 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.05),
+                color: Theme.of(
+                  context,
+                ).colorScheme.secondary.withValues(alpha: 0.15),
                 border: Border(
                   top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                 ),
               ),
-              child: const Center(
+              child: Center(
                 child: Text(
                   'View Space',
                   style: TextStyle(
-                    color: Colors.blue,
+                    color: Theme.of(context).colorScheme.primary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

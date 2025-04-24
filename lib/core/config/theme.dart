@@ -56,7 +56,6 @@ class AppTheme {
 
   static InputDecorationTheme _inputDecorationTheme({required bool isDark}) {
     final Color primary = isDark ? _primaryDark : _primaryLight;
-    final Color onSurface = isDark ? _onSurfaceDark : _onSurfaceLight;
     final Color outlineColor = isDark ? Colors.grey[700]! : Colors.grey[300]!;
     final Color errorColor = isDark ? _errorDark : _errorLight;
     final Color fillColor =
@@ -193,7 +192,7 @@ class AppTheme {
     );
   }
 
-  static final ThemeData lightTheme = ThemeData(
+  static ThemeData get lightTheme => ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
     primaryColor: _primaryLight,
@@ -242,6 +241,31 @@ class AppTheme {
       buttonColor: _primaryLight,
       textTheme: ButtonTextTheme.primary,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _primaryLight,
+        side: BorderSide(color: _primaryLight, width: 1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: _primaryLight,
+        foregroundColor: _onPrimaryLight,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+    ),
+    chipTheme: ChipThemeData(
+      selectedColor: _primaryLight,
+      secondarySelectedColor: _secondaryLight,
+      backgroundColor: _primaryLight.withValues(alpha: 0.15),
+      labelStyle: const TextStyle(color: _textPrimaryLight),
+      secondaryLabelStyle: const TextStyle(color: _textSecondaryLight),
+      side: BorderSide.none,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(20)),
+      ),
     ),
   );
 
