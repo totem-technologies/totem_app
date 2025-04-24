@@ -1,12 +1,13 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/app_exceptions.dart';
+import '../../core/services/analytics_service.dart';
+import '../../core/services/secure_storage.dart';
 import '../models/auth_state.dart';
 import '../repositories/auth_repository.dart';
-import '../../core/errors/app_exceptions.dart';
-import '../../core/services/secure_storage.dart';
-import '../../core/services/analytics_service.dart';
 
 /// Provider for the authentication controller
 final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
@@ -63,7 +64,6 @@ class AuthController extends StateNotifier<AuthState> {
         parameters: {'email': email},
       );
     } catch (e) {
-      // Handle error
       state = AuthState.error(e.toString());
       _emitState();
       rethrow;

@@ -16,7 +16,6 @@ import '../features/video_sessions/screens/pre_join_screen.dart';
 import '../features/video_sessions/screens/video_room_screen.dart';
 import 'route_names.dart';
 
-/// Bottom navigation scaffold that wraps the main app routes
 class BottomNavScaffold extends StatelessWidget {
   final Widget child;
   final String currentPath;
