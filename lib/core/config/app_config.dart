@@ -28,7 +28,7 @@ class AppConfig {
 
   /// API configuration
   static String get apiUrl {
-    return dotenv.get('API_URL', fallback: 'https://api.totem.org/v1');
+    return dotenv.get('API_URL', fallback: 'https://www.totem.org/');
   }
 
   /// Auth configuration

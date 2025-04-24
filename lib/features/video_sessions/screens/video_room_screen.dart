@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 class VideoRoomScreen extends ConsumerWidget {
   final String sessionId;
 
-  const VideoRoomScreen({Key? key, required this.sessionId}) : super(key: key);
+  const VideoRoomScreen({super.key, required this.sessionId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

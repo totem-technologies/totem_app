@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 class PreJoinScreen extends ConsumerWidget {
   final String sessionId;
 
-  const PreJoinScreen({Key? key, required this.sessionId}) : super(key: key);
+  const PreJoinScreen({super.key, required this.sessionId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

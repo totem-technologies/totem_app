@@ -44,9 +44,9 @@ class _AppState extends ConsumerState<App> {
         return MediaQuery(
           // Ensure text scaling respects accessibility settings
           data: MediaQuery.of(context).copyWith(
-            textScaleFactor: MediaQuery.of(
+            textScaler: MediaQuery.textScalerOf(
               context,
-            ).textScaleFactor.clamp(0.8, 1.5),
+            ).clamp(minScaleFactor: 0.8, maxScaleFactor: 1.5),
           ),
           child: child!,
         );
