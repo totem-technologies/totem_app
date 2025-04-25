@@ -60,7 +60,7 @@ GoRouter createRouter(WidgetRef ref) {
       ref.read(authControllerProvider.notifier).authStateChanges,
     ),
     redirect: (context, state) {
-      debugPrint("Router State Change: $state");
+      debugPrint("Router State Change: ${state.fullPath}");
       // Get current auth state
       final isLoggedIn = authController.isAuthenticated;
       final isOnboardingCompleted = authController.isOnboardingCompleted;
