@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
+import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 class EventDetailScreen extends ConsumerWidget {
   final String eventSlug;
@@ -18,7 +19,7 @@ class EventDetailScreen extends ConsumerWidget {
     return Scaffold(
       body: eventAsync.when(
         data: (event) => _buildEventDetail(context, event),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const LoadingIndicator(),
         error:
             (err, stack) => Center(
               child: Text(

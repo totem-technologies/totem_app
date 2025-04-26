@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 import '../auth/controllers/auth_controller.dart';
 import '../auth/screens/login_screen.dart';
@@ -121,12 +122,11 @@ GoRouter createRouter(WidgetRef ref) {
         path: '/auth/magic-link',
         name: RouteNames.magicLink,
         builder: (context, state) {
-          final token = state.uri.queryParameters['token'] ?? '';
+          // TODO: Handle magic link token
+          // final token = state.uri.queryParameters['token'] ?? '';
           // This would typically handle the magic link token
           // and trigger authentication
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: LoadingIndicator());
         },
       ),
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 import '../core/services/deep_link_service.dart';
 import 'app.dart';
@@ -64,9 +65,7 @@ class _TotemAppState extends ConsumerState<TotemApp>
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
-      return const MaterialApp(
-        home: Scaffold(body: Center(child: CircularProgressIndicator())),
-      );
+      return const MaterialApp(home: Scaffold(body: LoadingIndicator()));
     }
 
     return const App();

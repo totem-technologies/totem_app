@@ -17,7 +17,7 @@ class SpaceCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
       child: InkWell(
-        highlightColor: theme.colorScheme.secondary.withOpacity(0.1),
+        highlightColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
         onTap: () {
           context.push('/spaces/${space.nextEvent.slug}');
         },
