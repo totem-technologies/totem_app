@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
+import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 
 import '../repositories/space_repository.dart';
@@ -19,7 +20,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
     final selectedCategory = ref.watch(selectedCategoryProvider);
 
     return Scaffold(
-      appBar: AppBar(leading: const TotemIcon()),
+      appBar: AppBar(title: const TotemLogo(size: 30.0)),
       body: spaces.when(
         data: (spacesList) {
           if (spacesList.isEmpty) {
@@ -35,34 +36,35 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                       .where((space) => space.category == selectedCategory)
                       .toList();
 
-          return Column(
-            children: [
-              _buildCategoryFilter(
-                context,
-                ref,
-                allCategories,
-                selectedCategory,
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: _buildCategoryFilter(
+                  ref,
+                  allCategories,
+                  selectedCategory,
+                ),
               ),
-
-              Expanded(
-                child:
-                    filteredSpaces.isEmpty
-                        ? _buildNoResultsMessage(selectedCategory!)
-                        : ListView.separated(
-                          padding: const EdgeInsets.all(16.0),
-                          itemCount: filteredSpaces.length,
-                          itemBuilder:
-                              (_, index) =>
-                                  SpaceCard(space: filteredSpaces[index]),
-                          separatorBuilder:
-                              (_, _) => const SizedBox(height: 16),
-                        ),
-              ),
+              if (filteredSpaces.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _buildNoResultsMessage(selectedCategory ?? 'All'),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList.separated(
+                    itemCount: filteredSpaces.length,
+                    itemBuilder:
+                        (_, index) => SpaceCard(space: filteredSpaces[index]),
+                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+                  ),
+                ),
             ],
           );
         },
         error: (_, __) => const Text('Oops, something unexpected happened'),
-        loading: () => const CircularProgressIndicator(),
+        loading: () => const LoadingIndicator(),
       ),
     );
   }
@@ -81,83 +83,95 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
   }
 
   Widget _buildCategoryFilter(
-    BuildContext context,
     WidgetRef ref,
     List<String> categories,
     String? selectedCategory,
   ) {
-    return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
+    return Builder(
+      builder: (context) {
+        return Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+            borderRadius: BorderRadius.circular(16),
           ),
-        ],
-      ),
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: InkWell(
-              onTap:
-                  () =>
-                      ref.read(selectedCategoryProvider.notifier).state = null,
-              borderRadius: BorderRadius.circular(16),
+          child: Material(
+            type: MaterialType.transparency,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                _buildFilterChip(
+                  label: 'All',
+                  isSelected: selectedCategory == null,
+                  onTap: () {
+                    ref.read(selectedCategoryProvider.notifier).state = null;
+                  },
+                ),
+                ...categories.map(
+                  (category) => _buildFilterChip(
+                    label: category,
+                    isSelected: category == selectedCategory,
+                    onTap: () {
+                      ref.read(selectedCategoryProvider.notifier).state =
+                          category == selectedCategory ? null : category;
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Builder(
+      builder: (context) {
+        final theme = Theme.of(context);
+        return Padding(
+          padding: const EdgeInsets.only(right: 8.0),
+          child: Center(
+            child: GestureDetector(
+              onTap: () {
+                onTap();
+                Scrollable.ensureVisible(
+                  context,
+                  duration: const Duration(milliseconds: 300),
+                  alignment: 0.5,
+                  alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
+                );
+              },
               child: Chip(
-                label: const Text('All'),
+                label: Text(label),
                 backgroundColor:
-                    selectedCategory == null
-                        ? Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.15)
-                        : Colors.grey.withValues(alpha: 0.1),
+                    isSelected ? theme.colorScheme.primary : Colors.transparent,
                 labelStyle: TextStyle(
                   color:
-                      selectedCategory == null
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.black87,
+                      isSelected
+                          ? theme.colorScheme.onPrimary
+                          : theme.colorScheme.onSurface,
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
               ),
             ),
           ),
-          ...categories.map(
-            (category) => Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: InkWell(
-                onTap: () {
-                  ref.read(selectedCategoryProvider.notifier).state =
-                      category == selectedCategory ? null : category;
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: Chip(
-                  label: Text(category),
-                  backgroundColor:
-                      category == selectedCategory
-                          ? Theme.of(
-                            context,
-                          ).colorScheme.primary.withValues(alpha: 0.15)
-                          : Colors.grey.withValues(alpha: 0.1),
-                  labelStyle: TextStyle(
-                    color:
-                        category == selectedCategory
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.black87,
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

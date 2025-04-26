@@ -7,15 +7,14 @@ class LoadingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
       child: SizedBox(
         height: size,
         width: size,
         child: CircularProgressIndicator(
-          strokeWidth: 3.0,
-          valueColor: AlwaysStoppedAnimation<Color>(
-            Theme.of(context).primaryColor,
-          ),
+          strokeWidth: 1.5,
+          valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
         ),
       ),
     );

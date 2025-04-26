@@ -18,3 +18,20 @@ class TotemIcon extends StatelessWidget {
     );
   }
 }
+
+class TotemLogo extends StatelessWidget {
+  final double? size;
+
+  const TotemLogo({super.key, this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: size,
+      child: Image.asset(
+        'assets/logo/logo-black-small.png',
+        fit: BoxFit.contain,
+      ),
+    );
+  }
+}

@@ -188,6 +188,7 @@ class AppTheme {
       ),
       iconTheme: IconThemeData(color: black),
       actionsIconTheme: IconThemeData(color: black),
+      surfaceTintColor: Colors.transparent,
     ),
 
     // --- Button Themes ---
@@ -345,6 +346,7 @@ class AppTheme {
         borderRadius: BorderRadius.circular(20.0),
         side: BorderSide.none,
       ),
+      side: BorderSide.none,
     ),
 
     // --- Icon Theme ---
