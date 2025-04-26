@@ -35,31 +35,34 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                       .where((space) => space.category == selectedCategory)
                       .toList();
 
-          return CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: _buildCategoryFilter(
-                  ref,
-                  allCategories,
-                  selectedCategory,
-                ),
-              ),
-              if (filteredSpaces.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _buildNoResultsMessage(selectedCategory ?? 'All'),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverList.separated(
-                    itemCount: filteredSpaces.length,
-                    itemBuilder:
-                        (_, index) => SpaceCard(space: filteredSpaces[index]),
-                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+          return RefreshIndicator.adaptive(
+            onRefresh: () => ref.refresh(listSpacesProvider.future),
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: _buildCategoryFilter(
+                    ref,
+                    allCategories,
+                    selectedCategory,
                   ),
                 ),
-            ],
+                if (filteredSpaces.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _buildNoResultsMessage(selectedCategory ?? 'All'),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverList.separated(
+                      itemCount: filteredSpaces.length,
+                      itemBuilder:
+                          (_, index) => SpaceCard(space: filteredSpaces[index]),
+                      separatorBuilder: (_, __) => const SizedBox(height: 16),
+                    ),
+                  ),
+              ],
+            ),
           );
         },
         error: (_, __) => const Text('Oops, something unexpected happened'),

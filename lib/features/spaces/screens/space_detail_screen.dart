@@ -26,203 +26,206 @@ class EventDetailScreen extends ConsumerWidget {
       ),
       body: eventAsync.when(
         data: (event) {
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              return ListView(
-                padding: const EdgeInsetsDirectional.all(16.0),
-                children: [
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: TextButton.icon(
-                      onPressed: context.pop,
-                      style: TextButton.styleFrom(
-                        foregroundColor: theme.colorScheme.onSurface,
-                        textStyle: const TextStyle(
-                          decoration: TextDecoration.none,
-                        ),
-                      ),
-                      label: const Text('All spaces'),
-                      icon: Icon(Icons.adaptive.arrow_back),
-                      iconAlignment: IconAlignment.start,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: constraints.maxHeight * 0.6,
-                    child: Card(
-                      margin: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Stack(
-                        children: [
-                          Positioned.fill(
-                            child: CachedNetworkImage(
-                              imageUrl: event.space.image!,
-                              fit: BoxFit.cover,
-                              errorWidget:
-                                  (context, url, error) =>
-                                      const Icon(Icons.error),
-                              color: Colors.black54,
-                              colorBlendMode: BlendMode.darken,
-                            ),
+          return RefreshIndicator.adaptive(
+            onRefresh: () => ref.refresh(eventProvider(eventSlug).future),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return ListView(
+                  padding: const EdgeInsetsDirectional.all(16.0),
+                  children: [
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TextButton.icon(
+                        onPressed: context.pop,
+                        style: TextButton.styleFrom(
+                          foregroundColor: theme.colorScheme.onSurface,
+                          textStyle: const TextStyle(
+                            decoration: TextDecoration.none,
                           ),
-                          Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                Text(
-                                  event.title,
-                                  style: theme.textTheme.headlineLarge
-                                      ?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                                Text(
-                                  event.spaceTitle,
-                                  style: theme.textTheme.headlineSmall
-                                      ?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w400,
-                                      ),
-                                ),
-                                RichText(
-                                  text: TextSpan(
+                        ),
+                        label: const Text('All spaces'),
+                        icon: Icon(Icons.adaptive.arrow_back),
+                        iconAlignment: IconAlignment.start,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: constraints.maxHeight * 0.6,
+                      child: Card(
+                        margin: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: CachedNetworkImage(
+                                imageUrl: event.space.image!,
+                                fit: BoxFit.cover,
+                                errorWidget:
+                                    (context, url, error) =>
+                                        const Icon(Icons.error),
+                                color: Colors.black54,
+                                colorBlendMode: BlendMode.darken,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  Text(
+                                    event.title,
+                                    style: theme.textTheme.headlineLarge
+                                        ?.copyWith(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                  ),
+                                  Text(
+                                    event.spaceTitle,
+                                    style: theme.textTheme.headlineSmall
+                                        ?.copyWith(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                  ),
+                                  RichText(
+                                    text: TextSpan(
+                                      style: theme.textTheme.bodyLarge
+                                          ?.copyWith(color: Colors.white),
+                                      children: <TextSpan>[
+                                        const TextSpan(text: 'with '),
+                                        TextSpan(
+                                          text: event.space.author.name,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  Text(
+                                    'Starting at ${formatEventDateTime(event.start.toIso8601String())}',
                                     style: theme.textTheme.bodyLarge?.copyWith(
                                       color: Colors.white,
                                     ),
-                                    children: <TextSpan>[
-                                      const TextSpan(text: 'with '),
-                                      TextSpan(
-                                        text: event.space.author.name,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                  ),
+                                  Flexible(
+                                    child: Center(
+                                      child: CircleAvatar(
+                                        backgroundColor: Colors.transparent,
+                                        foregroundImage:
+                                            event.space.author.profileImage !=
+                                                    null
+                                                ? CachedNetworkImageProvider(
+                                                  getFullUrl(
+                                                    event
+                                                        .space
+                                                        .author
+                                                        .profileImage!,
+                                                  ),
+                                                )
+                                                : null,
+                                        radius: 52,
                                       ),
-                                    ],
-                                  ),
-                                ),
-
-                                Text(
-                                  'Starting at ${formatEventDateTime(event.start.toIso8601String())}',
-                                  style: theme.textTheme.bodyLarge?.copyWith(
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Center(
-                                    child: CircleAvatar(
-                                      backgroundColor: Colors.transparent,
-                                      foregroundImage:
-                                          event.space.author.profileImage !=
-                                                  null
-                                              ? CachedNetworkImageProvider(
-                                                getFullUrl(
-                                                  event
-                                                      .space
-                                                      .author
-                                                      .profileImage!,
-                                                ),
-                                              )
-                                              : null,
-                                      radius: 52,
                                     ),
                                   ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Card(
+                      margin: const EdgeInsetsDirectional.symmetric(
+                        vertical: 16.0,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Wrap(
+                              spacing: 8.0,
+                              runSpacing: 8.0,
+                              alignment: WrapAlignment.spaceBetween,
+                              crossAxisAlignment: WrapCrossAlignment.start,
+                              children: [
+                                _buildInfoItem(
+                                  icon: Icons.star_border,
+                                  title: '${event.subscribers} subscribers',
+                                ),
+                                _buildInfoItem(
+                                  icon: Icons.attach_money_rounded,
+                                  title:
+                                      event.price == 0
+                                          ? 'No cost'
+                                          // TODO: Format this
+                                          : 'Cost: ${event.price}',
+                                ),
+                                _buildInfoItem(
+                                  icon: Icons.schedule,
+                                  title: '${event.duration} minutes',
+                                ),
+                                _buildInfoItem(
+                                  icon: Icons.repeat,
+                                  title: event.recurring,
+                                ),
+                                _buildInfoItem(
+                                  icon: Icons.chair_outlined,
+                                  title:
+                                      event.seatsLeft > 0
+                                          ? '${event.seatsLeft} seats left'
+                                          : 'No seats left',
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Card(
-                    margin: const EdgeInsetsDirectional.symmetric(
-                      vertical: 16.0,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Wrap(
-                            spacing: 8.0,
-                            runSpacing: 8.0,
-                            alignment: WrapAlignment.spaceBetween,
-                            crossAxisAlignment: WrapCrossAlignment.start,
-                            children: [
-                              _buildInfoItem(
-                                icon: Icons.star_border,
-                                title: '${event.subscribers} subscribers',
-                              ),
-                              _buildInfoItem(
-                                icon: Icons.attach_money_rounded,
-                                title:
-                                    event.price == 0
-                                        ? 'No cost'
-                                        // TODO: Format this
-                                        : 'Cost: ${event.price}',
-                              ),
-                              _buildInfoItem(
-                                icon: Icons.schedule,
-                                title: '${event.duration} minutes',
-                              ),
-                              _buildInfoItem(
-                                icon: Icons.repeat,
-                                title: event.recurring,
-                              ),
-                              _buildInfoItem(
-                                icon: Icons.chair_outlined,
-                                title:
-                                    event.seatsLeft > 0
-                                        ? '${event.seatsLeft} seats left'
-                                        : 'No seats left',
-                              ),
-                            ],
-                          ),
 
-                          const SizedBox(height: 16),
+                            const SizedBox(height: 16),
 
-                          Text(
-                            formatEventDate(event.start.toIso8601String()),
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                            Text(
+                              formatEventDate(event.start.toIso8601String()),
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
 
-                          Text(
-                            formatEventTime(event.start.toIso8601String()),
-                            style: theme.textTheme.bodyMedium?.copyWith(),
-                          ),
+                            Text(
+                              formatEventTime(event.start.toIso8601String()),
+                              style: theme.textTheme.bodyMedium?.copyWith(),
+                            ),
 
-                          // TODO: Attend to this session button
-                        ],
+                            // TODO: Attend to this session button
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  Text(
-                    'About this session',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+                    Text(
+                      'About this session',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  Html(data: event.description),
+                    Html(data: event.description),
 
-                  // TODO: About this space
-                  // Text(
-                  //   'About this space',
-                  //   style: theme.textTheme.titleSmall?.copyWith(
-                  //     fontWeight: FontWeight.bold,
-                  //   ),
-                  // ),
-                  // Html(data: event.space.shortDescription),
-                ],
-              );
-            },
+                    // TODO: About this space
+                    // Text(
+                    //   'About this space',
+                    //   style: theme.textTheme.titleSmall?.copyWith(
+                    //     fontWeight: FontWeight.bold,
+                    //   ),
+                    // ),
+                    // Html(data: event.space.shortDescription),
+                  ],
+                );
+              },
+            ),
           );
         },
         loading: () => const LoadingIndicator(),
