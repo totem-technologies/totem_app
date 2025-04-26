@@ -245,7 +245,7 @@ class AppTheme {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: _primaryLight,
-        side: BorderSide(color: _primaryLight, width: 1),
+        side: const BorderSide(color: _primaryLight, width: 1),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     ),

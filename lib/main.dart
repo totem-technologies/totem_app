@@ -21,11 +21,13 @@ Future<void> main() async {
     DeviceOrientation.landscapeRight,
   ]);
 
-  await dotenv.load(fileName: ".env");
+  await dotenv.load(fileName: '.env');
   await _initializeServices();
   await _setupErrorHandling();
 
-  runApp(ProviderScope(observers: [ObserverService()], child: TotemApp()));
+  runApp(
+    ProviderScope(observers: [ObserverService()], child: const TotemApp()),
+  );
 }
 
 Future<void> _initializeServices() async {

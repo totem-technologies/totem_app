@@ -6,7 +6,7 @@ class SecureStorage {
 
   /// Constructor with optional storage instance for testing
   SecureStorage([FlutterSecureStorage? storage])
-    : _storage = storage ?? FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   /// Write a value securely
   Future<void> write({required String key, required String value}) async {

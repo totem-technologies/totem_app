@@ -28,9 +28,9 @@ class VideoRoomScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
+            const Text(
               'Video Room Screen',
-              style: const TextStyle(fontSize: 24, color: Colors.white),
+              style: TextStyle(fontSize: 24, color: Colors.white),
             ),
             Text(
               'Session ID: $sessionId',

@@ -64,7 +64,7 @@ class _TotemAppState extends ConsumerState<TotemApp>
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
-      return MaterialApp(
+      return const MaterialApp(
         home: Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }

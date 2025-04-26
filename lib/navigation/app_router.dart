@@ -60,7 +60,7 @@ GoRouter createRouter(WidgetRef ref) {
       ref.read(authControllerProvider.notifier).authStateChanges,
     ),
     redirect: (context, state) {
-      debugPrint("Router State Change: ${state.fullPath}");
+      debugPrint('Router State Change: ${state.fullPath}');
       // Get current auth state
       final isLoggedIn = authController.isAuthenticated;
       final isOnboardingCompleted = authController.isOnboardingCompleted;
@@ -124,7 +124,9 @@ GoRouter createRouter(WidgetRef ref) {
           final token = state.uri.queryParameters['token'] ?? '';
           // This would typically handle the magic link token
           // and trigger authentication
-          return Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         },
       ),
 

@@ -16,7 +16,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    var spaces = ref.watch(listSpacesProvider);
+    final spaces = ref.watch(listSpacesProvider);
     final selectedCategory = ref.watch(selectedCategoryProvider);
 
     return Scaffold(
@@ -196,14 +196,14 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyState() {
-    return Column(
+    return const Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.explore, size: 80),
-        const SizedBox(height: 16),
-        const Text('Spaces Discovery Screen', style: TextStyle(fontSize: 24)),
-        const SizedBox(height: 32),
-        const Text('No spaces available yet'),
+        Icon(Icons.explore, size: 80),
+        SizedBox(height: 16),
+        Text('Spaces Discovery Screen', style: TextStyle(fontSize: 24)),
+        SizedBox(height: 32),
+        Text('No spaces available yet'),
       ],
     );
   }
@@ -297,7 +297,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                               : null,
                       child:
                           space.author.profileImage == null
-                              ? Text(space.author.name?[0].toUpperCase() ?? "")
+                              ? Text(space.author.name?[0].toUpperCase() ?? '')
                               : null,
                     ),
                     const SizedBox(width: 8),

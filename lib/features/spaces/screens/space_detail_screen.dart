@@ -308,11 +308,11 @@ class EventDetailScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
         ),
-        child: Column(
+        child: const Column(
           children: [
-            const Icon(Icons.cancel, color: Colors.red, size: 32),
-            const SizedBox(height: 8),
-            const Text(
+            Icon(Icons.cancel, color: Colors.red, size: 32),
+            SizedBox(height: 8),
+            Text(
               'This event has been cancelled',
               style: TextStyle(
                 fontSize: 16,
@@ -410,18 +410,14 @@ class EventDetailScreen extends ConsumerWidget {
           ],
         ),
         if (event.subscribed != null && event.subscribed!)
-          Padding(
-            padding: const EdgeInsets.only(top: 16.0),
+          const Padding(
+            padding: EdgeInsets.only(top: 16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.notifications_active,
-                  size: 16,
-                  color: Colors.green,
-                ),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.notifications_active, size: 16, color: Colors.green),
+                SizedBox(width: 8),
+                Text(
                   'You will receive notifications for this event',
                   style: TextStyle(fontSize: 12, color: Colors.green),
                 ),

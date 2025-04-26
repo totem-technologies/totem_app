@@ -1,8 +1,7 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
-
-import 'package:totem_app/core/config/app_config.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/rest_client.dart';
+import 'package:totem_app/core/config/app_config.dart';
 
 import '../errors/app_exceptions.dart';
 import 'secure_storage.dart';
@@ -14,13 +13,13 @@ final secureStorageProvider = Provider<SecureStorage>((ref) {
 
 /// Provider for the API service
 final apiServiceProvider = Provider<RestClient>((ref) {
-  var dio = _initDio(ref);
+  final dio = _initDio(ref);
   return RestClient(dio, baseUrl: AppConfig.apiUrl);
 });
 
 /// Initialize Dio instance with interceptors and base configuration
 Dio _initDio(Ref ref) {
-  var dio = Dio();
+  final dio = Dio();
 
   // Add auth interceptor to inject API key
   dio.interceptors.add(
