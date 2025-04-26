@@ -13,7 +13,6 @@ class SpaceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    print(space.author);
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
