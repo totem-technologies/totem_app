@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../auth/controllers/auth_controller.dart';
-import '../core/config/theme.dart';
+import '../core/config/theme_v2.dart';
 import '../navigation/app_router.dart';
 
 class App extends ConsumerStatefulWidget {
