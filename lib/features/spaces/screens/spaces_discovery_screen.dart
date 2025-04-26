@@ -1,10 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
+import 'package:totem_app/features/spaces/widgets/space_card.dart';
+import 'package:totem_app/shared/widgets/totem_icon.dart';
 
 import '../repositories/space_repository.dart';
 
@@ -20,62 +19,50 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
     final selectedCategory = ref.watch(selectedCategoryProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Discover Spaces'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              context.push('/profile');
-            },
-          ),
-        ],
-      ),
-      body: Center(
-        child: spaces.when(
-          data: (spacesList) {
-            if (spacesList.isEmpty) {
-              return _buildEmptyState();
-            }
+      appBar: AppBar(leading: const TotemIcon()),
+      body: spaces.when(
+        data: (spacesList) {
+          if (spacesList.isEmpty) {
+            return _buildEmptyState();
+          }
 
-            final allCategories = _extractCategories(spacesList);
+          final allCategories = _extractCategories(spacesList);
 
-            final filteredSpaces =
-                selectedCategory == null
-                    ? spacesList
-                    : spacesList
-                        .where((space) => space.category == selectedCategory)
-                        .toList();
+          final filteredSpaces =
+              selectedCategory == null
+                  ? spacesList
+                  : spacesList
+                      .where((space) => space.category == selectedCategory)
+                      .toList();
 
-            return Column(
-              children: [
-                _buildCategoryFilter(
-                  context,
-                  ref,
-                  allCategories,
-                  selectedCategory,
-                ),
+          return Column(
+            children: [
+              _buildCategoryFilter(
+                context,
+                ref,
+                allCategories,
+                selectedCategory,
+              ),
 
-                Expanded(
-                  child:
-                      filteredSpaces.isEmpty
-                          ? _buildNoResultsMessage(selectedCategory!)
-                          : ListView.builder(
-                            padding: const EdgeInsets.all(16.0),
-                            itemCount: filteredSpaces.length,
-                            itemBuilder:
-                                (context, index) => _buildSpaceCard(
-                                  context,
-                                  filteredSpaces[index],
-                                ),
-                          ),
-                ),
-              ],
-            );
-          },
-          error: (_, __) => const Text('Oops, something unexpected happened'),
-          loading: () => const CircularProgressIndicator(),
-        ),
+              Expanded(
+                child:
+                    filteredSpaces.isEmpty
+                        ? _buildNoResultsMessage(selectedCategory!)
+                        : ListView.separated(
+                          padding: const EdgeInsets.all(16.0),
+                          itemCount: filteredSpaces.length,
+                          itemBuilder:
+                              (_, index) =>
+                                  SpaceCard(space: filteredSpaces[index]),
+                          separatorBuilder:
+                              (_, _) => const SizedBox(height: 16),
+                        ),
+              ),
+            ],
+          );
+        },
+        error: (_, __) => const Text('Oops, something unexpected happened'),
+        loading: () => const CircularProgressIndicator(),
       ),
     );
   }
@@ -196,181 +183,13 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyState() {
-    return const Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.explore, size: 80),
-        SizedBox(height: 16),
-        Text('Spaces Discovery Screen', style: TextStyle(fontSize: 24)),
-        SizedBox(height: 32),
-        Text('No spaces available yet'),
-      ],
-    );
-  }
-
-  String _formatEventDateTime(String isoUtcString) {
-    try {
-      final dateTime = DateTime.parse(isoUtcString);
-      final dateFormat = DateFormat.yMMMd(); // e.g., Apr 27, 2023
-      final timeFormat = DateFormat.jm(); // e.g., 2:30 PM
-      return '${dateFormat.format(dateTime)} at ${timeFormat.format(dateTime)}';
-    } catch (e) {
-      return 'Date TBA';
-    }
-  }
-
-  Widget _buildSpaceCard(BuildContext context, SpaceDetailSchema space) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      margin: const EdgeInsets.only(bottom: 16),
+    return const Center(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          if (space.imageLink != null)
-            CachedNetworkImage(
-              imageUrl: getFullUrl(space.imageLink!),
-              height: 120,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorWidget:
-                  (context, error, stackTrace) => Container(
-                    height: 120,
-                    color: Colors.grey[300],
-                    child: const Center(
-                      child: Icon(Icons.image_not_supported, size: 40),
-                    ),
-                  ),
-            ),
-
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        space.title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    if (space.category != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: Chip(
-                          label: Text(
-                            space.category!,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          padding: EdgeInsets.zero,
-                        ),
-                      ),
-                  ],
-                ),
-
-                const SizedBox(height: 8),
-
-                // Description (truncated)
-                Text(
-                  space.description.length > 100
-                      ? '${space.description.substring(0, 100)}...'
-                      : space.description,
-                  style: TextStyle(color: Colors.grey[700]),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Author info
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 12,
-                      backgroundImage:
-                          space.author.profileImage != null
-                              ? CachedNetworkImageProvider(
-                                getFullUrl(space.author.profileImage!),
-                              )
-                              : null,
-                      child:
-                          space.author.profileImage == null
-                              ? Text(space.author.name?[0].toUpperCase() ?? '')
-                              : null,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${space.author.name}',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                if (space.nextEvent.link.isNotEmpty)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Next event: ${space.nextEvent.title ?? "Upcoming Event"}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (space.nextEvent.start.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: Text(
-                            _formatEventDateTime(space.nextEvent.start),
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-
-          // Action button
-          InkWell(
-            onTap: () {
-              context.push('/spaces/${space.nextEvent.slug}');
-            },
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.secondary.withValues(alpha: 0.15),
-                border: Border(
-                  top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  'View Space',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          Icon(Icons.explore, size: 80),
+          SizedBox(height: 16),
+          Text('No spaces available yet'),
         ],
       ),
     );

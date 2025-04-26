@@ -343,7 +343,7 @@ class AppTheme {
       brightness: Brightness.light,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20.0),
-        side: BorderSide(color: deepGray.withValues(alpha: 0.3)),
+        side: BorderSide.none,
       ),
     ),
 

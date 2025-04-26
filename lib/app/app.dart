@@ -31,11 +31,9 @@ class _AppState extends ConsumerState<App> {
     return MaterialApp.router(
       title: 'Totem App',
       theme: AppTheme.lightTheme,
-      // darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.light,
       debugShowCheckedModeBanner: false,
       routerConfig: _router,
-      // Add app-wide accessibility features
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
