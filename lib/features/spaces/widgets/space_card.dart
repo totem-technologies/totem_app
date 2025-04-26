@@ -1,9 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
-import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
+import 'package:totem_app/shared/date.dart';
+import 'package:totem_app/shared/network.dart';
 
 class SpaceCard extends StatelessWidget {
   final SpaceDetailSchema space;
@@ -13,6 +13,7 @@ class SpaceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    print(space.author);
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
@@ -116,7 +117,7 @@ class SpaceCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.only(top: 4.0),
                             child: Text(
-                              _formatEventDateTime(space.nextEvent.start),
+                              formatEventDateTime(space.nextEvent.start),
                               style: theme.textTheme.bodySmall,
                             ),
                           ),
@@ -129,16 +130,5 @@ class SpaceCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _formatEventDateTime(String isoUtcString) {
-    try {
-      final dateTime = DateTime.parse(isoUtcString);
-      final dateFormat = DateFormat.yMMMd(); // e.g., Apr 27, 2023
-      final timeFormat = DateFormat.jm(); // e.g., 2:30 PM
-      return '${dateFormat.format(dateTime)} at ${timeFormat.format(dateTime)}';
-    } catch (e) {
-      return 'Date TBA';
-    }
   }
 }
