@@ -138,63 +138,72 @@ GoRouter createRouter(WidgetRef ref) {
       ),
 
       // Shell route for screens with bottom navigation
-      ShellRoute(
+      StatefulShellRoute.indexedStack(
         builder: (context, state, child) {
           return BottomNavScaffold(
             currentPath: state.matchedLocation,
             child: child,
           );
         },
-        routes: [
+        branches: [
           // Spaces tab and its sub-routes with fade transition
-          GoRoute(
-            path: '/spaces',
-            name: RouteNames.spacesDiscovery,
-            pageBuilder:
-                (context, state) => CustomTransitionPage(
-                  key: state.pageKey,
-                  child: const SpacesDiscoveryScreen(),
-                  transitionsBuilder: (
-                    context,
-                    animation,
-                    secondaryAnimation,
-                    child,
-                  ) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
-                  transitionDuration: const Duration(milliseconds: 200),
-                ),
-            routes: [
-              // Nested route under /spaces
+          StatefulShellBranch(
+            routes: <RouteBase>[
               GoRoute(
-                path: ':event_slug',
-                name: RouteNames.spaceDetail,
-                builder: (context, state) {
-                  final eventSlug = state.pathParameters['event_slug'] ?? '';
-                  return EventDetailScreen(eventSlug: eventSlug);
-                },
+                path: '/spaces',
+                name: RouteNames.spacesDiscovery,
+                pageBuilder:
+                    (context, state) => CustomTransitionPage(
+                      key: state.pageKey,
+                      child: const SpacesDiscoveryScreen(),
+                      transitionsBuilder: (
+                        context,
+                        animation,
+                        secondaryAnimation,
+                        child,
+                      ) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
+                      transitionDuration: const Duration(milliseconds: 200),
+                    ),
+                routes: [
+                  // Nested route under /spaces
+                  GoRoute(
+                    path: ':event_slug',
+                    name: RouteNames.spaceDetail,
+                    builder: (context, state) {
+                      final eventSlug =
+                          state.pathParameters['event_slug'] ?? '';
+                      return EventDetailScreen(eventSlug: eventSlug);
+                    },
+                  ),
+                ],
               ),
             ],
           ),
 
           // Profile tab with fade transition
-          GoRoute(
-            path: '/profile',
-            name: RouteNames.profile,
-            pageBuilder:
-                (context, state) => CustomTransitionPage(
-                  key: state.pageKey,
-                  child: const ProfileScreen(),
-                  transitionsBuilder: (
-                    context,
-                    animation,
-                    secondaryAnimation,
-                    child,
-                  ) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
-                  transitionDuration: const Duration(milliseconds: 200),
-                ),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/profile',
+                name: RouteNames.profile,
+                pageBuilder:
+                    (context, state) => CustomTransitionPage(
+                      key: state.pageKey,
+                      child: const ProfileScreen(),
+                      transitionsBuilder: (
+                        context,
+                        animation,
+                        secondaryAnimation,
+                        child,
+                      ) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
+                      transitionDuration: const Duration(milliseconds: 200),
+                    ),
+              ),
+            ],
           ),
         ],
       ),
