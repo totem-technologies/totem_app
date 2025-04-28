@@ -1,5 +1,5 @@
 swagger_parser:
-  schema_path: ../totem-server/openapi.json
+  schema_url: https://www.totem.org/api/v1/openapi.json
   output_directory: lib/api
   name: totem_api
   language: dart

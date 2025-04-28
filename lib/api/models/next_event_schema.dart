@@ -13,6 +13,7 @@ class NextEventSchema {
     required this.start,
     required this.link,
     required this.title,
+    required this.seatsLeft,
   });
 
   factory NextEventSchema.fromJson(Map<String, Object?> json) =>
@@ -22,6 +23,8 @@ class NextEventSchema {
   final String start;
   final String link;
   final String? title;
+  @JsonKey(name: 'seats_left')
+  final int seatsLeft;
 
   Map<String, Object?> toJson() => _$NextEventSchemaToJson(this);
 }

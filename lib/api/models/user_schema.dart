@@ -36,9 +36,4 @@ class UserSchema {
   final String? profileImage;
 
   Map<String, Object?> toJson() => _$UserSchemaToJson(this);
-
-  @override
-  String toString() {
-    return 'UserSchema{profileAvatarType: $profileAvatarType, name: $name, isStaff: $isStaff, profileAvatarSeed: $profileAvatarSeed, profileImage: $profileImage}';
-  }
 }
