@@ -1,7 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:async';
 
 import '../services/analytics_service.dart';
 import 'app_exceptions.dart';
@@ -12,7 +13,7 @@ import 'app_exceptions.dart';
 /// throughout the application in a consistent manner.
 class ErrorHandler {
   // Private constructor to prevent instantiation
-  ErrorHandler._();
+  const ErrorHandler._();
 
   // Tag for error logs
   static const String _tag = 'ErrorHandler';

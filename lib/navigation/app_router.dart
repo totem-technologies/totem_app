@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/core/services/deep_link_service.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 import '../auth/controllers/auth_controller.dart';
@@ -52,19 +53,16 @@ class BottomNavScaffold extends StatelessWidget {
   }
 }
 
-/// Creates and configures the app router with routes and navigation logic
 GoRouter createRouter(WidgetRef ref) {
-  // Get the auth controller to check authentication state
   final authController = ref.read(authControllerProvider.notifier);
 
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: DeepLinkService.instance.initialDeepLink?.path ?? '/',
     debugLogDiagnostics: true,
-    refreshListenable: GoRouterRefreshStream(
-      ref.read(authControllerProvider.notifier).authStateChanges,
-    ),
+    refreshListenable: GoRouterRefreshStream(authController.authStateChanges),
     redirect: (context, state) {
       debugPrint('Router State Change: ${state.fullPath}');
+
       // Get current auth state
       final isLoggedIn = authController.isAuthenticated;
       final isOnboardingCompleted = authController.isOnboardingCompleted;

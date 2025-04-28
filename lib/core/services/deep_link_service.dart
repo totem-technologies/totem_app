@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 /// Service to handle deep links and URI scheme opening.
@@ -6,12 +7,19 @@ import 'package:flutter/foundation.dart';
 /// This service handles both initial deep links (when the app is opened from a link)
 /// and background deep links (when the app is already running).
 class DeepLinkService {
+  static final DeepLinkService _instance = DeepLinkService._internal();
+  static DeepLinkService get instance => _instance;
+  DeepLinkService._internal();
+
   // Stream controller for deep links
   final StreamController<Uri> _deepLinkStreamController =
       StreamController<Uri>.broadcast();
 
   // Stream of deep links that can be listened to throughout the app
   Stream<Uri> get deepLinkStream => _deepLinkStreamController.stream;
+
+  Uri? _initialDeepLink;
+  Uri? get initialDeepLink => _initialDeepLink;
 
   // Store the most recent deep link
   Uri? _latestDeepLink;
@@ -32,9 +40,9 @@ class DeepLinkService {
     try {
       debugPrint('Initializing DeepLinkService...');
 
-      // Simulate initialization delay
-      await Future.delayed(const Duration(milliseconds: 200));
+      await handleInitialLink();
 
+      // Simulate initialization delay
       // TODO: In a real implementation, set up platform channels or
       // use a package like uni_links to handle deep links
 
@@ -60,6 +68,8 @@ class DeepLinkService {
     try {
       // TODO: In a real implementation, get the initial link from platform channel
       // or uni_links package
+
+      // _initialDeepLink = await getInitialLink();
 
       // For now, we'll just return null to indicate no deep link
       debugPrint('Checking for initial deep link: None found');
