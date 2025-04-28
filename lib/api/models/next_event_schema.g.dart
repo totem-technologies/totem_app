@@ -12,6 +12,7 @@ NextEventSchema _$NextEventSchemaFromJson(Map<String, dynamic> json) =>
       start: json['start'] as String,
       link: json['link'] as String,
       title: json['title'] as String?,
+      seatsLeft: (json['seats_left'] as num).toInt(),
     );
 
 Map<String, dynamic> _$NextEventSchemaToJson(NextEventSchema instance) =>
@@ -20,4 +21,5 @@ Map<String, dynamic> _$NextEventSchemaToJson(NextEventSchema instance) =>
       'start': instance.start,
       'link': instance.link,
       'title': instance.title,
+      'seats_left': instance.seatsLeft,
     };

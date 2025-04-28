@@ -10,7 +10,7 @@ EventCalendarFilterSchema _$EventCalendarFilterSchemaFromJson(
   Map<String, dynamic> json,
 ) => EventCalendarFilterSchema(
   spaceSlug: json['space_slug'] as String? ?? '',
-  month: (json['month'] as num?)?.toInt() ?? 3,
+  month: (json['month'] as num?)?.toInt() ?? 4,
   year: (json['year'] as num?)?.toInt() ?? 2025,
 );
 
