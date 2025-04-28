@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_app/auth/models/user.dart';
 
 import '../../core/errors/app_exceptions.dart';
 import '../../core/services/analytics_service.dart';
@@ -213,6 +214,22 @@ class AuthController extends StateNotifier<AuthState> {
 
   /// Check for existing authentication when app starts
   Future<void> _checkExistingAuth() async {
+    // TODO: Unmock this
+    state = AuthState(
+      status: AuthStatus.authenticated,
+      user: User(
+        id: '123',
+        email: 'user@mail.com',
+        createdAt: DateTime.now(),
+        hasCompletedOnboarding: true,
+        firstName: 'Name',
+        isKeeper: false,
+        lastLoginAt: DateTime.now(),
+      ),
+    );
+    _emitState();
+
+    /*
     try {
       // Set loading state
       state = AuthState.loading();
@@ -246,6 +263,7 @@ class AuthController extends StateNotifier<AuthState> {
     } finally {
       _emitState();
     }
+    */
   }
 
   /// Helper to emit the current state to the stream
