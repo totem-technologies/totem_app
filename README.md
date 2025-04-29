@@ -76,13 +76,12 @@ _Coming soon: Widget tests and CI-integrated integration tests._
 ```
 lib/
 ├── api/             # API clients & models (generated with Retrofit)
-├── app/             # App root, including main() and providers
 ├── auth/            # Auth flow: login, profile setup, state
 ├── core/            # Config, theme, services, errors
 ├── features/        # Feature modules (spaces, profile, video_sessions, etc.)
 ├── navigation/      # Centralized routing and guards
 ├── shared/          # Reusable widgets
-└── main.dart        # Entry point
+└── main.dart        # Entry point, app root
 ```
 
 ### 📐 Architecture
