@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
-import '../controllers/auth_controller.dart';
-import '../models/auth_state.dart';
-import '../../core/errors/error_handler.dart';
-import '../../shared/widgets/loading_indicator.dart';
-import '../../core/config/app_config.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/auth/models/auth_state.dart';
+import 'package:totem_app/core/config/app_config.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 class PinEntryScreen extends ConsumerStatefulWidget {
+  const PinEntryScreen({required this.email, super.key});
   final String email;
-
-  const PinEntryScreen({super.key, required this.email});
 
   @override
   ConsumerState<PinEntryScreen> createState() => _PinEntryScreenState();
@@ -59,7 +57,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
       await ref
           .read(authControllerProvider.notifier)
           .verifyPin(widget.email, _pinController.text.trim());
-      Future.delayed(const Duration(seconds: 2), () {
+      Future<void>.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           context.go('/');
         }
@@ -85,7 +83,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
 
         if (_attempts >= _maxAttempts) {
           // Navigate back to login screen after max attempts
-          Future.delayed(const Duration(seconds: 2), () {
+          Future<void>.delayed(const Duration(seconds: 2), () {
             if (mounted) {
               context.go('/auth/login');
             }
@@ -113,7 +111,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
       appBar: AppBar(title: const Text('Enter PIN')),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(24),
           child: Form(
             key: _formKey,
             child: Column(
@@ -135,7 +133,8 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'We\'ve sent a 6-digit PIN to ${widget.email}. Please enter it below to sign in.',
+                  "We've sent a 6-digit PIN to ${widget.email}. "
+                  'Please enter it below to sign in.',
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -158,15 +157,16 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
                 const SizedBox(height: 24),
 
                 // Verify button
-                _isLoading
-                    ? const LoadingIndicator()
-                    : ElevatedButton(
-                      onPressed: _attempts < _maxAttempts ? _verifyPin : null,
-                      child: const Padding(
-                        padding: EdgeInsets.all(12.0),
-                        child: Text('Verify PIN'),
-                      ),
+                if (_isLoading)
+                  const LoadingIndicator()
+                else
+                  ElevatedButton(
+                    onPressed: _attempts < _maxAttempts ? _verifyPin : null,
+                    child: const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text('Verify PIN'),
                     ),
+                  ),
                 const SizedBox(height: 16),
 
                 // Request new magic link

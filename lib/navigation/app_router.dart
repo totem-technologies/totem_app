@@ -3,30 +3,28 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/auth/screens/login_screen.dart';
+import 'package:totem_app/auth/screens/pin_entry_screen.dart';
+import 'package:totem_app/auth/screens/profile_setup_screen.dart';
 import 'package:totem_app/core/services/deep_link_service.dart';
+import 'package:totem_app/features/notifications/screens/notification_settings_screen.dart';
+import 'package:totem_app/features/profile/screens/profile_screen.dart';
+import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
+import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
+import 'package:totem_app/features/video_sessions/screens/pre_join_screen.dart';
+import 'package:totem_app/features/video_sessions/screens/video_room_screen.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
-import '../auth/controllers/auth_controller.dart';
-import '../auth/screens/login_screen.dart';
-import '../auth/screens/pin_entry_screen.dart';
-import '../auth/screens/profile_setup_screen.dart';
-import '../features/notifications/screens/notification_settings_screen.dart';
-import '../features/profile/screens/profile_screen.dart';
-import '../features/spaces/screens/space_detail_screen.dart';
-import '../features/spaces/screens/spaces_discovery_screen.dart';
-import '../features/video_sessions/screens/pre_join_screen.dart';
-import '../features/video_sessions/screens/video_room_screen.dart';
-import 'route_names.dart';
-
 class BottomNavScaffold extends StatelessWidget {
-  final Widget child;
-  final String currentPath;
-
   const BottomNavScaffold({
-    super.key,
     required this.child,
     required this.currentPath,
+    super.key,
   });
+  final Widget child;
+  final String currentPath;
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +80,8 @@ GoRouter createRouter(WidgetRef ref) {
         return '/auth/login';
       }
 
-      // If we're trying to access a protected route but not logged in, redirect to login
+      // If we're trying to access a protected route but not logged in, redirect
+      // to login
       if (!isLoggedIn && !isAuthRoute) {
         return '/auth/login';
       }
@@ -123,7 +122,7 @@ GoRouter createRouter(WidgetRef ref) {
         path: '/auth/magic-link',
         name: RouteNames.magicLink,
         builder: (context, state) {
-          // TODO: Handle magic link token
+          // TODO(auth): Handle magic link token
           // final token = state.uri.queryParameters['token'] ?? '';
           // This would typically handle the magic link token
           // and trigger authentication
@@ -259,13 +258,12 @@ GoRouter createRouter(WidgetRef ref) {
 
 /// A class to wrap a Stream as a Listenable for GoRouter refreshes
 class GoRouterRefreshStream extends ChangeNotifier {
-  late final StreamSubscription<dynamic> _subscription;
-
   GoRouterRefreshStream(Stream<dynamic> stream) {
     _subscription = stream.asBroadcastStream().listen((dynamic _) {
       notifyListeners();
     });
   }
+  late final StreamSubscription<dynamic> _subscription;
 
   @override
   void dispose() {

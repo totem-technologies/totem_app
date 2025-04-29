@@ -1,8 +1,14 @@
-include: package:flutter_lints/flutter.yaml
+include: package:very_good_analysis/analysis_options.yaml
 
 analyzer:
+  plugins:
+    - custom_lint
   exclude:
     - '**/*.g.dart'
+
+custom_lint:
+  rules:
+    - avoid_manual_providers_as_generated_provider_dependency
 
 linter:
   rules:
@@ -10,6 +16,7 @@ linter:
     prefer_single_quotes: true
     sort_child_properties_last: true
     unnecessary_this: true
+    sort_pub_dependencies: false
 
     # Safety and Best Practices
     avoid_print: true
@@ -21,14 +28,18 @@ linter:
     prefer_final_locals: true
     avoid_returning_null: true
     avoid_field_initializers_in_const_classes: true
+    avoid_catches_without_on_clauses: false
+    use_colored_box: true
+    use_decorated_box: true
 
     # Readability
     omit_local_variable_types: false
     require_trailing_commas: true
+    public_member_api_docs: false
+    avoid_positional_boolean_parameters: false
 
     # Null safety and defensive coding
     no_leading_underscores_for_local_identifiers: true
     always_specify_types: false # (optional — depends if you want verbose code)
-
-    # Async
+    no_default_cases: false
     avoid_void_async: true

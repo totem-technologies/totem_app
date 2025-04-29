@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
-import '../controllers/auth_controller.dart';
-import '../models/auth_state.dart';
-import '../../core/errors/error_handler.dart';
-import '../../shared/widgets/loading_indicator.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/auth/models/auth_state.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -59,7 +58,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ErrorHandler.handleApiError(context, e, onRetry: _requestMagicLink);
+        await ErrorHandler.handleApiError(
+          context,
+          e,
+          onRetry: _requestMagicLink,
+        );
       }
     } finally {
       if (mounted) {
@@ -83,7 +86,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       appBar: AppBar(title: const Text('Login')),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(24),
           child: Form(
             key: _formKey,
             child: Column(
@@ -128,20 +131,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 24),
 
                 // Submit button
-                _isLoading
-                    ? const LoadingIndicator()
-                    : ElevatedButton(
-                      onPressed: _requestMagicLink,
-                      child: const Padding(
-                        padding: EdgeInsets.all(12.0),
-                        child: Text('Send Magic Link'),
-                      ),
+                if (_isLoading)
+                  const LoadingIndicator()
+                else
+                  ElevatedButton(
+                    onPressed: _requestMagicLink,
+                    child: const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text('Send Magic Link'),
                     ),
+                  ),
                 const SizedBox(height: 16),
 
                 // Information text
                 Text(
-                  'We\'ll send you a magic link to your email. Click on it to sign in instantly, or use the provided PIN code if the link doesn\'t work.',
+                  "We'll send you a magic link to your email. "
+                  'Click on it to sign in instantly, or use the provided PIN '
+                  "code if the link doesn't work.",
                   style: Theme.of(context).textTheme.bodySmall,
                   textAlign: TextAlign.center,
                 ),

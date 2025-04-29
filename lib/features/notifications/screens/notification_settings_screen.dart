@@ -24,7 +24,7 @@ class _NotificationSettingsScreenState
       body: ListView(
         children: [
           const Padding(
-            padding: EdgeInsets.all(16.0),
+            padding: EdgeInsets.all(16),
             child: Text(
               'Manage your notification preferences',
               style: TextStyle(fontSize: 16),
@@ -55,7 +55,7 @@ class _NotificationSettingsScreenState
 
           const Divider(),
           const Padding(
-            padding: EdgeInsets.all(16.0),
+            padding: EdgeInsets.all(16),
             child: Text(
               'Notification Types',
               style: TextStyle(fontWeight: FontWeight.bold),
@@ -85,9 +85,10 @@ class _NotificationSettingsScreenState
           ),
 
           const Padding(
-            padding: EdgeInsets.all(16.0),
+            padding: EdgeInsets.all(16),
             child: Text(
-              'Note: These settings are just placeholders and don\'t affect anything in this demo.',
+              "Note: These settings are just placeholders and don't affect "
+              'anything in this demo.',
               style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
             ),
           ),

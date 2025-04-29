@@ -11,12 +11,12 @@ part 'space_repository.g.dart';
 Future<List<SpaceDetailSchema>> listSpaces(Ref ref) async {
   final apiService = ref.watch(apiServiceProvider);
   // Finally, we convert the Map into an Activity instance.
-  return await apiService.spaces.totemCirclesApiListSpaces();
+  return apiService.spaces.totemCirclesApiListSpaces();
 }
 
 @riverpod
 Future<EventDetailSchema> event(Ref ref, String eventId) async {
   final apiService = ref.watch(apiServiceProvider);
   // Finally, we convert the Map into an Activity instance.
-  return await apiService.events.totemCirclesApiEventDetail(eventSlug: eventId);
+  return apiService.events.totemCirclesApiEventDetail(eventSlug: eventId);
 }

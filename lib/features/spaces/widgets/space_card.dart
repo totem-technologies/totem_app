@@ -6,9 +6,8 @@ import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/network.dart';
 
 class SpaceCard extends StatelessWidget {
+  const SpaceCard({required this.space, super.key});
   final SpaceDetailSchema space;
-
-  const SpaceCard({super.key, required this.space});
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +33,7 @@ class SpaceCard extends StatelessWidget {
               ),
 
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -106,7 +105,8 @@ class SpaceCard extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                'Next event: ${space.nextEvent.title ?? "Upcoming Event"}',
+                                'Next event: '
+                                '${space.nextEvent.title ?? "Upcoming Event"}',
                                 style: theme.textTheme.bodyMedium,
                               ),
                             ),
@@ -114,9 +114,11 @@ class SpaceCard extends StatelessWidget {
                         ),
                         if (space.nextEvent.start.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
+                            padding: const EdgeInsets.only(top: 4),
                             child: Text(
-                              formatEventDateTime(space.nextEvent.start),
+                              formatEventDateTime(
+                                DateTime.parse(space.nextEvent.start),
+                              ),
                               style: theme.textTheme.bodySmall,
                             ),
                           ),

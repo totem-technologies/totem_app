@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class PreJoinScreen extends ConsumerWidget {
-  final String sessionId;
 
-  const PreJoinScreen({super.key, required this.sessionId});
+  const PreJoinScreen({required this.sessionId, super.key});
+  final String sessionId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

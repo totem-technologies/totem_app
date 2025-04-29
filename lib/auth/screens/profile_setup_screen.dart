@@ -1,11 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:io';
-
-import '../controllers/auth_controller.dart';
-import '../../core/errors/error_handler.dart';
-import '../../shared/widgets/loading_indicator.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -63,7 +63,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           );
       if (mounted) {
         // Navigate to home
-        Future.delayed(const Duration(milliseconds: 200), () {
+        Future<void>.delayed(const Duration(milliseconds: 200), () {
           if (mounted) {
             context.go('/spaces');
           }
@@ -71,7 +71,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ErrorHandler.handleApiError(context, e, onRetry: _submitProfile);
+        await ErrorHandler.handleApiError(context, e, onRetry: _submitProfile);
       }
     } finally {
       if (mounted) {
@@ -91,7 +91,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(24),
           child: Form(
             key: _formKey,
             child: Column(
@@ -105,7 +105,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Let\'s set up your profile to get started',
+                  "Let's set up your profile to get started",
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -162,15 +162,16 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 const SizedBox(height: 32),
 
                 // Submit button
-                _isLoading
-                    ? const LoadingIndicator()
-                    : ElevatedButton(
-                      onPressed: _submitProfile,
-                      child: const Padding(
-                        padding: EdgeInsets.all(12.0),
-                        child: Text('Complete Profile'),
-                      ),
+                if (_isLoading)
+                  const LoadingIndicator()
+                else
+                  ElevatedButton(
+                    onPressed: _submitProfile,
+                    child: const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text('Complete Profile'),
                     ),
+                  ),
               ],
             ),
           ),

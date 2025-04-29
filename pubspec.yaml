@@ -9,32 +9,47 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # State Management
   flutter_riverpod: ^2.6.1
   riverpod_annotation: ^2.6.1
+
+  # Routing
   go_router: ^14.8.1
+
+  # Environment and Storage
   flutter_dotenv: ^5.2.1
   flutter_secure_storage: ^9.2.4
+
+  # Networking & Serialization
   dio: ^5.8.0+1
-  json_annotation: ^4.9.0
   retrofit: ^4.4.2
-  intl: ^0.20.2
-  flutter_html: ^3.0.0
+  json_annotation: ^4.9.0
+
+  # UI & Utilities
   cached_network_image: ^3.4.1
+  flutter_html: ^3.0.0
   flutter_native_splash: ^2.4.6
   google_fonts: ^6.2.1
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  # Linting
   flutter_lints: ^5.0.0
-  riverpod_generator: ^2.6.5
+  very_good_analysis: ^7.0.0
   custom_lint: ^0.7.5
   riverpod_lint: ^2.6.5
+
+  # Generators
+  riverpod_generator: ^2.6.5
   swagger_parser: ^1.22.0
   retrofit_generator: ^9.1.9
   json_serializable: ^6.9.5
-  carapacik_lints: ^1.11.1
   build_runner: ^2.4.15
+
+  # App Icon and Splash Screens
   flutter_launcher_icons: ^0.14.3
 
 flutter:

@@ -179,7 +179,7 @@ class AppTheme {
     appBarTheme: const AppBarTheme(
       backgroundColor: cream,
       foregroundColor: black,
-      elevation: 2.0,
+      elevation: 2,
       titleTextStyle: TextStyle(
         fontFamily: fontFamilySans,
         fontSize: 20,
@@ -196,7 +196,7 @@ class AppTheme {
       buttonColor: mauve,
       textTheme: ButtonTextTheme.primary,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(8.0)),
+        borderRadius: BorderRadius.all(Radius.circular(8)),
       ),
     ),
 
@@ -208,7 +208,7 @@ class AppTheme {
           fontFamily: fontFamilySans,
           fontWeight: FontWeight.w500,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         elevation: 2,
       ),
@@ -222,7 +222,7 @@ class AppTheme {
           fontWeight: FontWeight.w500,
           decoration: TextDecoration.underline,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     ),
 
@@ -234,7 +234,7 @@ class AppTheme {
           fontFamily: fontFamilySans,
           fontWeight: FontWeight.w500,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     ),
@@ -246,24 +246,24 @@ class AppTheme {
       fillColor: cream.withValues(alpha: 0.5),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8.0),
+        borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide(color: deepGray.withValues(alpha: 0.5)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8.0),
+        borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide(color: deepGray.withValues(alpha: 0.7)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8.0),
-        borderSide: const BorderSide(color: mauve, width: 2.0),
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: mauve, width: 2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8.0),
+        borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: pinkTint, width: 1.5),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8.0),
-        borderSide: const BorderSide(color: pinkTint, width: 2.0),
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: pinkTint, width: 2),
       ),
       labelStyle: const TextStyle(
         fontFamily: fontFamilySans,
@@ -288,12 +288,11 @@ class AppTheme {
     // --- Card Theme ---
     cardTheme: CardTheme(
       color: white,
-      elevation: 1.0,
+      elevation: 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: grey.withValues(alpha: 0.2),
-          width: 1,
         ), // Subtle border
       ),
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -302,7 +301,7 @@ class AppTheme {
     // --- Dialog Theme ---
     dialogTheme: DialogTheme(
       backgroundColor: cream,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       titleTextStyle: const TextStyle(
         fontFamily: fontFamilySans,
         fontSize: 20,
@@ -320,8 +319,8 @@ class AppTheme {
     // --- Divider Theme ---
     dividerTheme: DividerThemeData(
       color: deepGray.withValues(alpha: 0.3),
-      thickness: 1.0,
-      space: 1.0,
+      thickness: 1,
+      space: 1,
     ),
 
     // --- Chip Theme ---
@@ -343,14 +342,13 @@ class AppTheme {
       ),
       brightness: Brightness.light,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20.0),
-        side: BorderSide.none,
+        borderRadius: BorderRadius.circular(20),
       ),
       side: BorderSide.none,
     ),
 
     // --- Icon Theme ---
-    iconTheme: const IconThemeData(color: deepGray, size: 24.0),
+    iconTheme: const IconThemeData(color: deepGray, size: 24),
     primaryIconTheme: const IconThemeData(color: mauve),
 
     useMaterial3: true,

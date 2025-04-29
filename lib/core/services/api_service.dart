@@ -2,9 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/rest_client.dart';
 import 'package:totem_app/core/config/app_config.dart';
-
-import '../errors/app_exceptions.dart';
-import 'secure_storage.dart';
+import 'package:totem_app/core/errors/app_exceptions.dart';
+import 'package:totem_app/core/services/secure_storage.dart';
 
 /// Provider for secure storage
 final secureStorageProvider = Provider<SecureStorage>((ref) {
@@ -37,7 +36,8 @@ Dio _initDio(Ref ref) {
         return handler.next(options);
       },
       onError: (DioException error, handler) {
-        // Convert DioExceptions to our app-specific exceptions before propagating
+        // Convert DioExceptions to our app-specific exceptions before
+        // propagating
         final appException = _handleDioError(error);
         return handler.reject(
           DioException(

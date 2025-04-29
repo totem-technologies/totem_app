@@ -2,13 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/auth/models/user.dart';
-
-import '../../core/errors/app_exceptions.dart';
-import '../../core/services/analytics_service.dart';
-import '../../core/services/secure_storage.dart';
-import '../models/auth_state.dart';
-import '../repositories/auth_repository.dart';
+import 'package:totem_app/auth/repositories/auth_repository.dart';
+import 'package:totem_app/core/errors/app_exceptions.dart';
+import 'package:totem_app/core/services/analytics_service.dart';
+import 'package:totem_app/core/services/secure_storage.dart';
 
 /// Provider for the authentication controller
 final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
@@ -20,13 +19,6 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
 
 /// Controller responsible for managing authentication state and operations
 class AuthController extends StateNotifier<AuthState> {
-  final AuthRepository _authRepository;
-  final SecureStorage _secureStorage;
-  final _authStateController = StreamController<AuthState>.broadcast();
-
-  /// Stream of auth state changes for widgets to listen to
-  Stream<AuthState> get authStateChanges => _authStateController.stream;
-
   /// Constructor initializes state and checks for existing credentials
   AuthController({
     required AuthRepository authRepository,
@@ -37,6 +29,12 @@ class AuthController extends StateNotifier<AuthState> {
     // Check for existing authentication when controller is created
     _checkExistingAuth();
   }
+  final AuthRepository _authRepository;
+  final SecureStorage _secureStorage;
+  final _authStateController = StreamController<AuthState>.broadcast();
+
+  /// Stream of auth state changes for widgets to listen to
+  Stream<AuthState> get authStateChanges => _authStateController.stream;
 
   /// Check if user is authenticated
   bool get isAuthenticated => state.status == AuthStatus.authenticated;
@@ -44,7 +42,7 @@ class AuthController extends StateNotifier<AuthState> {
   /// Check if onboarding is completed for authenticated users
   bool get isOnboardingCompleted =>
       state.status == AuthStatus.authenticated &&
-      state.user?.hasCompletedOnboarding == true;
+      (state.user?.hasCompletedOnboarding ?? false);
 
   /// Request a magic link to be sent to the provided email
   Future<void> requestMagicLink(String email) async {
@@ -97,7 +95,7 @@ class AuthController extends StateNotifier<AuthState> {
           'Magic link has expired. Please request a new one.',
         );
       } else {
-        state = AuthState.error('Authentication failed: ${e.toString()}');
+        state = AuthState.error('Authentication failed: $e');
       }
       _emitState();
       rethrow;
@@ -132,7 +130,7 @@ class AuthController extends StateNotifier<AuthState> {
           'Too many failed attempts. Please request a new magic link.',
         );
       } else {
-        state = AuthState.error('Authentication failed: ${e.toString()}');
+        state = AuthState.error('Authentication failed: $e');
       }
       _emitState();
       rethrow;
@@ -168,7 +166,7 @@ class AuthController extends StateNotifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.authenticated,
-        error: 'Failed to update profile: ${e.toString()}',
+        error: 'Failed to update profile: $e',
       );
       _emitState();
       rethrow;
@@ -214,7 +212,7 @@ class AuthController extends StateNotifier<AuthState> {
 
   /// Check for existing authentication when app starts
   Future<void> _checkExistingAuth() async {
-    // TODO: Unmock this
+    // TODO(bdlukaa): Unmock this
     state = AuthState(
       status: AuthStatus.authenticated,
       user: User(
@@ -223,7 +221,6 @@ class AuthController extends StateNotifier<AuthState> {
         createdAt: DateTime.now(),
         hasCompletedOnboarding: true,
         firstName: 'Name',
-        isKeeper: false,
         lastLoginAt: DateTime.now(),
       ),
     );

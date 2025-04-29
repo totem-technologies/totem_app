@@ -4,12 +4,12 @@ import 'package:flutter/foundation.dart';
 
 /// Service to handle deep links and URI scheme opening.
 ///
-/// This service handles both initial deep links (when the app is opened from a link)
-/// and background deep links (when the app is already running).
+/// This service handles both initial deep links (when the app is opened from a
+/// link) and background deep links (when the app is already running).
 class DeepLinkService {
+  DeepLinkService._internal();
   static final DeepLinkService _instance = DeepLinkService._internal();
   static DeepLinkService get instance => _instance;
-  DeepLinkService._internal();
 
   // Stream controller for deep links
   final StreamController<Uri> _deepLinkStreamController =
@@ -42,10 +42,6 @@ class DeepLinkService {
 
       await handleInitialLink();
 
-      // Simulate initialization delay
-      // TODO: In a real implementation, set up platform channels or
-      // use a package like uni_links to handle deep links
-
       _initialized = true;
       debugPrint('DeepLinkService initialized successfully');
     } catch (e) {
@@ -66,12 +62,8 @@ class DeepLinkService {
     }
 
     try {
-      // TODO: In a real implementation, get the initial link from platform channel
-      // or uni_links package
-
       // _initialDeepLink = await getInitialLink();
 
-      // For now, we'll just return null to indicate no deep link
       debugPrint('Checking for initial deep link: None found');
       return null;
     } catch (e) {
@@ -88,23 +80,6 @@ class DeepLinkService {
     }
 
     debugPrint('Started listening for background deep links');
-
-    // TODO: In a real implementation, set up a subscription to platform channels
-    // or uni_links package stream of links
-
-    // Example of how you would handle incoming links:
-    /*
-    _linkSubscription = uriLinkStream.listen((Uri? uri) {
-      if (uri == null) return;
-
-      _latestDeepLink = uri;
-      _deepLinkStreamController.add(uri);
-
-      debugPrint('Got deep link: $uri');
-    }, onError: (Object error) {
-      debugPrint('Error handling background deep link: $error');
-    });
-    */
   }
 
   /// Process a deep link URI and determine the appropriate action.
@@ -157,14 +132,11 @@ class DeepLinkService {
     }
 
     // Default route info if no specific handling
-    return {'route': '/', 'params': {}};
+    return {'route': '/', 'params': <String, dynamic>{}};
   }
 
   /// Clean up resources when service is no longer needed
   void dispose() {
     _deepLinkStreamController.close();
-
-    // TODO: Clean up any platform channel subscriptions
-    debugPrint('DeepLinkService disposed');
   }
 }

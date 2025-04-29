@@ -3,10 +3,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/export.dart';
-
-import '../../core/errors/app_exceptions.dart';
-import '../../core/services/api_service.dart';
-import '../models/user.dart';
+import 'package:totem_app/auth/models/user.dart';
+import 'package:totem_app/core/errors/app_exceptions.dart';
+import 'package:totem_app/core/services/api_service.dart';
 
 /// Provider for the auth repository
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -16,15 +15,14 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 
 /// Repository responsible for authentication-related API operations
 class AuthRepository {
-  final RestClient apiService;
-
   const AuthRepository({required this.apiService});
+  final RestClient apiService;
 
   /// Request a magic link to be sent to email
   Future<void> requestMagicLink(String email) async {
     try {
       // Simulate API call
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
 
       // In a real implementation, this would call the API:
       // await _apiService.post('/auth/magic-link', data: {'email': email});
@@ -33,7 +31,7 @@ class AuthRepository {
       return;
     } catch (e) {
       throw AppAuthException(
-        'Failed to request magic link: ${e.toString()}',
+        'Failed to request magic link: $e',
         code: 'REQUEST_FAILED',
       );
     }
@@ -43,7 +41,7 @@ class AuthRepository {
   Future<AuthResponse> verifyMagicLink(String token) async {
     try {
       // Simulate API call
-      await Future.delayed(const Duration(seconds: 1));
+      await Future<void>.delayed(const Duration(seconds: 1));
 
       // In a real implementation, this would call the API:
       // final response = await _apiService.post(
@@ -57,8 +55,6 @@ class AuthRepository {
         user: User(
           id: 'user-123',
           email: 'test@example.com',
-          firstName: null, // No first name yet
-          hasCompletedOnboarding: false,
           createdAt: DateTime.now(),
           lastLoginAt: DateTime.now(),
         ),
@@ -69,7 +65,7 @@ class AuthRepository {
         throw AppAuthException.magicLinkExpired();
       }
       throw AppAuthException(
-        'Failed to verify magic link: ${e.toString()}',
+        'Failed to verify magic link: $e',
         code: 'VERIFICATION_FAILED',
       );
     }
@@ -79,7 +75,7 @@ class AuthRepository {
   Future<AuthResponse> verifyPin(String email, String pin) async {
     try {
       // Simulate API call
-      await Future.delayed(const Duration(seconds: 1));
+      await Future<void>.delayed(const Duration(seconds: 1));
 
       // In a real implementation, this would call the API:
       // final response = await _apiService.post(
@@ -97,8 +93,6 @@ class AuthRepository {
         user: User(
           id: 'user-123',
           email: email,
-          firstName: null, // No first name yet
-          hasCompletedOnboarding: false,
           createdAt: DateTime.now(),
           lastLoginAt: DateTime.now(),
         ),
@@ -109,7 +103,7 @@ class AuthRepository {
         rethrow;
       }
       throw AppAuthException(
-        'Failed to verify PIN: ${e.toString()}',
+        'Failed to verify PIN: $e',
         code: 'PIN_VERIFICATION_FAILED',
       );
     }
@@ -123,7 +117,7 @@ class AuthRepository {
   }) async {
     try {
       // Simulate API call
-      await Future.delayed(const Duration(seconds: 1));
+      await Future<void>.delayed(const Duration(seconds: 1));
 
       // In a real implementation, this would call the API:
       // If there's an image, it would first upload it:
@@ -161,7 +155,7 @@ class AuthRepository {
       );
     } catch (e) {
       throw AppDataException(
-        'Failed to update profile: ${e.toString()}',
+        'Failed to update profile: $e',
         code: 'PROFILE_UPDATE_FAILED',
       );
     }
@@ -171,7 +165,7 @@ class AuthRepository {
   Future<User> validateApiKey(String apiKey) async {
     try {
       // Simulate API call
-      await Future.delayed(const Duration(seconds: 1));
+      await Future<void>.delayed(const Duration(seconds: 1));
 
       // In a real implementation, this would call the API:
       // final response = await _apiService.get(
@@ -198,7 +192,7 @@ class AuthRepository {
         rethrow;
       }
       throw AppAuthException(
-        'Failed to validate API key: ${e.toString()}',
+        'Failed to validate API key: $e',
         code: 'KEY_VALIDATION_FAILED',
       );
     }
@@ -208,7 +202,7 @@ class AuthRepository {
   Future<void> revokeApiKey(String apiKey) async {
     try {
       // Simulate API call
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
 
       // In a real implementation, this would call the API:
       // await _apiService.post(
@@ -220,7 +214,7 @@ class AuthRepository {
       return;
     } catch (e) {
       // Log but don't throw, as we want logout to succeed even if revoke fails
-      debugPrint('Warning: Failed to revoke API key: ${e.toString()}');
+      debugPrint('Warning: Failed to revoke API key: $e');
     }
   }
 }

@@ -5,11 +5,10 @@ import 'package:flutter/foundation.dart';
 /// This service provides a centralized way to track events, screen views,
 /// user properties, and other analytics data across the app.
 class AnalyticsService {
-  // Singleton instance
-  static final AnalyticsService instance = AnalyticsService._();
-
   // Private constructor for singleton
   AnalyticsService._();
+  // Singleton instance
+  static final AnalyticsService instance = AnalyticsService._();
 
   // Flag to check if analytics is initialized
   bool _isInitialized = false;
@@ -28,25 +27,22 @@ class AnalyticsService {
     }
 
     try {
-      // TODO: Initialize your actual analytics provider here
-
       // For development, just log that we would initialize
       debugPrint('📊 Initializing analytics service');
 
       // In a real implementation, you would do something like:
-      // await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(!kDebugMode);
+      // await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(
+      //   !kDebugMode,
+      // );
       // or
       // await AmplitudeFlutter().init(apiKey);
-
-      await Future.delayed(
-        const Duration(milliseconds: 300),
-      ); // Simulate initialization
 
       _isInitialized = true;
       _isEnabled = !kDebugMode; // Typically disable analytics in debug mode
 
       debugPrint(
-        '📊 Analytics initialized (collection ${_isEnabled ? 'enabled' : 'disabled'})',
+        '📊 Analytics initialized '
+        '(collection ${_isEnabled ? 'enabled' : 'disabled'})',
       );
     } catch (e) {
       debugPrint('📊 Failed to initialize analytics: $e');
@@ -61,12 +57,9 @@ class AnalyticsService {
     if (!_shouldLog()) return;
 
     debugPrint(
-      '📊 Screen View: $screenName ${parameters != null ? '| Params: $parameters' : ''}',
+      '📊 Screen View: $screenName '
+      '${parameters != null ? '| Params: $parameters' : ''}',
     );
-
-    // TODO: Implement actual screen tracking with your analytics provider
-    // Example:
-    // FirebaseAnalytics.instance.logScreenView(screenName: screenName, parameters: parameters);
   }
 
   /// Log a custom event
@@ -74,12 +67,9 @@ class AnalyticsService {
     if (!_shouldLog()) return;
 
     debugPrint(
-      '📊 Event: $eventName ${parameters != null ? '| Params: $parameters' : ''}',
+      '📊 Event: $eventName '
+      '${parameters != null ? '| Params: $parameters' : ''}',
     );
-
-    // TODO: Implement actual event tracking with your analytics provider
-    // Example:
-    // FirebaseAnalytics.instance.logEvent(name: eventName, parameters: parameters);
   }
 
   /// Set user properties
@@ -88,7 +78,6 @@ class AnalyticsService {
 
     debugPrint('📊 Setting user properties: $properties');
 
-    // TODO: Implement actual user property setting with your analytics provider
     // Example:
     // For each property in the map:
     // FirebaseAnalytics.instance.setUserProperty(name: key, value: value);
@@ -100,7 +89,6 @@ class AnalyticsService {
 
     debugPrint('📊 Setting user ID: $userId');
 
-    // TODO: Implement actual user ID setting with your analytics provider
     // Example:
     // FirebaseAnalytics.instance.setUserId(id: userId);
   }
@@ -111,7 +99,6 @@ class AnalyticsService {
 
     debugPrint('📊 Login event${method != null ? ' via $method' : ''}');
 
-    // TODO: Implement actual login tracking with your analytics provider
     // Example:
     // FirebaseAnalytics.instance.logLogin(method: method);
   }
@@ -122,9 +109,9 @@ class AnalyticsService {
 
     debugPrint('📊 Error event: $error | Reason: $reason');
 
-    // TODO: Implement actual error tracking with your analytics provider
-    // Example:
-    // FirebaseCrashlytics.instance.recordError(error, stackTrace, reason: reason);
+    // FirebaseCrashlytics.instance.recordError(
+    //  error, stackTrace, reason: reason
+    // );
   }
 
   /// Enable or disable analytics collection
@@ -132,7 +119,6 @@ class AnalyticsService {
     _isEnabled = enabled;
     debugPrint('📊 Analytics collection ${enabled ? 'enabled' : 'disabled'}');
 
-    // TODO: Implement with your analytics provider
     // Example:
     // FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(enabled);
   }

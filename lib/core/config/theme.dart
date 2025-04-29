@@ -58,15 +58,8 @@ class AppTheme {
     final Color primary = isDark ? _primaryDark : _primaryLight;
     final Color outlineColor = isDark ? Colors.grey[700]! : Colors.grey[300]!;
     final Color errorColor = isDark ? _errorDark : _errorLight;
-    final Color fillColor =
-        isDark
-            ? Colors.black12
-            : Colors
-                .grey[50]!; // Maybe adjust fillColor based on new palette? Using grey for now.
-    final Color hintColor =
-        isDark
-            ? Colors.grey[500]!
-            : Colors.grey[400]!; // Maybe adjust hintColor based on new palette?
+    final Color fillColor = isDark ? Colors.black12 : Colors.grey[50]!;
+    final Color hintColor = isDark ? Colors.grey[500]! : Colors.grey[400]!;
 
     return InputDecorationTheme(
       filled: true,
@@ -74,26 +67,26 @@ class AppTheme {
       contentPadding: const EdgeInsets.all(16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: outlineColor, width: 1.0),
+        borderSide: BorderSide(color: outlineColor),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: outlineColor, width: 1.0),
+        borderSide: BorderSide(color: outlineColor),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
           color: primary, // Use theme primary
-          width: 2.0,
+          width: 2,
         ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: errorColor, width: 1.0),
+        borderSide: BorderSide(color: errorColor),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: errorColor, width: 2.0),
+        borderSide: BorderSide(color: errorColor, width: 2),
       ),
       errorStyle: TextStyle(color: errorColor, fontSize: 12),
       labelStyle: TextStyle(
@@ -160,7 +153,7 @@ class AppTheme {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: borderColor, width: 1),
+        side: BorderSide(color: borderColor),
       ),
       color: cardColor, // Use surface color for cards
       clipBehavior: Clip.antiAlias,
@@ -199,12 +192,10 @@ class AppTheme {
     colorScheme: const ColorScheme.light(
       primary: _primaryLight,
       secondary: _secondaryLight,
-      surface: _surfaceLight,
       error: _errorLight,
       onPrimary: _onPrimaryLight,
       onSecondary: _onSecondaryLight,
       onSurface: _onSurfaceLight,
-      onError: _onErrorLight,
     ),
     scaffoldBackgroundColor: _backgroundLight,
     fontFamily: _fontFamily,
@@ -245,7 +236,7 @@ class AppTheme {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: _primaryLight,
-        side: const BorderSide(color: _primaryLight, width: 1),
+        side: const BorderSide(color: _primaryLight),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     ),
@@ -282,7 +273,6 @@ class AppTheme {
       onPrimary: _onPrimaryDark,
       onSecondary: _onSecondaryDark,
       onSurface: _onSurfaceDark, // Primary text on surface
-      onError: _onErrorDark,
     ),
     scaffoldBackgroundColor: _backgroundDark,
     fontFamily: _fontFamily,

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
-
-import '../repositories/space_repository.dart';
 
 // Provider to track the selected category filter
 final selectedCategoryProvider = StateProvider<String?>((ref) => null);
@@ -19,7 +18,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
     final selectedCategory = ref.watch(selectedCategoryProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const TotemLogo(size: 24.0)),
+      appBar: AppBar(title: const TotemLogo(size: 24)),
       body: spaces.when(
         data: (spacesList) {
           if (spacesList.isEmpty) {
@@ -146,7 +145,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
       builder: (context) {
         final theme = Theme.of(context);
         return Padding(
-          padding: const EdgeInsets.only(right: 8.0),
+          padding: const EdgeInsets.only(right: 8),
           child: Center(
             child: GestureDetector(
               onTap: () {
@@ -155,7 +154,6 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                   context,
                   duration: const Duration(milliseconds: 300),
                   alignment: 0.5,
-                  alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
                 );
               },
               child: Chip(

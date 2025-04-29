@@ -3,23 +3,14 @@ import 'package:flutter/foundation.dart';
 /// User model representing an authenticated user
 @immutable
 class User {
-  final String id;
-  final String email;
-  final String? firstName;
-  final String? profileImageUrl;
-  final bool hasCompletedOnboarding;
-  final bool isKeeper;
-  final DateTime createdAt;
-  final DateTime? lastLoginAt;
 
   const User({
     required this.id,
     required this.email,
-    this.firstName,
+    required this.createdAt, this.firstName,
     this.profileImageUrl,
     this.hasCompletedOnboarding = false,
     this.isKeeper = false,
-    required this.createdAt,
     this.lastLoginAt,
   });
 
@@ -40,6 +31,14 @@ class User {
               : null,
     );
   }
+  final String id;
+  final String email;
+  final String? firstName;
+  final String? profileImageUrl;
+  final bool hasCompletedOnboarding;
+  final bool isKeeper;
+  final DateTime createdAt;
+  final DateTime? lastLoginAt;
 
   /// Convert user to JSON map
   Map<String, dynamic> toJson() {
@@ -105,8 +104,6 @@ class User {
 
 /// Auth response model for login operations
 class AuthResponse {
-  final User user;
-  final String apiKey;
 
   AuthResponse({required this.user, required this.apiKey});
 
@@ -116,4 +113,6 @@ class AuthResponse {
       apiKey: json['api_key'] as String,
     );
   }
+  final User user;
+  final String apiKey;
 }

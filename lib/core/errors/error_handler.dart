@@ -3,9 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
-import '../services/analytics_service.dart';
-import 'app_exceptions.dart';
+import 'package:totem_app/core/errors/app_exceptions.dart';
+import 'package:totem_app/core/services/analytics_service.dart';
 
 /// Centralized error handling for the Totem App.
 ///
@@ -33,9 +32,6 @@ class ErrorHandler {
       error.toString(),
       stackTrace: stackTrace,
     );
-
-    // TODO: You might want to log to a remote logging service
-    // like Sentry, Firebase Crashlytics, etc.
   }
 
   /// Log a Flutter error from FlutterErrorDetails
@@ -46,7 +42,8 @@ class ErrorHandler {
   /// Handle an exception and return a user-friendly error message
   static String getUserFriendlyErrorMessage(Object error) {
     if (error is AppNetworkException) {
-      return 'Unable to connect to the server. Please check your internet connection and try again.';
+      return 'Unable to connect to the server. Please check your internet '
+          'connection and try again.';
     } else if (error is AppAuthException) {
       return 'Authentication error. Please log in again.';
     } else if (error is AppDataException) {
@@ -102,8 +99,8 @@ class ErrorHandler {
   /// Show an error dialog with a title and message
   static Future<void> showErrorDialog(
     BuildContext context, {
-    String title = 'Error',
     required String message,
+    String title = 'Error',
     String buttonText = 'OK',
   }) async {
     final theme = Theme.of(context);
@@ -145,8 +142,7 @@ class ErrorHandler {
 
     // If it's an auth error, we might need to re-authenticate
     if (error is AppAuthException) {
-      // TODO: Handle auth errors, possibly redirect to login
-      showErrorDialog(
+      await showErrorDialog(
         context,
         title: 'Authentication Error',
         message: message,
@@ -157,7 +153,7 @@ class ErrorHandler {
 
     // For network errors, we might want to offer a retry
     if (error is AppNetworkException && onRetry != null) {
-      showDialog<void>(
+      await showDialog<void>(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(

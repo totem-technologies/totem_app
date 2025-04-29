@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'user.dart';
+import 'package:totem_app/auth/models/user.dart';
 
 /// Possible authentication statuses
 enum AuthStatus {
@@ -14,11 +14,6 @@ enum AuthStatus {
 /// Class to represent the current authentication state
 @immutable
 class AuthState {
-  final AuthStatus status;
-  final User? user;
-  final String? email;
-  final String? error;
-
   const AuthState({required this.status, this.user, this.email, this.error});
 
   /// Factory for initial state
@@ -50,6 +45,10 @@ class AuthState {
   factory AuthState.error(String message) {
     return AuthState(status: AuthStatus.error, error: message);
   }
+  final AuthStatus status;
+  final User? user;
+  final String? email;
+  final String? error;
 
   /// Create a copy of this state with modified fields
   AuthState copyWith({
@@ -83,6 +82,8 @@ class AuthState {
 
   @override
   String toString() {
-    return 'AuthState(status: $status, user: ${user?.id}, email: $email, error: $error)';
+    return 'AuthState('
+        'status: $status, user: ${user?.id}, email: $email, error: $error'
+        ')';
   }
 }

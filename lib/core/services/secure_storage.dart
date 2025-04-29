@@ -1,12 +1,12 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// A wrapper service for flutter_secure_storage to handle secure credential storage
+/// A wrapper service for flutter_secure_storage to handle secure credential
+/// storage
 class SecureStorage {
-  final FlutterSecureStorage _storage;
-
   /// Constructor with optional storage instance for testing
   SecureStorage([FlutterSecureStorage? storage])
     : _storage = storage ?? const FlutterSecureStorage();
+  final FlutterSecureStorage _storage;
 
   /// Write a value securely
   Future<void> write({required String key, required String value}) async {
@@ -15,7 +15,7 @@ class SecureStorage {
 
   /// Read a value securely
   Future<String?> read({required String key}) async {
-    return await _storage.read(key: key);
+    return _storage.read(key: key);
   }
 
   /// Delete a value
@@ -30,6 +30,6 @@ class SecureStorage {
 
   /// Check if a key exists
   Future<bool> containsKey({required String key}) async {
-    return await _storage.containsKey(key: key);
+    return _storage.containsKey(key: key);
   }
 }

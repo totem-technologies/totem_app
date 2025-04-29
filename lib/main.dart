@@ -6,26 +6,27 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/core/services/deep_link_service.dart';
 import 'package:totem_app/core/services/observer_service.dart';
-
-import 'auth/controllers/auth_controller.dart';
-import 'core/config/theme.dart';
-import 'core/errors/error_handler.dart';
-import 'core/services/analytics_service.dart';
-import 'navigation/app_router.dart';
+import 'package:totem_app/navigation/app_router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
-  ]);
+  unawaited(
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]),
+  );
 
-  await dotenv.load(fileName: '.env');
+  await dotenv.load();
   await _initializeServices();
   await _setupErrorHandling();
 

@@ -39,7 +39,7 @@ class ObserverService extends ProviderObserver {
     _print('Provider $provider threw $error at $stackTrace');
   }
 
-  _print(String message) {
+  void _print(String message) {
     if (kDebugMode) {
       debugPrint(message);
     }

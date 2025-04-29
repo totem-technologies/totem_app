@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 
@@ -30,7 +29,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     } catch (e) {
       // Handle any logout errors
       if (mounted) {
-        ErrorHandler.handleApiError(context, e, onRetry: _logout);
+        await ErrorHandler.handleApiError(context, e, onRetry: _logout);
       }
     } finally {
       // In case we're still mounted and logout failed
@@ -82,7 +81,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             // Display user email if available
             if (user != null)
               Padding(
-                padding: const EdgeInsets.only(top: 8.0),
+                padding: const EdgeInsets.only(top: 8),
                 child: Text(
                   user.email,
                   style: TextStyle(fontSize: 16, color: Colors.grey[600]),

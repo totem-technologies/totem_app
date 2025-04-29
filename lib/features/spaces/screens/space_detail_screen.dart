@@ -10,9 +10,8 @@ import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 
 class EventDetailScreen extends ConsumerWidget {
+  const EventDetailScreen({required this.eventSlug, super.key});
   final String eventSlug;
-
-  const EventDetailScreen({super.key, required this.eventSlug});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -22,7 +21,7 @@ class EventDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const TotemLogo(size: 24.0),
+        title: const TotemLogo(size: 24),
       ),
       body: eventAsync.when(
         data: (event) {
@@ -31,7 +30,7 @@ class EventDetailScreen extends ConsumerWidget {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 return ListView(
-                  padding: const EdgeInsetsDirectional.all(16.0),
+                  padding: const EdgeInsetsDirectional.all(16),
                   children: [
                     Align(
                       alignment: AlignmentDirectional.centerStart,
@@ -71,7 +70,7 @@ class EventDetailScreen extends ConsumerWidget {
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.all(16.0),
+                              padding: const EdgeInsets.all(16),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisAlignment:
@@ -110,7 +109,8 @@ class EventDetailScreen extends ConsumerWidget {
                                   ),
 
                                   Text(
-                                    'Starting at ${formatEventDateTime(event.start.toIso8601String())}',
+                                    'Starting at '
+                                    '${formatEventDateTime(event.start)}',
                                     style: theme.textTheme.bodyLarge?.copyWith(
                                       color: Colors.white,
                                     ),
@@ -144,18 +144,17 @@ class EventDetailScreen extends ConsumerWidget {
                     ),
                     Card(
                       margin: const EdgeInsetsDirectional.symmetric(
-                        vertical: 16.0,
+                        vertical: 16,
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(16.0),
+                        padding: const EdgeInsets.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Wrap(
-                              spacing: 8.0,
-                              runSpacing: 8.0,
+                              spacing: 8,
+                              runSpacing: 8,
                               alignment: WrapAlignment.spaceBetween,
-                              crossAxisAlignment: WrapCrossAlignment.start,
                               children: [
                                 _buildInfoItem(
                                   icon: Icons.star_border,
@@ -166,7 +165,7 @@ class EventDetailScreen extends ConsumerWidget {
                                   title:
                                       event.price == 0
                                           ? 'No cost'
-                                          // TODO: Format this
+                                          // TODO(bdlukaa): Format this price
                                           : 'Cost: ${event.price}',
                                 ),
                                 _buildInfoItem(
@@ -190,18 +189,18 @@ class EventDetailScreen extends ConsumerWidget {
                             const SizedBox(height: 16),
 
                             Text(
-                              formatEventDate(event.start.toIso8601String()),
+                              formatEventDate(event.start),
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
 
                             Text(
-                              formatEventTime(event.start.toIso8601String()),
+                              formatEventTime(event.start),
                               style: theme.textTheme.bodyMedium?.copyWith(),
                             ),
 
-                            // TODO: Attend to this session button
+                            // TODO(bdlukaa): Attend to this session button
                           ],
                         ),
                       ),
@@ -214,7 +213,7 @@ class EventDetailScreen extends ConsumerWidget {
                     ),
                     Html(data: event.description),
 
-                    // TODO: About this space
+                    // TODO(bdlukaa): About this space
                     // Text(
                     //   'About this space',
                     //   style: theme.textTheme.titleSmall?.copyWith(
@@ -232,7 +231,7 @@ class EventDetailScreen extends ConsumerWidget {
         error:
             (err, stack) => Center(
               child: Text(
-                'Error loading event details: ${err.toString()}',
+                'Error loading event details: $err',
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.red),
               ),
@@ -245,7 +244,7 @@ class EventDetailScreen extends ConsumerWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 20.0),
+        Icon(icon, size: 20),
         const SizedBox(width: 8),
         Text(title, style: const TextStyle()),
       ],

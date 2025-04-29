@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 class TotemIcon extends StatelessWidget {
-  final double? size;
 
   const TotemIcon({super.key, this.size});
+  final double? size;
 
   @override
   Widget build(BuildContext context) {
@@ -20,9 +20,9 @@ class TotemIcon extends StatelessWidget {
 }
 
 class TotemLogo extends StatelessWidget {
-  final double? size;
 
   const TotemLogo({super.key, this.size});
+  final double? size;
 
   @override
   Widget build(BuildContext context) {

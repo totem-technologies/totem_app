@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class VideoRoomScreen extends ConsumerWidget {
+  const VideoRoomScreen({required this.sessionId, super.key});
   final String sessionId;
-
-  const VideoRoomScreen({super.key, required this.sessionId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,13 +42,12 @@ class VideoRoomScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 1.0,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
               ),
               itemCount: 4,
               itemBuilder: (context, index) {
-                return Container(
+                return DecoratedBox(
                   decoration: BoxDecoration(
                     color: Colors.grey.shade800,
                     borderRadius: BorderRadius.circular(8),
