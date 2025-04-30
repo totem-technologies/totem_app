@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 class TotemIcon extends StatelessWidget {
-
   const TotemIcon({super.key, this.size});
   final double? size;
 
@@ -20,7 +19,6 @@ class TotemIcon extends StatelessWidget {
 }
 
 class TotemLogo extends StatelessWidget {
-
   const TotemLogo({super.key, this.size});
   final double? size;
 

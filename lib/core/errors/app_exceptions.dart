@@ -1,6 +1,5 @@
 /// Base class for all custom app exceptions
 abstract class AppException implements Exception {
-
   AppException(this.message, {this.code, this.details});
   final String message;
   final String? code;

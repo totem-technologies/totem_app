@@ -291,9 +291,7 @@ class AppTheme {
       elevation: 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: grey.withValues(alpha: 0.2),
-        ), // Subtle border
+        side: BorderSide(color: grey.withValues(alpha: 0.2)), // Subtle border
       ),
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     ),
@@ -341,9 +339,7 @@ class AppTheme {
         fontWeight: FontWeight.w500,
       ),
       brightness: Brightness.light,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       side: BorderSide.none,
     ),
 

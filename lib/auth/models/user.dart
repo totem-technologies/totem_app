@@ -3,11 +3,11 @@ import 'package:flutter/foundation.dart';
 /// User model representing an authenticated user
 @immutable
 class User {
-
   const User({
     required this.id,
     required this.email,
-    required this.createdAt, this.firstName,
+    required this.createdAt,
+    this.firstName,
     this.profileImageUrl,
     this.hasCompletedOnboarding = false,
     this.isKeeper = false,
@@ -104,7 +104,6 @@ class User {
 
 /// Auth response model for login operations
 class AuthResponse {
-
   AuthResponse({required this.user, required this.apiKey});
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
