@@ -29,11 +29,14 @@ The Totem App will use a secure, PIN-based authentication process. This system w
   - Users are allowed up to five incorrect PIN entries total.
   - After five failed attempts, all active PINs for that user are reset, and the user must request a new PIN.
   - The app will display error message [TOO_MANY_ATTEMPTS].
+- **Account Status Check:**
+  - After successful PIN validation but before issuing tokens, the system will check if the user's account is deactivated.
+  - If the account has been deactivated for community guidelines violations, the app will display error message [ACCOUNT_DEACTIVATED].
 
 ### 3. Token Management
 #### 3.1. JWT and Refresh Token Issuance
 - **Upon Successful Authentication:**
-  - Once the user's PIN is validated, the backend generates:
+  - Once the user's PIN is validated and account status is confirmed as active, the backend generates:
     1. A JWT token for API requests (valid for exactly 60 minutes)
     2. A refresh token (long-lived, for obtaining new JWT tokens)
   - Both tokens are device-specific, bound to the device identifier
@@ -58,6 +61,9 @@ The Totem App will use a secure, PIN-based authentication process. This system w
   - When exceeded, the app will display error message [RATE_LIMIT_EXCEEDED].
 - **Refresh Failure Handling:**
   - If the refresh token is invalid or expired, the user will be prompted to log in again with error message [REAUTH_REQUIRED].
+- **Account Status Validation:**
+  - During token refresh, the system will also check if the user's account has been deactivated since their last authentication.
+  - If the account is found to be deactivated, the refresh will fail and display error message [ACCOUNT_DEACTIVATED].
 
 ### 4. Error Messages
 All error messages are deliberately vague to avoid providing attackers with useful information. The following error messages will be used throughout the app:
@@ -69,6 +75,7 @@ All error messages are deliberately vague to avoid providing attackers with usef
 - **[REAUTH_REQUIRED]**: "Please sign in again."
 - **[NETWORK_ERROR]**: "Please check your connection."
 - **[SERVER_ERROR]**: "Something went wrong. Please try again later."
+- **[ACCOUNT_DEACTIVATED]**: "This account has been deactivated for violating our community guidelines. Please contact support for more information."
 
 When a PIN is incorrect, the app will show [INCORRECT_PIN] without revealing how many attempts remain or other specific information that could help an attacker.
 
@@ -92,6 +99,7 @@ When a PIN is incorrect, the app will show [INCORRECT_PIN] without revealing how
 - **Token Revocation:**
   - In the event of suspicious activity, there will be backend mechanisms to revoke both JWT and refresh tokens.
   - Users can manually log out from all devices if needed, which invalidates all refresh tokens.
+  - When an account is deactivated, all associated refresh tokens will be automatically revoked.
 - **Error Messages:**
   - All error messages are deliberately vague to avoid providing attackers with useful information.
   - Error messages do not reveal whether an email exists, if a token is invalid, or specific reasons for authentication failures.
@@ -107,6 +115,10 @@ When a PIN is incorrect, the app will show [INCORRECT_PIN] without revealing how
 - **Rate Limiting Implementation:**
   - The backend will implement rate limiting using IP addresses and user identifiers.
   - Caching system will be used to track rate limit counters.
+- **Account Status Checks:**
+  - The backend will implement a system to check user account status during authentication and token refresh.
+  - Account deactivation status will be checked after PIN validation but before token issuance.
 - **Django Admin for Sensitive Data:**
   - Sensitive user data and authentication flows can be monitored and managed via Django Admin, providing a central control point for administrators.
   - Rate limit breaches and authentication attempts will be viewable in the admin interface.
+  - Administrators can deactivate accounts when users violate community guidelines.
