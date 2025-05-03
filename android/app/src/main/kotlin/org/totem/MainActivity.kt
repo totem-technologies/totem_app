@@ -1,4 +1,4 @@
-package com.example.totem_app
+package org.totem
 
 import io.flutter.embedding.android.FlutterActivity
 
