@@ -50,6 +50,13 @@ cd totem_app
 flutter pub get
 ```
 
+> \[!NOTE] 
+>
+> You must setup firebase locally. 
+> ⚠️ You must run `flutterfire configure` to generate firebase_options.dart and add your own Firebase config files (google-services.json, GoogleService-Info.plist) locally. These files are not committed to the repo. [Learn more](https://firebase.google.com/docs/flutter/setup)
+
+
+
 ### 📲 Running on Devices
 For development:
 
