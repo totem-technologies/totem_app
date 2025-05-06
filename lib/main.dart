@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -13,6 +14,7 @@ import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/core/services/deep_link_service.dart';
 import 'package:totem_app/core/services/notifications_service.dart';
 import 'package:totem_app/core/services/observer_service.dart';
+import 'package:totem_app/firebase_options.dart';
 import 'package:totem_app/navigation/app_router.dart';
 
 Future<void> main() async {
@@ -40,6 +42,8 @@ Future<void> main() async {
 ///
 /// Awaited services are required by the app to function correctly.
 Future<void> _initializeServices() async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   try {
     unawaited(AnalyticsService.instance.initialize());
     unawaited(DeepLinkService.instance.initialize());
