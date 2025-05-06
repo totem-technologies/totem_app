@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/api/rest_client.dart';
+import 'package:totem_app/api/totem_api.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/services/secure_storage.dart';
@@ -11,9 +11,9 @@ final secureStorageProvider = Provider<SecureStorage>((ref) {
 });
 
 /// Provider for the API service
-final apiServiceProvider = Provider<RestClient>((ref) {
+final apiServiceProvider = Provider<TotemApi>((ref) {
   final dio = _initDio(ref);
-  return RestClient(dio, baseUrl: AppConfig.apiUrl);
+  return TotemApi(dio, baseUrl: AppConfig.apiUrl);
 });
 
 /// Initialize Dio instance with interceptors and base configuration

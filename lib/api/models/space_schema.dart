@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'user_schema.dart';
+import 'public_user_schema.dart';
 
 part 'space_schema.g.dart';
 
@@ -18,11 +18,10 @@ class SpaceSchema {
     required this.subtitle,
     this.slug,
   });
-
-  factory SpaceSchema.fromJson(Map<String, Object?> json) =>
-      _$SpaceSchemaFromJson(json);
-
-  final UserSchema author;
+  
+  factory SpaceSchema.fromJson(Map<String, Object?> json) => _$SpaceSchemaFromJson(json);
+  
+  final PublicUserSchema author;
   final String title;
   final String? slug;
   @JsonKey(name: 'date_created')

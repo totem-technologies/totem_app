@@ -14,10 +14,9 @@ class AvatarUpdate {
     required this.avatarType,
     required this.updateAvatarSeed,
   });
-
-  factory AvatarUpdate.fromJson(Map<String, Object?> json) =>
-      _$AvatarUpdateFromJson(json);
-
+  
+  factory AvatarUpdate.fromJson(Map<String, Object?> json) => _$AvatarUpdateFromJson(json);
+  
   @JsonKey(name: 'avatar_type')
   final ProfileAvatarTypeEnum? avatarType;
   @JsonKey(name: 'update_avatar_seed')

@@ -5,7 +5,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'next_event_schema.dart';
-import 'user_schema.dart';
+import 'public_user_schema.dart';
 
 part 'space_detail_schema.g.dart';
 
@@ -20,16 +20,15 @@ class SpaceDetailSchema {
     required this.nextEvent,
     required this.category,
   });
-
-  factory SpaceDetailSchema.fromJson(Map<String, Object?> json) =>
-      _$SpaceDetailSchemaFromJson(json);
-
+  
+  factory SpaceDetailSchema.fromJson(Map<String, Object?> json) => _$SpaceDetailSchemaFromJson(json);
+  
   final String slug;
   final String title;
   @JsonKey(name: 'image_link')
   final String? imageLink;
   final String description;
-  final UserSchema author;
+  final PublicUserSchema author;
   final NextEventSchema nextEvent;
   final String? category;
 

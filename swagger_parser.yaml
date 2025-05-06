@@ -1,7 +1,5 @@
 swagger_parser:
-  schema_url: https://www.totem.org/api/v1/openapi.json
   output_directory: lib/api
-  name: totem_api
   language: dart
   json_serializer: json_serializable
   default_content_type: "application/json"
@@ -10,26 +8,10 @@ swagger_parser:
   # with interface and all clients instances.
   root_client: true
 
-  # Optional (dart only). Set root client name.
-  root_client_name: RestClient
-
-  # Optional (dart only). Set 'true' to generate export file.
   export_file: true
 
-  # Optional. Set to 'true' to put the all api in its folder.
-  put_in_folder: false
-
-  # Optional. Set 'true' to put all clients in clients folder.
-  put_clients_in_folder: false
-
-  # Optional. Set to 'true' to squash all clients in one client.
-  merge_clients: false
-
-  # Optional (dart only). Set 'true' to include toJson() in enums.
-  # If set to false, serialization will use .name instead.
   enums_to_json: false
 
-  # Optional. Set 'true' to set enum prefix from parent component.
   enums_parent_prefix: true
 
   # Optional (dart only). Set 'true' to maintain backwards compatibility
@@ -38,3 +20,11 @@ swagger_parser:
 
   # Optional (dart only). Set 'true' to wrap all request return types with HttpResponse.
   original_http_response: false
+
+  schemes:
+    - schema_url: https://www.totem.org/api/v1/openapi.json
+      name: totem_api
+      root_client_name: TotemApi
+    - schema_url: https://totem.kbl.io/api/mobile/openapi.json
+      name: totem_mobile_api
+      root_client_name: MobileTotemApi

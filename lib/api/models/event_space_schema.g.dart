@@ -8,7 +8,7 @@ part of 'event_space_schema.dart';
 
 EventSpaceSchema _$EventSpaceSchemaFromJson(Map<String, dynamic> json) =>
     EventSpaceSchema(
-      author: UserSchema.fromJson(json['author'] as Map<String, dynamic>),
+      author: PublicUserSchema.fromJson(json['author'] as Map<String, dynamic>),
       title: json['title'] as String,
       dateCreated: DateTime.parse(json['date_created'] as String),
       dateModified: DateTime.parse(json['date_modified'] as String),

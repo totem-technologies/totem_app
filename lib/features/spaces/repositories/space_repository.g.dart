@@ -6,7 +6,7 @@ part of 'space_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$listSpacesHash() => r'f72a41893135da9560c364fb136cd185894a4458';
+String _$listSpacesHash() => r'de49fb2f12fd4e73f99e577d3eae702e6b542554';
 
 /// See also [listSpaces].
 @ProviderFor(listSpaces)
@@ -25,7 +25,7 @@ final listSpacesProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef ListSpacesRef = AutoDisposeFutureProviderRef<List<SpaceDetailSchema>>;
-String _$eventHash() => r'b6fa9dde1ac9bcda3dea9b04e71a49a78f48e804';
+String _$eventHash() => r'7f12bf71b8b5f81cbc09b1740034d743aa761e9c';
 
 /// Copied from Dart SDK
 class _SystemHash {

@@ -114,7 +114,7 @@ class _EventsClient implements EventsClient {
   @override
   Future<List<EventCalendarSchema>> totemCirclesApiUpcomingEvents({
     String spaceSlug = '',
-    int month = 4,
+    int month = 5,
     int year = 2025,
   }) async {
     final _extra = <String, dynamic>{};

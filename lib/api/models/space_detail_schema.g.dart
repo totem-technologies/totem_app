@@ -12,7 +12,7 @@ SpaceDetailSchema _$SpaceDetailSchemaFromJson(Map<String, dynamic> json) =>
       title: json['title'] as String,
       imageLink: json['image_link'] as String?,
       description: json['description'] as String,
-      author: UserSchema.fromJson(json['author'] as Map<String, dynamic>),
+      author: PublicUserSchema.fromJson(json['author'] as Map<String, dynamic>),
       nextEvent: NextEventSchema.fromJson(
         json['nextEvent'] as Map<String, dynamic>,
       ),

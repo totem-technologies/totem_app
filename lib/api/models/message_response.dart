@@ -4,17 +4,17 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-part 'message.g.dart';
+part 'message_response.g.dart';
 
 @JsonSerializable()
-class Message {
-  const Message({
+class MessageResponse {
+  const MessageResponse({
     required this.message,
   });
   
-  factory Message.fromJson(Map<String, Object?> json) => _$MessageFromJson(json);
+  factory MessageResponse.fromJson(Map<String, Object?> json) => _$MessageResponseFromJson(json);
   
   final String message;
 
-  Map<String, Object?> toJson() => _$MessageToJson(this);
+  Map<String, Object?> toJson() => _$MessageResponseToJson(this);
 }

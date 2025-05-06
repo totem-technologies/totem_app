@@ -15,10 +15,9 @@ class NextEventSchema {
     required this.title,
     required this.seatsLeft,
   });
-
-  factory NextEventSchema.fromJson(Map<String, Object?> json) =>
-      _$NextEventSchemaFromJson(json);
-
+  
+  factory NextEventSchema.fromJson(Map<String, Object?> json) => _$NextEventSchemaFromJson(json);
+  
   final String slug;
   final String start;
   final String link;

@@ -6,20 +6,19 @@ import 'package:json_annotation/json_annotation.dart';
 
 import 'profile_avatar_type_enum.dart';
 
-part 'user_schema.g.dart';
+part 'public_user_schema.g.dart';
 
 @JsonSerializable()
-class UserSchema {
-  const UserSchema({
+class PublicUserSchema {
+  const PublicUserSchema({
     required this.profileAvatarType,
     required this.profileAvatarSeed,
-    required this.email,
     this.isStaff = false,
     this.name,
     this.profileImage,
   });
   
-  factory UserSchema.fromJson(Map<String, Object?> json) => _$UserSchemaFromJson(json);
+  factory PublicUserSchema.fromJson(Map<String, Object?> json) => _$PublicUserSchemaFromJson(json);
   
   @JsonKey(name: 'profile_avatar_type')
   final ProfileAvatarTypeEnum profileAvatarType;
@@ -34,7 +33,6 @@ class UserSchema {
   /// Profile image, must be under 5mb. Will be cropped to a square.
   @JsonKey(name: 'profile_image')
   final String? profileImage;
-  final String email;
 
-  Map<String, Object?> toJson() => _$UserSchemaToJson(this);
+  Map<String, Object?> toJson() => _$PublicUserSchemaToJson(this);
 }

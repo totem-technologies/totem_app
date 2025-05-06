@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'user_schema.dart';
+import 'public_user_schema.dart';
 
 part 'event_space_schema.g.dart';
 
@@ -22,11 +22,10 @@ class EventSpaceSchema {
     this.shortDescription,
     this.image,
   });
-
-  factory EventSpaceSchema.fromJson(Map<String, Object?> json) =>
-      _$EventSpaceSchemaFromJson(json);
-
-  final UserSchema author;
+  
+  factory EventSpaceSchema.fromJson(Map<String, Object?> json) => _$EventSpaceSchemaFromJson(json);
+  
+  final PublicUserSchema author;
   final String title;
   final String? slug;
   @JsonKey(name: 'date_created')

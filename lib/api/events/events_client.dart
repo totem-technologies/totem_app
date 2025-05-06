@@ -46,7 +46,7 @@ abstract class EventsClient {
   @GET('/api/v1/spaces/calendar')
   Future<List<EventCalendarSchema>> totemCirclesApiUpcomingEvents({
     @Query('space_slug') String spaceSlug = '',
-    @Query('month') int month = 4,
+    @Query('month') int month = 5,
     @Query('year') int year = 2025,
   });
 

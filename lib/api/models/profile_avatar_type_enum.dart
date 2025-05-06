@@ -10,14 +10,15 @@ enum ProfileAvatarTypeEnum {
   tD('TD'),
   @JsonValue('IM')
   iM('IM'),
-
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);
 
   const ProfileAvatarTypeEnum(this.json);
 
-  factory ProfileAvatarTypeEnum.fromJson(String json) =>
-      values.firstWhere((e) => e.json == json, orElse: () => $unknown);
+  factory ProfileAvatarTypeEnum.fromJson(String json) => values.firstWhere(
+        (e) => e.json == json,
+        orElse: () => $unknown,
+      );
 
   final String? json;
 }
