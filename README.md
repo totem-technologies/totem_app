@@ -10,7 +10,6 @@
 <p><em>Guided introspection groups at <a href="https://www.totem.org">totem.org</a></em></p>
 </div>
 
-
 ## 🧭 Overview
 
 Totem is a space for guided group introspection. This Flutter app is the **official open-source mobile client** for the Totem platform.  
@@ -25,9 +24,9 @@ This client targets both **iOS** and **Android**, using **Flutter** and **Riverp
 - 📅 View and explore available Totem Circles
 <!-- - 🔐 Secure authentication and onboarding -->
 - 💬 Join guided group sessions (with in-app video coming soon!)
-<!-- - 🧘 Personalized user profile and avatar -->
-<!-- - 🔔 Push notification integration -->
-<!-- - 🧪 CI/CD with GitHub Actions -->
+  <!-- - 🧘 Personalized user profile and avatar -->
+  <!-- - 🔔 Push notification integration -->
+  <!-- - 🧪 CI/CD with GitHub Actions -->
 
 ---
 
@@ -50,14 +49,13 @@ cd totem_app
 flutter pub get
 ```
 
-> \[!NOTE] 
+> \[!NOTE]
 >
-> You must setup firebase locally. 
+> You must setup firebase locally.
 > ⚠️ You must run `flutterfire configure` to generate firebase_options.dart and add your own Firebase config files (google-services.json, GoogleService-Info.plist) locally. These files are not committed to the repo. [Learn more](https://firebase.google.com/docs/flutter/setup)
 
-
-
 ### 📲 Running on Devices
+
 For development:
 
 ```bash
@@ -68,7 +66,6 @@ flutter run -d ios        # iOS
 
 If testing on an iOS device, ensure you're using macOS and have Xcode installed.
 
-
 ### 🧪 Testing
 
 Run all tests:
@@ -76,6 +73,7 @@ Run all tests:
 ```bash
 flutter test
 ```
+
 _Coming soon: Widget tests and CI-integrated integration tests._
 
 ## ✍️ Project Structure
@@ -98,15 +96,14 @@ API communication is handled using Retrofit + json_serializable with code genera
 
 For example:
 
-* Logic lives in `controllers/`
-* API integration in `repositories/`
-* UI in `screens/`
-* State is exposed via Riverpod providers
+- Logic lives in `controllers/`
+- API integration in `repositories/`
+- UI in `screens/`
+- State is exposed via Riverpod providers
 
 ## 👥 Community
 
 Join the Totem movement at [totem.org](https://www.totem.org).
 To discuss development or get involved, feel free to open an issue or pull request.
-
 
 <div align="center"> ✨ Built with care by the Totem Technologies team ✨ </div>

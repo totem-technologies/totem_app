@@ -8,12 +8,9 @@ import 'package:totem_app/auth/screens/login_screen.dart';
 import 'package:totem_app/auth/screens/pin_entry_screen.dart';
 import 'package:totem_app/auth/screens/profile_setup_screen.dart';
 import 'package:totem_app/core/services/deep_link_service.dart';
-import 'package:totem_app/features/notifications/screens/notification_settings_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_screen.dart';
 import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
 import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
-import 'package:totem_app/features/video_sessions/screens/pre_join_screen.dart';
-import 'package:totem_app/features/video_sessions/screens/video_room_screen.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
@@ -106,12 +103,12 @@ GoRouter createRouter(WidgetRef ref) {
     routes: [
       // Auth routes (no bottom nav)
       GoRoute(
-        path: '/auth/login',
+        path: RouteNames.login,
         name: RouteNames.login,
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
-        path: '/auth/pin',
+        path: RouteNames.pinEntry,
         name: RouteNames.pinEntry,
         builder: (context, state) {
           final email = state.uri.queryParameters['email'] ?? '';
@@ -119,7 +116,7 @@ GoRouter createRouter(WidgetRef ref) {
         },
       ),
       GoRoute(
-        path: '/auth/magic-link',
+        path: RouteNames.magicLink,
         name: RouteNames.magicLink,
         builder: (context, state) {
           // TODO(auth): Handle magic link token
@@ -132,7 +129,7 @@ GoRouter createRouter(WidgetRef ref) {
 
       // Onboarding (no bottom nav)
       GoRoute(
-        path: '/onboarding',
+        path: RouteNames.onboarding,
         name: RouteNames.onboarding,
         builder: (context, state) => const ProfileSetupScreen(),
       ),
@@ -150,8 +147,8 @@ GoRouter createRouter(WidgetRef ref) {
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: '/spaces',
-                name: RouteNames.spacesDiscovery,
+                path: RouteNames.spaces,
+                name: RouteNames.spaces,
                 pageBuilder:
                     (context, state) => CustomTransitionPage(
                       key: state.pageKey,
@@ -167,7 +164,6 @@ GoRouter createRouter(WidgetRef ref) {
                       transitionDuration: const Duration(milliseconds: 200),
                     ),
                 routes: [
-                  // Nested route under /spaces
                   GoRoute(
                     path: ':event_slug',
                     name: RouteNames.spaceDetail,
@@ -182,11 +178,10 @@ GoRouter createRouter(WidgetRef ref) {
             ],
           ),
 
-          // Profile tab with fade transition
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: '/profile',
+                path: RouteNames.profile,
                 name: RouteNames.profile,
                 pageBuilder:
                     (context, state) => CustomTransitionPage(
@@ -209,27 +204,27 @@ GoRouter createRouter(WidgetRef ref) {
       ),
 
       // Routes that don't show bottom nav
-      GoRoute(
-        path: '/sessions/:id/pre-join',
-        name: RouteNames.preJoinSession,
-        builder: (context, state) {
-          final sessionId = state.pathParameters['id'] ?? '';
-          return PreJoinScreen(sessionId: sessionId);
-        },
-      ),
-      GoRoute(
-        path: '/sessions/:id',
-        name: RouteNames.videoSession,
-        builder: (context, state) {
-          final sessionId = state.pathParameters['id'] ?? '';
-          return VideoRoomScreen(sessionId: sessionId);
-        },
-      ),
-      GoRoute(
-        path: '/notifications/settings',
-        name: RouteNames.notificationSettings,
-        builder: (context, state) => const NotificationSettingsScreen(),
-      ),
+      // GoRoute(
+      //   path: '/sessions/:id/pre-join',
+      //   name: RouteNames.preJoinSession,
+      //   builder: (context, state) {
+      //     final sessionId = state.pathParameters['id'] ?? '';
+      //     return PreJoinScreen(sessionId: sessionId);
+      //   },
+      // ),
+      // GoRoute(
+      //   path: '/sessions/:id',
+      //   name: RouteNames.videoSession,
+      //   builder: (context, state) {
+      //     final sessionId = state.pathParameters['id'] ?? '';
+      //     return VideoRoomScreen(sessionId: sessionId);
+      //   },
+      // ),
+      // GoRoute(
+      //   path: '/notifications/settings',
+      //   name: RouteNames.notificationSettings,
+      //   builder: (context, state) => const NotificationSettingsScreen(),
+      // ),
     ],
     errorBuilder:
         (context, state) => Scaffold(
