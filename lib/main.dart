@@ -11,6 +11,7 @@ import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/core/services/deep_link_service.dart';
+import 'package:totem_app/core/services/notifications_service.dart';
 import 'package:totem_app/core/services/observer_service.dart';
 import 'package:totem_app/navigation/app_router.dart';
 
@@ -26,24 +27,23 @@ Future<void> main() async {
     ]),
   );
 
+  await _setupErrorHandling();
   await dotenv.load();
   await _initializeServices();
-  await _setupErrorHandling();
 
   runApp(
     ProviderScope(observers: [ObserverService()], child: const TotemApp()),
   );
 }
 
+/// Initializes services.
+///
+/// Awaited services are required by the app to function correctly.
 Future<void> _initializeServices() async {
   try {
-    await AnalyticsService.instance.initialize();
-    await DeepLinkService.instance.initialize();
-
-    // Initialize other services here
-    // - Notifications
-    // - Secure storage setup
-    // - API client configuration
+    unawaited(AnalyticsService.instance.initialize());
+    unawaited(DeepLinkService.instance.initialize());
+    unawaited(NotificationsService.instance.initialize());
 
     debugPrint('✅ Services initialized successfully');
   } catch (e, stackTrace) {
@@ -68,6 +68,8 @@ Future<void> _setupErrorHandling() async {
 class TotemApp extends ConsumerStatefulWidget {
   const TotemApp({super.key});
 
+  static final navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   ConsumerState<TotemApp> createState() => _AppState();
 }
@@ -80,6 +82,7 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _router = createRouter(ref);
+    NotificationsService.instance.requestPermissions();
   }
 
   @override

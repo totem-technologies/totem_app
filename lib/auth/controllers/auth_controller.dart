@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
@@ -7,9 +8,9 @@ import 'package:totem_app/auth/models/user.dart';
 import 'package:totem_app/auth/repositories/auth_repository.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
+import 'package:totem_app/core/services/notifications_service.dart';
 import 'package:totem_app/core/services/secure_storage.dart';
 
-/// Provider for the authentication controller
 final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
   (ref) => AuthController(
     authRepository: ref.watch(authRepositoryProvider),
@@ -17,17 +18,18 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
   ),
 );
 
-/// Controller responsible for managing authentication state and operations
 class AuthController extends StateNotifier<AuthState> {
-  /// Constructor initializes state and checks for existing credentials
   AuthController({
     required AuthRepository authRepository,
     required SecureStorage secureStorage,
   }) : _authRepository = authRepository,
        _secureStorage = secureStorage,
        super(AuthState.unauthenticated()) {
-    // Check for existing authentication when controller is created
     _checkExistingAuth();
+
+    FirebaseMessaging.instance.onTokenRefresh
+        .listen((_) => _updateFCMToken)
+        .onError((err) {});
   }
   final AuthRepository _authRepository;
   final SecureStorage _secureStorage;
@@ -266,6 +268,19 @@ class AuthController extends StateNotifier<AuthState> {
   /// Helper to emit the current state to the stream
   void _emitState() {
     _authStateController.add(state);
+
+    if (state.status == AuthStatus.authenticated) {
+      _updateFCMToken();
+    }
+  }
+
+  Future<void> _updateFCMToken() async {
+    if (!isAuthenticated) return;
+
+    final fcmToken = await NotificationsService.instance.fcmToken;
+    if (fcmToken == null) return;
+
+    // TODO(bdlukaa): Implement this
   }
 
   @override

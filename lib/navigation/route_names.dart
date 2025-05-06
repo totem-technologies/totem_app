@@ -14,4 +14,18 @@ class RouteNames {
   static const spaceDetail = '/space';
   static String space(String id) => '/spaces/$id';
   static const profile = '/profile';
+
+  static const allRoutes = [
+    login,
+    pinEntry,
+    magicLink,
+    onboarding,
+    spaces,
+    spaceDetail,
+    profile,
+  ];
+
+  static bool isValidRoute(String? route) {
+    return allRoutes.contains(route);
+  }
 }

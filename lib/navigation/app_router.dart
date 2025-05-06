@@ -7,10 +7,10 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/screens/login_screen.dart';
 import 'package:totem_app/auth/screens/pin_entry_screen.dart';
 import 'package:totem_app/auth/screens/profile_setup_screen.dart';
-import 'package:totem_app/core/services/deep_link_service.dart';
 import 'package:totem_app/features/profile/screens/profile_screen.dart';
 import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
 import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
+import 'package:totem_app/main.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
@@ -52,7 +52,8 @@ GoRouter createRouter(WidgetRef ref) {
   final authController = ref.read(authControllerProvider.notifier);
 
   return GoRouter(
-    initialLocation: DeepLinkService.instance.initialDeepLink?.path ?? '/',
+    navigatorKey: TotemApp.navigatorKey,
+    initialLocation: '/',
     debugLogDiagnostics: true,
     refreshListenable: GoRouterRefreshStream(authController.authStateChanges),
     redirect: (context, state) {

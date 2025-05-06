@@ -4,7 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// Application-wide configuration settings
 class AppConfig {
   // Private constructor to prevent instantiation
-  AppConfig._();
+  const AppConfig._();
 
   /// Get the current environment (development, staging, production)
   static String get environment {
@@ -59,15 +59,18 @@ class AppConfig {
     return int.tryParse(dotenv.env['MAX_PIN_ATTEMPTS'] ?? '5') ?? 5;
   }
 
-  /// Feature flags
   static bool get enablePushNotifications {
     return dotenv.env['ENABLE_PUSH_NOTIFICATIONS']?.toLowerCase() == 'true';
   }
 
-  /// Analytics configuration
   static bool get enableAnalytics {
     if (kDebugMode) return false; // Disable in debug mode
     return dotenv.env['ENABLE_ANALYTICS']?.toLowerCase() !=
         'false'; // Enabled by default in release
+  }
+
+  /// Vapid Key used for push notifications on the web.
+  static String? get vapidKey {
+    return dotenv.env['VAPID_KEY'];
   }
 }

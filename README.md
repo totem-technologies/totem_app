@@ -101,6 +101,10 @@ For example:
 - UI in `screens/`
 - State is exposed via Riverpod providers
 
+### 🔔 Notifications
+
+Notifications are handled using Firebase Cloud Messaging (FCM). In the notification data, one may include a `path` key to specify the route to navigate to when the user taps on the notification. Check all the available routes [here](./lib/navigation/route_names.dart). 
+
 ## 👥 Community
 
 Join the Totem movement at [totem.org](https://www.totem.org).

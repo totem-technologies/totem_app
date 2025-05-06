@@ -11,11 +11,9 @@ class DeepLinkService {
   static final DeepLinkService _instance = DeepLinkService._internal();
   static DeepLinkService get instance => _instance;
 
-  // Stream controller for deep links
   final StreamController<Uri> _deepLinkStreamController =
       StreamController<Uri>.broadcast();
 
-  // Stream of deep links that can be listened to throughout the app
   Stream<Uri> get deepLinkStream => _deepLinkStreamController.stream;
 
   Uri? _initialDeepLink;
@@ -25,7 +23,6 @@ class DeepLinkService {
   Uri? _latestDeepLink;
   Uri? get latestDeepLink => _latestDeepLink;
 
-  // Flag to track initialization
   bool _initialized = false;
 
   /// Initialize the deep link service.
