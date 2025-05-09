@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/navigation/route_names.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -92,7 +93,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
             ElevatedButton(
               onPressed: () {
-                context.go('/spaces');
+                context.go(RouteNames.spaces);
               },
               child: const Text('Back to Spaces'),
             ),

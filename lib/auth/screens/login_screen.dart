@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -56,7 +57,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (mounted) {
         // Navigate to PIN entry screen
-        context.go('/auth/pin', extra: {'email': _emailController.text.trim()});
+        context.go(
+          RouteNames.pinEntry,
+          extra: {'email': _emailController.text.trim()},
+        );
       }
     } catch (e) {
       if (mounted) {

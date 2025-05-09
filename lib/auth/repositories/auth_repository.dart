@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
+import 'package:totem_app/api/models/fcm_token_register_schema.dart';
 import 'package:totem_app/api/models/message_response.dart';
 import 'package:totem_app/api/models/pin_request_schema.dart';
 import 'package:totem_app/api/models/refresh_token_schema.dart';
@@ -109,5 +110,35 @@ class AuthRepository {
     if (exp == null) return false;
     final expirationDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
     return expirationDate.isAfter(DateTime.now());
+  }
+
+  /// Update FCM token
+  Future<void> updateFcmToken(String fcmToken) async {
+    try {
+      await apiService.client.totemApiMobileApiRegisterFcmToken(
+        body: FcmTokenRegisterSchema(token: fcmToken),
+      );
+    } catch (e) {
+      if (e is AppAuthException) rethrow;
+      throw AppAuthException(
+        'Failed to update FCM token: $e',
+        code: 'FCM_TOKEN_UPDATE_FAILED',
+      );
+    }
+  }
+
+  /// Unregister FCM token
+  Future<void> unregisterFcmToken(String fcmToken) async {
+    try {
+      await apiService.client.totemApiMobileApiUnregisterFcmToken(
+        token: fcmToken,
+      );
+    } catch (e) {
+      if (e is AppAuthException) rethrow;
+      throw AppAuthException(
+        'Failed to unregister FCM token: $e',
+        code: 'FCM_TOKEN_UNREGISTER_FAILED',
+      );
+    }
   }
 }

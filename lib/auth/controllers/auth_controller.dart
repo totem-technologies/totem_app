@@ -51,7 +51,7 @@ class AuthController extends StateNotifier<AuthState> {
 
       AnalyticsService.instance.logEvent(
         'pin_requested',
-        parameters: {'email': email},
+        parameters: {'email': email, 'newsletterConsent': newsletterConsent},
       );
     } catch (e) {
       state = AuthState.error(e.toString());
@@ -83,15 +83,12 @@ class AuthController extends StateNotifier<AuthState> {
 
       final user = await _authRepository.currentUser;
 
-      // Set authenticated state with user
       state = AuthState.authenticated(user: user);
       _emitState();
 
-      // Log analytics
       AnalyticsService.instance.setUserId(user.email);
       AnalyticsService.instance.logLogin(method: 'pin');
     } catch (e) {
-      // Handle specific errors
       if (e is AppAuthException && e.code == 'INVALID_PIN') {
         state = AuthState.error('Invalid PIN code. Please try again.');
       } else if (e is AppAuthException && e.code == 'PIN_ATTEMPTS_EXCEEDED') {
@@ -115,8 +112,8 @@ class AuthController extends StateNotifier<AuthState> {
         throw AppAuthException.unauthenticated();
       }
 
-      state = state.copyWith(status: AuthStatus.loading);
-      _emitState();
+      // state = state.copyWith(status: AuthStatus.loading);
+      // _emitState();
 
       // Update profile with backend
       // final updatedUser = await _authRepository.updateProfile(
@@ -129,7 +126,6 @@ class AuthController extends StateNotifier<AuthState> {
       // state = AuthState.authenticated(user: updatedUser);
       // _emitState();
 
-      // Log analytics
       AnalyticsService.instance.logEvent('onboarding_completed');
     } catch (e) {
       state = state.copyWith(
@@ -168,7 +164,6 @@ class AuthController extends StateNotifier<AuthState> {
 
   Future<void> _checkExistingAuth() async {
     try {
-      // Set loading state
       state = AuthState.loading();
       _emitState();
 
@@ -208,7 +203,7 @@ class AuthController extends StateNotifier<AuthState> {
     final fcmToken = await NotificationsService.instance.fcmToken;
     if (fcmToken == null) return;
 
-    // TODO(bdlukaa): Implement this
+    return _authRepository.updateFcmToken(fcmToken);
   }
 
   @override

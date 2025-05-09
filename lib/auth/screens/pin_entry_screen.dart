@@ -5,6 +5,7 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 class PinEntryScreen extends ConsumerStatefulWidget {
@@ -86,7 +87,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
           // Navigate back to login screen after max attempts
           Future<void>.delayed(const Duration(seconds: 2), () {
             if (mounted) {
-              context.go('/auth/login');
+              context.go(RouteNames.login);
             }
           });
         }
@@ -96,7 +97,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
 
   // Request a new magic link
   void _requestNewMagicLink() {
-    context.go('/auth/login');
+    context.go(RouteNames.login);
   }
 
   @override

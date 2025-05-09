@@ -32,9 +32,9 @@ class BottomNavScaffold extends StatelessWidget {
       bottomNavigationBar: NavigationBar(
         onDestinationSelected: (index) {
           if (index == 0 && !currentPath.startsWith('/spaces')) {
-            context.go('/spaces');
+            context.go(RouteNames.spaces);
           } else if (index == 1 && !currentPath.startsWith('/profile')) {
-            context.go('/profile');
+            context.go(RouteNames.profile);
           }
         },
         selectedIndex: currentPath.startsWith('/spaces') ? 0 : 1,
@@ -241,7 +241,7 @@ GoRouter createRouter(WidgetRef ref) {
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () {
-                    context.go('/spaces');
+                    context.go(RouteNames.spaces);
                   },
                   child: const Text('Go Home'),
                 ),

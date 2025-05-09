@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
@@ -65,7 +66,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         // Navigate to home
         Future<void>.delayed(const Duration(milliseconds: 200), () {
           if (mounted) {
-            context.go('/spaces');
+            context.go(RouteNames.spaces);
           }
         });
       }
