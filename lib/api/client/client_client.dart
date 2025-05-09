@@ -5,6 +5,8 @@
 import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
+import '../models/fcm_token_register_schema.dart';
+import '../models/fcm_token_response_schema.dart';
 import '../models/message_response.dart';
 import '../models/pin_request_schema.dart';
 import '../models/refresh_token_schema.dart';
@@ -21,6 +23,22 @@ abstract class ClientClient {
   /// Current User
   @GET('/api/mobile/protected/currentuser')
   Future<UserSchema> totemApiMobileApiCurrentUser();
+
+  /// Register Fcm Token.
+  ///
+  /// Register or update an FCM token for the current user.
+  @POST('/api/mobile/protected/fcm/register')
+  Future<FcmTokenResponseSchema> totemApiMobileApiRegisterFcmToken({
+    @Body() required FcmTokenRegisterSchema body,
+  });
+
+  /// Unregister Fcm Token.
+  ///
+  /// Mark an FCM token as inactive.
+  @DELETE('/api/mobile/protected/fcm/unregister/{token}')
+  Future<void> totemApiMobileApiUnregisterFcmToken({
+    @Path('token') required String token,
+  });
 
   /// Request Pin.
   ///
