@@ -92,7 +92,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsetsDirectional.all(24),
           child: Form(
             key: _formKey,
             child: Column(
@@ -169,7 +169,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   ElevatedButton(
                     onPressed: _submitProfile,
                     child: const Padding(
-                      padding: EdgeInsets.all(12),
+                      padding: EdgeInsetsDirectional.all(12),
                       child: Text('Complete Profile'),
                     ),
                   ),

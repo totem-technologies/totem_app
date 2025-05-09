@@ -209,7 +209,10 @@ class AppTheme {
           fontWeight: FontWeight.w500,
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
         elevation: 2,
       ),
     ),
@@ -235,7 +238,10 @@ class AppTheme {
           fontWeight: FontWeight.w500,
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
     ),
 
@@ -244,7 +250,10 @@ class AppTheme {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: cream.withValues(alpha: 0.5),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      contentPadding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 16,
+        vertical: 12,
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide(color: deepGray.withValues(alpha: 0.5)),
@@ -293,7 +302,7 @@ class AppTheme {
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: grey.withValues(alpha: 0.2)), // Subtle border
       ),
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      margin: const EdgeInsetsDirectional.symmetric(horizontal: 8, vertical: 4),
     ),
 
     // --- Dialog Theme ---
@@ -327,7 +336,10 @@ class AppTheme {
       disabledColor: grey.withValues(alpha: 0.5),
       selectedColor: mauve.withValues(alpha: 0.2),
       secondarySelectedColor: yellow.withValues(alpha: 0.3),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 12,
+        vertical: 8,
+      ),
       labelStyle: const TextStyle(
         fontFamily: fontFamilySans,
         color: deepGray,

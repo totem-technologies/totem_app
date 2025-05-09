@@ -39,7 +39,7 @@ class VideoRoomScreen extends ConsumerWidget {
             // Participant grid placeholder
             GridView.builder(
               shrinkWrap: true,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsetsDirectional.all(16),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 8,
@@ -68,7 +68,7 @@ class VideoRoomScreen extends ConsumerWidget {
       bottomNavigationBar: BottomAppBar(
         color: Colors.black87,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsetsDirectional.symmetric(vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [

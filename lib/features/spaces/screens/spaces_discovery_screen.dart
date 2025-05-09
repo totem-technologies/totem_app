@@ -52,7 +52,9 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                   )
                 else
                   SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 16,
+                    ),
                     sliver: SliverList.separated(
                       itemCount: filteredSpaces.length,
                       itemBuilder:
@@ -92,8 +94,11 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
       builder: (context) {
         return Container(
           height: 56,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsetsDirectional.symmetric(vertical: 8),
+          margin: const EdgeInsetsDirectional.symmetric(
+            horizontal: 16,
+            vertical: 8,
+          ),
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
@@ -109,7 +114,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
             type: MaterialType.transparency,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
               children: [
                 _buildFilterChip(
                   label: 'All',
@@ -145,7 +150,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
       builder: (context) {
         final theme = Theme.of(context);
         return Padding(
-          padding: const EdgeInsets.only(right: 8),
+          padding: const EdgeInsetsDirectional.only(end: 8),
           child: Center(
             child: GestureDetector(
               onTap: () {
@@ -166,7 +171,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                           ? theme.colorScheme.onPrimary
                           : theme.colorScheme.onSurface,
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 8),
               ),
             ),
           ),

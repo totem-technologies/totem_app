@@ -116,7 +116,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
             key: _formKey,
             child: ListView(
               shrinkWrap: true,
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsetsDirectional.all(24),
               children: [
                 Icon(
                   Icons.lock_outline,
@@ -163,7 +163,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
                   ElevatedButton(
                     onPressed: _attempts < _maxAttempts ? _verifyPin : null,
                     child: const Padding(
-                      padding: EdgeInsets.all(12),
+                      padding: EdgeInsetsDirectional.all(12),
                       child: Text('Verify PIN'),
                     ),
                   ),

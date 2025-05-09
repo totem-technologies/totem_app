@@ -59,7 +59,10 @@ class PreJoinScreen extends ConsumerWidget {
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
               child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: EdgeInsetsDirectional.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 child: Text('Join Now'),
               ),
             ),

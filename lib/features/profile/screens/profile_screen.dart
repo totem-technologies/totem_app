@@ -82,7 +82,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             // Display user email if available
             if (user != null)
               Padding(
-                padding: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsetsDirectional.only(top: 8),
                 child: Text(
                   user.email,
                   style: TextStyle(fontSize: 16, color: Colors.grey[600]),

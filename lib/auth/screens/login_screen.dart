@@ -95,7 +95,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             key: _formKey,
             child: ListView(
               shrinkWrap: true,
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsetsDirectional.all(24),
               children: [
                 // App logo or icon
                 Icon(
@@ -141,7 +141,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ElevatedButton(
                     onPressed: _requestMagicLink,
                     child: const Padding(
-                      padding: EdgeInsets.all(12),
+                      padding: EdgeInsetsDirectional.all(12),
                       child: Text('Sign in'),
                     ),
                   ),

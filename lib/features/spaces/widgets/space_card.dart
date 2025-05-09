@@ -14,7 +14,7 @@ class SpaceCard extends StatelessWidget {
     final theme = Theme.of(context);
     return Card(
       clipBehavior: Clip.antiAlias,
-      margin: EdgeInsets.zero,
+      margin: EdgeInsetsDirectional.zero,
       child: InkWell(
         highlightColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
         onTap: () {
@@ -33,7 +33,7 @@ class SpaceCard extends StatelessWidget {
               ),
 
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsetsDirectional.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -85,13 +85,13 @@ class SpaceCard extends StatelessWidget {
 
                   if (space.category != null)
                     Padding(
-                      padding: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsetsDirectional.only(top: 8),
                       child: Chip(
                         label: Text(
                           space.category!,
                           style: const TextStyle(fontSize: 12),
                         ),
-                        padding: EdgeInsets.zero,
+                        padding: EdgeInsetsDirectional.zero,
                       ),
                     ),
 
@@ -114,7 +114,7 @@ class SpaceCard extends StatelessWidget {
                         ),
                         if (space.nextEvent.start.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(top: 4),
+                            padding: const EdgeInsetsDirectional.only(top: 4),
                             child: Text(
                               formatEventDateTime(
                                 DateTime.parse(space.nextEvent.start),

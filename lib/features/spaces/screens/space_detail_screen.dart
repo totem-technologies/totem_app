@@ -51,7 +51,7 @@ class EventDetailScreen extends ConsumerWidget {
                     SizedBox(
                       height: constraints.maxHeight * 0.6,
                       child: Card(
-                        margin: EdgeInsets.zero,
+                        margin: EdgeInsetsDirectional.zero,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -70,7 +70,7 @@ class EventDetailScreen extends ConsumerWidget {
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsetsDirectional.all(16),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisAlignment:
@@ -147,7 +147,7 @@ class EventDetailScreen extends ConsumerWidget {
                         vertical: 16,
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsetsDirectional.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
