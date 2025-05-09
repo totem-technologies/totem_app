@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/auth/repositories/auth_repository.dart';
@@ -202,9 +201,6 @@ class AuthController extends StateNotifier<AuthState> {
     } finally {
       _emitState();
     }
-
-    // TODO(bdukaa): Rethink this behavior
-    FlutterNativeSplash.remove();
   }
 
   void _emitState() {

@@ -19,8 +19,7 @@ import 'package:totem_app/firebase_options.dart';
 import 'package:totem_app/navigation/app_router.dart';
 
 Future<void> main() async {
-  final bindings = WidgetsFlutterBinding.ensureInitialized();
-  FlutterNativeSplash.preserve(widgetsBinding: bindings);
+  WidgetsFlutterBinding.ensureInitialized();
 
   unawaited(
     SystemChrome.setPreferredOrientations([
