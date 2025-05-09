@@ -67,9 +67,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             const SizedBox(height: 16),
 
             // Display user name if available
-            if (user != null && user.firstName != null)
+            if (user != null && user.name != null)
               Text(
-                'Hello, ${user.firstName}!',
+                'Hello, ${user.name}!',
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,

@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:totem_app/auth/models/user.dart';
+import 'package:totem_app/api/models/user_schema.dart';
 
 /// Possible authentication statuses
 enum AuthStatus {
@@ -27,7 +27,7 @@ class AuthState {
   }
 
   /// Factory for authenticated state
-  factory AuthState.authenticated({required User user}) {
+  factory AuthState.authenticated({required UserSchema user}) {
     return AuthState(status: AuthStatus.authenticated, user: user);
   }
 
@@ -46,14 +46,14 @@ class AuthState {
     return AuthState(status: AuthStatus.error, error: message);
   }
   final AuthStatus status;
-  final User? user;
+  final UserSchema? user;
   final String? email;
   final String? error;
 
   /// Create a copy of this state with modified fields
   AuthState copyWith({
     AuthStatus? status,
-    User? user,
+    UserSchema? user,
     String? email,
     String? error,
   }) {
@@ -83,7 +83,7 @@ class AuthState {
   @override
   String toString() {
     return 'AuthState('
-        'status: $status, user: ${user?.id}, email: $email, error: $error'
+        'status: $status, user: ${user?.email}, email: $email, error: $error'
         ')';
   }
 }

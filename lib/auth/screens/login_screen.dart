@@ -50,7 +50,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await ref
           .read(authControllerProvider.notifier)
-          .requestMagicLink(_emailController.text.trim());
+          // TODO(bdlukaa): Add a checkbox to allow users to opt-in for
+          //                newsletters
+          .requestPin(_emailController.text.trim(), true);
 
       if (mounted) {
         // Navigate to PIN entry screen

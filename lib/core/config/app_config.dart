@@ -31,6 +31,11 @@ class AppConfig {
     return dotenv.get('API_URL', fallback: 'https://www.totem.org/');
   }
 
+  /// API configuration
+  static String get mobileApiUrl {
+    return dotenv.get('MOBILE_API_URL', fallback: 'https://totem.kbl.io/');
+  }
+
   /// Auth configuration
   static Duration get magicLinkExpiration {
     // Default 30 minutes

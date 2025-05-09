@@ -9,6 +9,7 @@ import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 class PinEntryScreen extends ConsumerStatefulWidget {
   const PinEntryScreen({required this.email, super.key});
+
   final String email;
 
   @override
@@ -56,7 +57,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
     try {
       await ref
           .read(authControllerProvider.notifier)
-          .verifyPin(widget.email, _pinController.text.trim());
+          .verifyPin(_pinController.text.trim());
       Future<void>.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           context.go('/');

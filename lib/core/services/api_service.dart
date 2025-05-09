@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_app/api/mobile_totem_api.dart';
 import 'package:totem_app/api/totem_api.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
@@ -16,6 +17,12 @@ final apiServiceProvider = Provider<TotemApi>((ref) {
   return TotemApi(dio, baseUrl: AppConfig.apiUrl);
 });
 
+/// Provider for the API service
+final mobileApiServiceProvider = Provider<MobileTotemApi>((ref) {
+  final dio = _initDio(ref);
+  return MobileTotemApi(dio, baseUrl: AppConfig.mobileApiUrl);
+});
+
 /// Initialize Dio instance with interceptors and base configuration
 Dio _initDio(Ref ref) {
   final dio = Dio();
@@ -24,13 +31,12 @@ Dio _initDio(Ref ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
-        // Only add auth header if the request doesn't already have one
         if (!options.headers.containsKey('Authorization')) {
-          final apiKey = await ref
+          final jwtToken = await ref
               .read(secureStorageProvider)
-              .read(key: 'api_key');
-          if (apiKey != null) {
-            options.headers['Authorization'] = 'Bearer $apiKey';
+              .read(key: 'jwt_token');
+          if (jwtToken != null) {
+            options.headers['Authorization'] = 'Bearer $jwtToken';
           }
         }
         return handler.next(options);

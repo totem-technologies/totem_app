@@ -4,8 +4,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
-import 'package:totem_app/auth/models/user.dart';
 import 'package:totem_app/auth/repositories/auth_repository.dart';
+import 'package:totem_app/core/config/consts.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/core/services/notifications_service.dart';
@@ -35,33 +35,22 @@ class AuthController extends StateNotifier<AuthState> {
   final SecureStorage _secureStorage;
   final _authStateController = StreamController<AuthState>.broadcast();
 
-  /// Stream of auth state changes for widgets to listen to
   Stream<AuthState> get authStateChanges => _authStateController.stream;
 
-  /// Check if user is authenticated
   bool get isAuthenticated => state.status == AuthStatus.authenticated;
-
-  /// Check if onboarding is completed for authenticated users
   bool get isOnboardingCompleted =>
-      state.status == AuthStatus.authenticated &&
-      (state.user?.hasCompletedOnboarding ?? false);
+      state.status == AuthStatus.authenticated && state.user?.name != null;
 
-  /// Request a magic link to be sent to the provided email
-  Future<void> requestMagicLink(String email) async {
+  Future<void> requestPin(String email, bool newsletterConsent) async {
     try {
       state = AuthState.loading();
       _emitState();
-
-      // Request magic link from backend
-      await _authRepository.requestMagicLink(email);
-
-      // Update state to awaiting verification
+      await _authRepository.requestPin(email, newsletterConsent);
       state = AuthState.awaitingVerification(email: email);
       _emitState();
 
-      // Log analytics
       AnalyticsService.instance.logEvent(
-        'magic_link_requested',
+        'pin_requested',
         parameters: {'email': email},
       );
     } catch (e) {
@@ -72,56 +61,34 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   /// Verify a magic link token
-  Future<void> verifyMagicLink(String token) async {
+  Future<void> verifyPin(String pin) async {
+    assert(
+      state.status == AuthStatus.awaitingVerification,
+      'verifyPin() should only be called when status is '
+      'AuthStatus.awaitingVerification',
+    );
+    assert(
+      state.email != null,
+      'verifyPin() should only be called when email is not null',
+    );
     try {
       state = AuthState.loading();
       _emitState();
 
-      // Verify the magic link token with backend
-      final authResponse = await _authRepository.verifyMagicLink(token);
+      final authResponse = await _authRepository.verifyPin(state.email!, pin);
+      await _secureStorage.write(
+        key: AppConsts.jwtToken,
+        value: authResponse.refreshToken,
+      );
 
-      // Store the API key securely
-      await _secureStorage.write(key: 'api_key', value: authResponse.apiKey);
+      final user = await _authRepository.currentUser;
 
       // Set authenticated state with user
-      state = AuthState.authenticated(user: authResponse.user);
+      state = AuthState.authenticated(user: user);
       _emitState();
 
       // Log analytics
-      AnalyticsService.instance.setUserId(authResponse.user.id);
-      AnalyticsService.instance.logLogin(method: 'magic_link');
-    } catch (e) {
-      // Handle specific errors
-      if (e is AppAuthException && e.code == 'MAGIC_LINK_EXPIRED') {
-        state = AuthState.error(
-          'Magic link has expired. Please request a new one.',
-        );
-      } else {
-        state = AuthState.error('Authentication failed: $e');
-      }
-      _emitState();
-      rethrow;
-    }
-  }
-
-  /// Verify PIN code for login
-  Future<void> verifyPin(String email, String pin) async {
-    try {
-      state = AuthState.loading();
-      _emitState();
-
-      // Verify PIN with backend
-      final authResponse = await _authRepository.verifyPin(email, pin);
-
-      // Store the API key securely
-      await _secureStorage.write(key: 'api_key', value: authResponse.apiKey);
-
-      // Set authenticated state with user
-      state = AuthState.authenticated(user: authResponse.user);
-      _emitState();
-
-      // Log analytics
-      AnalyticsService.instance.setUserId(authResponse.user.id);
+      AnalyticsService.instance.setUserId(user.email);
       AnalyticsService.instance.logLogin(method: 'pin');
     } catch (e) {
       // Handle specific errors
@@ -139,7 +106,6 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
-  /// Complete user onboarding/profile setup
   Future<void> completeOnboarding({
     required String firstName,
     String? profileImagePath,
@@ -153,15 +119,15 @@ class AuthController extends StateNotifier<AuthState> {
       _emitState();
 
       // Update profile with backend
-      final updatedUser = await _authRepository.updateProfile(
-        userId: state.user!.id,
-        firstName: firstName,
-        profileImagePath: profileImagePath,
-      );
+      // final updatedUser = await _authRepository.updateProfile(
+      //   userId: state.user!.id,
+      //   firstName: firstName,
+      //   profileImagePath: profileImagePath,
+      // );
 
       // Update state with completed onboarding flag
-      state = AuthState.authenticated(user: updatedUser);
-      _emitState();
+      // state = AuthState.authenticated(user: updatedUser);
+      // _emitState();
 
       // Log analytics
       AnalyticsService.instance.logEvent('onboarding_completed');
@@ -183,89 +149,51 @@ class AuthController extends StateNotifier<AuthState> {
       state = AuthState.loading();
       _emitState();
 
-      // Get the API key to revoke
-      final apiKey = await _secureStorage.read(key: 'api_key');
+      final jwtToken = await _secureStorage.read(key: AppConsts.jwtToken);
+      if (jwtToken != null) await _authRepository.logout(jwtToken);
+      await _secureStorage.delete(key: AppConsts.jwtToken);
 
-      if (apiKey != null) {
-        // Revoke the API key on the server
-        await _authRepository.revokeApiKey(apiKey);
-      }
-
-      // Clear stored credentials
-      await _secureStorage.delete(key: 'api_key');
-
-      // Update state
       state = AuthState.unauthenticated();
       _emitState();
 
-      // Log analytics
       AnalyticsService.instance.logEvent('user_logged_out');
       AnalyticsService.instance.setUserId(null);
-    } catch (e) {
-      // Even if there's an error, we should still clear local state
-      await _secureStorage.delete(key: 'api_key');
+    } catch (error, stack) {
+      await _secureStorage.delete(key: AppConsts.jwtToken);
       state = AuthState.unauthenticated();
       _emitState();
-
-      // Log error
-      debugPrint('Error during logout: $e');
+      debugPrint('Error during logout: $error, $stack');
     }
   }
 
-  /// Check for existing authentication when app starts
   Future<void> _checkExistingAuth() async {
-    // TODO(bdlukaa): Unmock this
-    state = AuthState(
-      status: AuthStatus.authenticated,
-      user: User(
-        id: '123',
-        email: 'user@mail.com',
-        createdAt: DateTime.now(),
-        hasCompletedOnboarding: true,
-        firstName: 'Name',
-        lastLoginAt: DateTime.now(),
-      ),
-    );
-    _emitState();
-
-    /*
     try {
       // Set loading state
       state = AuthState.loading();
       _emitState();
 
-      // Check for saved API key
-      final apiKey = await _secureStorage.read(key: 'api_key');
+      final jwtToken = await _secureStorage.read(key: AppConsts.jwtToken);
 
-      if (apiKey == null) {
-        // No saved credentials
+      if (jwtToken == null || !_authRepository.isAuthenticated(jwtToken)) {
         state = AuthState.unauthenticated();
         _emitState();
         return;
       }
 
-      // Validate the API key with backend
-      final user = await _authRepository.validateApiKey(apiKey);
-
-      // Set authenticated state
+      final user = await _authRepository.currentUser;
       state = AuthState.authenticated(user: user);
 
-      // Set analytics user ID
-      AnalyticsService.instance.setUserId(user.id);
-    } catch (e) {
-      // Invalid or expired credentials
-      await _secureStorage.delete(key: 'api_key');
+      AnalyticsService.instance.setUserId(user.email);
+    } catch (e, stack) {
+      await _secureStorage.delete(key: AppConsts.jwtToken);
       state = AuthState.unauthenticated();
 
-      // Log error but don't rethrow
-      debugPrint('Error checking existing auth: $e');
+      debugPrint('Error checking existing auth: $e $stack');
     } finally {
       _emitState();
     }
-    */
   }
 
-  /// Helper to emit the current state to the stream
   void _emitState() {
     _authStateController.add(state);
 
