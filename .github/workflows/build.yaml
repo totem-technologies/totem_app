@@ -34,7 +34,7 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
       - name: Run flutterfire configure
-        run: flutterfire configure --project=totem-app-70d34 --out=lib/firebase_options.dart --platforms=web
+        run: flutterfire configure --project=totem-app-70d34 --out=lib/firebase_options.dart --platforms=web --overwrite-firebase-options
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
