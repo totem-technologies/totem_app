@@ -110,15 +110,13 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Enter PIN')),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+      body: SafeArea(
+        child: Center(
           child: Form(
             key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(24),
               children: [
                 Icon(
                   Icons.lock_outline,
@@ -135,7 +133,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "We've sent a 6-digit PIN to ${widget.email}. "
+                  "We've sent a 6-digit PIN to ${widget.email}.\n"
                   'Please enter it below to sign in.',
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,

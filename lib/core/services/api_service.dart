@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
 import 'package:totem_app/api/totem_api.dart';
 import 'package:totem_app/core/config/app_config.dart';
+import 'package:totem_app/core/config/consts.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/services/secure_storage.dart';
 
@@ -34,7 +35,7 @@ Dio _initDio(Ref ref) {
         if (!options.headers.containsKey('Authorization')) {
           final jwtToken = await ref
               .read(secureStorageProvider)
-              .read(key: 'jwt_token');
+              .read(key: AppConsts.accessToken);
           if (jwtToken != null) {
             options.headers['Authorization'] = 'Bearer $jwtToken';
           }

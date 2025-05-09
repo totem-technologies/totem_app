@@ -28,7 +28,6 @@ class BottomNavScaffold extends StatelessWidget {
     return Scaffold(
       body: child,
 
-      /*
       bottomNavigationBar: NavigationBar(
         onDestinationSelected: (index) {
           if (index == 0 && !currentPath.startsWith('/spaces')) {
@@ -43,7 +42,6 @@ class BottomNavScaffold extends StatelessWidget {
           NavigationDestination(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
-      */
     );
   }
 }

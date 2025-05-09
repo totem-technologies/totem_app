@@ -89,15 +89,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+      body: SafeArea(
+        child: Center(
           child: Form(
             key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(24),
               children: [
                 // App logo or icon
                 Icon(
@@ -144,16 +142,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: _requestMagicLink,
                     child: const Padding(
                       padding: EdgeInsets.all(12),
-                      child: Text('Send Magic Link'),
+                      child: Text('Sign in'),
                     ),
                   ),
                 const SizedBox(height: 16),
 
                 // Information text
                 Text(
-                  "We'll send you a magic link to your email. "
-                  'Click on it to sign in instantly, or use the provided PIN '
-                  "code if the link doesn't work.",
+                  "We'll send you a 6-digit PIN to your email.",
                   style: Theme.of(context).textTheme.bodySmall,
                   textAlign: TextAlign.center,
                 ),

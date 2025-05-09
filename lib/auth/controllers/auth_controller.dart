@@ -72,13 +72,18 @@ class AuthController extends StateNotifier<AuthState> {
       'verifyPin() should only be called when email is not null',
     );
     try {
+      final email = state.email!;
       state = AuthState.loading();
       _emitState();
 
-      final authResponse = await _authRepository.verifyPin(state.email!, pin);
+      final authResponse = await _authRepository.verifyPin(email, pin);
       await _secureStorage.write(
         key: AppConsts.jwtToken,
         value: authResponse.refreshToken,
+      );
+      await _secureStorage.write(
+        key: AppConsts.accessToken,
+        value: authResponse.accessToken,
       );
 
       final user = await _authRepository.currentUser;
@@ -88,7 +93,7 @@ class AuthController extends StateNotifier<AuthState> {
 
       AnalyticsService.instance.setUserId(user.email);
       AnalyticsService.instance.logLogin(method: 'pin');
-    } catch (e) {
+    } catch (e, s) {
       if (e is AppAuthException && e.code == 'INVALID_PIN') {
         state = AuthState.error('Invalid PIN code. Please try again.');
       } else if (e is AppAuthException && e.code == 'PIN_ATTEMPTS_EXCEEDED') {
@@ -96,7 +101,7 @@ class AuthController extends StateNotifier<AuthState> {
           'Too many failed attempts. Please request a new magic link.',
         );
       } else {
-        state = AuthState.error('Authentication failed: $e');
+        state = AuthState.error('Authentication failed: $e: $s');
       }
       _emitState();
       rethrow;
@@ -148,6 +153,7 @@ class AuthController extends StateNotifier<AuthState> {
       final jwtToken = await _secureStorage.read(key: AppConsts.jwtToken);
       if (jwtToken != null) await _authRepository.logout(jwtToken);
       await _secureStorage.delete(key: AppConsts.jwtToken);
+      await _secureStorage.delete(key: AppConsts.accessToken);
 
       state = AuthState.unauthenticated();
       _emitState();
@@ -156,6 +162,7 @@ class AuthController extends StateNotifier<AuthState> {
       AnalyticsService.instance.setUserId(null);
     } catch (error, stack) {
       await _secureStorage.delete(key: AppConsts.jwtToken);
+      await _secureStorage.delete(key: AppConsts.accessToken);
       state = AuthState.unauthenticated();
       _emitState();
       debugPrint('Error during logout: $error, $stack');
@@ -167,9 +174,10 @@ class AuthController extends StateNotifier<AuthState> {
       state = AuthState.loading();
       _emitState();
 
-      final jwtToken = await _secureStorage.read(key: AppConsts.jwtToken);
+      final accessToken = await _secureStorage.read(key: AppConsts.accessToken);
 
-      if (jwtToken == null || !_authRepository.isAuthenticated(jwtToken)) {
+      if (accessToken == null ||
+          !_authRepository.isAuthenticated(accessToken)) {
         state = AuthState.unauthenticated();
         _emitState();
         return;
@@ -213,7 +221,6 @@ class AuthController extends StateNotifier<AuthState> {
   }
 }
 
-/// Provider for secure storage
 final secureStorageProvider = Provider<SecureStorage>((ref) {
   return SecureStorage();
 });
