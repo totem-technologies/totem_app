@@ -46,22 +46,34 @@ Dio _initDio(Ref ref) {
           );
 
           if (refreshToken != null) {
-            final response = await MobileTotemApi(
-              Dio(), // This needs to be an independent Dio client.
-              baseUrl: AppConfig.mobileApiUrl,
-            ).client.totemApiAuthRefreshToken(
-              body: RefreshTokenSchema(refreshToken: refreshToken),
-            );
-            accessToken = response.accessToken;
+            try {
+              final response = await MobileTotemApi(
+                Dio(), // This needs to be an independent Dio client.
+                baseUrl: AppConfig.mobileApiUrl,
+              ).client.totemApiAuthRefreshToken(
+                body: RefreshTokenSchema(refreshToken: refreshToken),
+              );
+              accessToken = response.accessToken;
 
-            await secureStorage.write(
-              key: AppConsts.accessToken,
-              value: response.accessToken,
-            );
-            await secureStorage.write(
-              key: AppConsts.jwtToken,
-              value: response.refreshToken,
-            );
+              await secureStorage.write(
+                key: AppConsts.accessToken,
+                value: response.accessToken,
+              );
+              await secureStorage.write(
+                key: AppConsts.jwtToken,
+                value: response.refreshToken,
+              );
+            } catch (e) {
+              // Handle refresh token error
+              await secureStorage.delete(key: AppConsts.accessToken);
+              await secureStorage.delete(key: AppConsts.jwtToken);
+              return handler.reject(
+                DioException(
+                  requestOptions: options,
+                  error: AppAuthException.unauthenticated(),
+                ),
+              );
+            }
           }
         }
 
