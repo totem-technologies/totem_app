@@ -22,6 +22,21 @@ jobs:
       - name: Download Dependencies
         run: flutter pub get
 
+      - name: Install Firebase CLI
+        run: |
+          curl -sL https://firebase.tools | bash
+          dart pub global activate flutterfire_cli
+
+      - name: Setup Firebase auth
+        run: firebase login:ci --no-localhost || echo "Use FIREBASE_TOKEN instead"
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Run flutterfire configure
+        run: flutterfire configure --project=totem-app-70d34 --out=lib/firebase_options.dart --platforms=web
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
       - name: Build
         run: flutter build web
 
