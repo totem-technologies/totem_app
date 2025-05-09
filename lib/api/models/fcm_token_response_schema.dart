@@ -13,9 +13,10 @@ class FcmTokenResponseSchema {
     required this.active,
     required this.createdAt,
   });
-  
-  factory FcmTokenResponseSchema.fromJson(Map<String, Object?> json) => _$FcmTokenResponseSchemaFromJson(json);
-  
+
+  factory FcmTokenResponseSchema.fromJson(Map<String, Object?> json) =>
+      _$FcmTokenResponseSchemaFromJson(json);
+
   final String token;
   final bool active;
   @JsonKey(name: 'created_at')

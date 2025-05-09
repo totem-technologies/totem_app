@@ -8,13 +8,10 @@ part 'input.g.dart';
 
 @JsonSerializable()
 class Input {
-  const Input({
-    this.limit = 100,
-    this.offset = 0,
-  });
-  
+  const Input({this.limit = 100, this.offset = 0});
+
   factory Input.fromJson(Map<String, Object?> json) => _$InputFromJson(json);
-  
+
   final int limit;
   final int offset;
 

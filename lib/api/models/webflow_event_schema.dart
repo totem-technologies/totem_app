@@ -17,9 +17,10 @@ class WebflowEventSchema {
     required this.imageLink,
     required this.keeperImageLink,
   });
-  
-  factory WebflowEventSchema.fromJson(Map<String, Object?> json) => _$WebflowEventSchemaFromJson(json);
-  
+
+  factory WebflowEventSchema.fromJson(Map<String, Object?> json) =>
+      _$WebflowEventSchemaFromJson(json);
+
   final String start;
   final String name;
   @JsonKey(name: 'keeper_name')

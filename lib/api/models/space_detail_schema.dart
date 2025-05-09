@@ -20,9 +20,10 @@ class SpaceDetailSchema {
     required this.nextEvent,
     required this.category,
   });
-  
-  factory SpaceDetailSchema.fromJson(Map<String, Object?> json) => _$SpaceDetailSchemaFromJson(json);
-  
+
+  factory SpaceDetailSchema.fromJson(Map<String, Object?> json) =>
+      _$SpaceDetailSchemaFromJson(json);
+
   final String slug;
   final String title;
   @JsonKey(name: 'image_link')

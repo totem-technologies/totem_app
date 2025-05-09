@@ -35,9 +35,10 @@ class EventDetailSchema {
     required this.subscribed,
     required this.userTimezone,
   });
-  
-  factory EventDetailSchema.fromJson(Map<String, Object?> json) => _$EventDetailSchemaFromJson(json);
-  
+
+  factory EventDetailSchema.fromJson(Map<String, Object?> json) =>
+      _$EventDetailSchemaFromJson(json);
+
   final String slug;
   final String title;
   final EventSpaceSchema space;

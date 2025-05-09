@@ -8,12 +8,11 @@ part 'refresh_token_schema.g.dart';
 
 @JsonSerializable()
 class RefreshTokenSchema {
-  const RefreshTokenSchema({
-    required this.refreshToken,
-  });
-  
-  factory RefreshTokenSchema.fromJson(Map<String, Object?> json) => _$RefreshTokenSchemaFromJson(json);
-  
+  const RefreshTokenSchema({required this.refreshToken});
+
+  factory RefreshTokenSchema.fromJson(Map<String, Object?> json) =>
+      _$RefreshTokenSchemaFromJson(json);
+
   @JsonKey(name: 'refresh_token')
   final String refreshToken;
 

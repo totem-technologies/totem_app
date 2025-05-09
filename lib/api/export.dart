@@ -17,4 +17,3 @@ export 'models/validate_pin_schema.dart';
 export 'models/refresh_token_schema.dart';
 // Root client
 export 'mobile_totem_api.dart';
-

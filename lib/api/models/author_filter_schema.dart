@@ -8,13 +8,11 @@ part 'author_filter_schema.g.dart';
 
 @JsonSerializable()
 class AuthorFilterSchema {
-  const AuthorFilterSchema({
-    required this.name,
-    required this.slug,
-  });
-  
-  factory AuthorFilterSchema.fromJson(Map<String, Object?> json) => _$AuthorFilterSchemaFromJson(json);
-  
+  const AuthorFilterSchema({required this.name, required this.slug});
+
+  factory AuthorFilterSchema.fromJson(Map<String, Object?> json) =>
+      _$AuthorFilterSchemaFromJson(json);
+
   final String name;
   final String slug;
 

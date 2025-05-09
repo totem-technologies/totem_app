@@ -17,9 +17,10 @@ class PublicUserSchema {
     this.name,
     this.profileImage,
   });
-  
-  factory PublicUserSchema.fromJson(Map<String, Object?> json) => _$PublicUserSchemaFromJson(json);
-  
+
+  factory PublicUserSchema.fromJson(Map<String, Object?> json) =>
+      _$PublicUserSchemaFromJson(json);
+
   @JsonKey(name: 'profile_avatar_type')
   final ProfileAvatarTypeEnum profileAvatarType;
   final String? name;

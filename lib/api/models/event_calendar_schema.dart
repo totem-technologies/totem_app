@@ -14,9 +14,10 @@ class EventCalendarSchema {
     required this.slug,
     required this.url,
   });
-  
-  factory EventCalendarSchema.fromJson(Map<String, Object?> json) => _$EventCalendarSchemaFromJson(json);
-  
+
+  factory EventCalendarSchema.fromJson(Map<String, Object?> json) =>
+      _$EventCalendarSchemaFromJson(json);
+
   final String title;
   final String start;
   final String slug;

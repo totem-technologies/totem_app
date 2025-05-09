@@ -13,9 +13,10 @@ class TokenResponse {
     required this.refreshToken,
     required this.expiresIn,
   });
-  
-  factory TokenResponse.fromJson(Map<String, Object?> json) => _$TokenResponseFromJson(json);
-  
+
+  factory TokenResponse.fromJson(Map<String, Object?> json) =>
+      _$TokenResponseFromJson(json);
+
   @JsonKey(name: 'access_token')
   final String accessToken;
   @JsonKey(name: 'refresh_token')

@@ -22,9 +22,10 @@ class EventSpaceSchema {
     this.shortDescription,
     this.image,
   });
-  
-  factory EventSpaceSchema.fromJson(Map<String, Object?> json) => _$EventSpaceSchemaFromJson(json);
-  
+
+  factory EventSpaceSchema.fromJson(Map<String, Object?> json) =>
+      _$EventSpaceSchemaFromJson(json);
+
   final PublicUserSchema author;
   final String title;
   final String? slug;
