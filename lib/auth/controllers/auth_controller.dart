@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/auth/repositories/auth_repository.dart';
@@ -38,8 +39,11 @@ class AuthController extends StateNotifier<AuthState> {
   Stream<AuthState> get authStateChanges => _authStateController.stream;
 
   bool get isAuthenticated => state.status == AuthStatus.authenticated;
-  bool get isOnboardingCompleted =>
-      state.status == AuthStatus.authenticated && state.user?.name != null;
+  bool get isOnboardingCompleted => state.status == AuthStatus.authenticated
+  // TODO(bdlukaa): Uncomment this when profile endpoints are available
+  // &&
+  // (state.user?.name != null && state.user!.name!.isNotEmpty == true)
+  ;
 
   Future<void> requestPin(String email, bool newsletterConsent) async {
     try {
@@ -176,15 +180,18 @@ class AuthController extends StateNotifier<AuthState> {
 
       final accessToken = await _secureStorage.read(key: AppConsts.accessToken);
 
-      if (accessToken == null ||
-          !_authRepository.isAuthenticated(accessToken)) {
+      if (accessToken == null) {
         state = AuthState.unauthenticated();
         _emitState();
         return;
       }
 
+      // TODO(bdlukaa): User profile should be stored in secure storage and
+      //                retrieved here instead of making a network call for
+      //                every app launch.
       final user = await _authRepository.currentUser;
       state = AuthState.authenticated(user: user);
+      _emitState();
 
       AnalyticsService.instance.setUserId(user.email);
     } catch (e, stack) {
@@ -195,6 +202,9 @@ class AuthController extends StateNotifier<AuthState> {
     } finally {
       _emitState();
     }
+
+    // TODO(bdukaa): Rethink this behavior
+    FlutterNativeSplash.remove();
   }
 
   void _emitState() {

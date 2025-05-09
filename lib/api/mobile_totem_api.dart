@@ -10,11 +10,7 @@ import 'client/client_client.dart';
 ///
 ///
 class MobileTotemApi {
-  MobileTotemApi(
-    Dio dio, {
-    String? baseUrl,
-  })  : _dio = dio,
-        _baseUrl = baseUrl;
+  MobileTotemApi(Dio dio, {String? baseUrl}) : _dio = dio, _baseUrl = baseUrl;
 
   final Dio _dio;
   final String? _baseUrl;

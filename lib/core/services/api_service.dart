@@ -1,7 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
+import 'package:totem_app/api/models/refresh_token_schema.dart';
 import 'package:totem_app/api/totem_api.dart';
+import 'package:totem_app/auth/repositories/auth_repository.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/consts.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
@@ -28,29 +30,58 @@ final mobileApiServiceProvider = Provider<MobileTotemApi>((ref) {
 Dio _initDio(Ref ref) {
   final dio = Dio();
 
-  // Add auth interceptor to inject API key
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
-        if (!options.headers.containsKey('Authorization')) {
-          final jwtToken = await ref
-              .read(secureStorageProvider)
-              .read(key: AppConsts.accessToken);
-          if (jwtToken != null) {
-            options.headers['Authorization'] = 'Bearer $jwtToken';
+        final secureStorage = ref.read(secureStorageProvider);
+
+        String? accessToken = await secureStorage.read(
+          key: AppConsts.accessToken,
+        );
+
+        // Refresh if expired
+        if (AuthRepository.isAccessTokenExpired(accessToken)) {
+          final refreshToken = await secureStorage.read(
+            key: AppConsts.jwtToken,
+          );
+
+          if (refreshToken != null) {
+            final response = await MobileTotemApi(
+              Dio(), // This needs to be an independent Dio client.
+              baseUrl: AppConfig.mobileApiUrl,
+            ).client.totemApiAuthRefreshToken(
+              body: RefreshTokenSchema(refreshToken: refreshToken),
+            );
+            accessToken = response.accessToken;
+
+            await secureStorage.write(
+              key: AppConsts.accessToken,
+              value: response.accessToken,
+            );
+            await secureStorage.write(
+              key: AppConsts.jwtToken,
+              value: response.refreshToken,
+            );
           }
         }
+
+        // Add Authorization header if not already present
+        if (accessToken != null &&
+            !options.headers.containsKey('Authorization')) {
+          options.headers['Authorization'] = 'Bearer $accessToken';
+        }
+
         return handler.next(options);
       },
+
       onError: (DioException error, handler) {
-        // Convert DioExceptions to our app-specific exceptions before
-        // propagating
+        // Convert to app-specific exception
         final appException = _handleDioError(error);
+
         return handler.reject(
           DioException(
             requestOptions: error.requestOptions,
             error: appException,
-            // Pass through the original data
             response: error.response,
             type: error.type,
             message: appException.toString(),
@@ -60,10 +91,10 @@ Dio _initDio(Ref ref) {
     ),
   );
 
-  // Add logging interceptor in debug mode
   if (AppConfig.isDevelopment) {
     dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
   }
+
   return dio;
 }
 

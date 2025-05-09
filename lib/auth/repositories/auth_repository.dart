@@ -72,21 +72,6 @@ class AuthRepository {
     }
   }
 
-  /// Refresh the access token using a refresh token
-  Future<TokenResponse> refreshToken(String refreshToken) async {
-    try {
-      return await apiService.client.totemApiAuthRefreshToken(
-        body: RefreshTokenSchema(refreshToken: refreshToken),
-      );
-    } catch (e) {
-      if (e is AppAuthException) rethrow;
-      throw AppAuthException(
-        'Failed to refresh token: $e',
-        code: 'TOKEN_REFRESH_FAILED',
-      );
-    }
-  }
-
   /// Logout by invalidating a refresh token
   Future<MessageResponse> logout(String refreshToken) async {
     try {
@@ -100,16 +85,29 @@ class AuthRepository {
   }
 
   /// Check if the user is authenticated
-  bool isAuthenticated(String? jwtToken) {
+  static bool isAuthenticated(String? jwtToken) {
     if (jwtToken == null) return false;
-    final payload = jwtToken.split('.')[1];
-    final decodedPayload = String.fromCharCodes(base64Url.decode(payload));
-    final Map<String, dynamic> payloadMap =
-        jsonDecode(decodedPayload) as Map<String, dynamic>;
-    final exp = payloadMap['exp'] as int?;
-    if (exp == null) return false;
-    final expirationDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
-    return expirationDate.isAfter(DateTime.now());
+    return !isAccessTokenExpired(jwtToken);
+  }
+
+  static bool isAccessTokenExpired(String? jwtToken) {
+    if (jwtToken == null) return true;
+
+    try {
+      final payload = jwtToken.split('.')[1];
+      final normalizedPayload = base64Url.normalize(payload);
+      final decodedPayload = utf8.decode(base64Url.decode(normalizedPayload));
+      final Map<String, dynamic> payloadMap =
+          (jsonDecode(decodedPayload) as Map).cast<String, dynamic>();
+
+      final exp = payloadMap['exp'];
+      if (exp is! int) return true;
+
+      final expirationDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+      return expirationDate.isBefore(DateTime.now());
+    } catch (_) {
+      return true;
+    }
   }
 
   /// Update FCM token

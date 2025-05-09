@@ -61,25 +61,31 @@ GoRouter createRouter(WidgetRef ref) {
       final isLoggedIn = authController.isAuthenticated;
       final isOnboardingCompleted = authController.isOnboardingCompleted;
       final isAuthRoute = state.matchedLocation.startsWith('/auth');
-      final isOnboardingRoute = state.matchedLocation == '/onboarding';
+      final isOnboardingRoute = state.matchedLocation == RouteNames.onboarding;
 
       // If we're at the root and logged in, go to spaces
       if (state.matchedLocation == '/' && isLoggedIn) {
         if (!isOnboardingCompleted) {
-          return '/onboarding';
+          return RouteNames.onboarding;
         }
-        return '/spaces';
+        return RouteNames.spaces;
       }
 
       // If we're at the root and not logged in, go to login
       if (state.matchedLocation == '/' && !isLoggedIn) {
-        return '/auth/login';
+        return RouteNames.login;
+      }
+
+      if (isAuthRoute && isLoggedIn) {
+        // If we're logged in and trying to access auth routes, redirect to
+        // spaces
+        return RouteNames.spaces;
       }
 
       // If we're trying to access a protected route but not logged in, redirect
       // to login
       if (!isLoggedIn && !isAuthRoute) {
-        return '/auth/login';
+        return RouteNames.login;
       }
 
       // If we're logged in but haven't completed onboarding, and we're not
@@ -88,12 +94,12 @@ GoRouter createRouter(WidgetRef ref) {
           !isOnboardingCompleted &&
           !isOnboardingRoute &&
           !isAuthRoute) {
-        return '/onboarding';
+        return RouteNames.onboarding;
       }
 
       // If logged in and trying to access auth routes, redirect to spaces
       if (isLoggedIn && isOnboardingCompleted && isAuthRoute) {
-        return '/spaces';
+        return RouteNames.spaces;
       }
 
       // No redirect needed
