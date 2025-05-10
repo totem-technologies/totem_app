@@ -29,14 +29,13 @@ Future<void> main() async {
   );
 
   await dotenv.load();
+  await _initializeServices();
 
   await ErrorHandler.initialize(
     () => runApp(
       ProviderScope(observers: [ObserverService()], child: const TotemApp()),
     ),
   );
-
-  await _initializeServices();
 }
 
 /// Initializes services.
