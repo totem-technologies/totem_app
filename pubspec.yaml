@@ -27,6 +27,7 @@ dependencies:
   firebase_core: ^3.13.0
   firebase_messaging: ^15.2.5
   sentry_flutter: ^9.0.0-beta.2
+  posthog_flutter: ^5.0.0
 
   # UI & Utilities
   cached_network_image: ^3.4.1

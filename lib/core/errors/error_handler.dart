@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
+import 'package:totem_app/main.dart';
 
 /// Centralized error handling for the Totem App.
 ///
@@ -18,9 +20,11 @@ class ErrorHandler {
   static Future<void> initialize(VoidCallback runApp) async {
     await SentryFlutter.init((options) {
       options
-          // Adds request headers and IP for users, for more info visit:
-          // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
-          .sendDefaultPii = true;
+        ..dsn = AppConfig.sentryDsn
+        ..navigatorKey = TotemApp.navigatorKey
+        // Adds request headers and IP for users, for more info visit:
+        // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
+        ..sendDefaultPii = true;
       //
       // ignore: require_trailing_commas
     }, appRunner: runApp);

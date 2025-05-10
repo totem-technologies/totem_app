@@ -68,14 +68,27 @@ class AppConfig {
     return dotenv.env['ENABLE_PUSH_NOTIFICATIONS']?.toLowerCase() == 'true';
   }
 
+  /// Vapid Key used for push notifications on the web.
+  static String? get vapidKey {
+    return dotenv.env['VAPID_KEY'];
+  }
+
   static bool get enableAnalytics {
     if (kDebugMode) return false; // Disable in debug mode
     return dotenv.env['ENABLE_ANALYTICS']?.toLowerCase() !=
         'false'; // Enabled by default in release
   }
 
-  /// Vapid Key used for push notifications on the web.
-  static String? get vapidKey {
-    return dotenv.env['VAPID_KEY'];
+  static String get sentryDsn {
+    return dotenv.env['SENTRY_DSN'] ?? '';
+  }
+
+  static String get posthogApiKey {
+    return dotenv.env['POSTHOG_API_KEY'] ?? '';
+  }
+
+  static String get posthogHost {
+    // or EU Host: 'https://eu.i.posthog.com'
+    return dotenv.env['POSTHOG_HOST'] ?? 'https://us.i.posthog.com';
   }
 }

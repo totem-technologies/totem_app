@@ -96,7 +96,7 @@ class AuthController extends StateNotifier<AuthState> {
       state = AuthState.authenticated(user: user);
       _emitState();
 
-      AnalyticsService.instance.setUserId(user.email);
+      AnalyticsService.instance.setUserId(user);
       AnalyticsService.instance.logLogin(method: 'pin');
     } catch (e, s) {
       if (e is AppAuthException && e.code == 'INVALID_PIN') {
@@ -164,8 +164,7 @@ class AuthController extends StateNotifier<AuthState> {
       state = AuthState.unauthenticated();
       _emitState();
 
-      AnalyticsService.instance.logEvent('user_logged_out');
-      AnalyticsService.instance.setUserId(null);
+      AnalyticsService.instance.logLogout();
     } catch (error, stack) {
       await _secureStorage.delete(key: AppConsts.jwtToken);
       await _secureStorage.delete(key: AppConsts.accessToken);
@@ -195,7 +194,7 @@ class AuthController extends StateNotifier<AuthState> {
       state = AuthState.authenticated(user: user);
       _emitState();
 
-      AnalyticsService.instance.setUserId(user.email);
+      AnalyticsService.instance.setUserId(user);
     } catch (e, stack) {
       await _secureStorage.delete(key: AppConsts.jwtToken);
       state = AuthState.unauthenticated();
