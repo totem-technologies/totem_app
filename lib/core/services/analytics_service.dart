@@ -91,6 +91,14 @@ class AnalyticsService {
     );
   }
 
+  void logSpaceViewed(String spaceId) {
+    if (!_shouldLog()) return;
+
+    debugPrint('📊 Space viewed: $spaceId');
+
+    logEvent('space_viewed', parameters: {'space_id': spaceId});
+  }
+
   bool _shouldLog() {
     if (!_isInitialized) {
       debugPrint('📊 Analytics not initialized, skipping logging');
