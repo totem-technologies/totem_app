@@ -65,7 +65,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
         }
       });
       // If we reach here, PIN verification was successful
-    } catch (e) {
+    } catch (error) {
       if (mounted) {
         setState(() {
           _attempts++;

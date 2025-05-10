@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 
 /// Service to handle deep links and URI scheme opening.
 ///
@@ -41,8 +42,12 @@ class DeepLinkService {
 
       _initialized = true;
       debugPrint('DeepLinkService initialized successfully');
-    } catch (e) {
-      debugPrint('Failed to initialize DeepLinkService: $e');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        reason: 'Failed to initialize deep link service',
+      );
       // Fail gracefully - mark as initialized anyway
       _initialized = true;
       rethrow;
@@ -63,8 +68,12 @@ class DeepLinkService {
 
       debugPrint('Checking for initial deep link: None found');
       return null;
-    } catch (e) {
-      debugPrint('Error handling initial deep link: $e');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        reason: 'Failed to handle initial deep link',
+      );
       return null;
     }
   }

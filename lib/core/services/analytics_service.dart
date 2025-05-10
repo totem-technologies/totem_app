@@ -1,25 +1,20 @@
 import 'package:flutter/foundation.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 
 /// Service for tracking app analytics and user behavior.
 ///
 /// This service provides a centralized way to track events, screen views,
 /// user properties, and other analytics data across the app.
 class AnalyticsService {
-  // Private constructor for singleton
   AnalyticsService._();
-  // Singleton instance
   static final AnalyticsService instance = AnalyticsService._();
 
-  // Flag to check if analytics is initialized
   bool _isInitialized = false;
 
   // Flag to enable/disable analytics (for privacy or development)
   bool _isEnabled = true;
 
   /// Initialize the analytics service.
-  ///
-  /// This would typically connect to your analytics provider
-  /// (Firebase Analytics, Amplitude, Mixpanel, etc.)
   Future<void> initialize() async {
     if (_isInitialized) {
       debugPrint('Analytics already initialized');
@@ -27,25 +22,21 @@ class AnalyticsService {
     }
 
     try {
-      // For development, just log that we would initialize
       debugPrint('📊 Initializing analytics service');
 
-      // In a real implementation, you would do something like:
-      // await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(
-      //   !kDebugMode,
-      // );
-      // or
-      // await AmplitudeFlutter().init(apiKey);
-
       _isInitialized = true;
-      _isEnabled = !kDebugMode; // Typically disable analytics in debug mode
+      _isEnabled = !kDebugMode;
 
       debugPrint(
         '📊 Analytics initialized '
         '(collection ${_isEnabled ? 'enabled' : 'disabled'})',
       );
-    } catch (e) {
-      debugPrint('📊 Failed to initialize analytics: $e');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        reason: 'Failed to initialize analytics',
+      );
       // Fail gracefully - don't let analytics crash the app
       _isInitialized = false;
       _isEnabled = false;
@@ -103,17 +94,6 @@ class AnalyticsService {
     // FirebaseAnalytics.instance.logLogin(method: method);
   }
 
-  /// Log error events for monitoring
-  void logError(String error, {StackTrace? stackTrace, String? reason}) {
-    if (!_shouldLog()) return;
-
-    debugPrint('📊 Error event: $error | Reason: $reason');
-
-    // FirebaseCrashlytics.instance.recordError(
-    //  error, stackTrace, reason: reason
-    // );
-  }
-
   /// Enable or disable analytics collection
   void setAnalyticsCollectionEnabled(bool enabled) {
     _isEnabled = enabled;
@@ -123,7 +103,6 @@ class AnalyticsService {
     // FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(enabled);
   }
 
-  /// Helper method to determine if we should log events
   bool _shouldLog() {
     if (!_isInitialized) {
       debugPrint('📊 Analytics not initialized, skipping logging');

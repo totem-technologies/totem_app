@@ -70,9 +70,14 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           }
         });
       }
-    } catch (e) {
+    } catch (error, stackTrace) {
       if (mounted) {
-        await ErrorHandler.handleApiError(context, e, onRetry: _submitProfile);
+        await ErrorHandler.handleApiError(
+          context,
+          error,
+          stackTrace: stackTrace,
+          onRetry: _submitProfile,
+        );
       }
     } finally {
       if (mounted) {

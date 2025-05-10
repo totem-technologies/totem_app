@@ -7,6 +7,7 @@ import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/auth/repositories/auth_repository.dart';
 import 'package:totem_app/core/config/consts.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/core/services/notifications_service.dart';
 import 'package:totem_app/core/services/secure_storage.dart';
@@ -56,9 +57,10 @@ class AuthController extends StateNotifier<AuthState> {
         'pin_requested',
         parameters: {'email': email, 'newsletterConsent': newsletterConsent},
       );
-    } catch (e) {
-      state = AuthState.error(e.toString());
+    } catch (error, stackTrace) {
+      state = AuthState.error(error.toString());
       _emitState();
+      ErrorHandler.logError(error, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -135,12 +137,13 @@ class AuthController extends StateNotifier<AuthState> {
       // _emitState();
 
       AnalyticsService.instance.logEvent('onboarding_completed');
-    } catch (e) {
+    } catch (error, stackTrace) {
       state = state.copyWith(
         status: AuthStatus.authenticated,
-        error: 'Failed to update profile: $e',
+        error: 'Failed to update profile: $error',
       );
       _emitState();
+      ErrorHandler.logError(error, stackTrace: stackTrace);
       rethrow;
     }
   }
