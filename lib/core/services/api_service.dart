@@ -63,7 +63,7 @@ Dio _initDio(Ref ref) {
                 key: AppConsts.jwtToken,
                 value: response.refreshToken,
               );
-            } catch (e) {
+            } catch (error) {
               // Handle refresh token error
               await secureStorage.delete(key: AppConsts.accessToken);
               await secureStorage.delete(key: AppConsts.jwtToken);

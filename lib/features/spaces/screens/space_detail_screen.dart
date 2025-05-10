@@ -3,20 +3,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 
-class EventDetailScreen extends ConsumerWidget {
+class EventDetailScreen extends ConsumerStatefulWidget {
   const EventDetailScreen({required this.eventSlug, super.key});
   final String eventSlug;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EventDetailScreen> createState() => _EventDetailScreenState();
+}
+
+class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService.instance.logSpaceViewed(widget.eventSlug);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final eventAsync = ref.watch(eventProvider(eventSlug));
+    final eventAsync = ref.watch(eventProvider(widget.eventSlug));
 
     return Scaffold(
       appBar: AppBar(
@@ -26,7 +38,8 @@ class EventDetailScreen extends ConsumerWidget {
       body: eventAsync.when(
         data: (event) {
           return RefreshIndicator.adaptive(
-            onRefresh: () => ref.refresh(eventProvider(eventSlug).future),
+            onRefresh:
+                () => ref.refresh(eventProvider(widget.eventSlug).future),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 return ListView(

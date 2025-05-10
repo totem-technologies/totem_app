@@ -1,3 +1,5 @@
+# dart run swagger_parser
+# dart run build_runner build -d
 swagger_parser:
   output_directory: lib/api
   language: dart
