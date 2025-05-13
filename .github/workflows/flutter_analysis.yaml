@@ -26,7 +26,6 @@ jobs:
       #     dart pub global activate flutterfire_cli
 
       - name: Decode firebase_options.dart
-        if: secrets.FIREBASE_OPTIONS_B64 != ''
         run: |
           mkdir -p lib
           echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
