@@ -11,6 +11,7 @@ import 'package:totem_app/api/models/token_response.dart';
 import 'package:totem_app/api/models/user_schema.dart';
 import 'package:totem_app/api/models/validate_pin_schema.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 
 /// Provider for the auth repository
@@ -28,10 +29,11 @@ class AuthRepository {
   Future<UserSchema> get currentUser async {
     try {
       return await apiService.client.totemApiMobileApiCurrentUser();
-    } catch (e) {
-      if (e is AppAuthException) rethrow;
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(error, stackTrace: stackTrace);
+      if (error is AppAuthException) rethrow;
       throw AppAuthException(
-        'Failed to fetch current user: $e',
+        'Failed to fetch current user: $error',
         code: 'CURRENT_USER_FETCH_FAILED',
       );
     }
@@ -48,10 +50,11 @@ class AuthRepository {
           newsletterConsent: newsletterConsent,
         ),
       );
-    } catch (e) {
-      if (e is AppAuthException) rethrow;
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(error, stackTrace: stackTrace);
+      if (error is AppAuthException) rethrow;
       throw AppAuthException(
-        'Failed to request PIN: $e',
+        'Failed to request PIN: $error',
         code: 'PIN_REQUEST_FAILED',
       );
     }
@@ -63,10 +66,11 @@ class AuthRepository {
       return await apiService.client.totemApiAuthValidatePin(
         body: ValidatePinSchema(email: email, pin: pin),
       );
-    } catch (e) {
-      if (e is AppAuthException) rethrow;
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(error, stackTrace: stackTrace);
+      if (error is AppAuthException) rethrow;
       throw AppAuthException(
-        'Failed to verify PIN: $e',
+        'Failed to verify PIN: $error',
         code: 'PIN_VERIFICATION_FAILED',
       );
     }
@@ -78,9 +82,10 @@ class AuthRepository {
       return await apiService.client.totemApiAuthLogout(
         body: RefreshTokenSchema(refreshToken: refreshToken),
       );
-    } catch (e) {
-      if (e is AppAuthException) rethrow;
-      throw AppAuthException('Failed to logout: $e', code: 'LOGOUT_FAILED');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(error, stackTrace: stackTrace);
+      if (error is AppAuthException) rethrow;
+      throw AppAuthException('Failed to logout: $error', code: 'LOGOUT_FAILED');
     }
   }
 
@@ -116,10 +121,11 @@ class AuthRepository {
       await apiService.client.totemApiMobileApiRegisterFcmToken(
         body: FcmTokenRegisterSchema(token: fcmToken),
       );
-    } catch (e) {
-      if (e is AppAuthException) rethrow;
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(error, stackTrace: stackTrace);
+      if (error is AppAuthException) rethrow;
       throw AppAuthException(
-        'Failed to update FCM token: $e',
+        'Failed to update FCM token: $error',
         code: 'FCM_TOKEN_UPDATE_FAILED',
       );
     }
@@ -131,10 +137,11 @@ class AuthRepository {
       await apiService.client.totemApiMobileApiUnregisterFcmToken(
         token: fcmToken,
       );
-    } catch (e) {
-      if (e is AppAuthException) rethrow;
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(error, stackTrace: stackTrace);
+      if (error is AppAuthException) rethrow;
       throw AppAuthException(
-        'Failed to unregister FCM token: $e',
+        'Failed to unregister FCM token: $error',
         code: 'FCM_TOKEN_UNREGISTER_FAILED',
       );
     }

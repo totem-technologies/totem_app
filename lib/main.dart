@@ -1,11 +1,9 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
@@ -30,12 +28,13 @@ Future<void> main() async {
     ]),
   );
 
-  await _setupErrorHandling();
   await dotenv.load();
   await _initializeServices();
 
-  runApp(
-    ProviderScope(observers: [ObserverService()], child: const TotemApp()),
+  await ErrorHandler.initialize(
+    () => runApp(
+      ProviderScope(observers: [ObserverService()], child: const TotemApp()),
+    ),
   );
 }
 
@@ -53,21 +52,8 @@ Future<void> _initializeServices() async {
     debugPrint('✅ Services initialized successfully');
   } catch (e, stackTrace) {
     debugPrint('❌ Service initialization error: $e');
-    // Log error but continue app startup
     ErrorHandler.logError(e, stackTrace: stackTrace);
   }
-}
-
-Future<void> _setupErrorHandling() async {
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    ErrorHandler.logFlutterError(details);
-  };
-
-  PlatformDispatcher.instance.onError = (error, stack) {
-    ErrorHandler.logError(error, stackTrace: stack);
-    return true;
-  };
 }
 
 class TotemApp extends ConsumerStatefulWidget {

@@ -13,7 +13,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  bool _isLoggingOut = false;
+  var _isLoggingOut = false;
 
   // Implement logout functionality
   Future<void> _logout() async {
@@ -27,10 +27,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
       // Navigation will be handled automatically by router's redirect
       // when auth state changes to unauthenticated
-    } catch (e) {
+    } catch (error, stackTrace) {
       // Handle any logout errors
       if (mounted) {
-        await ErrorHandler.handleApiError(context, e, onRetry: _logout);
+        await ErrorHandler.handleApiError(
+          context,
+          error,
+          stackTrace: stackTrace,
+          onRetry: _logout,
+        );
       }
     } finally {
       // In case we're still mounted and logout failed

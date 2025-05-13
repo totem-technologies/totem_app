@@ -3,40 +3,50 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
-import 'package:totem_app/core/services/analytics_service.dart';
+import 'package:totem_app/main.dart';
 
 /// Centralized error handling for the Totem App.
 ///
 /// This class provides methods for handling, logging, and displaying errors
 /// throughout the application in a consistent manner.
 class ErrorHandler {
-  // Private constructor to prevent instantiation
   const ErrorHandler._();
 
-  // Tag for error logs
   static const String _tag = 'ErrorHandler';
 
-  /// Log an error with optional stack trace
-  static void logError(Object error, {StackTrace? stackTrace}) {
-    // Log to console in debug mode
+  static Future<void> initialize(VoidCallback runApp) async {
+    await SentryFlutter.init((options) {
+      options
+        ..dsn = AppConfig.sentryDsn
+        ..navigatorKey = TotemApp.navigatorKey
+        // Adds request headers and IP for users, for more info visit:
+        // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
+        ..sendDefaultPii = true;
+      //
+      // ignore: require_trailing_commas
+    }, appRunner: runApp);
+  }
+
+  static void logError(Object error, {StackTrace? stackTrace, String? reason}) {
     if (kDebugMode) {
       debugPrint('[$_tag] 🔴 Error: $error');
       if (stackTrace != null) {
         debugPrint('[$_tag] Stack trace: $stackTrace');
       }
     }
-
-    // Log to analytics service
-    AnalyticsService.instance.logError(
-      error.toString(),
-      stackTrace: stackTrace,
-    );
+    if (reason != null) debugPrint('📊 $reason');
+    Sentry.captureException(error, stackTrace: stackTrace, hint: Hint());
   }
 
-  /// Log a Flutter error from FlutterErrorDetails
   static void logFlutterError(FlutterErrorDetails details) {
-    logError(details.exceptionAsString(), stackTrace: details.stack);
+    logError(
+      details.exception,
+      stackTrace: details.stack,
+      reason: details.exceptionAsString(),
+    );
   }
 
   /// Handle an exception and return a user-friendly error message

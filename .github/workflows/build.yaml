@@ -2,10 +2,10 @@ name: Deploy to GitHub Pages
 
 on:
   workflow_dispatch:
+  pull_request:
   push:
     branches:
       - main
-  pull_request:
 
 jobs:
   deploy:
@@ -23,20 +23,15 @@ jobs:
       - name: Download Dependencies
         run: flutter pub get
 
-      - name: Install Firebase CLI
+      # - name: Install Firebase CLI
+      #   run: |
+      #     curl -sL https://firebase.tools | bash
+      #     dart pub global activate flutterfire_cli
+
+      - name: Decode firebase_options.dart
         run: |
-          curl -sL https://firebase.tools | bash
-          dart pub global activate flutterfire_cli
-
-      - name: Setup Firebase auth
-        run: firebase login:ci --no-localhost || echo "Use FIREBASE_TOKEN instead"
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-
-      - name: Run flutterfire configure
-        run: flutterfire configure --project=totem-app-70d34 --out=lib/firebase_options.dart --platforms=web --overwrite-firebase-options
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          mkdir -p lib
+          echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
 
       - name: Build
         run: flutter build web

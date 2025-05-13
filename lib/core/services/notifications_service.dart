@@ -1,6 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:totem_app/core/config/app_config.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/main.dart' show TotemApp;
 import 'package:totem_app/navigation/route_names.dart';
 
@@ -30,8 +31,12 @@ class NotificationsService {
       FirebaseMessaging.onMessageOpenedApp.listen(_handleMessage);
 
       debugPrint('NotificationsService initialized successfully');
-    } catch (e) {
-      debugPrint('Failed to initialize NotificationsService: $e');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        reason: 'Failed to initialize notifications service',
+      );
       // Fail gracefully - mark as initialized anyway
       _initialized = true;
       rethrow;

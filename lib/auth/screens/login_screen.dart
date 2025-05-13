@@ -39,7 +39,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   // Request magic link
-  Future<void> _requestMagicLink() async {
+  Future<void> _requestPin() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -62,12 +62,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           extra: {'email': _emailController.text.trim()},
         );
       }
-    } catch (e) {
+    } catch (error, stackTrace) {
       if (mounted) {
         await ErrorHandler.handleApiError(
           context,
-          e,
-          onRetry: _requestMagicLink,
+          error,
+          stackTrace: stackTrace,
+          onRetry: _requestPin,
         );
       }
     } finally {
@@ -139,7 +140,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const LoadingIndicator()
                 else
                   ElevatedButton(
-                    onPressed: _requestMagicLink,
+                    onPressed: _requestPin,
                     child: const Padding(
                       padding: EdgeInsetsDirectional.all(12),
                       child: Text('Sign in'),
