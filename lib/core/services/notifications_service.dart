@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +11,7 @@ import 'package:totem_app/navigation/route_names.dart';
 
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse notificationResponse) {
-  // handle action
+  // TODO: handle action
 }
 
 class NotificationsService {
@@ -40,12 +41,29 @@ class NotificationsService {
           _handleFirebaseMessage(initialMessage);
         }
         FirebaseMessaging.onMessageOpenedApp.listen(_handleFirebaseMessage);
+
+        FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+          debugPrint('Got a message whilst in the foreground!');
+          debugPrint('Message data: ${message.data}');
+
+          if (message.notification != null) {
+            debugPrint(
+              'Message also contained a notification: ${message.notification}',
+            );
+
+            showNotification(
+              title: message.notification?.title ?? '',
+              body: message.notification?.body ?? '',
+              data: message.data,
+            );
+          }
+        });
       }
 
       // Set up local notifications
       {
         const initializationSettings = InitializationSettings(
-          android: AndroidInitializationSettings('app_icon'),
+          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
           iOS: DarwinInitializationSettings(
             requestAlertPermission: false,
             requestBadgePermission: false,
@@ -61,7 +79,8 @@ class NotificationsService {
         final notificationAppLaunchDetails =
             await flutterLocalNotificationsPlugin
                 .getNotificationAppLaunchDetails();
-        if (notificationAppLaunchDetails?.notificationResponse != null) {
+        if (notificationAppLaunchDetails?.notificationResponse != null &&
+            (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false)) {
           _handleNotificationTap(
             notificationAppLaunchDetails!.notificationResponse!,
           );
@@ -82,13 +101,11 @@ class NotificationsService {
   }
 
   void _handleFirebaseMessage(RemoteMessage message) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      debugPrint('Handling message: ${message.data}');
+    debugPrint('Handling message: ${message.data}');
 
-      final path = message.data['path'] as String?;
+    final path = message.data['path'] as String?;
 
-      _handlePath(path);
-    });
+    _handlePath(path);
   }
 
   void _handleNotificationTap(NotificationResponse notificationResponse) {
@@ -103,8 +120,43 @@ class NotificationsService {
 
   void _handlePath(String? path) {
     if (path != null && RouteNames.isValidRoute(path)) {
-      TotemApp.navigatorKey.currentState?.pushNamed(path);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        TotemApp.navigatorKey.currentState?.pushNamed(path);
+      });
     }
+  }
+
+  void showNotification({
+    required String title,
+    required String body,
+    required Map<String, dynamic> data,
+  }) {
+    const notificationDetails = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'spaces',
+        'Spaces',
+        channelDescription: 'Spaces',
+        importance: Importance.max,
+        priority: Priority.high,
+        styleInformation: DefaultStyleInformation(true, true),
+        visibility: NotificationVisibility.public,
+      ),
+      iOS: DarwinNotificationDetails(
+        presentBadge: true,
+        presentSound: true,
+        interruptionLevel: InterruptionLevel.passive,
+      ),
+    );
+
+    final payload = jsonEncode({'path': data['path']});
+
+    flutterLocalNotificationsPlugin.show(
+      Random().nextInt(10000),
+      title,
+      body,
+      notificationDetails,
+      payload: payload,
+    );
   }
 
   Future<String?> get fcmToken {
