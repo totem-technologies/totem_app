@@ -12,6 +12,7 @@
 .swiftpm/
 migrate_working_dir/
 .env
+GoogleService-Info.plist
 
 # IntelliJ related
 *.iml
