@@ -11,7 +11,7 @@ import 'package:totem_app/navigation/route_names.dart';
 
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse notificationResponse) {
-  // TODO: handle action
+  // TODO(bdlukaa): handle action
 }
 
 class NotificationsService {
