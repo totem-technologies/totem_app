@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
 import 'package:totem_app/api/models/fcm_token_register_schema.dart';
@@ -31,7 +32,22 @@ class AuthRepository {
       return await apiService.client.totemApiMobileApiCurrentUser();
     } catch (error, stackTrace) {
       ErrorHandler.logError(error, stackTrace: stackTrace);
-      if (error is AppAuthException) rethrow;
+      if (error is AppAuthException) {
+        rethrow;
+      } else if (error is DioException) {
+        final response = error.response;
+        if (response != null && response.statusCode == 401) {
+          throw AppAuthException(
+            'Unauthorized: ${response.data}',
+            code: 'UNAUTHORIZED',
+          );
+        } else if (response != null) {
+          throw AppAuthException(
+            'Failed to fetch current user: ${response.data}',
+            code: 'CURRENT_USER_FETCH_FAILED',
+          );
+        }
+      }
       throw AppAuthException(
         'Failed to fetch current user: $error',
         code: 'CURRENT_USER_FETCH_FAILED',

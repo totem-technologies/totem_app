@@ -8,7 +8,7 @@ class ObserverService extends ProviderObserver {
     Object? value,
     ProviderContainer container,
   ) {
-    _print('Provider $provider was initialized with $value');
+    debugPrint('Provider ${provider.name} was initialized with $value');
   }
 
   @override
@@ -16,7 +16,7 @@ class ObserverService extends ProviderObserver {
     ProviderBase<Object?> provider,
     ProviderContainer container,
   ) {
-    _print('Provider $provider was disposed');
+    debugPrint('Provider ${provider.name} was disposed');
   }
 
   @override
@@ -26,7 +26,9 @@ class ObserverService extends ProviderObserver {
     Object? newValue,
     ProviderContainer container,
   ) {
-    _print('Provider $provider updated from $previousValue to $newValue');
+    debugPrint(
+      'Provider ${provider.name} updated from $previousValue to $newValue',
+    );
   }
 
   @override
@@ -36,12 +38,6 @@ class ObserverService extends ProviderObserver {
     StackTrace stackTrace,
     ProviderContainer container,
   ) {
-    _print('Provider $provider threw $error at $stackTrace');
-  }
-
-  void _print(String message) {
-    if (kDebugMode) {
-      debugPrint(message);
-    }
+    debugPrint('Provider ${provider.name} threw $error at $stackTrace');
   }
 }
