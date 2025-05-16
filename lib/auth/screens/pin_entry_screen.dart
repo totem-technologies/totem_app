@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,9 +21,9 @@ class PinEntryScreen extends ConsumerStatefulWidget {
 class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
   final _formKey = GlobalKey<FormState>();
   final _pinController = TextEditingController();
-  bool _isLoading = false;
-  int _attempts = 0;
-  final int _maxAttempts = AppConfig.maxPinAttempts;
+  var _isLoading = false;
+  var _attempts = 0;
+  final _maxAttempts = AppConfig.maxPinAttempts;
 
   @override
   void dispose() {
@@ -96,7 +97,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
   }
 
   // Request a new magic link
-  void _requestNewMagicLink() {
+  void _requestNewPin() {
     context.go(RouteNames.login);
   }
 
@@ -109,86 +110,112 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
       }
     });
 
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: SafeArea(
         child: Center(
-          child: Form(
-            key: _formKey,
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsetsDirectional.all(24),
-              children: [
-                Icon(
-                  Icons.lock_outline,
-                  size: 64,
-                  color: Theme.of(context).primaryColor,
-                ),
-                const SizedBox(height: 24),
-
-                // Instructions
-                Text(
-                  'Enter the 6-digit PIN',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "We've sent a 6-digit PIN to ${widget.email}.\n"
-                  'Please enter it below to sign in.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-
-                // PIN input
-                TextFormField(
-                  controller: _pinController,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
-                  textAlign: TextAlign.center,
-                  decoration: const InputDecoration(
-                    labelText: 'PIN Code',
-                    hintText: '123456',
-                    counterText: '',
-                  ),
-                  validator: _validatePin,
-                  enabled: !_isLoading && _attempts < _maxAttempts,
-                ),
-                const SizedBox(height: 24),
-
-                // Verify button
-                if (_isLoading)
-                  const LoadingIndicator()
-                else
-                  ElevatedButton(
-                    onPressed: _attempts < _maxAttempts ? _verifyPin : null,
-                    child: const Padding(
-                      padding: EdgeInsetsDirectional.all(12),
-                      child: Text('Verify PIN'),
-                    ),
-                  ),
-                const SizedBox(height: 16),
-
-                // Request new magic link
-                TextButton(
-                  onPressed: _requestNewMagicLink,
-                  child: const Text('Request a new magic link'),
-                ),
-
-                if (_attempts > 0) ...[
-                  const SizedBox(height: 16),
+          child: Card(
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsetsDirectional.all(24),
+                children: [
+                  // Instructions
                   Text(
-                    'Attempts: $_attempts of $_maxAttempts',
-                    style: TextStyle(
-                      color:
-                          _attempts >= _maxAttempts - 1
-                              ? Theme.of(context).colorScheme.error
-                              : null,
+                    'Enter the 6-digit PIN',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  RichText(
+                    text: TextSpan(
+                      text: "We've sent a 6-digit PIN to ",
+                      style: theme.textTheme.bodyMedium,
+                      children: [
+                        TextSpan(
+                          text:
+                              widget.email.isEmpty
+                                  ? 'your email'
+                                  : widget.email,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        TextSpan(
+                          text: '\nPlease enter it below to.',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ],
                     ),
                     textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: 32),
+
+                  Text(
+                    'Enter 6-digit code',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: _pinController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    textAlign: TextAlign.center,
+                    decoration: const InputDecoration(hintText: '123456'),
+                    validator: _validatePin,
+                    enabled: !_isLoading && _attempts < _maxAttempts,
+                  ),
+                  const SizedBox(height: 24),
+
+                  ElevatedButton(
+                    onPressed:
+                        !_isLoading && _attempts < _maxAttempts
+                            ? _verifyPin
+                            : null,
+                    child:
+                        _isLoading
+                            ? const LoadingIndicator()
+                            : const Text('Verify Code'),
+                  ),
+                  const SizedBox(height: 16),
+
+                  RichText(
+                    text: TextSpan(
+                      text: 'Need a new code? ',
+                      style: theme.textTheme.bodyMedium,
+                      children: [
+                        TextSpan(
+                          text: 'Send again',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          recognizer:
+                              TapGestureRecognizer()..onTap = _requestNewPin,
+                        ),
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
+                  if (_attempts > 0) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      'Attempts: $_attempts of $_maxAttempts',
+                      style: TextStyle(
+                        color:
+                            _attempts >= _maxAttempts - 1
+                                ? theme.colorScheme.error
+                                : null,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

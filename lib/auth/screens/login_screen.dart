@@ -197,11 +197,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const LoadingIndicator()
                   else
                     ElevatedButton(
-                      onPressed: _requestPin,
-                      child: const Padding(
-                        padding: EdgeInsetsDirectional.all(12),
-                        child: Text('Sign in'),
-                      ),
+                      onPressed: _isLoading ? null : _requestPin,
+                      child:
+                          _isLoading
+                              ? const LoadingIndicator()
+                              : const Text('Sign in'),
                     ),
                   const SizedBox(height: 16),
 

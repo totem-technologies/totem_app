@@ -131,7 +131,10 @@ GoRouter createRouter(WidgetRef ref) {
         path: RouteNames.pinEntry,
         name: RouteNames.pinEntry,
         builder: (context, state) {
-          final email = state.uri.queryParameters['email'] ?? '';
+          final String email =
+              (state.uri.queryParameters['email']) ??
+              ((state.extra as Map?)?['email'] as String?) ??
+              '';
           return PinEntryScreen(email: email);
         },
       ),
