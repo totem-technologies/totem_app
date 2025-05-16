@@ -1,6 +1,8 @@
 class RouteNames {
   const RouteNames._();
 
+  static const welcome = '/';
+
   // Auth routes
   static const login = '/auth/login';
   static const pinEntry = '/auth/pin';

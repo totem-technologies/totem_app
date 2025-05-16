@@ -202,18 +202,20 @@ class AppTheme {
 
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
+        surfaceTintColor: Colors.transparent,
         backgroundColor: mauve,
         foregroundColor: white,
         textStyle: const TextStyle(
           fontFamily: fontFamilySans,
           fontWeight: FontWeight.w500,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         padding: const EdgeInsetsDirectional.symmetric(
           horizontal: 16,
           vertical: 12,
         ),
-        elevation: 2,
+        elevation: 0,
+        minimumSize: const Size(20, 56),
       ),
     ),
 
@@ -298,11 +300,11 @@ class AppTheme {
     cardTheme: CardTheme(
       color: white,
       elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: grey.withValues(alpha: 0.2)), // Subtle border
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      margin: const EdgeInsetsDirectional.symmetric(
+        horizontal: 20,
+        vertical: 20,
       ),
-      margin: const EdgeInsetsDirectional.symmetric(horizontal: 8, vertical: 4),
     ),
 
     // --- Dialog Theme ---

@@ -65,6 +65,7 @@ flutter:
 
   assets:
     - .env
+    - assets/images/
     - assets/logo/
 
 flutter_launcher_icons:

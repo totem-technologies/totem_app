@@ -8,6 +8,7 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/screens/login_screen.dart';
 import 'package:totem_app/auth/screens/pin_entry_screen.dart';
 import 'package:totem_app/auth/screens/profile_setup_screen.dart';
+import 'package:totem_app/auth/screens/welcome_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_screen.dart';
 import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
 import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
@@ -60,33 +61,38 @@ GoRouter createRouter(WidgetRef ref) {
       debugPrint('Router State Change: ${state.fullPath}');
 
       // Get current auth state
+      final isRoot = state.matchedLocation == '/';
       final isLoggedIn = authController.isAuthenticated;
       final isOnboardingCompleted = authController.isOnboardingCompleted;
       final isAuthRoute = state.matchedLocation.startsWith('/auth');
       final isOnboardingRoute = state.matchedLocation == RouteNames.onboarding;
 
       // If we're at the root and logged in, go to spaces
-      if (state.matchedLocation == '/' && isLoggedIn) {
+      if (isRoot && isLoggedIn) {
         if (!isOnboardingCompleted) {
+          debugPrint('Redirecting to onboarding');
           return RouteNames.onboarding;
         }
+        debugPrint('Redirecting to spaces');
         return RouteNames.spaces;
       }
 
       // If we're at the root and not logged in, go to login
-      if (state.matchedLocation == '/' && !isLoggedIn) {
-        return RouteNames.login;
-      }
+      // if (state.matchedLocation == '/' && !isLoggedIn) {
+      //   return RouteNames.login;
+      // }
 
       if (isAuthRoute && isLoggedIn) {
         // If we're logged in and trying to access auth routes, redirect to
         // spaces
+        debugPrint('Redirecting to spaces from auth route');
         return RouteNames.spaces;
       }
 
       // If we're trying to access a protected route but not logged in, redirect
       // to login
-      if (!isLoggedIn && !isAuthRoute) {
+      if (!isLoggedIn && !isAuthRoute && !isRoot) {
+        debugPrint('Redirecting to login from non-auth route');
         return RouteNames.login;
       }
 
@@ -96,11 +102,13 @@ GoRouter createRouter(WidgetRef ref) {
           !isOnboardingCompleted &&
           !isOnboardingRoute &&
           !isAuthRoute) {
+        debugPrint('Redirecting to onboarding from non-onboarding route');
         return RouteNames.onboarding;
       }
 
       // If logged in and trying to access auth routes, redirect to spaces
       if (isLoggedIn && isOnboardingCompleted && isAuthRoute) {
+        debugPrint('Redirecting to spaces from auth route');
         return RouteNames.spaces;
       }
 
@@ -108,6 +116,11 @@ GoRouter createRouter(WidgetRef ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: RouteNames.welcome,
+        name: RouteNames.welcome,
+        builder: (context, state) => const WelcomeScreen(),
+      ),
       // Auth routes (no bottom nav)
       GoRoute(
         path: RouteNames.login,
