@@ -207,13 +207,13 @@ class AppTheme {
         foregroundColor: white,
         textStyle: const TextStyle(
           fontFamily: fontFamilySans,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
+          fontSize: 21,
+          height: 1.2,
+          letterSpacing: 0,
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
+        padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
         elevation: 0,
         minimumSize: const Size(20, 56),
       ),
@@ -251,29 +251,29 @@ class AppTheme {
     // Based on input/textarea styles
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: cream.withValues(alpha: 0.5),
+      fillColor: const Color(0xFFD9D9D9),
       contentPadding: const EdgeInsetsDirectional.symmetric(
         horizontal: 16,
         vertical: 12,
       ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: deepGray.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(20),
+        borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: deepGray.withValues(alpha: 0.7)),
+        borderRadius: BorderRadius.circular(20),
+        borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: mauve, width: 2),
+        borderRadius: BorderRadius.circular(20),
+        borderSide: BorderSide.none,
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(20),
         borderSide: const BorderSide(color: pinkTint, width: 1.5),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(20),
         borderSide: const BorderSide(color: pinkTint, width: 2),
       ),
       labelStyle: const TextStyle(
@@ -360,6 +360,14 @@ class AppTheme {
     // --- Icon Theme ---
     iconTheme: const IconThemeData(color: deepGray, size: 24),
     primaryIconTheme: const IconThemeData(color: mauve),
+
+    // --- Checkbox Theme ---
+    checkboxTheme: CheckboxThemeData(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+      materialTapTargetSize: MaterialTapTargetSize.padded,
+      side: const BorderSide(color: mauve, width: 1.5),
+      visualDensity: VisualDensity.compact,
+    ),
 
     useMaterial3: true,
   );
