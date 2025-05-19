@@ -144,8 +144,9 @@ class ErrorHandler {
     StackTrace? stackTrace,
     VoidCallback? onRetry,
   }) async {
-    // Log the error first
     logError(error, stackTrace: stackTrace);
+
+    if (!context.mounted) return;
 
     // Get user-friendly message
     final message = getUserFriendlyErrorMessage(error);

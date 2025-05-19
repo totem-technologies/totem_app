@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/card_screen.dart';
+import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/page_indicator.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
@@ -17,8 +19,9 @@ class ProfileSetupScreen extends ConsumerStatefulWidget {
 class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _firstNameController = TextEditingController();
-  bool _isLoading = false;
-  var selectedTopics = <String>{};
+  var _isLoading = false;
+  final _selectedTopics = <String>{};
+  final _referralSource = <String>{};
 
   @override
   void dispose() {
@@ -33,11 +36,10 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     return null;
   }
 
-  // Submit profile setup
   Future<void> _submitProfile() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    // if (!_formKey.currentState!.validate()) {
+    //   return;
+    // }
 
     setState(() {
       _isLoading = true;
@@ -47,23 +49,29 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       await ref
           .read(authControllerProvider.notifier)
           .completeOnboarding(firstName: _firstNameController.text.trim());
+
+      AnalyticsService.instance.logEvent(
+        'referral_source',
+        parameters: {
+          'source': _referralSource.toList(),
+          'user_type': 'new_user',
+          'signup_flow_step': 3,
+        },
+      );
+
       if (mounted) {
-        // Navigate to home
-        Future<void>.delayed(const Duration(milliseconds: 200), () {
-          if (mounted) {
-            context.go(RouteNames.spaces);
-          }
-        });
+        context.go(RouteNames.spaces);
       }
     } catch (error, stackTrace) {
-      if (mounted) {
-        await ErrorHandler.handleApiError(
-          context,
-          error,
-          stackTrace: stackTrace,
-          onRetry: _submitProfile,
-        );
-      }
+      await ErrorHandler.handleApiError(
+        // Do not need to check if mounted here because it is handled within the
+        // function.
+        // ignore: use_build_context_synchronously
+        context,
+        error,
+        stackTrace: stackTrace,
+        onRetry: _submitProfile,
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -130,8 +138,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       autofillHints: const [AutofillHints.givenName],
                     ),
                     buildInfoText(
-                      'Other people will see this, but you don’t have to use your real '
-                      'name. Add any pronounce is parentheses if you’d like.',
+                      'Other people will see this, but you don’t have to use '
+                      'your real name. Add any pronounce is parentheses if '
+                      'you’d like.',
                     ),
 
                     const SizedBox(height: 24),
@@ -218,12 +227,13 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       'Self-improvement',
                       'Other',
                     }.map((topic) {
-                      final isSelected = selectedTopics.contains(topic);
+                      final isSelected = _selectedTopics.contains(topic);
                       return Padding(
                         padding: const EdgeInsetsDirectional.only(bottom: 10),
                         child: CheckboxListTile(
                           title: Text(topic),
                           value: isSelected,
+                          checkboxScaleFactor: 1.35,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                             side: BorderSide(
@@ -237,9 +247,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                           onChanged: (value) {
                             setState(() {
                               if (value ?? false) {
-                                selectedTopics.add(topic);
+                                _selectedTopics.add(topic);
                               } else {
-                                selectedTopics.remove(topic);
+                                _selectedTopics.remove(topic);
                               }
                             });
                           },
@@ -255,7 +265,73 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                     ),
                   ],
                 ),
-                Container(),
+                CardScreen(
+                  isLoading: false,
+                  children: [
+                    Text(
+                      'How did you hear about us?',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'This helps us understand how to reach more people like '
+                      'you.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+
+                    ...{
+                      'Friend or Family',
+                      'Social Media',
+                      'Google',
+                      'Event',
+                      'Blog or Article',
+                      'Other',
+                    }.map((topic) {
+                      final isSelected = _referralSource.contains(topic);
+                      return Padding(
+                        padding: const EdgeInsetsDirectional.only(bottom: 10),
+                        child: CheckboxListTile(
+                          title: Text(topic),
+                          value: isSelected,
+                          checkboxScaleFactor: 1.35,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color:
+                                  isSelected
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.primaryContainer,
+                              width: 2,
+                            ),
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              if (value ?? false) {
+                                _referralSource.add(topic);
+                              } else {
+                                _referralSource.remove(topic);
+                              }
+                            });
+                          },
+                        ),
+                      );
+                    }),
+
+                    const SizedBox(height: 14),
+                    const PageIndicator(),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: _submitProfile,
+                      child:
+                          _isLoading
+                              ? const LoadingIndicator()
+                              : const Text('Get Started'),
+                    ),
+                  ],
+                ),
               ],
             ),
           );

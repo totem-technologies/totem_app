@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_app/api/models/user_schema.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/auth/repositories/auth_repository.dart';
 import 'package:totem_app/core/config/consts.dart';
@@ -39,12 +40,9 @@ class AuthController extends StateNotifier<AuthState> {
   Stream<AuthState> get authStateChanges => _authStateController.stream;
 
   bool get isAuthenticated => state.status == AuthStatus.authenticated;
-  bool get isOnboardingCompleted => false
-  //state.status == AuthStatus.authenticated
-  // TODO(bdlukaa): Uncomment this when profile endpoints are available
-  // &&
-  // (state.user?.name != null && state.user!.name!.isNotEmpty == true)
-  ;
+  bool get isOnboardingCompleted =>
+      state.status == AuthStatus.authenticated &&
+      (state.user?.name != null && state.user!.name!.isNotEmpty == true);
 
   Future<void> requestPin(String email, bool newsletterConsent) async {
     try {
@@ -114,10 +112,7 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> completeOnboarding({
-    required String firstName,
-    String? profileImagePath,
-  }) async {
+  Future<void> completeOnboarding({required String firstName}) async {
     try {
       if (!isAuthenticated) {
         throw AppAuthException.unauthenticated();
@@ -136,6 +131,17 @@ class AuthController extends StateNotifier<AuthState> {
       // Update state with completed onboarding flag
       // state = AuthState.authenticated(user: updatedUser);
       // _emitState();
+
+      state = AuthState.authenticated(
+        user: UserSchema(
+          email: state.user!.email,
+          isStaff: state.user!.isStaff,
+          profileAvatarType: state.user!.profileAvatarType,
+          profileAvatarSeed: state.user!.profileAvatarSeed,
+          name: firstName,
+        ),
+      );
+      _emitState();
 
       AnalyticsService.instance.logEvent('onboarding_completed');
     } catch (error, stackTrace) {

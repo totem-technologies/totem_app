@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class CardScreen extends StatelessWidget {
+class CardScreen extends StatefulWidget {
   const CardScreen({
     required this.children,
     required this.isLoading,
@@ -13,22 +13,29 @@ class CardScreen extends StatelessWidget {
   final bool isLoading;
 
   @override
+  State<CardScreen> createState() => _CardScreenState();
+}
+
+class _CardScreenState extends State<CardScreen>
+    with AutomaticKeepAliveClientMixin {
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     return PopScope(
-      canPop: !isLoading,
+      canPop: !widget.isLoading,
       child: Scaffold(
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
               child: Card(
                 child: Form(
-                  key: formKey,
+                  key: widget.formKey,
                   child: Padding(
                     padding: const EdgeInsetsDirectional.all(24),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: children,
+                      children: widget.children,
                     ),
                   ),
                 ),
@@ -39,4 +46,7 @@ class CardScreen extends StatelessWidget {
       ),
     );
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }
