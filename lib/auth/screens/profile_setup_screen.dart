@@ -18,6 +18,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _firstNameController = TextEditingController();
   bool _isLoading = false;
+  var selectedTopics = <String>{};
 
   @override
   void dispose() {
@@ -77,91 +78,188 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     final theme = Theme.of(context);
     return DefaultTabController(
       length: 3,
-      child: CardScreen(
-        formKey: _formKey,
-        isLoading: _isLoading,
-        children: [
-          Text(
-            'Welcome',
-            style: Theme.of(context).textTheme.headlineSmall,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'We just to know more about you. some final question and you’ll be '
-            'good to go.',
-            style: Theme.of(context).textTheme.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
+      child: Builder(
+        builder: (context) {
+          final controller = DefaultTabController.of(context);
 
-          Text(
-            'What do you like to be called?',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 6),
-          TextFormField(
-            controller: _firstNameController,
-            keyboardType: TextInputType.text,
-            decoration: const InputDecoration(hintText: 'Enter name'),
-            validator: _validateFirstName,
-            enabled: !_isLoading,
-            restorationId: 'first_name_onboarding_input',
-            textInputAction: TextInputAction.next,
-            autofillHints: const [AutofillHints.givenName],
-          ),
-          buildInfoText(
-            'Other people will see this, but you don’t have to use your real '
-            'name. Add any pronounce is parentheses if you’d like.',
-          ),
+          void nextPage() {
+            controller.animateTo(controller.index + 1);
+          }
 
-          const SizedBox(height: 24),
-
-          Text(
-            'How old are you?',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 6),
-          GestureDetector(
-            onTap: () {
-              if (_isLoading) return;
-              showDatePicker(
-                context: context,
-                firstDate: DateTime(1900),
-                lastDate: DateTime.now(),
-                initialDate: DateTime.now(),
-                helpText: 'Select your date of birth',
-              );
+          return PopScope(
+            canPop: !_isLoading,
+            onPopInvokedWithResult: (_, _) {
+              controller.animateTo(controller.index - 1);
             },
-            child: TextFormField(
-              controller: _firstNameController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(hintText: 'Enter your age'),
-              // validator: ,
-              enabled: !_isLoading,
-              restorationId: 'first_name_onboarding_input',
-              textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.givenName],
+            child: TabBarView(
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                CardScreen(
+                  formKey: _formKey,
+                  isLoading: _isLoading,
+                  children: [
+                    Text(
+                      'Welcome',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'We just to know more about you. some final question and '
+                      'you’ll be good to go.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+
+                    Text(
+                      'What do you like to be called?',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: _firstNameController,
+                      keyboardType: TextInputType.text,
+                      decoration: const InputDecoration(hintText: 'Enter name'),
+                      validator: _validateFirstName,
+                      enabled: !_isLoading,
+                      restorationId: 'first_name_onboarding_input',
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.givenName],
+                    ),
+                    buildInfoText(
+                      'Other people will see this, but you don’t have to use your real '
+                      'name. Add any pronounce is parentheses if you’d like.',
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    Text(
+                      'How old are you?',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        if (_isLoading) return;
+                        showDatePicker(
+                          context: context,
+                          firstDate: DateTime(1900),
+                          lastDate: DateTime.now(),
+                          initialDate: DateTime.now(),
+                          helpText: 'Select your date of birth',
+                        );
+                      },
+                      child: TextFormField(
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          hintText: 'Enter your age',
+                        ),
+                        // validator: ,
+                        enabled: !_isLoading,
+                        restorationId: 'first_name_onboarding_input',
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.givenName],
+                        onFieldSubmitted: (_) => nextPage(),
+                      ),
+                    ),
+
+                    buildInfoText(
+                      'You must be over 13 to join. Age is for verification '
+                      'only, no one will see it.',
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    const PageIndicator(),
+
+                    const SizedBox(height: 24),
+
+                    Builder(
+                      builder: (context) {
+                        return ElevatedButton(
+                          onPressed: () {
+                            if (!_formKey.currentState!.validate()) {
+                              return;
+                            }
+                            nextPage();
+                          },
+                          child: const Text('Continue'),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                CardScreen(
+                  isLoading: _isLoading,
+                  children: [
+                    Text(
+                      'What topics would you like to explore?',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'You feedback here will help us about new topics to '
+                      'offer.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ...{
+                      'Love & Emotions',
+                      'Mothers',
+                      'Queer',
+                      'Self-improvement',
+                      'Other',
+                    }.map((topic) {
+                      final isSelected = selectedTopics.contains(topic);
+                      return Padding(
+                        padding: const EdgeInsetsDirectional.only(bottom: 10),
+                        child: CheckboxListTile(
+                          title: Text(topic),
+                          value: isSelected,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color:
+                                  isSelected
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.primaryContainer,
+                              width: 2,
+                            ),
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              if (value ?? false) {
+                                selectedTopics.add(topic);
+                              } else {
+                                selectedTopics.remove(topic);
+                              }
+                            });
+                          },
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 14),
+                    const PageIndicator(),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: nextPage,
+                      child: const Text('Next'),
+                    ),
+                  ],
+                ),
+                Container(),
+              ],
             ),
-          ),
-
-          buildInfoText(
-            'You must be over 13 to join. Age is for verification only, no one '
-            'will see it.',
-          ),
-
-          const SizedBox(height: 24),
-
-          const PageIndicator(),
-
-          const SizedBox(height: 24),
-
-          ElevatedButton(onPressed: () {}, child: const Text('Continue')),
-        ],
+          );
+        },
       ),
     );
   }

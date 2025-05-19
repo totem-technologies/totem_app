@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 class CardScreen extends StatelessWidget {
   const CardScreen({
     required this.children,
-    required this.formKey,
     required this.isLoading,
+    this.formKey,
     super.key,
   });
 
   final List<Widget> children;
-  final GlobalKey<FormState> formKey;
+  final GlobalKey<FormState>? formKey;
   final bool isLoading;
 
   @override
