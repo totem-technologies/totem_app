@@ -17,8 +17,7 @@ class WelcomeScreen extends StatelessWidget {
             ),
           ),
           SafeArea(
-            child: Container(
-              alignment: Alignment.center,
+            child: Center(
               child: Card(
                 child: Padding(
                   padding: const EdgeInsetsDirectional.symmetric(

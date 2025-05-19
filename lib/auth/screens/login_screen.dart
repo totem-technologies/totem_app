@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
+import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -19,7 +21,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   var _isLoading = false;
-  var newsletterConsent = false;
+  var _newsletterConsent = false;
 
   @override
   void dispose() {
@@ -53,9 +55,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await ref
           .read(authControllerProvider.notifier)
-          // TODO(bdlukaa): Add a checkbox to allow users to opt-in for
-          //                newsletters
-          .requestPin(_emailController.text.trim(), newsletterConsent);
+          .requestPin(_emailController.text.trim(), _newsletterConsent);
 
       if (mounted) {
         // Navigate to PIN entry screen
@@ -129,10 +129,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Row(
                     children: [
                       Checkbox(
-                        value: newsletterConsent,
+                        value: _newsletterConsent,
                         onChanged: (_) {
                           setState(() {
-                            newsletterConsent = !newsletterConsent;
+                            _newsletterConsent = !_newsletterConsent;
                           });
                         },
                       ),
@@ -140,7 +140,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: GestureDetector(
                           onTap: () {
                             setState(() {
-                              newsletterConsent = !newsletterConsent;
+                              _newsletterConsent = !_newsletterConsent;
                             });
                           },
                           child: Text(
@@ -169,7 +169,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           recognizer:
                               TapGestureRecognizer()
                                 ..onTap = () {
-                                  // TODO(bdlukaa): Launch TOS: https://www.totem.org/tos/
+                                  launchUrl(AppConfig.termsOfServiceUrl);
                                 },
                         ),
                         const TextSpan(text: ' and '),
@@ -183,7 +183,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           recognizer:
                               TapGestureRecognizer()
                                 ..onTap = () {
-                                  // TODO(bdlukaa): Launch Privacy Policy: https://www.totem.org/privacy/
+                                  launchUrl(AppConfig.privacyPolicyUrl);
                                 },
                         ),
                       ],

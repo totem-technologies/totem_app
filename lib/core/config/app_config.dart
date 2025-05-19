@@ -91,4 +91,16 @@ class AppConfig {
     // or EU Host: 'https://eu.i.posthog.com'
     return dotenv.env['POSTHOG_HOST'] ?? 'https://us.i.posthog.com';
   }
+
+  static Uri get privacyPolicyUrl {
+    return Uri.parse(
+      dotenv.env['PRIVACY_POLICY_URL'] ?? 'https://www.totem.org/privacy/',
+    );
+  }
+
+  static Uri get termsOfServiceUrl {
+    return Uri.parse(
+      dotenv.env['TERMS_OF_SERVICE_URL'] ?? 'https://www.totem.org/tos/',
+    );
+  }
 }
