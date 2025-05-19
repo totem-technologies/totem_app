@@ -1,12 +1,11 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/navigation/route_names.dart';
-import 'package:totem_app/shared/widgets/loading_indicator.dart';
+import 'package:totem_app/shared/widgets/card_screen.dart';
+import 'package:totem_app/shared/widgets/page_indicator.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -19,7 +18,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _firstNameController = TextEditingController();
   bool _isLoading = false;
-  File? _profileImage;
 
   @override
   void dispose() {
@@ -27,22 +25,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     super.dispose();
   }
 
-  // Field validation
   String? _validateFirstName(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Please enter your first name';
     }
     return null;
-  }
-
-  // Upload profile image (mock implementation)
-  Future<void> _selectProfileImage() async {
-    // In a real implementation, you would use image_picker package
-    // For now, we'll just set a flag to simulate image selection
-    setState(() {
-      // Mock a file selection
-      _profileImage = File('');
-    });
   }
 
   // Submit profile setup
@@ -58,10 +45,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     try {
       await ref
           .read(authControllerProvider.notifier)
-          .completeOnboarding(
-            firstName: _firstNameController.text.trim(),
-            profileImagePath: _profileImage?.path,
-          );
+          .completeOnboarding(firstName: _firstNameController.text.trim());
       if (mounted) {
         // Navigate to home
         Future<void>.delayed(const Duration(milliseconds: 200), () {
@@ -90,98 +74,120 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Set Up Your Profile'),
-        automaticallyImplyLeading: false, // Disable back button
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsetsDirectional.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Welcome to Totem!',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Let's set up your profile to get started",
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
+    final theme = Theme.of(context);
+    return DefaultTabController(
+      length: 3,
+      child: CardScreen(
+        formKey: _formKey,
+        isLoading: _isLoading,
+        children: [
+          Text(
+            'Welcome',
+            style: Theme.of(context).textTheme.headlineSmall,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'We just to know more about you. some final question and you’ll be '
+            'good to go.',
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
 
-                // Profile image selection
-                Center(
-                  child: GestureDetector(
-                    onTap: _selectProfileImage,
-                    child: CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.1),
-                      child:
-                          _profileImage != null
-                              ? Icon(
-                                Icons.check_circle,
-                                color: Theme.of(context).colorScheme.primary,
-                                size: 40,
-                              )
-                              : Icon(
-                                Icons.add_a_photo,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Center(
-                  child: TextButton(
-                    onPressed: _selectProfileImage,
-                    child: Text(
-                      _profileImage != null
-                          ? 'Change Photo'
-                          : 'Add Profile Photo (Optional)',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // First name input
-                TextFormField(
-                  controller: _firstNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'First Name',
-                    hintText: 'Enter your first name',
-                    prefixIcon: Icon(Icons.person_outline),
-                  ),
-                  validator: _validateFirstName,
-                  enabled: !_isLoading,
-                  textCapitalization: TextCapitalization.words,
-                ),
-                const SizedBox(height: 32),
-
-                // Submit button
-                if (_isLoading)
-                  const LoadingIndicator()
-                else
-                  ElevatedButton(
-                    onPressed: _submitProfile,
-                    child: const Padding(
-                      padding: EdgeInsetsDirectional.all(12),
-                      child: Text('Complete Profile'),
-                    ),
-                  ),
-              ],
+          Text(
+            'What do you like to be called?',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _firstNameController,
+            keyboardType: TextInputType.text,
+            decoration: const InputDecoration(hintText: 'Enter name'),
+            validator: _validateFirstName,
+            enabled: !_isLoading,
+            restorationId: 'first_name_onboarding_input',
+            textInputAction: TextInputAction.next,
+            autofillHints: const [AutofillHints.givenName],
+          ),
+          buildInfoText(
+            'Other people will see this, but you don’t have to use your real '
+            'name. Add any pronounce is parentheses if you’d like.',
+          ),
+
+          const SizedBox(height: 24),
+
+          Text(
+            'How old are you?',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          GestureDetector(
+            onTap: () {
+              if (_isLoading) return;
+              showDatePicker(
+                context: context,
+                firstDate: DateTime(1900),
+                lastDate: DateTime.now(),
+                initialDate: DateTime.now(),
+                helpText: 'Select your date of birth',
+              );
+            },
+            child: TextFormField(
+              controller: _firstNameController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(hintText: 'Enter your age'),
+              // validator: ,
+              enabled: !_isLoading,
+              restorationId: 'first_name_onboarding_input',
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.givenName],
+            ),
+          ),
+
+          buildInfoText(
+            'You must be over 13 to join. Age is for verification only, no one '
+            'will see it.',
+          ),
+
+          const SizedBox(height: 24),
+
+          const PageIndicator(),
+
+          const SizedBox(height: 24),
+
+          ElevatedButton(onPressed: () {}, child: const Text('Continue')),
+        ],
+      ),
+    );
+  }
+
+  Widget buildInfoText(String text) {
+    return Padding(
+      padding: const EdgeInsetsDirectional.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline,
+            color: Theme.of(context).disabledColor,
+            size: 16,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).disabledColor,
+                fontSize: 10,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

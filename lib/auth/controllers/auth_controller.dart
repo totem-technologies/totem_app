@@ -39,7 +39,8 @@ class AuthController extends StateNotifier<AuthState> {
   Stream<AuthState> get authStateChanges => _authStateController.stream;
 
   bool get isAuthenticated => state.status == AuthStatus.authenticated;
-  bool get isOnboardingCompleted => state.status == AuthStatus.authenticated
+  bool get isOnboardingCompleted => false
+  //state.status == AuthStatus.authenticated
   // TODO(bdlukaa): Uncomment this when profile endpoints are available
   // &&
   // (state.user?.name != null && state.user!.name!.isNotEmpty == true)

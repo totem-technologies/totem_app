@@ -27,6 +27,7 @@ class CardScreen extends StatelessWidget {
                     padding: const EdgeInsetsDirectional.all(24),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: children,
                     ),
                   ),
