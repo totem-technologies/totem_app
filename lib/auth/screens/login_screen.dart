@@ -7,6 +7,7 @@ import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_app/shared/widgets/card_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -93,130 +94,117 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final theme = Theme.of(context);
 
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Card(
-            child: Form(
-              key: _formKey,
-              child: ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsetsDirectional.all(24),
-                children: [
-                  Text(
-                    'Get Started',
-                    style: theme.textTheme.headlineMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Enter your email to create an account or access your '
-                    'existing one.',
-                    style: theme.textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 32),
+    return CardScreen(
+      isLoading: _isLoading,
+      formKey: _formKey,
+      children: [
+        Text(
+          'Get Started',
+          style: theme.textTheme.headlineMedium,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Enter your email to create an account or access your '
+          'existing one.',
+          style: theme.textTheme.bodyMedium,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 32),
 
-                  // Email input
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.email],
-                    decoration: const InputDecoration(hintText: 'Email'),
-                    validator: _validateEmail,
-                    enabled: !_isLoading,
-                  ),
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _newsletterConsent,
-                        onChanged: (_) {
-                          setState(() {
-                            _newsletterConsent = !_newsletterConsent;
-                          });
-                        },
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _newsletterConsent = !_newsletterConsent;
-                            });
-                          },
-                          child: Text(
-                            'Yes, receive email updates',
-                            style: theme.textTheme.bodySmall,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  RichText(
-                    text: TextSpan(
-                      text: 'By continuing, you agree to our ',
-                      style: theme.textTheme.bodySmall,
-                      children: [
-                        TextSpan(
-                          text: 'Terms of Service',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.underline,
-                            color: theme.colorScheme.primary,
-                          ),
-                          recognizer:
-                              TapGestureRecognizer()
-                                ..onTap = () {
-                                  launchUrl(AppConfig.termsOfServiceUrl);
-                                },
-                        ),
-                        const TextSpan(text: ' and '),
-                        TextSpan(
-                          text: 'Privacy Policy',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.underline,
-                            color: theme.colorScheme.primary,
-                          ),
-                          recognizer:
-                              TapGestureRecognizer()
-                                ..onTap = () {
-                                  launchUrl(AppConfig.privacyPolicyUrl);
-                                },
-                        ),
-                      ],
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Submit button
-                  if (_isLoading)
-                    const LoadingIndicator()
-                  else
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _requestPin,
-                      child:
-                          _isLoading
-                              ? const LoadingIndicator()
-                              : const Text('Sign in'),
-                    ),
-                  const SizedBox(height: 16),
-
-                  // Information text
-                  Text(
-                    "We'll send you a 6-digit PIN to your email.",
-                    style: theme.textTheme.bodySmall,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+        // Email input
+        TextFormField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          autofillHints: const [AutofillHints.email],
+          decoration: const InputDecoration(hintText: 'Email'),
+          validator: _validateEmail,
+          enabled: !_isLoading,
+          restorationId: 'auth_email_input',
+          onFieldSubmitted: (_) => _requestPin(),
+        ),
+        Row(
+          children: [
+            Checkbox(
+              value: _newsletterConsent,
+              onChanged: (_) {
+                setState(() {
+                  _newsletterConsent = !_newsletterConsent;
+                });
+              },
+            ),
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _newsletterConsent = !_newsletterConsent;
+                  });
+                },
+                child: Text(
+                  'Yes, receive email updates',
+                  style: theme.textTheme.bodySmall,
+                ),
               ),
             ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        RichText(
+          text: TextSpan(
+            text: 'By continuing, you agree to our ',
+            style: theme.textTheme.bodySmall,
+            children: [
+              TextSpan(
+                text: 'Terms of Service',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  decoration: TextDecoration.underline,
+                  color: theme.colorScheme.primary,
+                ),
+                recognizer:
+                    TapGestureRecognizer()
+                      ..onTap = () {
+                        launchUrl(AppConfig.termsOfServiceUrl);
+                      },
+              ),
+              const TextSpan(text: ' and '),
+              TextSpan(
+                text: 'Privacy Policy',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  decoration: TextDecoration.underline,
+                  color: theme.colorScheme.primary,
+                ),
+                recognizer:
+                    TapGestureRecognizer()
+                      ..onTap = () {
+                        launchUrl(AppConfig.privacyPolicyUrl);
+                      },
+              ),
+            ],
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _requestPin,
+            child:
+                _isLoading ? const LoadingIndicator() : const Text('Sign in'),
           ),
         ),
-      ),
+        const SizedBox(height: 16),
+
+        Text(
+          "We'll send you a 6-digit PIN to your email.",
+          style: theme.textTheme.bodySmall,
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }
