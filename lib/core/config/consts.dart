@@ -1,4 +1,4 @@
 class AppConsts {
-  static const accessToken = 'jwt_token';
-  static const jwtToken = 'jwt_token';
+  static const accessToken = 'access_token';
+  static const refreshToken = 'refresh_token';
 }

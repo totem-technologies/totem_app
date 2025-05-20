@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
 import 'package:totem_app/api/models/refresh_token_schema.dart';
@@ -7,6 +8,7 @@ import 'package:totem_app/auth/repositories/auth_repository.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/consts.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/secure_storage.dart';
 
 /// Provider for secure storage
@@ -34,39 +36,50 @@ Dio _initDio(Ref ref) {
     InterceptorsWrapper(
       onRequest: (options, handler) async {
         final secureStorage = ref.read(secureStorageProvider);
-
         String? accessToken = await secureStorage.read(
           key: AppConsts.accessToken,
         );
 
         // Refresh if expired
         if (AuthRepository.isAccessTokenExpired(accessToken)) {
+          debugPrint('Access token expired, refreshing...');
           final refreshToken = await secureStorage.read(
-            key: AppConsts.jwtToken,
+            key: AppConsts.refreshToken,
           );
 
           if (refreshToken != null) {
             try {
               final response = await MobileTotemApi(
-                Dio(), // This needs to be an independent Dio client.
+                Dio(),
                 baseUrl: AppConfig.mobileApiUrl,
               ).client.totemApiAuthRefreshToken(
                 body: RefreshTokenSchema(refreshToken: refreshToken),
               );
               accessToken = response.accessToken;
 
+              debugPrint(
+                'Token refreshed successfully! New token: $accessToken',
+              );
+
               await secureStorage.write(
                 key: AppConsts.accessToken,
                 value: response.accessToken,
               );
               await secureStorage.write(
-                key: AppConsts.jwtToken,
+                key: AppConsts.refreshToken,
                 value: response.refreshToken,
               );
-            } catch (error) {
-              // Handle refresh token error
+            } catch (error, stackTrace) {
               await secureStorage.delete(key: AppConsts.accessToken);
-              await secureStorage.delete(key: AppConsts.jwtToken);
+              await secureStorage.delete(key: AppConsts.refreshToken);
+
+              debugPrint('Error refreshing token: $error; $stackTrace');
+              ErrorHandler.logError(
+                error,
+                stackTrace: stackTrace,
+                reason: 'Error refreshing access token',
+              );
+
               return handler.reject(
                 DioException(
                   requestOptions: options,
@@ -74,6 +87,8 @@ Dio _initDio(Ref ref) {
                 ),
               );
             }
+          } else {
+            debugPrint('Refresh token not found, redirecting to login...');
           }
         }
 

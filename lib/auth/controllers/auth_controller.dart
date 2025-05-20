@@ -82,7 +82,7 @@ class AuthController extends StateNotifier<AuthState> {
 
       final authResponse = await _authRepository.verifyPin(email, pin);
       await _secureStorage.write(
-        key: AppConsts.jwtToken,
+        key: AppConsts.refreshToken,
         value: authResponse.refreshToken,
       );
       await _secureStorage.write(
@@ -176,9 +176,11 @@ class AuthController extends StateNotifier<AuthState> {
       state = AuthState.loading();
       _emitState();
 
-      final jwtToken = await _secureStorage.read(key: AppConsts.jwtToken);
-      if (jwtToken != null) await _authRepository.logout(jwtToken);
-      await _secureStorage.delete(key: AppConsts.jwtToken);
+      final refreshToken = await _secureStorage.read(
+        key: AppConsts.refreshToken,
+      );
+      if (refreshToken != null) await _authRepository.logout(refreshToken);
+      await _secureStorage.delete(key: AppConsts.refreshToken);
       await _secureStorage.delete(key: AppConsts.accessToken);
 
       state = AuthState.unauthenticated();
@@ -186,7 +188,7 @@ class AuthController extends StateNotifier<AuthState> {
 
       AnalyticsService.instance.logLogout();
     } catch (error, stack) {
-      await _secureStorage.delete(key: AppConsts.jwtToken);
+      await _secureStorage.delete(key: AppConsts.refreshToken);
       await _secureStorage.delete(key: AppConsts.accessToken);
       state = AuthState.unauthenticated();
       _emitState();
@@ -216,7 +218,7 @@ class AuthController extends StateNotifier<AuthState> {
 
       AnalyticsService.instance.setUserId(user);
     } catch (e, stack) {
-      await _secureStorage.delete(key: AppConsts.jwtToken);
+      await _secureStorage.delete(key: AppConsts.refreshToken);
       state = AuthState.unauthenticated();
 
       debugPrint('Error checking existing auth: $e $stack');
