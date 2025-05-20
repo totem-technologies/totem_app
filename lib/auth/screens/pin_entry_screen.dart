@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pinput/pinput.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/config/app_config.dart';
@@ -152,18 +153,23 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
           ),
         ),
         const SizedBox(height: 6),
-        TextFormField(
+        Pinput(
           controller: _pinController,
-          keyboardType: TextInputType.number,
-          maxLength: 6,
-          textAlign: TextAlign.center,
-          decoration: const InputDecoration(hintText: '123456'),
-          validator: _validatePin,
-          enabled: !_isLoading && _attempts < _maxAttempts,
-          restorationId: 'auth_pin_input',
-          onFieldSubmitted: (_) => _verifyPin(),
+          defaultPinTheme: const PinTheme(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.all(Radius.circular(18)),
+              color: Color(0xFFD9D9D9),
+            ),
+          ),
+          separatorBuilder: (_) => const SizedBox(width: 4),
+          length: 6,
+          onCompleted: (_) => _verifyPin(),
           textInputAction: TextInputAction.done,
-          autofillHints: const [AutofillHints.oneTimeCode],
+          restorationId: 'auth_pin_input',
+          enabled: !_isLoading && _attempts < _maxAttempts,
+          validator: _validatePin,
         ),
         const SizedBox(height: 24),
 
