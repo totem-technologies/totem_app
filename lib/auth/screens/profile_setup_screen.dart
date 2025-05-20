@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/card_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/page_indicator.dart';
 
+// --- Main Screen Widget ---
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({super.key});
 
@@ -17,319 +18,113 @@ class ProfileSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
-  final _formKey = GlobalKey<FormState>();
+  final _formKeyTab1 = GlobalKey<FormState>();
   final _firstNameController = TextEditingController();
-  var _isLoading = false;
+  final _ageController = TextEditingController();
+
   final _selectedTopics = <String>{};
-  final _referralSource = <String>{};
+  final _referralSources = <String>{};
+  var _isLoading = false;
 
   @override
   void dispose() {
     _firstNameController.dispose();
+    _ageController.dispose();
     super.dispose();
   }
 
-  String? _validateFirstName(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Please enter your first name';
-    }
-    return null;
+  void _handleTopicSelection(String topic, bool isSelected) {
+    setState(() {
+      if (isSelected) {
+        _selectedTopics.add(topic);
+      } else {
+        _selectedTopics.remove(topic);
+      }
+    });
+  }
+
+  void _handleReferralSourceSelection(String source, bool isSelected) {
+    setState(() {
+      if (isSelected) {
+        _referralSources.add(source);
+      } else {
+        _referralSources.remove(source);
+      }
+    });
   }
 
   Future<void> _submitProfile() async {
-    // if (!_formKey.currentState!.validate()) {
-    //   return;
-    // }
-
-    setState(() {
-      _isLoading = true;
-    });
-
+    setState(() => _isLoading = true);
     try {
       await ref
           .read(authControllerProvider.notifier)
-          .completeOnboarding(firstName: _firstNameController.text.trim());
+          .completeOnboarding(
+            firstName: _firstNameController.text.trim(),
+            referralSources: _referralSources,
+            interestTopics: _selectedTopics,
+          );
 
-      AnalyticsService.instance.logEvent(
-        'referral_source',
-        parameters: {
-          'source': _referralSource.toList(),
-          'user_type': 'new_user',
-          'signup_flow_step': 3,
-        },
-      );
-
-      if (mounted) {
-        context.go(RouteNames.spaces);
-      }
+      if (mounted) context.go(RouteNames.spaces);
     } catch (error, stackTrace) {
-      await ErrorHandler.handleApiError(
-        // Do not need to check if mounted here because it is handled within the
-        // function.
-        // ignore: use_build_context_synchronously
-        context,
-        error,
-        stackTrace: stackTrace,
-        onRetry: _submitProfile,
-      );
-    } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        await ErrorHandler.handleApiError(
+          context,
+          error,
+          stackTrace: stackTrace,
+          onRetry: _submitProfile,
+        );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return DefaultTabController(
       length: 3,
       child: Builder(
         builder: (context) {
-          final controller = DefaultTabController.of(context);
-
-          void nextPage() {
-            controller.animateTo(controller.index + 1);
+          final tabController = DefaultTabController.of(context);
+          void navigateToNextTab() {
+            if (tabController.index < 3 - 1) {
+              tabController.animateTo(tabController.index + 1);
+            }
           }
 
           return PopScope(
-            canPop: !_isLoading,
-            onPopInvokedWithResult: (_, _) {
-              controller.animateTo(controller.index - 1);
+            canPop: tabController.index == 0 && !_isLoading,
+            onPopInvokedWithResult: (didPop, _) {
+              if (didPop) return;
+              if (tabController.index > 0) {
+                tabController.animateTo(tabController.index - 1);
+              }
             },
             child: TabBarView(
               physics: const NeverScrollableScrollPhysics(),
               children: [
-                CardScreen(
-                  formKey: _formKey,
+                _NameAndAgeTab(
+                  formKey: _formKeyTab1,
+                  firstNameController: _firstNameController,
+                  ageController: _ageController,
                   isLoading: _isLoading,
-                  children: [
-                    Text(
-                      'Welcome',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'We just to know more about you. some final question and '
-                      'you’ll be good to go.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-
-                    Text(
-                      'What do you like to be called?',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _firstNameController,
-                      keyboardType: TextInputType.text,
-                      decoration: const InputDecoration(hintText: 'Enter name'),
-                      validator: _validateFirstName,
-                      enabled: !_isLoading,
-                      restorationId: 'first_name_onboarding_input',
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.givenName],
-                    ),
-                    buildInfoText(
-                      'Other people will see this, but you don’t have to use '
-                      'your real name. Add any pronounce is parentheses if '
-                      'you’d like.',
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    Text(
-                      'How old are you?',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        if (_isLoading) return;
-                        showDatePicker(
-                          context: context,
-                          firstDate: DateTime(1900),
-                          lastDate: DateTime.now(),
-                          initialDate: DateTime.now(),
-                          helpText: 'Select your date of birth',
-                        );
-                      },
-                      child: TextFormField(
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          hintText: 'Enter your age',
-                        ),
-                        // validator: ,
-                        enabled: !_isLoading,
-                        restorationId: 'first_name_onboarding_input',
-                        textInputAction: TextInputAction.next,
-                        autofillHints: const [AutofillHints.givenName],
-                        onFieldSubmitted: (_) => nextPage(),
-                      ),
-                    ),
-
-                    buildInfoText(
-                      'You must be over 13 to join. Age is for verification '
-                      'only, no one will see it.',
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    const PageIndicator(),
-
-                    const SizedBox(height: 24),
-
-                    Builder(
-                      builder: (context) {
-                        return ElevatedButton(
-                          onPressed: () {
-                            if (!_formKey.currentState!.validate()) {
-                              return;
-                            }
-                            nextPage();
-                          },
-                          child: const Text('Continue'),
-                        );
-                      },
-                    ),
-                  ],
+                  onContinue: () {
+                    if (_formKeyTab1.currentState!.validate()) {
+                      navigateToNextTab();
+                    }
+                  },
                 ),
-                CardScreen(
+                _TopicsTab(
+                  selectedTopics: _selectedTopics,
                   isLoading: _isLoading,
-                  children: [
-                    Text(
-                      'What topics would you like to explore?',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'You feedback here will help us about new topics to '
-                      'offer.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    ...{
-                      'Love & Emotions',
-                      'Mothers',
-                      'Queer',
-                      'Self-improvement',
-                      'Other',
-                    }.map((topic) {
-                      final isSelected = _selectedTopics.contains(topic);
-                      return Padding(
-                        padding: const EdgeInsetsDirectional.only(bottom: 10),
-                        child: CheckboxListTile(
-                          title: Text(topic),
-                          value: isSelected,
-                          checkboxScaleFactor: 1.35,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            side: BorderSide(
-                              color:
-                                  isSelected
-                                      ? theme.colorScheme.primary
-                                      : theme.colorScheme.primaryContainer,
-                              width: 2,
-                            ),
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              if (value ?? false) {
-                                _selectedTopics.add(topic);
-                              } else {
-                                _selectedTopics.remove(topic);
-                              }
-                            });
-                          },
-                        ),
-                      );
-                    }),
-                    const SizedBox(height: 14),
-                    const PageIndicator(),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: nextPage,
-                      child: const Text('Next'),
-                    ),
-                  ],
+                  onTopicSelected: _handleTopicSelection,
+                  onContinue: navigateToNextTab,
                 ),
-                CardScreen(
-                  children: [
-                    Text(
-                      'How did you hear about us?',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'This helps us understand how to reach more people like '
-                      'you.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-
-                    ...{
-                      'Friend or Family',
-                      'Social Media',
-                      'Google',
-                      'Event',
-                      'Blog or Article',
-                      'Other',
-                    }.map((topic) {
-                      final isSelected = _referralSource.contains(topic);
-                      return Padding(
-                        padding: const EdgeInsetsDirectional.only(bottom: 10),
-                        child: CheckboxListTile(
-                          title: Text(topic),
-                          value: isSelected,
-                          checkboxScaleFactor: 1.35,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            side: BorderSide(
-                              color:
-                                  isSelected
-                                      ? theme.colorScheme.primary
-                                      : theme.colorScheme.primaryContainer,
-                              width: 2,
-                            ),
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              if (value ?? false) {
-                                _referralSource.add(topic);
-                              } else {
-                                _referralSource.remove(topic);
-                              }
-                            });
-                          },
-                        ),
-                      );
-                    }),
-
-                    const SizedBox(height: 14),
-                    const PageIndicator(),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: _submitProfile,
-                      child:
-                          _isLoading
-                              ? const LoadingIndicator()
-                              : const Text('Get Started'),
-                    ),
-                  ],
+                _ReferralSourceTab(
+                  selectedReferralSources: _referralSources,
+                  isLoading: _isLoading,
+                  onSourceSelected: _handleReferralSourceSelection,
+                  onSubmit: _submitProfile,
                 ),
               ],
             ),
@@ -338,28 +133,306 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       ),
     );
   }
+}
 
-  Widget buildInfoText(String text) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsetsDirectional.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, color: theme.disabledColor, size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.disabledColor,
-                fontSize: 10,
+// --- Tab 1: Name and Age ---
+class _NameAndAgeTab extends StatefulWidget {
+  const _NameAndAgeTab({
+    required this.formKey,
+    required this.firstNameController,
+    required this.ageController,
+    required this.isLoading,
+    required this.onContinue,
+  });
+  final GlobalKey<FormState> formKey;
+  final TextEditingController firstNameController;
+  final TextEditingController ageController;
+  final bool isLoading;
+  final VoidCallback onContinue;
+
+  @override
+  State<_NameAndAgeTab> createState() => _NameAndAgeTabState();
+}
+
+class _NameAndAgeTabState extends State<_NameAndAgeTab>
+    with AutomaticKeepAliveClientMixin {
+  String? _validateFirstName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter your first name';
+    }
+    return null;
+  }
+
+  String? _validateAge(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter your age';
+    } else if (int.tryParse(value) == null) {
+      return 'Please enter a valid age';
+    } else if (int.parse(value) < 13) {
+      return 'You must be at least 13 years old';
+    }
+    return null;
+  }
+
+  Widget _buildInfoText(String text) {
+    return Builder(
+      builder: (context) {
+        final theme = Theme.of(context);
+        return Padding(
+          padding: const EdgeInsetsDirectional.symmetric(vertical: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline, color: theme.disabledColor, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  text,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.disabledColor,
+                    fontSize: 10,
+                  ),
+                  textAlign: TextAlign.start,
+                ),
               ),
-              textAlign: TextAlign.start,
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    final theme = Theme.of(context);
+    return CardScreen(
+      formKey: widget.formKey,
+      isLoading: widget.isLoading,
+      children: [
+        Text(
+          'Welcome',
+          style: theme.textTheme.headlineSmall,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'We just to know more about you. some final question and you’ll be '
+          'good to go.',
+          style: theme.textTheme.bodyMedium,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'What do you like to be called?',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: widget.firstNameController,
+          keyboardType: TextInputType.text,
+          decoration: const InputDecoration(hintText: 'Enter name'),
+          validator: _validateFirstName,
+          enabled: !widget.isLoading,
+          restorationId: 'first_name_onboarding_input',
+          textInputAction: TextInputAction.next,
+          autofillHints: const [AutofillHints.givenName],
+        ),
+        _buildInfoText(
+          'Other people will see this, but you don’t have to use your real '
+          'name. Add any pronounce is parentheses if you’d like.',
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'How old are you?',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: widget.ageController,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: const InputDecoration(hintText: 'Enter your age'),
+          validator: _validateAge,
+          enabled: !widget.isLoading,
+          restorationId: 'age_onboarding_input',
+          textInputAction: TextInputAction.done,
+          onFieldSubmitted: (_) => widget.onContinue(),
+        ),
+        _buildInfoText(
+          'You must be over 13 to join. Age is for verification only, no one '
+          'will see it.',
+        ),
+        const SizedBox(height: 24),
+        const PageIndicator(),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: widget.isLoading ? null : widget.onContinue,
+          child: const Text('Continue'),
+        ),
+      ],
+    );
+  }
+
+  @override
+  bool get wantKeepAlive => true;
+}
+
+// --- Tab 2: Topics ---
+class _TopicsTab extends StatelessWidget {
+  const _TopicsTab({
+    required this.selectedTopics,
+    required this.isLoading,
+    required this.onTopicSelected,
+    required this.onContinue,
+  });
+  final Set<String> selectedTopics;
+  final bool isLoading;
+  final void Function(String topic, bool isSelected) onTopicSelected;
+  final VoidCallback onContinue;
+
+  static const List<String> _availableTopics = [
+    'Love & Emotions',
+    'Mothers',
+    'Queer',
+    'Self-improvement',
+    'Other',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return CardScreen(
+      isLoading: isLoading,
+      children: [
+        Text(
+          'What topics would you like to explore?',
+          style: theme.textTheme.headlineSmall,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'You feedback here will help us about new topics to offer.',
+          style: theme.textTheme.bodyMedium,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        ..._availableTopics.map((topic) {
+          final isSelected = selectedTopics.contains(topic);
+          return Padding(
+            padding: const EdgeInsetsDirectional.only(bottom: 10),
+            child: CheckboxListTile(
+              title: Text(topic),
+              value: isSelected,
+              onChanged:
+                  isLoading
+                      ? null
+                      : (value) => onTopicSelected(topic, value ?? false),
+              checkboxScaleFactor: 1.35,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color:
+                      isSelected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.primaryContainer,
+                  width: 2,
+                ),
+              ),
+            ),
+          );
+        }),
+        const SizedBox(height: 14),
+        const PageIndicator(),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: isLoading ? null : onContinue,
+          child: const Text('Next'),
+        ),
+      ],
+    );
+  }
+}
+
+// --- Tab 3: Referral Source ---
+class _ReferralSourceTab extends StatelessWidget {
+  const _ReferralSourceTab({
+    required this.selectedReferralSources,
+    required this.isLoading,
+    required this.onSourceSelected,
+    required this.onSubmit,
+  });
+
+  final Set<String> selectedReferralSources;
+  final bool isLoading;
+  final void Function(String source, bool isSelected) onSourceSelected;
+  final VoidCallback onSubmit;
+
+  static const List<String> _availableSources = [
+    'Friend or Family',
+    'Social Media',
+    'Google',
+    'Event',
+    'Blog or Article',
+    'Other',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return CardScreen(
+      isLoading: isLoading, // Pass isLoading if CardScreen uses it
+      children: [
+        Text(
+          'How did you hear about us?',
+          style: theme.textTheme.headlineSmall,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'This helps us understand how to reach more people like you.',
+          style: theme.textTheme.bodyMedium,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        ..._availableSources.map((source) {
+          final isSelected = selectedReferralSources.contains(source);
+          return Padding(
+            padding: const EdgeInsetsDirectional.only(bottom: 10),
+            child: CheckboxListTile(
+              title: Text(source),
+              value: isSelected,
+              onChanged:
+                  isLoading
+                      ? null
+                      : (value) => onSourceSelected(source, value ?? false),
+              checkboxScaleFactor: 1.35,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color:
+                      isSelected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.primaryContainer,
+                  width: 2,
+                ),
+              ),
+            ),
+          );
+        }),
+        const SizedBox(height: 14),
+        const PageIndicator(),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: isLoading ? null : onSubmit,
+          child:
+              isLoading ? const LoadingIndicator() : const Text('Get Started'),
+        ),
+      ],
     );
   }
 }

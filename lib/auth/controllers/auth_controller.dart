@@ -112,7 +112,11 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> completeOnboarding({required String firstName}) async {
+  Future<void> completeOnboarding({
+    required String firstName,
+    required Set<String> referralSources,
+    required Set<String> interestTopics,
+  }) async {
     try {
       if (!isAuthenticated) {
         throw AppAuthException.unauthenticated();
@@ -142,6 +146,15 @@ class AuthController extends StateNotifier<AuthState> {
         ),
       );
       _emitState();
+
+      AnalyticsService.instance.logEvent(
+        'referral_source',
+        parameters: {
+          'source': referralSources.toList(),
+          'user_type': 'new_user',
+          'signup_flow_step': 3,
+        },
+      );
 
       AnalyticsService.instance.logEvent('onboarding_completed');
     } catch (error, stackTrace) {

@@ -43,8 +43,10 @@ class AuthRepository {
           );
         } else if (response != null) {
           throw AppAuthException(
-            'Failed to fetch current user: ${response.data}',
+            'Failed to fetch current user (${response.statusCode}): '
+            '${response.data}',
             code: 'CURRENT_USER_FETCH_FAILED',
+            details: error.message,
           );
         }
       }
