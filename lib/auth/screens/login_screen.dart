@@ -143,6 +143,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Text(
                   'Yes, receive email updates',
                   style: theme.textTheme.bodySmall,
+                  textAlign: TextAlign.start,
                 ),
               ),
             ),

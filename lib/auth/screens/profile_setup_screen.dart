@@ -266,7 +266,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   ],
                 ),
                 CardScreen(
-                  isLoading: false,
                   children: [
                     Text(
                       'How did you hear about us?',
@@ -341,24 +340,22 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   }
 
   Widget buildInfoText(String text) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsetsDirectional.symmetric(vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.info_outline,
-            color: Theme.of(context).disabledColor,
-            size: 16,
-          ),
+          Icon(Icons.info_outline, color: theme.disabledColor, size: 16),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).disabledColor,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.disabledColor,
                 fontSize: 10,
               ),
+              textAlign: TextAlign.start,
             ),
           ),
         ],
