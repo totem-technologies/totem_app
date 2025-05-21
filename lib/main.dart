@@ -10,11 +10,11 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
-import 'package:totem_app/core/services/deep_link_service.dart';
 import 'package:totem_app/core/services/notifications_service.dart';
 import 'package:totem_app/core/services/observer_service.dart';
 import 'package:totem_app/firebase_options.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/shared/logger.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,13 +46,15 @@ Future<void> _initializeServices() async {
 
   try {
     unawaited(AnalyticsService.instance.initialize());
-    unawaited(DeepLinkService.instance.initialize());
     unawaited(NotificationsService.instance.initialize());
 
-    debugPrint('✅ Services initialized successfully');
+    logger.i('✅ Services initialized successfully');
   } catch (e, stackTrace) {
-    debugPrint('❌ Service initialization error: $e');
-    ErrorHandler.logError(e, stackTrace: stackTrace);
+    ErrorHandler.logError(
+      e,
+      stackTrace: stackTrace,
+      message: 'Service initialization error',
+    );
   }
 }
 
@@ -80,15 +82,6 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-
-    if (state == AppLifecycleState.resumed) {
-      DeepLinkService.instance.handleIncomingLinks();
-    }
   }
 
   @override

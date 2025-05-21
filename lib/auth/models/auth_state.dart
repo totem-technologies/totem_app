@@ -74,8 +74,17 @@ class AuthState {
 
   @override
   String toString() {
-    return 'AuthState('
-        'status: $status, user: ${user?.email}, email: $email, error: $error'
-        ')';
+    final buffer = StringBuffer('AuthState {')..write('status: $status');
+    if (user != null) {
+      buffer.write(', user: $user');
+    }
+    if (email != null) {
+      buffer.write(', email: $email');
+    }
+    if (error != null) {
+      buffer.write(', error: $error');
+    }
+    buffer.write('}');
+    return buffer.toString();
   }
 }

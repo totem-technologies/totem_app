@@ -7,6 +7,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/main.dart';
+import 'package:totem_app/shared/logger.dart';
 
 /// Centralized error handling for the Totem App.
 ///
@@ -14,8 +15,6 @@ import 'package:totem_app/main.dart';
 /// throughout the application in a consistent manner.
 class ErrorHandler {
   const ErrorHandler._();
-
-  static const String _tag = 'ErrorHandler';
 
   static Future<void> initialize(VoidCallback runApp) async {
     await SentryFlutter.init((options) {
@@ -34,14 +33,11 @@ class ErrorHandler {
     dynamic error, {
     StackTrace? stackTrace,
     String? reason,
+    String? message,
   }) {
     if (kDebugMode) {
-      debugPrint('[$_tag] 🔴 Error: $error');
-      if (stackTrace != null) {
-        debugPrint('[$_tag] Stack trace: $stackTrace');
-      }
+      logger.e(message ?? reason, error: error, stackTrace: stackTrace);
     }
-    if (reason != null) debugPrint('📊 $reason');
     Sentry.captureException(error, stackTrace: stackTrace, hint: Hint());
   }
 

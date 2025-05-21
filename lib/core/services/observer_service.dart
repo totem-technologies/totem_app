@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_app/shared/logger.dart';
 
 class ObserverService extends ProviderObserver {
   @override
@@ -8,7 +8,7 @@ class ObserverService extends ProviderObserver {
     Object? value,
     ProviderContainer container,
   ) {
-    debugPrint('Provider ${provider.name} was initialized with $value');
+    logger.d('Provider ${provider.name} was initialized with $value');
   }
 
   @override
@@ -16,7 +16,7 @@ class ObserverService extends ProviderObserver {
     ProviderBase<Object?> provider,
     ProviderContainer container,
   ) {
-    debugPrint('Provider ${provider.name} was disposed');
+    logger.d('Provider ${provider.name} was disposed');
   }
 
   @override
@@ -26,7 +26,7 @@ class ObserverService extends ProviderObserver {
     Object? newValue,
     ProviderContainer container,
   ) {
-    debugPrint(
+    logger.d(
       'Provider ${provider.name} updated from $previousValue to $newValue',
     );
   }
@@ -38,6 +38,10 @@ class ObserverService extends ProviderObserver {
     StackTrace stackTrace,
     ProviderContainer container,
   ) {
-    debugPrint('Provider ${provider.name} threw $error at $stackTrace');
+    logger.d(
+      'Provider ${provider.name} threw an error.',
+      error: error,
+      stackTrace: stackTrace,
+    );
   }
 }

@@ -9,6 +9,7 @@ import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/main.dart' show TotemApp;
 import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_app/shared/logger.dart';
 
 final notificationsProvider = Provider<NotificationsService>((ref) {
   return NotificationsService.instance;
@@ -30,12 +31,11 @@ class NotificationsService {
   bool _initialized = false;
   Future<void> initialize() async {
     if (_initialized) {
-      debugPrint('NotificationsService already initialized');
       return;
     }
 
     try {
-      debugPrint('Initializing NotificationsService...');
+      logger.d('⏰ Initializing NotificationsService...');
       _initialized = true;
 
       // Set up Firebase
@@ -48,12 +48,14 @@ class NotificationsService {
         FirebaseMessaging.onMessageOpenedApp.listen(_handleFirebaseMessage);
 
         FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-          debugPrint('Got a message whilst in the foreground!');
-          debugPrint('Message data: ${message.data}');
+          logger
+            ..i('⏰ Got a message whilst in the foreground!')
+            ..i('⏰ Message data: ${message.data}');
 
           if (message.notification != null) {
-            debugPrint(
-              'Message also contained a notification: ${message.notification}',
+            logger.i(
+              '⏰ Message also contained a notification: '
+              '${message.notification}',
             );
 
             showNotification(
@@ -92,7 +94,7 @@ class NotificationsService {
         }
       }
 
-      debugPrint('NotificationsService initialized successfully');
+      logger.d('⏰ NotificationsService initialized successfully');
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -106,7 +108,7 @@ class NotificationsService {
   }
 
   void _handleFirebaseMessage(RemoteMessage message) {
-    debugPrint('Handling message: ${message.data}');
+    logger.d('⏰ Handling message: ${message.data}');
 
     final path = message.data['path'] as String?;
 
@@ -116,7 +118,7 @@ class NotificationsService {
   void _handleNotificationTap(NotificationResponse notificationResponse) {
     final payload = notificationResponse.payload;
     if (payload != null) {
-      debugPrint('Notification payload: $payload');
+      logger.d('⏰ Notification payload: $payload');
       final deserializedPayload = jsonDecode(payload) as Map;
       final path = deserializedPayload['path'] as String?;
       _handlePath(path);

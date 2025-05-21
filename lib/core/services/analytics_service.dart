@@ -4,6 +4,7 @@ import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/shared/logger.dart';
 
 final analyticsProvider = Provider<AnalyticsService>((ref) {
   return AnalyticsService.instance;
@@ -22,13 +23,10 @@ class AnalyticsService {
 
   /// Initialize the analytics service.
   Future<void> initialize() async {
-    if (_isInitialized) {
-      debugPrint('Analytics already initialized');
-      return;
-    }
+    if (_isInitialized) return;
 
     try {
-      debugPrint('📊 Initializing analytics service');
+      logger.i('📊 Initializing analytics service');
 
       final config =
           PostHogConfig(AppConfig.posthogApiKey)
@@ -40,23 +38,22 @@ class AnalyticsService {
 
       _isInitialized = true;
 
-      debugPrint('📊 Analytics initialized ');
+      logger.i('📊 Analytics initialized ');
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        reason: 'Failed to initialize analytics',
+        message: 'Failed to initialize analytics',
       );
       // Fail gracefully - don't let analytics crash the app
       _isInitialized = false;
     }
   }
 
-  /// Log a custom event
   void logEvent(String eventName, {Map<String, Object>? parameters}) {
     if (!_shouldLog()) return;
 
-    debugPrint(
+    logger.i(
       '📊 Event: $eventName '
       '${parameters != null ? '| Params: $parameters' : ''}',
     );
@@ -66,7 +63,7 @@ class AnalyticsService {
 
   void setUserId(UserSchema user) {
     if (!_shouldLog()) return;
-    debugPrint('📊 Setting user ID: ${user.email}');
+    logger.i('📊 Setting user ID: ${user.email}');
 
     posthog.identify(
       userId: user.email,
@@ -79,16 +76,12 @@ class AnalyticsService {
 
   void logLogout() {
     if (!_shouldLog()) return;
-    debugPrint('📊 Logout event');
-
     logEvent('user_logged_out');
     posthog.reset();
   }
 
   void logLogin({String? method}) {
     if (!_shouldLog()) return;
-
-    debugPrint('📊 Login event${method != null ? ' via $method' : ''}');
 
     logEvent(
       'user_logged_in',
@@ -99,14 +92,11 @@ class AnalyticsService {
   void logSpaceViewed(String spaceId) {
     if (!_shouldLog()) return;
 
-    debugPrint('📊 Space viewed: $spaceId');
-
     logEvent('space_viewed', parameters: {'space_id': spaceId});
   }
 
   bool _shouldLog() {
     if (!_isInitialized) {
-      debugPrint('📊 Analytics not initialized, skipping logging');
       return false;
     }
 

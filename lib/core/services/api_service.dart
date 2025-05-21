@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
 import 'package:totem_app/api/models/refresh_token_schema.dart';
@@ -10,6 +9,7 @@ import 'package:totem_app/core/config/consts.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/secure_storage.dart';
+import 'package:totem_app/shared/logger.dart';
 
 /// Provider for secure storage
 final secureStorageProvider = Provider<SecureStorage>((ref) {
@@ -42,7 +42,7 @@ Dio _initDio(Ref ref) {
 
         // Refresh if expired
         if (AuthRepository.isAccessTokenExpired(accessToken)) {
-          debugPrint('Access token expired, refreshing...');
+          logger.d('🔑 Access token expired, refreshing...');
           final refreshToken = await secureStorage.read(
             key: AppConsts.refreshToken,
           );
@@ -57,8 +57,8 @@ Dio _initDio(Ref ref) {
               );
               accessToken = response.accessToken;
 
-              debugPrint(
-                'Token refreshed successfully! New token: $accessToken',
+              logger.d(
+                '🔑 Token refreshed successfully! New token: $accessToken',
               );
 
               await secureStorage.write(
@@ -73,11 +73,10 @@ Dio _initDio(Ref ref) {
               await secureStorage.delete(key: AppConsts.accessToken);
               await secureStorage.delete(key: AppConsts.refreshToken);
 
-              debugPrint('Error refreshing token: $error; $stackTrace');
               ErrorHandler.logError(
                 error,
                 stackTrace: stackTrace,
-                reason: 'Error refreshing access token',
+                message: '🔑 Error refreshing access token',
               );
 
               return handler.reject(
@@ -88,7 +87,7 @@ Dio _initDio(Ref ref) {
               );
             }
           } else {
-            debugPrint('Refresh token not found, redirecting to login...');
+            logger.d('🔑 Refresh token not found, redirecting to login...');
           }
         }
 
