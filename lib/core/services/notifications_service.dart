@@ -35,7 +35,7 @@ class NotificationsService {
     }
 
     try {
-      logger.d('⏰ Initializing NotificationsService...');
+      logger.i('⏰ Initializing NotificationsService...');
       _initialized = true;
 
       // Set up Firebase
@@ -94,7 +94,7 @@ class NotificationsService {
         }
       }
 
-      logger.d('⏰ NotificationsService initialized successfully');
+      logger.i('⏰ NotificationsService initialized successfully');
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -108,7 +108,7 @@ class NotificationsService {
   }
 
   void _handleFirebaseMessage(RemoteMessage message) {
-    logger.d('⏰ Handling message: ${message.data}');
+    logger.i('⏰ Handling message: ${message.data}');
 
     final path = message.data['path'] as String?;
 

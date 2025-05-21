@@ -14,27 +14,32 @@ import 'package:totem_app/core/services/notifications_service.dart';
 import 'package:totem_app/core/services/observer_service.dart';
 import 'package:totem_app/firebase_options.dart';
 import 'package:totem_app/navigation/app_router.dart';
-import 'package:totem_app/shared/logger.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
 
-  unawaited(
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]),
-  );
+      unawaited(
+        SystemChrome.setPreferredOrientations([
+          DeviceOrientation.portraitUp,
+          DeviceOrientation.portraitDown,
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
+        ]),
+      );
 
-  await dotenv.load();
-  await _initializeServices();
+      await dotenv.load();
+      await _initializeServices();
 
-  await ErrorHandler.initialize(
-    () => runApp(
-      ProviderScope(observers: [ObserverService()], child: const TotemApp()),
-    ),
+      await ErrorHandler.initialize();
+      runApp(
+        ProviderScope(observers: [ObserverService()], child: const TotemApp()),
+      );
+    },
+    (exception, stackTrace) async {
+      ErrorHandler.logError(exception, stackTrace: stackTrace);
+    },
   );
 }
 
@@ -47,8 +52,6 @@ Future<void> _initializeServices() async {
   try {
     unawaited(AnalyticsService.instance.initialize());
     unawaited(NotificationsService.instance.initialize());
-
-    logger.i('✅ Services initialized successfully');
   } catch (e, stackTrace) {
     ErrorHandler.logError(
       e,

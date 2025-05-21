@@ -16,17 +16,19 @@ import 'package:totem_app/shared/logger.dart';
 class ErrorHandler {
   const ErrorHandler._();
 
-  static Future<void> initialize(VoidCallback runApp) async {
-    await SentryFlutter.init((options) {
-      options
-        ..dsn = AppConfig.sentryDsn
-        ..navigatorKey = TotemApp.navigatorKey
-        // Adds request headers and IP for users, for more info visit:
-        // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
-        ..sendDefaultPii = true;
-      //
-      // ignore: require_trailing_commas
-    }, appRunner: runApp);
+  static Future<void> initialize() async {
+    if (AppConfig.sentryDsn.isNotEmpty) {
+      await SentryFlutter.init((options) {
+        options
+          ..dsn = AppConfig.sentryDsn
+          ..navigatorKey = TotemApp.navigatorKey
+          // Adds request headers and IP for users, for more info visit:
+          // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
+          ..sendDefaultPii = true;
+        //
+        // ignore: require_trailing_commas
+      });
+    }
   }
 
   static void logError(
@@ -37,8 +39,9 @@ class ErrorHandler {
   }) {
     if (kDebugMode) {
       logger.e(message ?? reason, error: error, stackTrace: stackTrace);
+    } else if (AppConfig.sentryDsn.isNotEmpty) {
+      Sentry.captureException(error, stackTrace: stackTrace, hint: Hint());
     }
-    Sentry.captureException(error, stackTrace: stackTrace, hint: Hint());
   }
 
   static void logFlutterError(FlutterErrorDetails details) {
