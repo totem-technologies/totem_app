@@ -22,7 +22,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService.instance.logSpaceViewed(widget.eventSlug);
+    ref.read(analyticsProvider).logSpaceViewed(widget.eventSlug);
   }
 
   @override

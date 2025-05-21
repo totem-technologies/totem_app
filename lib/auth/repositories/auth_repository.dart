@@ -15,96 +15,102 @@ import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 
-/// Provider for the auth repository
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final apiService = ref.watch(mobileApiServiceProvider);
   return AuthRepository(apiService: apiService);
 });
 
-/// Repository responsible for authentication-related API operations
 class AuthRepository {
   const AuthRepository({required this.apiService});
 
   final MobileTotemApi apiService;
 
-  Future<UserSchema> get currentUser async {
+  Future<T> _handleApiCall<T>(
+    Future<T> Function() apiCall, {
+    required String operationName,
+    required String genericErrorCode,
+  }) async {
     try {
-      return await apiService.client.totemApiMobileApiCurrentUser();
+      return await apiCall();
     } catch (error, stackTrace) {
       ErrorHandler.logError(error, stackTrace: stackTrace);
       if (error is AppAuthException) {
         rethrow;
-      } else if (error is DioException) {
+      }
+      if (error is DioException) {
         final response = error.response;
-        if (response != null && response.statusCode == 401) {
+        if (response != null) {
+          if (response.statusCode == 401) {
+            throw AppAuthException(
+              'Unauthorized: ${response.data}',
+              code: 'UNAUTHORIZED',
+            );
+          }
           throw AppAuthException(
-            'Unauthorized: ${response.data}',
-            code: 'UNAUTHORIZED',
-          );
-        } else if (response != null) {
-          throw AppAuthException(
-            'Failed to fetch current user (${response.statusCode}): '
+            'Failed to $operationName (${response.statusCode}): '
             '${response.data}',
-            code: 'CURRENT_USER_FETCH_FAILED',
-            details: error.message,
+            code: genericErrorCode,
+            details: error.message ?? error.toString(),
+          );
+        } else {
+          throw AppAuthException(
+            'Failed to $operationName due to a network or unknown error: '
+            '${error.message ?? error.toString()}',
+            code: genericErrorCode,
           );
         }
       }
       throw AppAuthException(
-        'Failed to fetch current user: $error',
-        code: 'CURRENT_USER_FETCH_FAILED',
+        'Failed to $operationName: $error',
+        code: genericErrorCode,
       );
     }
+  }
+
+  Future<UserSchema> get currentUser async {
+    return _handleApiCall(
+      () => apiService.client.totemApiMobileApiCurrentUser(),
+      operationName: 'fetch current user',
+      genericErrorCode: 'CURRENT_USER_FETCH_FAILED',
+    );
   }
 
   Future<MessageResponse> requestPin(
     String email,
     bool newsletterConsent,
   ) async {
-    try {
-      return await apiService.client.totemApiAuthRequestPin(
+    return _handleApiCall(
+      () => apiService.client.totemApiAuthRequestPin(
         body: PinRequestSchema(
           email: email,
           newsletterConsent: newsletterConsent,
         ),
-      );
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(error, stackTrace: stackTrace);
-      if (error is AppAuthException) rethrow;
-      throw AppAuthException(
-        'Failed to request PIN: $error',
-        code: 'PIN_REQUEST_FAILED',
-      );
-    }
+      ),
+      operationName: 'request PIN',
+      genericErrorCode: 'PIN_REQUEST_FAILED',
+    );
   }
 
   /// Verify a PIN code
   Future<TokenResponse> verifyPin(String email, String pin) async {
-    try {
-      return await apiService.client.totemApiAuthValidatePin(
+    return _handleApiCall(
+      () => apiService.client.totemApiAuthValidatePin(
         body: ValidatePinSchema(email: email, pin: pin),
-      );
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(error, stackTrace: stackTrace);
-      if (error is AppAuthException) rethrow;
-      throw AppAuthException(
-        'Failed to verify PIN: $error',
-        code: 'PIN_VERIFICATION_FAILED',
-      );
-    }
+      ),
+      operationName: 'verify PIN',
+      genericErrorCode: 'PIN_VERIFICATION_FAILED',
+    );
   }
 
   /// Logout by invalidating a refresh token
   Future<MessageResponse> logout(String refreshToken) async {
-    try {
-      return await apiService.client.totemApiAuthLogout(
+    return _handleApiCall(
+      () => apiService.client.totemApiAuthLogout(
         body: RefreshTokenSchema(refreshToken: refreshToken),
-      );
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(error, stackTrace: stackTrace);
-      if (error is AppAuthException) rethrow;
-      throw AppAuthException('Failed to logout: $error', code: 'LOGOUT_FAILED');
-    }
+      ),
+      operationName: 'logout',
+      genericErrorCode: 'LOGOUT_FAILED',
+    );
   }
 
   /// Check if the user is authenticated
@@ -117,11 +123,13 @@ class AuthRepository {
     if (jwtToken == null) return true;
 
     try {
-      final payload = jwtToken.split('.')[1];
+      final parts = jwtToken.split('.');
+      if (parts.length != 3) return true;
+
+      final payload = parts[1];
       final normalizedPayload = base64Url.normalize(payload);
       final decodedPayload = utf8.decode(base64Url.decode(normalizedPayload));
-      final Map<String, dynamic> payloadMap =
-          (jsonDecode(decodedPayload) as Map).cast<String, dynamic>();
+      final payloadMap = jsonDecode(decodedPayload) as Map<String, dynamic>;
 
       final exp = payloadMap['exp'];
       if (exp is! int) return true;
@@ -135,33 +143,23 @@ class AuthRepository {
 
   /// Update FCM token
   Future<void> updateFcmToken(String fcmToken) async {
-    try {
-      await apiService.client.totemApiMobileApiRegisterFcmToken(
+    return _handleApiCall(
+      () => apiService.client.totemApiMobileApiRegisterFcmToken(
         body: FcmTokenRegisterSchema(token: fcmToken),
-      );
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(error, stackTrace: stackTrace);
-      if (error is AppAuthException) rethrow;
-      throw AppAuthException(
-        'Failed to update FCM token: $error',
-        code: 'FCM_TOKEN_UPDATE_FAILED',
-      );
-    }
+      ),
+      operationName: 'update FCM token',
+      genericErrorCode: 'FCM_TOKEN_UPDATE_FAILED',
+    );
   }
 
   /// Unregister FCM token
   Future<void> unregisterFcmToken(String fcmToken) async {
-    try {
-      await apiService.client.totemApiMobileApiUnregisterFcmToken(
+    return _handleApiCall(
+      () => apiService.client.totemApiMobileApiUnregisterFcmToken(
         token: fcmToken,
-      );
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(error, stackTrace: stackTrace);
-      if (error is AppAuthException) rethrow;
-      throw AppAuthException(
-        'Failed to unregister FCM token: $error',
-        code: 'FCM_TOKEN_UNREGISTER_FAILED',
-      );
-    }
+      ),
+      operationName: 'unregister FCM token',
+      genericErrorCode: 'FCM_TOKEN_UNREGISTER_FAILED',
+    );
   }
 }

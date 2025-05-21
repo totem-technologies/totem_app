@@ -4,10 +4,15 @@ import 'dart:math';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/main.dart' show TotemApp;
 import 'package:totem_app/navigation/route_names.dart';
+
+final notificationsProvider = Provider<NotificationsService>((ref) {
+  return NotificationsService.instance;
+});
 
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse notificationResponse) {

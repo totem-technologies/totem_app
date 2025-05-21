@@ -73,7 +73,7 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _router = createRouter(ref);
-    NotificationsService.instance.requestPermissions();
+    ref.read(notificationsProvider).requestPermissions();
   }
 
   @override

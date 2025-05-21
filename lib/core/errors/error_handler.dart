@@ -30,7 +30,11 @@ class ErrorHandler {
     }, appRunner: runApp);
   }
 
-  static void logError(Object error, {StackTrace? stackTrace, String? reason}) {
+  static void logError(
+    dynamic error, {
+    StackTrace? stackTrace,
+    String? reason,
+  }) {
     if (kDebugMode) {
       debugPrint('[$_tag] 🔴 Error: $error');
       if (stackTrace != null) {

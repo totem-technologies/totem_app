@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/models/user_schema.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
@@ -15,99 +14,88 @@ import 'package:totem_app/core/services/secure_storage.dart';
 
 final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
   (ref) => AuthController(
-    authRepository: ref.watch(authRepositoryProvider),
-    secureStorage: ref.watch(secureStorageProvider),
+    ref.watch(authRepositoryProvider),
+    ref.watch(secureStorageProvider),
+    ref.watch(analyticsProvider),
+    ref.watch(notificationsProvider),
   ),
 );
 
 class AuthController extends StateNotifier<AuthState> {
-  AuthController({
-    required AuthRepository authRepository,
-    required SecureStorage secureStorage,
-  }) : _authRepository = authRepository,
-       _secureStorage = secureStorage,
-       super(AuthState.unauthenticated()) {
-    _checkExistingAuth();
-
-    FirebaseMessaging.instance.onTokenRefresh
-        .listen((_) => _updateFCMToken)
-        .onError((err) {});
+  AuthController(
+    this._authRepository,
+    this._secureStorage,
+    this._analyticsService,
+    this._notificationsService,
+  ) : super(AuthState.unauthenticated()) {
+    _initialize();
   }
+
   final AuthRepository _authRepository;
   final SecureStorage _secureStorage;
-  final _authStateController = StreamController<AuthState>.broadcast();
+  final AnalyticsService _analyticsService;
+  final NotificationsService _notificationsService;
 
+  final _authStateController = StreamController<AuthState>.broadcast();
   Stream<AuthState> get authStateChanges => _authStateController.stream;
 
   bool get isAuthenticated => state.status == AuthStatus.authenticated;
   bool get isOnboardingCompleted =>
-      state.status == AuthStatus.authenticated &&
+      isAuthenticated &&
       (state.user?.name != null && state.user!.name!.isNotEmpty == true);
 
-  Future<void> requestPin(String email, bool newsletterConsent) async {
-    try {
-      state = AuthState.loading();
-      _emitState();
-      await _authRepository.requestPin(email, newsletterConsent);
-      state = AuthState.awaitingVerification(email: email);
-      _emitState();
+  void _initialize() {
+    _checkExistingAuth();
+    FirebaseMessaging.instance.onTokenRefresh
+        .listen((_) => _updateFCMToken())
+        .onError((dynamic error, StackTrace stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            reason: 'FCM token refresh failed',
+          );
+        });
+  }
 
-      AnalyticsService.instance.logEvent(
+  Future<void> requestPin(String email, bool newsletterConsent) async {
+    _setState(AuthState.loading());
+    try {
+      await _authRepository.requestPin(email, newsletterConsent);
+      _setState(AuthState.awaitingVerification(email: email));
+      _analyticsService.logEvent(
         'pin_requested',
         parameters: {'email': email, 'newsletterConsent': newsletterConsent},
       );
     } catch (error, stackTrace) {
-      state = AuthState.error(error.toString());
-      _emitState();
-      ErrorHandler.logError(error, stackTrace: stackTrace);
+      _handleAuthError(error, stackTrace);
       rethrow;
     }
   }
 
-  /// Verify a magic link token
   Future<void> verifyPin(String pin) async {
-    assert(
-      state.status == AuthStatus.awaitingVerification,
-      'verifyPin() should only be called when status is '
-      'AuthStatus.awaitingVerification',
-    );
-    assert(
-      state.email != null,
-      'verifyPin() should only be called when email is not null',
-    );
-    try {
-      final email = state.email!;
-      state = AuthState.loading();
-      _emitState();
+    final currentEmail = state.email;
+    if (state.status != AuthStatus.awaitingVerification ||
+        currentEmail == null) {
+      // This should ideally not happen if UI flow is correct
+      _setState(AuthState.error('Invalid state for PIN verification.'));
+      return;
+    }
 
-      final authResponse = await _authRepository.verifyPin(email, pin);
-      await _secureStorage.write(
-        key: AppConsts.refreshToken,
-        value: authResponse.refreshToken,
-      );
-      await _secureStorage.write(
-        key: AppConsts.accessToken,
-        value: authResponse.accessToken,
-      );
+    _setState(AuthState.loading());
+    try {
+      final authResponse = await _authRepository.verifyPin(currentEmail, pin);
+      await _storeTokens(authResponse.accessToken, authResponse.refreshToken);
 
       final user = await _authRepository.currentUser;
+      _setState(AuthState.authenticated(user: user));
 
-      state = AuthState.authenticated(user: user);
-      _emitState();
-
-      AnalyticsService.instance.setUserId(user);
-      AnalyticsService.instance.logLogin(method: 'pin');
-    } catch (e, s) {
-      if (e is AppAuthException && e.code == 'INVALID_PIN') {
-        state = AuthState.error('Invalid PIN code. Please try again.');
-      } else if (e is AppAuthException && e.code == 'PIN_ATTEMPTS_EXCEEDED') {
-        state = AuthState.error(
-          'Too many failed attempts. Please request a new magic link.',
-        );
-      } else {
-        state = AuthState.error('Authentication failed: $e: $s');
-      }
-      _emitState();
+      _analyticsService
+        ..setUserId(user)
+        ..logLogin(method: 'pin');
+      await _updateFCMToken();
+    } catch (error, stackTrace) {
+      _handlePinVerificationError(error);
+      ErrorHandler.logError(error, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -117,131 +105,161 @@ class AuthController extends StateNotifier<AuthState> {
     required Set<String> referralSources,
     required Set<String> interestTopics,
   }) async {
+    if (!isAuthenticated || state.user == null) {
+      _setState(AuthState.error('User not authenticated for onboarding.'));
+      // Potentially throw AppAuthException.unauthenticated();
+      return;
+    }
+
+    // _setState(state.copyWith(status: AuthStatus.loading)); // Optional: if there's a noticeable delay
+
     try {
-      if (!isAuthenticated) {
-        throw AppAuthException.unauthenticated();
-      }
-
-      // state = state.copyWith(status: AuthStatus.loading);
-      // _emitState();
-
-      // Update profile with backend
+      // Assuming state.user is not null due to isAuthenticated check
+      final currentUser = state.user!;
+      final updatedUser = UserSchema(
+        email: currentUser.email,
+        isStaff: currentUser.isStaff,
+        profileAvatarType: currentUser.profileAvatarType,
+        profileAvatarSeed: currentUser.profileAvatarSeed,
+        name: firstName,
+        // profileImage: profileImagePath, // If you re-introduce image path
+      );
       // final updatedUser = await _authRepository.updateProfile(
-      //   userId: state.user!.id,
+      //   userId: state.user!.id, // Make sure UserSchema has an ID if needed by backend
       //   firstName: firstName,
-      //   profileImagePath: profileImagePath,
+      //   profileImagePath: profileImagePath, // If image path is part of this
       // );
 
-      // Update state with completed onboarding flag
-      // state = AuthState.authenticated(user: updatedUser);
-      // _emitState();
+      _setState(AuthState.authenticated(user: updatedUser));
 
-      state = AuthState.authenticated(
-        user: UserSchema(
-          email: state.user!.email,
-          isStaff: state.user!.isStaff,
-          profileAvatarType: state.user!.profileAvatarType,
-          profileAvatarSeed: state.user!.profileAvatarSeed,
-          name: firstName,
+      _analyticsService
+        ..logEvent(
+          'referral_source',
+          parameters: {
+            'source': referralSources.toList(),
+            'user_type': 'new_user',
+            'signup_flow_step': 3,
+          },
+        )
+        ..logEvent('onboarding_completed');
+    } catch (error, stackTrace) {
+      _setState(
+        state.copyWith(
+          status: AuthStatus.authenticated,
+          error: 'Failed to update profile: $error',
         ),
       );
-      _emitState();
-
-      AnalyticsService.instance.logEvent(
-        'referral_source',
-        parameters: {
-          'source': referralSources.toList(),
-          'user_type': 'new_user',
-          'signup_flow_step': 3,
-        },
-      );
-
-      AnalyticsService.instance.logEvent('onboarding_completed');
-    } catch (error, stackTrace) {
-      state = state.copyWith(
-        status: AuthStatus.authenticated,
-        error: 'Failed to update profile: $error',
-      );
-      _emitState();
       ErrorHandler.logError(error, stackTrace: stackTrace);
       rethrow;
     }
   }
 
-  /// Log out the current user
   Future<void> logout() async {
+    if (!isAuthenticated) return;
+
+    _setState(AuthState.loading());
     try {
-      if (!isAuthenticated) return;
-
-      state = AuthState.loading();
-      _emitState();
-
       final refreshToken = await _secureStorage.read(
         key: AppConsts.refreshToken,
       );
-      if (refreshToken != null) await _authRepository.logout(refreshToken);
-      await _secureStorage.delete(key: AppConsts.refreshToken);
-      await _secureStorage.delete(key: AppConsts.accessToken);
-
-      state = AuthState.unauthenticated();
-      _emitState();
-
-      AnalyticsService.instance.logLogout();
-    } catch (error, stack) {
-      await _secureStorage.delete(key: AppConsts.refreshToken);
-      await _secureStorage.delete(key: AppConsts.accessToken);
-      state = AuthState.unauthenticated();
-      _emitState();
-      debugPrint('Error during logout: $error, $stack');
+      if (refreshToken != null) {
+        await _authRepository.logout(refreshToken);
+      }
+      await _clearTokens();
+      _setState(AuthState.unauthenticated());
+      _analyticsService.logLogout();
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        reason: 'Logout failed',
+      );
+      await _clearTokens();
+      _setState(AuthState.unauthenticated());
     }
   }
 
   Future<void> _checkExistingAuth() async {
+    _setState(AuthState.loading());
     try {
-      state = AuthState.loading();
-      _emitState();
-
       final accessToken = await _secureStorage.read(key: AppConsts.accessToken);
-
       if (accessToken == null) {
-        state = AuthState.unauthenticated();
-        _emitState();
+        _setState(AuthState.unauthenticated());
         return;
       }
 
       // TODO(bdlukaa): User profile should be stored in secure storage and
-      //                retrieved here instead of making a network call for
-      //                every app launch.
+      // retrieved here instead of making a network call for
+      // every app launch.
       final user = await _authRepository.currentUser;
-      state = AuthState.authenticated(user: user);
-      _emitState();
-
-      AnalyticsService.instance.setUserId(user);
-    } catch (e, stack) {
-      await _secureStorage.delete(key: AppConsts.refreshToken);
-      state = AuthState.unauthenticated();
-
-      debugPrint('Error checking existing auth: $e $stack');
-    } finally {
-      _emitState();
+      _setState(AuthState.authenticated(user: user));
+      _analyticsService.setUserId(user);
+      await _updateFCMToken();
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        reason: 'Error checking existing auth',
+      );
+      await _clearTokens();
+      _setState(AuthState.unauthenticated());
     }
   }
 
-  void _emitState() {
-    _authStateController.add(state);
+  Future<void> _storeTokens(String accessToken, String refreshToken) async {
+    await _secureStorage.write(key: AppConsts.accessToken, value: accessToken);
+    await _secureStorage.write(
+      key: AppConsts.refreshToken,
+      value: refreshToken,
+    );
+  }
 
-    if (state.status == AuthStatus.authenticated) {
-      _updateFCMToken();
+  Future<void> _clearTokens() async {
+    await _secureStorage.delete(key: AppConsts.accessToken);
+    await _secureStorage.delete(key: AppConsts.refreshToken);
+  }
+
+  void _handleAuthError(Object error, StackTrace stackTrace) {
+    ErrorHandler.logError(error, stackTrace: stackTrace);
+    _setState(AuthState.error(error.toString()));
+  }
+
+  void _handlePinVerificationError(dynamic error) {
+    String errorMessage = 'Authentication failed. Please try again.';
+    if (error is AppAuthException) {
+      switch (error.code) {
+        case 'INVALID_PIN':
+          errorMessage = 'Invalid PIN code. Please try again.';
+        case 'PIN_ATTEMPTS_EXCEEDED':
+          errorMessage =
+              'Too many failed attempts. Please request a new magic link.';
+        default:
+          errorMessage = error.message;
+      }
     }
+    _setState(AuthState.error(errorMessage));
   }
 
   Future<void> _updateFCMToken() async {
     if (!isAuthenticated) return;
 
-    final fcmToken = await NotificationsService.instance.fcmToken;
-    if (fcmToken == null) return;
+    try {
+      final fcmToken = await _notificationsService.fcmToken;
+      if (fcmToken != null) {
+        await _authRepository.updateFcmToken(fcmToken);
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        reason: 'FCM token update failed',
+      );
+    }
+  }
 
-    return _authRepository.updateFcmToken(fcmToken);
+  void _setState(AuthState newState) {
+    state = newState;
+    _authStateController.add(state);
   }
 
   @override
@@ -250,7 +268,3 @@ class AuthController extends StateNotifier<AuthState> {
     super.dispose();
   }
 }
-
-final secureStorageProvider = Provider<SecureStorage>((ref) {
-  return SecureStorage();
-});
