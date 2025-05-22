@@ -74,17 +74,18 @@ class AppConfig {
   }
 
   static bool get enableAnalytics {
-    if (kDebugMode) return false; // Disable in debug mode
-    return dotenv.env['ENABLE_ANALYTICS']?.toLowerCase() !=
-        'false'; // Enabled by default in release
+    if (kDebugMode) return false;
+    return dotenv.env['ENABLE_ANALYTICS']?.toLowerCase() != 'false';
   }
 
   static String get sentryDsn {
-    return dotenv.env['SENTRY_DSN'] ?? '';
+    return dotenv.env['SENTRY_DSN'] ??
+        'https://66cc97ae272344978f48840710f857a0@o1324443.ingest.us.sentry.io/6582849';
   }
 
   static String get posthogApiKey {
-    return dotenv.env['POSTHOG_API_KEY'] ?? '';
+    return dotenv.env['POSTHOG_API_KEY'] ??
+        'phc_OJCztWvtlN5scoDe58jLipnOTCBugeidvZlni3FIy9z';
   }
 
   static String get posthogHost {
