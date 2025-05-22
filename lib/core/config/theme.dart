@@ -297,7 +297,7 @@ class AppTheme {
     ),
 
     // --- Card Theme ---
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: white,
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -308,7 +308,7 @@ class AppTheme {
     ),
 
     // --- Dialog Theme ---
-    dialogTheme: DialogTheme(
+    dialogTheme: DialogThemeData(
       backgroundColor: cream,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       titleTextStyle: const TextStyle(
