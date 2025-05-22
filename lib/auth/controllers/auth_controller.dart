@@ -46,7 +46,7 @@ class AuthController extends StateNotifier<AuthState> {
       (state.user?.name != null && state.user!.name!.isNotEmpty == true);
 
   void _initialize() {
-    _checkExistingAuth();
+    checkExistingAuth();
     FirebaseMessaging.instance.onTokenRefresh
         .listen((_) => _updateFCMToken())
         .onError((dynamic error, StackTrace stackTrace) {
@@ -183,7 +183,28 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
+  Completer<void>? _checkExistingAuthCompleter;
+  Future<void> checkExistingAuth() async {
+    if (_checkExistingAuthCompleter == null) {
+      _checkExistingAuthCompleter = Completer<void>();
+
+      try {
+        await _checkExistingAuth();
+        _checkExistingAuthCompleter?.complete();
+      } catch (error, stackTrace) {
+        _checkExistingAuthCompleter?.completeError(error, stackTrace);
+      } finally {
+        _checkExistingAuthCompleter = null;
+      }
+    } else {
+      await _checkExistingAuthCompleter!.future;
+    }
+  }
+
+  var _isCheckingExistingAuth = false;
   Future<void> _checkExistingAuth() async {
+    if (_isCheckingExistingAuth) return;
+    _isCheckingExistingAuth = true;
     _setState(AuthState.loading());
     try {
       final accessToken = await _secureStorage.read(key: AppConsts.accessToken);
@@ -207,6 +228,8 @@ class AuthController extends StateNotifier<AuthState> {
       );
       await _clearTokens();
       _setState(AuthState.unauthenticated());
+    } finally {
+      _isCheckingExistingAuth = false;
     }
   }
 

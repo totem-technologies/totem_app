@@ -33,8 +33,15 @@ void main() {
       await _initializeServices();
 
       await ErrorHandler.initialize();
+
+      final container = ProviderContainer(observers: [ObserverService()]);
+      await container.read(authControllerProvider.notifier).checkExistingAuth();
+
       runApp(
-        ProviderScope(observers: [ObserverService()], child: const TotemApp()),
+        UncontrolledProviderScope(
+          container: container,
+          child: const TotemApp(),
+        ),
       );
     },
     (exception, stackTrace) async {
