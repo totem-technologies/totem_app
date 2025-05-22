@@ -69,7 +69,7 @@ class AuthRepository {
 
   Future<UserSchema> get currentUser async {
     return _handleApiCall(
-      () => apiService.client.totemApiMobileApiCurrentUser(),
+      () => apiService.client.totemUsersMobileApiGetCurrentUser(),
       operationName: 'fetch current user',
       genericErrorCode: 'CURRENT_USER_FETCH_FAILED',
     );

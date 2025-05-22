@@ -12,6 +12,7 @@ part 'user_schema.g.dart';
 class UserSchema {
   const UserSchema({
     required this.profileAvatarType,
+    required this.apiKey,
     required this.profileAvatarSeed,
     required this.email,
     this.isStaff = false,
@@ -29,6 +30,8 @@ class UserSchema {
   /// Designates whether the user can log into this admin site.
   @JsonKey(name: 'is_staff')
   final bool isStaff;
+  @JsonKey(name: 'api_key')
+  final String apiKey;
   @JsonKey(name: 'profile_avatar_seed')
   final String profileAvatarSeed;
 

@@ -2,16 +2,21 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, unused_import
 
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
 import '../models/fcm_token_register_schema.dart';
 import '../models/fcm_token_response_schema.dart';
 import '../models/message_response.dart';
+import '../models/onboard_schema.dart';
 import '../models/pin_request_schema.dart';
 import '../models/refresh_token_schema.dart';
 import '../models/token_response.dart';
 import '../models/user_schema.dart';
+import '../models/user_update_schema.dart';
 import '../models/validate_pin_schema.dart';
 
 part 'client_client.g.dart';
@@ -19,10 +24,6 @@ part 'client_client.g.dart';
 @RestApi()
 abstract class ClientClient {
   factory ClientClient(Dio dio, {String? baseUrl}) = _ClientClient;
-
-  /// Current User
-  @GET('/api/mobile/protected/currentuser')
-  Future<UserSchema> totemApiMobileApiCurrentUser();
 
   /// Register Fcm Token.
   ///
@@ -39,6 +40,33 @@ abstract class ClientClient {
   Future<void> totemApiMobileApiUnregisterFcmToken({
     @Path('token') required String token,
   });
+
+  /// Get Current User
+  @GET('/api/mobile/protected/users/current')
+  Future<UserSchema> totemUsersMobileApiGetCurrentUser();
+
+  /// Update Current User
+  @POST('/api/mobile/protected/users/update')
+  Future<UserSchema> totemUsersMobileApiUpdateCurrentUser({
+    @Body() required UserUpdateSchema body,
+  });
+
+  /// Update Current User Image
+  @MultiPart()
+  @POST('/api/mobile/protected/users/update_image')
+  Future<bool> totemUsersMobileApiUpdateCurrentUserImage({
+    @Part(name: 'profile_image') required File profileImage,
+  });
+
+  /// Onboard Post
+  @POST('/api/mobile/protected/onboard/')
+  Future<OnboardSchema> totemOnboardMobileApiOnboardPost({
+    @Body() required OnboardSchema body,
+  });
+
+  /// Onboard Get
+  @GET('/api/mobile/protected/onboard/')
+  Future<OnboardSchema> totemOnboardMobileApiOnboardGet();
 
   /// Request Pin.
   ///

@@ -1,0 +1,34 @@
+// coverage:ignore-file
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, unused_import
+
+import 'package:json_annotation/json_annotation.dart';
+
+import 'referral_choices.dart';
+
+part 'onboard_schema.g.dart';
+
+@JsonSerializable()
+class OnboardSchema {
+  const OnboardSchema({
+    this.referralOther = '',
+    this.yearBorn,
+    this.hopes,
+    this.referralSource = ReferralChoices.valueDefault,
+  });
+
+  factory OnboardSchema.fromJson(Map<String, Object?> json) =>
+      _$OnboardSchemaFromJson(json);
+
+  @JsonKey(name: 'referral_source')
+  final ReferralChoices referralSource;
+  @JsonKey(name: 'year_born')
+  final int? yearBorn;
+  final String? hopes;
+
+  /// Please tell us more about how you found us
+  @JsonKey(name: 'referral_other')
+  final String referralOther;
+
+  Map<String, Object?> toJson() => _$OnboardSchemaToJson(this);
+}
