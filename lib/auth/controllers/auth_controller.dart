@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/api/models/user_schema.dart';
+import 'package:totem_app/api/models/referral_choices.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/auth/repositories/auth_repository.dart';
 import 'package:totem_app/core/config/consts.dart';
@@ -11,6 +11,7 @@ import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/core/services/notifications_service.dart';
 import 'package:totem_app/core/services/secure_storage.dart';
+import 'package:totem_app/shared/logger.dart';
 
 final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
   (ref) => AuthController(
@@ -102,7 +103,8 @@ class AuthController extends StateNotifier<AuthState> {
 
   Future<void> completeOnboarding({
     required String firstName,
-    required Set<String> referralSources,
+    required int? age,
+    required ReferralChoices? referralSource,
     required Set<String> interestTopics,
   }) async {
     if (!isAuthenticated || state.user == null) {
@@ -114,34 +116,36 @@ class AuthController extends StateNotifier<AuthState> {
     // _setState(state.copyWith(status: AuthStatus.loading)); // Optional: if there's a noticeable delay
 
     try {
-      // Assuming state.user is not null due to isAuthenticated check
-      final currentUser = state.user!;
-      final updatedUser = UserSchema(
-        email: currentUser.email,
-        isStaff: currentUser.isStaff,
-        profileAvatarType: currentUser.profileAvatarType,
-        profileAvatarSeed: currentUser.profileAvatarSeed,
+      final updatedUser = await _authRepository.updateCurrentUserProfile(
         name: firstName,
-        // profileImage: profileImagePath, // If you re-introduce image path
       );
-      // final updatedUser = await _authRepository.updateProfile(
-      //   userId: state.user!.id, // Make sure UserSchema has an ID if needed by backend
-      //   firstName: firstName,
-      //   profileImagePath: profileImagePath, // If image path is part of this
-      // );
+
+      unawaited(
+        _authRepository
+            .completeOnboarding(
+              interestTopics: interestTopics,
+              referralSource: referralSource,
+              yearBorn: age == null ? null : (DateTime.now().year - age),
+            )
+            .then((_) {
+              logger.i('🔑 Onboard completed!');
+            }),
+      );
 
       _setState(AuthState.authenticated(user: updatedUser));
 
-      _analyticsService
-        ..logEvent(
+      if (referralSource != null) {
+        _analyticsService.logEvent(
           'referral_source',
           parameters: {
-            'source': referralSources.toList(),
+            'source': referralSource,
             'user_type': 'new_user',
             'signup_flow_step': 3,
           },
-        )
-        ..logEvent('onboarding_completed');
+        );
+      }
+
+      _analyticsService.logEvent('onboarding_completed');
     } catch (error, stackTrace) {
       _setState(
         state.copyWith(

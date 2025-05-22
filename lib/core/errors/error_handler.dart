@@ -84,9 +84,9 @@ class ErrorHandler {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
+          spacing: 12,
           children: [
             Icon(Icons.error_outline, color: theme.colorScheme.error),
-            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 message,
@@ -96,11 +96,8 @@ class ErrorHandler {
           ],
         ),
         duration: duration,
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: theme.colorScheme.surface,
         action: SnackBarAction(
           label: 'Dismiss',
-          textColor: theme.colorScheme.primary,
           onPressed: () {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
           },
@@ -146,10 +143,11 @@ class ErrorHandler {
     Object error, {
     StackTrace? stackTrace,
     VoidCallback? onRetry,
+    bool showError = true,
   }) async {
     logError(error, stackTrace: stackTrace);
 
-    if (!context.mounted) return;
+    if (!context.mounted || !showError) return;
 
     // Get user-friendly message
     final message = getUserFriendlyErrorMessage(error);
@@ -162,9 +160,7 @@ class ErrorHandler {
         message: message,
         buttonText: 'Log In Again',
       );
-      return;
-    }
-
+    } else
     // For network errors, we might want to offer a retry
     if (error is AppNetworkException && onRetry != null) {
       await showDialog<void>(
@@ -191,10 +187,10 @@ class ErrorHandler {
           );
         },
       );
-      return;
-    }
-
+    } else
     // For other errors, just show a snackbar
-    showErrorSnackBar(context, message);
+    {
+      showErrorSnackBar(context, message);
+    }
   }
 }

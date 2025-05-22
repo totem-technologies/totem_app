@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
 /// This was generated based on the css.
@@ -367,6 +369,29 @@ class AppTheme {
       materialTapTargetSize: MaterialTapTargetSize.padded,
       side: const BorderSide(color: mauve, width: 1.5),
       visualDensity: VisualDensity.compact,
+    ),
+
+    // --- SnackBar Theme ---
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: cream,
+      contentTextStyle: const TextStyle(
+        fontFamily: fontFamilySans,
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+        color: white,
+      ),
+      actionTextColor: mauve,
+      behavior: SnackBarBehavior.floating,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(20)),
+      ),
+      insetPadding: const EdgeInsets.all(20),
+      width:
+          ui.PlatformDispatcher.instance.views.first.physicalSize.width.clamp(
+            100,
+            600,
+          ) -
+          40,
     ),
 
     useMaterial3: true,

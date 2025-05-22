@@ -3,14 +3,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/api/mobile_totem_api.dart';
-import 'package:totem_app/api/models/fcm_token_register_schema.dart';
-import 'package:totem_app/api/models/message_response.dart';
-import 'package:totem_app/api/models/pin_request_schema.dart';
-import 'package:totem_app/api/models/refresh_token_schema.dart';
-import 'package:totem_app/api/models/token_response.dart';
-import 'package:totem_app/api/models/user_schema.dart';
-import 'package:totem_app/api/models/validate_pin_schema.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
@@ -68,10 +61,63 @@ class AuthRepository {
   }
 
   Future<UserSchema> get currentUser async {
-    return _handleApiCall(
+    return _handleApiCall<UserSchema>(
       () => apiService.client.totemUsersMobileApiGetCurrentUser(),
       operationName: 'fetch current user',
       genericErrorCode: 'CURRENT_USER_FETCH_FAILED',
+    );
+  }
+
+  /// Update the current user's profile.
+  Future<UserSchema> updateCurrentUserProfile({
+    String? name,
+    String? email,
+    String? timezone,
+    bool? newsletterConsent,
+    ProfileAvatarTypeEnum? profileAvatarType,
+    bool? randomizeAvatarSeed,
+  }) async {
+    return _handleApiCall<UserSchema>(
+      () => apiService.client.totemUsersMobileApiUpdateCurrentUser(
+        body: UserUpdateSchema(
+          name: name,
+          email: email,
+          timezone: timezone,
+          newsletterConsent: newsletterConsent,
+          profileAvatarType: profileAvatarType,
+          randomizeAvatarSeed: randomizeAvatarSeed,
+        ),
+      ),
+      operationName: 'update current user profile',
+      genericErrorCode: 'CURRENT_USER_PROFILE_UPDATE_FAILED',
+    );
+  }
+
+  Future<OnboardSchema> get onboardStatus async {
+    return _handleApiCall<OnboardSchema>(
+      () => apiService.client.totemOnboardMobileApiOnboardGet(),
+      operationName: 'fetch onboard status',
+      genericErrorCode: 'ONBOARD_STATUS_FETCH_FAILED',
+    );
+  }
+
+  Future<OnboardSchema> completeOnboarding({
+    required ReferralChoices? referralSource,
+    required Set<String> interestTopics,
+    int? yearBorn,
+    String? referralOther,
+  }) async {
+    return _handleApiCall<OnboardSchema>(
+      () => apiService.client.totemOnboardMobileApiOnboardPost(
+        body: OnboardSchema(
+          referralSource: referralSource ?? ReferralChoices.valueDefault,
+          referralOther: referralOther ?? '',
+          hopes: interestTopics.join(', '),
+          yearBorn: yearBorn,
+        ),
+      ),
+      operationName: 'complete onboarding',
+      genericErrorCode: 'ONBOARDING_COMPLETION_FAILED',
     );
   }
 
@@ -79,7 +125,7 @@ class AuthRepository {
     String email,
     bool newsletterConsent,
   ) async {
-    return _handleApiCall(
+    return _handleApiCall<MessageResponse>(
       () => apiService.client.totemApiAuthRequestPin(
         body: PinRequestSchema(
           email: email,
@@ -93,7 +139,7 @@ class AuthRepository {
 
   /// Verify a PIN code
   Future<TokenResponse> verifyPin(String email, String pin) async {
-    return _handleApiCall(
+    return _handleApiCall<TokenResponse>(
       () => apiService.client.totemApiAuthValidatePin(
         body: ValidatePinSchema(email: email, pin: pin),
       ),
@@ -104,7 +150,7 @@ class AuthRepository {
 
   /// Logout by invalidating a refresh token
   Future<MessageResponse> logout(String refreshToken) async {
-    return _handleApiCall(
+    return _handleApiCall<MessageResponse>(
       () => apiService.client.totemApiAuthLogout(
         body: RefreshTokenSchema(refreshToken: refreshToken),
       ),

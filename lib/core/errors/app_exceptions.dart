@@ -7,7 +7,7 @@ abstract class AppException implements Exception {
 
   @override
   String toString() {
-    return 'AppException: $message${code != null ? ' (code: $code)' : ''}';
+    return '$runtimeType: $message${code != null ? ' (code: $code)' : ''}';
   }
 }
 

@@ -72,6 +72,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           error,
           stackTrace: stackTrace,
           onRetry: _requestPin,
+          showError: false,
         );
       }
     } finally {
@@ -88,7 +89,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // Listen for auth state changes
     ref.listen<AuthState>(authControllerProvider, (previous, current) {
       if (current.status == AuthStatus.error && current.error != null) {
-        ErrorHandler.showErrorSnackBar(context, current.error!);
+        ErrorHandler.showErrorSnackBar(
+          context,
+          ErrorHandler.getUserFriendlyErrorMessage(current.error!),
+        );
       }
     });
 

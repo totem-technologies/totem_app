@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/api/models/referral_choices.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/navigation/route_names.dart';
@@ -23,7 +24,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final _ageController = TextEditingController();
 
   final _selectedTopics = <String>{};
-  final _referralSources = <String>{};
+  ReferralChoices? _referralSource;
   var _isLoading = false;
 
   @override
@@ -43,14 +44,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     });
   }
 
-  void _handleReferralSourceSelection(String source, bool isSelected) {
-    setState(() {
-      if (isSelected) {
-        _referralSources.add(source);
-      } else {
-        _referralSources.remove(source);
-      }
-    });
+  void _handleReferralSourceSelection(ReferralChoices source) {
+    setState(() => _referralSource = source);
   }
 
   Future<void> _submitProfile() async {
@@ -60,8 +55,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           .read(authControllerProvider.notifier)
           .completeOnboarding(
             firstName: _firstNameController.text.trim(),
-            referralSources: _referralSources,
+            referralSource: _referralSource,
             interestTopics: _selectedTopics,
+            age: int.tryParse(_ageController.text.trim()),
           );
 
       if (mounted) context.go(RouteNames.spaces);
@@ -121,7 +117,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   onContinue: navigateToNextTab,
                 ),
                 _ReferralSourceTab(
-                  selectedReferralSources: _referralSources,
+                  selectedReferralSource: _referralSource,
                   isLoading: _isLoading,
                   onSourceSelected: _handleReferralSourceSelection,
                   onSubmit: _submitProfile,
@@ -361,29 +357,30 @@ class _TopicsTab extends StatelessWidget {
 // --- Tab 3: Referral Source ---
 class _ReferralSourceTab extends StatelessWidget {
   const _ReferralSourceTab({
-    required this.selectedReferralSources,
+    required this.selectedReferralSource,
     required this.isLoading,
     required this.onSourceSelected,
     required this.onSubmit,
   });
 
-  final Set<String> selectedReferralSources;
+  final ReferralChoices? selectedReferralSource;
   final bool isLoading;
-  final void Function(String source, bool isSelected) onSourceSelected;
+  final ValueChanged<ReferralChoices> onSourceSelected;
   final VoidCallback onSubmit;
-
-  static const List<String> _availableSources = [
-    'Friend or Family',
-    'Social Media',
-    'Google',
-    'Event',
-    'Blog or Article',
-    'Other',
-  ];
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    final availableSources =
+        ReferralChoices.values
+            .where((source) => source != ReferralChoices.other)
+            .map(
+              (source) =>
+                  MapEntry<ReferralChoices, String>(source, source.name),
+            )
+            .toSet();
+
     return CardScreen(
       isLoading: isLoading, // Pass isLoading if CardScreen uses it
       children: [
@@ -399,17 +396,17 @@ class _ReferralSourceTab extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
-        ..._availableSources.map((source) {
-          final isSelected = selectedReferralSources.contains(source);
+        ...availableSources.map((source) {
+          final sourceRef = source.key;
+          final sourceName = source.value;
+          final isSelected = selectedReferralSource == sourceRef;
           return Padding(
             padding: const EdgeInsetsDirectional.only(bottom: 10),
             child: CheckboxListTile(
-              title: Text(source),
+              title: Text(sourceName),
               value: isSelected,
               onChanged:
-                  isLoading
-                      ? null
-                      : (value) => onSourceSelected(source, value ?? false),
+                  isLoading ? null : (value) => onSourceSelected(sourceRef),
               checkboxScaleFactor: 1.35,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -434,5 +431,20 @@ class _ReferralSourceTab extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+extension on ReferralChoices {
+  String get name {
+    return switch (this) {
+      ReferralChoices.blog => 'Blog or Article',
+      ReferralChoices.dream => 'Dream',
+      ReferralChoices.keeper => 'Keeper',
+      ReferralChoices.newsletter => 'Newsletter',
+      ReferralChoices.pamphlet => 'Pamphlet',
+      ReferralChoices.search => 'Google',
+      ReferralChoices.social => 'Social Media',
+      ReferralChoices.other || _ => 'Other',
+    };
   }
 }
