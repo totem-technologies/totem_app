@@ -15,6 +15,7 @@ import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
 import 'package:totem_app/main.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/logger.dart';
+import 'package:totem_app/shared/svg_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 class BottomNavScaffold extends StatelessWidget {
@@ -41,7 +42,10 @@ class BottomNavScaffold extends StatelessWidget {
         },
         selectedIndex: currentPath.startsWith('/spaces') ? 0 : 1,
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.explore), label: 'Spaces'),
+          NavigationDestination(
+            icon: TotemIcon(TotemIcons.home),
+            label: 'Spaces',
+          ),
           NavigationDestination(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
