@@ -44,6 +44,7 @@ dependencies:
   pinput: ^5.0.1
   flutter_boring_avatars: ^2.0.1
   flutter_svg: ^2.1.0
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:

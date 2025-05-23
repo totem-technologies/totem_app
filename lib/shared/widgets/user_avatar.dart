@@ -5,9 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 
 class UserAvatar extends ConsumerWidget {
-  const UserAvatar({super.key, this.radius = 30});
+  const UserAvatar({super.key, this.radius = 30, this.image});
 
   final double radius;
+  final ImageProvider? image;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -18,11 +19,12 @@ class UserAvatar extends ConsumerWidget {
       child: CircleAvatar(
         radius: radius,
         backgroundImage:
-            user?.profileImage == null
+            image ??
+            (user?.profileImage == null
                 ? null
-                : CachedNetworkImageProvider(user!.profileImage!),
+                : CachedNetworkImageProvider(user!.profileImage!)),
         child:
-            user?.profileImage == null
+            user?.profileImage == null && image == null
                 ? AnimatedBoringAvatar(
                   name: user!.profileAvatarSeed,
                   type: BoringAvatarType.beam,
