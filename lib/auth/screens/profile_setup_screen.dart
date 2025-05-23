@@ -7,6 +7,7 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/card_screen.dart';
+import 'package:totem_app/shared/widgets/info_text.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/page_indicator.dart';
 
@@ -171,34 +172,6 @@ class _NameAndAgeTabState extends State<_NameAndAgeTab>
     return null;
   }
 
-  Widget _buildInfoText(String text) {
-    return Builder(
-      builder: (context) {
-        final theme = Theme.of(context);
-        return Padding(
-          padding: const EdgeInsetsDirectional.symmetric(vertical: 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.info_outline, color: theme.disabledColor, size: 16),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  text,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.disabledColor,
-                    fontSize: 10,
-                  ),
-                  textAlign: TextAlign.start,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -237,7 +210,7 @@ class _NameAndAgeTabState extends State<_NameAndAgeTab>
           textInputAction: TextInputAction.next,
           autofillHints: const [AutofillHints.givenName],
         ),
-        _buildInfoText(
+        const InfoText(
           'Other people will see this, but you don’t have to use your real '
           'name. Add any pronounce is parentheses if you’d like.',
         ),
@@ -260,7 +233,7 @@ class _NameAndAgeTabState extends State<_NameAndAgeTab>
           textInputAction: TextInputAction.done,
           onFieldSubmitted: (_) => widget.onContinue(),
         ),
-        _buildInfoText(
+        const InfoText(
           'You must be over 13 to join. Age is for verification only, no one '
           'will see it.',
         ),

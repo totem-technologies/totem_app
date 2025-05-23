@@ -1,8 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_boring_avatars/flutter_boring_avatars.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -30,23 +31,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Row(
                 spacing: 10,
                 children: [
-                  ClipOval(
-                    child: CircleAvatar(
-                      radius: 30,
-                      backgroundImage:
-                          user?.profileImage == null
-                              ? null
-                              : CachedNetworkImageProvider(user!.profileImage!),
-                      child:
-                          user?.profileImage == null
-                              ? AnimatedBoringAvatar(
-                                name: user!.profileAvatarSeed,
-                                type: BoringAvatarType.beam,
-                                duration: const Duration(milliseconds: 300),
-                              )
-                              : null,
-                    ),
-                  ),
+                  const UserAvatar(),
                   Expanded(
                     child: Text(
                       user?.name ?? 'Welcome',
@@ -58,7 +43,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ProfileTile(
                 icon: const Icon(Icons.person),
                 title: 'Profile',
-                onTap: () {},
+                onTap: () {
+                  context.pushNamed(RouteNames.profileDetail);
+                },
               ),
               ProfileTile(
                 icon: const Icon(Icons.person),
@@ -118,27 +105,33 @@ class ProfileTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(25),
-        color: Colors.white,
-      ),
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: 20,
-        vertical: 10,
-      ),
-      child: Row(
-        spacing: 10,
-        children: [
-          icon,
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(25),
+          color: Colors.white,
+        ),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: 20,
+          vertical: 10,
+        ),
+        child: Row(
+          spacing: 10,
+          children: [
+            icon,
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
-          ),
-          const Icon(Icons.navigate_next_rounded),
-        ],
+            const Icon(Icons.navigate_next_rounded),
+          ],
+        ),
       ),
     );
   }

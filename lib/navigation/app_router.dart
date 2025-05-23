@@ -9,6 +9,7 @@ import 'package:totem_app/auth/screens/login_screen.dart';
 import 'package:totem_app/auth/screens/pin_entry_screen.dart';
 import 'package:totem_app/auth/screens/profile_setup_screen.dart';
 import 'package:totem_app/auth/screens/welcome_screen.dart';
+import 'package:totem_app/features/profile/screens/profile_details_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_screen.dart';
 import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
 import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
@@ -229,6 +230,11 @@ GoRouter createRouter(WidgetRef ref) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: RouteNames.profileDetail,
+        name: RouteNames.profileDetail,
+        builder: (context, state) => const ProfileDetailsScreen(),
       ),
 
       // Routes that don't show bottom nav

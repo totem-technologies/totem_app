@@ -45,7 +45,6 @@ class TotemIcon extends StatelessWidget {
       width: iconSize,
       height: iconSize,
       colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
-      fit: BoxFit.contain,
     );
   }
 }

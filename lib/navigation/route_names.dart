@@ -15,7 +15,9 @@ class RouteNames {
   static const spaces = '/spaces';
   static const spaceDetail = '/space';
   static String space(String id) => '/spaces/$id';
+
   static const profile = '/profile';
+  static const profileDetail = '/profile/detail';
 
   static const allRoutes = [
     login,
