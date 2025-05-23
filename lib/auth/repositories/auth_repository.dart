@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -65,6 +66,16 @@ class AuthRepository {
       () => apiService.client.totemUsersMobileApiGetCurrentUser(),
       operationName: 'fetch current user',
       genericErrorCode: 'CURRENT_USER_FETCH_FAILED',
+    );
+  }
+
+  Future<bool> updateCurrentUserProfilePicture(File file) {
+    return _handleApiCall<bool>(
+      () => apiService.client.totemUsersMobileApiUpdateCurrentUserImage(
+        profileImage: file,
+      ),
+      operationName: 'update current user profile picture',
+      genericErrorCode: 'CURRENT_USER_PROFILE_PICTURE_UPDATE_FAILED',
     );
   }
 

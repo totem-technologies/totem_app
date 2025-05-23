@@ -1,8 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/api/models/referral_choices.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/auth/repositories/auth_repository.dart';
 import 'package:totem_app/core/config/consts.dart';
@@ -156,6 +157,93 @@ class AuthController extends StateNotifier<AuthState> {
       ErrorHandler.logError(error, stackTrace: stackTrace);
       rethrow;
     }
+  }
+
+  Future<bool> updateUserProfile({
+    String? name,
+    String? email,
+    File? profileImage,
+  }) async {
+    var overallSuccess = true;
+    var finalUpdatedUser = state.user;
+
+    if (profileImage != null) {
+      try {
+        final bool imageUpdateSuccess = await _authRepository
+            .updateCurrentUserProfilePicture(profileImage);
+        if (!imageUpdateSuccess) {
+          overallSuccess = false;
+        } else {
+          // If image update was successful and you need to refresh user data
+          // to get new image URL
+          // you might need to call _authRepository.currentUser again or the
+          // image update method should return the new UserSchema or at least
+          // the new image URL. For simplicity, if it returns a new UserSchema:
+          // finalUser = await _authRepository.currentUser;
+        }
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          reason: 'Failed to update profile image',
+        );
+        overallSuccess = false;
+      }
+    }
+
+    var shouldUpdateTextProfile = false;
+    final newName = (name != null && state.user?.name != name) ? name : null;
+    final newEmail =
+        (email != null && state.user?.email != email) ? email : null;
+
+    if (newName != null || newEmail != null) {
+      shouldUpdateTextProfile = true;
+    }
+
+    if (shouldUpdateTextProfile) {
+      try {
+        final backendUpdatedUser = await _authRepository
+            .updateCurrentUserProfile(name: newName, email: newEmail);
+        finalUpdatedUser = backendUpdatedUser;
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          reason: 'Failed to update name/email',
+        );
+        overallSuccess = false;
+      }
+    }
+
+    if (overallSuccess &&
+        finalUpdatedUser != null &&
+        finalUpdatedUser != state.user) {
+      _setState(
+        state.copyWith(
+          status: AuthStatus.authenticated,
+          user: finalUpdatedUser,
+        ),
+      );
+    } else if (overallSuccess &&
+        (profileImage != null || shouldUpdateTextProfile)) {
+      // If an update was attempted and reported success by the repo,
+      // but we don't have a new user object from the repo calls,
+      // it might be safest to re-fetch the user to ensure UI consistency.
+      try {
+        final refreshedUser = await _authRepository.currentUser;
+        _setState(
+          state.copyWith(status: AuthStatus.authenticated, user: refreshedUser),
+        );
+      } catch (e) {
+        overallSuccess = false;
+        ErrorHandler.logError(
+          e,
+          reason: 'Failed to refresh user after profile update',
+        );
+      }
+    }
+
+    return overallSuccess;
   }
 
   Future<void> logout() async {

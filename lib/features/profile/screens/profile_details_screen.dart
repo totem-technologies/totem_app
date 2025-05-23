@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,6 +53,15 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     setState(() {
       _loading = true;
     });
+
+    final imageFile = File(_pickedImage!.path);
+    await ref
+        .read(authControllerProvider.notifier)
+        .updateUserProfile(
+          name: _nameController.text.trim(),
+          email: _emailController.text.trim(),
+          profileImage: imageFile,
+        );
 
     setState(() {
       _loading = true;
