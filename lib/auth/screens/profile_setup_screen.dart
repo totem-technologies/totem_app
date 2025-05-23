@@ -107,6 +107,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   onContinue: () {
                     if (_formKeyTab1.currentState!.validate()) {
                       navigateToNextTab();
+                      FocusScope.of(context).unfocus();
                     }
                   },
                 ),
@@ -374,7 +375,9 @@ class _ReferralSourceTab extends StatelessWidget {
 
     final availableSources =
         ReferralChoices.values
-            .where((source) => source != ReferralChoices.other)
+            .where((source) => source.name != ReferralChoices.other.name)
+            .toSet() // exclude 'Other' from the list
+            .toList()
             .map(
               (source) =>
                   MapEntry<ReferralChoices, String>(source, source.name),

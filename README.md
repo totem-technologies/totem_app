@@ -59,7 +59,7 @@ flutter pub get
 For development:
 
 ```bash
-flutter run -d chrome     # Web (temporary testing)
+flutter run -d chrome --web-browser-flag "--disable-web-security" --web-experimental-hot-reload     # Web (temporary testing)
 flutter run -d android    # Android
 flutter run -d ios        # iOS
 ```
