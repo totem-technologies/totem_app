@@ -19,7 +19,6 @@ import 'package:totem_app/main.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/logger.dart';
 import 'package:totem_app/shared/totem_icons.dart';
-import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 class BottomNavScaffold extends StatelessWidget {
   const BottomNavScaffold({
@@ -155,17 +154,6 @@ GoRouter createRouter(WidgetRef ref) {
               ((state.extra as Map?)?['email'] as String?) ??
               '';
           return PinEntryScreen(email: email);
-        },
-      ),
-      GoRoute(
-        path: RouteNames.magicLink,
-        name: RouteNames.magicLink,
-        builder: (context, state) {
-          // TODO(auth): Handle magic link token
-          // final token = state.uri.queryParameters['token'] ?? '';
-          // This would typically handle the magic link token
-          // and trigger authentication
-          return const Scaffold(body: LoadingIndicator());
         },
       ),
 

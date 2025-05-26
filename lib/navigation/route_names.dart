@@ -6,7 +6,6 @@ class RouteNames {
   // Auth routes
   static const login = '/auth/login';
   static const pinEntry = '/auth/pin';
-  static const magicLink = '/auth/magic-link';
 
   // Onboarding
   static const onboarding = '/onboarding';
@@ -24,7 +23,6 @@ class RouteNames {
   static const allRoutes = [
     login,
     pinEntry,
-    magicLink,
     onboarding,
     spaces,
     spaceDetail,
