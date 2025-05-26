@@ -46,6 +46,8 @@ class AuthController extends StateNotifier<AuthState> {
       isAuthenticated &&
       (state.user?.name != null && state.user!.name!.isNotEmpty == true);
 
+  UserSchema? get user => state.user;
+
   void _initialize() {
     checkExistingAuth();
     FirebaseMessaging.instance.onTokenRefresh

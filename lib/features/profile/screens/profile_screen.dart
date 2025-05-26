@@ -17,74 +17,116 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     // Get user info from auth state
-    final authState = ref.watch(authControllerProvider);
-    final user = authState.user;
+    final auth = ref.watch(authControllerProvider.notifier);
+    final user = auth.user;
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
+        child: ListView(
           padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 12,
-            children: [
-              Row(
-                spacing: 10,
-                children: [
-                  const UserAvatar(),
-                  Expanded(
-                    child: Text(
-                      user?.name ?? 'Welcome',
-                      style: theme.textTheme.headlineMedium,
+          children: [
+            Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  spacing: 10,
+                  children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minWidth: 146),
+                      child: Column(
+                        spacing: 10,
+                        children: [
+                          const UserAvatar(),
+                          Text(
+                            user?.name ?? 'Welcome',
+                            style: theme.textTheme.headlineMedium,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    // TODO(bdlukaa): Add user stats
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '12',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text('Sessions joined'),
+                          SizedBox(height: 20),
+                          Text(
+                            '2',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text('Spaces joined'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              ProfileTile(
-                icon: const Icon(Icons.person),
-                title: 'Profile',
-                onTap: () {
-                  context.pushNamed(RouteNames.profileDetail);
-                },
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Account',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
-              ProfileTile(
-                icon: const Icon(Icons.person),
-                title: 'Subscribed Spaces',
-                onTap: () {},
+            ),
+            const SizedBox(height: 12),
+            ProfileTile(
+              icon: const Icon(Icons.person),
+              title: 'Profile',
+              onTap: () {
+                context.pushNamed(RouteNames.profileDetail);
+              },
+            ),
+            ProfileTile(
+              icon: const Icon(Icons.person),
+              title: 'Subscribed Spaces',
+              onTap: () {},
+            ),
+            ProfileTile(
+              icon: const Icon(Icons.history),
+              title: 'Session history',
+              onTap: () {},
+            ),
+            ProfileTile(
+              icon: const Icon(Icons.person),
+              title: 'Logout',
+              onTap: auth.logout,
+            ),
+            Text(
+              'Settings',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
-              ProfileTile(
-                icon: const Icon(Icons.history),
-                title: 'Session history',
-                onTap: () {},
-              ),
-              ProfileTile(
-                icon: const Icon(Icons.person),
-                title: 'Profile',
-                onTap: () {},
-              ),
-              const Spacer(),
-              ProfileTile(
-                icon: const Icon(Icons.person),
-                title: 'Feedback',
-                onTap: () {},
-              ),
-              ProfileTile(
-                icon: const Icon(Icons.person),
-                title: 'Privacy Policy',
-                onTap: () {},
-              ),
-              ProfileTile(
-                icon: const Icon(Icons.person),
-                title: 'Terms',
-                onTap: () {},
-              ),
-              ProfileTile(
-                icon: const Icon(Icons.person),
-                title: 'Delete account',
-                onTap: () {},
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 12),
+            ProfileTile(
+              icon: const Icon(Icons.person),
+              title: 'Feedback',
+              onTap: () {},
+            ),
+            ProfileTile(
+              icon: const Icon(Icons.person),
+              title: 'Privacy Policy',
+              onTap: () {},
+            ),
+            ProfileTile(
+              icon: const Icon(Icons.person),
+              title: 'Terms',
+              onTap: () {},
+            ),
+            ProfileTile(
+              icon: const Icon(Icons.person),
+              title: 'Delete account',
+              onTap: () {},
+            ),
+          ],
         ),
       ),
     );
@@ -105,32 +147,35 @@ class ProfileTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(25),
-          color: Colors.white,
-        ),
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: 20,
-          vertical: 10,
-        ),
-        child: Row(
-          spacing: 10,
-          children: [
-            icon,
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(bottom: 12),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(25),
+            color: Colors.white,
+          ),
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: 20,
+            vertical: 10,
+          ),
+          child: Row(
+            spacing: 10,
+            children: [
+              icon,
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
-            ),
-            const Icon(Icons.navigate_next_rounded),
-          ],
+              const Icon(Icons.navigate_next_rounded),
+            ],
+          ),
         ),
       ),
     );

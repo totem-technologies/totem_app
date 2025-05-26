@@ -59,9 +59,9 @@ flutter pub get
 For development:
 
 ```bash
-flutter run -d chrome --web-browser-flag "--disable-web-security" --web-experimental-hot-reload     # Web (temporary testing)
 flutter run -d android    # Android
 flutter run -d ios        # iOS
+flutter run -d chrome --web-browser-flag "--disable-web-security" --web-experimental-hot-reload     # Web (temporary testing)
 ```
 
 If testing on an iOS device, ensure you're using macOS and have Xcode installed.
