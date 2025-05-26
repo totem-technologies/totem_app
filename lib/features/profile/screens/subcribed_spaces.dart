@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
 class SubscribedSpacesScreen extends StatelessWidget {
@@ -37,7 +39,9 @@ class SubscribedSpacesScreen extends StatelessWidget {
               ),
               if (spaces.isEmpty)
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    context.pushNamed(RouteNames.spaces);
+                  },
                   child: const Text('Browse Spaces'),
                 )
               else

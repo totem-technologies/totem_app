@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:totem_app/navigation/route_names.dart';
 
 class SessionHistoryScreen extends StatelessWidget {
   const SessionHistoryScreen({super.key});
@@ -26,7 +28,9 @@ class SessionHistoryScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  context.pushNamed(RouteNames.spaces);
+                },
                 child: const Text('Browse Spaces'),
               ),
             ],
