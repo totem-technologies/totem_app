@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
+import 'package:url_launcher/link.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -107,20 +109,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            ProfileTile(
-              icon: const TotemIcon(TotemIcons.feedback),
-              title: 'Feedback',
-              onTap: () {},
+            Link(
+              uri: Uri.parse('https://www.totem.org/users/feedback/'),
+              builder:
+                  (context, launch) => ProfileTile(
+                    icon: const TotemIcon(TotemIcons.feedback),
+                    title: 'Feedback',
+                    onTap: () => launch?.call(),
+                  ),
             ),
-            ProfileTile(
-              icon: const TotemIcon(TotemIcons.lock),
-              title: 'Privacy Policy',
-              onTap: () {},
+            Link(
+              uri: AppConfig.privacyPolicyUrl,
+              builder:
+                  (context, launch) => ProfileTile(
+                    icon: const TotemIcon(TotemIcons.lock),
+                    title: 'Privacy Policy',
+                    onTap: () => launch?.call(),
+                  ),
             ),
-            ProfileTile(
-              icon: const TotemIcon(TotemIcons.safe),
-              title: 'Terms',
-              onTap: () {},
+            Link(
+              uri: AppConfig.termsOfServiceUrl,
+              builder:
+                  (context, launch) => ProfileTile(
+                    icon: const TotemIcon(TotemIcons.safe),
+                    title: 'Terms',
+                    onTap: () => launch?.call(),
+                  ),
             ),
             ProfileTile(
               icon: const TotemIcon(TotemIcons.closeRounded),
