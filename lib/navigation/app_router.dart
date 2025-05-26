@@ -16,7 +16,7 @@ import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
 import 'package:totem_app/main.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/logger.dart';
-import 'package:totem_app/shared/svg_icons.dart';
+import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 class BottomNavScaffold extends StatelessWidget {
@@ -33,22 +33,33 @@ class BottomNavScaffold extends StatelessWidget {
     return Scaffold(
       body: child,
 
-      bottomNavigationBar: NavigationBar(
-        onDestinationSelected: (index) {
-          if (index == 0 && !currentPath.startsWith('/spaces')) {
-            context.go(RouteNames.spaces);
-          } else if (index == 1 && !currentPath.startsWith('/profile')) {
-            context.go(RouteNames.profile);
-          }
-        },
-        selectedIndex: currentPath.startsWith('/spaces') ? 0 : 1,
-        destinations: const [
-          NavigationDestination(
-            icon: TotemIcon(TotemIcons.home),
-            label: 'Spaces',
-          ),
-          NavigationDestination(icon: Icon(Icons.person), label: 'Profile'),
-        ],
+      bottomNavigationBar: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        child: NavigationBar(
+          onDestinationSelected: (index) {
+            if (index == 0 && !currentPath.startsWith('/spaces')) {
+              context.go(RouteNames.spaces);
+            } else if (index == 1 && !currentPath.startsWith('/profile')) {
+              context.go(RouteNames.profile);
+            }
+          },
+          selectedIndex: currentPath.startsWith('/spaces') ? 0 : 1,
+          destinations: const [
+            NavigationDestination(
+              icon: TotemIcon(TotemIcons.home),
+              selectedIcon: TotemIcon(TotemIcons.homeFilled, fillColor: false),
+              label: 'Spaces',
+            ),
+            NavigationDestination(
+              icon: TotemIcon(TotemIcons.profile),
+              selectedIcon: TotemIcon(
+                TotemIcons.profileFilled,
+                fillColor: false,
+              ),
+              label: 'Profile',
+            ),
+          ],
+        ),
       ),
     );
   }

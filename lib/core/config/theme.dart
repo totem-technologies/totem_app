@@ -394,6 +394,30 @@ class AppTheme {
           40,
     ),
 
+    /// --- Bottom Navigation Bar Theme ---
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      indicatorColor: Colors.transparent,
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return const TextStyle(
+            fontFamily: fontFamilySans,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: mauve,
+          );
+        } else {
+          return const TextStyle(
+            fontFamily: fontFamilySans,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: deepGray,
+          );
+        }
+      }),
+    ),
+
     useMaterial3: true,
   );
 }
