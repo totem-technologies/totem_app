@@ -11,6 +11,8 @@ import 'package:totem_app/auth/screens/profile_setup_screen.dart';
 import 'package:totem_app/auth/screens/welcome_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_details_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_screen.dart';
+import 'package:totem_app/features/profile/screens/session_history.dart';
+import 'package:totem_app/features/profile/screens/subcribed_spaces.dart';
 import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
 import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
 import 'package:totem_app/main.dart';
@@ -237,15 +239,27 @@ GoRouter createRouter(WidgetRef ref) {
                       },
                       transitionDuration: const Duration(milliseconds: 200),
                     ),
+                routes: [
+                  GoRoute(
+                    path: RouteNames.profileDetail,
+                    name: RouteNames.profileDetail,
+                    builder: (context, state) => const ProfileDetailsScreen(),
+                  ),
+                  GoRoute(
+                    path: RouteNames.subscribedSpaces,
+                    name: RouteNames.subscribedSpaces,
+                    builder: (context, state) => const SubscribedSpacesScreen(),
+                  ),
+                  GoRoute(
+                    path: RouteNames.sessionHistory,
+                    name: RouteNames.sessionHistory,
+                    builder: (context, state) => const SessionHistoryScreen(),
+                  ),
+                ],
               ),
             ],
           ),
         ],
-      ),
-      GoRoute(
-        path: RouteNames.profileDetail,
-        name: RouteNames.profileDetail,
-        builder: (context, state) => const ProfileDetailsScreen(),
       ),
 
       // Routes that don't show bottom nav

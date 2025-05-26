@@ -18,6 +18,8 @@ class RouteNames {
 
   static const profile = '/profile';
   static const profileDetail = '/profile/detail';
+  static const subscribedSpaces = '/profile/subscribed-spaces';
+  static const sessionHistory = '/profile/session-history';
 
   static const allRoutes = [
     login,
@@ -27,6 +29,9 @@ class RouteNames {
     spaces,
     spaceDetail,
     profile,
+    profileDetail,
+    subscribedSpaces,
+    sessionHistory,
   ];
 
   static bool isValidRoute(String? route) {
