@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -78,24 +79,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             const SizedBox(height: 12),
             ProfileTile(
-              icon: const Icon(Icons.person),
+              icon: const TotemIcon(TotemIcons.profile),
               title: 'Profile',
               onTap: () {
                 context.pushNamed(RouteNames.profileDetail);
               },
             ),
             ProfileTile(
-              icon: const Icon(Icons.person),
+              icon: const TotemIcon(TotemIcons.subscribedSpaces),
               title: 'Subscribed Spaces',
               onTap: () {},
             ),
             ProfileTile(
-              icon: const Icon(Icons.history),
+              icon: const TotemIcon(TotemIcons.history),
               title: 'Session history',
               onTap: () {},
             ),
             ProfileTile(
-              icon: const Icon(Icons.person),
+              icon: const TotemIcon(TotemIcons.logout),
               title: 'Logout',
               onTap: auth.logout,
             ),
@@ -107,23 +108,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             const SizedBox(height: 12),
             ProfileTile(
-              icon: const Icon(Icons.person),
+              icon: const TotemIcon(TotemIcons.feedback),
               title: 'Feedback',
               onTap: () {},
             ),
             ProfileTile(
-              icon: const Icon(Icons.person),
+              icon: const TotemIcon(TotemIcons.lock),
               title: 'Privacy Policy',
               onTap: () {},
             ),
             ProfileTile(
-              icon: const Icon(Icons.person),
+              icon: const TotemIcon(TotemIcons.safe),
               title: 'Terms',
               onTap: () {},
             ),
             ProfileTile(
-              icon: const Icon(Icons.person),
+              icon: const TotemIcon(TotemIcons.closeRounded),
               title: 'Delete account',
+              backgroundColor: const Color(0xFFFF3B30),
+              foregroundColor: Colors.white,
               onTap: () {},
             ),
           ],
@@ -138,12 +141,17 @@ class ProfileTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.onTap,
+    this.backgroundColor,
+    this.foregroundColor,
     super.key,
   });
 
   final Widget icon;
   final String title;
   final VoidCallback onTap;
+
+  final Color? backgroundColor;
+  final Color? foregroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -154,7 +162,7 @@ class ProfileTile extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(25),
-            color: Colors.white,
+            color: backgroundColor ?? Colors.white,
           ),
           padding: const EdgeInsetsDirectional.symmetric(
             horizontal: 20,
@@ -163,17 +171,25 @@ class ProfileTile extends StatelessWidget {
           child: Row(
             spacing: 10,
             children: [
-              icon,
+              IconTheme.merge(
+                data: IconThemeData(color: foregroundColor),
+                child: icon,
+              ),
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
+                    color: foregroundColor,
                   ),
                 ),
               ),
-              const Icon(Icons.navigate_next_rounded),
+              TotemIcon(
+                TotemIcons.arrowForward,
+                color: foregroundColor,
+                size: 22,
+              ),
             ],
           ),
         ),
