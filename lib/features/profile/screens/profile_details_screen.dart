@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/shared/widgets/card_screen.dart';
 import 'package:totem_app/shared/widgets/info_text.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -55,7 +56,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     });
 
     final imageFile = File(_pickedImage!.path);
-    await ref
+    final updated = await ref
         .read(authControllerProvider.notifier)
         .updateUserProfile(
           name: _nameController.text.trim(),
@@ -63,8 +64,22 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           profileImage: imageFile,
         );
 
+    if (!mounted) return;
+
+    if (updated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated successfully')),
+      );
+      Navigator.of(context).pop();
+    } else {
+      ErrorHandler.showErrorSnackBar(
+        context,
+        'Failed to update profile. Try again later.',
+      );
+    }
+
     setState(() {
-      _loading = true;
+      _loading = false;
     });
   }
 
@@ -74,6 +89,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     return CardScreen(
       showLogoOnLargeScreens: false,
       showBackground: false,
+      isLoading: _loading,
       appBar: AppBar(),
       children: [
         GestureDetector(
