@@ -74,6 +74,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     return CardScreen(
       showLogoOnLargeScreens: false,
       showBackground: false,
+      appBar: AppBar(),
       children: [
         GestureDetector(
           onTap: _pickImage,

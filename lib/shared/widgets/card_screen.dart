@@ -12,6 +12,7 @@ class CardScreen extends StatefulWidget {
     this.showBackground,
     this.showLogoOnLargeScreens = true,
     this.onPopInvokedWithResult,
+    this.appBar,
   });
 
   /// The children to be displayed on the screen.
@@ -37,6 +38,9 @@ class CardScreen extends StatefulWidget {
 
   final PopInvokedWithResultCallback<void>? onPopInvokedWithResult;
 
+  /// An optional app bar to be displayed on the screen.
+  final AppBar? appBar;
+
   @override
   State<CardScreen> createState() => _CardScreenState();
 }
@@ -49,6 +53,8 @@ class _CardScreenState extends State<CardScreen>
     return PopScope<void>(
       canPop: !widget.isLoading,
       child: Scaffold(
+        appBar: widget.appBar,
+        extendBodyBehindAppBar: true,
         body: LayoutBuilder(
           builder: (context, constraints) {
             final isPhone = constraints.maxWidth < 600;

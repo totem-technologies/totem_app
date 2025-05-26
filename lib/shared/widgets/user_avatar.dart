@@ -15,22 +15,25 @@ class UserAvatar extends ConsumerWidget {
     final authState = ref.watch(authControllerProvider);
     final user = authState.user;
 
-    return ClipOval(
-      child: CircleAvatar(
-        radius: radius,
-        backgroundImage:
-            image ??
-            (user?.profileImage == null
-                ? null
-                : CachedNetworkImageProvider(user!.profileImage!)),
-        child:
-            user?.profileImage == null && image == null
-                ? AnimatedBoringAvatar(
-                  name: user!.profileAvatarSeed,
-                  type: BoringAvatarType.beam,
-                  duration: const Duration(milliseconds: 300),
-                )
-                : null,
+    return Hero(
+      tag: 'user-avatar-${user?.email}',
+      child: ClipOval(
+        child: CircleAvatar(
+          radius: radius,
+          backgroundImage:
+              image ??
+              (user?.profileImage == null
+                  ? null
+                  : CachedNetworkImageProvider(user!.profileImage!)),
+          child:
+              user?.profileImage == null && image == null
+                  ? AnimatedBoringAvatar(
+                    name: user!.profileAvatarSeed,
+                    type: BoringAvatarType.beam,
+                    duration: const Duration(milliseconds: 300),
+                  )
+                  : null,
+        ),
       ),
     );
   }

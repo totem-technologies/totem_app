@@ -172,7 +172,7 @@ class ProfileTile extends StatelessWidget {
             spacing: 10,
             children: [
               IconTheme.merge(
-                data: IconThemeData(color: foregroundColor),
+                data: IconThemeData(color: foregroundColor, size: 20),
                 child: icon,
               ),
               Expanded(
