@@ -337,7 +337,8 @@ class AppTheme {
 
     // --- Chip Theme ---
     chipTheme: ChipThemeData(
-      backgroundColor: cream.withValues(alpha: 0.8),
+      backgroundColor: Colors.white,
+      color: WidgetStateProperty.all(Colors.white),
       disabledColor: grey.withValues(alpha: 0.5),
       selectedColor: mauve.withValues(alpha: 0.2),
       secondarySelectedColor: yellow.withValues(alpha: 0.3),

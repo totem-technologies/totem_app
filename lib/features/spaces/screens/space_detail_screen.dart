@@ -43,8 +43,15 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 () => ref.refresh(eventProvider(widget.eventSlug).future),
             child: LayoutBuilder(
               builder: (context, constraints) {
+                final isPhone = constraints.maxWidth < 600;
                 return ListView(
-                  padding: const EdgeInsetsDirectional.all(16),
+                  padding:
+                      isPhone
+                          ? const EdgeInsetsDirectional.all(16)
+                          : const EdgeInsetsDirectional.symmetric(
+                            horizontal: 80,
+                            vertical: 16,
+                          ),
                   children: [
                     SizedBox(
                       height: constraints.maxHeight * 0.4,
@@ -86,14 +93,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                                 fontWeight: FontWeight.bold,
                                               ),
                                         ),
-                                        // Text(
-                                        //   event.spaceTitle,
-                                        //   style: theme.textTheme.headlineSmall
-                                        //       ?.copyWith(
-                                        //         color: Colors.white,
-                                        //         fontWeight: FontWeight.w400,
-                                        //       ),
-                                        // ),
+
                                         RichText(
                                           text: TextSpan(
                                             style: theme.textTheme.bodyLarge
@@ -171,7 +171,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                       icon: Icon(Icons.adaptive.share),
                                       visualDensity: VisualDensity.compact,
                                       onPressed: () {
-                                        // TODO: Implement share functionality
+                                        // TODO(bdlukaa): Implement space share
                                       },
                                     ),
                                   ),
@@ -191,43 +191,6 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              alignment: WrapAlignment.spaceBetween,
-                              children: [
-                                _buildInfoItem(
-                                  icon: Icons.star_border,
-                                  title: '${event.subscribers} subscribers',
-                                ),
-                                _buildInfoItem(
-                                  icon: Icons.attach_money_rounded,
-                                  title:
-                                      event.price == 0
-                                          ? 'No cost'
-                                          // TODO(bdlukaa): Format this price
-                                          : 'Cost: ${event.price}',
-                                ),
-                                _buildInfoItem(
-                                  icon: Icons.schedule,
-                                  title: '${event.duration} minutes',
-                                ),
-                                _buildInfoItem(
-                                  icon: Icons.repeat,
-                                  title: event.recurring,
-                                ),
-                                _buildInfoItem(
-                                  icon: Icons.chair_outlined,
-                                  title:
-                                      event.seatsLeft > 0
-                                          ? '${event.seatsLeft} seats left'
-                                          : 'No seats left',
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 16),
-
                             Text(
                               formatEventDate(event.start),
                               style: theme.textTheme.bodyMedium?.copyWith(
@@ -251,15 +214,49 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        Chip(label: Text('${event.duration} minutes')),
+                        Chip(
+                          label: Text(
+                            event.seatsLeft > 0
+                                ? '${event.seatsLeft} seats left'
+                                : 'No seats left',
+                          ),
+                        ),
+                      ],
+                    ),
+
                     Html(data: event.description),
 
                     // TODO(bdlukaa): About this space
-                    // Text(
-                    //   'About this space',
-                    //   style: theme.textTheme.titleSmall?.copyWith(
-                    //     fontWeight: FontWeight.bold,
-                    //   ),
-                    // ),
+                    Text(
+                      'About this space',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        Chip(label: Text('${event.subscribers} subscribers')),
+                        Chip(
+                          label: Text(
+                            event.price == 0
+                                ? 'No cost'
+                                // TODO(bdlukaa): Format this price
+                                : 'Cost: ${event.price}',
+                          ),
+                        ),
+                        Chip(label: Text(event.space.recurring)),
+                      ],
+                    ),
+
                     // Html(data: event.space.shortDescription),
                   ],
                 );
@@ -277,17 +274,6 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
               ),
             ),
       ),
-    );
-  }
-
-  Widget _buildInfoItem({required IconData icon, required String title}) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 20),
-        const SizedBox(width: 8),
-        Text(title, style: const TextStyle()),
-      ],
     );
   }
 }
