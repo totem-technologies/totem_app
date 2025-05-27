@@ -1,11 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/features/profile/screens/profile_image_picker.dart';
+import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/card_screen.dart';
 import 'package:totem_app/shared/widgets/info_text.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -20,11 +18,9 @@ class ProfileDetailsScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
-  final _imagePicker = ImagePicker();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   var _loading = false;
-  XFile? _pickedImage;
 
   @override
   void initState() {
@@ -41,27 +37,16 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
-    final image = await _imagePicker.pickImage(source: ImageSource.gallery);
-    if (image == null || !mounted) return;
-
-    setState(() {
-      _pickedImage = image;
-    });
-  }
-
   Future<void> _save() async {
     setState(() {
       _loading = true;
     });
 
-    final imageFile = File(_pickedImage!.path);
     final updated = await ref
         .read(authControllerProvider.notifier)
         .updateUserProfile(
           name: _nameController.text.trim(),
           email: _emailController.text.trim(),
-          profileImage: imageFile,
         );
 
     if (!mounted) return;
@@ -93,23 +78,13 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
       appBar: AppBar(),
       children: [
         GestureDetector(
-          onTap: _pickImage,
+          // onTap: _pickImage,
+          onTap: () => showProfileImagePicker(context),
           child: Center(
             child: Stack(
               alignment: AlignmentDirectional.center,
               children: [
-                FutureBuilder<Uint8List?>(
-                  future: _pickedImage?.readAsBytes(),
-                  builder: (context, asyncSnapshot) {
-                    return UserAvatar(
-                      radius: 50,
-                      image:
-                          asyncSnapshot.hasData
-                              ? MemoryImage(asyncSnapshot.data!)
-                              : null,
-                    );
-                  },
-                ),
+                const UserAvatar(radius: 50),
                 PositionedDirectional(
                   bottom: -10,
                   end: -10,
@@ -120,13 +95,14 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.edit),
+                    child: const TotemIcon(TotemIcons.edit),
                   ),
                 ),
               ],
             ),
           ),
         ),
+        const SizedBox(height: 16),
         Text(
           'Name',
           style: theme.textTheme.bodyMedium?.copyWith(
