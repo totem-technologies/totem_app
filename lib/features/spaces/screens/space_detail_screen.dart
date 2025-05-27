@@ -9,6 +9,7 @@ import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
+import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class EventDetailScreen extends ConsumerStatefulWidget {
   const EventDetailScreen({required this.eventSlug, super.key});
@@ -45,24 +46,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 return ListView(
                   padding: const EdgeInsetsDirectional.all(16),
                   children: [
-                    Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: TextButton.icon(
-                        onPressed: context.pop,
-                        style: TextButton.styleFrom(
-                          foregroundColor: theme.colorScheme.onSurface,
-                          textStyle: const TextStyle(
-                            decoration: TextDecoration.none,
-                          ),
-                        ),
-                        label: const Text('All spaces'),
-                        icon: Icon(Icons.adaptive.arrow_back),
-                        iconAlignment: IconAlignment.start,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
                     SizedBox(
-                      height: constraints.maxHeight * 0.6,
+                      height: constraints.maxHeight * 0.4,
                       child: Card(
                         margin: EdgeInsetsDirectional.zero,
                         shape: RoundedRectangleBorder(
@@ -78,74 +63,116 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 errorWidget:
                                     (context, url, error) =>
                                         const Icon(Icons.error),
-                                color: Colors.black54,
+                                color: Colors.black38,
                                 colorBlendMode: BlendMode.darken,
                               ),
                             ),
                             Padding(
                               padding: const EdgeInsetsDirectional.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  Text(
-                                    event.title,
-                                    style: theme.textTheme.headlineLarge
-                                        ?.copyWith(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          event.title,
+                                          style: theme.textTheme.headlineLarge
+                                              ?.copyWith(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                         ),
-                                  ),
-                                  Text(
-                                    event.spaceTitle,
-                                    style: theme.textTheme.headlineSmall
-                                        ?.copyWith(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                  ),
-                                  RichText(
-                                    text: TextSpan(
-                                      style: theme.textTheme.bodyLarge
-                                          ?.copyWith(color: Colors.white),
-                                      children: <TextSpan>[
-                                        const TextSpan(text: 'with '),
-                                        TextSpan(
-                                          text: event.space.author.name,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
+                                        // Text(
+                                        //   event.spaceTitle,
+                                        //   style: theme.textTheme.headlineSmall
+                                        //       ?.copyWith(
+                                        //         color: Colors.white,
+                                        //         fontWeight: FontWeight.w400,
+                                        //       ),
+                                        // ),
+                                        RichText(
+                                          text: TextSpan(
+                                            style: theme.textTheme.bodyLarge
+                                                ?.copyWith(color: Colors.white),
+                                            children: <TextSpan>[
+                                              const TextSpan(text: 'with '),
+                                              TextSpan(
+                                                text: event.space.author.name,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
-
-                                  Text(
-                                    'Starting at '
-                                    '${formatEventDateTime(event.start)}',
-                                    style: theme.textTheme.bodyLarge?.copyWith(
+                                  UserAvatar(
+                                    image:
+                                        event.space.author.profileImage != null
+                                            ? CachedNetworkImageProvider(
+                                              getFullUrl(
+                                                event
+                                                    .space
+                                                    .author
+                                                    .profileImage!,
+                                              ),
+                                            )
+                                            : null,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Positioned(
+                              top: 20,
+                              left: 20,
+                              right: 20,
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  DecoratedBox(
+                                    decoration: const BoxDecoration(
                                       color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black26,
+                                          blurRadius: 4,
+                                          offset: Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: IconButton(
+                                      icon: Icon(Icons.adaptive.arrow_back),
+                                      iconSize: 24,
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: context.pop,
                                     ),
                                   ),
-                                  Flexible(
-                                    child: Center(
-                                      child: CircleAvatar(
-                                        backgroundColor: Colors.transparent,
-                                        foregroundImage:
-                                            event.space.author.profileImage !=
-                                                    null
-                                                ? CachedNetworkImageProvider(
-                                                  getFullUrl(
-                                                    event
-                                                        .space
-                                                        .author
-                                                        .profileImage!,
-                                                  ),
-                                                )
-                                                : null,
-                                        radius: 52,
-                                      ),
+                                  DecoratedBox(
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black26,
+                                          blurRadius: 4,
+                                          offset: Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: IconButton(
+                                      icon: Icon(Icons.adaptive.share),
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: () {
+                                        // TODO: Implement share functionality
+                                      },
                                     ),
                                   ),
                                 ],

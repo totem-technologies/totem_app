@@ -23,24 +23,32 @@ class UserAvatar extends ConsumerWidget {
 
     return Hero(
       tag: 'user-avatar-${user?.email}',
-      child: ClipOval(
-        child: CircleAvatar(
-          radius: radius,
-          backgroundImage:
-              showImage
-                  ? (image ??
-                      (user?.profileImage == null
-                          ? null
-                          : CachedNetworkImageProvider(user!.profileImage!)))
-                  : null,
-          child:
-              showImage && user?.profileImage == null && image == null
-                  ? AnimatedBoringAvatar(
-                    name: user!.profileAvatarSeed,
-                    type: BoringAvatarType.beam,
-                    duration: const Duration(milliseconds: 300),
-                  )
-                  : null,
+      // For some reason, DecoratedBox is not working here
+      // ignore: use_decorated_box
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2),
+        ),
+        child: ClipOval(
+          child: CircleAvatar(
+            radius: radius,
+            backgroundImage:
+                showImage
+                    ? (image ??
+                        (user?.profileImage == null
+                            ? null
+                            : CachedNetworkImageProvider(user!.profileImage!)))
+                    : null,
+            child:
+                showImage && user?.profileImage == null && image == null
+                    ? AnimatedBoringAvatar(
+                      name: user!.profileAvatarSeed,
+                      type: BoringAvatarType.beam,
+                      duration: const Duration(milliseconds: 300),
+                    )
+                    : null,
+          ),
         ),
       ),
     );
