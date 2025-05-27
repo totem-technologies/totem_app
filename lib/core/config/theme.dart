@@ -217,7 +217,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
         elevation: 0,
-        minimumSize: const Size(20, 56),
+        minimumSize: const Size(20, 48),
       ),
     ),
 
@@ -236,16 +236,17 @@ class AppTheme {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: mauve,
-        side: const BorderSide(color: mauve, width: 1.5),
+        side: const BorderSide(color: mauve),
         textStyle: const TextStyle(
           fontFamily: fontFamilySans,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         padding: const EdgeInsetsDirectional.symmetric(
           horizontal: 16,
           vertical: 12,
         ),
+        minimumSize: const Size(20, 48),
       ),
     ),
 
@@ -311,12 +312,12 @@ class AppTheme {
 
     // --- Dialog Theme ---
     dialogTheme: DialogThemeData(
-      backgroundColor: cream,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      backgroundColor: const Color(0xFFF3F1E9),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       titleTextStyle: const TextStyle(
         fontFamily: fontFamilySans,
-        fontSize: 20,
-        fontWeight: FontWeight.w500,
+        fontSize: 21,
+        fontWeight: FontWeight.w600,
         color: slate,
       ),
       contentTextStyle: const TextStyle(

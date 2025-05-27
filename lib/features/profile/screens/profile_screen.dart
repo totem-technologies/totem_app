@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
+import 'package:totem_app/features/profile/screens/delete_account.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
@@ -143,9 +144,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ProfileTile(
               icon: const TotemIcon(TotemIcons.closeRounded),
               title: 'Delete account',
-              backgroundColor: const Color(0xFFFF3B30),
-              foregroundColor: Colors.white,
-              onTap: () {},
+              onTap: () {
+                showDeleteAccountDialog(context);
+              },
             ),
           ],
         ),

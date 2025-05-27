@@ -273,6 +273,32 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> deleteAccount() async {
+    if (!isAuthenticated) return;
+
+    _setState(AuthState.loading());
+    try {
+      final refreshToken = await _secureStorage.read(
+        key: AppConsts.refreshToken,
+      );
+      if (refreshToken != null) {
+        // TODO(bdlukaa): Uncomment when deleteAccount is implemented
+        // await _authRepository.deleteAccount(refreshToken);
+      }
+      await _clearTokens();
+      _setState(AuthState.unauthenticated());
+      _analyticsService.logEvent('account_deleted');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        reason: 'Account deletion failed',
+      );
+      await _clearTokens();
+      _setState(AuthState.unauthenticated());
+    }
+  }
+
   Completer<void>? _checkExistingAuthCompleter;
   Future<void> checkExistingAuth() async {
     if (_checkExistingAuthCompleter == null) {
@@ -324,11 +350,24 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<void> _storeTokens(String accessToken, String refreshToken) async {
-    await _secureStorage.write(key: AppConsts.accessToken, value: accessToken);
-    await _secureStorage.write(
-      key: AppConsts.refreshToken,
-      value: refreshToken,
-    );
+    try {
+      await _secureStorage.write(
+        key: AppConsts.accessToken,
+        value: accessToken,
+      );
+      await _secureStorage.write(
+        key: AppConsts.refreshToken,
+        value: refreshToken,
+      );
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        reason: 'Failed to store tokens',
+      );
+      // Optionally rethrow or handle the error as needed
+      throw const AppAuthException('Failed to store tokens');
+    }
   }
 
   Future<void> _clearTokens() async {
