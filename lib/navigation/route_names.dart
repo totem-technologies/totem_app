@@ -12,8 +12,8 @@ class RouteNames {
 
   // Main app routes
   static const spaces = '/spaces';
-  static const spaceDetail = '/space';
-  static String space(String id) => '/spaces/$id';
+  static const spaceDetail = '/spaces/event/';
+  static String space(String id) => '/spaces/event/$id';
 
   static const profile = '/profile';
   static const profileDetail = '/profile/detail';

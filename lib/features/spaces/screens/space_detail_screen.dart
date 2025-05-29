@@ -10,6 +10,7 @@ import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class EventDetailScreen extends ConsumerStatefulWidget {
   const EventDetailScreen({required this.eventSlug, super.key});
@@ -171,7 +172,12 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                       icon: Icon(Icons.adaptive.share),
                                       visualDensity: VisualDensity.compact,
                                       onPressed: () {
-                                        // TODO(bdlukaa): Implement space share
+                                        launchUrl(
+                                          Uri.parse(
+                                            'https://totem.org/spaces/event/${event.slug}?utm_source=app&utm_medium=share',
+                                          ),
+                                          mode: LaunchMode.externalApplication,
+                                        );
                                       },
                                     ),
                                   ),
@@ -257,7 +263,17 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                       ],
                     ),
 
-                    // Html(data: event.space.shortDescription),
+                    Html(data: event.space.shortDescription),
+
+                    Text(
+                      'About the author',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    // TODO(bdlukaa): About the author
+
+                    // TODO(bdlukaa): Join now button
                   ],
                 );
               },

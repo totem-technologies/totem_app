@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/network.dart';
 
@@ -18,7 +19,7 @@ class SpaceCard extends StatelessWidget {
       child: InkWell(
         highlightColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
         onTap: () {
-          context.push('/spaces/${space.nextEvent.slug}');
+          context.pushNamed(RouteNames.space(space.nextEvent.slug));
         },
         borderRadius: BorderRadius.circular(8),
         child: Column(

@@ -193,17 +193,6 @@ GoRouter createRouter(WidgetRef ref) {
                       },
                       transitionDuration: const Duration(milliseconds: 200),
                     ),
-                routes: [
-                  GoRoute(
-                    path: ':event_slug',
-                    name: RouteNames.spaceDetail,
-                    builder: (context, state) {
-                      final eventSlug =
-                          state.pathParameters['event_slug'] ?? '';
-                      return EventDetailScreen(eventSlug: eventSlug);
-                    },
-                  ),
-                ],
               ),
             ],
           ),
@@ -251,6 +240,15 @@ GoRouter createRouter(WidgetRef ref) {
       ),
 
       // Routes that don't show bottom nav
+      GoRoute(
+        path: RouteNames.space(':event_slug'),
+        name: RouteNames.spaceDetail,
+        builder: (context, state) {
+          final eventSlug = state.pathParameters['event_slug'] ?? '';
+          return EventDetailScreen(eventSlug: eventSlug);
+        },
+      ),
+
       // GoRoute(
       //   path: '/sessions/:id/pre-join',
       //   name: RouteNames.preJoinSession,
