@@ -54,5 +54,8 @@
 	</array>
 	<key>com.posthog.posthog.AUTO_INIT</key>
 	<false/>
+
+	<key>FlutterDeepLinkingEnabled</key>
+	<true />
 </dict>
 </plist>
