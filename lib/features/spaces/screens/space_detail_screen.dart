@@ -76,6 +76,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 padding: const EdgeInsetsDirectional.all(16),
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.end,
+                                  spacing: 8,
                                   children: [
                                     Expanded(
                                       child: Column(
@@ -114,6 +115,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                       ),
                                     ),
                                     UserAvatar(
+                                      seed:
+                                          event.space.author.profileAvatarSeed,
                                       image:
                                           event.space.author.profileImage !=
                                                   null
@@ -271,14 +274,46 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
 
                             const SizedBox(height: 16),
                             Text(
-                              'About the author',
+                              'Meet the keeper',
                               style: theme.textTheme.titleSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            // TODO(bdlukaa): About the author
+                            const SizedBox(height: 8),
 
-                            // TODO(bdlukaa): Join now button
+                            Row(
+                              spacing: 8,
+                              children: [
+                                UserAvatar(
+                                  image:
+                                      event.space.author.profileImage != null
+                                          ? CachedNetworkImageProvider(
+                                            getFullUrl(
+                                              event.space.author.profileImage!,
+                                            ),
+                                          )
+                                          : null,
+                                  seed: event.space.author.profileAvatarSeed,
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    event.space.author.name ?? 'Keeper',
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    // TODO(bdlukaa): View keeper profile
+                                  },
+                                  child: const Text(
+                                    'View Profile',
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            // TODO(bdlukaa): About the author
                           ],
                         ),
                       ),

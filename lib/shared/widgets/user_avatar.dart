@@ -9,11 +9,13 @@ class UserAvatar extends ConsumerWidget {
     super.key,
     this.radius = 30,
     this.image,
+    this.seed,
     this.showImage = true,
   });
 
   final double radius;
   final ImageProvider? image;
+  final String? seed;
   final bool showImage;
 
   @override
@@ -43,7 +45,7 @@ class UserAvatar extends ConsumerWidget {
             child:
                 showImage && user?.profileImage == null && image == null
                     ? AnimatedBoringAvatar(
-                      name: user!.profileAvatarSeed,
+                      name: seed ?? user!.profileAvatarSeed,
                       type: BoringAvatarType.marble,
                       duration: const Duration(milliseconds: 300),
                     )
