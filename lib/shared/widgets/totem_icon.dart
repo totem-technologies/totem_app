@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class TotemIcon extends StatelessWidget {
-  const TotemIcon({super.key, this.size});
+class TotemIconLogo extends StatelessWidget {
+  const TotemIconLogo({super.key, this.size});
   final double? size;
 
   @override
