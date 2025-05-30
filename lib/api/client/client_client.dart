@@ -58,6 +58,10 @@ abstract class ClientClient {
     @Part(name: 'profile_image') required File profileImage,
   });
 
+  /// Delete Current User
+  @POST('/api/mobile/protected/users/delete')
+  Future<bool> totemUsersMobileApiDeleteCurrentUser();
+
   /// Onboard Post
   @POST('/api/mobile/protected/onboard/')
   Future<OnboardSchema> totemOnboardMobileApiOnboardPost({

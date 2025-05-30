@@ -170,6 +170,14 @@ class AuthRepository {
     );
   }
 
+  Future<void> deleteAccount() async {
+    return _handleApiCall<void>(
+      () => apiService.client.totemUsersMobileApiDeleteCurrentUser(),
+      operationName: 'delete account',
+      genericErrorCode: 'ACCOUNT_DELETION_FAILED',
+    );
+  }
+
   /// Check if the user is authenticated
   static bool isAuthenticated(String? jwtToken) {
     if (jwtToken == null) return false;

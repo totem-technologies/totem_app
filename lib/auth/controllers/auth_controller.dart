@@ -278,13 +278,7 @@ class AuthController extends StateNotifier<AuthState> {
 
     _setState(AuthState.loading());
     try {
-      final refreshToken = await _secureStorage.read(
-        key: AppConsts.refreshToken,
-      );
-      if (refreshToken != null) {
-        // TODO(bdlukaa): Uncomment when deleteAccount is implemented
-        // await _authRepository.deleteAccount(refreshToken);
-      }
+      await _authRepository.deleteAccount();
       await _clearTokens();
       _setState(AuthState.unauthenticated());
       _analyticsService.logEvent('account_deleted');
