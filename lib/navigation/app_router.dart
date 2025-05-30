@@ -18,6 +18,7 @@ import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
 import 'package:totem_app/main.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/logger.dart';
+import 'package:totem_app/shared/offline_indicator.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
 class BottomNavScaffold extends StatelessWidget {
@@ -32,7 +33,7 @@ class BottomNavScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: child,
+      body: OfflineIndicatorPage(child: child),
 
       bottomNavigationBar: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
@@ -242,7 +243,7 @@ GoRouter createRouter(WidgetRef ref) {
       // Routes that don't show bottom nav
       GoRoute(
         path: RouteNames.space(':event_slug'),
-        name: RouteNames.spaceDetail,
+        name: RouteNames.space(':event_slug'),
         builder: (context, state) {
           final eventSlug = state.pathParameters['event_slug'] ?? '';
           return EventDetailScreen(eventSlug: eventSlug);
