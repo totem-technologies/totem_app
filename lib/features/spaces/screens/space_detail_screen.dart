@@ -9,6 +9,7 @@ import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
@@ -335,14 +336,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           );
         },
         loading: () => const LoadingIndicator(),
-        error:
-            (err, stack) => Center(
-              child: Text(
-                'Error loading event details: $err',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-            ),
+        error: (err, stack) => ErrorScreen(error: err),
       ),
     );
   }

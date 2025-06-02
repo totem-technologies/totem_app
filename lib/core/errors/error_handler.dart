@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -54,21 +55,18 @@ class ErrorHandler {
 
   /// Handle an exception and return a user-friendly error message
   static String getUserFriendlyErrorMessage(Object error) {
-    if (error is AppNetworkException) {
-      return 'Unable to connect to the server. Please check your internet '
+    if (error is AppNetworkException ||
+        error is DioException ||
+        error is TimeoutException) {
+      return 'Unable to connect to the Totem.\nPlease check your internet '
           'connection and try again.';
     } else if (error is AppAuthException) {
       return 'Authentication error. Please log in again.';
-    } else if (error is AppDataException) {
+    } else if (error is AppDataException ||
+        error is FormatException ||
+        error is PlatformException) {
       return 'There was an issue processing your data. Please try again.';
-    } else if (error is PlatformException) {
-      return 'There was an issue with your device. Please try again.';
-    } else if (error is TimeoutException) {
-      return 'The operation timed out. Please try again.';
-    } else if (error is FormatException) {
-      return 'There was an issue with the data format. Please try again.';
     } else {
-      // Generic error message for unknown errors
       return 'Something went wrong. Please try again later.';
     }
   }

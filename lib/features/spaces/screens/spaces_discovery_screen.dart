@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
+import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 
@@ -66,7 +67,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
             ),
           );
         },
-        error: (_, __) => const Text('Oops, something unexpected happened'),
+        error: (err, stack) => ErrorScreen(error: err),
         loading: () => const LoadingIndicator(),
       ),
     );

@@ -19,6 +19,7 @@ import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/logger.dart';
 import 'package:totem_app/shared/offline_indicator.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/error_screen.dart';
 
 enum HomeRoutes {
   spaces(RouteNames.spaces),
@@ -209,13 +210,15 @@ GoRouter createRouter(WidgetRef ref) {
         key: shellNavigatorKey,
         parentNavigatorKey: navigatorKey,
         builder: (context, state, child) {
-          return BottomNavScaffold(
-            currentPath: state.matchedLocation,
-            child: child,
+          return HeroControllerScope(
+            controller: MaterialApp.createMaterialHeroController(),
+            child: BottomNavScaffold(
+              currentPath: state.matchedLocation,
+              child: child,
+            ),
           );
         },
         branches: [
-          // Spaces tab and its sub-routes with fade transition
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
@@ -281,7 +284,6 @@ GoRouter createRouter(WidgetRef ref) {
         ],
       ),
 
-      // Routes that don't show bottom nav
       GoRoute(
         path: RouteNames.space(':event_slug'),
         name: RouteNames.space(':event_slug'),
@@ -313,28 +315,7 @@ GoRouter createRouter(WidgetRef ref) {
       //   builder: (context, state) => const NotificationSettingsScreen(),
       // ),
     ],
-    errorBuilder:
-        (context, state) => Scaffold(
-          appBar: AppBar(title: const Text('Page Not Found')),
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  'Oops! Something went wrong.',
-                  style: TextStyle(fontSize: 18),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    context.go(RouteNames.spaces);
-                  },
-                  child: const Text('Go Home'),
-                ),
-              ],
-            ),
-          ),
-        ),
+    errorBuilder: (context, state) => const ErrorScreen(),
   );
 }
 
