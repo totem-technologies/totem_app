@@ -7,7 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/main.dart' show TotemApp;
+import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/logger.dart';
 
@@ -128,7 +128,7 @@ class NotificationsService {
   void _handlePath(String? path) {
     if (path != null && RouteNames.isValidRoute(path)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        TotemApp.navigatorKey.currentState?.pushNamed(path);
+        navigatorKey.currentState?.pushNamed(path);
       });
     }
   }

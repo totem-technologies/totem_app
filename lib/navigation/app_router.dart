@@ -15,17 +15,16 @@ import 'package:totem_app/features/profile/screens/session_history.dart';
 import 'package:totem_app/features/profile/screens/subcribed_spaces.dart';
 import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
 import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
-import 'package:totem_app/main.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/logger.dart';
 import 'package:totem_app/shared/offline_indicator.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
-enum MainRoutes {
+enum HomeRoutes {
   spaces(RouteNames.spaces),
   profile(RouteNames.profile);
 
-  const MainRoutes(this.path);
+  const HomeRoutes(this.path);
 
   final String path;
 }
@@ -41,9 +40,9 @@ class BottomNavScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentRoute = MainRoutes.values.firstWhere(
+    final currentRoute = HomeRoutes.values.firstWhere(
       (route) => currentPath.startsWith(route.path),
-      orElse: () => MainRoutes.spaces,
+      orElse: () => HomeRoutes.spaces,
     );
 
     return Scaffold(
@@ -53,9 +52,9 @@ class BottomNavScaffold extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         child: NavigationBar(
           onDestinationSelected: (index) {
-            if (index == 0 && currentRoute != MainRoutes.spaces) {
+            if (index == 0 && currentRoute != HomeRoutes.spaces) {
               context.go(RouteNames.spaces);
-            } else if (index == 1 && currentRoute != MainRoutes.profile) {
+            } else if (index == 1 && currentRoute != HomeRoutes.profile) {
               context.go(RouteNames.profile);
             }
           },
@@ -81,13 +80,37 @@ class BottomNavScaffold extends StatelessWidget {
   }
 }
 
+void popOrHome([BuildContext? context]) {
+  if (context != null) {
+    final router = GoRouter.of(context);
+    if (router.canPop()) {
+      router.pop();
+    } else {
+      router.pushReplacementNamed(RouteNames.welcome);
+    }
+  } else if (navigatorKey.currentState?.canPop() ?? false) {
+    navigatorKey.currentState?.pop();
+  } else {
+    navigatorKey.currentState?.pushReplacementNamed(RouteNames.welcome);
+  }
+}
+
 final shellNavigatorKey = GlobalKey<StatefulNavigationShellState>();
+void toHome(HomeRoutes route) {
+  if (shellNavigatorKey.currentState != null) {
+    shellNavigatorKey.currentState?.goBranch(route.index);
+  } else {
+    navigatorKey.currentState?.pushReplacementNamed(RouteNames.welcome);
+  }
+}
+
+final navigatorKey = GlobalKey<NavigatorState>();
 
 GoRouter createRouter(WidgetRef ref) {
   final authController = ref.read(authControllerProvider.notifier);
 
   return GoRouter(
-    navigatorKey: TotemApp.navigatorKey,
+    navigatorKey: navigatorKey,
     initialLocation: '/',
     debugLogDiagnostics: true,
     refreshListenable: GoRouterRefreshStream(authController.authStateChanges),
@@ -184,6 +207,7 @@ GoRouter createRouter(WidgetRef ref) {
       // Shell route for screens with bottom navigation
       StatefulShellRoute.indexedStack(
         key: shellNavigatorKey,
+        parentNavigatorKey: navigatorKey,
         builder: (context, state, child) {
           return BottomNavScaffold(
             currentPath: state.matchedLocation,

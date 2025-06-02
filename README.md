@@ -76,6 +76,22 @@ flutter test
 
 _Coming soon: Widget tests and CI-integrated integration tests._
 
+### Deep Linking
+
+To test deep linking, you can use the following commands:
+
+For Android:
+
+```bash
+adb shell 'am start -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d "https://totem.org/spaces/event/doa689fvb"' org.totem
+```
+
+For iOS:
+
+```bash
+xcrun simctl openurl booted "https://totem.org/spaces/event/doa689fvb"
+```
+
 ## ✍️ Project Structure
 
 ```

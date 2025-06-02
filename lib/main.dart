@@ -71,8 +71,6 @@ Future<void> _initializeServices() async {
 class TotemApp extends ConsumerStatefulWidget {
   const TotemApp({super.key});
 
-  static final navigatorKey = GlobalKey<NavigatorState>();
-
   @override
   ConsumerState<TotemApp> createState() => _AppState();
 }

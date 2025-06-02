@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
-import 'package:totem_app/main.dart';
+import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/logger.dart';
 
 /// Centralized error handling for the Totem App.
@@ -21,7 +21,7 @@ class ErrorHandler {
       await SentryFlutter.init((options) {
         options
           ..dsn = AppConfig.sentryDsn
-          ..navigatorKey = TotemApp.navigatorKey
+          ..navigatorKey = navigatorKey
           // Adds request headers and IP for users, for more info visit:
           // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
           ..sendDefaultPii = true;

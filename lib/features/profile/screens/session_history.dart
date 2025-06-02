@@ -28,9 +28,7 @@ class SessionHistoryScreen extends StatelessWidget {
               ),
               ElevatedButton(
                 onPressed: () {
-                  shellNavigatorKey.currentState?.goBranch(
-                    MainRoutes.spaces.index,
-                  );
+                  toHome(HomeRoutes.spaces);
                 },
                 child: const Text('Browse Spaces'),
               ),

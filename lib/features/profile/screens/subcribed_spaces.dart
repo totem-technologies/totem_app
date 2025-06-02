@@ -39,9 +39,7 @@ class SubscribedSpacesScreen extends StatelessWidget {
               if (spaces.isEmpty)
                 ElevatedButton(
                   onPressed: () {
-                    shellNavigatorKey.currentState?.goBranch(
-                      MainRoutes.spaces.index,
-                    );
+                    toHome(HomeRoutes.spaces);
                   },
                   child: const Text('Browse Spaces'),
                 )
