@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
@@ -10,7 +11,6 @@ import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class EventDetailScreen extends ConsumerStatefulWidget {
   const EventDetailScreen({required this.eventSlug, super.key});
@@ -178,13 +178,12 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                           icon: Icon(Icons.adaptive.share),
                                           visualDensity: VisualDensity.compact,
                                           onPressed: () {
-                                            launchUrl(
-                                              Uri.parse(
-                                                'https://totem.org/spaces/event/${event.slug}?utm_source=app&utm_medium=share',
+                                            SharePlus.instance.share(
+                                              ShareParams(
+                                                uri: Uri.parse(
+                                                  'https://totem.org/spaces/event/${event.slug}?utm_source=app&utm_medium=share',
+                                                ),
                                               ),
-                                              mode:
-                                                  LaunchMode
-                                                      .externalApplication,
                                             );
                                           },
                                         ),
@@ -264,7 +263,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                     event.price == 0
                                         ? 'No cost'
                                         // TODO(bdlukaa): Format this price
-                                        : 'Cost: ${event.price}',
+                                        : 'Cost: \$${event.price}',
                                   ),
                                 ),
                                 _buildInfoText(
