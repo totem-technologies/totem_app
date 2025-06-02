@@ -21,6 +21,15 @@ import 'package:totem_app/shared/logger.dart';
 import 'package:totem_app/shared/offline_indicator.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
+enum MainRoutes {
+  spaces(RouteNames.spaces),
+  profile(RouteNames.profile);
+
+  const MainRoutes(this.path);
+
+  final String path;
+}
+
 class BottomNavScaffold extends StatelessWidget {
   const BottomNavScaffold({
     required this.child,
@@ -32,6 +41,11 @@ class BottomNavScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentRoute = MainRoutes.values.firstWhere(
+      (route) => currentPath.startsWith(route.path),
+      orElse: () => MainRoutes.spaces,
+    );
+
     return Scaffold(
       body: OfflineIndicatorPage(child: child),
 
@@ -39,13 +53,13 @@ class BottomNavScaffold extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         child: NavigationBar(
           onDestinationSelected: (index) {
-            if (index == 0 && !currentPath.startsWith('/spaces')) {
+            if (index == 0 && currentRoute != MainRoutes.spaces) {
               context.go(RouteNames.spaces);
-            } else if (index == 1 && !currentPath.startsWith('/profile')) {
+            } else if (index == 1 && currentRoute != MainRoutes.profile) {
               context.go(RouteNames.profile);
             }
           },
-          selectedIndex: currentPath.startsWith('/spaces') ? 0 : 1,
+          selectedIndex: currentRoute.index,
           destinations: const [
             NavigationDestination(
               icon: TotemIcon(TotemIcons.home),

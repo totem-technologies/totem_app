@@ -281,14 +281,13 @@ class TotemIcon extends StatelessWidget {
     final iconSize = size ?? iconTheme.size ?? 24.0;
     final iconColor = color ?? iconTheme.color ?? Colors.black;
 
-    return Center(
-      child: SvgPicture.string(
-        icon,
-        width: iconSize,
-        height: iconSize,
-        colorFilter:
-            fillColor ? ColorFilter.mode(iconColor, BlendMode.srcIn) : null,
-      ),
+    return SvgPicture.string(
+      icon,
+      width: iconSize,
+      height: iconSize,
+      colorFilter:
+          fillColor ? ColorFilter.mode(iconColor, BlendMode.srcIn) : null,
+      alignment: AlignmentDirectional.center,
     );
   }
 }
