@@ -81,6 +81,8 @@ class BottomNavScaffold extends StatelessWidget {
   }
 }
 
+final shellNavigatorKey = GlobalKey<StatefulNavigationShellState>();
+
 GoRouter createRouter(WidgetRef ref) {
   final authController = ref.read(authControllerProvider.notifier);
 
@@ -181,6 +183,7 @@ GoRouter createRouter(WidgetRef ref) {
 
       // Shell route for screens with bottom navigation
       StatefulShellRoute.indexedStack(
+        key: shellNavigatorKey,
         builder: (context, state, child) {
           return BottomNavScaffold(
             currentPath: state.matchedLocation,

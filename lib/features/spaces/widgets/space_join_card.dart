@@ -40,6 +40,7 @@ class SpaceJoinCard extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
@@ -56,15 +57,19 @@ class SpaceJoinCard extends StatelessWidget {
                       }(),
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        height: 0.8,
                       ),
                     ),
-                    Text(() {
-                      if (hasStarted) return timeago.format(event.start);
-                      if (hasEnded) return 'Explore upcoming session';
+                    Text(
+                      () {
+                        if (hasStarted) return timeago.format(event.start);
+                        if (hasEnded) return 'Explore upcoming session';
 
-                      return timeFormatter.format(event.start);
-                    }(), style: theme.textTheme.bodyLarge),
+                        return timeFormatter.format(event.start);
+                      }(),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
                   ],
                 ),
               ),

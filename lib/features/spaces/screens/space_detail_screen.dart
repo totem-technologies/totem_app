@@ -137,56 +137,60 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 top: 20,
                                 left: 20,
                                 right: 20,
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    DecoratedBox(
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black26,
-                                            blurRadius: 4,
-                                            offset: Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: IconButton(
-                                        icon: Icon(Icons.adaptive.arrow_back),
-                                        iconSize: 24,
-                                        visualDensity: VisualDensity.compact,
-                                        onPressed: context.pop,
-                                      ),
-                                    ),
-                                    DecoratedBox(
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black26,
-                                            blurRadius: 4,
-                                            offset: Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: IconButton(
-                                        icon: Icon(Icons.adaptive.share),
-                                        visualDensity: VisualDensity.compact,
-                                        onPressed: () {
-                                          launchUrl(
-                                            Uri.parse(
-                                              'https://totem.org/spaces/event/${event.slug}?utm_source=app&utm_medium=share',
+                                child: SafeArea(
+                                  bottom: false,
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      DecoratedBox(
+                                        decoration: const BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black26,
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2),
                                             ),
-                                            mode:
-                                                LaunchMode.externalApplication,
-                                          );
-                                        },
+                                          ],
+                                        ),
+                                        child: IconButton(
+                                          icon: Icon(Icons.adaptive.arrow_back),
+                                          iconSize: 24,
+                                          visualDensity: VisualDensity.compact,
+                                          onPressed: context.pop,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                      DecoratedBox(
+                                        decoration: const BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black26,
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: IconButton(
+                                          icon: Icon(Icons.adaptive.share),
+                                          visualDensity: VisualDensity.compact,
+                                          onPressed: () {
+                                            launchUrl(
+                                              Uri.parse(
+                                                'https://totem.org/spaces/event/${event.slug}?utm_source=app&utm_medium=share',
+                                              ),
+                                              mode:
+                                                  LaunchMode
+                                                      .externalApplication,
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
@@ -298,8 +302,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 Expanded(
                                   child: Text(
                                     event.space.author.name ?? 'Keeper',
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                    style: theme.textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                                 ElevatedButton(
@@ -313,7 +318,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 ),
                               ],
                             ),
-                            // TODO(bdlukaa): About the author
+                            // TODO(bdlukaa): More spaces held by this keeper
                           ],
                         ),
                       ),
