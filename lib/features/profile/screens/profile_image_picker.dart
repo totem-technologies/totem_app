@@ -8,6 +8,7 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
+import 'package:uuid/uuid.dart';
 
 Future<void> showProfileImagePicker(BuildContext context) async {
   return showModalBottomSheet(
@@ -34,6 +35,9 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
   final _imagePicker = ImagePicker();
   XFile? _pickedImage;
 
+  static const _uuid = Uuid();
+  String? _tieDyeSeed;
+
   Future<void> _pickImage() async {
     final image = await _imagePicker.pickImage(source: ImageSource.gallery);
     if (image == null || !mounted) return;
@@ -43,16 +47,20 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
     });
   }
 
-  Future<void> _onSave() async {
-    setState(() {
-      _loading = true;
-    });
+  void _randomizeTieDyeSeed() {
+    setState(() => _tieDyeSeed = _uuid.v4());
+  }
 
-    // TODO(bdlukaa): Switch to tie-dye image
-    final imageFile = File(_pickedImage!.path);
+  Future<void> _onSave() async {
+    setState(() => _loading = true);
+
     final updated = await ref
         .read(authControllerProvider.notifier)
-        .updateUserProfile(profileImage: imageFile);
+        .updateUserProfile(
+          profileImage:
+              _state == _PickerState.image ? File(_pickedImage!.path) : null,
+          avatarSeed: _state == _PickerState.tieDye ? _tieDyeSeed : null,
+        );
 
     if (!mounted) return;
 
@@ -91,8 +99,7 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                 onTap: () {
                   switch (_state) {
                     case _PickerState.tieDye:
-                      // TODO(bdlukaa): Handle tie-dye selection
-                      break;
+                      _randomizeTieDyeSeed();
                     case _PickerState.image:
                       _pickImage();
                   }
@@ -105,15 +112,22 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                       FutureBuilder<Uint8List?>(
                         future: _pickedImage?.readAsBytes(),
                         builder: (context, asyncSnapshot) {
-                          return UserAvatar(
-                            radius: 50,
-                            image: () {
-                              if (_state == _PickerState.image) {
-                                return asyncSnapshot.hasData
-                                    ? MemoryImage(asyncSnapshot.data!)
-                                    : null;
-                              }
-                            }(),
+                          return AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 150),
+                            switchInCurve: Curves.easeInOut,
+                            switchOutCurve: Curves.easeInOut,
+                            child: UserAvatar(
+                              key: ValueKey(_tieDyeSeed ?? 'default'),
+                              radius: 50,
+                              seed: _tieDyeSeed,
+                              image: () {
+                                if (_state == _PickerState.image) {
+                                  return asyncSnapshot.hasData
+                                      ? MemoryImage(asyncSnapshot.data!)
+                                      : null;
+                                }
+                              }(),
+                            ),
                           );
                         },
                       ),
@@ -127,13 +141,16 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                             color: Colors.white,
                             shape: BoxShape.circle,
                           ),
-                          child: Center(
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 200),
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 150),
+                            switchInCurve: Curves.easeInOut,
+                            switchOutCurve: Curves.easeInOut,
+                            child: Center(
+                              key: ValueKey(_state),
                               child: TotemIcon(switch (_state) {
                                 _PickerState.tieDye => TotemIcons.edit,
                                 _PickerState.image => TotemIcons.upload,
-                              }, key: ValueKey(_state)),
+                              }),
                             ),
                           ),
                         ),

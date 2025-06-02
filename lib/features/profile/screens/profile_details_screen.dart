@@ -95,6 +95,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
+                    alignment: AlignmentDirectional.center,
                     child: const TotemIcon(TotemIcons.edit),
                   ),
                 ),

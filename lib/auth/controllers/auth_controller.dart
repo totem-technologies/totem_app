@@ -165,7 +165,22 @@ class AuthController extends StateNotifier<AuthState> {
     String? name,
     String? email,
     File? profileImage,
+    ProfileAvatarTypeEnum? profileAvatarType,
+    String? avatarSeed,
   }) async {
+    assert(
+      isAuthenticated,
+      'Cannot update profile when user is not authenticated.',
+    );
+
+    assert(
+      profileImage != null ||
+          avatarSeed != null ||
+          name != null ||
+          email != null,
+      'At least one profile field must be provided for update.',
+    );
+
     var overallSuccess = true;
     var finalUpdatedUser = state.user;
 
@@ -205,7 +220,13 @@ class AuthController extends StateNotifier<AuthState> {
     if (shouldUpdateTextProfile) {
       try {
         final backendUpdatedUser = await _authRepository
-            .updateCurrentUserProfile(name: newName, email: newEmail);
+            .updateCurrentUserProfile(
+              name: newName,
+              email: newEmail,
+              profileAvatarType: profileAvatarType,
+              // TODO(bdlukaa): Upload avatar seed when available
+              // randomizeAvatarSeed: avatarSeed,
+            );
         finalUpdatedUser = backendUpdatedUser;
       } catch (error, stackTrace) {
         ErrorHandler.logError(
