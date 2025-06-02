@@ -2,11 +2,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
+import 'package:totem_app/features/spaces/widgets/space_detail_app_bar.dart';
 import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
-import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -55,146 +54,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         automaticallyImplyLeading: false,
                         backgroundColor: theme.scaffoldBackgroundColor,
                         flexibleSpace: FlexibleSpaceBar(
-                          background: Stack(
-                            children: [
-                              Positioned.fill(
-                                child: ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(
-                                    bottom: Radius.circular(25),
-                                  ),
-                                  child: CachedNetworkImage(
-                                    imageUrl: event.space.image!,
-                                    fit: BoxFit.cover,
-                                    errorWidget:
-                                        (context, url, error) =>
-                                            const Icon(Icons.error),
-                                    color: Colors.black38,
-                                    colorBlendMode: BlendMode.darken,
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsetsDirectional.all(16),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  spacing: 8,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            event.title,
-                                            style: theme.textTheme.headlineLarge
-                                                ?.copyWith(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                          ),
-
-                                          RichText(
-                                            text: TextSpan(
-                                              style: theme.textTheme.bodyLarge
-                                                  ?.copyWith(
-                                                    color: Colors.white,
-                                                  ),
-                                              children: <TextSpan>[
-                                                const TextSpan(text: 'with '),
-                                                TextSpan(
-                                                  text: event.space.author.name,
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    UserAvatar(
-                                      seed:
-                                          event.space.author.profileAvatarSeed,
-                                      image:
-                                          event.space.author.profileImage !=
-                                                  null
-                                              ? CachedNetworkImageProvider(
-                                                getFullUrl(
-                                                  event
-                                                      .space
-                                                      .author
-                                                      .profileImage!,
-                                                ),
-                                              )
-                                              : null,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Positioned(
-                                top: 20,
-                                left: 20,
-                                right: 20,
-                                child: SafeArea(
-                                  bottom: false,
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      DecoratedBox(
-                                        decoration: const BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black26,
-                                              blurRadius: 4,
-                                              offset: Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: IconButton(
-                                          icon: Icon(Icons.adaptive.arrow_back),
-                                          iconSize: 24,
-                                          visualDensity: VisualDensity.compact,
-                                          onPressed: () => popOrHome(context),
-                                        ),
-                                      ),
-                                      DecoratedBox(
-                                        decoration: const BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black26,
-                                              blurRadius: 4,
-                                              offset: Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: IconButton(
-                                          icon: Icon(Icons.adaptive.share),
-                                          visualDensity: VisualDensity.compact,
-                                          onPressed: () {
-                                            SharePlus.instance.share(
-                                              ShareParams(
-                                                uri: Uri.parse(
-                                                  'https://totem.org/spaces/event/${event.slug}?utm_source=app&utm_medium=share',
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          background: SpaceDetailAppBar(event: event),
                         ),
                       ),
                       SliverPadding(
