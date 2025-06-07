@@ -1,8 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
-import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
@@ -19,6 +17,7 @@ class SpaceDetailAppBar extends StatelessWidget {
         Scrollable.ensureVisible(
           context,
           duration: const Duration(milliseconds: 180),
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
         );
       },
       child: Stack(
@@ -87,6 +86,7 @@ class SpaceDetailAppBar extends StatelessWidget {
               ],
             ),
           ),
+          /* This is now handled by the main app bar
           Positioned(
             top: 20,
             left: 20,
@@ -160,6 +160,7 @@ class SpaceDetailAppBar extends StatelessWidget {
               ),
             ),
           ),
+          */
         ],
       ),
     );
