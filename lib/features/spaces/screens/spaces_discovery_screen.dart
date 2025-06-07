@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
+import 'package:totem_app/features/spaces/widgets/filter.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -17,6 +18,8 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final spaces = ref.watch(listSpacesProvider);
     final selectedCategory = ref.watch(selectedCategoryProvider);
+
+    final isLargeScreen = MediaQuery.sizeOf(context).width > 600;
 
     return Scaffold(
       appBar: AppBar(title: const TotemLogo(size: 24)),
@@ -40,10 +43,13 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
             child: CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
-                  child: _buildCategoryFilter(
-                    ref,
-                    allCategories,
-                    selectedCategory,
+                  child: SpacesFilterBar(
+                    categories: allCategories,
+                    selectedCategory: selectedCategory,
+                    onCategorySelected: (category) {
+                      ref.read(selectedCategoryProvider.notifier).state =
+                          category == selectedCategory ? null : category;
+                    },
                   ),
                 ),
                 if (filteredSpaces.isEmpty)
@@ -51,18 +57,37 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                     hasScrollBody: false,
                     child: _buildNoResultsMessage(selectedCategory ?? 'All'),
                   )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: 16,
+                else ...[
+                  if (!isLargeScreen)
+                    SliverPadding(
+                      padding: const EdgeInsetsDirectional.symmetric(
+                        horizontal: 16,
+                      ),
+                      sliver: SliverList.separated(
+                        itemCount: filteredSpaces.length,
+                        itemBuilder:
+                            (_, index) =>
+                                SpaceCard(space: filteredSpaces[index]),
+                        separatorBuilder: (_, __) => const SizedBox(height: 16),
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsetsDirectional.symmetric(
+                        horizontal: 100,
+                      ),
+                      sliver: SliverGrid.count(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                        childAspectRatio: 16 / 14,
+                        children:
+                            filteredSpaces
+                                .map((space) => SpaceCard(space: space))
+                                .toList(),
+                      ),
                     ),
-                    sliver: SliverList.separated(
-                      itemCount: filteredSpaces.length,
-                      itemBuilder:
-                          (_, index) => SpaceCard(space: filteredSpaces[index]),
-                      separatorBuilder: (_, __) => const SizedBox(height: 16),
-                    ),
-                  ),
+                ],
               ],
             ),
           );
@@ -84,101 +109,6 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
           ..sort();
 
     return categories;
-  }
-
-  Widget _buildCategoryFilter(
-    WidgetRef ref,
-    List<String> categories,
-    String? selectedCategory,
-  ) {
-    return Builder(
-      builder: (context) {
-        return Container(
-          height: 56,
-          padding: const EdgeInsetsDirectional.symmetric(vertical: 8),
-          margin: const EdgeInsetsDirectional.symmetric(
-            horizontal: 16,
-            vertical: 8,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 6,
-                offset: const Offset(0, 3),
-              ),
-            ],
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Material(
-            type: MaterialType.transparency,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
-              children: [
-                _buildFilterChip(
-                  label: 'All',
-                  isSelected: selectedCategory == null,
-                  onTap: () {
-                    ref.read(selectedCategoryProvider.notifier).state = null;
-                  },
-                ),
-                ...categories.map(
-                  (category) => _buildFilterChip(
-                    label: category,
-                    isSelected: category == selectedCategory,
-                    onTap: () {
-                      ref.read(selectedCategoryProvider.notifier).state =
-                          category == selectedCategory ? null : category;
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildFilterChip({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return Builder(
-      builder: (context) {
-        final theme = Theme.of(context);
-        return Padding(
-          padding: const EdgeInsetsDirectional.only(end: 8),
-          child: Center(
-            child: GestureDetector(
-              onTap: () {
-                onTap();
-                Scrollable.ensureVisible(
-                  context,
-                  duration: const Duration(milliseconds: 300),
-                  alignment: 0.5,
-                );
-              },
-              child: Chip(
-                label: Text(label),
-                backgroundColor:
-                    isSelected ? theme.colorScheme.primary : Colors.transparent,
-                labelStyle: TextStyle(
-                  color:
-                      isSelected
-                          ? theme.colorScheme.onPrimary
-                          : theme.colorScheme.onSurface,
-                ),
-                padding: const EdgeInsetsDirectional.symmetric(horizontal: 8),
-              ),
-            ),
-          ),
-        );
-      },
-    );
   }
 
   Widget _buildNoResultsMessage(String category) {

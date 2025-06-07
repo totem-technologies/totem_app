@@ -26,16 +26,20 @@ class SpaceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (space.imageLink != null)
-              Ink.image(
-                image: CachedNetworkImageProvider(getFullUrl(space.imageLink!)),
-                height: 120,
-                width: double.infinity,
-                fit: BoxFit.cover,
+              Expanded(
+                child: Ink.image(
+                  image: CachedNetworkImageProvider(
+                    getFullUrl(space.imageLink!),
+                  ),
+                  height: 120,
+                  fit: BoxFit.cover,
+                ),
               ),
 
             Padding(
               padding: const EdgeInsetsDirectional.all(16),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -49,10 +53,10 @@ class SpaceCard extends StatelessWidget {
                   if (space.description.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      space.description.length > 100
-                          ? '${space.description.substring(0, 100)}...'
-                          : space.description,
+                      space.description,
                       style: const TextStyle(color: Colors.grey),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
 
@@ -99,31 +103,33 @@ class SpaceCard extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   if (space.nextEvent.link.isNotEmpty)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Next event: '
-                                '${space.nextEvent.title ?? "Upcoming Event"}',
-                                style: theme.textTheme.bodyMedium,
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Next event: '
+                                  '${space.nextEvent.title ?? "Upcoming Event"}',
+                                  style: theme.textTheme.bodyMedium,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        if (space.nextEvent.start.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsetsDirectional.only(top: 4),
-                            child: Text(
-                              formatEventDateTime(
-                                DateTime.parse(space.nextEvent.start),
-                              ),
-                              style: theme.textTheme.bodySmall,
-                            ),
+                            ],
                           ),
-                      ],
+                          if (space.nextEvent.start.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsetsDirectional.only(top: 4),
+                              child: Text(
+                                formatEventDateTime(
+                                  DateTime.parse(space.nextEvent.start),
+                                ),
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                 ],
               ),
