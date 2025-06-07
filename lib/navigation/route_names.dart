@@ -13,12 +13,16 @@ class RouteNames {
   // Main app routes
   static const spaces = '/spaces';
   static const spaceDetail = '/spaces/event/';
-  static String space(String id) => '/spaces/event/$id';
+  static String space(String slug) => '/spaces/event/$slug';
 
   static const profile = '/profile';
   static const profileDetail = '/profile/detail';
   static const subscribedSpaces = '/profile/subscribed-spaces';
   static const sessionHistory = '/profile/session-history';
+
+  static const blog = '/blog';
+  static const blogDetail = '/blog/detail';
+  static String blogPost(String slug) => '/blog/$slug';
 
   static const allRoutes = [
     login,
@@ -30,6 +34,8 @@ class RouteNames {
     profileDetail,
     subscribedSpaces,
     sessionHistory,
+    blog,
+    blogDetail,
   ];
 
   static bool isValidRoute(String? route) {

@@ -9,6 +9,7 @@ import 'package:totem_app/auth/screens/login_screen.dart';
 import 'package:totem_app/auth/screens/pin_entry_screen.dart';
 import 'package:totem_app/auth/screens/profile_setup_screen.dart';
 import 'package:totem_app/auth/screens/welcome_screen.dart';
+import 'package:totem_app/features/blog/screens/blog_list_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_details_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_screen.dart';
 import 'package:totem_app/features/profile/screens/session_history.dart';
@@ -23,6 +24,7 @@ import 'package:totem_app/shared/widgets/error_screen.dart';
 
 enum HomeRoutes {
   spaces(RouteNames.spaces),
+  blog(RouteNames.blog),
   profile(RouteNames.profile);
 
   const HomeRoutes(this.path);
@@ -53,10 +55,13 @@ class BottomNavScaffold extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         child: NavigationBar(
           onDestinationSelected: (index) {
-            if (index == 0 && currentRoute != HomeRoutes.spaces) {
-              context.go(RouteNames.spaces);
-            } else if (index == 1 && currentRoute != HomeRoutes.profile) {
-              context.go(RouteNames.profile);
+            for (final route in HomeRoutes.values) {
+              logger.i('🛻 Checking route: ${route.path}');
+              if (index == route.index && currentRoute != route) {
+                logger.i('🛻 Navigating to: ${route.path}');
+                context.go(route.path);
+                return;
+              }
             }
           },
           selectedIndex: currentRoute.index,
@@ -65,6 +70,11 @@ class BottomNavScaffold extends StatelessWidget {
               icon: TotemIcon(TotemIcons.home),
               selectedIcon: TotemIcon(TotemIcons.homeFilled, fillColor: false),
               label: 'Spaces',
+            ),
+            NavigationDestination(
+              icon: TotemIcon(TotemIcons.blog),
+              selectedIcon: TotemIcon(TotemIcons.blogFilled, fillColor: false),
+              label: 'Blog',
             ),
             NavigationDestination(
               icon: TotemIcon(TotemIcons.profile),
@@ -238,6 +248,16 @@ GoRouter createRouter(WidgetRef ref) {
                       },
                       transitionDuration: const Duration(milliseconds: 200),
                     ),
+              ),
+            ],
+          ),
+
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: RouteNames.blog,
+                name: RouteNames.blog,
+                builder: (context, state) => const BlogListScreen(),
               ),
             ],
           ),
