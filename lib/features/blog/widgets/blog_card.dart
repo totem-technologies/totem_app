@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:totem_app/api/models/blog_post_list_schema.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class BlogPostCard extends StatelessWidget {
@@ -14,6 +15,17 @@ class BlogPostCard extends StatelessWidget {
     this.isLarge = false,
     super.key,
   });
+
+  BlogPostCard.fromBlogPostSchema(
+    BlogPostListSchema schema, {
+    this.isLarge = false,
+    super.key,
+  }) : title = schema.title,
+       authorName = schema.author?.name ?? 'Keeper',
+       authorImageUrl = schema.author?.profileImage,
+       authorImageSeed = schema.author?.profileAvatarSeed ?? '',
+       publishedDate = schema.datePublished,
+       image = schema.headerImageUrl ?? '';
 
   final String title;
   final String authorName;
@@ -49,10 +61,10 @@ class BlogPostCard extends StatelessWidget {
           image: DecorationImage(
             image: CachedNetworkImageProvider(image),
             fit: BoxFit.cover,
-            // colorFilter: ColorFilter.mode(
-            //   Colors.black.withValues(alpha: .3),
-            //   BlendMode.darken,
-            // ),
+            colorFilter: ColorFilter.mode(
+              Colors.black.withValues(alpha: .2),
+              BlendMode.multiply,
+            ),
           ),
           gradient: const LinearGradient(
             begin: Alignment.topCenter,
