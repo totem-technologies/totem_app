@@ -10,7 +10,7 @@ part 'event_calendar_filter_schema.g.dart';
 class EventCalendarFilterSchema {
   const EventCalendarFilterSchema({
     this.spaceSlug = '',
-    this.month = 5,
+    this.month = 6,
     this.year = 2025,
   });
 

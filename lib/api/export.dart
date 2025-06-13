@@ -4,14 +4,20 @@
 
 // Clients
 export 'client/client_client.dart';
+export 'blog/blog_client.dart';
 // Data classes
 export 'models/fcm_token_response_schema.dart';
 export 'models/fcm_token_register_schema.dart';
 export 'models/profile_avatar_type_enum.dart';
 export 'models/user_schema.dart';
+export 'models/public_user_schema.dart';
 export 'models/user_update_schema.dart';
 export 'models/onboard_schema.dart';
 export 'models/referral_choices.dart';
+export 'models/input.dart';
+export 'models/blog_post_list_schema.dart';
+export 'models/paged_blog_post_list_schema.dart';
+export 'models/blog_post_schema.dart';
 export 'models/message_response.dart';
 export 'models/error_response.dart';
 export 'models/pin_request_schema.dart';

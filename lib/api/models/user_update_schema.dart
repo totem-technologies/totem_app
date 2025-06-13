@@ -16,7 +16,7 @@ class UserUpdateSchema {
     this.timezone,
     this.newsletterConsent,
     this.profileAvatarType,
-    this.randomizeAvatarSeed,
+    this.profileAvatarSeed,
   });
 
   factory UserUpdateSchema.fromJson(Map<String, Object?> json) =>
@@ -30,9 +30,9 @@ class UserUpdateSchema {
   @JsonKey(name: 'profile_avatar_type')
   final ProfileAvatarTypeEnum? profileAvatarType;
 
-  /// Set to true to generate a new random avatar seed.
-  @JsonKey(name: 'randomize_avatar_seed')
-  final bool? randomizeAvatarSeed;
+  /// Should be a random UUID
+  @JsonKey(name: 'profile_avatar_seed')
+  final String? profileAvatarSeed;
 
   Map<String, Object?> toJson() => _$UserUpdateSchemaToJson(this);
 }

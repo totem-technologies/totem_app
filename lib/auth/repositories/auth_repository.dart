@@ -86,7 +86,7 @@ class AuthRepository {
     String? timezone,
     bool? newsletterConsent,
     ProfileAvatarTypeEnum? profileAvatarType,
-    bool? randomizeAvatarSeed,
+    String? avatarSeed,
   }) async {
     return _handleApiCall<UserSchema>(
       () => apiService.client.totemUsersMobileApiUpdateCurrentUser(
@@ -96,7 +96,7 @@ class AuthRepository {
           timezone: timezone,
           newsletterConsent: newsletterConsent,
           profileAvatarType: profileAvatarType,
-          randomizeAvatarSeed: randomizeAvatarSeed,
+          profileAvatarSeed: avatarSeed,
         ),
       ),
       operationName: 'update current user profile',

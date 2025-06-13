@@ -13,6 +13,7 @@ import '../models/fcm_token_response_schema.dart';
 import '../models/message_response.dart';
 import '../models/onboard_schema.dart';
 import '../models/pin_request_schema.dart';
+import '../models/public_user_schema.dart';
 import '../models/refresh_token_schema.dart';
 import '../models/token_response.dart';
 import '../models/user_schema.dart';
@@ -45,6 +46,12 @@ abstract class ClientClient {
   @GET('/api/mobile/protected/users/current')
   Future<UserSchema> totemUsersMobileApiGetCurrentUser();
 
+  /// Get User Profile
+  @GET('/api/mobile/protected/users/profile/{user_slug}')
+  Future<PublicUserSchema> totemUsersMobileApiGetUserProfile({
+    @Path('user_slug') required String userSlug,
+  });
+
   /// Update Current User
   @POST('/api/mobile/protected/users/update')
   Future<UserSchema> totemUsersMobileApiUpdateCurrentUser({
@@ -59,7 +66,7 @@ abstract class ClientClient {
   });
 
   /// Delete Current User
-  @POST('/api/mobile/protected/users/delete')
+  @DELETE('/api/mobile/protected/users/delete')
   Future<bool> totemUsersMobileApiDeleteCurrentUser();
 
   /// Onboard Post
@@ -71,6 +78,22 @@ abstract class ClientClient {
   /// Onboard Get
   @GET('/api/mobile/protected/onboard/')
   Future<OnboardSchema> totemOnboardMobileApiOnboardGet();
+
+  /// Subscribe To Space
+  @POST('/api/mobile/protected/spaces/subscribe/{space_slug}')
+  Future<bool> totemCirclesMobileApiSubscribeToSpace({
+    @Path('space_slug') required String spaceSlug,
+  });
+
+  /// Unsubscribe To Space
+  @DELETE('/api/mobile/protected/spaces/subscribe/{space_slug}')
+  Future<bool> totemCirclesMobileApiUnsubscribeToSpace({
+    @Path('space_slug') required String spaceSlug,
+  });
+
+  /// List Subscriptions
+  @GET('/api/mobile/protected/spaces/subscribe')
+  Future<bool> totemCirclesMobileApiListSubscriptions();
 
   /// Request Pin.
   ///

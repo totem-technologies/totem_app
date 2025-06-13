@@ -18,7 +18,7 @@ UserUpdateSchema _$UserUpdateSchemaFromJson(Map<String, dynamic> json) =>
               : ProfileAvatarTypeEnum.fromJson(
                 json['profile_avatar_type'] as String,
               ),
-      randomizeAvatarSeed: json['randomize_avatar_seed'] as bool?,
+      profileAvatarSeed: json['profile_avatar_seed'] as String?,
     );
 
 Map<String, dynamic> _$UserUpdateSchemaToJson(UserUpdateSchema instance) =>
@@ -29,7 +29,7 @@ Map<String, dynamic> _$UserUpdateSchemaToJson(UserUpdateSchema instance) =>
       'newsletter_consent': instance.newsletterConsent,
       'profile_avatar_type':
           _$ProfileAvatarTypeEnumEnumMap[instance.profileAvatarType],
-      'randomize_avatar_seed': instance.randomizeAvatarSeed,
+      'profile_avatar_seed': instance.profileAvatarSeed,
     };
 
 const _$ProfileAvatarTypeEnumEnumMap = {
