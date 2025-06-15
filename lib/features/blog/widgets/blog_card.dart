@@ -1,7 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/api/models/blog_post_list_schema.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class BlogPostCard extends StatelessWidget {
@@ -47,7 +50,7 @@ class BlogPostCard extends StatelessWidget {
       splashColor: Colors.transparent,
       borderRadius: BorderRadius.circular(20),
       onTap: () {
-        // context.push(RouteNames.blogPost(''));
+        context.push(RouteNames.blogPost(slug));
       },
       child: Ink(
         decoration: BoxDecoration(
