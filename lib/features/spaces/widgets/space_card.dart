@@ -120,7 +120,7 @@ class SpaceCard extends StatelessWidget {
                                 Expanded(
                                   child: Text(
                                     'Next event: '
-                                    '${space.nextEvent.title ?? "Upcoming Event"}',
+                                    '${space.nextEvent.title!}',
                                     style: theme.textTheme.bodyMedium,
                                   ),
                                 ),
