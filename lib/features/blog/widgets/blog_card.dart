@@ -12,6 +12,7 @@ class BlogPostCard extends StatelessWidget {
     required this.authorImageSeed,
     required this.publishedDate,
     required this.image,
+    required this.slug,
     this.isLarge = false,
     super.key,
   });
@@ -25,6 +26,7 @@ class BlogPostCard extends StatelessWidget {
        authorImageUrl = schema.author?.profileImage,
        authorImageSeed = schema.author?.profileAvatarSeed ?? '',
        publishedDate = schema.datePublished,
+       slug = schema.slug!,
        image = schema.headerImageUrl ?? '';
 
   final String title;
@@ -33,7 +35,7 @@ class BlogPostCard extends StatelessWidget {
   final String authorImageSeed;
   final DateTime publishedDate;
   final String image;
-
+  final String slug;
   final bool isLarge;
 
   @override
@@ -61,96 +63,98 @@ class BlogPostCard extends StatelessWidget {
           image: DecorationImage(
             image: CachedNetworkImageProvider(image),
             fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(
-              Colors.black.withValues(alpha: .2),
-              BlendMode.multiply,
-            ),
-          ),
-          gradient: const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.black54, Colors.transparent],
           ),
         ),
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          spacing: 10,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: isLarge ? 24 : 14,
-                fontWeight: FontWeight.w600,
-              ),
-              maxLines: isLarge ? 2 : 3,
-              overflow: TextOverflow.ellipsis,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.transparent, Colors.black45],
             ),
-            Row(
-              spacing: 6,
-              children: [
-                UserAvatar(
-                  image:
-                      authorImageUrl != null
-                          ? CachedNetworkImageProvider(authorImageUrl!)
-                          : null,
-                  seed: authorImageSeed,
-                  radius: 17.5,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.end,
+            spacing: 10,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: isLarge ? 24 : 14,
+                  fontWeight: FontWeight.w600,
                 ),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        authorName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.fade,
-                      ),
-                      Text(
-                        dateFormatter.format(publishedDate),
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: .7),
-                          fontSize: 10,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.fade,
-                      ),
-                    ],
+                maxLines: isLarge ? 2 : 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Row(
+                spacing: 6,
+                children: [
+                  UserAvatar(
+                    image:
+                        authorImageUrl != null
+                            ? CachedNetworkImageProvider(authorImageUrl!)
+                            : null,
+                    seed: authorImageSeed,
+                    radius: 17.5,
                   ),
-                ),
-                if (isLarge)
-                  IgnorePointer(
-                    child: Center(
-                      child: ElevatedButton.icon(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsetsDirectional.only(
-                            start: 12,
-                            end: 4,
-                            top: 4,
-                            bottom: 4,
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          authorName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
                           ),
-                          minimumSize: const Size(100, 42),
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
                         ),
-                        label: const Text(
-                          'Read',
-                          style: TextStyle(fontSize: 14),
+                        Text(
+                          dateFormatter.format(publishedDate),
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: .7),
+                            fontSize: 10,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
                         ),
-                        icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                        iconAlignment: IconAlignment.end,
-                      ),
+                      ],
                     ),
                   ),
-              ],
-            ),
-          ],
+                  if (isLarge)
+                    IgnorePointer(
+                      child: Center(
+                        child: ElevatedButton.icon(
+                          onPressed: () {},
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsetsDirectional.only(
+                              start: 12,
+                              end: 4,
+                              top: 4,
+                              bottom: 4,
+                            ),
+                            minimumSize: const Size(100, 42),
+                          ),
+                          label: const Text(
+                            'Read',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                          iconAlignment: IconAlignment.end,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
