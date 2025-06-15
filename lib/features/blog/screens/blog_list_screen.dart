@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/blog/widgets/blog_card.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
+import 'package:totem_app/shared/widgets/totem_icon.dart';
 
 class BlogListScreen extends ConsumerWidget {
   const BlogListScreen({super.key});
@@ -10,8 +11,9 @@ class BlogListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final blogs = ref.watch(listBlogPostsProvider);
-    return SafeArea(
-      child: LayoutBuilder(
+    return Scaffold(
+      appBar: AppBar(title: const TotemLogo(size: 24)),
+      body: LayoutBuilder(
         builder: (context, constraints) {
           return blogs.when<Widget>(
             data: (data) {

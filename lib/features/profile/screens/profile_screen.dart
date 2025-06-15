@@ -6,6 +6,7 @@ import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/features/profile/screens/delete_account.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/totem_icon.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/link.dart';
 
@@ -25,7 +26,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final user = auth.user;
 
     return Scaffold(
+      appBar: AppBar(title: const TotemLogo(size: 24)),
       body: SafeArea(
+        top: false,
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
