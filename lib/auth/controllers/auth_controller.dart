@@ -224,8 +224,7 @@ class AuthController extends StateNotifier<AuthState> {
               name: newName,
               email: newEmail,
               profileAvatarType: profileAvatarType,
-              // TODO(bdlukaa): Upload avatar seed when available
-              // randomizeAvatarSeed: avatarSeed,
+              avatarSeed: avatarSeed,
             );
         finalUpdatedUser = backendUpdatedUser;
       } catch (error, stackTrace) {
