@@ -24,6 +24,8 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>FlutterDeepLinkingEnabled</key>
+	<true/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
@@ -54,8 +56,5 @@
 	</array>
 	<key>com.posthog.posthog.AUTO_INIT</key>
 	<false/>
-
-	<key>FlutterDeepLinkingEnabled</key>
-	<true />
 </dict>
 </plist>
