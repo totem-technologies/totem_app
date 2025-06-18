@@ -84,18 +84,20 @@ flutter_launcher_icons:
   image_path: "assets/logo/ig_logo.jpg"
   min_sdk_android: 21 # android min sdk min:16, default 21
 
-  adaptive_icon_background: "#F4DC92" # yellow
+  adaptive_icon_background: "#FFF4DC92" # yellow
   adaptive_icon_foreground: "assets/logo/Icon_black_square.png"
   adaptive_icon_monochrome: "assets/logo/Icon_colored_square.png"
 
   image_path_ios: "assets/logo/Icon_colored_square.png"
-  image_path_ios_dark_transparent: "assets/logo/Icon_white_square.png"
+  # image_path_ios_dark_transparent: "assets/logo/Icon_white_square.png"
+  remove_alpha_ios: true
+  background_color_ios: "#FFF4DC92" # yellow
 
   web:
     generate: true
     image_path: "assets/logo/logo-square-black-512.png"
-    background_color: "#F4DC92" # yellow
-    theme_color: "#987AA5" # purple
+    background_color: "#FFF4DC92" # yellow
+    theme_color: "#FF987AA5" # purple
 
 flutter_native_splash:
   # This package generates native code to customize Flutter's default white native splash screen
