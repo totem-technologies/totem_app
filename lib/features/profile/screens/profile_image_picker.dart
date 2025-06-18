@@ -29,7 +29,7 @@ class ProfileImagePicker extends ConsumerStatefulWidget {
 }
 
 class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
-  var _state = _PickerState.tieDye;
+  _PickerState _state = _PickerState.tieDye;
   var _loading = false;
 
   final _imagePicker = ImagePicker();

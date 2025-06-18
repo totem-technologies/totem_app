@@ -25,7 +25,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
   final _pinController = TextEditingController();
   var _isLoading = false;
   var _attempts = 0;
-  final _maxAttempts = AppConfig.maxPinAttempts;
+  final int _maxAttempts = AppConfig.maxPinAttempts;
 
   @override
   void dispose() {

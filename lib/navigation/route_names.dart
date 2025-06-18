@@ -24,7 +24,7 @@ class RouteNames {
   static const blogDetail = '/blog/detail';
   static String blogPost(String slug) => '/blog/$slug';
 
-  static const allRoutes = [
+  static const allRoutes = <String>[
     login,
     pinEntry,
     onboarding,
