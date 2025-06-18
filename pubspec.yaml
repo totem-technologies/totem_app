@@ -91,7 +91,7 @@ flutter_launcher_icons:
   image_path_ios: "assets/logo/Icon_colored_square.png"
   # image_path_ios_dark_transparent: "assets/logo/Icon_white_square.png"
   remove_alpha_ios: true
-  background_color_ios: "#FFF4DC92" # yellow
+  # background_color_ios: "#F4DC92" # yellow
 
   web:
     generate: true
