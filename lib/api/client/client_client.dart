@@ -10,6 +10,7 @@ import 'package:retrofit/retrofit.dart';
 
 import '../models/fcm_token_register_schema.dart';
 import '../models/fcm_token_response_schema.dart';
+import '../models/keeper_profile_schema.dart';
 import '../models/message_response.dart';
 import '../models/onboard_schema.dart';
 import '../models/pin_request_schema.dart';
@@ -68,6 +69,12 @@ abstract class ClientClient {
   /// Delete Current User
   @DELETE('/api/mobile/protected/users/delete')
   Future<bool> totemUsersMobileApiDeleteCurrentUser();
+
+  /// Keeper
+  @GET('/api/mobile/protected/users/keeper/{username}')
+  Future<KeeperProfileSchema> totemUsersMobileApiKeeper({
+    @Path('username') required String username,
+  });
 
   /// Onboard Post
   @POST('/api/mobile/protected/onboard/')

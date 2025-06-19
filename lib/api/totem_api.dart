@@ -12,7 +12,11 @@ import 'spaces/spaces_client.dart';
 ///
 ///
 class TotemApi {
-  TotemApi(Dio dio, {String? baseUrl}) : _dio = dio, _baseUrl = baseUrl;
+  TotemApi(
+    Dio dio, {
+    String? baseUrl,
+  }) : _dio = dio,
+       _baseUrl = baseUrl;
 
   final Dio _dio;
   final String? _baseUrl;

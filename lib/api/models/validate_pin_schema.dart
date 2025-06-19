@@ -8,7 +8,10 @@ part 'validate_pin_schema.g.dart';
 
 @JsonSerializable()
 class ValidatePinSchema {
-  const ValidatePinSchema({required this.email, required this.pin});
+  const ValidatePinSchema({
+    required this.email,
+    required this.pin,
+  });
 
   factory ValidatePinSchema.fromJson(Map<String, Object?> json) =>
       _$ValidatePinSchemaFromJson(json);

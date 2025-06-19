@@ -9,7 +9,6 @@ part of 'blog_post_schema.dart';
 BlogPostSchema _$BlogPostSchemaFromJson(Map<String, dynamic> json) =>
     BlogPostSchema(
       title: json['title'] as String,
-      content: json['content'] as String,
       datePublished: DateTime.parse(json['date_published'] as String),
       publish: json['publish'] as bool? ?? false,
       author:
@@ -31,7 +30,6 @@ Map<String, dynamic> _$BlogPostSchemaToJson(BlogPostSchema instance) =>
       'content_html': instance.contentHtml,
       'title': instance.title,
       'subtitle': instance.subtitle,
-      'content': instance.content,
       'date_published': instance.datePublished.toIso8601String(),
       'slug': instance.slug,
       'publish': instance.publish,

@@ -8,7 +8,9 @@ part 'fcm_token_register_schema.g.dart';
 
 @JsonSerializable()
 class FcmTokenRegisterSchema {
-  const FcmTokenRegisterSchema({required this.token});
+  const FcmTokenRegisterSchema({
+    required this.token,
+  });
 
   factory FcmTokenRegisterSchema.fromJson(Map<String, Object?> json) =>
       _$FcmTokenRegisterSchemaFromJson(json);

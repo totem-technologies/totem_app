@@ -8,7 +8,10 @@ part 'category_filter_schema.g.dart';
 
 @JsonSerializable()
 class CategoryFilterSchema {
-  const CategoryFilterSchema({required this.name, required this.slug});
+  const CategoryFilterSchema({
+    required this.name,
+    required this.slug,
+  });
 
   factory CategoryFilterSchema.fromJson(Map<String, Object?> json) =>
       _$CategoryFilterSchemaFromJson(json);

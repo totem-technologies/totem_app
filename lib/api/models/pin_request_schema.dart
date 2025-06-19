@@ -8,7 +8,10 @@ part 'pin_request_schema.g.dart';
 
 @JsonSerializable()
 class PinRequestSchema {
-  const PinRequestSchema({required this.email, this.newsletterConsent = false});
+  const PinRequestSchema({
+    required this.email,
+    this.newsletterConsent = false,
+  });
 
   factory PinRequestSchema.fromJson(Map<String, Object?> json) =>
       _$PinRequestSchemaFromJson(json);

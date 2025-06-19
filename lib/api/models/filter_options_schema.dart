@@ -11,7 +11,10 @@ part 'filter_options_schema.g.dart';
 
 @JsonSerializable()
 class FilterOptionsSchema {
-  const FilterOptionsSchema({required this.categories, required this.authors});
+  const FilterOptionsSchema({
+    required this.categories,
+    required this.authors,
+  });
 
   factory FilterOptionsSchema.fromJson(Map<String, Object?> json) =>
       _$FilterOptionsSchemaFromJson(json);
