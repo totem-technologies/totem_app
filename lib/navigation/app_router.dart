@@ -11,6 +11,7 @@ import 'package:totem_app/auth/screens/profile_setup_screen.dart';
 import 'package:totem_app/auth/screens/welcome_screen.dart';
 import 'package:totem_app/features/blog/screens/blog_list_screen.dart';
 import 'package:totem_app/features/blog/screens/blog_screen.dart';
+import 'package:totem_app/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_details_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_screen.dart';
 import 'package:totem_app/features/profile/screens/session_history.dart';
@@ -311,6 +312,15 @@ GoRouter createRouter(WidgetRef ref) {
         builder: (context, state) {
           final eventSlug = state.pathParameters['event_slug'] ?? '';
           return EventDetailScreen(eventSlug: eventSlug);
+        },
+      ),
+
+      GoRoute(
+        path: RouteNames.keeperProfile(':username'),
+        name: RouteNames.keeperProfile(':username'),
+        builder: (context, state) {
+          final username = state.pathParameters['username'] ?? '';
+          return KeeperProfileScreen(username: username);
         },
       ),
 

@@ -8,7 +8,7 @@ analyzer:
 
 custom_lint:
   rules:
-    - avoid_manual_providers_as_generated_provider_dependency
+    - avoid_manual_providers_as_generated_provider_dependency: false
 
 linter:
   rules:
