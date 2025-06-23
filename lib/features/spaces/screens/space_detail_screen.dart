@@ -39,10 +39,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     final width = MediaQuery.sizeOf(context).width;
     final isPhone = width < 600;
 
-    return Scaffold(
-      body: eventAsync.when(
-        data: (event) {
-          return Stack(
+    return eventAsync.when(
+      data: (event) {
+        return Scaffold(
+          body: Stack(
             children: [
               Positioned.fill(
                 child: RefreshIndicator.adaptive(
@@ -258,11 +258,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 child: SpaceJoinCard(event: event),
               ),
             ],
-          );
-        },
-        loading: () => const LoadingIndicator(),
-        error: (err, stack) => ErrorScreen(error: err),
-      ),
+          ),
+        );
+      },
+      loading: () => const LoadingScreen(),
+      error: (err, stack) => ErrorScreen(error: err),
     );
   }
 

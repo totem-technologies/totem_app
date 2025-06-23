@@ -13,7 +13,7 @@ class ErrorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: Scaffold.maybeOf(context) != null
+      appBar: Scaffold.maybeOf(context)?.hasAppBar ?? false
           ? null
           : AppBar(title: title != null ? Text(title!) : null),
       body: Padding(
