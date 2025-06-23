@@ -159,7 +159,7 @@ class KeeperProfileScreen extends ConsumerWidget {
                 ),
               ),
               Html(
-                data: keeper.bio,
+                data: keeper.bioHtml ?? keeper.bio,
               ),
               // TODO(bdlukaa): Upcoming spaces
             ],
