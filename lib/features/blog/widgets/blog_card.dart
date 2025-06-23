@@ -97,10 +97,9 @@ class BlogPostCard extends StatelessWidget {
                 spacing: 6,
                 children: [
                   UserAvatar(
-                    image:
-                        authorImageUrl != null
-                            ? CachedNetworkImageProvider(authorImageUrl!)
-                            : null,
+                    image: authorImageUrl != null
+                        ? CachedNetworkImageProvider(authorImageUrl!)
+                        : null,
                     seed: authorImageSeed,
                     radius: 17.5,
                   ),

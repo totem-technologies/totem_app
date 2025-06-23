@@ -176,12 +176,12 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed:
-                !_isLoading && _attempts < _maxAttempts ? _verifyPin : null,
-            child:
-                _isLoading
-                    ? const LoadingIndicator()
-                    : const Text('Verify Code'),
+            onPressed: !_isLoading && _attempts < _maxAttempts
+                ? _verifyPin
+                : null,
+            child: _isLoading
+                ? const LoadingIndicator()
+                : const Text('Verify Code'),
           ),
         ),
         const SizedBox(height: 16),
@@ -208,10 +208,9 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
           Text(
             'Attempts: $_attempts of $_maxAttempts',
             style: TextStyle(
-              color:
-                  _attempts >= _maxAttempts - 1
-                      ? theme.colorScheme.error
-                      : null,
+              color: _attempts >= _maxAttempts - 1
+                  ? theme.colorScheme.error
+                  : null,
             ),
             textAlign: TextAlign.center,
           ),

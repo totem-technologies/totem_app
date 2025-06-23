@@ -298,18 +298,16 @@ class _TopicsTab extends StatelessWidget {
             child: CheckboxListTile(
               title: Text(topic),
               value: isSelected,
-              onChanged:
-                  isLoading
-                      ? null
-                      : (value) => onTopicSelected(topic, value ?? false),
+              onChanged: isLoading
+                  ? null
+                  : (value) => onTopicSelected(topic, value ?? false),
               checkboxScaleFactor: 1.35,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(
-                  color:
-                      isSelected
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.primaryContainer,
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.primaryContainer,
                   width: 2,
                 ),
               ),
@@ -346,16 +344,14 @@ class _ReferralSourceTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final availableSources =
-        ReferralChoices.values
-            .where((source) => source.name != ReferralChoices.other.name)
-            .toSet() // exclude 'Other' from the list
-            .toList()
-            .map(
-              (source) =>
-                  MapEntry<ReferralChoices, String>(source, source.name),
-            )
-            .toSet();
+    final availableSources = ReferralChoices.values
+        .where((source) => source.name != ReferralChoices.other.name)
+        .toSet() // exclude 'Other' from the list
+        .toList()
+        .map(
+          (source) => MapEntry<ReferralChoices, String>(source, source.name),
+        )
+        .toSet();
 
     return CardScreen(
       isLoading: isLoading, // Pass isLoading if CardScreen uses it
@@ -381,16 +377,16 @@ class _ReferralSourceTab extends StatelessWidget {
             child: CheckboxListTile(
               title: Text(sourceName),
               value: isSelected,
-              onChanged:
-                  isLoading ? null : (value) => onSourceSelected(sourceRef),
+              onChanged: isLoading
+                  ? null
+                  : (value) => onSourceSelected(sourceRef),
               checkboxScaleFactor: 1.35,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(
-                  color:
-                      isSelected
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.primaryContainer,
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.primaryContainer,
                   width: 2,
                 ),
               ),
@@ -402,8 +398,9 @@ class _ReferralSourceTab extends StatelessWidget {
         const SizedBox(height: 24),
         ElevatedButton(
           onPressed: isLoading ? null : onSubmit,
-          child:
-              isLoading ? const LoadingIndicator() : const Text('Get Started'),
+          child: isLoading
+              ? const LoadingIndicator()
+              : const Text('Get Started'),
         ),
       ],
     );

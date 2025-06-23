@@ -14,10 +14,9 @@ final listBlogPostsProvider =
     AutoDisposeFutureProvider<PagedBlogPostListSchema>.internal(
       listBlogPosts,
       name: r'listBlogPostsProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$listBlogPostsHash,
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$listBlogPostsHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );
@@ -91,10 +90,9 @@ class BlogPostProvider extends AutoDisposeFutureProvider<BlogPostSchema> {
         (ref) => blogPost(ref as BlogPostRef, slug),
         from: blogPostProvider,
         name: r'blogPostProvider',
-        debugGetCreateSourceHash:
-            const bool.fromEnvironment('dart.vm.product')
-                ? null
-                : _$blogPostHash,
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$blogPostHash,
         dependencies: BlogPostFamily._dependencies,
         allTransitiveDependencies: BlogPostFamily._allTransitiveDependencies,
         slug: slug,

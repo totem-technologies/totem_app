@@ -14,6 +14,7 @@ PublicUserSchema _$PublicUserSchemaFromJson(Map<String, dynamic> json) =>
       profileAvatarSeed: json['profile_avatar_seed'] as String,
       isStaff: json['is_staff'] as bool? ?? false,
       name: json['name'] as String?,
+      slug: json['slug'] as String?,
       profileImage: json['profile_image'] as String?,
     );
 
@@ -22,6 +23,7 @@ Map<String, dynamic> _$PublicUserSchemaToJson(PublicUserSchema instance) =>
       'profile_avatar_type':
           _$ProfileAvatarTypeEnumEnumMap[instance.profileAvatarType]!,
       'name': instance.name,
+      'slug': instance.slug,
       'is_staff': instance.isStaff,
       'profile_avatar_seed': instance.profileAvatarSeed,
       'profile_image': instance.profileImage,

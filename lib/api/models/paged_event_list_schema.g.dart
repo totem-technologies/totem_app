@@ -9,10 +9,9 @@ part of 'paged_event_list_schema.dart';
 PagedEventListSchema _$PagedEventListSchemaFromJson(
   Map<String, dynamic> json,
 ) => PagedEventListSchema(
-  items:
-      (json['items'] as List<dynamic>)
-          .map((e) => EventListSchema.fromJson(e as Map<String, dynamic>))
-          .toList(),
+  items: (json['items'] as List<dynamic>)
+      .map((e) => EventListSchema.fromJson(e as Map<String, dynamic>))
+      .toList(),
   count: (json['count'] as num).toInt(),
 );
 

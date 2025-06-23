@@ -10,7 +10,10 @@ part 'paged_blog_post_list_schema.g.dart';
 
 @JsonSerializable()
 class PagedBlogPostListSchema {
-  const PagedBlogPostListSchema({required this.items, required this.count});
+  const PagedBlogPostListSchema({
+    required this.items,
+    required this.count,
+  });
 
   factory PagedBlogPostListSchema.fromJson(Map<String, Object?> json) =>
       _$PagedBlogPostListSchemaFromJson(json);

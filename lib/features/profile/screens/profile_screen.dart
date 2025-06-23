@@ -119,30 +119,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             const SizedBox(height: 12),
             Link(
               uri: Uri.parse('https://www.totem.org/users/feedback/'),
-              builder:
-                  (context, launch) => ProfileTile(
-                    icon: const TotemIcon(TotemIcons.feedback),
-                    title: 'Feedback',
-                    onTap: () => launch?.call(),
-                  ),
+              builder: (context, launch) => ProfileTile(
+                icon: const TotemIcon(TotemIcons.feedback),
+                title: 'Feedback',
+                onTap: () => launch?.call(),
+              ),
             ),
             Link(
               uri: AppConfig.privacyPolicyUrl,
-              builder:
-                  (context, launch) => ProfileTile(
-                    icon: const TotemIcon(TotemIcons.lock),
-                    title: 'Privacy Policy',
-                    onTap: () => launch?.call(),
-                  ),
+              builder: (context, launch) => ProfileTile(
+                icon: const TotemIcon(TotemIcons.lock),
+                title: 'Privacy Policy',
+                onTap: () => launch?.call(),
+              ),
             ),
             Link(
               uri: AppConfig.termsOfServiceUrl,
-              builder:
-                  (context, launch) => ProfileTile(
-                    icon: const TotemIcon(TotemIcons.safe),
-                    title: 'Terms',
-                    onTap: () => launch?.call(),
-                  ),
+              builder: (context, launch) => ProfileTile(
+                icon: const TotemIcon(TotemIcons.safe),
+                title: 'Terms',
+                onTap: () => launch?.call(),
+              ),
             ),
             ProfileTile(
               icon: const TotemIcon(TotemIcons.closeRounded),

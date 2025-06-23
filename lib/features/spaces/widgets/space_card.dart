@@ -75,18 +75,16 @@ class SpaceCard extends StatelessWidget {
                       children: [
                         CircleAvatar(
                           radius: 12,
-                          backgroundImage:
-                              space.author.profileImage != null
-                                  ? CachedNetworkImageProvider(
-                                    getFullUrl(space.author.profileImage!),
-                                  )
-                                  : null,
-                          child:
-                              space.author.profileImage == null
-                                  ? Text(
-                                    space.author.name?[0].toUpperCase() ?? '',
-                                  )
-                                  : null,
+                          backgroundImage: space.author.profileImage != null
+                              ? CachedNetworkImageProvider(
+                                  getFullUrl(space.author.profileImage!),
+                                )
+                              : null,
+                          child: space.author.profileImage == null
+                              ? Text(
+                                  space.author.name?[0].toUpperCase() ?? '',
+                                )
+                              : null,
                         ),
                         const SizedBox(width: 8),
                         Text(

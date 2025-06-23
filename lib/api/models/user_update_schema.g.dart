@@ -12,12 +12,11 @@ UserUpdateSchema _$UserUpdateSchemaFromJson(Map<String, dynamic> json) =>
       email: json['email'] as String?,
       timezone: json['timezone'] as String?,
       newsletterConsent: json['newsletter_consent'] as bool?,
-      profileAvatarType:
-          json['profile_avatar_type'] == null
-              ? null
-              : ProfileAvatarTypeEnum.fromJson(
-                json['profile_avatar_type'] as String,
-              ),
+      profileAvatarType: json['profile_avatar_type'] == null
+          ? null
+          : ProfileAvatarTypeEnum.fromJson(
+              json['profile_avatar_type'] as String,
+            ),
       profileAvatarSeed: json['profile_avatar_seed'] as String?,
     );
 

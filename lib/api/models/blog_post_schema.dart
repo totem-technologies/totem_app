@@ -12,7 +12,6 @@ part 'blog_post_schema.g.dart';
 class BlogPostSchema {
   const BlogPostSchema({
     required this.title,
-    required this.content,
     required this.datePublished,
     this.publish = false,
     this.author,
@@ -32,10 +31,6 @@ class BlogPostSchema {
   final String? contentHtml;
   final String title;
   final String? subtitle;
-
-  /// Markdown content for the blog post. Do not use h1 (single #) headers.
-  ///         Add inline images like {% image slug="vji504tvi" %}, after uploading them in the Images section.
-  final String content;
   @JsonKey(name: 'date_published')
   final DateTime datePublished;
   final String? slug;

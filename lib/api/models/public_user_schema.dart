@@ -15,6 +15,7 @@ class PublicUserSchema {
     required this.profileAvatarSeed,
     this.isStaff = false,
     this.name,
+    this.slug,
     this.profileImage,
   });
 
@@ -24,6 +25,7 @@ class PublicUserSchema {
   @JsonKey(name: 'profile_avatar_type')
   final ProfileAvatarTypeEnum profileAvatarType;
   final String? name;
+  final String? slug;
 
   /// Designates whether the user can log into this admin site.
   @JsonKey(name: 'is_staff')

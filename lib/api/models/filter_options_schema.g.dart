@@ -9,14 +9,12 @@ part of 'filter_options_schema.dart';
 FilterOptionsSchema _$FilterOptionsSchemaFromJson(
   Map<String, dynamic> json,
 ) => FilterOptionsSchema(
-  categories:
-      (json['categories'] as List<dynamic>)
-          .map((e) => CategoryFilterSchema.fromJson(e as Map<String, dynamic>))
-          .toList(),
-  authors:
-      (json['authors'] as List<dynamic>)
-          .map((e) => AuthorFilterSchema.fromJson(e as Map<String, dynamic>))
-          .toList(),
+  categories: (json['categories'] as List<dynamic>)
+      .map((e) => CategoryFilterSchema.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  authors: (json['authors'] as List<dynamic>)
+      .map((e) => AuthorFilterSchema.fromJson(e as Map<String, dynamic>))
+      .toList(),
 );
 
 Map<String, dynamic> _$FilterOptionsSchemaToJson(

@@ -49,12 +49,13 @@ Dio _initDio(Ref ref) {
 
           if (refreshToken != null) {
             try {
-              final response = await MobileTotemApi(
-                Dio(),
-                baseUrl: AppConfig.mobileApiUrl,
-              ).client.totemApiAuthRefreshToken(
-                body: RefreshTokenSchema(refreshToken: refreshToken),
-              );
+              final response =
+                  await MobileTotemApi(
+                    Dio(),
+                    baseUrl: AppConfig.mobileApiUrl,
+                  ).client.totemApiAuthRefreshToken(
+                    body: RefreshTokenSchema(refreshToken: refreshToken),
+                  );
               accessToken = response.accessToken;
 
               logger.d(

@@ -14,10 +14,9 @@ final listSpacesProvider =
     AutoDisposeFutureProvider<List<SpaceDetailSchema>>.internal(
       listSpaces,
       name: r'listSpacesProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$listSpacesHash,
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$listSpacesHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );
@@ -90,8 +89,9 @@ class EventProvider extends AutoDisposeFutureProvider<EventDetailSchema> {
         (ref) => event(ref as EventRef, eventId),
         from: eventProvider,
         name: r'eventProvider',
-        debugGetCreateSourceHash:
-            const bool.fromEnvironment('dart.vm.product') ? null : _$eventHash,
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$eventHash,
         dependencies: EventFamily._dependencies,
         allTransitiveDependencies: EventFamily._allTransitiveDependencies,
         eventId: eventId,

@@ -76,12 +76,11 @@ class SpaceDetailAppBar extends StatelessWidget {
                 ),
                 UserAvatar(
                   seed: event.space.author.profileAvatarSeed,
-                  image:
-                      event.space.author.profileImage != null
-                          ? CachedNetworkImageProvider(
-                            getFullUrl(event.space.author.profileImage!),
-                          )
-                          : null,
+                  image: event.space.author.profileImage != null
+                      ? CachedNetworkImageProvider(
+                          getFullUrl(event.space.author.profileImage!),
+                        )
+                      : null,
                 ),
               ],
             ),

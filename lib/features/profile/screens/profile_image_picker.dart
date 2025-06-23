@@ -57,8 +57,9 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
     final updated = await ref
         .read(authControllerProvider.notifier)
         .updateUserProfile(
-          profileImage:
-              _state == _PickerState.image ? File(_pickedImage!.path) : null,
+          profileImage: _state == _PickerState.image
+              ? File(_pickedImage!.path)
+              : null,
           avatarSeed: _state == _PickerState.tieDye ? _tieDyeSeed : null,
         );
 
@@ -163,10 +164,9 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
               GestureDetector(
                 onTap: () {
                   setState(() {
-                    _state =
-                        _state == _PickerState.tieDye
-                            ? _PickerState.image
-                            : _PickerState.tieDye;
+                    _state = _state == _PickerState.tieDye
+                        ? _PickerState.image
+                        : _PickerState.tieDye;
                   });
                 },
                 child: Center(
@@ -203,10 +203,9 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                                   duration: const Duration(milliseconds: 200),
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color:
-                                        _state == _PickerState.tieDye
-                                            ? theme.colorScheme.onPrimary
-                                            : theme.colorScheme.onSurface,
+                                    color: _state == _PickerState.tieDye
+                                        ? theme.colorScheme.onPrimary
+                                        : theme.colorScheme.onSurface,
                                   ),
                                   textAlign: TextAlign.center,
                                   child: const Text('Tie Dye'),
@@ -217,10 +216,9 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                                   duration: const Duration(milliseconds: 200),
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color:
-                                        _state == _PickerState.image
-                                            ? theme.colorScheme.onPrimary
-                                            : theme.colorScheme.onSurface,
+                                    color: _state == _PickerState.image
+                                        ? theme.colorScheme.onPrimary
+                                        : theme.colorScheme.onSurface,
                                   ),
                                   textAlign: TextAlign.center,
                                   child: const Text('Image'),

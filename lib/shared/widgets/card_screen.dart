@@ -58,10 +58,9 @@ class _CardScreenState extends State<CardScreen>
         body: LayoutBuilder(
           builder: (context, constraints) {
             final isPhone = constraints.maxWidth < 600;
-            final showBackground =
-                widget.showBackground == null
-                    ? !isPhone
-                    : widget.showBackground!;
+            final showBackground = widget.showBackground == null
+                ? !isPhone
+                : widget.showBackground!;
             return Stack(
               alignment: Alignment.center,
               children: [

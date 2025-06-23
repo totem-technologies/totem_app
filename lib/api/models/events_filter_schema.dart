@@ -8,7 +8,10 @@ part 'events_filter_schema.g.dart';
 
 @JsonSerializable()
 class EventsFilterSchema {
-  const EventsFilterSchema({required this.category, required this.author});
+  const EventsFilterSchema({
+    required this.category,
+    required this.author,
+  });
 
   factory EventsFilterSchema.fromJson(Map<String, Object?> json) =>
       _$EventsFilterSchemaFromJson(json);

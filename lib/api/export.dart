@@ -12,6 +12,7 @@ export 'models/profile_avatar_type_enum.dart';
 export 'models/user_schema.dart';
 export 'models/public_user_schema.dart';
 export 'models/user_update_schema.dart';
+export 'models/keeper_profile_schema.dart';
 export 'models/onboard_schema.dart';
 export 'models/referral_choices.dart';
 export 'models/input.dart';

@@ -89,13 +89,13 @@ class SpacesFilterChip extends StatelessWidget {
           },
           child: Chip(
             label: Text(label),
-            backgroundColor:
-                isSelected ? theme.colorScheme.primary : Colors.transparent,
+            backgroundColor: isSelected
+                ? theme.colorScheme.primary
+                : Colors.transparent,
             labelStyle: TextStyle(
-              color:
-                  isSelected
-                      ? theme.colorScheme.onPrimary
-                      : theme.colorScheme.onSurface,
+              color: isSelected
+                  ? theme.colorScheme.onPrimary
+                  : theme.colorScheme.onSurface,
             ),
             padding: const EdgeInsetsDirectional.symmetric(horizontal: 8),
           ),

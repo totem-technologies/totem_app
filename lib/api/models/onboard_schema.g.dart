@@ -11,10 +11,9 @@ OnboardSchema _$OnboardSchemaFromJson(Map<String, dynamic> json) =>
       referralOther: json['referral_other'] as String? ?? '',
       yearBorn: (json['year_born'] as num?)?.toInt(),
       hopes: json['hopes'] as String?,
-      referralSource:
-          json['referral_source'] == null
-              ? ReferralChoices.valueDefault
-              : ReferralChoices.fromJson(json['referral_source'] as String),
+      referralSource: json['referral_source'] == null
+          ? ReferralChoices.valueDefault
+          : ReferralChoices.fromJson(json['referral_source'] as String),
     );
 
 Map<String, dynamic> _$OnboardSchemaToJson(OnboardSchema instance) =>

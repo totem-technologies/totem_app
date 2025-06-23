@@ -138,13 +138,12 @@ class _EventsClient implements EventsClient {
     final _result = await _dio.fetch<List<dynamic>>(_options);
     late List<EventCalendarSchema> _value;
     try {
-      _value =
-          _result.data!
-              .map(
-                (dynamic i) =>
-                    EventCalendarSchema.fromJson(i as Map<String, dynamic>),
-              )
-              .toList();
+      _value = _result.data!
+          .map(
+            (dynamic i) =>
+                EventCalendarSchema.fromJson(i as Map<String, dynamic>),
+          )
+          .toList();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options);
       rethrow;
@@ -176,13 +175,12 @@ class _EventsClient implements EventsClient {
     final _result = await _dio.fetch<List<dynamic>>(_options);
     late List<WebflowEventSchema> _value;
     try {
-      _value =
-          _result.data!
-              .map(
-                (dynamic i) =>
-                    WebflowEventSchema.fromJson(i as Map<String, dynamic>),
-              )
-              .toList();
+      _value = _result.data!
+          .map(
+            (dynamic i) =>
+                WebflowEventSchema.fromJson(i as Map<String, dynamic>),
+          )
+          .toList();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options);
       rethrow;

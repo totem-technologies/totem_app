@@ -8,7 +8,9 @@ part 'refresh_token_schema.g.dart';
 
 @JsonSerializable()
 class RefreshTokenSchema {
-  const RefreshTokenSchema({required this.refreshToken});
+  const RefreshTokenSchema({
+    required this.refreshToken,
+  });
 
   factory RefreshTokenSchema.fromJson(Map<String, Object?> json) =>
       _$RefreshTokenSchemaFromJson(json);

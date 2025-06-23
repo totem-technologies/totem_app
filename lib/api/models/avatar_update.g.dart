@@ -7,10 +7,9 @@ part of 'avatar_update.dart';
 // **************************************************************************
 
 AvatarUpdate _$AvatarUpdateFromJson(Map<String, dynamic> json) => AvatarUpdate(
-  avatarType:
-      json['avatar_type'] == null
-          ? null
-          : ProfileAvatarTypeEnum.fromJson(json['avatar_type'] as String),
+  avatarType: json['avatar_type'] == null
+      ? null
+      : ProfileAvatarTypeEnum.fromJson(json['avatar_type'] as String),
   updateAvatarSeed: json['update_avatar_seed'] as bool?,
 );
 

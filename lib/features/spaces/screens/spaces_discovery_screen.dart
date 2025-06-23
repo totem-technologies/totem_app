@@ -31,12 +31,11 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
 
           final allCategories = _extractCategories(spacesList);
 
-          final filteredSpaces =
-              selectedCategory == null
-                  ? spacesList
-                  : spacesList
-                      .where((space) => space.category == selectedCategory)
-                      .toList();
+          final filteredSpaces = selectedCategory == null
+              ? spacesList
+              : spacesList
+                    .where((space) => space.category == selectedCategory)
+                    .toList();
 
           return RefreshIndicator.adaptive(
             onRefresh: () => ref.refresh(listSpacesProvider.future),
@@ -65,9 +64,8 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                       ),
                       sliver: SliverList.separated(
                         itemCount: filteredSpaces.length,
-                        itemBuilder:
-                            (_, index) =>
-                                SpaceCard(space: filteredSpaces[index]),
+                        itemBuilder: (_, index) =>
+                            SpaceCard(space: filteredSpaces[index]),
                         separatorBuilder: (_, _) => const SizedBox(height: 16),
                       ),
                     )
@@ -81,10 +79,9 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                         mainAxisSpacing: 16,
                         crossAxisSpacing: 16,
                         childAspectRatio: 16 / 14,
-                        children:
-                            filteredSpaces
-                                .map((space) => SpaceCard(space: space))
-                                .toList(),
+                        children: filteredSpaces
+                            .map((space) => SpaceCard(space: space))
+                            .toList(),
                       ),
                     ),
                 ],

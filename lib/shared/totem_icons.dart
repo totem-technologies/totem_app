@@ -259,6 +259,35 @@ class TotemIcons {
 </defs>
 </svg>
 ''';
+
+  static const link = '''
+<svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_386_2638)">
+<path d="M4.79127 6.31088C4.17 5.6872 4.22596 4.61981 4.91627 3.92682L6.91612 1.91919C7.60643 1.22621 8.66968 1.17003 9.29097 1.79371C9.91226 2.41741 9.85628 3.48477 9.16597 4.17776L8.16605 5.18158" stroke="#787D7E" stroke-width="0.618816" stroke-linecap="round"/>
+<path d="M6.40316 4.66016C7.02445 5.28384 6.96847 6.35122 6.27816 7.04421L5.27823 8.04801L4.2783 9.05185C3.58799 9.74484 2.52474 9.80099 1.90346 9.17731C1.28218 8.55362 1.33814 7.48625 2.02845 6.79326L3.02839 5.78941" stroke="#787D7E" stroke-width="0.618816" stroke-linecap="round"/>
+</g>
+<defs>
+<clipPath id="clip0_386_2638">
+<rect width="9.90106" height="9.90106" fill="white" transform="translate(0.646698 0.535156)"/>
+</clipPath>
+</defs>
+</svg>
+''';
+
+  static const instagram = '''
+<svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_386_2646)">
+<path d="M4.51153 9.61123H6.98679C9.04951 9.61123 9.8746 8.78614 9.8746 6.72342V4.24816C9.8746 2.18544 9.04951 1.36035 6.98679 1.36035H4.51153C2.44881 1.36035 1.62372 2.18544 1.62372 4.24816V6.72342C1.62372 8.78614 2.44881 9.61123 4.51153 9.61123Z" stroke="#787D7E" stroke-width="0.618816" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M5.74917 6.9298C6.54662 6.9298 7.19308 6.28334 7.19308 5.4859C7.19308 4.68845 6.54662 4.04199 5.74917 4.04199C4.95172 4.04199 4.30527 4.68845 4.30527 5.4859C4.30527 6.28334 4.95172 6.9298 5.74917 6.9298Z" stroke="#787D7E" stroke-width="0.618816" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8.07431 3.42285H8.0791" stroke="#787D7E" stroke-width="0.825088" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<defs>
+<clipPath id="clip0_386_2646">
+<rect width="9.90106" height="9.90106" fill="white" transform="translate(0.798645 0.535156)"/>
+</clipPath>
+</defs>
+</svg>
+''';
 }
 
 class TotemIcon extends StatelessWidget {
@@ -285,8 +314,9 @@ class TotemIcon extends StatelessWidget {
       icon,
       width: iconSize,
       height: iconSize,
-      colorFilter:
-          fillColor ? ColorFilter.mode(iconColor, BlendMode.srcIn) : null,
+      colorFilter: fillColor
+          ? ColorFilter.mode(iconColor, BlendMode.srcIn)
+          : null,
       alignment: AlignmentDirectional.center,
     );
   }
