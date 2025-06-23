@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
@@ -80,6 +82,13 @@ class SpaceDetailAppBar extends StatelessWidget {
                       ? CachedNetworkImageProvider(
                           getFullUrl(event.space.author.profileImage!),
                         )
+                      : null,
+                  onTap: event.space.author.slug != null
+                      ? () {
+                          context.push(
+                            RouteNames.keeperProfile(event.space.author.slug!),
+                          );
+                        }
                       : null,
                 ),
               ],

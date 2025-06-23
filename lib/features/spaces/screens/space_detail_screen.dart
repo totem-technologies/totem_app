@@ -229,7 +229,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 ElevatedButton(
                                   onPressed: () {
                                     if (event.space.author.slug != null) {
-                                      context.go(
+                                      context.push(
                                         RouteNames.keeperProfile(
                                           event.space.author.slug!,
                                         ),
