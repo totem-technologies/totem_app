@@ -71,9 +71,9 @@ abstract class ClientClient {
   Future<bool> totemUsersMobileApiDeleteCurrentUser();
 
   /// Keeper
-  @GET('/api/mobile/protected/users/keeper/{username}')
+  @GET('/api/mobile/protected/users/keeper/{slug}')
   Future<KeeperProfileSchema> totemUsersMobileApiKeeper({
-    @Path('username') required String username,
+    @Path('slug') required String slug,
   });
 
   /// Onboard Post

@@ -226,7 +226,7 @@ class _ClientClient implements ClientClient {
 
   @override
   Future<KeeperProfileSchema> totemUsersMobileApiKeeper({
-    required String username,
+    required String slug,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
@@ -236,7 +236,7 @@ class _ClientClient implements ClientClient {
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/mobile/protected/users/keeper/${username}',
+            '/api/mobile/protected/users/keeper/${slug}',
             queryParameters: queryParameters,
             data: _data,
           )

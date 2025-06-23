@@ -6,7 +6,7 @@ import 'package:totem_app/core/services/api_service.dart';
 part 'keeper_repository.g.dart';
 
 @riverpod
-Future<KeeperProfileSchema> keeperProfile(Ref ref, String username) async {
+Future<KeeperProfileSchema> keeperProfile(Ref ref, String slug) async {
   final apiService = ref.watch(mobileApiServiceProvider);
-  return apiService.client.totemUsersMobileApiKeeper(username: username);
+  return apiService.client.totemUsersMobileApiKeeper(slug: slug);
 }

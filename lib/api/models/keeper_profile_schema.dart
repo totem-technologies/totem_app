@@ -12,22 +12,29 @@ part 'keeper_profile_schema.g.dart';
 class KeeperProfileSchema {
   const KeeperProfileSchema({
     required this.user,
+    required this.circleCount,
+    required this.monthJoined,
+    this.title = 'Keeper',
+    this.location = 'Earth',
+    this.languages = 'English',
+    this.bioHtml,
     this.username,
     this.bio,
     this.instagramUsername,
     this.website,
     this.xUsername,
-    this.circleCount = 0,
-    this.title = 'Keeper',
-    this.location = 'Earth',
   });
 
   factory KeeperProfileSchema.fromJson(Map<String, Object?> json) =>
       _$KeeperProfileSchemaFromJson(json);
 
-  final PublicUserSchema? user;
+  final PublicUserSchema user;
   @JsonKey(name: 'circle_count')
   final int circleCount;
+  @JsonKey(name: 'month_joined')
+  final String monthJoined;
+  @JsonKey(name: 'bio_html')
+  final String? bioHtml;
 
   /// Your unique username.
   final String? username;
@@ -36,6 +43,9 @@ class KeeperProfileSchema {
 
   /// Where are you located? (City, State, Country)
   final String location;
+
+  /// What languages do you speak? (English, Spanish, etc.)
+  final String languages;
 
   /// Your Instagram username, no @ symbol
   @JsonKey(name: 'instagram_username')
