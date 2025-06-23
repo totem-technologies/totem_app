@@ -92,6 +92,15 @@ For iOS:
 xcrun simctl openurl booted "https://totem.org/spaces/event/doa689fvb"
 ```
 
+### Local Server
+
+To run the app with a local server, you can set the `TOTEM_API_URL` environment variable at the `.env` file in the root directory of the project. This allows you to connect to a local instance of the Totem API.
+
+```bash
+API_URL="http://localhost:8000/"
+MOBILE_API_URL="http://localhost:8000/"
+```
+
 ## ✍️ Project Structure
 
 ```

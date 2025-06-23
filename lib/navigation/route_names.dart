@@ -20,7 +20,7 @@ class RouteNames {
   static const subscribedSpaces = '/profile/subscribed-spaces';
   static const sessionHistory = '/profile/session-history';
 
-  static String keeperProfile(String username) => '/keeper/$username';
+  static String keeperProfile(String slug) => '/keeper/$slug';
 
   static const blog = '/blog';
   static const blogDetail = '/blog/detail';

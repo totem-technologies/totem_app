@@ -2,12 +2,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_detail_app_bar.dart';
 import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -226,7 +228,13 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 ),
                                 ElevatedButton(
                                   onPressed: () {
-                                    // TODO(bdlukaa): View keeper profile
+                                    if (event.space.author.slug != null) {
+                                      context.go(
+                                        RouteNames.keeperProfile(
+                                          event.space.author.slug!,
+                                        ),
+                                      );
+                                    }
                                   },
                                   child: const Text(
                                     'View Profile',

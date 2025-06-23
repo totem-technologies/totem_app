@@ -316,11 +316,11 @@ GoRouter createRouter(WidgetRef ref) {
       ),
 
       GoRoute(
-        path: RouteNames.keeperProfile(':username'),
-        name: RouteNames.keeperProfile(':username'),
+        path: RouteNames.keeperProfile(':slug'),
+        name: RouteNames.keeperProfile(':slug'),
         builder: (context, state) {
-          final username = state.pathParameters['username'] ?? '';
-          return KeeperProfileScreen(username: username);
+          final slug = state.pathParameters['slug'] ?? '';
+          return KeeperProfileScreen(slug: slug);
         },
       ),
 
