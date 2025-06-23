@@ -112,7 +112,7 @@ class KeeperProfileScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Spacer(),
+                            const Spacer(),
                             Text(
                               '${keeper.circleCount}',
                               style: const TextStyle(
@@ -121,7 +121,7 @@ class KeeperProfileScreen extends ConsumerWidget {
                               ),
                             ),
                             const Text('Hosted Spaces'),
-                            Spacer(),
+                            const Spacer(),
 
                             Text(
                               keeper.languages,
@@ -132,7 +132,7 @@ class KeeperProfileScreen extends ConsumerWidget {
                             ),
                             const Text('Languages'),
 
-                            Spacer(),
+                            const Spacer(),
 
                             Text(
                               keeper.monthJoined,
@@ -143,7 +143,7 @@ class KeeperProfileScreen extends ConsumerWidget {
                             ),
                             const Text('Month Joined'),
 
-                            Spacer(),
+                            const Spacer(),
                           ],
                         ),
                       ),
