@@ -236,11 +236,11 @@ GoRouter createRouter(WidgetRef ref) {
               GoRoute(
                 path: RouteNames.spaces,
                 name: RouteNames.spaces,
-                pageBuilder:
-                    (context, state) => CustomTransitionPage(
-                      key: state.pageKey,
-                      child: const SpacesDiscoveryScreen(),
-                      transitionsBuilder: (
+                pageBuilder: (context, state) => CustomTransitionPage(
+                  key: state.pageKey,
+                  child: const SpacesDiscoveryScreen(),
+                  transitionsBuilder:
+                      (
                         context,
                         animation,
                         secondaryAnimation,
@@ -248,8 +248,8 @@ GoRouter createRouter(WidgetRef ref) {
                       ) {
                         return FadeTransition(opacity: animation, child: child);
                       },
-                      transitionDuration: const Duration(milliseconds: 200),
-                    ),
+                  transitionDuration: const Duration(milliseconds: 200),
+                ),
               ),
             ],
           ),
@@ -269,11 +269,11 @@ GoRouter createRouter(WidgetRef ref) {
               GoRoute(
                 path: RouteNames.profile,
                 name: RouteNames.profile,
-                pageBuilder:
-                    (context, state) => CustomTransitionPage(
-                      key: state.pageKey,
-                      child: const ProfileScreen(),
-                      transitionsBuilder: (
+                pageBuilder: (context, state) => CustomTransitionPage(
+                  key: state.pageKey,
+                  child: const ProfileScreen(),
+                  transitionsBuilder:
+                      (
                         context,
                         animation,
                         secondaryAnimation,
@@ -281,8 +281,8 @@ GoRouter createRouter(WidgetRef ref) {
                       ) {
                         return FadeTransition(opacity: animation, child: child);
                       },
-                      transitionDuration: const Duration(milliseconds: 200),
-                    ),
+                  transitionDuration: const Duration(milliseconds: 200),
+                ),
                 routes: [
                   GoRoute(
                     path: RouteNames.profileDetail,

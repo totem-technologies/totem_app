@@ -168,11 +168,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   decoration: TextDecoration.underline,
                   color: theme.colorScheme.primary,
                 ),
-                recognizer:
-                    TapGestureRecognizer()
-                      ..onTap = () {
-                        launchUrl(AppConfig.termsOfServiceUrl);
-                      },
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () {
+                    launchUrl(AppConfig.termsOfServiceUrl);
+                  },
               ),
               const TextSpan(text: ' and '),
               TextSpan(
@@ -182,11 +181,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   decoration: TextDecoration.underline,
                   color: theme.colorScheme.primary,
                 ),
-                recognizer:
-                    TapGestureRecognizer()
-                      ..onTap = () {
-                        launchUrl(AppConfig.privacyPolicyUrl);
-                      },
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () {
+                    launchUrl(AppConfig.privacyPolicyUrl);
+                  },
               ),
             ],
           ),
@@ -198,8 +196,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           width: double.infinity,
           child: ElevatedButton(
             onPressed: _isLoading ? null : _requestPin,
-            child:
-                _isLoading ? const LoadingIndicator() : const Text('Sign in'),
+            child: _isLoading
+                ? const LoadingIndicator()
+                : const Text('Sign in'),
           ),
         ),
         const SizedBox(height: 16),

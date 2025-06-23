@@ -76,12 +76,11 @@ class BlogDetailAppBar extends StatelessWidget {
                 ),
                 UserAvatar(
                   seed: event.author?.profileAvatarSeed,
-                  image:
-                      event.author?.profileImage != null
-                          ? CachedNetworkImageProvider(
-                            getFullUrl(event.author!.profileImage!),
-                          )
-                          : null,
+                  image: event.author?.profileImage != null
+                      ? CachedNetworkImageProvider(
+                          getFullUrl(event.author!.profileImage!),
+                        )
+                      : null,
                 ),
               ],
             ),

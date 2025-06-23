@@ -40,8 +40,8 @@ class NotificationsService {
 
       // Set up Firebase
       {
-        final initialMessage =
-            await FirebaseMessaging.instance.getInitialMessage();
+        final initialMessage = await FirebaseMessaging.instance
+            .getInitialMessage();
         if (initialMessage != null) {
           _handleFirebaseMessage(initialMessage);
         }

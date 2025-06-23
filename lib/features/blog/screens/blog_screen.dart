@@ -77,11 +77,10 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                                     uri: Uri.parse(
                                       'https://totem.org/blog/${blog.slug}?utm_source=app&utm_medium=share',
                                     ),
-                                    sharePositionOrigin:
-                                        box != null
-                                            ? box.localToGlobal(Offset.zero) &
-                                                box.size
-                                            : null,
+                                    sharePositionOrigin: box != null
+                                        ? box.localToGlobal(Offset.zero) &
+                                              box.size
+                                        : null,
                                   ),
                                 );
                               },

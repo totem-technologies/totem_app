@@ -77,8 +77,9 @@ class _OfflineIndicatorPageState extends State<OfflineIndicatorPage> {
         Positioned.fill(child: widget.child),
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
-          child:
-              _isOffline ? const OfflineIndicator() : const SizedBox.shrink(),
+          child: _isOffline
+              ? const OfflineIndicator()
+              : const SizedBox.shrink(),
         ),
       ],
     );

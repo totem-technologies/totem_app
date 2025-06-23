@@ -13,10 +13,9 @@ EventSpaceSchema _$EventSpaceSchemaFromJson(Map<String, dynamic> json) =>
       dateCreated: DateTime.parse(json['date_created'] as String),
       dateModified: DateTime.parse(json['date_modified'] as String),
       subtitle: json['subtitle'] as String,
-      categories:
-          (json['categories'] as List<dynamic>)
-              .map((e) => (e as num).toInt())
-              .toList(),
+      categories: (json['categories'] as List<dynamic>)
+          .map((e) => (e as num).toInt())
+          .toList(),
       recurring: json['recurring'] as String,
       slug: json['slug'] as String?,
       shortDescription: json['short_description'] as String?,

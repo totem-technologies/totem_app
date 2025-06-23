@@ -11,12 +11,11 @@ BlogPostSchema _$BlogPostSchemaFromJson(Map<String, dynamic> json) =>
       title: json['title'] as String,
       datePublished: DateTime.parse(json['date_published'] as String),
       publish: json['publish'] as bool? ?? false,
-      author:
-          json['author'] == null
-              ? null
-              : PublicUserSchema.fromJson(
-                json['author'] as Map<String, dynamic>,
-              ),
+      author: json['author'] == null
+          ? null
+          : PublicUserSchema.fromJson(
+              json['author'] as Map<String, dynamic>,
+            ),
       headerImageUrl: json['header_image_url'] as String?,
       contentHtml: json['content_html'] as String?,
       subtitle: json['subtitle'] as String?,

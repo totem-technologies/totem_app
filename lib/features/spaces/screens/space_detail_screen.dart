@@ -44,8 +44,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
             children: [
               Positioned.fill(
                 child: RefreshIndicator.adaptive(
-                  onRefresh:
-                      () => ref.refresh(eventProvider(widget.eventSlug).future),
+                  onRefresh: () =>
+                      ref.refresh(eventProvider(widget.eventSlug).future),
                   child: CustomScrollView(
                     slivers: [
                       SliverAppBar.large(
@@ -99,13 +99,12 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                           uri: Uri.parse(
                                             'https://totem.org/spaces/event/${event.slug}?utm_source=app&utm_medium=share',
                                           ),
-                                          sharePositionOrigin:
-                                              box != null
-                                                  ? box.localToGlobal(
-                                                        Offset.zero,
-                                                      ) &
-                                                      box.size
-                                                  : null,
+                                          sharePositionOrigin: box != null
+                                              ? box.localToGlobal(
+                                                      Offset.zero,
+                                                    ) &
+                                                    box.size
+                                              : null,
                                         ),
                                       );
                                     },
@@ -118,20 +117,19 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         title: Text(event.title),
                       ),
                       SliverPadding(
-                        padding:
-                            isPhone
-                                ? const EdgeInsetsDirectional.only(
-                                  start: 16,
-                                  top: 16,
-                                  end: 16,
-                                  bottom: 16 + 64 * 2,
-                                )
-                                : const EdgeInsetsDirectional.only(
-                                  start: 80,
-                                  end: 80,
-                                  top: 16,
-                                  bottom: 16 + 64 * 2,
-                                ),
+                        padding: isPhone
+                            ? const EdgeInsetsDirectional.only(
+                                start: 16,
+                                top: 16,
+                                end: 16,
+                                bottom: 16 + 64 * 2,
+                              )
+                            : const EdgeInsetsDirectional.only(
+                                start: 80,
+                                end: 80,
+                                top: 16,
+                                bottom: 16 + 64 * 2,
+                              ),
                         sliver: SliverList.list(
                           children: [
                             Text(
@@ -209,14 +207,13 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                               spacing: 8,
                               children: [
                                 UserAvatar(
-                                  image:
-                                      event.space.author.profileImage != null
-                                          ? CachedNetworkImageProvider(
-                                            getFullUrl(
-                                              event.space.author.profileImage!,
-                                            ),
-                                          )
-                                          : null,
+                                  image: event.space.author.profileImage != null
+                                      ? CachedNetworkImageProvider(
+                                          getFullUrl(
+                                            event.space.author.profileImage!,
+                                          ),
+                                        )
+                                      : null,
                                   seed: event.space.author.profileAvatarSeed,
                                 ),
                                 Expanded(

@@ -17,10 +17,9 @@ class SubscribedSpacesScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
-            mainAxisAlignment:
-                spaces.isEmpty
-                    ? MainAxisAlignment.center
-                    : MainAxisAlignment.start,
+            mainAxisAlignment: spaces.isEmpty
+                ? MainAxisAlignment.center
+                : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: 10,
             children: [
@@ -33,7 +32,7 @@ class SubscribedSpacesScreen extends StatelessWidget {
                 spaces.isEmpty
                     ? 'You are not subscribed to any Spaces.'
                     : 'These are the Spaces you will get notifications for '
-                        'when new sessions are coming up.',
+                          'when new sessions are coming up.',
                 textAlign: TextAlign.center,
               ),
               if (spaces.isEmpty)

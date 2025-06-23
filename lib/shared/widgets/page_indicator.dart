@@ -23,10 +23,9 @@ class PageIndicator extends StatelessWidget {
             width: 50,
             height: 8,
             decoration: BoxDecoration(
-              color:
-                  index <= currentIndex
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.primaryContainer,
+              color: index <= currentIndex
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(20),
             ),
           ),

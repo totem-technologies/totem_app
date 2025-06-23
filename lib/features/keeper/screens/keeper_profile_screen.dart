@@ -34,12 +34,11 @@ class KeeperProfileScreen extends ConsumerWidget {
                         children: [
                           UserAvatar(
                             seed: keeper.user.profileAvatarSeed,
-                            image:
-                                keeper.user.profileImage != null
-                                    ? CachedNetworkImageProvider(
-                                      keeper.user.profileImage!,
-                                    )
-                                    : null,
+                            image: keeper.user.profileImage != null
+                                ? CachedNetworkImageProvider(
+                                    keeper.user.profileImage!,
+                                  )
+                                : null,
                             radius: 50,
                           ),
                           Text(keeper.user.name ?? 'Keeper'),

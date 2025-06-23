@@ -74,10 +74,9 @@ class KeeperProfileProvider
         (ref) => keeperProfile(ref as KeeperProfileRef, username),
         from: keeperProfileProvider,
         name: r'keeperProfileProvider',
-        debugGetCreateSourceHash:
-            const bool.fromEnvironment('dart.vm.product')
-                ? null
-                : _$keeperProfileHash,
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$keeperProfileHash,
         dependencies: KeeperProfileFamily._dependencies,
         allTransitiveDependencies:
             KeeperProfileFamily._allTransitiveDependencies,

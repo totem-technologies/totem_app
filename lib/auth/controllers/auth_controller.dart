@@ -210,8 +210,9 @@ class AuthController extends StateNotifier<AuthState> {
 
     var shouldUpdateTextProfile = false;
     final newName = (name != null && state.user?.name != name) ? name : null;
-    final newEmail =
-        (email != null && state.user?.email != email) ? email : null;
+    final newEmail = (email != null && state.user?.email != email)
+        ? email
+        : null;
 
     if (newName != null || newEmail != null) {
       shouldUpdateTextProfile = true;

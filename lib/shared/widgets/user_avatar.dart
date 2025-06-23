@@ -35,21 +35,19 @@ class UserAvatar extends ConsumerWidget {
         child: ClipOval(
           child: CircleAvatar(
             radius: radius,
-            backgroundImage:
-                showImage
-                    ? (image ??
-                        (user?.profileImage == null
-                            ? null
-                            : CachedNetworkImageProvider(user!.profileImage!)))
-                    : null,
-            child:
-                showImage && user?.profileImage == null && image == null
-                    ? AnimatedBoringAvatar(
-                      name: seed ?? user!.profileAvatarSeed,
-                      type: BoringAvatarType.marble,
-                      duration: const Duration(milliseconds: 300),
-                    )
-                    : null,
+            backgroundImage: showImage
+                ? (image ??
+                      (user?.profileImage == null
+                          ? null
+                          : CachedNetworkImageProvider(user!.profileImage!)))
+                : null,
+            child: showImage && user?.profileImage == null && image == null
+                ? AnimatedBoringAvatar(
+                    name: seed ?? user!.profileAvatarSeed,
+                    type: BoringAvatarType.marble,
+                    duration: const Duration(milliseconds: 300),
+                  )
+                : null,
           ),
         ),
       ),

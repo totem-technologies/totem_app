@@ -28,12 +28,11 @@ class AnalyticsService {
     try {
       logger.i('📊 Initializing analytics service');
 
-      final config =
-          PostHogConfig(AppConfig.posthogApiKey)
-            ..debug = kDebugMode
-            ..captureApplicationLifecycleEvents = true
-            ..host = AppConfig.posthogHost
-            ..sessionReplay = true;
+      final config = PostHogConfig(AppConfig.posthogApiKey)
+        ..debug = kDebugMode
+        ..captureApplicationLifecycleEvents = true
+        ..host = AppConfig.posthogHost
+        ..sessionReplay = true;
       await posthog.setup(config);
 
       _isInitialized = true;
