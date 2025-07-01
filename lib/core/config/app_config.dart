@@ -27,11 +27,6 @@ class AppConfig {
   }
 
   /// API configuration
-  static String get apiUrl {
-    return dotenv.get('API_URL', fallback: 'https://www.totem.org/');
-  }
-
-  /// API configuration
   static String get mobileApiUrl {
     return dotenv.get('MOBILE_API_URL', fallback: 'https://totem.kbl.io/');
   }

@@ -11,7 +11,7 @@ String getFullUrl(String url) {
   }
 
   // Ensure the URL and base path are properly joined
-  final baseUrl = AppConfig.apiUrl;
+  final baseUrl = AppConfig.mobileApiUrl;
   // Remove trailing slash from base URL if any
   final normalizedBaseUrl = baseUrl.endsWith('/')
       ? baseUrl.substring(0, baseUrl.length - 1)

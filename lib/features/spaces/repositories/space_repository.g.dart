@@ -162,5 +162,268 @@ class _EventProviderElement
   String get eventSlug => (origin as EventProvider).eventSlug;
 }
 
+String _$listSubscribedSpacesHash() =>
+    r'2b4b00c814f4fdd7b2ca99b6433d5fb8ff7aee5e';
+
+/// See also [listSubscribedSpaces].
+@ProviderFor(listSubscribedSpaces)
+final listSubscribedSpacesProvider =
+    AutoDisposeFutureProvider<List<SpaceSchema>>.internal(
+      listSubscribedSpaces,
+      name: r'listSubscribedSpacesProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$listSubscribedSpacesHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef ListSubscribedSpacesRef =
+    AutoDisposeFutureProviderRef<List<SpaceSchema>>;
+String _$subscribeToSpaceHash() => r'1bf0ba8b30966e2e5dce99fab5ddc30cf8bb19bf';
+
+/// See also [subscribeToSpace].
+@ProviderFor(subscribeToSpace)
+const subscribeToSpaceProvider = SubscribeToSpaceFamily();
+
+/// See also [subscribeToSpace].
+class SubscribeToSpaceFamily extends Family<AsyncValue<bool>> {
+  /// See also [subscribeToSpace].
+  const SubscribeToSpaceFamily();
+
+  /// See also [subscribeToSpace].
+  SubscribeToSpaceProvider call(String spaceSlug) {
+    return SubscribeToSpaceProvider(spaceSlug);
+  }
+
+  @override
+  SubscribeToSpaceProvider getProviderOverride(
+    covariant SubscribeToSpaceProvider provider,
+  ) {
+    return call(provider.spaceSlug);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'subscribeToSpaceProvider';
+}
+
+/// See also [subscribeToSpace].
+class SubscribeToSpaceProvider extends AutoDisposeFutureProvider<bool> {
+  /// See also [subscribeToSpace].
+  SubscribeToSpaceProvider(String spaceSlug)
+    : this._internal(
+        (ref) => subscribeToSpace(ref as SubscribeToSpaceRef, spaceSlug),
+        from: subscribeToSpaceProvider,
+        name: r'subscribeToSpaceProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$subscribeToSpaceHash,
+        dependencies: SubscribeToSpaceFamily._dependencies,
+        allTransitiveDependencies:
+            SubscribeToSpaceFamily._allTransitiveDependencies,
+        spaceSlug: spaceSlug,
+      );
+
+  SubscribeToSpaceProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.spaceSlug,
+  }) : super.internal();
+
+  final String spaceSlug;
+
+  @override
+  Override overrideWith(
+    FutureOr<bool> Function(SubscribeToSpaceRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: SubscribeToSpaceProvider._internal(
+        (ref) => create(ref as SubscribeToSpaceRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        spaceSlug: spaceSlug,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<bool> createElement() {
+    return _SubscribeToSpaceProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SubscribeToSpaceProvider && other.spaceSlug == spaceSlug;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, spaceSlug.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin SubscribeToSpaceRef on AutoDisposeFutureProviderRef<bool> {
+  /// The parameter `spaceSlug` of this provider.
+  String get spaceSlug;
+}
+
+class _SubscribeToSpaceProviderElement
+    extends AutoDisposeFutureProviderElement<bool>
+    with SubscribeToSpaceRef {
+  _SubscribeToSpaceProviderElement(super.provider);
+
+  @override
+  String get spaceSlug => (origin as SubscribeToSpaceProvider).spaceSlug;
+}
+
+String _$unsubscribeFromSpaceHash() =>
+    r'a7d02cfafee32e28bf01de64b5c7d80dd4aea428';
+
+/// See also [unsubscribeFromSpace].
+@ProviderFor(unsubscribeFromSpace)
+const unsubscribeFromSpaceProvider = UnsubscribeFromSpaceFamily();
+
+/// See also [unsubscribeFromSpace].
+class UnsubscribeFromSpaceFamily extends Family<AsyncValue<bool>> {
+  /// See also [unsubscribeFromSpace].
+  const UnsubscribeFromSpaceFamily();
+
+  /// See also [unsubscribeFromSpace].
+  UnsubscribeFromSpaceProvider call(String spaceSlug) {
+    return UnsubscribeFromSpaceProvider(spaceSlug);
+  }
+
+  @override
+  UnsubscribeFromSpaceProvider getProviderOverride(
+    covariant UnsubscribeFromSpaceProvider provider,
+  ) {
+    return call(provider.spaceSlug);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'unsubscribeFromSpaceProvider';
+}
+
+/// See also [unsubscribeFromSpace].
+class UnsubscribeFromSpaceProvider extends AutoDisposeFutureProvider<bool> {
+  /// See also [unsubscribeFromSpace].
+  UnsubscribeFromSpaceProvider(String spaceSlug)
+    : this._internal(
+        (ref) =>
+            unsubscribeFromSpace(ref as UnsubscribeFromSpaceRef, spaceSlug),
+        from: unsubscribeFromSpaceProvider,
+        name: r'unsubscribeFromSpaceProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$unsubscribeFromSpaceHash,
+        dependencies: UnsubscribeFromSpaceFamily._dependencies,
+        allTransitiveDependencies:
+            UnsubscribeFromSpaceFamily._allTransitiveDependencies,
+        spaceSlug: spaceSlug,
+      );
+
+  UnsubscribeFromSpaceProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.spaceSlug,
+  }) : super.internal();
+
+  final String spaceSlug;
+
+  @override
+  Override overrideWith(
+    FutureOr<bool> Function(UnsubscribeFromSpaceRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: UnsubscribeFromSpaceProvider._internal(
+        (ref) => create(ref as UnsubscribeFromSpaceRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        spaceSlug: spaceSlug,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<bool> createElement() {
+    return _UnsubscribeFromSpaceProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is UnsubscribeFromSpaceProvider &&
+        other.spaceSlug == spaceSlug;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, spaceSlug.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin UnsubscribeFromSpaceRef on AutoDisposeFutureProviderRef<bool> {
+  /// The parameter `spaceSlug` of this provider.
+  String get spaceSlug;
+}
+
+class _UnsubscribeFromSpaceProviderElement
+    extends AutoDisposeFutureProviderElement<bool>
+    with UnsubscribeFromSpaceRef {
+  _UnsubscribeFromSpaceProviderElement(super.provider);
+
+  @override
+  String get spaceSlug => (origin as UnsubscribeFromSpaceProvider).spaceSlug;
+}
+
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

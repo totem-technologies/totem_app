@@ -21,3 +21,37 @@ Future<EventDetailSchema> event(Ref ref, String eventSlug) async {
     eventSlug: eventSlug,
   );
 }
+
+@riverpod
+Future<List<SpaceSchema>> listSubscribedSpaces(Ref ref) async {
+  final mobileApiService = ref.watch(mobileApiServiceProvider);
+  return mobileApiService.spaces.totemCirclesMobileApiListSubscriptions();
+}
+
+@riverpod
+Future<bool> subscribeToSpace(
+  Ref ref,
+  String spaceSlug,
+) async {
+  final mobileApiService = ref.watch(mobileApiServiceProvider);
+  return mobileApiService.spaces.totemCirclesMobileApiSubscribeToSpace(
+    spaceSlug: spaceSlug,
+  );
+}
+
+@riverpod
+Future<bool> unsubscribeFromSpace(
+  Ref ref,
+  String spaceSlug,
+) async {
+  final mobileApiService = ref.watch(mobileApiServiceProvider);
+  final success = await mobileApiService.spaces
+      .totemCirclesMobileApiUnsubscribeToSpace(
+        spaceSlug: spaceSlug,
+      );
+
+  final refreshable = ref.refresh(listSubscribedSpacesProvider.future);
+  await refreshable;
+
+  return success;
+}
