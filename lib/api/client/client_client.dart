@@ -86,22 +86,6 @@ abstract class ClientClient {
   @GET('/api/mobile/protected/onboard/')
   Future<OnboardSchema> totemOnboardMobileApiOnboardGet();
 
-  /// Subscribe To Space
-  @POST('/api/mobile/protected/spaces/subscribe/{space_slug}')
-  Future<bool> totemCirclesMobileApiSubscribeToSpace({
-    @Path('space_slug') required String spaceSlug,
-  });
-
-  /// Unsubscribe To Space
-  @DELETE('/api/mobile/protected/spaces/subscribe/{space_slug}')
-  Future<bool> totemCirclesMobileApiUnsubscribeToSpace({
-    @Path('space_slug') required String spaceSlug,
-  });
-
-  /// List Subscriptions
-  @GET('/api/mobile/protected/spaces/subscribe')
-  Future<bool> totemCirclesMobileApiListSubscriptions();
-
   /// Request Pin.
   ///
   /// Request a PIN code to be sent via email.

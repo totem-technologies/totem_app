@@ -6,7 +6,7 @@ part of 'keeper_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$keeperProfileHash() => r'8a341bc17444b8be1079e1cd73fb050ac25159d0';
+String _$keeperProfileHash() => r'fedc805446263131ac613a3f65e4469570c7c40b';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -39,15 +39,15 @@ class KeeperProfileFamily extends Family<AsyncValue<KeeperProfileSchema>> {
   const KeeperProfileFamily();
 
   /// See also [keeperProfile].
-  KeeperProfileProvider call(String username) {
-    return KeeperProfileProvider(username);
+  KeeperProfileProvider call(String slug) {
+    return KeeperProfileProvider(slug);
   }
 
   @override
   KeeperProfileProvider getProviderOverride(
     covariant KeeperProfileProvider provider,
   ) {
-    return call(provider.username);
+    return call(provider.slug);
   }
 
   static const Iterable<ProviderOrFamily>? _dependencies = null;
@@ -69,9 +69,9 @@ class KeeperProfileFamily extends Family<AsyncValue<KeeperProfileSchema>> {
 class KeeperProfileProvider
     extends AutoDisposeFutureProvider<KeeperProfileSchema> {
   /// See also [keeperProfile].
-  KeeperProfileProvider(String username)
+  KeeperProfileProvider(String slug)
     : this._internal(
-        (ref) => keeperProfile(ref as KeeperProfileRef, username),
+        (ref) => keeperProfile(ref as KeeperProfileRef, slug),
         from: keeperProfileProvider,
         name: r'keeperProfileProvider',
         debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -80,7 +80,7 @@ class KeeperProfileProvider
         dependencies: KeeperProfileFamily._dependencies,
         allTransitiveDependencies:
             KeeperProfileFamily._allTransitiveDependencies,
-        username: username,
+        slug: slug,
       );
 
   KeeperProfileProvider._internal(
@@ -90,10 +90,10 @@ class KeeperProfileProvider
     required super.allTransitiveDependencies,
     required super.debugGetCreateSourceHash,
     required super.from,
-    required this.username,
+    required this.slug,
   }) : super.internal();
 
-  final String username;
+  final String slug;
 
   @override
   Override overrideWith(
@@ -108,7 +108,7 @@ class KeeperProfileProvider
         dependencies: null,
         allTransitiveDependencies: null,
         debugGetCreateSourceHash: null,
-        username: username,
+        slug: slug,
       ),
     );
   }
@@ -120,13 +120,13 @@ class KeeperProfileProvider
 
   @override
   bool operator ==(Object other) {
-    return other is KeeperProfileProvider && other.username == username;
+    return other is KeeperProfileProvider && other.slug == slug;
   }
 
   @override
   int get hashCode {
     var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, username.hashCode);
+    hash = _SystemHash.combine(hash, slug.hashCode);
 
     return _SystemHash.finish(hash);
   }
@@ -135,8 +135,8 @@ class KeeperProfileProvider
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 mixin KeeperProfileRef on AutoDisposeFutureProviderRef<KeeperProfileSchema> {
-  /// The parameter `username` of this provider.
-  String get username;
+  /// The parameter `slug` of this provider.
+  String get slug;
 }
 
 class _KeeperProfileProviderElement
@@ -145,7 +145,7 @@ class _KeeperProfileProviderElement
   _KeeperProfileProviderElement(super.provider);
 
   @override
-  String get username => (origin as KeeperProfileProvider).username;
+  String get slug => (origin as KeeperProfileProvider).slug;
 }
 
 // ignore_for_file: type=lint

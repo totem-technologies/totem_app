@@ -12,9 +12,7 @@ BlogPostListSchema _$BlogPostListSchemaFromJson(Map<String, dynamic> json) =>
       datePublished: DateTime.parse(json['date_published'] as String),
       author: json['author'] == null
           ? null
-          : PublicUserSchema.fromJson(
-              json['author'] as Map<String, dynamic>,
-            ),
+          : PublicUserSchema.fromJson(json['author'] as Map<String, dynamic>),
       headerImageUrl: json['header_image_url'] as String?,
       subtitle: json['subtitle'] as String?,
       slug: json['slug'] as String?,

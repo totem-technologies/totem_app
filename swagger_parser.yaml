@@ -1,4 +1,4 @@
-# dart run swagger_parser; dart run build_runner build -d
+# dart run swagger_parser; dart run build_runner build -d; dart format .
 swagger_parser:
   output_directory: lib/api
   language: dart
@@ -23,9 +23,10 @@ swagger_parser:
   original_http_response: false
 
   schemes:
-    - schema_url: https://www.totem.org/api/v1/openapi.json
-      name: totem_api
-      root_client_name: TotemApi
-    - schema_url: https://totem.kbl.io/api/mobile/openapi.json
+    # - schema_url: https://www.totem.org/api/v1/openapi.json
+    #   name: totem_api
+    #   root_client_name: TotemApi
+    # - schema_url: https://totem.kbl.io/api/mobile/openapi.json
+    - schema_url: http://localhost:8000/api/mobile/openapi.json
       name: totem_mobile_api
       root_client_name: MobileTotemApi

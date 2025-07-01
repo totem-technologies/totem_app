@@ -1,20 +1,20 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'paged_event_list_schema.dart';
+part of 'paged_space_detail_schema.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-PagedEventListSchema _$PagedEventListSchemaFromJson(
+PagedSpaceDetailSchema _$PagedSpaceDetailSchemaFromJson(
   Map<String, dynamic> json,
-) => PagedEventListSchema(
+) => PagedSpaceDetailSchema(
   items: (json['items'] as List<dynamic>)
-      .map((e) => EventListSchema.fromJson(e as Map<String, dynamic>))
+      .map((e) => SpaceDetailSchema.fromJson(e as Map<String, dynamic>))
       .toList(),
   count: (json['count'] as num).toInt(),
 );
 
-Map<String, dynamic> _$PagedEventListSchemaToJson(
-  PagedEventListSchema instance,
+Map<String, dynamic> _$PagedSpaceDetailSchemaToJson(
+  PagedSpaceDetailSchema instance,
 ) => <String, dynamic>{'items': instance.items, 'count': instance.count};

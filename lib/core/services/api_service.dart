@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
 import 'package:totem_app/api/models/refresh_token_schema.dart';
-import 'package:totem_app/api/totem_api.dart';
 import 'package:totem_app/auth/repositories/auth_repository.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/consts.dart';
@@ -14,12 +13,6 @@ import 'package:totem_app/shared/logger.dart';
 /// Provider for secure storage
 final secureStorageProvider = Provider<SecureStorage>((ref) {
   return SecureStorage();
-});
-
-/// Provider for the API service
-final apiServiceProvider = Provider<TotemApi>((ref) {
-  final dio = _initDio(ref);
-  return TotemApi(dio, baseUrl: AppConfig.apiUrl);
 });
 
 /// Provider for the API service

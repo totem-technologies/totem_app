@@ -5,6 +5,7 @@
 import 'package:dio/dio.dart';
 
 import 'client/client_client.dart';
+import 'spaces/spaces_client.dart';
 import 'blog/blog_client.dart';
 
 /// Totem Mobile API `v1`.
@@ -23,9 +24,12 @@ class MobileTotemApi {
   static String get version => '1';
 
   ClientClient? _client;
+  SpacesClient? _spaces;
   BlogClient? _blog;
 
   ClientClient get client => _client ??= ClientClient(_dio, baseUrl: _baseUrl);
+
+  SpacesClient get spaces => _spaces ??= SpacesClient(_dio, baseUrl: _baseUrl);
 
   BlogClient get blog => _blog ??= BlogClient(_dio, baseUrl: _baseUrl);
 }

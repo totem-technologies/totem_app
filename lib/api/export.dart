@@ -4,6 +4,7 @@
 
 // Clients
 export 'client/client_client.dart';
+export 'spaces/spaces_client.dart';
 export 'blog/blog_client.dart';
 // Data classes
 export 'models/fcm_token_response_schema.dart';
@@ -15,7 +16,13 @@ export 'models/user_update_schema.dart';
 export 'models/keeper_profile_schema.dart';
 export 'models/onboard_schema.dart';
 export 'models/referral_choices.dart';
+export 'models/space_schema.dart';
 export 'models/input.dart';
+export 'models/next_event_schema.dart';
+export 'models/paged_space_detail_schema.dart';
+export 'models/space_detail_schema.dart';
+export 'models/event_detail_schema.dart';
+export 'models/event_space_schema.dart';
 export 'models/blog_post_list_schema.dart';
 export 'models/paged_blog_post_list_schema.dart';
 export 'models/blog_post_schema.dart';

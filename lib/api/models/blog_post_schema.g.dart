@@ -13,9 +13,7 @@ BlogPostSchema _$BlogPostSchemaFromJson(Map<String, dynamic> json) =>
       publish: json['publish'] as bool? ?? false,
       author: json['author'] == null
           ? null
-          : PublicUserSchema.fromJson(
-              json['author'] as Map<String, dynamic>,
-            ),
+          : PublicUserSchema.fromJson(json['author'] as Map<String, dynamic>),
       headerImageUrl: json['header_image_url'] as String?,
       contentHtml: json['content_html'] as String?,
       subtitle: json['subtitle'] as String?,

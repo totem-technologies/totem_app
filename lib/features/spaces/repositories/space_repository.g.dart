@@ -6,7 +6,7 @@ part of 'space_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$listSpacesHash() => r'de49fb2f12fd4e73f99e577d3eae702e6b542554';
+String _$listSpacesHash() => r'5e4af02f508d872c95e913011e610e8a394b548d';
 
 /// See also [listSpaces].
 @ProviderFor(listSpaces)
@@ -24,7 +24,7 @@ final listSpacesProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef ListSpacesRef = AutoDisposeFutureProviderRef<List<SpaceDetailSchema>>;
-String _$eventHash() => r'7f12bf71b8b5f81cbc09b1740034d743aa761e9c';
+String _$eventHash() => r'45c7d390bcdc6683294c1783234cff99bc4c79ab';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -57,13 +57,13 @@ class EventFamily extends Family<AsyncValue<EventDetailSchema>> {
   const EventFamily();
 
   /// See also [event].
-  EventProvider call(String eventId) {
-    return EventProvider(eventId);
+  EventProvider call(String eventSlug) {
+    return EventProvider(eventSlug);
   }
 
   @override
   EventProvider getProviderOverride(covariant EventProvider provider) {
-    return call(provider.eventId);
+    return call(provider.eventSlug);
   }
 
   static const Iterable<ProviderOrFamily>? _dependencies = null;
@@ -84,9 +84,9 @@ class EventFamily extends Family<AsyncValue<EventDetailSchema>> {
 /// See also [event].
 class EventProvider extends AutoDisposeFutureProvider<EventDetailSchema> {
   /// See also [event].
-  EventProvider(String eventId)
+  EventProvider(String eventSlug)
     : this._internal(
-        (ref) => event(ref as EventRef, eventId),
+        (ref) => event(ref as EventRef, eventSlug),
         from: eventProvider,
         name: r'eventProvider',
         debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -94,7 +94,7 @@ class EventProvider extends AutoDisposeFutureProvider<EventDetailSchema> {
             : _$eventHash,
         dependencies: EventFamily._dependencies,
         allTransitiveDependencies: EventFamily._allTransitiveDependencies,
-        eventId: eventId,
+        eventSlug: eventSlug,
       );
 
   EventProvider._internal(
@@ -104,10 +104,10 @@ class EventProvider extends AutoDisposeFutureProvider<EventDetailSchema> {
     required super.allTransitiveDependencies,
     required super.debugGetCreateSourceHash,
     required super.from,
-    required this.eventId,
+    required this.eventSlug,
   }) : super.internal();
 
-  final String eventId;
+  final String eventSlug;
 
   @override
   Override overrideWith(
@@ -122,7 +122,7 @@ class EventProvider extends AutoDisposeFutureProvider<EventDetailSchema> {
         dependencies: null,
         allTransitiveDependencies: null,
         debugGetCreateSourceHash: null,
-        eventId: eventId,
+        eventSlug: eventSlug,
       ),
     );
   }
@@ -134,13 +134,13 @@ class EventProvider extends AutoDisposeFutureProvider<EventDetailSchema> {
 
   @override
   bool operator ==(Object other) {
-    return other is EventProvider && other.eventId == eventId;
+    return other is EventProvider && other.eventSlug == eventSlug;
   }
 
   @override
   int get hashCode {
     var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, eventId.hashCode);
+    hash = _SystemHash.combine(hash, eventSlug.hashCode);
 
     return _SystemHash.finish(hash);
   }
@@ -149,8 +149,8 @@ class EventProvider extends AutoDisposeFutureProvider<EventDetailSchema> {
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 mixin EventRef on AutoDisposeFutureProviderRef<EventDetailSchema> {
-  /// The parameter `eventId` of this provider.
-  String get eventId;
+  /// The parameter `eventSlug` of this provider.
+  String get eventSlug;
 }
 
 class _EventProviderElement
@@ -159,7 +159,7 @@ class _EventProviderElement
   _EventProviderElement(super.provider);
 
   @override
-  String get eventId => (origin as EventProvider).eventId;
+  String get eventSlug => (origin as EventProvider).eventSlug;
 }
 
 // ignore_for_file: type=lint
