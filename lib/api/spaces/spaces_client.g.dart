@@ -167,14 +167,14 @@ class _SpacesClient implements SpacesClient {
   }
 
   @override
-  Future<List<SpaceSchema>> totemCirclesMobileApiGetKeeperSpaces({
+  Future<List<SpaceDetailSchema>> totemCirclesMobileApiGetKeeperSpaces({
     required String slug,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<List<SpaceSchema>>(
+    final _options = _setStreamType<List<SpaceDetailSchema>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -185,10 +185,13 @@ class _SpacesClient implements SpacesClient {
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
     final _result = await _dio.fetch<List<dynamic>>(_options);
-    late List<SpaceSchema> _value;
+    late List<SpaceDetailSchema> _value;
     try {
       _value = _result.data!
-          .map((dynamic i) => SpaceSchema.fromJson(i as Map<String, dynamic>))
+          .map(
+            (dynamic i) =>
+                SpaceDetailSchema.fromJson(i as Map<String, dynamic>),
+          )
           .toList();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options);

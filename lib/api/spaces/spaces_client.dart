@@ -7,6 +7,7 @@ import 'package:retrofit/retrofit.dart';
 
 import '../models/event_detail_schema.dart';
 import '../models/paged_space_detail_schema.dart';
+import '../models/space_detail_schema.dart';
 import '../models/space_schema.dart';
 
 part 'spaces_client.g.dart';
@@ -46,7 +47,7 @@ abstract class SpacesClient {
 
   /// Get Keeper Spaces
   @GET('/api/mobile/protected/spaces/keeper/{slug}/')
-  Future<List<SpaceSchema>> totemCirclesMobileApiGetKeeperSpaces({
+  Future<List<SpaceDetailSchema>> totemCirclesMobileApiGetKeeperSpaces({
     @Path('slug') required String slug,
   });
 }

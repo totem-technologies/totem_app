@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
+import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
 import 'package:totem_app/features/spaces/widgets/space_detail_app_bar.dart';
 import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
@@ -243,7 +244,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 ),
                               ],
                             ),
-                            // TODO(bdlukaa): More spaces held by this keeper
+
+                            const SizedBox(height: 16),
+                            KeeperSpaces(keeperSlug: event.space.author.slug!),
                           ],
                         ),
                       ),

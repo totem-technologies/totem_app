@@ -55,3 +55,14 @@ Future<bool> unsubscribeFromSpace(
 
   return success;
 }
+
+@riverpod
+Future<List<SpaceDetailSchema>> listSpacesByKeeper(
+  Ref ref,
+  String keeperSlug,
+) async {
+  final mobileApiService = ref.watch(mobileApiServiceProvider);
+  return mobileApiService.spaces.totemCirclesMobileApiGetKeeperSpaces(
+    slug: keeperSlug,
+  );
+}

@@ -303,7 +303,7 @@ class _SubscribeToSpaceProviderElement
 }
 
 String _$unsubscribeFromSpaceHash() =>
-    r'a7d02cfafee32e28bf01de64b5c7d80dd4aea428';
+    r'9964930d5f0e388324fa3d1f85402123883c836e';
 
 /// See also [unsubscribeFromSpace].
 @ProviderFor(unsubscribeFromSpace)
@@ -423,6 +423,132 @@ class _UnsubscribeFromSpaceProviderElement
 
   @override
   String get spaceSlug => (origin as UnsubscribeFromSpaceProvider).spaceSlug;
+}
+
+String _$listSpacesByKeeperHash() =>
+    r'f8156433ac38a512659635c1c84e29fd765ff02a';
+
+/// See also [listSpacesByKeeper].
+@ProviderFor(listSpacesByKeeper)
+const listSpacesByKeeperProvider = ListSpacesByKeeperFamily();
+
+/// See also [listSpacesByKeeper].
+class ListSpacesByKeeperFamily
+    extends Family<AsyncValue<List<SpaceDetailSchema>>> {
+  /// See also [listSpacesByKeeper].
+  const ListSpacesByKeeperFamily();
+
+  /// See also [listSpacesByKeeper].
+  ListSpacesByKeeperProvider call(String keeperSlug) {
+    return ListSpacesByKeeperProvider(keeperSlug);
+  }
+
+  @override
+  ListSpacesByKeeperProvider getProviderOverride(
+    covariant ListSpacesByKeeperProvider provider,
+  ) {
+    return call(provider.keeperSlug);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'listSpacesByKeeperProvider';
+}
+
+/// See also [listSpacesByKeeper].
+class ListSpacesByKeeperProvider
+    extends AutoDisposeFutureProvider<List<SpaceDetailSchema>> {
+  /// See also [listSpacesByKeeper].
+  ListSpacesByKeeperProvider(String keeperSlug)
+    : this._internal(
+        (ref) => listSpacesByKeeper(ref as ListSpacesByKeeperRef, keeperSlug),
+        from: listSpacesByKeeperProvider,
+        name: r'listSpacesByKeeperProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$listSpacesByKeeperHash,
+        dependencies: ListSpacesByKeeperFamily._dependencies,
+        allTransitiveDependencies:
+            ListSpacesByKeeperFamily._allTransitiveDependencies,
+        keeperSlug: keeperSlug,
+      );
+
+  ListSpacesByKeeperProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.keeperSlug,
+  }) : super.internal();
+
+  final String keeperSlug;
+
+  @override
+  Override overrideWith(
+    FutureOr<List<SpaceDetailSchema>> Function(ListSpacesByKeeperRef provider)
+    create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: ListSpacesByKeeperProvider._internal(
+        (ref) => create(ref as ListSpacesByKeeperRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        keeperSlug: keeperSlug,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<List<SpaceDetailSchema>> createElement() {
+    return _ListSpacesByKeeperProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ListSpacesByKeeperProvider &&
+        other.keeperSlug == keeperSlug;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, keeperSlug.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin ListSpacesByKeeperRef
+    on AutoDisposeFutureProviderRef<List<SpaceDetailSchema>> {
+  /// The parameter `keeperSlug` of this provider.
+  String get keeperSlug;
+}
+
+class _ListSpacesByKeeperProviderElement
+    extends AutoDisposeFutureProviderElement<List<SpaceDetailSchema>>
+    with ListSpacesByKeeperRef {
+  _ListSpacesByKeeperProviderElement(super.provider);
+
+  @override
+  String get keeperSlug => (origin as ListSpacesByKeeperProvider).keeperSlug;
 }
 
 // ignore_for_file: type=lint

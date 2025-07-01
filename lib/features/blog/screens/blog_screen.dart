@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/blog/widgets/blog_detail_app_bar.dart';
+import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
@@ -98,6 +99,13 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                     child: Html(data: blog.contentHtml),
                   ),
                 ),
+
+                if (blog.author?.slug != null)
+                  SliverToBoxAdapter(
+                    child: KeeperSpaces(
+                      keeperSlug: blog.author!.slug!,
+                    ),
+                  ),
               ],
             ),
           );
