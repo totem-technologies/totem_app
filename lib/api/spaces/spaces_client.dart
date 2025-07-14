@@ -50,4 +50,15 @@ abstract class SpacesClient {
   Future<List<SpaceDetailSchema>> totemCirclesMobileApiGetKeeperSpaces({
     @Path('slug') required String slug,
   });
+
+  /// Get Sessions History
+  @GET('/api/mobile/protected/spaces/sessions/history')
+  Future<List<EventDetailSchema>> totemCirclesMobileApiGetSessionsHistory();
+
+  /// Get Recommended Spaces
+  @GET('/api/mobile/protected/spaces/recommended')
+  Future<List<EventDetailSchema>> totemCirclesMobileApiGetRecommendedSpaces({
+    @Body() List<String>? body,
+    @Query('limit') int limit = 3,
+  });
 }
