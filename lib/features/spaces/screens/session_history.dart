@@ -62,7 +62,7 @@ class SessionHistoryScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    'Here are the recent sessions you have be a part of.',
+                    'Here are the recent sessions you have been a part of.',
                     textAlign: TextAlign.center,
                   ),
 
