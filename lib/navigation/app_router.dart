@@ -14,7 +14,7 @@ import 'package:totem_app/features/blog/screens/blog_screen.dart';
 import 'package:totem_app/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_details_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_screen.dart';
-import 'package:totem_app/features/profile/screens/session_history.dart';
+import 'package:totem_app/features/spaces/screens/session_history.dart';
 import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
 import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
 import 'package:totem_app/features/spaces/screens/subcribed_spaces.dart';
