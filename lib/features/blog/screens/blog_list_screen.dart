@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/blog/widgets/blog_card.dart';
+import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 
@@ -67,12 +68,8 @@ class BlogListScreen extends ConsumerWidget {
                 ),
               );
             },
-            error: (error, stackTrace) {
-              return Center(child: Text('Error loading blogs: $error'));
-            },
-            loading: () {
-              return const LoadingIndicator();
-            },
+            error: (error, _) => ErrorScreen(error: error),
+            loading: LoadingIndicator.new,
           );
         },
       ),

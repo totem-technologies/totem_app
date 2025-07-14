@@ -55,11 +55,12 @@ class ErrorHandler {
 
   /// Handle an exception and return a user-friendly error message
   static String getUserFriendlyErrorMessage(Object error) {
-    if (error is AppNetworkException ||
+    if (error is AppNetworkException && error.code == 'HTTP_ERROR_404') {
+      return "This page doesn't exist";
+    } else if (error is AppNetworkException ||
         error is DioException ||
         error is TimeoutException) {
-      return 'Unable to connect to the Totem.\nPlease check your internet '
-          'connection and try again.';
+      return 'Something went wrong. Please try again later.';
     } else if (error is AppAuthException) {
       return 'Authentication error. Please log in again.';
     } else if (error is AppDataException ||

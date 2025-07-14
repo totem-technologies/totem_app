@@ -217,7 +217,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
         elevation: 0,
-        minimumSize: const Size(20, 48),
+        minimumSize: const Size(20, 56),
       ),
     ),
 

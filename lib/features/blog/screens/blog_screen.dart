@@ -6,6 +6,7 @@ import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/blog/widgets/blog_detail_app_bar.dart';
 import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 class BlogScreen extends ConsumerStatefulWidget {
@@ -110,11 +111,7 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
             ),
           );
         },
-        error: (error, stackTrace) {
-          debugPrint('Error loading blog post: $error');
-          debugPrint('Stack trace: $stackTrace');
-          return const Center(child: Text('Error loading blog post'));
-        },
+        error: (error, _) => ErrorScreen(error: error),
         loading: () {
           return const LoadingIndicator();
         },
