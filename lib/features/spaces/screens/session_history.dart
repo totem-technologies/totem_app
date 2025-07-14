@@ -50,42 +50,45 @@ class SessionHistoryScreen extends ConsumerWidget {
               );
             }
 
-            return ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                Text(
-                  'Session History',
-                  style: theme.textTheme.titleLarge,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Here are the recent sessions you have be a part of.',
-                  textAlign: TextAlign.center,
-                ),
+            return RefreshIndicator.adaptive(
+              onRefresh: () => ref.refresh(listSessionsHistoryProvider.future),
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  Text(
+                    'Session History',
+                    style: theme.textTheme.titleLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Here are the recent sessions you have be a part of.',
+                    textAlign: TextAlign.center,
+                  ),
 
-                for (final session in data)
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(top: 20),
-                    child: SpaceCard(
-                      space: SpaceDetailSchema(
-                        slug: session.space.slug!,
-                        author: session.space.author,
-                        category: '',
-                        imageLink: session.space.image,
-                        nextEvent: NextEventSchema(
-                          link: session.calLink,
-                          seatsLeft: session.seatsLeft,
-                          start: session.start.toIso8601String(),
-                          title: session.title,
-                          slug: session.slug,
+                  for (final session in data)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(top: 20),
+                      child: SpaceCard(
+                        space: SpaceDetailSchema(
+                          slug: session.space.slug!,
+                          author: session.space.author,
+                          category: '',
+                          imageLink: session.space.image,
+                          nextEvent: NextEventSchema(
+                            link: session.calLink,
+                            seatsLeft: session.seatsLeft,
+                            start: session.start.toIso8601String(),
+                            title: session.title,
+                            slug: session.slug,
+                          ),
+                          description: session.space.subtitle,
+                          title: session.space.title,
                         ),
-                        description: session.space.subtitle,
-                        title: session.space.title,
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             );
           },
           error: (error, _) => ErrorScreen(error: error),
