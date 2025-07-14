@@ -21,11 +21,14 @@ class ErrorScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              AspectRatio(
-                aspectRatio: 1.2,
-                child: SvgPicture.asset(
-                  'assets/images/error_indicator.svg',
-                  semanticsLabel: 'Error Indicator',
+              Padding(
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 32),
+                child: AspectRatio(
+                  aspectRatio: 1.2,
+                  child: SvgPicture.asset(
+                    'assets/images/error_indicator.svg',
+                    semanticsLabel: 'Error Indicator',
+                  ),
                 ),
               ),
               Text(
