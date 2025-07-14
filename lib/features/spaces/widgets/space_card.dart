@@ -13,13 +13,8 @@ class SpaceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return ConstrainedBox(
-      constraints: const BoxConstraints(
-        minHeight: 240,
-        minWidth: 340,
-        maxHeight: 340,
-        maxWidth: 400,
-      ),
+    return AspectRatio(
+      aspectRatio: 1.38,
       child: Card(
         clipBehavior: Clip.antiAlias,
         margin: EdgeInsetsDirectional.zero,
@@ -29,52 +24,78 @@ class SpaceCard extends StatelessWidget {
             context.push(RouteNames.space(space.nextEvent.slug));
           },
           borderRadius: BorderRadius.circular(8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (space.imageLink != null)
-                Expanded(
-                  child: Ink.image(
-                    image: CachedNetworkImageProvider(
-                      getFullUrl(space.imageLink!),
-                    ),
-                    height: 120,
-                    fit: BoxFit.cover,
-                  ),
-                ),
 
-              Padding(
-                padding: const EdgeInsetsDirectional.all(16),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Image.network(
+                  getFullUrl(space.imageLink ?? ''),
+                  fit: BoxFit.cover,
+                  color: Colors.black.withValues(alpha: 0.45),
+                  colorBlendMode: BlendMode.multiply,
+                ),
+              ),
+              PositionedDirectional(
+                top: 20,
+                start: 20,
+                end: 20,
+                bottom: 20,
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 4,
                   children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0x99262F37),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        formatEventDateTime(
+                          DateTime.parse(space.nextEvent.start),
+                        ),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: '${space.nextEvent.seatsLeft}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const TextSpan(
+                            text: ' seats left',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     Text(
                       space.title,
                       style: const TextStyle(
-                        fontSize: 18,
+                        color: Colors.white,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-
-                    if (space.description.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        space.description,
-                        style: const TextStyle(color: Colors.grey),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-
-                    const SizedBox(height: 12),
-
-                    // Author info
                     Row(
+                      spacing: 8,
                       children: [
                         CircleAvatar(
-                          radius: 12,
+                          radius: 18,
                           backgroundImage: space.author.profileImage != null
                               ? CachedNetworkImageProvider(
                                   getFullUrl(space.author.profileImage!),
@@ -86,59 +107,31 @@ class SpaceCard extends StatelessWidget {
                                 )
                               : null,
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${space.author.name}',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ],
-                    ),
-
-                    if (space.category != null)
-                      Padding(
-                        padding: const EdgeInsetsDirectional.only(top: 8),
-                        child: Chip(
-                          label: Text(
-                            space.category!,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          padding: EdgeInsetsDirectional.zero,
-                        ),
-                      ),
-
-                    const SizedBox(height: 12),
-
-                    if (space.nextEvent.link.isNotEmpty)
-                      Flexible(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                        Expanded(
+                          child: RichText(
+                            text: TextSpan(
                               children: [
-                                Expanded(
-                                  child: Text(
-                                    'Next event: '
-                                    '${space.nextEvent.title!}',
-                                    style: theme.textTheme.bodyMedium,
+                                const TextSpan(
+                                  text: 'with ',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: '${space.author.name}',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ],
                             ),
-                            if (space.nextEvent.start.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsetsDirectional.only(
-                                  top: 4,
-                                ),
-                                child: Text(
-                                  formatEventDateTime(
-                                    DateTime.parse(space.nextEvent.start),
-                                  ),
-                                  style: theme.textTheme.bodySmall,
-                                ),
-                              ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
+                    ),
                   ],
                 ),
               ),

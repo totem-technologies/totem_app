@@ -66,3 +66,9 @@ Future<List<SpaceDetailSchema>> listSpacesByKeeper(
     slug: keeperSlug,
   );
 }
+
+@riverpod
+Future<List<EventDetailSchema>> listSessionsHistory(Ref ref) async {
+  final mobileApiService = ref.watch(mobileApiServiceProvider);
+  return mobileApiService.spaces.totemCirclesMobileApiGetSessionsHistory();
+}
