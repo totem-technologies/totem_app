@@ -162,7 +162,8 @@ class SpaceCard extends StatelessWidget {
                                   //         space.author.name?[0].toUpperCase()
                                   //  ?? '',
                                   //         style: TextStyle(
-                                  //           color: theme.colorScheme.onPrimary,
+                                  //           color:
+                                  //    theme.colorScheme.onPrimary,
                                   //           fontSize: compact ? 10 : 16,
                                   //         ),
                                   //       )
