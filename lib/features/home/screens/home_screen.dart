@@ -31,11 +31,15 @@ class HomeScreen extends ConsumerWidget {
               slivers: [
                 if (summary.upcoming.isNotEmpty)
                   SliverToBoxAdapter(
-                    child: SizedBox(
+                    child: Container(
                       height: 300,
+                      margin: const EdgeInsetsDirectional.symmetric(
+                        horizontal: 8,
+                      ),
                       child: CarouselView(
                         padding: const EdgeInsets.only(
-                          left: 16,
+                          left: 8,
+                          right: 8,
                         ),
                         itemExtent: upcomingCardWidth.clamp(180, 350),
                         children: [
@@ -102,7 +106,10 @@ class HomeScreen extends ConsumerWidget {
                       padding: const EdgeInsetsDirectional.all(16),
                       child: Text(
                         'Spaces for you',
-                        style: theme.textTheme.bodyMedium,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ),
@@ -117,7 +124,7 @@ class HomeScreen extends ConsumerWidget {
                         itemCount: summary.forYou.length,
                         itemBuilder: (context, index) {
                           final space = summary.forYou[index];
-                          return SpaceCard(space: space);
+                          return SpaceCard(space: space, compact: true);
                         },
                         separatorBuilder: (_, _) => const SizedBox(width: 16),
                       ),
@@ -130,7 +137,10 @@ class HomeScreen extends ConsumerWidget {
                       padding: const EdgeInsetsDirectional.all(16),
                       child: Text(
                         'Explore spaces',
-                        style: theme.textTheme.bodyMedium,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ),
@@ -158,7 +168,7 @@ class HomeScreen extends ConsumerWidget {
                       itemCount: summary.explore.length,
                       itemBuilder: (context, index) {
                         final space = summary.explore[index];
-                        return SpaceCard(space: space);
+                        return SpaceCard(space: space, compact: true);
                       },
                     ),
                   ),

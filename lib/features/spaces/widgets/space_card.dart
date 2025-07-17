@@ -4,15 +4,21 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/date.dart';
+import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/network.dart';
+import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class SpaceCard extends StatelessWidget {
-  const SpaceCard({required this.space, super.key});
+  const SpaceCard({required this.space, super.key, this.compact = false});
+
   final SpaceDetailSchema space;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return AspectRatio(
       aspectRatio: 1.38,
       child: Card(
@@ -24,7 +30,6 @@ class SpaceCard extends StatelessWidget {
             context.push(RouteNames.space(space.nextEvent.slug));
           },
           borderRadius: BorderRadius.circular(8),
-
           child: Stack(
             children: [
               Positioned.fill(
@@ -36,40 +41,29 @@ class SpaceCard extends StatelessWidget {
                 ),
               ),
               PositionedDirectional(
-                top: 20,
-                start: 20,
-                end: 20,
-                bottom: 20,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 4,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0x99262F37),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        formatEventDateTime(
-                          DateTime.parse(space.nextEvent.start),
-                        ),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    RichText(
+                top: compact ? 10.0 : 20.0,
+                start: compact ? 10.0 : 20.0,
+                end: compact ? 10.0 : 20.0,
+                bottom: compact ? 10.0 : 26.0,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // If the width is too small, only show the image.
+                    final isContentVisible = constraints.maxWidth > 66;
+                    if (!isContentVisible) {
+                      return const SizedBox.shrink();
+                    }
+                    final isJoinButtonVisible = constraints.maxWidth > 200;
+
+                    final seatsLeft = RichText(
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
                       text: TextSpan(
                         children: [
                           TextSpan(
                             text: '${space.nextEvent.seatsLeft}',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 14,
+                              fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -77,62 +71,153 @@ class SpaceCard extends StatelessWidget {
                             text: ' seats left',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 14,
+                              fontSize: 10,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    Text(
-                      space.title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Row(
-                      spacing: 8,
+                    );
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundImage: space.author.profileImage != null
-                              ? CachedNetworkImageProvider(
-                                  getFullUrl(space.author.profileImage!),
-                                )
-                              : null,
-                          child: space.author.profileImage == null
-                              ? Text(
-                                  space.author.name?[0].toUpperCase() ?? '',
-                                )
-                              : null,
-                        ),
-                        Expanded(
-                          child: RichText(
-                            text: TextSpan(
-                              children: [
-                                const TextSpan(
-                                  text: 'with ',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.white,
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0x99262F37),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            spacing: 4,
+                            children: [
+                              const TotemIcon(
+                                TotemIcons.calendar,
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                              Flexible(
+                                child: Text(
+                                  formatEventDateTime(
+                                    DateTime.parse(space.nextEvent.start),
                                   ),
-                                ),
-                                TextSpan(
-                                  text: '${space.author.name}',
                                   style: const TextStyle(
-                                    fontSize: 16,
                                     color: Colors.white,
+                                    fontSize: 8,
                                     fontWeight: FontWeight.bold,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.fade,
                                 ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        if (compact) seatsLeft,
+                        Text(
+                          space.title,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: compact ? 14 : 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
+                        ),
+                        const SizedBox(height: 4),
+                        RichText(
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                children: [
+                                  const TextSpan(text: 'with '),
+                                  TextSpan(
+                                    text: space.author.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                                style: TextStyle(
+                                  fontSize: compact ? 10 : 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const TextSpan(text: '  '),
+                              WidgetSpan(
+                                alignment: PlaceholderAlignment.middle,
+                                child: UserAvatar(
+                                  radius: 25 / 2,
+                                  image: space.author.profileImage != null
+                                      ? CachedNetworkImageProvider(
+                                          getFullUrl(
+                                            space.author.profileImage!,
+                                          ),
+                                        )
+                                      : null,
+                                  // child: space.author.profileImage == null
+                                  //     ? Text(
+                                  //         space.author.name?[0].toUpperCase()
+                                  //  ?? '',
+                                  //         style: TextStyle(
+                                  //           color: theme.colorScheme.onPrimary,
+                                  //           fontSize: compact ? 10 : 16,
+                                  //         ),
+                                  //       )
+                                  //     : null,
+                                ),
+                              ),
+                            ].reversedIf(compact),
+                          ),
+                        ),
+                        if (!compact)
+                          Container(
+                            margin: const EdgeInsetsDirectional.only(
+                              top: 4,
+                            ),
+                            height: 30,
+                            child: Row(
+                              spacing: 8,
+                              children: [
+                                Expanded(child: seatsLeft),
+                                if (isJoinButtonVisible)
+                                  Center(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {},
+                                      label: const Text('Join'),
+                                      icon: const TotemIcon(
+                                        TotemIcons.arrowForward,
+                                      ),
+                                      iconAlignment: IconAlignment.end,
+                                      style: const ButtonStyle(
+                                        minimumSize: WidgetStatePropertyAll(
+                                          Size(0, 28),
+                                        ),
+                                        padding: WidgetStatePropertyAll(
+                                          EdgeInsetsDirectional.only(
+                                            top: 8,
+                                            bottom: 8,
+                                            start: 24,
+                                            end: 15,
+                                          ),
+                                        ),
+                                        textStyle: WidgetStatePropertyAll(
+                                          TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
-                        ),
                       ],
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ],
