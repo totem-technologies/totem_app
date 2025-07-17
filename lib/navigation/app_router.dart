@@ -26,6 +26,7 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 
 enum HomeRoutes {
+  home(RouteNames.home),
   spaces(RouteNames.spaces),
   blog(RouteNames.blog),
   profile(RouteNames.profile);
@@ -266,15 +267,6 @@ GoRouter createRouter(WidgetRef ref) {
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: RouteNames.blog,
-                name: RouteNames.blog,
-                builder: (context, state) => const BlogListScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: <RouteBase>[
-              GoRoute(
                 path: RouteNames.spaces,
                 name: RouteNames.spaces,
                 pageBuilder: (context, state) => CustomTransitionPage(
@@ -304,7 +296,6 @@ GoRouter createRouter(WidgetRef ref) {
               ),
             ],
           ),
-
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
