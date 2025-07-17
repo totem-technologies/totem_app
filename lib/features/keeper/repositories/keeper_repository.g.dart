@@ -6,81 +6,146 @@ part of 'keeper_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-@ProviderFor(keeperProfile)
-const keeperProfileProvider = KeeperProfileFamily._();
+String _$keeperProfileHash() => r'fedc805446263131ac613a3f65e4469570c7c40b';
 
-final class KeeperProfileProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<KeeperProfileSchema>,
-          KeeperProfileSchema,
-          FutureOr<KeeperProfileSchema>
-        >
-    with
-        $FutureModifier<KeeperProfileSchema>,
-        $FutureProvider<KeeperProfileSchema> {
-  const KeeperProfileProvider._({
-    required KeeperProfileFamily super.from,
-    required String super.argument,
-  }) : super(
-         retry: null,
-         name: r'keeperProfileProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
+/// Copied from Dart SDK
+class _SystemHash {
+  _SystemHash._();
 
-  @override
-  String debugGetCreateSourceHash() => _$keeperProfileHash();
-
-  @override
-  String toString() {
-    return r'keeperProfileProvider'
-        ''
-        '($argument)';
+  static int combine(int hash, int value) {
+    // ignore: parameter_assignments
+    hash = 0x1fffffff & (hash + value);
+    // ignore: parameter_assignments
+    hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
+    return hash ^ (hash >> 6);
   }
 
-  @$internal
-  @override
-  $FutureProviderElement<KeeperProfileSchema> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
+  static int finish(int hash) {
+    // ignore: parameter_assignments
+    hash = 0x1fffffff & (hash + ((0x03ffffff & hash) << 3));
+    // ignore: parameter_assignments
+    hash = hash ^ (hash >> 11);
+    return 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
+  }
+}
+
+/// See also [keeperProfile].
+@ProviderFor(keeperProfile)
+const keeperProfileProvider = KeeperProfileFamily();
+
+/// See also [keeperProfile].
+class KeeperProfileFamily extends Family<AsyncValue<KeeperProfileSchema>> {
+  /// See also [keeperProfile].
+  const KeeperProfileFamily();
+
+  /// See also [keeperProfile].
+  KeeperProfileProvider call(String slug) {
+    return KeeperProfileProvider(slug);
+  }
 
   @override
-  FutureOr<KeeperProfileSchema> create(Ref ref) {
-    final argument = this.argument as String;
-    return keeperProfile(ref, argument);
+  KeeperProfileProvider getProviderOverride(
+    covariant KeeperProfileProvider provider,
+  ) {
+    return call(provider.slug);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'keeperProfileProvider';
+}
+
+/// See also [keeperProfile].
+class KeeperProfileProvider
+    extends AutoDisposeFutureProvider<KeeperProfileSchema> {
+  /// See also [keeperProfile].
+  KeeperProfileProvider(String slug)
+    : this._internal(
+        (ref) => keeperProfile(ref as KeeperProfileRef, slug),
+        from: keeperProfileProvider,
+        name: r'keeperProfileProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$keeperProfileHash,
+        dependencies: KeeperProfileFamily._dependencies,
+        allTransitiveDependencies:
+            KeeperProfileFamily._allTransitiveDependencies,
+        slug: slug,
+      );
+
+  KeeperProfileProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.slug,
+  }) : super.internal();
+
+  final String slug;
+
+  @override
+  Override overrideWith(
+    FutureOr<KeeperProfileSchema> Function(KeeperProfileRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: KeeperProfileProvider._internal(
+        (ref) => create(ref as KeeperProfileRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        slug: slug,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<KeeperProfileSchema> createElement() {
+    return _KeeperProfileProviderElement(this);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is KeeperProfileProvider && other.argument == argument;
+    return other is KeeperProfileProvider && other.slug == slug;
   }
 
   @override
   int get hashCode {
-    return argument.hashCode;
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, slug.hashCode);
+
+    return _SystemHash.finish(hash);
   }
 }
 
-String _$keeperProfileHash() => r'fedc805446263131ac613a3f65e4469570c7c40b';
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin KeeperProfileRef on AutoDisposeFutureProviderRef<KeeperProfileSchema> {
+  /// The parameter `slug` of this provider.
+  String get slug;
+}
 
-final class KeeperProfileFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<KeeperProfileSchema>, String> {
-  const KeeperProfileFamily._()
-    : super(
-        retry: null,
-        name: r'keeperProfileProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
-
-  KeeperProfileProvider call(String slug) =>
-      KeeperProfileProvider._(argument: slug, from: this);
+class _KeeperProfileProviderElement
+    extends AutoDisposeFutureProviderElement<KeeperProfileSchema>
+    with KeeperProfileRef {
+  _KeeperProfileProviderElement(super.provider);
 
   @override
-  String toString() => r'keeperProfileProvider';
+  String get slug => (origin as KeeperProfileProvider).slug;
 }
 
 // ignore_for_file: type=lint

@@ -6,120 +6,161 @@ part of 'blog_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
+String _$listBlogPostsHash() => r'a02c79b351043c4205736535010e5a0502bf14a5';
+
+/// See also [listBlogPosts].
 @ProviderFor(listBlogPosts)
-const listBlogPostsProvider = ListBlogPostsProvider._();
+final listBlogPostsProvider =
+    AutoDisposeFutureProvider<PagedBlogPostListSchema>.internal(
+      listBlogPosts,
+      name: r'listBlogPostsProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$listBlogPostsHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
 
-final class ListBlogPostsProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<PagedBlogPostListSchema>,
-          PagedBlogPostListSchema,
-          FutureOr<PagedBlogPostListSchema>
-        >
-    with
-        $FutureModifier<PagedBlogPostListSchema>,
-        $FutureProvider<PagedBlogPostListSchema> {
-  const ListBlogPostsProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'listBlogPostsProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef ListBlogPostsRef =
+    AutoDisposeFutureProviderRef<PagedBlogPostListSchema>;
+String _$blogPostHash() => r'85dac9d60c002f4c61fcb3bfc58eb7e34a6af76f';
 
-  @override
-  String debugGetCreateSourceHash() => _$listBlogPostsHash();
+/// Copied from Dart SDK
+class _SystemHash {
+  _SystemHash._();
 
-  @$internal
-  @override
-  $FutureProviderElement<PagedBlogPostListSchema> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
+  static int combine(int hash, int value) {
+    // ignore: parameter_assignments
+    hash = 0x1fffffff & (hash + value);
+    // ignore: parameter_assignments
+    hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
+    return hash ^ (hash >> 6);
+  }
 
-  @override
-  FutureOr<PagedBlogPostListSchema> create(Ref ref) {
-    return listBlogPosts(ref);
+  static int finish(int hash) {
+    // ignore: parameter_assignments
+    hash = 0x1fffffff & (hash + ((0x03ffffff & hash) << 3));
+    // ignore: parameter_assignments
+    hash = hash ^ (hash >> 11);
+    return 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
   }
 }
 
-String _$listBlogPostsHash() => r'a02c79b351043c4205736535010e5a0502bf14a5';
-
+/// See also [blogPost].
 @ProviderFor(blogPost)
-const blogPostProvider = BlogPostFamily._();
+const blogPostProvider = BlogPostFamily();
 
-final class BlogPostProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<BlogPostSchema>,
-          BlogPostSchema,
-          FutureOr<BlogPostSchema>
-        >
-    with $FutureModifier<BlogPostSchema>, $FutureProvider<BlogPostSchema> {
-  const BlogPostProvider._({
-    required BlogPostFamily super.from,
-    required String super.argument,
-  }) : super(
-         retry: null,
-         name: r'blogPostProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
+/// See also [blogPost].
+class BlogPostFamily extends Family<AsyncValue<BlogPostSchema>> {
+  /// See also [blogPost].
+  const BlogPostFamily();
 
-  @override
-  String debugGetCreateSourceHash() => _$blogPostHash();
-
-  @override
-  String toString() {
-    return r'blogPostProvider'
-        ''
-        '($argument)';
+  /// See also [blogPost].
+  BlogPostProvider call(String slug) {
+    return BlogPostProvider(slug);
   }
 
-  @$internal
   @override
-  $FutureProviderElement<BlogPostSchema> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
+  BlogPostProvider getProviderOverride(covariant BlogPostProvider provider) {
+    return call(provider.slug);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
 
   @override
-  FutureOr<BlogPostSchema> create(Ref ref) {
-    final argument = this.argument as String;
-    return blogPost(ref, argument);
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'blogPostProvider';
+}
+
+/// See also [blogPost].
+class BlogPostProvider extends AutoDisposeFutureProvider<BlogPostSchema> {
+  /// See also [blogPost].
+  BlogPostProvider(String slug)
+    : this._internal(
+        (ref) => blogPost(ref as BlogPostRef, slug),
+        from: blogPostProvider,
+        name: r'blogPostProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$blogPostHash,
+        dependencies: BlogPostFamily._dependencies,
+        allTransitiveDependencies: BlogPostFamily._allTransitiveDependencies,
+        slug: slug,
+      );
+
+  BlogPostProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.slug,
+  }) : super.internal();
+
+  final String slug;
+
+  @override
+  Override overrideWith(
+    FutureOr<BlogPostSchema> Function(BlogPostRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: BlogPostProvider._internal(
+        (ref) => create(ref as BlogPostRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        slug: slug,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<BlogPostSchema> createElement() {
+    return _BlogPostProviderElement(this);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is BlogPostProvider && other.argument == argument;
+    return other is BlogPostProvider && other.slug == slug;
   }
 
   @override
   int get hashCode {
-    return argument.hashCode;
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, slug.hashCode);
+
+    return _SystemHash.finish(hash);
   }
 }
 
-String _$blogPostHash() => r'85dac9d60c002f4c61fcb3bfc58eb7e34a6af76f';
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin BlogPostRef on AutoDisposeFutureProviderRef<BlogPostSchema> {
+  /// The parameter `slug` of this provider.
+  String get slug;
+}
 
-final class BlogPostFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<BlogPostSchema>, String> {
-  const BlogPostFamily._()
-    : super(
-        retry: null,
-        name: r'blogPostProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
-
-  BlogPostProvider call(String slug) =>
-      BlogPostProvider._(argument: slug, from: this);
+class _BlogPostProviderElement
+    extends AutoDisposeFutureProviderElement<BlogPostSchema>
+    with BlogPostRef {
+  _BlogPostProviderElement(super.provider);
 
   @override
-  String toString() => r'blogPostProvider';
+  String get slug => (origin as BlogPostProvider).slug;
 }
 
 // ignore_for_file: type=lint

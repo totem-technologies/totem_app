@@ -6,424 +6,570 @@ part of 'space_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
+String _$listSpacesHash() => r'5e4af02f508d872c95e913011e610e8a394b548d';
+
+/// See also [listSpaces].
 @ProviderFor(listSpaces)
-const listSpacesProvider = ListSpacesProvider._();
+final listSpacesProvider =
+    AutoDisposeFutureProvider<List<SpaceDetailSchema>>.internal(
+      listSpaces,
+      name: r'listSpacesProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$listSpacesHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
 
-final class ListSpacesProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<List<SpaceDetailSchema>>,
-          List<SpaceDetailSchema>,
-          FutureOr<List<SpaceDetailSchema>>
-        >
-    with
-        $FutureModifier<List<SpaceDetailSchema>>,
-        $FutureProvider<List<SpaceDetailSchema>> {
-  const ListSpacesProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'listSpacesProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef ListSpacesRef = AutoDisposeFutureProviderRef<List<SpaceDetailSchema>>;
+String _$eventHash() => r'45c7d390bcdc6683294c1783234cff99bc4c79ab';
 
-  @override
-  String debugGetCreateSourceHash() => _$listSpacesHash();
+/// Copied from Dart SDK
+class _SystemHash {
+  _SystemHash._();
 
-  @$internal
-  @override
-  $FutureProviderElement<List<SpaceDetailSchema>> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
+  static int combine(int hash, int value) {
+    // ignore: parameter_assignments
+    hash = 0x1fffffff & (hash + value);
+    // ignore: parameter_assignments
+    hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
+    return hash ^ (hash >> 6);
+  }
 
-  @override
-  FutureOr<List<SpaceDetailSchema>> create(Ref ref) {
-    return listSpaces(ref);
+  static int finish(int hash) {
+    // ignore: parameter_assignments
+    hash = 0x1fffffff & (hash + ((0x03ffffff & hash) << 3));
+    // ignore: parameter_assignments
+    hash = hash ^ (hash >> 11);
+    return 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
   }
 }
 
-String _$listSpacesHash() => r'5e4af02f508d872c95e913011e610e8a394b548d';
-
+/// See also [event].
 @ProviderFor(event)
-const eventProvider = EventFamily._();
+const eventProvider = EventFamily();
 
-final class EventProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<EventDetailSchema>,
-          EventDetailSchema,
-          FutureOr<EventDetailSchema>
-        >
-    with
-        $FutureModifier<EventDetailSchema>,
-        $FutureProvider<EventDetailSchema> {
-  const EventProvider._({
-    required EventFamily super.from,
-    required String super.argument,
-  }) : super(
-         retry: null,
-         name: r'eventProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
+/// See also [event].
+class EventFamily extends Family<AsyncValue<EventDetailSchema>> {
+  /// See also [event].
+  const EventFamily();
 
-  @override
-  String debugGetCreateSourceHash() => _$eventHash();
-
-  @override
-  String toString() {
-    return r'eventProvider'
-        ''
-        '($argument)';
+  /// See also [event].
+  EventProvider call(String eventSlug) {
+    return EventProvider(eventSlug);
   }
 
-  @$internal
   @override
-  $FutureProviderElement<EventDetailSchema> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
+  EventProvider getProviderOverride(covariant EventProvider provider) {
+    return call(provider.eventSlug);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
 
   @override
-  FutureOr<EventDetailSchema> create(Ref ref) {
-    final argument = this.argument as String;
-    return event(ref, argument);
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'eventProvider';
+}
+
+/// See also [event].
+class EventProvider extends AutoDisposeFutureProvider<EventDetailSchema> {
+  /// See also [event].
+  EventProvider(String eventSlug)
+    : this._internal(
+        (ref) => event(ref as EventRef, eventSlug),
+        from: eventProvider,
+        name: r'eventProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$eventHash,
+        dependencies: EventFamily._dependencies,
+        allTransitiveDependencies: EventFamily._allTransitiveDependencies,
+        eventSlug: eventSlug,
+      );
+
+  EventProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.eventSlug,
+  }) : super.internal();
+
+  final String eventSlug;
+
+  @override
+  Override overrideWith(
+    FutureOr<EventDetailSchema> Function(EventRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: EventProvider._internal(
+        (ref) => create(ref as EventRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        eventSlug: eventSlug,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<EventDetailSchema> createElement() {
+    return _EventProviderElement(this);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is EventProvider && other.argument == argument;
+    return other is EventProvider && other.eventSlug == eventSlug;
   }
 
   @override
   int get hashCode {
-    return argument.hashCode;
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, eventSlug.hashCode);
+
+    return _SystemHash.finish(hash);
   }
 }
 
-String _$eventHash() => r'45c7d390bcdc6683294c1783234cff99bc4c79ab';
-
-final class EventFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<EventDetailSchema>, String> {
-  const EventFamily._()
-    : super(
-        retry: null,
-        name: r'eventProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
-
-  EventProvider call(String eventSlug) =>
-      EventProvider._(argument: eventSlug, from: this);
-
-  @override
-  String toString() => r'eventProvider';
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin EventRef on AutoDisposeFutureProviderRef<EventDetailSchema> {
+  /// The parameter `eventSlug` of this provider.
+  String get eventSlug;
 }
 
-@ProviderFor(listSubscribedSpaces)
-const listSubscribedSpacesProvider = ListSubscribedSpacesProvider._();
-
-final class ListSubscribedSpacesProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<List<SpaceSchema>>,
-          List<SpaceSchema>,
-          FutureOr<List<SpaceSchema>>
-        >
-    with
-        $FutureModifier<List<SpaceSchema>>,
-        $FutureProvider<List<SpaceSchema>> {
-  const ListSubscribedSpacesProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'listSubscribedSpacesProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
+class _EventProviderElement
+    extends AutoDisposeFutureProviderElement<EventDetailSchema>
+    with EventRef {
+  _EventProviderElement(super.provider);
 
   @override
-  String debugGetCreateSourceHash() => _$listSubscribedSpacesHash();
-
-  @$internal
-  @override
-  $FutureProviderElement<List<SpaceSchema>> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<List<SpaceSchema>> create(Ref ref) {
-    return listSubscribedSpaces(ref);
-  }
+  String get eventSlug => (origin as EventProvider).eventSlug;
 }
 
 String _$listSubscribedSpacesHash() =>
     r'2b4b00c814f4fdd7b2ca99b6433d5fb8ff7aee5e';
 
-@ProviderFor(subscribeToSpace)
-const subscribeToSpaceProvider = SubscribeToSpaceFamily._();
+/// See also [listSubscribedSpaces].
+@ProviderFor(listSubscribedSpaces)
+final listSubscribedSpacesProvider =
+    AutoDisposeFutureProvider<List<SpaceSchema>>.internal(
+      listSubscribedSpaces,
+      name: r'listSubscribedSpacesProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$listSubscribedSpacesHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
 
-final class SubscribeToSpaceProvider
-    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
-    with $FutureModifier<bool>, $FutureProvider<bool> {
-  const SubscribeToSpaceProvider._({
-    required SubscribeToSpaceFamily super.from,
-    required String super.argument,
-  }) : super(
-         retry: null,
-         name: r'subscribeToSpaceProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
-
-  @override
-  String debugGetCreateSourceHash() => _$subscribeToSpaceHash();
-
-  @override
-  String toString() {
-    return r'subscribeToSpaceProvider'
-        ''
-        '($argument)';
-  }
-
-  @$internal
-  @override
-  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<bool> create(Ref ref) {
-    final argument = this.argument as String;
-    return subscribeToSpace(ref, argument);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is SubscribeToSpaceProvider && other.argument == argument;
-  }
-
-  @override
-  int get hashCode {
-    return argument.hashCode;
-  }
-}
-
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef ListSubscribedSpacesRef =
+    AutoDisposeFutureProviderRef<List<SpaceSchema>>;
 String _$subscribeToSpaceHash() => r'1bf0ba8b30966e2e5dce99fab5ddc30cf8bb19bf';
 
-final class SubscribeToSpaceFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<bool>, String> {
-  const SubscribeToSpaceFamily._()
-    : super(
-        retry: null,
-        name: r'subscribeToSpaceProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
+/// See also [subscribeToSpace].
+@ProviderFor(subscribeToSpace)
+const subscribeToSpaceProvider = SubscribeToSpaceFamily();
 
-  SubscribeToSpaceProvider call(String spaceSlug) =>
-      SubscribeToSpaceProvider._(argument: spaceSlug, from: this);
+/// See also [subscribeToSpace].
+class SubscribeToSpaceFamily extends Family<AsyncValue<bool>> {
+  /// See also [subscribeToSpace].
+  const SubscribeToSpaceFamily();
 
-  @override
-  String toString() => r'subscribeToSpaceProvider';
-}
-
-@ProviderFor(unsubscribeFromSpace)
-const unsubscribeFromSpaceProvider = UnsubscribeFromSpaceFamily._();
-
-final class UnsubscribeFromSpaceProvider
-    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
-    with $FutureModifier<bool>, $FutureProvider<bool> {
-  const UnsubscribeFromSpaceProvider._({
-    required UnsubscribeFromSpaceFamily super.from,
-    required String super.argument,
-  }) : super(
-         retry: null,
-         name: r'unsubscribeFromSpaceProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
-
-  @override
-  String debugGetCreateSourceHash() => _$unsubscribeFromSpaceHash();
-
-  @override
-  String toString() {
-    return r'unsubscribeFromSpaceProvider'
-        ''
-        '($argument)';
+  /// See also [subscribeToSpace].
+  SubscribeToSpaceProvider call(String spaceSlug) {
+    return SubscribeToSpaceProvider(spaceSlug);
   }
 
-  @$internal
   @override
-  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  SubscribeToSpaceProvider getProviderOverride(
+    covariant SubscribeToSpaceProvider provider,
+  ) {
+    return call(provider.spaceSlug);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
 
   @override
-  FutureOr<bool> create(Ref ref) {
-    final argument = this.argument as String;
-    return unsubscribeFromSpace(ref, argument);
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'subscribeToSpaceProvider';
+}
+
+/// See also [subscribeToSpace].
+class SubscribeToSpaceProvider extends AutoDisposeFutureProvider<bool> {
+  /// See also [subscribeToSpace].
+  SubscribeToSpaceProvider(String spaceSlug)
+    : this._internal(
+        (ref) => subscribeToSpace(ref as SubscribeToSpaceRef, spaceSlug),
+        from: subscribeToSpaceProvider,
+        name: r'subscribeToSpaceProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$subscribeToSpaceHash,
+        dependencies: SubscribeToSpaceFamily._dependencies,
+        allTransitiveDependencies:
+            SubscribeToSpaceFamily._allTransitiveDependencies,
+        spaceSlug: spaceSlug,
+      );
+
+  SubscribeToSpaceProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.spaceSlug,
+  }) : super.internal();
+
+  final String spaceSlug;
+
+  @override
+  Override overrideWith(
+    FutureOr<bool> Function(SubscribeToSpaceRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: SubscribeToSpaceProvider._internal(
+        (ref) => create(ref as SubscribeToSpaceRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        spaceSlug: spaceSlug,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<bool> createElement() {
+    return _SubscribeToSpaceProviderElement(this);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is UnsubscribeFromSpaceProvider && other.argument == argument;
+    return other is SubscribeToSpaceProvider && other.spaceSlug == spaceSlug;
   }
 
   @override
   int get hashCode {
-    return argument.hashCode;
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, spaceSlug.hashCode);
+
+    return _SystemHash.finish(hash);
   }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin SubscribeToSpaceRef on AutoDisposeFutureProviderRef<bool> {
+  /// The parameter `spaceSlug` of this provider.
+  String get spaceSlug;
+}
+
+class _SubscribeToSpaceProviderElement
+    extends AutoDisposeFutureProviderElement<bool>
+    with SubscribeToSpaceRef {
+  _SubscribeToSpaceProviderElement(super.provider);
+
+  @override
+  String get spaceSlug => (origin as SubscribeToSpaceProvider).spaceSlug;
 }
 
 String _$unsubscribeFromSpaceHash() =>
     r'9964930d5f0e388324fa3d1f85402123883c836e';
 
-final class UnsubscribeFromSpaceFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<bool>, String> {
-  const UnsubscribeFromSpaceFamily._()
-    : super(
-        retry: null,
-        name: r'unsubscribeFromSpaceProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
+/// See also [unsubscribeFromSpace].
+@ProviderFor(unsubscribeFromSpace)
+const unsubscribeFromSpaceProvider = UnsubscribeFromSpaceFamily();
 
-  UnsubscribeFromSpaceProvider call(String spaceSlug) =>
-      UnsubscribeFromSpaceProvider._(argument: spaceSlug, from: this);
+/// See also [unsubscribeFromSpace].
+class UnsubscribeFromSpaceFamily extends Family<AsyncValue<bool>> {
+  /// See also [unsubscribeFromSpace].
+  const UnsubscribeFromSpaceFamily();
 
-  @override
-  String toString() => r'unsubscribeFromSpaceProvider';
-}
-
-@ProviderFor(listSpacesByKeeper)
-const listSpacesByKeeperProvider = ListSpacesByKeeperFamily._();
-
-final class ListSpacesByKeeperProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<List<SpaceDetailSchema>>,
-          List<SpaceDetailSchema>,
-          FutureOr<List<SpaceDetailSchema>>
-        >
-    with
-        $FutureModifier<List<SpaceDetailSchema>>,
-        $FutureProvider<List<SpaceDetailSchema>> {
-  const ListSpacesByKeeperProvider._({
-    required ListSpacesByKeeperFamily super.from,
-    required String super.argument,
-  }) : super(
-         retry: null,
-         name: r'listSpacesByKeeperProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
-
-  @override
-  String debugGetCreateSourceHash() => _$listSpacesByKeeperHash();
-
-  @override
-  String toString() {
-    return r'listSpacesByKeeperProvider'
-        ''
-        '($argument)';
+  /// See also [unsubscribeFromSpace].
+  UnsubscribeFromSpaceProvider call(String spaceSlug) {
+    return UnsubscribeFromSpaceProvider(spaceSlug);
   }
 
-  @$internal
   @override
-  $FutureProviderElement<List<SpaceDetailSchema>> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
+  UnsubscribeFromSpaceProvider getProviderOverride(
+    covariant UnsubscribeFromSpaceProvider provider,
+  ) {
+    return call(provider.spaceSlug);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
 
   @override
-  FutureOr<List<SpaceDetailSchema>> create(Ref ref) {
-    final argument = this.argument as String;
-    return listSpacesByKeeper(ref, argument);
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'unsubscribeFromSpaceProvider';
+}
+
+/// See also [unsubscribeFromSpace].
+class UnsubscribeFromSpaceProvider extends AutoDisposeFutureProvider<bool> {
+  /// See also [unsubscribeFromSpace].
+  UnsubscribeFromSpaceProvider(String spaceSlug)
+    : this._internal(
+        (ref) =>
+            unsubscribeFromSpace(ref as UnsubscribeFromSpaceRef, spaceSlug),
+        from: unsubscribeFromSpaceProvider,
+        name: r'unsubscribeFromSpaceProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$unsubscribeFromSpaceHash,
+        dependencies: UnsubscribeFromSpaceFamily._dependencies,
+        allTransitiveDependencies:
+            UnsubscribeFromSpaceFamily._allTransitiveDependencies,
+        spaceSlug: spaceSlug,
+      );
+
+  UnsubscribeFromSpaceProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.spaceSlug,
+  }) : super.internal();
+
+  final String spaceSlug;
+
+  @override
+  Override overrideWith(
+    FutureOr<bool> Function(UnsubscribeFromSpaceRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: UnsubscribeFromSpaceProvider._internal(
+        (ref) => create(ref as UnsubscribeFromSpaceRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        spaceSlug: spaceSlug,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<bool> createElement() {
+    return _UnsubscribeFromSpaceProviderElement(this);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is ListSpacesByKeeperProvider && other.argument == argument;
+    return other is UnsubscribeFromSpaceProvider &&
+        other.spaceSlug == spaceSlug;
   }
 
   @override
   int get hashCode {
-    return argument.hashCode;
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, spaceSlug.hashCode);
+
+    return _SystemHash.finish(hash);
   }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin UnsubscribeFromSpaceRef on AutoDisposeFutureProviderRef<bool> {
+  /// The parameter `spaceSlug` of this provider.
+  String get spaceSlug;
+}
+
+class _UnsubscribeFromSpaceProviderElement
+    extends AutoDisposeFutureProviderElement<bool>
+    with UnsubscribeFromSpaceRef {
+  _UnsubscribeFromSpaceProviderElement(super.provider);
+
+  @override
+  String get spaceSlug => (origin as UnsubscribeFromSpaceProvider).spaceSlug;
 }
 
 String _$listSpacesByKeeperHash() =>
     r'f8156433ac38a512659635c1c84e29fd765ff02a';
 
-final class ListSpacesByKeeperFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<List<SpaceDetailSchema>>, String> {
-  const ListSpacesByKeeperFamily._()
-    : super(
-        retry: null,
-        name: r'listSpacesByKeeperProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
+/// See also [listSpacesByKeeper].
+@ProviderFor(listSpacesByKeeper)
+const listSpacesByKeeperProvider = ListSpacesByKeeperFamily();
 
-  ListSpacesByKeeperProvider call(String keeperSlug) =>
-      ListSpacesByKeeperProvider._(argument: keeperSlug, from: this);
+/// See also [listSpacesByKeeper].
+class ListSpacesByKeeperFamily
+    extends Family<AsyncValue<List<SpaceDetailSchema>>> {
+  /// See also [listSpacesByKeeper].
+  const ListSpacesByKeeperFamily();
+
+  /// See also [listSpacesByKeeper].
+  ListSpacesByKeeperProvider call(String keeperSlug) {
+    return ListSpacesByKeeperProvider(keeperSlug);
+  }
 
   @override
-  String toString() => r'listSpacesByKeeperProvider';
+  ListSpacesByKeeperProvider getProviderOverride(
+    covariant ListSpacesByKeeperProvider provider,
+  ) {
+    return call(provider.keeperSlug);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'listSpacesByKeeperProvider';
 }
 
-@ProviderFor(listSessionsHistory)
-const listSessionsHistoryProvider = ListSessionsHistoryProvider._();
-
-final class ListSessionsHistoryProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<List<EventDetailSchema>>,
-          List<EventDetailSchema>,
-          FutureOr<List<EventDetailSchema>>
-        >
-    with
-        $FutureModifier<List<EventDetailSchema>>,
-        $FutureProvider<List<EventDetailSchema>> {
-  const ListSessionsHistoryProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'listSessionsHistoryProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
+/// See also [listSpacesByKeeper].
+class ListSpacesByKeeperProvider
+    extends AutoDisposeFutureProvider<List<SpaceDetailSchema>> {
+  /// See also [listSpacesByKeeper].
+  ListSpacesByKeeperProvider(String keeperSlug)
+    : this._internal(
+        (ref) => listSpacesByKeeper(ref as ListSpacesByKeeperRef, keeperSlug),
+        from: listSpacesByKeeperProvider,
+        name: r'listSpacesByKeeperProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$listSpacesByKeeperHash,
+        dependencies: ListSpacesByKeeperFamily._dependencies,
+        allTransitiveDependencies:
+            ListSpacesByKeeperFamily._allTransitiveDependencies,
+        keeperSlug: keeperSlug,
       );
 
-  @override
-  String debugGetCreateSourceHash() => _$listSessionsHistoryHash();
+  ListSpacesByKeeperProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.keeperSlug,
+  }) : super.internal();
 
-  @$internal
-  @override
-  $FutureProviderElement<List<EventDetailSchema>> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
+  final String keeperSlug;
 
   @override
-  FutureOr<List<EventDetailSchema>> create(Ref ref) {
-    return listSessionsHistory(ref);
+  Override overrideWith(
+    FutureOr<List<SpaceDetailSchema>> Function(ListSpacesByKeeperRef provider)
+    create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: ListSpacesByKeeperProvider._internal(
+        (ref) => create(ref as ListSpacesByKeeperRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        keeperSlug: keeperSlug,
+      ),
+    );
   }
+
+  @override
+  AutoDisposeFutureProviderElement<List<SpaceDetailSchema>> createElement() {
+    return _ListSpacesByKeeperProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ListSpacesByKeeperProvider &&
+        other.keeperSlug == keeperSlug;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, keeperSlug.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin ListSpacesByKeeperRef
+    on AutoDisposeFutureProviderRef<List<SpaceDetailSchema>> {
+  /// The parameter `keeperSlug` of this provider.
+  String get keeperSlug;
+}
+
+class _ListSpacesByKeeperProviderElement
+    extends AutoDisposeFutureProviderElement<List<SpaceDetailSchema>>
+    with ListSpacesByKeeperRef {
+  _ListSpacesByKeeperProviderElement(super.provider);
+
+  @override
+  String get keeperSlug => (origin as ListSpacesByKeeperProvider).keeperSlug;
 }
 
 String _$listSessionsHistoryHash() =>
     r'28a5e8c88cebc2f364efc555f8d94b9f8868167a';
 
+/// See also [listSessionsHistory].
+@ProviderFor(listSessionsHistory)
+final listSessionsHistoryProvider =
+    AutoDisposeFutureProvider<List<EventDetailSchema>>.internal(
+      listSessionsHistory,
+      name: r'listSessionsHistoryProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$listSessionsHistoryHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef ListSessionsHistoryRef =
+    AutoDisposeFutureProviderRef<List<EventDetailSchema>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
