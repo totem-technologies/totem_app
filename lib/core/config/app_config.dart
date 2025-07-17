@@ -28,7 +28,8 @@ class AppConfig {
 
   /// API configuration
   static String get mobileApiUrl {
-    return dotenv.get('MOBILE_API_URL', fallback: 'https://totem.kbl.io/');
+    // return dotenv.get('MOBILE_API_URL', fallback: 'https://totem.kbl.io/');
+    return dotenv.get('MOBILE_API_URL', fallback: 'http://localhost:8000/');
   }
 
   /// Auth configuration

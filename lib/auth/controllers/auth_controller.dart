@@ -1,3 +1,5 @@
+//
+// ignore_for_file: avoid_public_notifier_properties
 import 'dart:async';
 import 'dart:io';
 
@@ -14,29 +16,28 @@ import 'package:totem_app/core/services/notifications_service.dart';
 import 'package:totem_app/core/services/secure_storage.dart';
 import 'package:totem_app/shared/logger.dart';
 
-final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
-  (ref) => AuthController(
-    ref.watch(authRepositoryProvider),
-    ref.watch(secureStorageProvider),
-    ref.watch(analyticsProvider),
-    ref.watch(notificationsProvider),
-  ),
+final authControllerProvider = NotifierProvider<AuthController, AuthState>(
+  AuthController.new,
 );
 
-class AuthController extends StateNotifier<AuthState> {
-  AuthController(
-    this._authRepository,
-    this._secureStorage,
-    this._analyticsService,
-    this._notificationsService,
-  ) : super(AuthState.unauthenticated()) {
-    _initialize();
-  }
+class AuthController extends Notifier<AuthState> {
+  AuthController();
 
-  final AuthRepository _authRepository;
-  final SecureStorage _secureStorage;
-  final AnalyticsService _analyticsService;
-  final NotificationsService _notificationsService;
+  late final AuthRepository _authRepository;
+  late final SecureStorage _secureStorage;
+  late final AnalyticsService _analyticsService;
+  late final NotificationsService _notificationsService;
+
+  @override
+  AuthState build() {
+    _authRepository = ref.watch(authRepositoryProvider);
+    _secureStorage = ref.watch(secureStorageProvider);
+    _analyticsService = ref.watch(analyticsProvider);
+    _notificationsService = ref.watch(notificationsProvider);
+
+    _initialize();
+    return AuthState.unauthenticated();
+  }
 
   final _authStateController = StreamController<AuthState>.broadcast();
   Stream<AuthState> get authStateChanges => _authStateController.stream;
@@ -431,11 +432,5 @@ class AuthController extends StateNotifier<AuthState> {
   void _setState(AuthState newState) {
     state = newState;
     _authStateController.add(state);
-  }
-
-  @override
-  void dispose() {
-    _authStateController.close();
-    super.dispose();
   }
 }

@@ -9,6 +9,7 @@ import '../models/event_detail_schema.dart';
 import '../models/paged_space_detail_schema.dart';
 import '../models/space_detail_schema.dart';
 import '../models/space_schema.dart';
+import '../models/summary_spaces_schema.dart';
 
 part 'spaces_client.g.dart';
 
@@ -33,7 +34,7 @@ abstract class SpacesClient {
   Future<List<SpaceSchema>> totemCirclesMobileApiListSubscriptions();
 
   /// List Spaces
-  @GET('/api/mobile/protected/spaces/spaces')
+  @GET('/api/mobile/protected/spaces/')
   Future<PagedSpaceDetailSchema> totemCirclesMobileApiListSpaces({
     @Query('limit') int limit = 100,
     @Query('offset') int offset = 0,
@@ -61,4 +62,8 @@ abstract class SpacesClient {
     @Body() List<String>? body,
     @Query('limit') int limit = 3,
   });
+
+  /// Get Spaces Summary
+  @GET('/api/mobile/protected/spaces/summary')
+  Future<SummarySpacesSchema> totemCirclesMobileApiGetSpacesSummary();
 }

@@ -9,7 +9,20 @@ import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 
 // Provider to track the selected category filter
-final selectedCategoryProvider = StateProvider<String?>((ref) => null);
+class SelectedCategoryNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void toggleCategory(String? category) {
+    state = (state == category) ? null : category;
+  }
+}
+
+// Provider
+final selectedCategoryProvider =
+    NotifierProvider<SelectedCategoryNotifier, String?>(
+      SelectedCategoryNotifier.new,
+    );
 
 class SpacesDiscoveryScreen extends ConsumerWidget {
   const SpacesDiscoveryScreen({super.key});
@@ -46,8 +59,9 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                     categories: allCategories,
                     selectedCategory: selectedCategory,
                     onCategorySelected: (category) {
-                      ref.read(selectedCategoryProvider.notifier).state =
-                          category == selectedCategory ? null : category;
+                      ref
+                          .read(selectedCategoryProvider.notifier)
+                          .toggleCategory(category);
                     },
                   ),
                 ),

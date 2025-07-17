@@ -11,6 +11,7 @@ import 'package:totem_app/auth/screens/profile_setup_screen.dart';
 import 'package:totem_app/auth/screens/welcome_screen.dart';
 import 'package:totem_app/features/blog/screens/blog_list_screen.dart';
 import 'package:totem_app/features/blog/screens/blog_screen.dart';
+import 'package:totem_app/features/home/screens/home_screen.dart';
 import 'package:totem_app/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_details_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_screen.dart';
@@ -71,6 +72,14 @@ class BottomNavScaffold extends StatelessWidget {
             NavigationDestination(
               icon: TotemIcon(TotemIcons.home),
               selectedIcon: TotemIcon(TotemIcons.homeFilled, fillColor: false),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: TotemIcon(TotemIcons.spaces),
+              selectedIcon: TotemIcon(
+                TotemIcons.spacesFilled,
+                fillColor: false,
+              ),
               label: 'Spaces',
             ),
             NavigationDestination(
@@ -231,6 +240,38 @@ GoRouter createRouter(WidgetRef ref) {
           );
         },
         branches: [
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: RouteNames.home,
+                name: RouteNames.home,
+                pageBuilder: (context, state) => CustomTransitionPage(
+                  key: state.pageKey,
+                  child: const HomeScreen(),
+                  transitionsBuilder:
+                      (
+                        context,
+                        animation,
+                        secondaryAnimation,
+                        child,
+                      ) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
+                  transitionDuration: const Duration(milliseconds: 200),
+                ),
+              ),
+            ],
+          ),
+
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: RouteNames.blog,
+                name: RouteNames.blog,
+                builder: (context, state) => const BlogListScreen(),
+              ),
+            ],
+          ),
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(

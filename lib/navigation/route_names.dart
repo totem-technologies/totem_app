@@ -11,6 +11,7 @@ class RouteNames {
   static const onboarding = '/onboarding';
 
   // Main app routes
+  static const home = '/home';
   static const spaces = '/spaces';
   static const spaceDetail = '/spaces/event/';
   static String space(String slug) => '/spaces/event/$slug';

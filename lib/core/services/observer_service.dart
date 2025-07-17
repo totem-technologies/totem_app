@@ -4,42 +4,36 @@ import 'package:totem_app/shared/logger.dart';
 class ObserverService extends ProviderObserver {
   @override
   void didAddProvider(
-    ProviderBase<Object?> provider,
+    ProviderObserverContext context,
     Object? value,
-    ProviderContainer container,
   ) {
-    logger.d('Provider ${provider.name} was initialized with $value');
+    logger.d('Provider ${context.provider.name} was initialized with $value');
   }
 
   @override
-  void didDisposeProvider(
-    ProviderBase<Object?> provider,
-    ProviderContainer container,
-  ) {
-    logger.d('Provider ${provider.name} was disposed');
+  void didDisposeProvider(ProviderObserverContext context) {
+    logger.d('Provider ${context.provider.name} was disposed');
   }
 
   @override
   void didUpdateProvider(
-    ProviderBase<Object?> provider,
+    ProviderObserverContext context,
     Object? previousValue,
     Object? newValue,
-    ProviderContainer container,
   ) {
     logger.d(
-      'Provider ${provider.name} updated from $previousValue to $newValue',
+      'Provider ${context.provider.name} updated from ''$previousValue to ''$newValue',
     );
   }
 
   @override
   void providerDidFail(
-    ProviderBase<Object?> provider,
+    ProviderObserverContext context,
     Object error,
     StackTrace stackTrace,
-    ProviderContainer container,
   ) {
     logger.d(
-      'Provider ${provider.name} threw an error.',
+      'Provider ${context.provider.name} threw an error.',
       error: error,
       stackTrace: stackTrace,
     );
