@@ -23,23 +23,9 @@ class TotemIcons {
 ''';
 
   static const spacesFilled = '''
-<svg width="42" height="37" viewBox="0 0 42 37" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g filter="url(#filter0_d_335_1680)">
-<path d="M33.1088 14C33.1088 20.9036 27.5124 26.5 20.6088 26.5C13.7052 26.5 8.10876 20.9036 8.10876 14C8.10876 7.09644 13.7052 1.5 20.6088 1.5C27.5124 1.5 33.1088 7.09644 33.1088 14Z" fill="#987AA5"/>
-</g>
-<defs>
-<filter id="filter0_d_335_1680" x="0.108765" y="-4.5" width="41" height="41" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-<feFlood flood-opacity="0" result="BackgroundImageFix"/>
-<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-<feOffset dy="2"/>
-<feGaussianBlur stdDeviation="4"/>
-<feComposite in2="hardAlpha" operator="out"/>
-<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.08 0"/>
-<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_335_1680"/>
-<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_335_1680" result="shape"/>
-</filter>
-</defs>
-</svg>
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M26.7754 14C26.7754 20.9036 21.179 26.5 14.2754 26.5C7.37187 26.5 1.77542 20.9036 1.77542 14C1.77542 7.09644 7.37187 1.5 14.2754 1.5C21.179 1.5 26.7754 7.09644 26.7754 14Z" fill="#987AA5" stroke="#987AA5" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
 ''';
 
   static const blog = '''
