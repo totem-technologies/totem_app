@@ -10,7 +10,7 @@ class ErrorScreen extends StatefulWidget {
   const ErrorScreen({
     this.title,
     this.error,
-    this.showHomeButton = true,
+    this.showHomeButton,
     this.onRetry,
     super.key,
   });
@@ -19,7 +19,7 @@ class ErrorScreen extends StatefulWidget {
 
   final Object? error;
 
-  final bool showHomeButton;
+  final bool? showHomeButton;
 
   final Future<void> Function()? onRetry;
 
@@ -35,7 +35,7 @@ class _ErrorScreenState extends State<ErrorScreen> {
     final theme = Theme.of(context);
 
     final showHomeButton =
-        widget.showHomeButton || ErrorHandler.is404(widget.error);
+        (widget.showHomeButton ?? true) && ErrorHandler.is404(widget.error);
 
     return Scaffold(
       appBar: Scaffold.maybeOf(context)?.hasAppBar ?? false
