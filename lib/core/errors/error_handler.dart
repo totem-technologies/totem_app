@@ -55,12 +55,12 @@ class ErrorHandler {
 
   /// Handle an exception and return a user-friendly error message
   static String getUserFriendlyErrorMessage(Object error) {
-    if (error is AppNetworkException && error.code == 'HTTP_ERROR_404') {
+    if (is404(error)) {
       return "This page doesn't exist";
     } else if (error is AppNetworkException ||
         error is DioException ||
         error is TimeoutException) {
-      return 'Something went wrong. Please try again later.';
+      return 'Oops! Something went wrong.\nPlease try again later.';
     } else if (error is AppAuthException) {
       return 'Authentication error. Please log in again.';
     } else if (error is AppDataException ||
@@ -68,7 +68,17 @@ class ErrorHandler {
         error is PlatformException) {
       return 'There was an issue processing your data. Please try again.';
     } else {
-      return 'Something went wrong. Please try again later.';
+      return 'Oops! Something went wrong.';
+    }
+  }
+
+  static bool is404(Object? error) {
+    if (error is AppNetworkException) {
+      return error.code == 'HTTP_ERROR_404';
+    } else if (error is DioException) {
+      return error.response?.statusCode == 404;
+    } else {
+      return false;
     }
   }
 

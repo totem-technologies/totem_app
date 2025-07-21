@@ -166,7 +166,11 @@ class KeeperProfileScreen extends ConsumerWidget {
           );
         },
         loading: () => const LoadingIndicator(),
-        error: (error, stack) => ErrorScreen(error: error),
+        error: (error, stack) => ErrorScreen(
+          error: error,
+          onRetry: () => ref.refresh(keeperProfileProvider(slug).future),
+          showHomeButton: false,
+        ),
       ),
     );
   }

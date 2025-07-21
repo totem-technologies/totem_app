@@ -68,7 +68,11 @@ class BlogListScreen extends ConsumerWidget {
                 ),
               );
             },
-            error: (error, _) => ErrorScreen(error: error),
+            error: (error, _) => ErrorScreen(
+              error: error,
+              showHomeButton: false,
+              onRetry: () => ref.refresh(listBlogPostsProvider.future),
+            ),
             loading: LoadingIndicator.new,
           );
         },

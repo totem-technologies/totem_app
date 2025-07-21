@@ -111,7 +111,11 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
             ),
           );
         },
-        error: (error, _) => ErrorScreen(error: error),
+        error: (error, _) => ErrorScreen(
+          error: error,
+          showHomeButton: false,
+          onRetry: () => ref.refresh(blogPostProvider(widget.slug).future),
+        ),
         loading: () {
           return const LoadingIndicator();
         },

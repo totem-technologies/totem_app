@@ -95,7 +95,8 @@ class HomeScreen extends ConsumerWidget {
                       //       ),
                       //     );
                       //   },
-                      //   separatorBuilder: (_, _) => const SizedBox(width: 16),
+                      //   separatorBuilder: (_, _) => const SizedBox(width:
+                      // 16),
                       // ),
                     ),
                   ),
@@ -179,7 +180,11 @@ class HomeScreen extends ConsumerWidget {
         },
         loading: LoadingScreen.new,
         error: (error, stackTrace) {
-          return ErrorScreen(error: error);
+          return ErrorScreen(
+            error: error,
+            showHomeButton: false,
+            onRetry: () => ref.refresh(spacesSummaryProvider.future),
+          );
         },
       ),
     );

@@ -103,7 +103,11 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
             ),
           );
         },
-        error: (err, stack) => ErrorScreen(error: err),
+        error: (err, stack) => ErrorScreen(
+          error: err,
+          showHomeButton: false,
+          onRetry: () => ref.refresh(listSpacesProvider.future),
+        ),
         loading: () => const LoadingIndicator(),
       ),
     );
