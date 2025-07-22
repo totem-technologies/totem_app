@@ -165,9 +165,9 @@ GoRouter createRouter(WidgetRef ref) {
 
       if (isAuthRoute && isLoggedIn) {
         // If we're logged in and trying to access auth routes, redirect to
-        // spaces
-        logger.i('🛻 Redirecting to spaces from auth route');
-        return RouteNames.spaces;
+        // home
+        logger.i('🛻 Redirecting to home from auth route');
+        return RouteNames.home;
       }
 
       // If we're trying to access a protected route but not logged in, redirect
@@ -187,10 +187,10 @@ GoRouter createRouter(WidgetRef ref) {
         return RouteNames.onboarding;
       }
 
-      // If logged in and trying to access auth routes, redirect to spaces
+      // If logged in and trying to access auth routes, redirect to home
       if (isLoggedIn && isOnboardingCompleted && isAuthRoute) {
-        logger.i('🛻 Redirecting to spaces from auth route');
-        return RouteNames.spaces;
+        logger.i('🛻 Redirecting to home from auth route');
+        return RouteNames.home;
       }
 
       // No redirect needed

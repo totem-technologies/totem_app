@@ -126,6 +126,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           enabled: !_isLoading,
           restorationId: 'auth_email_input',
           onFieldSubmitted: (_) => _requestPin(),
+          autofocus: true,
         ),
         Row(
           children: [

@@ -170,6 +170,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
           restorationId: 'auth_pin_input',
           enabled: !_isLoading && _attempts < _maxAttempts,
           validator: _validatePin,
+          autofocus: true,
         ),
         const SizedBox(height: 24),
 
