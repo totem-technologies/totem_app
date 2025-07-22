@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/export.dart';
@@ -12,6 +13,7 @@ import 'package:totem_app/core/config/consts.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
+import 'package:totem_app/core/services/local_storage_service.dart';
 import 'package:totem_app/core/services/notifications_service.dart';
 import 'package:totem_app/core/services/secure_storage.dart';
 import 'package:totem_app/shared/logger.dart';
@@ -339,19 +341,33 @@ class AuthController extends Notifier<AuthState> {
     _isCheckingExistingAuth = true;
     _setState(AuthState.loading());
     try {
+      final connectivityResult = await Connectivity().checkConnectivity();
+      final isOffline = connectivityResult.contains(ConnectivityResult.none);
+
       final accessToken = await _secureStorage.read(key: AppConsts.accessToken);
       if (accessToken == null) {
         _setState(AuthState.unauthenticated());
         return;
       }
 
-      // TODO(bdlukaa): User profile should be stored in secure storage and
-      // retrieved here instead of making a network call for
-      // every app launch.
-      final user = await _authRepository.currentUser;
-      _setState(AuthState.authenticated(user: user));
-      _analyticsService.setUserId(user);
-      await _updateFCMToken();
+      if (isOffline) {
+        final cachedUser = await ref
+            .read(localStorageServiceProvider)
+            .getUser();
+        if (cachedUser != null) {
+          _setState(AuthState.authenticated(user: cachedUser));
+        } else {
+          // If offline and no cached user, we have to assume unauthenticated
+          _setState(AuthState.unauthenticated());
+        }
+      } else {
+        // If online, proceed with the network call
+        final user = await _authRepository.currentUser;
+        await ref.read(localStorageServiceProvider).saveUser(user);
+        _setState(AuthState.authenticated(user: user));
+        _analyticsService.setUserId(user);
+        await _updateFCMToken();
+      }
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -389,6 +405,7 @@ class AuthController extends Notifier<AuthState> {
   Future<void> _clearTokens() async {
     await _secureStorage.delete(key: AppConsts.accessToken);
     await _secureStorage.delete(key: AppConsts.refreshToken);
+    await ref.read(localStorageServiceProvider).clearUser();
   }
 
   void _handleAuthError(Object error, StackTrace stackTrace) {
