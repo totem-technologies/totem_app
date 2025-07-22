@@ -2,6 +2,12 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_app/core/services/connectivity_service.dart';
+import 'package:totem_app/features/blog/repositories/blog_repository.dart';
+import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
+import 'package:totem_app/shared/logger.dart';
 
 enum ConnectivityStatus { offline, online, recentlyReconnected }
 
@@ -46,17 +52,17 @@ class _StatusBanner extends StatelessWidget {
   }
 }
 
-class OfflineIndicatorPage extends StatefulWidget {
+class OfflineIndicatorPage extends ConsumerStatefulWidget {
   const OfflineIndicatorPage({required this.child, super.key});
 
   final Widget child;
 
   @override
-  State<OfflineIndicatorPage> createState() => _OfflineIndicatorPageState();
+  ConsumerState<OfflineIndicatorPage> createState() =>
+      _OfflineIndicatorPageState();
 }
 
-class _OfflineIndicatorPageState extends State<OfflineIndicatorPage> {
-  late final StreamSubscription<List<ConnectivityResult>> _subscription;
+class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
   ConnectivityStatus _status = ConnectivityStatus.online;
   Timer? _reconnectedTimer;
 
@@ -64,13 +70,10 @@ class _OfflineIndicatorPageState extends State<OfflineIndicatorPage> {
   void initState() {
     super.initState();
     _checkInitialConnectivity();
-    _subscription = Connectivity().onConnectivityChanged.listen(
-      _updateConnectivityStatus,
-    );
   }
 
   Future<void> _checkInitialConnectivity() async {
-    final result = await Connectivity().checkConnectivity();
+    final result = await ref.read(connectivityProvider).checkConnectivity();
     _updateConnectivityStatus(result, isInitialCheck: true);
   }
 
@@ -89,6 +92,7 @@ class _OfflineIndicatorPageState extends State<OfflineIndicatorPage> {
         });
       } else {
         if (wasOffline && !isInitialCheck) {
+          _resyncData();
           setState(() {
             _status = ConnectivityStatus.recentlyReconnected;
           });
@@ -109,15 +113,40 @@ class _OfflineIndicatorPageState extends State<OfflineIndicatorPage> {
     }
   }
 
+  void _resyncData() {
+    void smartRefresh<T>(AutoDisposeFutureProvider<T> provider) {
+      if (!ref.read(provider).hasValue) {
+        logger.i('Refreshing $provider due to reconnection');
+        ref.invalidate(provider);
+      } else {
+        // ref.refresh(provider);
+      }
+    }
+
+    smartRefresh(listSpacesProvider);
+    smartRefresh(spacesSummaryProvider);
+    smartRefresh(listBlogPostsProvider);
+    smartRefresh(listSubscribedSpacesProvider);
+    smartRefresh(listSessionsHistoryProvider);
+  }
+
   @override
   void dispose() {
-    _subscription.cancel();
     _reconnectedTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(
+      connectivityStreamProvider,
+      (previous, next) {
+        if (next.hasValue) {
+          _updateConnectivityStatus(next.value!);
+        }
+      },
+    );
+
     return Stack(
       fit: StackFit.expand,
       alignment: Alignment.bottomCenter,
