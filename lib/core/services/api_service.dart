@@ -33,9 +33,14 @@ Dio _initDio(Ref ref) {
           key: AppConsts.accessToken,
         );
 
+        // Don't try to refresh the token for the refresh token endpoint itself
+        if (options.path.endsWith('/auth/refresh')) {
+          return handler.next(options);
+        }
+
         // Refresh if expired
         if (AuthRepository.isAccessTokenExpired(accessToken)) {
-          logger.d('🔑 Access token expired, refreshing...');
+          logger.d(' Access token expired, refreshing...');
           final refreshToken = await secureStorage.read(
             key: AppConsts.refreshToken,
           );
@@ -52,7 +57,7 @@ Dio _initDio(Ref ref) {
               accessToken = response.accessToken;
 
               logger.d(
-                '🔑 Token refreshed successfully! New token: $accessToken',
+                ' Token refreshed successfully! New token: $accessToken',
               );
 
               await secureStorage.write(
@@ -63,7 +68,16 @@ Dio _initDio(Ref ref) {
                 key: AppConsts.refreshToken,
                 value: response.refreshToken,
               );
-            } catch (error, stackTrace) {
+            } on DioException catch (error, stackTrace) {
+              // This is the critical part: if token refresh fails due to
+              // network, we don't want to log the user out.
+              if (error.type != DioExceptionType.badResponse) {
+                // It's a network error, not an auth error.
+                // Let the original request fail with a network error.
+                return handler.next(options);
+              }
+
+              // If it's a bad response (like 401), then it's a real auth issue.
               await secureStorage.delete(key: AppConsts.accessToken);
               await secureStorage.delete(key: AppConsts.refreshToken);
 
@@ -81,7 +95,7 @@ Dio _initDio(Ref ref) {
               );
             }
           } else {
-            logger.d('🔑 Refresh token not found, redirecting to login...');
+            logger.d('🔑 Refresh token not found, user needs to log in.');
           }
         }
 
