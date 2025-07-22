@@ -346,6 +346,7 @@ class AuthController extends Notifier<AuthState> {
 
       final accessToken = await _secureStorage.read(key: AppConsts.accessToken);
       if (accessToken == null) {
+        logger.i('🔑 No access token found, setting state to unauthenticated');
         _setState(AuthState.unauthenticated());
         return;
       }
@@ -355,6 +356,7 @@ class AuthController extends Notifier<AuthState> {
             .read(localStorageServiceProvider)
             .getUser();
         if (cachedUser != null) {
+          logger.i('🔑 Offline mode: Using cached user data');
           _setState(AuthState.authenticated(user: cachedUser));
         } else {
           // If offline and no cached user, we have to assume unauthenticated

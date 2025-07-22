@@ -3,32 +3,42 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 
-class OfflineIndicator extends StatelessWidget {
-  const OfflineIndicator({super.key});
+enum ConnectivityStatus { offline, online, recentlyReconnected }
+
+class _StatusBanner extends StatelessWidget {
+  const _StatusBanner({required this.status});
+
+  final ConnectivityStatus status;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isOffline = status == ConnectivityStatus.offline;
+    final text = isOffline ? 'You are offline' : "You're back online";
+    final backgroundColor = isOffline ? Colors.white : Colors.green.shade100;
+    final textColor = isOffline
+        ? theme.colorScheme.onSurface
+        : Colors.green.shade900;
+
     return Align(
       alignment: Alignment.bottomCenter,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
         width: double.infinity,
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        padding: const EdgeInsets.all(6),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: theme.colorScheme.shadow,
-              blurRadius: 12,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: backgroundColor,
+          boxShadow: kElevationToShadow[1],
           borderRadius: BorderRadius.circular(30),
         ),
         child: Text(
-          'You are offline',
-          style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface),
+          text,
+          style: TextStyle(
+            fontSize: 14,
+            color: textColor,
+            fontWeight: FontWeight.w500,
+          ),
           textAlign: TextAlign.center,
         ),
       ),
@@ -46,25 +56,63 @@ class OfflineIndicatorPage extends StatefulWidget {
 }
 
 class _OfflineIndicatorPageState extends State<OfflineIndicatorPage> {
-  late final StreamSubscription<List<ConnectivityResult>> subscription;
-
-  var _isOffline = false;
+  late final StreamSubscription<List<ConnectivityResult>> _subscription;
+  ConnectivityStatus _status = ConnectivityStatus.online;
+  Timer? _reconnectedTimer;
 
   @override
   void initState() {
     super.initState();
-    subscription = Connectivity().onConnectivityChanged.listen((
-      List<ConnectivityResult> result,
-    ) {
-      setState(() {
-        _isOffline = result.isEmpty || result.contains(ConnectivityResult.none);
-      });
-    });
+    _checkInitialConnectivity();
+    _subscription = Connectivity().onConnectivityChanged.listen(
+      _updateConnectivityStatus,
+    );
+  }
+
+  Future<void> _checkInitialConnectivity() async {
+    final result = await Connectivity().checkConnectivity();
+    _updateConnectivityStatus(result, isInitialCheck: true);
+  }
+
+  void _updateConnectivityStatus(
+    List<ConnectivityResult> result, {
+    bool isInitialCheck = false,
+  }) {
+    final bool wasOffline = _status == ConnectivityStatus.offline;
+    final bool isNowOffline =
+        result.isEmpty || result.contains(ConnectivityResult.none);
+
+    if (mounted) {
+      if (isNowOffline) {
+        setState(() {
+          _status = ConnectivityStatus.offline;
+        });
+      } else {
+        if (wasOffline && !isInitialCheck) {
+          setState(() {
+            _status = ConnectivityStatus.recentlyReconnected;
+          });
+          _reconnectedTimer?.cancel();
+          _reconnectedTimer = Timer(const Duration(seconds: 3), () {
+            if (mounted) {
+              setState(() {
+                _status = ConnectivityStatus.online;
+              });
+            }
+          });
+        } else if (_status != ConnectivityStatus.recentlyReconnected) {
+          setState(() {
+            _status = ConnectivityStatus.online;
+          });
+        }
+      }
+    }
   }
 
   @override
   void dispose() {
-    subscription.cancel();
+    _subscription.cancel();
+    _reconnectedTimer?.cancel();
     super.dispose();
   }
 
@@ -76,10 +124,22 @@ class _OfflineIndicatorPageState extends State<OfflineIndicatorPage> {
       children: [
         Positioned.fill(child: widget.child),
         AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: _isOffline
-              ? const OfflineIndicator()
-              : const SizedBox.shrink(),
+          duration: const Duration(milliseconds: 350),
+          transitionBuilder: (child, animation) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 1.5),
+                end: Offset.zero,
+              ).animate(animation),
+              child: FadeTransition(
+                opacity: animation,
+                child: child,
+              ),
+            );
+          },
+          child: _status != ConnectivityStatus.online
+              ? _StatusBanner(status: _status)
+              : const SizedBox.shrink(key: ValueKey('online')),
         ),
       ],
     );
