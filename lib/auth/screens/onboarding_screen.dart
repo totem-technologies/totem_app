@@ -1,34 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/navigation/route_names.dart';
 
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final onboardingData = [
     const _OnboardingData(
       title: 'Welcome',
       description:
-          'Totem provides online discussion groups where you can cultivate your voice, and be a better listener.',
+          'Totem provides online discussion groups where you can '
+          'cultivate your voice, and be a better listener.',
       image: 'assets/images/onboarding_1.jpg',
     ),
     const _OnboardingData(
       title: 'Our Promise',
       description:
-          'We provide a moderated space you can safely express yourself and learn from others.',
+          'We provide a moderated space you can safely express '
+          'yourself and learn from others.',
       image: 'assets/images/onboarding_2.jpg',
     ),
     const _OnboardingData(
       title: 'Our Ask',
       description:
-          'We ask that you keep everything confidential, and that you only speak from your experience.',
+          'We ask that you keep everything confidential, and that '
+          'you only speak from your experience.',
       image: 'assets/images/onboarding_3.jpg',
     ),
   ];
@@ -76,8 +81,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  void _onSkip() {
-    context.go(RouteNames.login);
+  /// Complete the welcome onboarding and navigate to login
+  /// This marks that the user has seen the intro screens
+  Future<void> _onSkip() async {
+    // Mark welcome onboarding as completed so user won't see it again
+    await ref
+        .read(authControllerProvider.notifier)
+        .markWelcomeOnboardingCompleted();
+
+    if (mounted) {
+      context.go(RouteNames.login);
+    }
   }
 
   @override

@@ -138,7 +138,7 @@ GoRouter createRouter(WidgetRef ref) {
     debugLogDiagnostics: true,
     refreshListenable: GoRouterRefreshStream(authController.authStateChanges),
     observers: [PosthogObserver()],
-    redirect: (context, state) {
+    redirect: (context, state) async {
       logger.i('🛻 Router State Change: ${state.fullPath}');
 
       // Get current auth state
@@ -147,21 +147,39 @@ GoRouter createRouter(WidgetRef ref) {
       final isOnboardingCompleted = authController.isOnboardingCompleted;
       final isAuthRoute = state.matchedLocation.startsWith('/auth');
       final isOnboardingRoute = state.matchedLocation == RouteNames.onboarding;
+      final isWelcomeRoute = state.matchedLocation == RouteNames.welcome;
 
-      // If we're at the root and logged in, go to spaces
-      if (isRoot && isLoggedIn) {
-        if (!isOnboardingCompleted) {
-          logger.i('🛻 Redirecting to onboarding');
-          return RouteNames.onboarding;
+      // Check if user has seen welcome onboarding (first-time user detection)
+      final hasSeenWelcomeOnboarding =
+          await authController.hasSeenWelcomeOnboarding;
+
+      // If we're at the root
+      if (isRoot) {
+        if (isLoggedIn) {
+          // User is logged in
+          if (!isOnboardingCompleted) {
+            logger.i('🛻 Redirecting logged-in user to profile onboarding');
+            return RouteNames.onboarding;
+          }
+          logger.i('🛻 Redirecting logged-in user to spaces');
+          return RouteNames.spaces;
+        } else {
+          // User is not logged in
+          if (!hasSeenWelcomeOnboarding) {
+            logger.i('🛻 First-time user - staying on welcome screens');
+            return null; // Stay on welcome screens
+          } else {
+            logger.i('🛻 Returning user - redirecting to login');
+            return RouteNames.login;
+          }
         }
-        logger.i('🛻 Redirecting to spaces');
-        return RouteNames.spaces;
       }
 
-      // If we're at the root and not logged in, go to login
-      // if (state.matchedLocation == '/' && !isLoggedIn) {
-      //   return RouteNames.login;
-      // }
+      // If trying to access welcome screens but already seen them
+      if (isWelcomeRoute && hasSeenWelcomeOnboarding && !isLoggedIn) {
+        logger.i('🛻 User already seen welcome - redirecting to login');
+        return RouteNames.login;
+      }
 
       if (isAuthRoute && isLoggedIn) {
         // If we're logged in and trying to access auth routes, redirect to
@@ -172,7 +190,7 @@ GoRouter createRouter(WidgetRef ref) {
 
       // If we're trying to access a protected route but not logged in, redirect
       // to login
-      if (!isLoggedIn && !isAuthRoute && !isRoot) {
+      if (!isLoggedIn && !isAuthRoute && !isRoot && !isWelcomeRoute) {
         logger.i('🛻 Redirecting to login from non-auth route');
         return RouteNames.login;
       }
