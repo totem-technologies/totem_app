@@ -6,9 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/screens/login_screen.dart';
+import 'package:totem_app/auth/screens/onboarding_screen.dart';
 import 'package:totem_app/auth/screens/pin_entry_screen.dart';
 import 'package:totem_app/auth/screens/profile_setup_screen.dart';
-import 'package:totem_app/auth/screens/welcome_screen.dart';
 import 'package:totem_app/features/blog/screens/blog_list_screen.dart';
 import 'package:totem_app/features/blog/screens/blog_screen.dart';
 import 'package:totem_app/features/home/screens/home_screen.dart';
@@ -200,7 +200,7 @@ GoRouter createRouter(WidgetRef ref) {
       GoRoute(
         path: RouteNames.welcome,
         name: RouteNames.welcome,
-        builder: (context, state) => const WelcomeScreen(),
+        builder: (context, state) => const OnboardingScreen(),
       ),
       // Auth routes (no bottom nav)
       GoRoute(
