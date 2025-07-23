@@ -51,3 +51,6 @@ openapi.json
 **/google-services.json
 **/firebase_options.dart
 **/firebase.json
+
+# VS Code
+.vscode/
