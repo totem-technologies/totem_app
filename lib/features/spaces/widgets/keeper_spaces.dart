@@ -4,9 +4,11 @@ import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 
 class KeeperSpaces extends ConsumerWidget {
-  const KeeperSpaces({required this.keeperSlug, super.key});
+  const KeeperSpaces({required this.keeperSlug, this.title, super.key});
 
   final String keeperSlug;
+
+  final String? title;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,10 +22,10 @@ class KeeperSpaces extends ConsumerWidget {
         }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 5,
+          spacing: 8,
           children: [
             Text(
-              'Upcoming Spaces',
+              title ?? 'Upcoming Spaces',
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),

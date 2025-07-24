@@ -8,6 +8,7 @@ import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class BlogScreen extends ConsumerStatefulWidget {
   const BlogScreen({required this.slug, super.key});
@@ -94,19 +95,33 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                   ],
                   title: Text(blog.title),
                 ),
-                SliverPadding(
-                  padding: const EdgeInsets.all(16),
-                  sliver: SliverToBoxAdapter(
-                    child: Html(data: blog.contentHtml),
+                SliverToBoxAdapter(
+                  child: Html(
+                    data: blog.contentHtml,
+                    onLinkTap: (url, _, _) {
+                      launchUrl(Uri.parse(url ?? ''));
+                    },
+                    style: {
+                      'body': Style(
+                        margin: Margins.symmetric(horizontal: 16),
+                      ),
+                    },
                   ),
                 ),
 
                 if (blog.author?.slug != null)
                   SliverToBoxAdapter(
-                    child: KeeperSpaces(
-                      keeperSlug: blog.author!.slug!,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: KeeperSpaces(
+                        keeperSlug: blog.author!.slug!,
+                      ),
                     ),
                   ),
+
+                const SliverSafeArea(
+                  sliver: SliverToBoxAdapter(),
+                ),
               ],
             ),
           );
