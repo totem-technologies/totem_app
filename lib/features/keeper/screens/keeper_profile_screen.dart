@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/keeper/repositories/keeper_repository.dart';
+import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -29,140 +30,152 @@ class KeeperProfileScreen extends ConsumerWidget {
       ),
       body: async.when(
         data: (keeper) {
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              IntrinsicHeight(
-                child: Container(
-                  constraints: const BoxConstraints(
-                    maxWidth: 400,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    vertical: 20,
-                    horizontal: 22,
-                  ),
-                  child: Row(
-                    spacing: 8,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          children: [
-                            UserAvatar(
-                              seed: keeper.user.profileAvatarSeed,
-                              image: keeper.user.profileImage != null
-                                  ? CachedNetworkImageProvider(
-                                      keeper.user.profileImage!,
-                                    )
-                                  : null,
-                              radius: 52,
-                            ),
-                            Text(
-                              keeper.user.name ?? 'Keeper',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
+          final bottomSafeArea = MediaQuery.paddingOf(context).bottom;
+          return SafeArea(
+            bottom: false,
+            child: ListView(
+              padding: EdgeInsetsDirectional.only(
+                start: 16,
+                end: 16,
+                top: 16,
+                bottom: 16 + bottomSafeArea,
+              ),
+              children: [
+                IntrinsicHeight(
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      maxWidth: 400,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      vertical: 20,
+                      horizontal: 22,
+                    ),
+                    child: Row(
+                      spacing: 8,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              UserAvatar(
+                                seed: keeper.user.profileAvatarSeed,
+                                image: keeper.user.profileImage != null
+                                    ? CachedNetworkImageProvider(
+                                        keeper.user.profileImage!,
+                                      )
+                                    : null,
+                                radius: 52,
                               ),
-                            ),
-                            Text(keeper.location),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (keeper.website != null &&
-                                    keeper.website!.isNotEmpty)
-                                  Link(
-                                    uri: Uri.parse(keeper.website!),
-                                    builder: (context, followLink) {
-                                      return IconButton(
-                                        icon: const TotemIcon(
-                                          TotemIcons.link,
-                                          size: 20,
-                                        ),
-                                        onPressed: followLink,
-                                        iconSize: 20,
-                                      );
-                                    },
-                                  ),
-                                if (keeper.instagramUsername != null &&
-                                    keeper.instagramUsername!.isNotEmpty)
-                                  Link(
-                                    uri: Uri.parse(
-                                      'https://instagram.com/${keeper.instagramUsername!}',
+                              Text(
+                                keeper.user.name ?? 'Keeper',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(keeper.location),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (keeper.website != null &&
+                                      keeper.website!.isNotEmpty)
+                                    Link(
+                                      uri: Uri.parse(keeper.website!),
+                                      builder: (context, followLink) {
+                                        return IconButton(
+                                          icon: const TotemIcon(
+                                            TotemIcons.link,
+                                            size: 20,
+                                          ),
+                                          onPressed: followLink,
+                                          iconSize: 20,
+                                        );
+                                      },
                                     ),
-                                    builder: (context, followLink) {
-                                      return IconButton(
-                                        icon: const TotemIcon(
-                                          TotemIcons.instagram,
-                                          size: 20,
-                                        ),
-                                        onPressed: followLink,
-                                        iconSize: 20,
-                                      );
-                                    },
-                                  ),
-                              ],
-                            ),
-                          ],
+                                  if (keeper.instagramUsername != null &&
+                                      keeper.instagramUsername!.isNotEmpty)
+                                    Link(
+                                      uri: Uri.parse(
+                                        'https://instagram.com/${keeper.instagramUsername!}',
+                                      ),
+                                      builder: (context, followLink) {
+                                        return IconButton(
+                                          icon: const TotemIcon(
+                                            TotemIcons.instagram,
+                                            size: 20,
+                                          ),
+                                          onPressed: followLink,
+                                          iconSize: 20,
+                                        );
+                                      },
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const Spacer(),
-                            Text(
-                              '${keeper.circleCount}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Spacer(),
+                              Text(
+                                '${keeper.circleCount}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
                               ),
-                            ),
-                            const Text('Hosted Spaces'),
-                            const Spacer(),
+                              const Text('Hosted Spaces'),
+                              const Spacer(),
 
-                            Text(
-                              keeper.languages,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
+                              Text(
+                                keeper.languages,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
                               ),
-                            ),
-                            const Text('Languages'),
+                              const Text('Languages'),
 
-                            const Spacer(),
+                              const Spacer(),
 
-                            Text(
-                              keeper.monthJoined,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
+                              Text(
+                                keeper.monthJoined,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
                               ),
-                            ),
-                            const Text('Month Joined'),
+                              const Text('Month Joined'),
 
-                            const Spacer(),
-                          ],
+                              const Spacer(),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Biography',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: 20),
+                Text(
+                  'Biography',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              Html(
-                data: keeper.bioHtml ?? keeper.bio,
-              ),
-              // TODO(bdlukaa): Upcoming spaces
-            ],
+                Html(
+                  data: keeper.bioHtml ?? keeper.bio,
+                ),
+                const SizedBox(height: 20),
+                KeeperSpaces(
+                  keeperSlug: keeper.user.slug!,
+                ),
+              ],
+            ),
           );
         },
         loading: () => const LoadingIndicator(),

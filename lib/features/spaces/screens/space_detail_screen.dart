@@ -46,12 +46,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           body: Stack(
             children: [
               Positioned.fill(
-                child: RefreshIndicator.adaptive(
-                  onRefresh: () =>
-                      ref.refresh(eventProvider(widget.eventSlug).future),
-                  child: CustomScrollView(
-                    shrinkWrap: true,
-                    slivers: [
+                child: NestedScrollView(
+                  headerSliverBuilder: (context, _) {
+                    return [
                       SliverAppBar.large(
                         centerTitle: true,
                         expandedHeight: MediaQuery.sizeOf(context).height * 0.4,
@@ -120,145 +117,145 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         ],
                         title: Text(event.title),
                       ),
-                      SliverSafeArea(
-                        top: false,
-                        sliver: SliverPadding(
-                          padding: isPhone
-                              ? const EdgeInsetsDirectional.only(
-                                  start: 16,
-                                  top: 16,
-                                  end: 16,
-                                  bottom: 124,
-                                )
-                              : const EdgeInsetsDirectional.only(
-                                  start: 80,
-                                  end: 80,
-                                  top: 16,
-                                  bottom: 16 + 64 * 2,
-                                ),
-                          sliver: SliverList.list(
+                    ];
+                  },
+                  body: RefreshIndicator.adaptive(
+                    onRefresh: () =>
+                        ref.refresh(eventProvider(widget.eventSlug).future),
+                    child: SafeArea(
+                      top: false,
+                      child: ListView(
+                        padding: isPhone
+                            ? const EdgeInsetsDirectional.only(
+                                start: 16,
+                                top: 16,
+                                end: 16,
+                                bottom: 124,
+                              )
+                            : const EdgeInsetsDirectional.only(
+                                start: 80,
+                                end: 80,
+                                top: 16,
+                                bottom: 16 + 64 * 2,
+                              ),
+                        children: [
+                          Text(
+                            'About this session',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
                             children: [
-                              Text(
-                                'About this session',
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                              _buildInfoText(
+                                const TotemIcon(TotemIcons.clockCircle),
+                                Text('${event.duration} minutes'),
+                              ),
+                              _buildInfoText(
+                                const TotemIcon(TotemIcons.seats),
+                                Text(
+                                  event.seatsLeft > 0
+                                      ? '${event.seatsLeft} seats left'
+                                      : 'No seats left',
                                 ),
-                              ),
-
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  _buildInfoText(
-                                    const TotemIcon(TotemIcons.clockCircle),
-                                    Text('${event.duration} minutes'),
-                                  ),
-                                  _buildInfoText(
-                                    const TotemIcon(TotemIcons.seats),
-                                    Text(
-                                      event.seatsLeft > 0
-                                          ? '${event.seatsLeft} seats left'
-                                          : 'No seats left',
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              Html(data: event.description),
-
-                              // TODO(bdlukaa): About this space
-                              Text(
-                                'About this space',
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  _buildInfoText(
-                                    const TotemIcon(TotemIcons.person),
-                                    Text('${event.subscribers} subscribers'),
-                                  ),
-                                  _buildInfoText(
-                                    const TotemIcon(TotemIcons.priceTag),
-                                    Text(
-                                      event.price == 0
-                                          ? 'No cost'
-                                          // TODO(bdlukaa): Format this price
-                                          : 'Cost: \$${event.price}',
-                                    ),
-                                  ),
-                                  _buildInfoText(
-                                    const TotemIcon(TotemIcons.calendar),
-                                    Text(event.space.recurring),
-                                  ),
-                                ],
-                              ),
-
-                              Html(data: event.space.shortDescription),
-
-                              const SizedBox(height: 16),
-                              Text(
-                                'Meet the keeper',
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-
-                              Row(
-                                spacing: 8,
-                                children: [
-                                  UserAvatar(
-                                    image:
-                                        event.space.author.profileImage != null
-                                        ? CachedNetworkImageProvider(
-                                            getFullUrl(
-                                              event.space.author.profileImage!,
-                                            ),
-                                          )
-                                        : null,
-                                    seed: event.space.author.profileAvatarSeed,
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      event.space.author.name ?? 'Keeper',
-                                      style: theme.textTheme.titleLarge
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                    ),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      if (event.space.author.slug != null) {
-                                        context.push(
-                                          RouteNames.keeperProfile(
-                                            event.space.author.slug!,
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    child: const Text(
-                                      'View Profile',
-                                      style: TextStyle(fontSize: 14),
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 32),
-                              KeeperSpaces(
-                                keeperSlug: event.space.author.slug!,
                               ),
                             ],
                           ),
-                        ),
+
+                          Html(data: event.description),
+
+                          // TODO(bdlukaa): About this space
+                          Text(
+                            'About this space',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _buildInfoText(
+                                const TotemIcon(TotemIcons.person),
+                                Text('${event.subscribers} subscribers'),
+                              ),
+                              _buildInfoText(
+                                const TotemIcon(TotemIcons.priceTag),
+                                Text(
+                                  event.price == 0
+                                      ? 'No cost'
+                                      // TODO(bdlukaa): Format this price
+                                      : 'Cost: \$${event.price}',
+                                ),
+                              ),
+                              _buildInfoText(
+                                const TotemIcon(TotemIcons.calendar),
+                                Text(event.space.recurring),
+                              ),
+                            ],
+                          ),
+
+                          Html(data: event.space.shortDescription),
+
+                          const SizedBox(height: 16),
+                          Text(
+                            'Meet the keeper',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+
+                          Row(
+                            spacing: 8,
+                            children: [
+                              UserAvatar(
+                                image: event.space.author.profileImage != null
+                                    ? CachedNetworkImageProvider(
+                                        getFullUrl(
+                                          event.space.author.profileImage!,
+                                        ),
+                                      )
+                                    : null,
+                                seed: event.space.author.profileAvatarSeed,
+                              ),
+                              Expanded(
+                                child: Text(
+                                  event.space.author.name ?? 'Keeper',
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  if (event.space.author.slug != null) {
+                                    context.push(
+                                      RouteNames.keeperProfile(
+                                        event.space.author.slug!,
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: const Text(
+                                  'View Profile',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 32),
+                          KeeperSpaces(
+                            keeperSlug: event.space.author.slug!,
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
