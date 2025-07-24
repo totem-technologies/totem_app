@@ -33,11 +33,17 @@ class SpaceCard extends StatelessWidget {
           child: Stack(
             children: [
               Positioned.fill(
-                child: Image.network(
-                  getFullUrl(space.imageLink ?? ''),
+                child: CachedNetworkImage(
+                  imageUrl: getFullUrl(space.imageLink ?? ''),
                   fit: BoxFit.cover,
                   color: Colors.black.withValues(alpha: 0.45),
                   colorBlendMode: BlendMode.multiply,
+                  placeholder: (context, url) => ColoredBox(
+                    color: Colors.black.withValues(alpha: 0.75),
+                  ),
+                  errorWidget: (context, url, error) => ColoredBox(
+                    color: Colors.black.withValues(alpha: 0.75),
+                  ),
                 ),
               ),
               PositionedDirectional(
