@@ -1,17 +1,35 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/services/api_service.dart';
+import 'package:totem_app/core/services/cache_service.dart';
 
 part 'space_repository.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 Future<List<SpaceDetailSchema>> listSpaces(Ref ref) async {
   final mobileApiService = ref.watch(mobileApiServiceProvider);
-  return (await mobileApiService.spaces.totemCirclesMobileApiListSpaces())
-      .items;
+  final cache = ref.watch(cacheServiceProvider);
+
+  try {
+    final response = await mobileApiService.spaces
+        .totemCirclesMobileApiListSpaces();
+    final spaces = response.items;
+
+    unawaited(cache.saveSpaces(spaces));
+
+    return spaces;
+  } on DioException catch (_) {
+    final cachedSpaces = await cache.getSpaces();
+    if (cachedSpaces != null) {
+      return cachedSpaces;
+    } else {
+      rethrow;
+    }
+  }
 }
 
 @riverpod

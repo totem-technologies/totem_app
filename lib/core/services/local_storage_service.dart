@@ -17,13 +17,15 @@ class LocalStorageService {
 
   Future<void> saveUser(UserSchema user) async {
     await _secureStorage.write(
-      key: AppConsts.userProfile,
+      key: AppConsts.storageUserProfileKey,
       value: jsonEncode(user.toJson()),
     );
   }
 
   Future<UserSchema?> getUser() async {
-    final userJson = await _secureStorage.read(key: AppConsts.userProfile);
+    final userJson = await _secureStorage.read(
+      key: AppConsts.storageUserProfileKey,
+    );
     if (userJson != null) {
       try {
         return UserSchema.fromJson(
@@ -38,6 +40,6 @@ class LocalStorageService {
   }
 
   Future<void> clearUser() async {
-    await _secureStorage.delete(key: AppConsts.userProfile);
+    await _secureStorage.delete(key: AppConsts.storageUserProfileKey);
   }
 }

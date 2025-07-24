@@ -5,7 +5,7 @@ import 'package:totem_app/core/services/api_service.dart';
 
 part 'home_screen_repository.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 Future<SummarySpacesSchema> spacesSummary(Ref ref) {
   final mobileApiService = ref.watch(mobileApiServiceProvider);
   return mobileApiService.spaces.totemCirclesMobileApiGetSpacesSummary();
