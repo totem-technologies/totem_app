@@ -47,7 +47,7 @@ class UserAvatar extends ConsumerWidget {
                 : null,
             child: showImage && user?.profileImage == null && image == null
                 ? AnimatedBoringAvatar(
-                    name: seed ?? user!.profileAvatarSeed,
+                    name: seed ?? user?.profileAvatarSeed ?? 'default',
                     type: BoringAvatarType.marble,
                     duration: const Duration(milliseconds: 300),
                   )
