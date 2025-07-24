@@ -29,32 +29,29 @@ class UserAvatar extends ConsumerWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: Hero(
-        tag: 'user-avatar-${user?.email}',
-        // For some reason, DecoratedBox is not working here
-        // ignore: use_decorated_box
-        child: Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: borderWidth),
-          ),
-          child: ClipOval(
-            child: CircleAvatar(
-              radius: radius,
-              backgroundImage: showImage
-                  ? (image ??
-                        (user?.profileImage == null
-                            ? null
-                            : CachedNetworkImageProvider(user!.profileImage!)))
-                  : null,
-              child: showImage && user?.profileImage == null && image == null
-                  ? AnimatedBoringAvatar(
-                      name: seed ?? user!.profileAvatarSeed,
-                      type: BoringAvatarType.marble,
-                      duration: const Duration(milliseconds: 300),
-                    )
-                  : null,
-            ),
+      // For some reason, DecoratedBox is not working here
+      // ignore: use_decorated_box
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: borderWidth),
+        ),
+        child: ClipOval(
+          child: CircleAvatar(
+            radius: radius,
+            backgroundImage: showImage
+                ? (image ??
+                      (user?.profileImage == null
+                          ? null
+                          : CachedNetworkImageProvider(user!.profileImage!)))
+                : null,
+            child: showImage && user?.profileImage == null && image == null
+                ? AnimatedBoringAvatar(
+                    name: seed ?? user!.profileAvatarSeed,
+                    type: BoringAvatarType.marble,
+                    duration: const Duration(milliseconds: 300),
+                  )
+                : null,
           ),
         ),
       ),

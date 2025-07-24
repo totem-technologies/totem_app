@@ -34,6 +34,8 @@ enum HomeRoutes {
   const HomeRoutes(this.path);
 
   final String path;
+
+  static const HomeRoutes initialRoute = HomeRoutes.home;
 }
 
 class BottomNavScaffold extends StatelessWidget {
@@ -49,7 +51,7 @@ class BottomNavScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentRoute = HomeRoutes.values.firstWhere(
       (route) => currentPath.startsWith(route.path),
-      orElse: () => HomeRoutes.spaces,
+      orElse: () => HomeRoutes.initialRoute,
     );
 
     return Scaffold(
@@ -167,7 +169,7 @@ GoRouter createRouter(WidgetRef ref) {
         // If we're logged in and trying to access auth routes, redirect to
         // home
         logger.i('🛻 Redirecting to home from auth route');
-        return RouteNames.home;
+        return HomeRoutes.initialRoute.path;
       }
 
       // If we're trying to access a protected route but not logged in, redirect
@@ -190,7 +192,7 @@ GoRouter createRouter(WidgetRef ref) {
       // If logged in and trying to access auth routes, redirect to home
       if (isLoggedIn && isOnboardingCompleted && isAuthRoute) {
         logger.i('🛻 Redirecting to home from auth route');
-        return RouteNames.home;
+        return HomeRoutes.initialRoute.path;
       }
 
       // No redirect needed
