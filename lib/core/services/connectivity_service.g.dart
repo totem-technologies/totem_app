@@ -6,7 +6,7 @@ part of 'connectivity_service.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$connectivityHash() => r'da8080dfc40288eff97ff9cb96e9d9577714a9a0';
+String _$connectivityHash() => r'6d67af0ea4110f6ee0246dd332f90f8901380eda';
 
 /// See also [connectivity].
 @ProviderFor(connectivity)
@@ -24,7 +24,7 @@ final connectivityProvider = AutoDisposeProvider<Connectivity>.internal(
 // ignore: unused_element
 typedef ConnectivityRef = AutoDisposeProviderRef<Connectivity>;
 String _$connectivityStreamHash() =>
-    r'cfd2bdb3b4b2ff1dce5eb5ead658df9369b82cf1';
+    r'67159f6e1fedd7ed3da5924800bdf232db68da4c';
 
 /// See also [connectivityStream].
 @ProviderFor(connectivityStream)
@@ -43,7 +43,7 @@ final connectivityStreamProvider =
 // ignore: unused_element
 typedef ConnectivityStreamRef =
     AutoDisposeStreamProviderRef<List<ConnectivityResult>>;
-String _$isOfflineHash() => r'ed040972e140d1a73c556e8ba1d17e27fe865321';
+String _$isOfflineHash() => r'226ea739d3f33712af77c459ed952164200c7f64';
 
 /// See also [isOffline].
 @ProviderFor(isOffline)

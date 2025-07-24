@@ -6,23 +6,22 @@ part of 'home_screen_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$spacesSummaryHash() => r'f03336a47e876edfeebaababd4a66b2d9a3e6672';
+String _$spacesSummaryHash() => r'c38b9f29105ac53e7fd04182ccce10fe7b4ee143';
 
 /// See also [spacesSummary].
 @ProviderFor(spacesSummary)
-final spacesSummaryProvider =
-    AutoDisposeFutureProvider<SummarySpacesSchema>.internal(
-      spacesSummary,
-      name: r'spacesSummaryProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$spacesSummaryHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+final spacesSummaryProvider = FutureProvider<SummarySpacesSchema>.internal(
+  spacesSummary,
+  name: r'spacesSummaryProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$spacesSummaryHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef SpacesSummaryRef = AutoDisposeFutureProviderRef<SummarySpacesSchema>;
+typedef SpacesSummaryRef = FutureProviderRef<SummarySpacesSchema>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

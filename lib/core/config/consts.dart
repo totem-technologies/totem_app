@@ -6,4 +6,7 @@ class AppConsts {
 
   static const storageUserProfileKey = 'user_profile';
   static const storageSpacesListKey = 'spaces_list';
+  static const storageSpacesSummaryKey = 'spaces_summary';
+  static const storageSubscribedSpacesKey = 'subscribed_spaces';
+  static const storageSessionsHistoryKey = 'sessions_history';
 }

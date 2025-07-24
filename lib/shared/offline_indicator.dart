@@ -114,8 +114,10 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
   }
 
   void _resyncData() {
-    void smartRefresh<T>(AutoDisposeFutureProvider<T> provider) {
-      if (!ref.read(provider).hasValue) {
+    void smartRefresh(ProviderOrFamily provider) {
+      // Workaround for the riverpod typing inconsistency
+      if (!((ref.read(provider as ProviderListenable) as dynamic).hasValue
+          as bool)) {
         logger.i('Refreshing $provider due to reconnection');
         ref.invalidate(provider);
       } else {

@@ -43,7 +43,20 @@ Future<EventDetailSchema> event(Ref ref, String eventSlug) async {
 @riverpod
 Future<List<SpaceSchema>> listSubscribedSpaces(Ref ref) async {
   final mobileApiService = ref.watch(mobileApiServiceProvider);
-  return mobileApiService.spaces.totemCirclesMobileApiListSubscriptions();
+  final cache = ref.watch(cacheServiceProvider);
+  try {
+    final spaces = await mobileApiService.spaces
+        .totemCirclesMobileApiListSubscriptions();
+    unawaited(cache.saveSubscribedSpaces(spaces));
+    return spaces;
+  } on DioException catch (_) {
+    final cachedSpaces = await cache.getSubscribedSpaces();
+    if (cachedSpaces != null) {
+      return cachedSpaces;
+    } else {
+      rethrow;
+    }
+  }
 }
 
 @riverpod
@@ -88,5 +101,19 @@ Future<List<SpaceDetailSchema>> listSpacesByKeeper(
 @riverpod
 Future<List<EventDetailSchema>> listSessionsHistory(Ref ref) async {
   final mobileApiService = ref.watch(mobileApiServiceProvider);
-  return mobileApiService.spaces.totemCirclesMobileApiGetSessionsHistory();
+  final cache = ref.watch(cacheServiceProvider);
+
+  try {
+    final sessions = await mobileApiService.spaces
+        .totemCirclesMobileApiGetSessionsHistory();
+    unawaited(cache.saveSessionsHistory(sessions));
+    return sessions;
+  } on DioException catch (_) {
+    final cachedSessions = await cache.getSessionsHistory();
+    if (cachedSessions != null) {
+      return cachedSessions;
+    } else {
+      rethrow;
+    }
+  }
 }

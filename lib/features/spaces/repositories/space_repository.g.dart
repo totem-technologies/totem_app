@@ -6,24 +6,23 @@ part of 'space_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$listSpacesHash() => r'5e4af02f508d872c95e913011e610e8a394b548d';
+String _$listSpacesHash() => r'c17a7ffbca65ff4ee39431b66791b74eed094662';
 
 /// See also [listSpaces].
 @ProviderFor(listSpaces)
-final listSpacesProvider =
-    AutoDisposeFutureProvider<List<SpaceDetailSchema>>.internal(
-      listSpaces,
-      name: r'listSpacesProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$listSpacesHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+final listSpacesProvider = FutureProvider<List<SpaceDetailSchema>>.internal(
+  listSpaces,
+  name: r'listSpacesProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$listSpacesHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef ListSpacesRef = AutoDisposeFutureProviderRef<List<SpaceDetailSchema>>;
+typedef ListSpacesRef = FutureProviderRef<List<SpaceDetailSchema>>;
 String _$eventHash() => r'45c7d390bcdc6683294c1783234cff99bc4c79ab';
 
 /// Copied from Dart SDK
@@ -163,7 +162,7 @@ class _EventProviderElement
 }
 
 String _$listSubscribedSpacesHash() =>
-    r'2b4b00c814f4fdd7b2ca99b6433d5fb8ff7aee5e';
+    r'e4b73ae7cce24792714775c344deffd39373fe43';
 
 /// See also [listSubscribedSpaces].
 @ProviderFor(listSubscribedSpaces)
@@ -552,7 +551,7 @@ class _ListSpacesByKeeperProviderElement
 }
 
 String _$listSessionsHistoryHash() =>
-    r'28a5e8c88cebc2f364efc555f8d94b9f8868167a';
+    r'669b9babcb1f41a9d0e855b3e1592935fb14d10c';
 
 /// See also [listSessionsHistory].
 @ProviderFor(listSessionsHistory)
