@@ -12,6 +12,7 @@ class UserAvatar extends ConsumerWidget {
     this.seed,
     this.showImage = true,
     this.onTap,
+    this.borderWidth = 1.5,
   });
 
   final double radius;
@@ -19,6 +20,7 @@ class UserAvatar extends ConsumerWidget {
   final String? seed;
   final bool showImage;
   final VoidCallback? onTap;
+  final double borderWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,7 +36,7 @@ class UserAvatar extends ConsumerWidget {
         child: Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
+            border: Border.all(color: Colors.white, width: borderWidth),
           ),
           child: ClipOval(
             child: CircleAvatar(

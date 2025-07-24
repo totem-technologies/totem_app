@@ -34,7 +34,8 @@ Dio _initDio(Ref ref) {
         );
 
         // Don't try to refresh the token for the refresh token endpoint itself
-        if (options.path.endsWith('/auth/refresh')) {
+        if (options.path.endsWith('/auth/refresh') ||
+            options.path.endsWith('/auth/request-pin')) {
           return handler.next(options);
         }
 
