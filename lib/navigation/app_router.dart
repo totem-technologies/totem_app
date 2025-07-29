@@ -160,7 +160,7 @@ GoRouter createRouter(WidgetRef ref) {
           // User is logged in
           if (!isOnboardingCompleted) {
             logger.i('🛻 Redirecting logged-in user to profile onboarding');
-            return RouteNames.onboarding;
+            return RouteNames.communityGuidelines;
           }
           logger.i('🛻 Redirecting logged-in user to spaces');
           return RouteNames.spaces;
@@ -186,7 +186,7 @@ GoRouter createRouter(WidgetRef ref) {
         // If we're logged in and trying to access auth routes, redirect to
         // home
         logger.i('🛻 Redirecting to home from auth route');
-        return RouteNames.home;
+        return RouteNames.communityGuidelines;
       }
 
       // If we're trying to access a protected route but not logged in, redirect
