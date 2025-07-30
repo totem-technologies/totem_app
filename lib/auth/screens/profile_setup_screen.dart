@@ -5,11 +5,14 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/referral_choices.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/features/profile/screens/profile_image_picker.dart';
 import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/card_screen.dart';
 import 'package:totem_app/shared/widgets/info_text.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/page_indicator.dart';
+import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 // --- Main Screen Widget ---
 class ProfileSetupScreen extends ConsumerStatefulWidget {
@@ -79,7 +82,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 2,
       child: Builder(
         builder: (context) {
           final tabController = DefaultTabController.of(context);
@@ -105,6 +108,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   firstNameController: _firstNameController,
                   ageController: _ageController,
                   isLoading: _isLoading,
+                  onReferralSourceSelected: _handleReferralSourceSelection,
                   onContinue: () {
                     if (_formKeyTab1.currentState!.validate()) {
                       navigateToNextTab();
@@ -118,12 +122,12 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   onTopicSelected: _handleTopicSelection,
                   onContinue: navigateToNextTab,
                 ),
-                _ReferralSourceTab(
-                  selectedReferralSource: _referralSource,
-                  isLoading: _isLoading,
-                  onSourceSelected: _handleReferralSourceSelection,
-                  onSubmit: _submitProfile,
-                ),
+                // _ReferralSourceTab(
+                //   selectedReferralSource: _referralSource,
+                //   isLoading: _isLoading,
+                //   onSourceSelected: _handleReferralSourceSelection,
+                //   onSubmit: _submitProfile,
+                // ),
               ],
             ),
           );
@@ -141,13 +145,14 @@ class _NameAndAgeTab extends StatefulWidget {
     required this.ageController,
     required this.isLoading,
     required this.onContinue,
+    required this.onReferralSourceSelected,
   });
   final GlobalKey<FormState> formKey;
   final TextEditingController firstNameController;
   final TextEditingController ageController;
   final bool isLoading;
   final VoidCallback onContinue;
-
+  final ValueChanged<ReferralChoices> onReferralSourceSelected;
   @override
   State<_NameAndAgeTab> createState() => _NameAndAgeTabState();
 }
@@ -181,7 +186,7 @@ class _NameAndAgeTabState extends State<_NameAndAgeTab>
       isLoading: widget.isLoading,
       children: [
         Text(
-          'Welcome',
+          'Let’s get to know you',
           style: theme.textTheme.headlineSmall,
           textAlign: TextAlign.center,
         ),
@@ -193,8 +198,36 @@ class _NameAndAgeTabState extends State<_NameAndAgeTab>
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
+        GestureDetector(
+          // onTap: _pickImage,
+          onTap: () => showProfileImagePicker(context),
+          child: Center(
+            child: Stack(
+              alignment: AlignmentDirectional.center,
+              children: [
+                const UserAvatar(radius: 50),
+                PositionedDirectional(
+                  bottom: -10,
+                  end: -10,
+                  child: Container(
+                    height: 40,
+                    width: 40,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: AlignmentDirectional.center,
+                    child: const TotemIcon(TotemIcons.edit),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
         Text(
           'What do you like to be called?',
+          textAlign: TextAlign.left,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -214,9 +247,10 @@ class _NameAndAgeTabState extends State<_NameAndAgeTab>
           'Other people will see this, but you don’t have to use your real '
           'name. Add any pronounce is parentheses if you’d like.',
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
         Text(
           'How old are you?',
+          textAlign: TextAlign.left,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -237,9 +271,42 @@ class _NameAndAgeTabState extends State<_NameAndAgeTab>
           'You must be over 13 to join. Age is for verification only, no one '
           'will see it.',
         ),
-        const SizedBox(height: 24),
-        const PageIndicator(),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
+        Text(
+          'How did you hear about us?',
+          textAlign: TextAlign.left,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: () {
+            showModalBottomSheet<ReferralChoices>(
+              isScrollControlled: true,
+              context: context,
+              builder: (context) => const _ReferralSourceModal(),
+            ).then(
+              (value) {
+                if (value != null) {
+                  widget.onReferralSourceSelected(value);
+                }
+              },
+            );
+          },
+          child: TextFormField(
+            enabled: false,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(
+              hintText: 'Tap to select',
+            ),
+          ),
+        ),
+        const InfoText(
+          'This helps us understand how to reach more people like you.',
+        ),
+        const SizedBox(height: 20),
         ElevatedButton(
           onPressed: widget.isLoading ? null : widget.onContinue,
           child: const Text('Continue'),
@@ -314,8 +381,6 @@ class _TopicsTab extends StatelessWidget {
             ),
           );
         }),
-        const SizedBox(height: 14),
-        const PageIndicator(),
         const SizedBox(height: 24),
         ElevatedButton(
           onPressed: isLoading ? null : onContinue,
@@ -419,5 +484,83 @@ extension on ReferralChoices {
       ReferralChoices.social => 'Social Media',
       ReferralChoices.other || _ => 'Other',
     };
+  }
+}
+
+/// Modal for selecting a single referral source.
+/// This widget manages the selected choice, updates the UI to reflect it,
+/// and returns the selected one when the user clicks "Save".
+class _ReferralSourceModal extends StatefulWidget {
+  const _ReferralSourceModal();
+
+  @override
+  State<_ReferralSourceModal> createState() => _ReferralSourceModalState();
+}
+
+class _ReferralSourceModalState extends State<_ReferralSourceModal> {
+  /// Holds the currently selected referral source (only one allowed).
+  ReferralChoices? _selectedSource;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    // Build a set of available sources, excluding 'Other'
+    final availableSources = ReferralChoices.values
+        .where((source) => source.name != ReferralChoices.other.name)
+        .toSet();
+
+    return CardScreen(
+      children: [
+        Text(
+          'How did you hear about us?',
+          style: theme.textTheme.headlineSmall,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'This helps us understand how to reach more people like you.',
+          style: theme.textTheme.bodyMedium,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        ...availableSources.map((source) {
+          final isSelected = _selectedSource == source;
+          return Padding(
+            padding: const EdgeInsetsDirectional.only(bottom: 10),
+            child: RadioListTile<ReferralChoices>(
+              title: Text(source.name),
+              value: source,
+              groupValue: _selectedSource,
+              onChanged: (value) {
+                setState(() {
+                  _selectedSource = value;
+                });
+              },
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.primaryContainer,
+                  width: 2,
+                ),
+              ),
+              visualDensity: VisualDensity.compact,
+            ),
+          );
+        }),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: _selectedSource != null
+              ? () {
+                  // Pop and return the selected source as a ReferralChoices
+                  Navigator.of(context).pop(_selectedSource);
+                }
+              : null,
+          child: const Text('Save'),
+        ),
+      ],
+    );
   }
 }

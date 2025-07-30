@@ -151,13 +151,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     ),
                     const Spacer(),
                     Semantics(
-                      label: 'Skip onboarding',
+                      label: 'Log in button',
                       child: TextButton(
                         style: TextButton.styleFrom(
                           foregroundColor: AppTheme.white,
                         ),
                         onPressed: _onSkip,
-                        child: const Text('Skip'),
+                        child: const Text('Log in'),
                       ),
                     ),
                   ],
