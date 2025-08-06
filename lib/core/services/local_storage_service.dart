@@ -42,4 +42,27 @@ class LocalStorageService {
   Future<void> clearUser() async {
     await _secureStorage.delete(key: AppConsts.storageUserProfileKey);
   }
+
+  /// Check if the user has seen the welcome onboarding screens
+  /// Returns true if they have seen it before, false if it's their first time
+  Future<bool> hasSeenWelcomeOnboarding() async {
+    final hasSeenString = await _secureStorage.read(
+      key: AppConsts.hasSeenWelcomeOnboarding,
+    );
+    return hasSeenString == 'true';
+  }
+
+  /// Mark that the user has completed the welcome onboarding screens
+  /// This ensures they won't see the welcome screens again
+  Future<void> markWelcomeOnboardingCompleted() async {
+    await _secureStorage.write(
+      key: AppConsts.hasSeenWelcomeOnboarding,
+      value: 'true',
+    );
+  }
+
+  /// Clear the welcome onboarding flag (useful for testing or reset scenarios)
+  Future<void> clearWelcomeOnboardingFlag() async {
+    await _secureStorage.delete(key: AppConsts.hasSeenWelcomeOnboarding);
+  }
 }

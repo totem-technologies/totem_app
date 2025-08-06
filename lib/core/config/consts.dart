@@ -9,4 +9,6 @@ class AppConsts {
   static const storageSpacesSummaryKey = 'spaces_summary';
   static const storageSubscribedSpacesKey = 'subscribed_spaces';
   static const storageSessionsHistoryKey = 'sessions_history';
+  static const userProfile = 'user_profile';
+  static const hasSeenWelcomeOnboarding = 'has_seen_welcome_onboarding';
 }
