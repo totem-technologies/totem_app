@@ -241,10 +241,15 @@ class _SpacesClient implements SpacesClient {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{r'limit': limit};
     queryParameters.removeWhere((k, v) => v == null);
-    final _headers = <String, dynamic>{};
+    final _headers = <String, dynamic>{'Content-Type': 'application/json'};
     final _data = body;
     final _options = _setStreamType<List<EventDetailSchema>>(
-      Options(method: 'GET', headers: _headers, extra: _extra)
+      Options(
+            method: 'GET',
+            headers: _headers,
+            extra: _extra,
+            contentType: 'application/json',
+          )
           .compose(
             _dio.options,
             '/api/mobile/protected/spaces/recommended',

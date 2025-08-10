@@ -2,12 +2,15 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/referral_choices.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/screens/profile_image_picker.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/card_screen.dart';
@@ -527,58 +530,105 @@ class _SuggestedSpacesState extends State<_SuggestedSpaces> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return CardScreen(
-      isLoading: widget.isLoading,
-      children: [
-        Text(
-          'Suggested Spaces',
-          style: theme.textTheme.headlineSmall,
-          textAlign: TextAlign.center,
-        ),
-        Text(
-          'We’ve found some spaces that might be a good fit for you.',
-          style: theme.textTheme.bodyMedium,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 20),
-        const SuggestedSpace(),
-        const SizedBox(height: 20),
-        const SuggestedSpace(),
-        const SizedBox(height: 20),
-        const SuggestedSpace(),
-        const SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: () {},
-          style: ElevatedButton.styleFrom(
-            backgroundColor: theme.colorScheme.primaryContainer,
-            foregroundColor: theme.colorScheme.onPrimaryContainer,
-          ),
-          child: const Text('See all'),
-        ),
-      ],
+    final topics = widget.selectedTopics.toList();
+
+    return Consumer(
+      builder: (context, ref, _) {
+        final recommended = ref.watch(recommendedSpacesProvider(topics));
+
+        return CardScreen(
+          isLoading: widget.isLoading,
+          children: [
+            Text(
+              'Suggested Spaces',
+              style: theme.textTheme.headlineSmall,
+              textAlign: TextAlign.center,
+            ),
+            Text(
+              'We’ve found some spaces that might be a good fit for you.',
+              style: theme.textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            recommended.when(
+              data: (events) {
+                if (events.isEmpty) {
+                  return const InfoText(
+                    'No suggestions yet. Try selecting a few topics.',
+                  );
+                }
+                return Column(
+                  children: [
+                    for (final event in events) ...[
+                      SuggestedSpaceCard(event: event),
+                      const SizedBox(height: 12),
+                    ],
+                    const SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: widget.onSeeAllSpaces,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                        foregroundColor: theme.colorScheme.onPrimaryContainer,
+                      ),
+                      child: const Text('See all'),
+                    ),
+                  ],
+                );
+              },
+              error: (error, stack) {
+                return Column(
+                  children: [
+                    const InfoText('Couldn’t load suggestions.'),
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      onPressed: () =>
+                          ref.refresh(recommendedSpacesProvider(topics).future),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
-class SuggestedSpace extends StatelessWidget {
-  const SuggestedSpace({
+class SuggestedSpaceCard extends StatelessWidget {
+  const SuggestedSpaceCard({
+    required this.event,
     super.key,
   });
 
+  final EventDetailSchema event;
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final backgroundImage = event.space.image;
+    final timeLabel = _buildTimeLabel(event.start);
+    final title = event.title.isNotEmpty ? event.title : event.spaceTitle;
+    final keeperName = event.space.author.name ?? 'Keeper';
+    final seatsLeft = event.seatsLeft;
+
     return Container(
       height: 120,
       width: double.infinity,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        image: const DecorationImage(
-          image: NetworkImage(
-            'https://images.unsplash.com/photo-1485871981521-5b1fd3805eee?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-          ),
-          fit: BoxFit.cover,
-        ),
         borderRadius: BorderRadius.circular(20),
+        image: backgroundImage == null
+            ? null
+            : DecorationImage(
+                image: NetworkImage(backgroundImage),
+                fit: BoxFit.cover,
+              ),
+        color: backgroundImage == null
+            ? theme.colorScheme.primaryContainer
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -596,31 +646,33 @@ class SuggestedSpace extends StatelessWidget {
                   color: const Color.fromRGBO(38, 47, 55, 0.60),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'Today, 4:00 PM',
+                child: Text(
+                  timeLabel,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFFFFFFFF), // #FFF
+                  style: const TextStyle(
+                    color: Color(0xFFFFFFFF),
                     fontFamily: 'Albert Sans',
                     fontSize: 8,
                     fontStyle: FontStyle.normal,
                     fontWeight: FontWeight.w700,
-                    height: 1, // line-height: normal
+                    height: 1,
                   ),
                 ),
               ),
             ),
           ),
           const Spacer(),
-          const Text(
-            'Setting the Tone for May',
-            style: TextStyle(
-              color: Color(0xFFFFFFFF), // #FFF
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xFFFFFFFF),
               fontFamily: 'Albert Sans',
               fontSize: 14,
               fontStyle: FontStyle.normal,
               fontWeight: FontWeight.w600,
-              height: 1, // line-height: normal
+              height: 1,
             ),
             textAlign: TextAlign.left,
           ),
@@ -631,53 +683,46 @@ class SuggestedSpace extends StatelessWidget {
                 width: 25,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white,
-                  ),
-                  color: const Color(0xFF007AFF),
+                  border: Border.all(color: Colors.white),
+                  color: theme.colorScheme.primary,
                 ),
               ),
               const SizedBox(width: 4),
               RichText(
-                text: const TextSpan(
-                  style: TextStyle(
-                    color: Color(0xFFFFFFFF), // #FFF
+                text: TextSpan(
+                  style: const TextStyle(
+                    color: Color(0xFFFFFFFF),
                     fontFamily: 'Albert Sans',
                     fontSize: 10,
                     fontStyle: FontStyle.normal,
-                    height: 1, // line-height: normal
+                    height: 1,
                   ),
                   children: [
-                    TextSpan(
+                    const TextSpan(
                       text: 'With ',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w400,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w400),
                     ),
                     TextSpan(
-                      text: 'Maria',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700, // Bold for "Maria"
-                      ),
+                      text: keeperName,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
               ),
               const Spacer(),
               Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Container(
                     padding: const EdgeInsets.fromLTRB(8, 3, 9, 3),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF987AA5), // Mauve background
-                      borderRadius: BorderRadius.circular(
-                        20,
-                      ), // 20px border-radius
+                      color: const Color(0xFF987AA5),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
                       'Join',
                       style: TextStyle(
-                        color: Color(0xFFFFFFFF), // White text
+                        color: Color(0xFFFFFFFF),
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                         fontFamily: 'Albert Sans',
@@ -685,16 +730,16 @@ class SuggestedSpace extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    '4 seats left',
+                  Text(
+                    '${seatsLeft} seats left',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0xFFFFFFFF), // #FFF
+                    style: const TextStyle(
+                      color: Color(0xFFFFFFFF),
                       fontFamily: 'Albert Sans',
                       fontSize: 8,
                       fontStyle: FontStyle.normal,
                       fontWeight: FontWeight.w400,
-                      height: 1, // line-height: normal
+                      height: 1,
                     ),
                   ),
                 ],
@@ -704,6 +749,17 @@ class SuggestedSpace extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _buildTimeLabel(DateTime start) {
+    final isToday =
+        DateTime.now().day == start.day &&
+        DateTime.now().month == start.month &&
+        DateTime.now().year == start.year;
+    final dateFormatter = DateFormat('E MMM dd');
+    final timeFormatter = DateFormat('hh:mm a');
+    if (isToday) return 'Today, ${timeFormatter.format(start)}';
+    return '${dateFormatter.format(start)}, ${timeFormatter.format(start)}';
   }
 }
 
