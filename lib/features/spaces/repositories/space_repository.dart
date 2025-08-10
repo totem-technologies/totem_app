@@ -122,14 +122,16 @@ Future<List<EventDetailSchema>> listSessionsHistory(Ref ref) async {
 /// Uses the existing mobile API client method which calls
 /// `/api/mobile/protected/spaces/recommended` with a request body of
 /// `List<String>` and an optional `limit` query param.
-final recommendedSpacesProvider =
-    FutureProviderFamily<List<EventDetailSchema>, List<String>>((
+final recommendedEventsByTopicsKeyProvider =
+    FutureProviderFamily<List<EventDetailSchema>, String>((
       ref,
-      topics,
+      topicsKey,
     ) async {
       final mobileApiService = ref.watch(mobileApiServiceProvider);
-      // Backend expects a list of strings in the body. We default to limit=3.
+      final List<String>? body = topicsKey.isEmpty
+          ? null
+          : topicsKey.split('|');
       final events = await mobileApiService.spaces
-          .totemCirclesMobileApiGetRecommendedSpaces(body: topics, limit: 3);
+          .totemCirclesMobileApiGetRecommendedSpaces(body: body);
       return events;
     });

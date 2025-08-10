@@ -1,13 +1,11 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/referral_choices.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/auth/widget/referral_source_modal.dart';
+import 'package:totem_app/auth/widget/suggested_space_card_widget.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/screens/profile_image_picker.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
@@ -17,15 +15,14 @@ import 'package:totem_app/shared/widgets/card_screen.dart';
 import 'package:totem_app/shared/widgets/info_text.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
-class ProfileSetupScreenV2 extends ConsumerStatefulWidget {
-  const ProfileSetupScreenV2({super.key});
+class ProfileSetupScreen extends ConsumerStatefulWidget {
+  const ProfileSetupScreen({super.key});
 
   @override
-  ConsumerState<ProfileSetupScreenV2> createState() =>
-      _ProfileSetupScreenV2State();
+  ConsumerState<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
 }
 
-class _ProfileSetupScreenV2State extends ConsumerState<ProfileSetupScreenV2> {
+class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final PageController _pageController = PageController();
 
   final GlobalKey<FormState> _formKeyTab1 = GlobalKey<FormState>();
@@ -108,8 +105,8 @@ class _ProfileSetupScreenV2State extends ConsumerState<ProfileSetupScreenV2> {
         controller: _pageController,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          _GuidelinesPage(onContinue: _nextPage),
-          _ProfileSetupTab(
+          _GuidelinesTab(onContinue: _nextPage),
+          _ProfileTab(
             formKey: _formKeyTab1,
             firstNameController: _firstNameController,
             ageController: _ageController,
@@ -134,7 +131,7 @@ class _ProfileSetupScreenV2State extends ConsumerState<ProfileSetupScreenV2> {
               _nextPage();
             },
           ),
-          _SuggestedSpaces(
+          _SuggestionsTab(
             selectedTopics: _selectedTopics,
             isLoading: _isLoading,
             onSeeAllSpaces: () {
@@ -147,8 +144,9 @@ class _ProfileSetupScreenV2State extends ConsumerState<ProfileSetupScreenV2> {
   }
 }
 
-class _GuidelinesPage extends StatelessWidget {
-  const _GuidelinesPage({required this.onContinue});
+/// First tab: Community Guidelines acknowledgement.
+class _GuidelinesTab extends StatelessWidget {
+  const _GuidelinesTab({required this.onContinue});
 
   final VoidCallback onContinue;
 
@@ -237,13 +235,9 @@ class _GuidelinesPage extends StatelessWidget {
   }
 }
 
-// --- Main Screen Widget ---
-// Replace old implementation by aliasing to V2
-typedef ProfileSetupScreen = ProfileSetupScreenV2;
-
-// --- Tab 1: Name and Age ---
-class _ProfileSetupTab extends StatefulWidget {
-  const _ProfileSetupTab({
+/// Second tab: Name, age, and referral source capture.
+class _ProfileTab extends StatefulWidget {
+  const _ProfileTab({
     required this.formKey,
     required this.firstNameController,
     required this.ageController,
@@ -260,10 +254,10 @@ class _ProfileSetupTab extends StatefulWidget {
   final ValueChanged<ReferralChoices> onReferralSourceSelected;
   final ReferralChoices? referralSource;
   @override
-  State<_ProfileSetupTab> createState() => _ProfileSetupTabState();
+  State<_ProfileTab> createState() => _ProfileTabState();
 }
 
-class _ProfileSetupTabState extends State<_ProfileSetupTab>
+class _ProfileTabState extends State<_ProfileTab>
     with AutomaticKeepAliveClientMixin {
   String? _validateFirstName(String? value) {
     if (value == null || value.trim().isEmpty) {
@@ -391,7 +385,7 @@ class _ProfileSetupTabState extends State<_ProfileSetupTab>
             showModalBottomSheet<ReferralChoices>(
               isScrollControlled: true,
               context: context,
-              builder: (context) => const _ReferralSourceModal(),
+              builder: (context) => const ReferralSourceModal(),
             ).then(
               (value) {
                 if (value != null) {
@@ -439,7 +433,7 @@ class _ProfileSetupTabState extends State<_ProfileSetupTab>
   bool get wantKeepAlive => true;
 }
 
-// --- Tab 2: Topics ---
+/// Third tab: Topics selection.
 class _TopicsTab extends StatelessWidget {
   const _TopicsTab({
     required this.selectedTopics,
@@ -511,345 +505,79 @@ class _TopicsTab extends StatelessWidget {
   }
 }
 
-// --- Tab 3: Referral Source ---
-class _SuggestedSpaces extends StatefulWidget {
-  const _SuggestedSpaces({
+/// Fourth tab: Suggested spaces fetched from backend.
+class _SuggestionsTab extends ConsumerWidget {
+  const _SuggestionsTab({
     required this.selectedTopics,
     required this.isLoading,
     required this.onSeeAllSpaces,
   });
+
   final Set<String> selectedTopics;
   final bool isLoading;
   final VoidCallback onSeeAllSpaces;
 
   @override
-  State<_SuggestedSpaces> createState() => _SuggestedSpacesState();
-}
-
-class _SuggestedSpacesState extends State<_SuggestedSpaces> {
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final topics = widget.selectedTopics.toList();
-
-    return Consumer(
-      builder: (context, ref, _) {
-        final recommended = ref.watch(recommendedSpacesProvider(topics));
-
-        return CardScreen(
-          isLoading: widget.isLoading,
-          children: [
-            Text(
-              'Suggested Spaces',
-              style: theme.textTheme.headlineSmall,
-              textAlign: TextAlign.center,
-            ),
-            Text(
-              'We’ve found some spaces that might be a good fit for you.',
-              style: theme.textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            recommended.when(
-              data: (events) {
-                if (events.isEmpty) {
-                  return const InfoText(
-                    'No suggestions yet. Try selecting a few topics.',
-                  );
-                }
-                return Column(
-                  children: [
-                    for (final event in events) ...[
-                      SuggestedSpaceCard(event: event),
-                      const SizedBox(height: 12),
-                    ],
-                    const SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: widget.onSeeAllSpaces,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.colorScheme.primaryContainer,
-                        foregroundColor: theme.colorScheme.onPrimaryContainer,
-                      ),
-                      child: const Text('See all'),
-                    ),
-                  ],
-                );
-              },
-              error: (error, stack) {
-                return Column(
-                  children: [
-                    const InfoText('Couldn’t load suggestions.'),
-                    const SizedBox(height: 8),
-                    OutlinedButton(
-                      onPressed: () =>
-                          ref.refresh(recommendedSpacesProvider(topics).future),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-            ),
-          ],
-        );
-      },
+    final topicsKey = (selectedTopics.toList()..sort()).join('|');
+    final recommended = ref.watch(
+      recommendedEventsByTopicsKeyProvider(topicsKey),
     );
-  }
-}
-
-class SuggestedSpaceCard extends StatelessWidget {
-  const SuggestedSpaceCard({
-    required this.event,
-    super.key,
-  });
-
-  final EventDetailSchema event;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final backgroundImage = event.space.image;
-    final timeLabel = _buildTimeLabel(event.start);
-    final title = event.title.isNotEmpty ? event.title : event.spaceTitle;
-    final keeperName = event.space.author.name ?? 'Keeper';
-    final seatsLeft = event.seatsLeft;
-
-    return Container(
-      height: 120,
-      width: double.infinity,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        image: backgroundImage == null
-            ? null
-            : DecorationImage(
-                image: NetworkImage(backgroundImage),
-                fit: BoxFit.cover,
-              ),
-        color: backgroundImage == null
-            ? theme.colorScheme.primaryContainer
-            : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color.fromRGBO(38, 47, 55, 0.60),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  timeLabel,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Color(0xFFFFFFFF),
-                    fontFamily: 'Albert Sans',
-                    fontSize: 8,
-                    fontStyle: FontStyle.normal,
-                    fontWeight: FontWeight.w700,
-                    height: 1,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const Spacer(),
-          Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Color(0xFFFFFFFF),
-              fontFamily: 'Albert Sans',
-              fontSize: 14,
-              fontStyle: FontStyle.normal,
-              fontWeight: FontWeight.w600,
-              height: 1,
-            ),
-            textAlign: TextAlign.left,
-          ),
-          Row(
-            children: [
-              Container(
-                height: 25,
-                width: 25,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white),
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-              const SizedBox(width: 4),
-              RichText(
-                text: TextSpan(
-                  style: const TextStyle(
-                    color: Color(0xFFFFFFFF),
-                    fontFamily: 'Albert Sans',
-                    fontSize: 10,
-                    fontStyle: FontStyle.normal,
-                    height: 1,
-                  ),
-                  children: [
-                    const TextSpan(
-                      text: 'With ',
-                      style: TextStyle(fontWeight: FontWeight.w400),
-                    ),
-                    TextSpan(
-                      text: keeperName,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(8, 3, 9, 3),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF987AA5),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Join',
-                      style: TextStyle(
-                        color: Color(0xFFFFFFFF),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                        fontFamily: 'Albert Sans',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${seatsLeft} seats left',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFFFFFFFF),
-                      fontFamily: 'Albert Sans',
-                      fontSize: 8,
-                      fontStyle: FontStyle.normal,
-                      fontWeight: FontWeight.w400,
-                      height: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _buildTimeLabel(DateTime start) {
-    final isToday =
-        DateTime.now().day == start.day &&
-        DateTime.now().month == start.month &&
-        DateTime.now().year == start.year;
-    final dateFormatter = DateFormat('E MMM dd');
-    final timeFormatter = DateFormat('hh:mm a');
-    if (isToday) return 'Today, ${timeFormatter.format(start)}';
-    return '${dateFormatter.format(start)}, ${timeFormatter.format(start)}';
-  }
-}
-
-extension on ReferralChoices {
-  String get name {
-    return switch (this) {
-      ReferralChoices.blog => 'Blog or Article',
-      ReferralChoices.dream => 'Dream',
-      ReferralChoices.keeper => 'Keeper',
-      ReferralChoices.newsletter => 'Newsletter',
-      ReferralChoices.pamphlet => 'Pamphlet',
-      ReferralChoices.search => 'Google',
-      ReferralChoices.social => 'Social Media',
-      ReferralChoices.other || _ => 'Other',
-    };
-  }
-}
-
-/// Modal for selecting a single referral source.
-/// This widget manages the selected choice, updates the UI to reflect it,
-/// and returns the selected one when the user clicks "Save".
-class _ReferralSourceModal extends StatefulWidget {
-  const _ReferralSourceModal();
-
-  @override
-  State<_ReferralSourceModal> createState() => _ReferralSourceModalState();
-}
-
-class _ReferralSourceModalState extends State<_ReferralSourceModal> {
-  /// Holds the currently selected referral source (only one allowed).
-  ReferralChoices? _selectedSource;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    // Build a set of available sources, excluding 'Other'
-    final availableSources = ReferralChoices.values
-        .where((source) => source.name != ReferralChoices.other.name)
-        .toSet();
 
     return CardScreen(
+      isLoading: isLoading,
       children: [
         Text(
-          'How did you hear about us?',
+          'Suggested Spaces',
           style: theme.textTheme.headlineSmall,
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 8),
         Text(
-          'This helps us understand how to reach more people like you.',
+          'We’ve found some spaces that might be a good fit for you.',
           style: theme.textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 24),
-        ...availableSources.map((source) {
-          final isSelected = _selectedSource == source;
-          return Padding(
-            padding: const EdgeInsetsDirectional.only(bottom: 10),
-            child: RadioListTile<ReferralChoices>(
-              title: Text(source.name),
-              value: source,
-              groupValue: _selectedSource,
-              onChanged: (value) {
-                setState(() {
-                  _selectedSource = value;
-                });
-              },
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(
-                  color: isSelected
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.primaryContainer,
-                  width: 2,
+        const SizedBox(height: 20),
+        recommended.when(
+          data: (events) {
+            if (events.isEmpty) {
+              return const InfoText(
+                'No suggestions yet. Try selecting a few topics.',
+              );
+            }
+            return Column(
+              children: [
+                for (final event in events) ...[
+                  SuggestedSpaceCard(event: event),
+                  const SizedBox(height: 12),
+                ],
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: onSeeAllSpaces,
+                    child: const Text('See all'),
+                  ),
                 ),
-              ),
-              visualDensity: VisualDensity.compact,
-            ),
-          );
-        }),
-        const SizedBox(height: 24),
-        ElevatedButton(
-          onPressed: _selectedSource != null
-              ? () {
-                  // Pop and return the selected source as a ReferralChoices
-                  Navigator.of(context).pop(_selectedSource);
-                }
-              : null,
-          child: const Text('Save'),
+              ],
+            );
+          },
+          error: (error, stack) {
+            return Column(
+              children: [
+                const InfoText('Couldn’t load suggestions.'),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () => ref.refresh(
+                    recommendedEventsByTopicsKeyProvider(topicsKey).future,
+                  ),
+                  child: const Text('Retry'),
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
         ),
       ],
     );
