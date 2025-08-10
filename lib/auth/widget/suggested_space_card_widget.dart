@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
@@ -139,13 +140,45 @@ class SuggestedSpaceCard extends StatelessWidget {
                           width: 25,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white),
-                            color: theme.colorScheme.primary,
+                            border: Border.all(color: Colors.white, width: 1.5),
                           ),
-                          // TODO: Add a profile image here.
-                          child: const Icon(
-                            Icons.person,
-                            color: Colors.white,
+                          child: ClipOval(
+                            child: () {
+                              final profileImage =
+                                  event.space.author.profileImage;
+                              if (profileImage != null &&
+                                  profileImage.isNotEmpty) {
+                                return CachedNetworkImage(
+                                  imageUrl: profileImage,
+                                  fit: BoxFit.cover,
+                                  width: 25,
+                                  height: 25,
+                                  placeholder: (_, _) => const Icon(
+                                    Icons.person,
+                                    color: Colors.white,
+                                    size: 25,
+                                  ),
+                                  errorWidget: (_, _, _) => Container(
+                                    color: theme.colorScheme.primary,
+                                    alignment: Alignment.center,
+                                    child: const Icon(
+                                      Icons.person,
+                                      color: Colors.white,
+                                      size: 14,
+                                    ),
+                                  ),
+                                );
+                              }
+                              return Container(
+                                color: theme.colorScheme.primary,
+                                alignment: Alignment.center,
+                                child: const Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                              );
+                            }(),
                           ),
                         ),
                         const SizedBox(width: 4),
