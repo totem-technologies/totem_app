@@ -144,77 +144,40 @@ GoRouter createRouter(WidgetRef ref) {
     redirect: (context, state) async {
       logger.i('🛻 Router State Change: ${state.fullPath}');
 
-      // Get current auth state
-      final isRoot = state.matchedLocation == '/';
       final isLoggedIn = authController.isAuthenticated;
       final isOnboardingCompleted = authController.isOnboardingCompleted;
       final isAuthRoute = state.matchedLocation.startsWith('/auth');
       final isOnboardingRoute = state.matchedLocation == RouteNames.onboarding;
-      final isWelcomeRoute = state.matchedLocation == RouteNames.welcome;
+      final isWelcomeRoute = state.matchedLocation == RouteNames.welcome; // '/'
 
-      // Check if user has seen welcome onboarding (first-time user detection)
-      final hasSeenWelcomeOnboarding =
-          await authController.hasSeenWelcomeOnboarding;
+      // Unauthenticated flow
+      if (!isLoggedIn) {
+        final hasSeenWelcomeOnboarding =
+            await authController.hasSeenWelcomeOnboarding;
 
-      // If we're at the root
-      if (isRoot) {
-        if (isLoggedIn) {
-          // User is logged in
-          if (!isOnboardingCompleted) {
-            logger.i('🛻 Redirecting logged-in user to profile onboarding');
-            return RouteNames.communityGuidelines;
-          }
-          logger.i('🛻 Redirecting logged-in user to spaces');
-          return RouteNames.spaces;
-        } else {
-          // User is not logged in
-          if (!hasSeenWelcomeOnboarding) {
-            logger.i('🛻 First-time user - staying on welcome screens');
-            return null; // Stay on welcome screens
-          } else {
-            logger.i('🛻 Returning user - redirecting to login');
-            return RouteNames.login;
-          }
+        if (isWelcomeRoute) {
+          // First-time users stay on welcome; returning users go to login
+          return hasSeenWelcomeOnboarding ? RouteNames.login : null;
         }
-      }
 
-      // If trying to access welcome screens but already seen them
-      if (isWelcomeRoute && hasSeenWelcomeOnboarding && !isLoggedIn) {
-        logger.i('🛻 User already seen welcome - redirecting to login');
+        // Auth pages are allowed when logged out
+        if (isAuthRoute) return null;
+
+        // Any other route requires auth
         return RouteNames.login;
       }
 
-      if (isAuthRoute && isLoggedIn) {
-        // If we're logged in and trying to access auth routes, redirect to
-        // home
-        logger.i('🛻 Redirecting to home from auth route');
-        return HomeRoutes.initialRoute.path;
+      // Logged-in flow
+      if (!isOnboardingCompleted) {
+        // Force onboarding until completed
+        return isOnboardingRoute ? null : RouteNames.onboarding;
       }
 
-      // If we're trying to access a protected route but not logged in, redirect
-      // to login
-      if (!isLoggedIn && !isAuthRoute && !isRoot && !isWelcomeRoute) {
-        logger.i('🛻 Redirecting to login from non-auth route');
-        return RouteNames.login;
+      // Logged-in and onboarded: keep them off auth/welcome routes
+      if (isAuthRoute || isWelcomeRoute) {
+        return RouteNames.home;
       }
 
-      // If we're logged in but haven't completed onboarding, and we're not
-      // on the onboarding screen, redirect to onboarding
-      if (isLoggedIn &&
-          !isOnboardingCompleted &&
-          !isOnboardingRoute &&
-          !isAuthRoute) {
-        logger.i('🛻 Redirecting to onboarding from non-onboarding route');
-        return RouteNames.onboarding;
-      }
-
-      // If logged in and trying to access auth routes, redirect to home
-      if (isLoggedIn && isOnboardingCompleted && isAuthRoute) {
-        logger.i('🛻 Redirecting to home from auth route');
-        return HomeRoutes.initialRoute.path;
-      }
-
-      // No redirect needed
       return null;
     },
     routes: [

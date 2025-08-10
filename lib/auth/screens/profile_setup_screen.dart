@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,32 +12,42 @@ import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/card_screen.dart';
 import 'package:totem_app/shared/widgets/info_text.dart';
-import 'package:totem_app/shared/widgets/loading_indicator.dart';
-import 'package:totem_app/shared/widgets/page_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
-// --- Main Screen Widget ---
-class ProfileSetupScreen extends ConsumerStatefulWidget {
-  const ProfileSetupScreen({super.key});
+class ProfileSetupScreenV2 extends ConsumerStatefulWidget {
+  const ProfileSetupScreenV2({super.key});
 
   @override
-  ConsumerState<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
+  ConsumerState<ProfileSetupScreenV2> createState() =>
+      _ProfileSetupScreenV2State();
 }
 
-class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
-  final _formKeyTab1 = GlobalKey<FormState>();
-  final _firstNameController = TextEditingController();
-  final _ageController = TextEditingController();
+class _ProfileSetupScreenV2State extends ConsumerState<ProfileSetupScreenV2> {
+  final PageController _pageController = PageController();
 
-  final _selectedTopics = <String>{};
+  final GlobalKey<FormState> _formKeyTab1 = GlobalKey<FormState>();
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
+
+  final Set<String> _selectedTopics = <String>{};
   ReferralChoices? _referralSource;
-  var _isLoading = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
+    _pageController.dispose();
     _firstNameController.dispose();
     _ageController.dispose();
     super.dispose();
+  }
+
+  void _nextPage() {
+    if (_pageController.hasClients) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   void _handleTopicSelection(String topic, bool isSelected) {
@@ -46,10 +58,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         _selectedTopics.remove(topic);
       }
     });
-  }
-
-  void _handleReferralSourceSelection(ReferralChoices source) {
-    setState(() => _referralSource = source);
   }
 
   Future<void> _submitProfile() async {
@@ -63,8 +71,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             interestTopics: _selectedTopics,
             age: int.tryParse(_ageController.text.trim()),
           );
-
-      if (mounted) context.go(RouteNames.spaces);
+      _nextPage();
     } catch (error, stackTrace) {
       if (mounted) {
         await ErrorHandler.handleApiError(
@@ -81,71 +88,166 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Builder(
-        builder: (context) {
-          final tabController = DefaultTabController.of(context);
-          void navigateToNextTab() {
-            if (tabController.index < 3 - 1) {
-              tabController.animateTo(tabController.index + 1);
-            }
-          }
-
-          return PopScope(
-            canPop: tabController.index == 0 && !_isLoading,
-            onPopInvokedWithResult: (didPop, _) {
-              if (didPop) return;
-              if (tabController.index > 0) {
-                tabController.animateTo(tabController.index - 1);
+    return PopScope(
+      canPop: !_isLoading,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (_pageController.hasClients &&
+            _pageController.page != null &&
+            _pageController.page! > 0) {
+          _pageController.previousPage(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+          );
+        }
+      },
+      child: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          _GuidelinesPage(onContinue: _nextPage),
+          _ProfileSetupTab(
+            formKey: _formKeyTab1,
+            firstNameController: _firstNameController,
+            ageController: _ageController,
+            isLoading: _isLoading,
+            onReferralSourceSelected: (source) =>
+                setState(() => _referralSource = source),
+            referralSource: _referralSource,
+            onContinue: () async {
+              FocusScope.of(context).unfocus();
+              if (_formKeyTab1.currentState!.validate()) {
+                setState(() => _isLoading = true);
+                await _submitProfile();
+                if (mounted) setState(() => _isLoading = false);
               }
             },
-            child: TabBarView(
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _NameAndAgeTab(
-                  formKey: _formKeyTab1,
-                  firstNameController: _firstNameController,
-                  ageController: _ageController,
-                  isLoading: _isLoading,
-                  onReferralSourceSelected: _handleReferralSourceSelection,
-                  onContinue: () {
-                    if (_formKeyTab1.currentState!.validate()) {
-                      navigateToNextTab();
-                      FocusScope.of(context).unfocus();
-                    }
-                  },
-                ),
-                _TopicsTab(
-                  selectedTopics: _selectedTopics,
-                  isLoading: _isLoading,
-                  onTopicSelected: _handleTopicSelection,
-                  onContinue: navigateToNextTab,
-                ),
-                // _ReferralSourceTab(
-                //   selectedReferralSource: _referralSource,
-                //   isLoading: _isLoading,
-                //   onSourceSelected: _handleReferralSourceSelection,
-                //   onSubmit: _submitProfile,
-                // ),
-              ],
-            ),
-          );
-        },
+          ),
+          _TopicsTab(
+            selectedTopics: _selectedTopics,
+            isLoading: _isLoading,
+            onTopicSelected: _handleTopicSelection,
+            onContinue: () async {
+              _nextPage();
+            },
+          ),
+          _SuggestedSpaces(
+            selectedTopics: _selectedTopics,
+            isLoading: _isLoading,
+            onSeeAllSpaces: () {
+              context.go(RouteNames.home);
+            },
+          ),
+        ],
       ),
     );
   }
 }
 
+class _GuidelinesPage extends StatelessWidget {
+  const _GuidelinesPage({required this.onContinue});
+
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    return CardScreen(
+      children: [
+        Text(
+          'Community Guidelines',
+          style: Theme.of(context).textTheme.headlineSmall,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        RichText(
+          textAlign: TextAlign.center,
+          text: TextSpan(
+            style: Theme.of(context).textTheme.bodyMedium,
+            children: [
+              const TextSpan(
+                text:
+                    'In order to keep Totem safe, we require everyone adhere to ',
+              ),
+              TextSpan(
+                text: 'confidentiality',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const TextSpan(
+                text:
+                    '. Breaking confidentiality can be grounds for account removal.',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        RichText(
+          textAlign: TextAlign.center,
+          text: TextSpan(
+            style: Theme.of(context).textTheme.bodyMedium,
+            children: [
+              const TextSpan(
+                text: 'We also encourage you to only speak about ',
+              ),
+              TextSpan(
+                text: 'your own experience',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const TextSpan(
+                text:
+                    ', and not to share other people’s information or stories.',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        RichText(
+          textAlign: TextAlign.center,
+          text: TextSpan(
+            style: Theme.of(context).textTheme.bodyMedium,
+            children: const [
+              TextSpan(text: 'For more details, see the full '),
+              TextSpan(
+                text: 'Community Guidelines',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+              TextSpan(text: '.'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: onContinue,
+            child: const Text('Agree and Continue'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// --- Main Screen Widget ---
+// Replace old implementation by aliasing to V2
+typedef ProfileSetupScreen = ProfileSetupScreenV2;
+
 // --- Tab 1: Name and Age ---
-class _NameAndAgeTab extends StatefulWidget {
-  const _NameAndAgeTab({
+class _ProfileSetupTab extends StatefulWidget {
+  const _ProfileSetupTab({
     required this.formKey,
     required this.firstNameController,
     required this.ageController,
     required this.isLoading,
     required this.onContinue,
     required this.onReferralSourceSelected,
+    required this.referralSource,
   });
   final GlobalKey<FormState> formKey;
   final TextEditingController firstNameController;
@@ -153,11 +255,12 @@ class _NameAndAgeTab extends StatefulWidget {
   final bool isLoading;
   final VoidCallback onContinue;
   final ValueChanged<ReferralChoices> onReferralSourceSelected;
+  final ReferralChoices? referralSource;
   @override
-  State<_NameAndAgeTab> createState() => _NameAndAgeTabState();
+  State<_ProfileSetupTab> createState() => _ProfileSetupTabState();
 }
 
-class _NameAndAgeTabState extends State<_NameAndAgeTab>
+class _ProfileSetupTabState extends State<_ProfileSetupTab>
     with AutomaticKeepAliveClientMixin {
   String? _validateFirstName(String? value) {
     if (value == null || value.trim().isEmpty) {
@@ -294,12 +397,26 @@ class _NameAndAgeTabState extends State<_NameAndAgeTab>
               },
             );
           },
-          child: TextFormField(
-            enabled: false,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
-              hintText: 'Tap to select',
+          child: Container(
+            height: 53,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 15,
+              vertical: 16,
+            ),
+            decoration: BoxDecoration(
+              color: const Color(0xffD9D9D9),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              maxLines: 1,
+              textAlign: TextAlign.left,
+              overflow: TextOverflow.ellipsis,
+              widget.referralSource?.name ?? 'Tap to select',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: widget.referralSource == null
+                    ? const Color(0xffA2A2A2)
+                    : theme.textTheme.bodyLarge?.color,
+              ),
             ),
           ),
         ),
@@ -347,13 +464,13 @@ class _TopicsTab extends StatelessWidget {
       isLoading: isLoading,
       children: [
         Text(
-          'What topics would you like to explore?',
+          'Which community feels like home to you?',
           style: theme.textTheme.headlineSmall,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
         Text(
-          'You feedback here will help us about new topics to offer.',
+          'Pick a few — we’ll help you connect with the right spaces.',
           style: theme.textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
@@ -392,82 +509,200 @@ class _TopicsTab extends StatelessWidget {
 }
 
 // --- Tab 3: Referral Source ---
-class _ReferralSourceTab extends StatelessWidget {
-  const _ReferralSourceTab({
-    required this.selectedReferralSource,
+class _SuggestedSpaces extends StatefulWidget {
+  const _SuggestedSpaces({
+    required this.selectedTopics,
     required this.isLoading,
-    required this.onSourceSelected,
-    required this.onSubmit,
+    required this.onSeeAllSpaces,
   });
-
-  final ReferralChoices? selectedReferralSource;
+  final Set<String> selectedTopics;
   final bool isLoading;
-  final ValueChanged<ReferralChoices> onSourceSelected;
-  final VoidCallback onSubmit;
+  final VoidCallback onSeeAllSpaces;
 
+  @override
+  State<_SuggestedSpaces> createState() => _SuggestedSpacesState();
+}
+
+class _SuggestedSpacesState extends State<_SuggestedSpaces> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    final availableSources = ReferralChoices.values
-        .where((source) => source.name != ReferralChoices.other.name)
-        .toSet() // exclude 'Other' from the list
-        .toList()
-        .map(
-          (source) => MapEntry<ReferralChoices, String>(source, source.name),
-        )
-        .toSet();
-
     return CardScreen(
-      isLoading: isLoading, // Pass isLoading if CardScreen uses it
+      isLoading: widget.isLoading,
       children: [
         Text(
-          'How did you hear about us?',
+          'Suggested Spaces',
           style: theme.textTheme.headlineSmall,
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 8),
         Text(
-          'This helps us understand how to reach more people like you.',
+          'We’ve found some spaces that might be a good fit for you.',
           style: theme.textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 24),
-        ...availableSources.map((source) {
-          final sourceRef = source.key;
-          final sourceName = source.value;
-          final isSelected = selectedReferralSource == sourceRef;
-          return Padding(
-            padding: const EdgeInsetsDirectional.only(bottom: 10),
-            child: CheckboxListTile(
-              title: Text(sourceName),
-              value: isSelected,
-              onChanged: isLoading
-                  ? null
-                  : (value) => onSourceSelected(sourceRef),
-              checkboxScaleFactor: 1.35,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(
-                  color: isSelected
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.primaryContainer,
-                  width: 2,
+        const SizedBox(height: 20),
+        const SuggestedSpace(),
+        const SizedBox(height: 20),
+        const SuggestedSpace(),
+        const SizedBox(height: 20),
+        const SuggestedSpace(),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: () {},
+          style: ElevatedButton.styleFrom(
+            backgroundColor: theme.colorScheme.primaryContainer,
+            foregroundColor: theme.colorScheme.onPrimaryContainer,
+          ),
+          child: const Text('See all'),
+        ),
+      ],
+    );
+  }
+}
+
+class SuggestedSpace extends StatelessWidget {
+  const SuggestedSpace({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 120,
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        image: const DecorationImage(
+          image: NetworkImage(
+            'https://images.unsplash.com/photo-1485871981521-5b1fd3805eee?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+          ),
+          fit: BoxFit.cover,
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color.fromRGBO(38, 47, 55, 0.60),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'Today, 4:00 PM',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFFFFFFFF), // #FFF
+                    fontFamily: 'Albert Sans',
+                    fontSize: 8,
+                    fontStyle: FontStyle.normal,
+                    fontWeight: FontWeight.w700,
+                    height: 1, // line-height: normal
+                  ),
                 ),
               ),
             ),
-          );
-        }),
-        const SizedBox(height: 14),
-        const PageIndicator(),
-        const SizedBox(height: 24),
-        ElevatedButton(
-          onPressed: isLoading ? null : onSubmit,
-          child: isLoading
-              ? const LoadingIndicator()
-              : const Text('Get Started'),
-        ),
-      ],
+          ),
+          const Spacer(),
+          const Text(
+            'Setting the Tone for May',
+            style: TextStyle(
+              color: Color(0xFFFFFFFF), // #FFF
+              fontFamily: 'Albert Sans',
+              fontSize: 14,
+              fontStyle: FontStyle.normal,
+              fontWeight: FontWeight.w600,
+              height: 1, // line-height: normal
+            ),
+            textAlign: TextAlign.left,
+          ),
+          Row(
+            children: [
+              Container(
+                height: 25,
+                width: 25,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white,
+                  ),
+                  color: const Color(0xFF007AFF),
+                ),
+              ),
+              const SizedBox(width: 4),
+              RichText(
+                text: const TextSpan(
+                  style: TextStyle(
+                    color: Color(0xFFFFFFFF), // #FFF
+                    fontFamily: 'Albert Sans',
+                    fontSize: 10,
+                    fontStyle: FontStyle.normal,
+                    height: 1, // line-height: normal
+                  ),
+                  children: [
+                    TextSpan(
+                      text: 'With ',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    TextSpan(
+                      text: 'Maria',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700, // Bold for "Maria"
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(8, 3, 9, 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF987AA5), // Mauve background
+                      borderRadius: BorderRadius.circular(
+                        20,
+                      ), // 20px border-radius
+                    ),
+                    child: const Text(
+                      'Join',
+                      style: TextStyle(
+                        color: Color(0xFFFFFFFF), // White text
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                        fontFamily: 'Albert Sans',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '4 seats left',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFFFFFFFF), // #FFF
+                      fontFamily: 'Albert Sans',
+                      fontSize: 8,
+                      fontStyle: FontStyle.normal,
+                      fontWeight: FontWeight.w400,
+                      height: 1, // line-height: normal
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
