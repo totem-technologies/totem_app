@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
-import 'package:totem_app/auth/screens/community_guidelines.dart';
 import 'package:totem_app/auth/screens/login_screen.dart';
 import 'package:totem_app/auth/screens/onboarding_screen.dart';
 import 'package:totem_app/auth/screens/pin_entry_screen.dart';
@@ -202,11 +201,6 @@ GoRouter createRouter(WidgetRef ref) {
               '';
           return PinEntryScreen(email: email);
         },
-      ),
-      GoRoute(
-        path: RouteNames.communityGuidelines,
-        name: RouteNames.communityGuidelines,
-        builder: (context, state) => const CommunityGuidelinesScreen(),
       ),
       // Onboarding (no bottom nav)
       GoRoute(
