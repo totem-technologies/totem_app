@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -60,13 +59,8 @@ class KeeperProfileScreen extends ConsumerWidget {
                         Expanded(
                           child: Column(
                             children: [
-                              UserAvatar(
-                                seed: keeper.user.profileAvatarSeed,
-                                image: keeper.user.profileImage != null
-                                    ? CachedNetworkImageProvider(
-                                        keeper.user.profileImage!,
-                                      )
-                                    : null,
+                              UserAvatar.fromUserSchema(
+                                keeper.user,
                                 radius: 52,
                               ),
                               Text(

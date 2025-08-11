@@ -154,26 +154,9 @@ class SpaceCard extends StatelessWidget {
                               const TextSpan(text: '  '),
                               WidgetSpan(
                                 alignment: PlaceholderAlignment.middle,
-                                child: UserAvatar(
+                                child: UserAvatar.fromUserSchema(
+                                  space.author,
                                   radius: 25 / 2,
-                                  image: space.author.profileImage != null
-                                      ? CachedNetworkImageProvider(
-                                          getFullUrl(
-                                            space.author.profileImage!,
-                                          ),
-                                        )
-                                      : null,
-                                  // child: space.author.profileImage == null
-                                  //     ? Text(
-                                  //         space.author.name?[0].toUpperCase()
-                                  //  ?? '',
-                                  //         style: TextStyle(
-                                  //           color:
-                                  //    theme.colorScheme.onPrimary,
-                                  //           fontSize: compact ? 10 : 16,
-                                  //         ),
-                                  //       )
-                                  //     : null,
                                 ),
                               ),
                             ].reversedIf(compact),

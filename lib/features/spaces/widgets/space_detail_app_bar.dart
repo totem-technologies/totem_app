@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
-import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class SpaceDetailAppBar extends StatelessWidget {
@@ -76,13 +75,8 @@ class SpaceDetailAppBar extends StatelessWidget {
                     ],
                   ),
                 ),
-                UserAvatar(
-                  seed: event.space.author.profileAvatarSeed,
-                  image: event.space.author.profileImage != null
-                      ? CachedNetworkImageProvider(
-                          getFullUrl(event.space.author.profileImage!),
-                        )
-                      : null,
+                UserAvatar.fromUserSchema(
+                  event.space.author,
                   onTap: event.space.author.slug != null
                       ? () {
                           context.push(

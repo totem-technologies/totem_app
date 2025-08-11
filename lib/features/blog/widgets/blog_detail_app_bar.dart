@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/blog_post_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
-import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class BlogDetailAppBar extends StatelessWidget {
@@ -76,13 +75,8 @@ class BlogDetailAppBar extends StatelessWidget {
                     ],
                   ),
                 ),
-                UserAvatar(
-                  seed: event.author?.profileAvatarSeed,
-                  image: event.author?.profileImage != null
-                      ? CachedNetworkImageProvider(
-                          getFullUrl(event.author!.profileImage!),
-                        )
-                      : null,
+                UserAvatar.fromUserSchema(
+                  event.author,
                   onTap: event.author?.slug != null
                       ? () {
                           context.push(

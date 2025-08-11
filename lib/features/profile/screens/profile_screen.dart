@@ -44,7 +44,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       child: Column(
                         spacing: 10,
                         children: [
-                          const UserAvatar(),
+                          UserAvatar.currentUser(),
                           Text(
                             user?.name ?? 'Welcome',
                             style: theme.textTheme.headlineMedium,

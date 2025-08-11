@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +10,6 @@ import 'package:totem_app/features/spaces/widgets/space_detail_app_bar.dart';
 import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
-import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -213,16 +211,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           Row(
                             spacing: 8,
                             children: [
-                              UserAvatar(
-                                image: event.space.author.profileImage != null
-                                    ? CachedNetworkImageProvider(
-                                        getFullUrl(
-                                          event.space.author.profileImage!,
-                                        ),
-                                      )
-                                    : null,
-                                seed: event.space.author.profileAvatarSeed,
-                              ),
+                              UserAvatar.fromUserSchema(event.space.author),
                               Expanded(
                                 child: Text(
                                   event.space.author.name ?? 'Keeper',
