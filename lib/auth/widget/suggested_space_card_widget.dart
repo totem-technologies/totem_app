@@ -2,8 +2,8 @@ import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/shared/date.dart';
 
 /// Card used in Suggestions tab, built from EventDetailSchema.
 class SuggestedSpaceCard extends StatelessWidget {
@@ -18,7 +18,7 @@ class SuggestedSpaceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final backgroundImage = event.space.image;
-    final timeLabel = _buildTimeLabel(event.start);
+    final timeLabel = buildTimeLabel(event.start);
     final title = event.title.isNotEmpty ? event.title : event.spaceTitle;
     final keeperName = event.space.author.name ?? 'Keeper';
     final seatsLeft = event.seatsLeft;
@@ -250,16 +250,5 @@ class SuggestedSpaceCard extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _buildTimeLabel(DateTime start) {
-    final isToday =
-        DateTime.now().day == start.day &&
-        DateTime.now().month == start.month &&
-        DateTime.now().year == start.year;
-    final dateFormatter = DateFormat('E MMM dd');
-    final timeFormatter = DateFormat('hh:mm a');
-    if (isToday) return 'Today, ${timeFormatter.format(start)}';
-    return '${dateFormatter.format(start)}, ${timeFormatter.format(start)}';
   }
 }
