@@ -318,9 +318,6 @@ class AuthController extends Notifier<AuthState> {
     _setState(AuthState.loading());
     try {
       await _authRepository.deleteAccount();
-      await _clearTokens();
-      // Clear welcome onboarding flag on account deletion for complete reset
-      await ref.read(localStorageServiceProvider).clearWelcomeOnboardingFlag();
       _setState(AuthState.unauthenticated());
       _analyticsService.logEvent('account_deleted');
     } catch (error, stackTrace) {
@@ -329,10 +326,9 @@ class AuthController extends Notifier<AuthState> {
         stackTrace: stackTrace,
         reason: 'Account deletion failed',
       );
-      await _clearTokens();
-      // Clear welcome onboarding flag even on error for safety
-      await ref.read(localStorageServiceProvider).clearWelcomeOnboardingFlag();
       _setState(AuthState.unauthenticated());
+    } finally {
+      await _clearAllLocalStorage();
     }
   }
 
@@ -429,6 +425,10 @@ class AuthController extends Notifier<AuthState> {
     await ref.read(localStorageServiceProvider).clearUser();
     // Note: We intentionally don't clear welcome onboarding flag here
     // so returning users don't see welcome screens again unless they reinstall
+  }
+
+  Future<void> _clearAllLocalStorage() async {
+    await _secureStorage.deleteAll();
   }
 
   void _handleAuthError(Object error, StackTrace stackTrace) {
