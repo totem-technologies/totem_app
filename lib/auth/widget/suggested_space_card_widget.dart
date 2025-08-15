@@ -31,7 +31,7 @@ class SuggestedSpaceCard extends StatelessWidget {
         image: backgroundImage == null
             ? null
             : DecorationImage(
-                image: NetworkImage(backgroundImage),
+                image: CachedNetworkImageProvider(backgroundImage),
                 fit: BoxFit.cover,
               ),
         color: backgroundImage == null
