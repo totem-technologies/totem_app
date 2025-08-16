@@ -6,6 +6,7 @@ import 'package:totem_app/api/models/referral_choices.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/widget/referral_source_modal.dart';
 import 'package:totem_app/auth/widget/suggested_space_card_widget.dart';
+import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/screens/profile_image_picker.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
@@ -15,6 +16,7 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/card_screen.dart';
 import 'package:totem_app/shared/widgets/info_text.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -211,11 +213,26 @@ class _GuidelinesTab extends StatelessWidget {
             style: Theme.of(context).textTheme.bodyMedium,
             children: [
               TextSpan(text: l10n.communityGuidelinesFullText),
-              TextSpan(
-                text: l10n.communityGuidelinesLink,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  decoration: TextDecoration.underline,
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: GestureDetector(
+                  onTap: () async {
+                    const url = 'https://www.totem.org/guidelines/';
+                    if (await canLaunchUrl(Uri.parse(url))) {
+                      await launchUrl(
+                        Uri.parse(url),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
+                  },
+                  child: Text(
+                    l10n.communityGuidelinesLink,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.purple,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
                 ),
               ),
               const TextSpan(text: '.'),
