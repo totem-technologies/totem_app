@@ -513,6 +513,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Turn Conversations Into Community'**
   String get turnConversationsIntoCommunity;
+
+  /// No description provided for @keeper.
+  ///
+  /// In en, this message translates to:
+  /// **'Keeper'**
+  String get keeper;
+
+  /// No description provided for @withPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'With '**
+  String get withPrefix;
+
+  /// No description provided for @join.
+  ///
+  /// In en, this message translates to:
+  /// **'Join'**
+  String get join;
+
+  /// No description provided for @seatsLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} seats left'**
+  String seatsLeft(int count);
 }
 
 class _AppLocalizationsDelegate

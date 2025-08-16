@@ -86,5 +86,16 @@
   "privacyPolicy": "Privacy Policy",
   "signIn": "Sign in",
   "wellSendSixDigitPin": "We'll send you a 6-digit PIN to your email.",
-  "turnConversationsIntoCommunity": "Turn Conversations Into Community"
+  "turnConversationsIntoCommunity": "Turn Conversations Into Community",
+  "keeper": "Keeper",
+  "withPrefix": "With ",
+  "join": "Join",
+  "seatsLeft": "{count} seats left",
+  "@seatsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

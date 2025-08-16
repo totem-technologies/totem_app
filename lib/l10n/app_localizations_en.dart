@@ -240,4 +240,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get turnConversationsIntoCommunity =>
       'Turn Conversations Into Community';
+
+  @override
+  String get keeper => 'Keeper';
+
+  @override
+  String get withPrefix => 'With ';
+
+  @override
+  String get join => 'Join';
+
+  @override
+  String seatsLeft(int count) {
+    return '$count seats left';
+  }
 }
