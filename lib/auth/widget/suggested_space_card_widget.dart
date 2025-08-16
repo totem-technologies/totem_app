@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/shared/date.dart';
 
 /// Card used in Suggestions tab, built from EventDetailSchema.
@@ -27,6 +28,13 @@ class SuggestedSpaceCard extends StatelessWidget {
       height: 120,
       width: double.infinity,
       decoration: BoxDecoration(
+        boxShadow: const [
+          BoxShadow(
+            color: Color.fromRGBO(0, 0, 0, 0.25),
+            blurRadius: 4,
+            offset: Offset(0, 4),
+          ),
+        ],
         borderRadius: BorderRadius.circular(20),
         image: backgroundImage == null
             ? null
@@ -58,19 +66,16 @@ class SuggestedSpaceCard extends StatelessWidget {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color.fromRGBO(38, 47, 55, 0.60),
+                          color: AppTheme.slate.withValues(alpha: 0.6),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           timeLabel,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Color(0xFFFFFFFF),
-                            fontFamily: 'Albert Sans',
-                            fontSize: 8,
-                            fontStyle: FontStyle.normal,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppTheme.white,
                             fontWeight: FontWeight.w700,
-                            height: 1,
+                            fontSize: 8,
                           ),
                         ),
                       ),
@@ -81,10 +86,10 @@ class SuggestedSpaceCard extends StatelessWidget {
             ),
           ),
           Expanded(
-            flex: 3,
+            flex: 4,
             child: DecoratedBox(
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.only(
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(20),
                   bottomRight: Radius.circular(20),
                 ),
@@ -92,16 +97,16 @@ class SuggestedSpaceCard extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Color.fromRGBO(38, 47, 55, 0),
-                    Color(0xFF262F37),
+                    AppTheme.slate.withValues(alpha: 0),
+                    AppTheme.slate,
                   ],
-                  stops: [0.0, 1.0],
+                  stops: const [0, 1],
                 ),
               ),
               child: Container(
                 padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.only(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(20),
                     bottomRight: Radius.circular(20),
                   ),
@@ -109,10 +114,10 @@ class SuggestedSpaceCard extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Color.fromRGBO(38, 47, 55, 0),
-                      Color(0xFF262F37),
+                      AppTheme.slate.withValues(alpha: 0),
+                      AppTheme.slate,
                     ],
-                    stops: [0.0, 1.0],
+                    stops: const [0.0, 1.0],
                   ),
                 ),
                 child: Column(
@@ -123,16 +128,15 @@ class SuggestedSpaceCard extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFFFFFFFF),
-                        fontFamily: 'Albert Sans',
-                        fontSize: 14,
-                        fontStyle: FontStyle.normal,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: AppTheme.white,
                         fontWeight: FontWeight.w600,
                         height: 1,
+                        fontSize: 14,
                       ),
                       textAlign: TextAlign.left,
                     ),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
                         Container(
@@ -184,22 +188,25 @@ class SuggestedSpaceCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         RichText(
                           text: TextSpan(
-                            style: const TextStyle(
-                              color: Color(0xFFFFFFFF),
-                              fontFamily: 'Albert Sans',
-                              fontSize: 10,
-                              fontStyle: FontStyle.normal,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppTheme.white,
+                              fontWeight: FontWeight.w400,
                               height: 1,
+                              fontSize: 10,
                             ),
                             children: [
-                              const TextSpan(
+                              TextSpan(
                                 text: 'With ',
-                                style: TextStyle(fontWeight: FontWeight.w400),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w400,
+                                  color: AppTheme.white,
+                                ),
                               ),
                               TextSpan(
                                 text: keeperName,
-                                style: const TextStyle(
+                                style: theme.textTheme.bodySmall?.copyWith(
                                   fontWeight: FontWeight.w700,
+                                  color: AppTheme.white,
                                 ),
                               ),
                             ],
@@ -215,13 +222,12 @@ class SuggestedSpaceCard extends StatelessWidget {
                                 color: const Color(0xFF987AA5),
                                 borderRadius: BorderRadius.circular(20),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'Join',
-                                style: TextStyle(
-                                  color: Color(0xFFFFFFFF),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.white,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 12,
-                                  fontFamily: 'Albert Sans',
                                 ),
                               ),
                             ),
@@ -229,13 +235,11 @@ class SuggestedSpaceCard extends StatelessWidget {
                             Text(
                               '$seatsLeft seats left',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Color(0xFFFFFFFF),
-                                fontFamily: 'Albert Sans',
-                                fontSize: 8,
-                                fontStyle: FontStyle.normal,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppTheme.white,
                                 fontWeight: FontWeight.w400,
                                 height: 1,
+                                fontSize: 8,
                               ),
                             ),
                           ],
