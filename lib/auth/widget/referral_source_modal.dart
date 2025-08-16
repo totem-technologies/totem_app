@@ -54,32 +54,36 @@ class _ReferralSourceModalState extends State<ReferralSourceModal> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
-        ...availableSources.map((source) {
-          final isSelected = _selectedSource == source;
-          return Padding(
-            padding: const EdgeInsetsDirectional.only(bottom: 10),
-            child: RadioListTile<ReferralChoices>(
-              title: Text(source.name),
-              value: source,
-              groupValue: _selectedSource,
-              onChanged: (value) {
-                setState(() {
-                  _selectedSource = value;
-                });
-              },
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(
-                  color: isSelected
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.primaryContainer,
-                  width: 2,
+        RadioGroup<ReferralChoices>(
+          groupValue: _selectedSource,
+          onChanged: (value) {
+            setState(() {
+              _selectedSource = value;
+            });
+          },
+          child: Column(
+            children: availableSources.map((source) {
+              final isSelected = _selectedSource == source;
+              return Padding(
+                padding: const EdgeInsetsDirectional.only(bottom: 10),
+                child: RadioListTile<ReferralChoices>(
+                  title: Text(source.name),
+                  value: source,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(
+                      color: isSelected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.primaryContainer,
+                      width: 2,
+                    ),
+                  ),
+                  visualDensity: VisualDensity.compact,
                 ),
-              ),
-              visualDensity: VisualDensity.compact,
-            ),
-          );
-        }),
+              );
+            }).toList(),
+          ),
+        ),
         const SizedBox(height: 24),
         ElevatedButton(
           onPressed: _selectedSource != null
