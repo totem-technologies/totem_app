@@ -17,6 +17,9 @@ jobs:
         with:
           channel: stable
 
+      - name: Flutter version
+        run: flutter --version
+
       - name: Create .env file
         run: echo 'API_URL="https://www.totem.org"' > .env
 
