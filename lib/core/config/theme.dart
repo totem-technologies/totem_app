@@ -17,6 +17,7 @@ class AppTheme {
   static const Color blueTint = Color(0xFF55778F);
   static const Color pink = Color(0xFFD999AA);
   static const Color pinkTint = Color(0xFF8B5363);
+  static const Color purple = Color(0xFF8B5CF6);
 
   // Basic Colors
   static const Color white = Colors.white;

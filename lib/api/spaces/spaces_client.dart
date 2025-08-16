@@ -2,7 +2,7 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, unused_import
 
-import 'package:dio/dio.dart';
+import 'package:dio/dio.dart' hide Headers;
 import 'package:retrofit/retrofit.dart';
 
 import '../models/event_detail_schema.dart';
@@ -57,6 +57,7 @@ abstract class SpacesClient {
   Future<List<EventDetailSchema>> totemCirclesMobileApiGetSessionsHistory();
 
   /// Get Recommended Spaces
+  @Headers(const {'Content-Type': 'application/json'})
   @GET('/api/mobile/protected/spaces/recommended')
   Future<List<EventDetailSchema>> totemCirclesMobileApiGetRecommendedSpaces({
     @Body() List<String>? body,

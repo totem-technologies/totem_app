@@ -51,6 +51,21 @@ class AuthController extends Notifier<AuthState> {
 
   UserSchema? get user => state.user;
 
+  /// Check if the user has seen the welcome onboarding screens before
+  /// This determines if they should see the intro screens on app launch
+  Future<bool> get hasSeenWelcomeOnboarding async {
+    return ref.read(localStorageServiceProvider).hasSeenWelcomeOnboarding();
+  }
+
+  /// Mark that the user has completed the welcome onboarding screens
+  /// Called when user finishes the intro screens or skips them
+  Future<void> markWelcomeOnboardingCompleted() async {
+    await ref
+        .read(localStorageServiceProvider)
+        .markWelcomeOnboardingCompleted();
+    _analyticsService.logEvent('welcome_onboarding_completed');
+  }
+
   void _initialize() {
     checkExistingAuth();
     FirebaseMessaging.instance.onTokenRefresh
@@ -303,7 +318,6 @@ class AuthController extends Notifier<AuthState> {
     _setState(AuthState.loading());
     try {
       await _authRepository.deleteAccount();
-      await _clearTokens();
       _setState(AuthState.unauthenticated());
       _analyticsService.logEvent('account_deleted');
     } catch (error, stackTrace) {
@@ -312,8 +326,9 @@ class AuthController extends Notifier<AuthState> {
         stackTrace: stackTrace,
         reason: 'Account deletion failed',
       );
-      await _clearTokens();
       _setState(AuthState.unauthenticated());
+    } finally {
+      await _clearAllLocalStorage();
     }
   }
 
@@ -408,6 +423,12 @@ class AuthController extends Notifier<AuthState> {
     await _secureStorage.delete(key: AppConsts.accessToken);
     await _secureStorage.delete(key: AppConsts.refreshToken);
     await ref.read(localStorageServiceProvider).clearUser();
+    // Note: We intentionally don't clear welcome onboarding flag here
+    // so returning users don't see welcome screens again unless they reinstall
+  }
+
+  Future<void> _clearAllLocalStorage() async {
+    await _secureStorage.deleteAll();
   }
 
   void _handleAuthError(Object error, StackTrace stackTrace) {

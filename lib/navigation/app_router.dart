@@ -6,9 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/screens/login_screen.dart';
+import 'package:totem_app/auth/screens/onboarding_screen.dart';
 import 'package:totem_app/auth/screens/pin_entry_screen.dart';
 import 'package:totem_app/auth/screens/profile_setup_screen.dart';
-import 'package:totem_app/auth/screens/welcome_screen.dart';
 import 'package:totem_app/features/blog/screens/blog_list_screen.dart';
 import 'package:totem_app/features/blog/screens/blog_screen.dart';
 import 'package:totem_app/features/home/screens/home_screen.dart';
@@ -140,69 +140,50 @@ GoRouter createRouter(WidgetRef ref) {
     debugLogDiagnostics: true,
     refreshListenable: GoRouterRefreshStream(authController.authStateChanges),
     observers: [PosthogObserver()],
-    redirect: (context, state) {
+    redirect: (context, state) async {
       logger.i('🛻 Router State Change: ${state.fullPath}');
 
-      // Get current auth state
-      final isRoot = state.matchedLocation == '/';
       final isLoggedIn = authController.isAuthenticated;
       final isOnboardingCompleted = authController.isOnboardingCompleted;
       final isAuthRoute = state.matchedLocation.startsWith('/auth');
       final isOnboardingRoute = state.matchedLocation == RouteNames.onboarding;
+      final isWelcomeRoute = state.matchedLocation == RouteNames.welcome; // '/'
 
-      // If we're at the root and logged in, go to spaces
-      if (isRoot && isLoggedIn) {
-        if (!isOnboardingCompleted) {
-          logger.i('🛻 Redirecting to onboarding');
-          return RouteNames.onboarding;
+      // Unauthenticated flow
+      if (!isLoggedIn) {
+        final hasSeenWelcomeOnboarding =
+            await authController.hasSeenWelcomeOnboarding;
+
+        if (isWelcomeRoute) {
+          // First-time users stay on welcome; returning users go to login
+          return hasSeenWelcomeOnboarding ? RouteNames.login : null;
         }
-        logger.i('🛻 Redirecting to spaces');
-        return RouteNames.spaces;
-      }
 
-      // If we're at the root and not logged in, go to login
-      // if (state.matchedLocation == '/' && !isLoggedIn) {
-      //   return RouteNames.login;
-      // }
+        // Auth pages are allowed when logged out
+        if (isAuthRoute) return null;
 
-      if (isAuthRoute && isLoggedIn) {
-        // If we're logged in and trying to access auth routes, redirect to
-        // home
-        logger.i('🛻 Redirecting to home from auth route');
-        return HomeRoutes.initialRoute.path;
-      }
-
-      // If we're trying to access a protected route but not logged in, redirect
-      // to login
-      if (!isLoggedIn && !isAuthRoute && !isRoot) {
-        logger.i('🛻 Redirecting to login from non-auth route');
+        // Any other route requires auth
         return RouteNames.login;
       }
 
-      // If we're logged in but haven't completed onboarding, and we're not
-      // on the onboarding screen, redirect to onboarding
-      if (isLoggedIn &&
-          !isOnboardingCompleted &&
-          !isOnboardingRoute &&
-          !isAuthRoute) {
-        logger.i('🛻 Redirecting to onboarding from non-onboarding route');
-        return RouteNames.onboarding;
+      // Logged-in flow
+      if (!isOnboardingCompleted) {
+        // Force onboarding until completed
+        return isOnboardingRoute ? null : RouteNames.onboarding;
       }
 
-      // If logged in and trying to access auth routes, redirect to home
-      if (isLoggedIn && isOnboardingCompleted && isAuthRoute) {
-        logger.i('🛻 Redirecting to home from auth route');
-        return HomeRoutes.initialRoute.path;
+      // Logged-in and onboarded: keep them off auth/welcome routes
+      if (isAuthRoute || isWelcomeRoute) {
+        return RouteNames.home;
       }
 
-      // No redirect needed
       return null;
     },
     routes: [
       GoRoute(
         path: RouteNames.welcome,
         name: RouteNames.welcome,
-        builder: (context, state) => const WelcomeScreen(),
+        builder: (context, state) => const OnboardingScreen(),
       ),
       // Auth routes (no bottom nav)
       GoRoute(
@@ -221,7 +202,6 @@ GoRouter createRouter(WidgetRef ref) {
           return PinEntryScreen(email: email);
         },
       ),
-
       // Onboarding (no bottom nav)
       GoRoute(
         path: RouteNames.onboarding,

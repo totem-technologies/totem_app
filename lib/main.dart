@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
@@ -13,6 +14,7 @@ import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/core/services/notifications_service.dart';
 import 'package:totem_app/core/services/observer_service.dart';
 import 'package:totem_app/firebase_options.dart';
+import 'package:totem_app/l10n/app_localizations.dart';
 import 'package:totem_app/navigation/app_router.dart';
 
 void main() {
@@ -104,6 +106,15 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
       themeMode: ThemeMode.light,
       debugShowCheckedModeBanner: false,
       routerConfig: _router,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en', ''), // English
+      ],
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
