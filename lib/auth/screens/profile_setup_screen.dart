@@ -9,6 +9,7 @@ import 'package:totem_app/auth/widget/suggested_space_card_widget.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/screens/profile_image_picker.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
+import 'package:totem_app/l10n/app_localizations.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/card_screen.dart';
@@ -152,10 +153,12 @@ class _GuidelinesTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return CardScreen(
       children: [
         Text(
-          'Community Guidelines',
+          l10n.communityGuidelinesTitle,
           style: Theme.of(context).textTheme.headlineSmall,
           textAlign: TextAlign.center,
         ),
@@ -165,19 +168,17 @@ class _GuidelinesTab extends StatelessWidget {
           text: TextSpan(
             style: Theme.of(context).textTheme.bodyMedium,
             children: [
-              const TextSpan(
-                text:
-                    'In order to keep Totem safe, we require everyone adhere to ',
+              TextSpan(
+                text: l10n.communityGuidelinesConfidentialityText,
               ),
               TextSpan(
-                text: 'confidentiality',
+                text: l10n.confidentiality,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const TextSpan(
-                text:
-                    '. Breaking confidentiality can be grounds for account removal.',
+              TextSpan(
+                text: l10n.communityGuidelinesConfidentialityWarning,
               ),
             ],
           ),
@@ -188,18 +189,17 @@ class _GuidelinesTab extends StatelessWidget {
           text: TextSpan(
             style: Theme.of(context).textTheme.bodyMedium,
             children: [
-              const TextSpan(
-                text: 'We also encourage you to only speak about ',
+              TextSpan(
+                text: l10n.communityGuidelinesPersonalExperienceText,
               ),
               TextSpan(
-                text: 'your own experience',
+                text: l10n.yourOwnExperience,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const TextSpan(
-                text:
-                    ', and not to share other people’s information or stories.',
+              TextSpan(
+                text: l10n.communityGuidelinesPersonalExperienceWarning,
               ),
             ],
           ),
@@ -209,16 +209,16 @@ class _GuidelinesTab extends StatelessWidget {
           textAlign: TextAlign.center,
           text: TextSpan(
             style: Theme.of(context).textTheme.bodyMedium,
-            children: const [
-              TextSpan(text: 'For more details, see the full '),
+            children: [
+              TextSpan(text: l10n.communityGuidelinesFullText),
               TextSpan(
-                text: 'Community Guidelines',
-                style: TextStyle(
+                text: l10n.communityGuidelinesLink,
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   decoration: TextDecoration.underline,
                 ),
               ),
-              TextSpan(text: '.'),
+              const TextSpan(text: '.'),
             ],
           ),
         ),
@@ -227,7 +227,7 @@ class _GuidelinesTab extends StatelessWidget {
           width: double.infinity,
           child: ElevatedButton(
             onPressed: onContinue,
-            child: const Text('Agree and Continue'),
+            child: Text(l10n.agreeAndContinue),
           ),
         ),
       ],

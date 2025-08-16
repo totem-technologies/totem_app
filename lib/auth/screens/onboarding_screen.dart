@@ -4,6 +4,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/l10n/app_localizations.dart';
 import 'package:totem_app/navigation/route_names.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -14,29 +15,25 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  final onboardingData = [
-    const _OnboardingData(
-      title: 'Welcome',
-      description:
-          'Totem provides online discussion groups where you can '
-          'cultivate your voice, and be a better listener.',
-      image: 'assets/images/onboarding_1.jpg',
-    ),
-    const _OnboardingData(
-      title: 'Our Promise',
-      description:
-          'We provide a moderated space you can safely express '
-          'yourself and learn from others.',
-      image: 'assets/images/onboarding_2.jpg',
-    ),
-    const _OnboardingData(
-      title: 'Our Ask',
-      description:
-          'We ask that you keep everything confidential, and that '
-          'you only speak from your experience.',
-      image: 'assets/images/onboarding_3.jpg',
-    ),
-  ];
+  List<_OnboardingData> _getOnboardingData(AppLocalizations l10n) {
+    return [
+      _OnboardingData(
+        title: l10n.onboardingWelcomeTitle,
+        description: l10n.onboardingWelcomeDescription,
+        image: 'assets/images/onboarding_1.jpg',
+      ),
+      _OnboardingData(
+        title: l10n.onboardingPromiseTitle,
+        description: l10n.onboardingPromiseDescription,
+        image: 'assets/images/onboarding_2.jpg',
+      ),
+      _OnboardingData(
+        title: l10n.onboardingAskTitle,
+        description: l10n.onboardingAskDescription,
+        image: 'assets/images/onboarding_3.jpg',
+      ),
+    ];
+  }
 
   int currentPage = 0;
   final PageController _backgroundPageController = PageController();
@@ -59,13 +56,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// Preloads all onboarding images into memory for smooth transitions
   /// Called from didChangeDependencies to ensure MediaQuery is available
   void _preloadImages() {
-    for (final onboarding in onboardingData) {
-      precacheImage(AssetImage(onboarding.image), context);
+    const images = [
+      'assets/images/onboarding_1.jpg',
+      'assets/images/onboarding_2.jpg',
+      'assets/images/onboarding_3.jpg',
+    ];
+    for (final image in images) {
+      precacheImage(AssetImage(image), context);
     }
   }
 
   void _onNext() {
-    if (currentPage < onboardingData.length - 1) {
+    if (currentPage < 3 - 1) {
       _contentPageController.animateToPage(
         currentPage + 1,
         duration: const Duration(milliseconds: 500),
@@ -103,6 +105,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final onboardingData = _getOnboardingData(l10n);
+
     return Material(
       // Use a Stack to layer the fixed top bar and the paged content
       child: Stack(
@@ -151,13 +156,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     ),
                     const Spacer(),
                     Semantics(
-                      label: 'Log in button',
+                      label: l10n.logInButtonLabel,
                       child: TextButton(
                         style: TextButton.styleFrom(
                           foregroundColor: AppTheme.white,
                         ),
                         onPressed: _onSkip,
-                        child: const Text('Log in'),
+                        child: Text(l10n.logIn),
                       ),
                     ),
                   ],
@@ -212,7 +217,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             return Column(
                               children: [
                                 Semantics(
-                                  label: 'Onboarding title',
+                                  label: l10n.onboardingTitleLabel,
                                   child: Text(
                                     onboarding.title,
                                     style: textTheme.headlineMedium?.copyWith(
@@ -223,7 +228,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                 const SizedBox(height: 10),
                                 // Onboarding description
                                 Semantics(
-                                  label: 'Onboarding description',
+                                  label: l10n.onboardingDescriptionLabel,
                                   child: Text(
                                     onboarding.description,
                                     textAlign: TextAlign.center,
@@ -259,7 +264,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           ),
                           const Spacer(),
                           Semantics(
-                            label: 'Next page',
+                            label: l10n.nextPageLabel,
                             child: GestureDetector(
                               onTap: _onNext,
                               child: const CircleAvatar(
