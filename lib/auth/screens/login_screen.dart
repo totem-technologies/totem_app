@@ -6,7 +6,6 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/l10n/app_localizations.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/card_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -33,15 +32,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   // Email validation
   String? _validateEmail(String? value) {
-    final l10n = AppLocalizations.of(context)!;
-
     if (value == null || value.isEmpty) {
-      return l10n.pleaseEnterEmail;
+      return 'Please enter your email';
     }
     // Simple email regex validation
     final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
     if (!emailRegex.hasMatch(value)) {
-      return l10n.pleaseEnterValidEmail;
+      return 'Please enter a valid email address';
     }
     return null;
   }
@@ -100,20 +97,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
 
     return CardScreen(
       isLoading: _isLoading,
       formKey: _formKey,
       children: [
         Text(
-          l10n.getStarted,
+          'Get Started',
           style: theme.textTheme.headlineMedium,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
         Text(
-          l10n.enterEmailDescription,
+          'Enter your email to create an account or access your '
+          'existing one.',
           style: theme.textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
@@ -124,7 +121,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
           autofillHints: const [AutofillHints.email],
-          decoration: InputDecoration(hintText: l10n.email),
+          decoration: const InputDecoration(hintText: 'Email'),
           validator: _validateEmail,
           enabled: !_isLoading,
           restorationId: 'auth_email_input',
@@ -149,7 +146,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   });
                 },
                 child: Text(
-                  l10n.yesReceiveEmailUpdates,
+                  'Yes, receive email updates',
                   style: theme.textTheme.bodySmall,
                   textAlign: TextAlign.start,
                 ),
@@ -162,11 +159,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
         RichText(
           text: TextSpan(
-            text: l10n.byContinuingYouAgree,
+            text: 'By continuing, you agree to our ',
             style: theme.textTheme.bodySmall,
             children: [
               TextSpan(
-                text: l10n.termsOfService,
+                text: 'Terms of Service',
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   decoration: TextDecoration.underline,
@@ -177,9 +174,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     launchUrl(AppConfig.termsOfServiceUrl);
                   },
               ),
-              TextSpan(text: l10n.and),
+              const TextSpan(text: ' and '),
               TextSpan(
-                text: l10n.privacyPolicy,
+                text: 'Privacy Policy',
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   decoration: TextDecoration.underline,
@@ -200,13 +197,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           width: double.infinity,
           child: ElevatedButton(
             onPressed: _isLoading ? null : _requestPin,
-            child: _isLoading ? const LoadingIndicator() : Text(l10n.signIn),
+            child: _isLoading
+                ? const LoadingIndicator()
+                : const Text('Sign in'),
           ),
         ),
         const SizedBox(height: 16),
 
         Text(
-          l10n.wellSendSixDigitPin,
+          "We'll send you a 6-digit PIN to your email.",
           style: theme.textTheme.bodySmall,
           textAlign: TextAlign.center,
         ),

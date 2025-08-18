@@ -7,7 +7,6 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/l10n/app_localizations.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/card_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -36,17 +35,15 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
 
   // PIN validation
   String? _validatePin(String? value) {
-    final l10n = AppLocalizations.of(context)!;
-
     if (value == null || value.isEmpty) {
-      return l10n.pleaseEnterPin;
+      return 'Please enter the PIN from your email';
     }
     if (value.length != 6) {
-      return l10n.pinMustBeSixDigits;
+      return 'PIN must be 6 digits';
     }
     // Check if PIN contains only digits
     if (!RegExp(r'^\d+$').hasMatch(value)) {
-      return l10n.pinMustContainOnlyDigits;
+      return 'PIN must contain only digits';
     }
     return null;
   }
@@ -78,14 +75,13 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
           _isLoading = false;
         });
 
-        final l10n = AppLocalizations.of(context)!;
-        String errorMessage = l10n.invalidPinTryAgain;
+        String errorMessage = 'Invalid PIN. Please try again.';
         if (_attempts >= _maxAttempts) {
-          errorMessage = l10n.tooManyFailedAttempts;
+          errorMessage =
+              'Too many failed attempts. Please request a new magic link.';
         } else {
-          errorMessage = l10n.invalidPinAttemptsRemaining(
-            _maxAttempts - _attempts,
-          );
+          errorMessage =
+              'Invalid PIN. ${_maxAttempts - _attempts} attempts remaining.';
         }
 
         ErrorHandler.showErrorSnackBar(context, errorMessage);
@@ -117,7 +113,6 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
     });
 
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
 
     return CardScreen(
       isLoading: _isLoading,
@@ -125,24 +120,24 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
       children: [
         // Instructions
         Text(
-          l10n.enterVerificationCode,
+          'Enter verification code',
           style: Theme.of(context).textTheme.headlineSmall,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
         RichText(
           text: TextSpan(
-            text: l10n.weSentSixDigitPinTo,
+            text: "We've sent a 6-digit PIN to ",
             style: theme.textTheme.bodyMedium,
             children: [
               TextSpan(
-                text: widget.email.isEmpty ? l10n.yourEmail : widget.email,
+                text: widget.email.isEmpty ? 'your email' : widget.email,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
               TextSpan(
-                text: l10n.pleaseEnterItBelow,
+                text: '\nPlease enter it below to.',
                 style: theme.textTheme.bodyMedium,
               ),
             ],
@@ -152,7 +147,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
         const SizedBox(height: 32),
 
         Text(
-          l10n.enterSixDigitCode,
+          'Enter 6-digit code',
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -187,18 +182,18 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
                 : null,
             child: _isLoading
                 ? const LoadingIndicator()
-                : Text(l10n.verifyCode),
+                : const Text('Verify Code'),
           ),
         ),
         const SizedBox(height: 16),
 
         RichText(
           text: TextSpan(
-            text: l10n.needNewCode,
+            text: 'Need a new code? ',
             style: theme.textTheme.bodyMedium,
             children: [
               TextSpan(
-                text: l10n.sendAgain,
+                text: 'Send again',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -212,7 +207,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
         if (_attempts > 0) ...[
           const SizedBox(height: 16),
           Text(
-            l10n.attemptsOf(_attempts, _maxAttempts),
+            'Attempts: $_attempts of $_maxAttempts',
             style: TextStyle(
               color: _attempts >= _maxAttempts - 1
                   ? theme.colorScheme.error
