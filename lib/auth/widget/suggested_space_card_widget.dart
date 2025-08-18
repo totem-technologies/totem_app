@@ -4,7 +4,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
-import 'package:totem_app/l10n/app_localizations.dart';
 import 'package:totem_app/shared/date.dart';
 
 /// Card used in Suggestions tab, built from EventDetailSchema.
@@ -19,11 +18,10 @@ class SuggestedSpaceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
     final backgroundImage = event.space.image;
     final timeLabel = buildTimeLabel(event.start);
     final title = event.title.isNotEmpty ? event.title : event.spaceTitle;
-    final keeperName = event.space.author.name ?? l10n.keeper;
+    final keeperName = event.space.author.name ?? 'Keeper';
     final seatsLeft = event.seatsLeft;
 
     return Container(
@@ -198,7 +196,7 @@ class SuggestedSpaceCard extends StatelessWidget {
                             ),
                             children: [
                               TextSpan(
-                                text: l10n.withPrefix,
+                                text: 'with ',
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   fontWeight: FontWeight.w400,
                                   color: AppTheme.white,
@@ -225,7 +223,7 @@ class SuggestedSpaceCard extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
-                                l10n.join,
+                                'Join',
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: AppTheme.white,
                                   fontWeight: FontWeight.w600,
@@ -235,7 +233,7 @@ class SuggestedSpaceCard extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              l10n.seatsLeft(seatsLeft),
+                              '$seatsLeft seats left',
                               textAlign: TextAlign.center,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: AppTheme.white,
