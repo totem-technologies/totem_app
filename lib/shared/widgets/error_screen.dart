@@ -36,7 +36,7 @@ class _ErrorScreenState extends State<ErrorScreen> {
     final theme = Theme.of(context);
 
     final showHomeButton =
-        (widget.showHomeButton ?? true) && ErrorHandler.is404(widget.error);
+        widget.showHomeButton ?? ErrorHandler.is404(widget.error);
 
     return Scaffold(
       appBar: Scaffold.maybeOf(context)?.hasAppBar ?? false
@@ -47,9 +47,10 @@ class _ErrorScreenState extends State<ErrorScreen> {
                   : BackButton(onPressed: () => popOrHome(context)),
             ),
       extendBodyBehindAppBar: true,
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Center(
+      body: Center(
+        child: Container(
+          margin: const EdgeInsets.all(20),
+          constraints: const BoxConstraints(maxWidth: 400),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -113,7 +114,7 @@ class _ErrorScreenState extends State<ErrorScreen> {
                 const SizedBox(height: 20),
                 const Text(
                   'You might be a little off path and that’s okay. Let’s help '
-                  'you find your way back to the circle.',
+                  'you find your way back.',
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),

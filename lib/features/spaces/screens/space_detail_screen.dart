@@ -259,7 +259,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         );
       },
       loading: () => const LoadingScreen(),
-      error: (err, stack) => ErrorScreen(error: err),
+      error: (err, stack) => ErrorScreen(error: err, showHomeButton: true),
     );
   }
 
