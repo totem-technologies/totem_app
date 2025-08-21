@@ -27,3 +27,24 @@ String formatEventDateTime(DateTime dateTime) {
     return 'Date TBA';
   }
 }
+
+String buildTimeLabel(DateTime start) {
+  try {
+    final now = DateTime.now();
+    final isToday =
+        now.day == start.day &&
+        now.month == start.month &&
+        now.year == start.year;
+
+    final timeFormatter = DateFormat('hh:mm a');
+
+    if (isToday) {
+      return 'Today, ${timeFormatter.format(start)}';
+    }
+
+    final dateFormatter = DateFormat('E MMM dd');
+    return '${dateFormatter.format(start)}, ${timeFormatter.format(start)}';
+  } catch (error) {
+    return 'Time TBA';
+  }
+}

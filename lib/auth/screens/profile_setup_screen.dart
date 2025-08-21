@@ -4,14 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/referral_choices.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/auth/widget/referral_source_modal.dart';
+import 'package:totem_app/auth/widget/suggested_space_card_widget.dart';
+import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/features/profile/screens/profile_image_picker.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/card_screen.dart';
 import 'package:totem_app/shared/widgets/info_text.dart';
-import 'package:totem_app/shared/widgets/loading_indicator.dart';
-import 'package:totem_app/shared/widgets/page_indicator.dart';
+import 'package:totem_app/shared/widgets/user_avatar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-// --- Main Screen Widget ---
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({super.key});
 
@@ -20,19 +25,31 @@ class ProfileSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
-  final _formKeyTab1 = GlobalKey<FormState>();
-  final _firstNameController = TextEditingController();
-  final _ageController = TextEditingController();
+  final PageController _pageController = PageController();
 
-  final _selectedTopics = <String>{};
+  final GlobalKey<FormState> _formKeyTab1 = GlobalKey<FormState>();
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
+
+  final Set<String> _selectedTopics = <String>{};
   ReferralChoices? _referralSource;
-  var _isLoading = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
+    _pageController.dispose();
     _firstNameController.dispose();
     _ageController.dispose();
     super.dispose();
+  }
+
+  void _nextPage() {
+    if (_pageController.hasClients) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   void _handleTopicSelection(String topic, bool isSelected) {
@@ -43,10 +60,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         _selectedTopics.remove(topic);
       }
     });
-  }
-
-  void _handleReferralSourceSelection(ReferralChoices source) {
-    setState(() => _referralSource = source);
   }
 
   Future<void> _submitProfile() async {
@@ -60,8 +73,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             interestTopics: _selectedTopics,
             age: int.tryParse(_ageController.text.trim()),
           );
-
-      if (mounted) context.go(RouteNames.spaces);
+      _nextPage();
     } catch (error, stackTrace) {
       if (mounted) {
         await ErrorHandler.handleApiError(
@@ -78,81 +90,195 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Builder(
-        builder: (context) {
-          final tabController = DefaultTabController.of(context);
-          void navigateToNextTab() {
-            if (tabController.index < 3 - 1) {
-              tabController.animateTo(tabController.index + 1);
-            }
-          }
-
-          return PopScope(
-            canPop: tabController.index == 0 && !_isLoading,
-            onPopInvokedWithResult: (didPop, _) {
-              if (didPop) return;
-              if (tabController.index > 0) {
-                tabController.animateTo(tabController.index - 1);
+    return PopScope(
+      canPop: !_isLoading,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (_pageController.hasClients &&
+            _pageController.page != null &&
+            _pageController.page! > 0) {
+          _pageController.previousPage(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+          );
+        }
+      },
+      child: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          _GuidelinesTab(onContinue: _nextPage),
+          _ProfileTab(
+            formKey: _formKeyTab1,
+            firstNameController: _firstNameController,
+            ageController: _ageController,
+            isLoading: _isLoading,
+            onReferralSourceSelected: (source) =>
+                setState(() => _referralSource = source),
+            referralSource: _referralSource,
+            onContinue: () async {
+              FocusScope.of(context).unfocus();
+              if (_formKeyTab1.currentState!.validate()) {
+                setState(() => _isLoading = true);
+                await _submitProfile();
+                if (mounted) setState(() => _isLoading = false);
               }
             },
-            child: TabBarView(
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _NameAndAgeTab(
-                  formKey: _formKeyTab1,
-                  firstNameController: _firstNameController,
-                  ageController: _ageController,
-                  isLoading: _isLoading,
-                  onContinue: () {
-                    if (_formKeyTab1.currentState!.validate()) {
-                      navigateToNextTab();
-                      FocusScope.of(context).unfocus();
-                    }
-                  },
-                ),
-                _TopicsTab(
-                  selectedTopics: _selectedTopics,
-                  isLoading: _isLoading,
-                  onTopicSelected: _handleTopicSelection,
-                  onContinue: navigateToNextTab,
-                ),
-                _ReferralSourceTab(
-                  selectedReferralSource: _referralSource,
-                  isLoading: _isLoading,
-                  onSourceSelected: _handleReferralSourceSelection,
-                  onSubmit: _submitProfile,
-                ),
-              ],
-            ),
-          );
-        },
+          ),
+          _TopicsTab(
+            selectedTopics: _selectedTopics,
+            isLoading: _isLoading,
+            onTopicSelected: _handleTopicSelection,
+            onContinue: () async {
+              _nextPage();
+            },
+          ),
+          _SuggestionsTab(
+            selectedTopics: _selectedTopics,
+            isLoading: _isLoading,
+            onSeeAllSpaces: () {
+              context.go(RouteNames.home);
+            },
+          ),
+        ],
       ),
     );
   }
 }
 
-// --- Tab 1: Name and Age ---
-class _NameAndAgeTab extends StatefulWidget {
-  const _NameAndAgeTab({
+/// First tab: Community Guidelines acknowledgement.
+class _GuidelinesTab extends StatelessWidget {
+  const _GuidelinesTab({required this.onContinue});
+
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    return CardScreen(
+      children: [
+        Text(
+          'Community Guidelines',
+          style: Theme.of(context).textTheme.headlineSmall,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        RichText(
+          textAlign: TextAlign.center,
+          text: TextSpan(
+            style: Theme.of(context).textTheme.bodyMedium,
+            children: [
+              const TextSpan(
+                text:
+                    // ignore for now, will fix later
+                    // ignore: lines_longer_than_80_chars
+                    'In order to keep Totem safe, we require everyone adhere to ',
+              ),
+              TextSpan(
+                text: 'confidentiality',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const TextSpan(
+                text:
+                    // ignore for now, will fix later
+                    // ignore: lines_longer_than_80_chars
+                    '. Breaking confidentiality can be grounds for account removal.',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        RichText(
+          textAlign: TextAlign.center,
+          text: TextSpan(
+            style: Theme.of(context).textTheme.bodyMedium,
+            children: [
+              const TextSpan(
+                text: 'We also encourage you to only speak about ',
+              ),
+              TextSpan(
+                text: 'your own experience',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const TextSpan(
+                text:
+                    ', and not to share other people’s information or stories.',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        RichText(
+          textAlign: TextAlign.center,
+          text: TextSpan(
+            style: Theme.of(context).textTheme.bodyMedium,
+            children: [
+              const TextSpan(text: 'For more details, see the full '),
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: GestureDetector(
+                  onTap: () async {
+                    const url = 'https://www.totem.org/guidelines/';
+                    if (await canLaunchUrl(Uri.parse(url))) {
+                      await launchUrl(
+                        Uri.parse(url),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
+                  },
+                  child: Text(
+                    'Community Guidelines',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.purple,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ),
+              const TextSpan(text: '.'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: onContinue,
+            child: const Text('Agree and Continue'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Second tab: Name, age, and referral source capture.
+class _ProfileTab extends StatefulWidget {
+  const _ProfileTab({
     required this.formKey,
     required this.firstNameController,
     required this.ageController,
     required this.isLoading,
     required this.onContinue,
+    required this.onReferralSourceSelected,
+    required this.referralSource,
   });
   final GlobalKey<FormState> formKey;
   final TextEditingController firstNameController;
   final TextEditingController ageController;
   final bool isLoading;
   final VoidCallback onContinue;
-
+  final ValueChanged<ReferralChoices> onReferralSourceSelected;
+  final ReferralChoices? referralSource;
   @override
-  State<_NameAndAgeTab> createState() => _NameAndAgeTabState();
+  State<_ProfileTab> createState() => _ProfileTabState();
 }
 
-class _NameAndAgeTabState extends State<_NameAndAgeTab>
+class _ProfileTabState extends State<_ProfileTab>
     with AutomaticKeepAliveClientMixin {
   String? _validateFirstName(String? value) {
     if (value == null || value.trim().isEmpty) {
@@ -181,7 +307,7 @@ class _NameAndAgeTabState extends State<_NameAndAgeTab>
       isLoading: widget.isLoading,
       children: [
         Text(
-          'Welcome',
+          'Let’s get to know you',
           style: theme.textTheme.headlineSmall,
           textAlign: TextAlign.center,
         ),
@@ -193,8 +319,35 @@ class _NameAndAgeTabState extends State<_NameAndAgeTab>
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
+        GestureDetector(
+          onTap: () => showProfileImagePicker(context),
+          child: Center(
+            child: Stack(
+              alignment: AlignmentDirectional.center,
+              children: [
+                const UserAvatar(radius: 50),
+                PositionedDirectional(
+                  bottom: -10,
+                  end: -10,
+                  child: Container(
+                    height: 40,
+                    width: 40,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: AlignmentDirectional.center,
+                    child: const TotemIcon(TotemIcons.edit),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
         Text(
           'What do you like to be called?',
+          textAlign: TextAlign.left,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -214,9 +367,10 @@ class _NameAndAgeTabState extends State<_NameAndAgeTab>
           'Other people will see this, but you don’t have to use your real '
           'name. Add any pronounce is parentheses if you’d like.',
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
         Text(
           'How old are you?',
+          textAlign: TextAlign.left,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -237,9 +391,56 @@ class _NameAndAgeTabState extends State<_NameAndAgeTab>
           'You must be over 13 to join. Age is for verification only, no one '
           'will see it.',
         ),
-        const SizedBox(height: 24),
-        const PageIndicator(),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
+        Text(
+          'How did you hear about us?',
+          textAlign: TextAlign.left,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: () {
+            showModalBottomSheet<ReferralChoices>(
+              isScrollControlled: true,
+              context: context,
+              builder: (context) => const ReferralSourceModal(),
+            ).then(
+              (value) {
+                if (value != null) {
+                  widget.onReferralSourceSelected(value);
+                }
+              },
+            );
+          },
+          child: Container(
+            height: 53,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 15,
+              vertical: 16,
+            ),
+            decoration: BoxDecoration(
+              color: const Color(0xffD9D9D9),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              maxLines: 1,
+              textAlign: TextAlign.left,
+              overflow: TextOverflow.ellipsis,
+              widget.referralSource?.name ?? 'Tap to select',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: widget.referralSource == null
+                    ? const Color(0xffA2A2A2)
+                    : theme.textTheme.bodyLarge?.color,
+              ),
+            ),
+          ),
+        ),
+        const InfoText(
+          'This helps us understand how to reach more people like you.',
+        ),
+        const SizedBox(height: 20),
         ElevatedButton(
           onPressed: widget.isLoading ? null : widget.onContinue,
           child: const Text('Continue'),
@@ -252,7 +453,7 @@ class _NameAndAgeTabState extends State<_NameAndAgeTab>
   bool get wantKeepAlive => true;
 }
 
-// --- Tab 2: Topics ---
+/// Third tab: Topics selection.
 class _TopicsTab extends StatelessWidget {
   const _TopicsTab({
     required this.selectedTopics,
@@ -280,13 +481,13 @@ class _TopicsTab extends StatelessWidget {
       isLoading: isLoading,
       children: [
         Text(
-          'What topics would you like to explore?',
+          'Which community feels like home to you?',
           style: theme.textTheme.headlineSmall,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
         Text(
-          'You feedback here will help us about new topics to offer.',
+          'Pick a few — we’ll help you connect with the right spaces.',
           style: theme.textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
@@ -314,8 +515,6 @@ class _TopicsTab extends StatelessWidget {
             ),
           );
         }),
-        const SizedBox(height: 14),
-        const PageIndicator(),
         const SizedBox(height: 24),
         ElevatedButton(
           onPressed: isLoading ? null : onContinue,
@@ -326,98 +525,81 @@ class _TopicsTab extends StatelessWidget {
   }
 }
 
-// --- Tab 3: Referral Source ---
-class _ReferralSourceTab extends StatelessWidget {
-  const _ReferralSourceTab({
-    required this.selectedReferralSource,
+/// Fourth tab: Suggested spaces fetched from backend.
+class _SuggestionsTab extends ConsumerWidget {
+  const _SuggestionsTab({
+    required this.selectedTopics,
     required this.isLoading,
-    required this.onSourceSelected,
-    required this.onSubmit,
+    required this.onSeeAllSpaces,
   });
 
-  final ReferralChoices? selectedReferralSource;
+  final Set<String> selectedTopics;
   final bool isLoading;
-  final ValueChanged<ReferralChoices> onSourceSelected;
-  final VoidCallback onSubmit;
+  final VoidCallback onSeeAllSpaces;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-
-    final availableSources = ReferralChoices.values
-        .where((source) => source.name != ReferralChoices.other.name)
-        .toSet() // exclude 'Other' from the list
-        .toList()
-        .map(
-          (source) => MapEntry<ReferralChoices, String>(source, source.name),
-        )
-        .toSet();
+    final topicsKey = (selectedTopics.toList()..sort()).join('|');
+    final recommended = ref.watch(
+      recommendedEventsByTopicsKeyProvider(topicsKey),
+    );
 
     return CardScreen(
-      isLoading: isLoading, // Pass isLoading if CardScreen uses it
+      isLoading: isLoading,
       children: [
         Text(
-          'How did you hear about us?',
+          'Suggested Spaces',
           style: theme.textTheme.headlineSmall,
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 8),
         Text(
-          'This helps us understand how to reach more people like you.',
+          'We’ve found some spaces that might be a good fit for you.',
           style: theme.textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 24),
-        ...availableSources.map((source) {
-          final sourceRef = source.key;
-          final sourceName = source.value;
-          final isSelected = selectedReferralSource == sourceRef;
-          return Padding(
-            padding: const EdgeInsetsDirectional.only(bottom: 10),
-            child: CheckboxListTile(
-              title: Text(sourceName),
-              value: isSelected,
-              onChanged: isLoading
-                  ? null
-                  : (value) => onSourceSelected(sourceRef),
-              checkboxScaleFactor: 1.35,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(
-                  color: isSelected
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.primaryContainer,
-                  width: 2,
+        const SizedBox(height: 20),
+        recommended.when(
+          data: (events) {
+            if (events.isEmpty) {
+              return const InfoText(
+                'No suggestions yet. Try selecting a few topics.',
+              );
+            }
+            return Column(
+              children: [
+                for (final event in events) ...[
+                  SuggestedSpaceCard(event: event),
+                  const SizedBox(height: 12),
+                ],
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: onSeeAllSpaces,
+                    child: const Text('See all'),
+                  ),
                 ),
-              ),
-            ),
-          );
-        }),
-        const SizedBox(height: 14),
-        const PageIndicator(),
-        const SizedBox(height: 24),
-        ElevatedButton(
-          onPressed: isLoading ? null : onSubmit,
-          child: isLoading
-              ? const LoadingIndicator()
-              : const Text('Get Started'),
+              ],
+            );
+          },
+          error: (error, stack) {
+            return Column(
+              children: [
+                const InfoText('Couldn’t load suggestions.'),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () => ref.refresh(
+                    recommendedEventsByTopicsKeyProvider(topicsKey).future,
+                  ),
+                  child: const Text('Retry'),
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
         ),
       ],
     );
-  }
-}
-
-extension on ReferralChoices {
-  String get name {
-    return switch (this) {
-      ReferralChoices.blog => 'Blog or Article',
-      ReferralChoices.dream => 'Dream',
-      ReferralChoices.keeper => 'Keeper',
-      ReferralChoices.newsletter => 'Newsletter',
-      ReferralChoices.pamphlet => 'Pamphlet',
-      ReferralChoices.search => 'Google',
-      ReferralChoices.social => 'Social Media',
-      ReferralChoices.other || _ => 'Other',
-    };
   }
 }
