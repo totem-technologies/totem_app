@@ -21,11 +21,11 @@ final mobileApiServiceProvider = Provider<MobileTotemApi>((ref) {
   return MobileTotemApi(dio, baseUrl: AppConfig.mobileApiUrl);
 });
 
+final _dio = Dio();
+
 /// Initialize Dio instance with interceptors and base configuration
 Dio _initDio(Ref ref) {
-  final dio = Dio();
-
-  dio.interceptors.add(
+  _dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
         final secureStorage = ref.read(secureStorageProvider);
@@ -127,10 +127,12 @@ Dio _initDio(Ref ref) {
   );
 
   if (AppConfig.isDevelopment) {
-    dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
+    _dio.interceptors.add(
+      LogInterceptor(requestBody: true, responseBody: true),
+    );
   }
 
-  return dio;
+  return _dio;
 }
 
 /// Handle Dio errors and convert them to app-specific exceptions
@@ -194,4 +196,27 @@ Exception _handleDioError(DioException error) {
         details: error,
       );
   }
+}
+
+Future<Response<dynamic>> postData(
+  String url, {
+  Map<String, dynamic> data = const {},
+}) async {
+  final body = {
+    ...data,
+  };
+
+  final response = await _dio.post<dynamic>(
+    url,
+    data: FormData.fromMap(body),
+    options: Options(
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    ),
+  );
+
+  return response;
 }

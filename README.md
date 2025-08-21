@@ -61,7 +61,7 @@ For development:
 ```bash
 flutter run -d android    # Android
 flutter run -d ios        # iOS
-flutter run -d chrome --web-browser-flag "--disable-web-security" --web-experimental-hot-reload     # Web (temporary testing)
+flutter run -d chrome --web-browser-flag "--disable-web-security"     # Web (temporary testing)
 ```
 
 If testing on an iOS device, ensure you're using macOS and have Xcode installed.
@@ -128,7 +128,7 @@ For example:
 
 ### 🔔 Notifications
 
-Notifications are handled using Firebase Cloud Messaging (FCM). In the notification data, one may include a `path` key to specify the route to navigate to when the user taps on the notification. Check all the available routes [here](./lib/navigation/route_names.dart). 
+Notifications are handled using Firebase Cloud Messaging (FCM). In the notification data, one may include a `path` key to specify the route to navigate to when the user taps on the notification. Check all the available routes [here](./lib/navigation/route_names.dart).
 
 ## 👥 Community
 
