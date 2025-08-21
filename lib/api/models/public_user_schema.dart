@@ -12,10 +12,10 @@ part 'public_user_schema.g.dart';
 class PublicUserSchema {
   const PublicUserSchema({
     required this.profileAvatarType,
-    required this.profileAvatarSeed,
     this.isStaff = false,
     this.name,
     this.slug,
+    this.profileAvatarSeed,
     this.profileImage,
   });
 
@@ -31,7 +31,7 @@ class PublicUserSchema {
   @JsonKey(name: 'is_staff')
   final bool isStaff;
   @JsonKey(name: 'profile_avatar_seed')
-  final String profileAvatarSeed;
+  final String? profileAvatarSeed;
 
   /// Profile image, must be under 5mb. Will be cropped to a square.
   @JsonKey(name: 'profile_image')

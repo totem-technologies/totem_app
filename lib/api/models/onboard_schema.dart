@@ -11,10 +11,10 @@ part 'onboard_schema.g.dart';
 @JsonSerializable()
 class OnboardSchema {
   const OnboardSchema({
-    this.referralOther = '',
-    this.yearBorn,
-    this.hopes,
+    required this.yearBorn,
+    required this.hopes,
     this.referralSource = ReferralChoices.valueDefault,
+    this.referralOther = '',
   });
 
   factory OnboardSchema.fromJson(Map<String, Object?> json) =>
@@ -28,7 +28,7 @@ class OnboardSchema {
 
   /// Please tell us more about how you found us
   @JsonKey(name: 'referral_other')
-  final String referralOther;
+  final String? referralOther;
 
   Map<String, Object?> toJson() => _$OnboardSchemaToJson(this);
 }

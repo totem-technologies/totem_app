@@ -9,12 +9,15 @@ part of 'blog_post_list_schema.dart';
 BlogPostListSchema _$BlogPostListSchemaFromJson(Map<String, dynamic> json) =>
     BlogPostListSchema(
       title: json['title'] as String,
-      datePublished: DateTime.parse(json['date_published'] as String),
+      readTime: (json['read_time'] as num?)?.toInt() ?? 1,
       author: json['author'] == null
           ? null
           : PublicUserSchema.fromJson(json['author'] as Map<String, dynamic>),
       headerImageUrl: json['header_image_url'] as String?,
       subtitle: json['subtitle'] as String?,
+      datePublished: json['date_published'] == null
+          ? null
+          : DateTime.parse(json['date_published'] as String),
       slug: json['slug'] as String?,
     );
 
@@ -24,6 +27,7 @@ Map<String, dynamic> _$BlogPostListSchemaToJson(BlogPostListSchema instance) =>
       'header_image_url': instance.headerImageUrl,
       'title': instance.title,
       'subtitle': instance.subtitle,
-      'date_published': instance.datePublished.toIso8601String(),
+      'date_published': instance.datePublished?.toIso8601String(),
       'slug': instance.slug,
+      'read_time': instance.readTime,
     };

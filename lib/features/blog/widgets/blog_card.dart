@@ -36,7 +36,7 @@ class BlogPostCard extends StatelessWidget {
   final String authorName;
   final String? authorImageUrl;
   final String authorImageSeed;
-  final DateTime publishedDate;
+  final DateTime? publishedDate;
   final String image;
   final String slug;
   final bool isLarge;
@@ -121,15 +121,16 @@ class BlogPostCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.fade,
                         ),
-                        Text(
-                          dateFormatter.format(publishedDate),
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: .7),
-                            fontSize: 10,
+                        if (publishedDate != null)
+                          Text(
+                            dateFormatter.format(publishedDate!),
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: .7),
+                              fontSize: 10,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.fade,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.fade,
-                        ),
                       ],
                     ),
                   ),

@@ -2,7 +2,7 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, unused_import
 
-import 'package:dio/dio.dart' hide Headers;
+import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
 import '../models/event_detail_schema.dart';
@@ -36,8 +36,8 @@ abstract class SpacesClient {
   /// List Spaces
   @GET('/api/mobile/protected/spaces/')
   Future<PagedSpaceDetailSchema> totemCirclesMobileApiListSpaces({
-    @Query('limit') int limit = 100,
-    @Query('offset') int offset = 0,
+    @Query('limit') int? limit = 100,
+    @Query('offset') int? offset = 0,
   });
 
   /// Get Space Detail
@@ -57,11 +57,10 @@ abstract class SpacesClient {
   Future<List<EventDetailSchema>> totemCirclesMobileApiGetSessionsHistory();
 
   /// Get Recommended Spaces
-  @Headers(const {'Content-Type': 'application/json'})
   @GET('/api/mobile/protected/spaces/recommended')
   Future<List<EventDetailSchema>> totemCirclesMobileApiGetRecommendedSpaces({
     @Body() List<String>? body,
-    @Query('limit') int limit = 3,
+    @Query('limit') int? limit = 3,
   });
 
   /// Get Spaces Summary

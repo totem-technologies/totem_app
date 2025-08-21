@@ -10,11 +10,11 @@ UserSchema _$UserSchemaFromJson(Map<String, dynamic> json) => UserSchema(
   profileAvatarType: ProfileAvatarTypeEnum.fromJson(
     json['profile_avatar_type'] as String,
   ),
-  apiKey: json['api_key'] as String,
-  profileAvatarSeed: json['profile_avatar_seed'] as String,
   email: json['email'] as String,
   isStaff: json['is_staff'] as bool? ?? false,
   name: json['name'] as String?,
+  apiKey: json['api_key'] as String?,
+  profileAvatarSeed: json['profile_avatar_seed'] as String?,
   profileImage: json['profile_image'] as String?,
 );
 

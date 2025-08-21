@@ -12,10 +12,11 @@ part 'blog_post_list_schema.g.dart';
 class BlogPostListSchema {
   const BlogPostListSchema({
     required this.title,
-    required this.datePublished,
+    this.readTime = 1,
     this.author,
     this.headerImageUrl,
     this.subtitle,
+    this.datePublished,
     this.slug,
   });
 
@@ -28,8 +29,12 @@ class BlogPostListSchema {
   final String title;
   final String? subtitle;
   @JsonKey(name: 'date_published')
-  final DateTime datePublished;
+  final DateTime? datePublished;
   final String? slug;
+
+  /// Estimated reading time in minutes (auto-calculated)
+  @JsonKey(name: 'read_time')
+  final int readTime;
 
   Map<String, Object?> toJson() => _$BlogPostListSchemaToJson(this);
 }

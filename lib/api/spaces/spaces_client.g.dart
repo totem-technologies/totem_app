@@ -106,14 +106,15 @@ class _SpacesClient implements SpacesClient {
 
   @override
   Future<PagedSpaceDetailSchema> totemCirclesMobileApiListSpaces({
-    int limit = 100,
-    int offset = 0,
+    int? limit = 100,
+    int? offset = 0,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'limit': limit,
       r'offset': offset,
     };
+    queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<PagedSpaceDetailSchema>(
@@ -236,20 +237,15 @@ class _SpacesClient implements SpacesClient {
   @override
   Future<List<EventDetailSchema>> totemCirclesMobileApiGetRecommendedSpaces({
     List<String>? body,
-    int limit = 3,
+    int? limit = 3,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{r'limit': limit};
     queryParameters.removeWhere((k, v) => v == null);
-    final _headers = <String, dynamic>{'Content-Type': 'application/json'};
+    final _headers = <String, dynamic>{};
     final _data = body;
     final _options = _setStreamType<List<EventDetailSchema>>(
-      Options(
-            method: 'GET',
-            headers: _headers,
-            extra: _extra,
-            contentType: 'application/json',
-          )
+      Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
             '/api/mobile/protected/spaces/recommended',

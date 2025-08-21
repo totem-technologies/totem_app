@@ -11,10 +11,10 @@ PublicUserSchema _$PublicUserSchemaFromJson(Map<String, dynamic> json) =>
       profileAvatarType: ProfileAvatarTypeEnum.fromJson(
         json['profile_avatar_type'] as String,
       ),
-      profileAvatarSeed: json['profile_avatar_seed'] as String,
       isStaff: json['is_staff'] as bool? ?? false,
       name: json['name'] as String?,
       slug: json['slug'] as String?,
+      profileAvatarSeed: json['profile_avatar_seed'] as String?,
       profileImage: json['profile_image'] as String?,
     );
 

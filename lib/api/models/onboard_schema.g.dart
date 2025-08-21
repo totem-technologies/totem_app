@@ -8,12 +8,12 @@ part of 'onboard_schema.dart';
 
 OnboardSchema _$OnboardSchemaFromJson(Map<String, dynamic> json) =>
     OnboardSchema(
-      referralOther: json['referral_other'] as String? ?? '',
       yearBorn: (json['year_born'] as num?)?.toInt(),
       hopes: json['hopes'] as String?,
       referralSource: json['referral_source'] == null
           ? ReferralChoices.valueDefault
           : ReferralChoices.fromJson(json['referral_source'] as String),
+      referralOther: json['referral_other'] as String? ?? '',
     );
 
 Map<String, dynamic> _$OnboardSchemaToJson(OnboardSchema instance) =>

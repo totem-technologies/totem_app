@@ -12,11 +12,11 @@ part 'user_schema.g.dart';
 class UserSchema {
   const UserSchema({
     required this.profileAvatarType,
-    required this.apiKey,
-    required this.profileAvatarSeed,
     required this.email,
     this.isStaff = false,
     this.name,
+    this.apiKey,
+    this.profileAvatarSeed,
     this.profileImage,
   });
 
@@ -31,9 +31,9 @@ class UserSchema {
   @JsonKey(name: 'is_staff')
   final bool isStaff;
   @JsonKey(name: 'api_key')
-  final String apiKey;
+  final String? apiKey;
   @JsonKey(name: 'profile_avatar_seed')
-  final String profileAvatarSeed;
+  final String? profileAvatarSeed;
 
   /// Profile image, must be under 5mb. Will be cropped to a square.
   @JsonKey(name: 'profile_image')

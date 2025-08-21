@@ -22,4 +22,11 @@ enum ProfileAvatarTypeEnum {
   );
 
   final String? json;
+
+  @override
+  String toString() => json ?? super.toString();
+
+  /// Returns all defined enum values excluding the $unknown value.
+  static List<ProfileAvatarTypeEnum> get $valuesDefined =>
+      values.where((value) => value != $unknown).toList();
 }

@@ -9,14 +9,17 @@ part of 'blog_post_schema.dart';
 BlogPostSchema _$BlogPostSchemaFromJson(Map<String, dynamic> json) =>
     BlogPostSchema(
       title: json['title'] as String,
-      datePublished: DateTime.parse(json['date_published'] as String),
       publish: json['publish'] as bool? ?? false,
+      readTime: (json['read_time'] as num?)?.toInt() ?? 1,
       author: json['author'] == null
           ? null
           : PublicUserSchema.fromJson(json['author'] as Map<String, dynamic>),
       headerImageUrl: json['header_image_url'] as String?,
       contentHtml: json['content_html'] as String?,
       subtitle: json['subtitle'] as String?,
+      datePublished: json['date_published'] == null
+          ? null
+          : DateTime.parse(json['date_published'] as String),
       slug: json['slug'] as String?,
     );
 
@@ -27,7 +30,8 @@ Map<String, dynamic> _$BlogPostSchemaToJson(BlogPostSchema instance) =>
       'content_html': instance.contentHtml,
       'title': instance.title,
       'subtitle': instance.subtitle,
-      'date_published': instance.datePublished.toIso8601String(),
+      'date_published': instance.datePublished?.toIso8601String(),
       'slug': instance.slug,
       'publish': instance.publish,
+      'read_time': instance.readTime,
     };

@@ -19,8 +19,8 @@ abstract class BlogClient {
   /// List all blog posts.
   @GET('/api/mobile/protected/blog/posts')
   Future<PagedBlogPostListSchema> totemBlogMobileApiListPosts({
-    @Query('limit') int limit = 100,
-    @Query('offset') int offset = 0,
+    @Query('limit') int? limit = 100,
+    @Query('offset') int? offset = 0,
   });
 
   /// Post
