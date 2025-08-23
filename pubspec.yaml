@@ -42,7 +42,7 @@ dependencies:
 
   # UI & Utilities
   flutter_html: ^3.0.0
-  flutter_native_splash: ^2.4.6
+  # flutter_native_splash: ^2.4.6
   google_fonts: ^6.2.1
   pinput: ^5.0.1
   flutter_boring_avatars: ^2.0.1
@@ -51,6 +51,7 @@ dependencies:
   timeago: ^3.7.1
   sliver_tools: ^0.2.12
   flutter_confetti: ^0.5.1
+  eventide: ^0.10.2
 
 dev_dependencies:
   flutter_test:

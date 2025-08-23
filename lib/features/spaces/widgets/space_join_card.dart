@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:eventide/eventide.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,7 @@ import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:url_launcher/link.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 enum SpaceJoinCardState {
   ended,
@@ -290,5 +292,69 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     });
   }
 
-  void addToCalendar() {}
+  Future<void> addToCalendar() async {
+    try {
+      final eventide = Eventide();
+      await eventide.createEventInDefaultCalendar(
+        title: widget.event.space.title,
+        // description: widget.event.space.shortDescription,
+        startDate: widget.event.start.toLocal(),
+        endDate: widget.event.start
+            .add(Duration(minutes: widget.event.duration))
+            .toLocal(),
+        url: getFullUrl(widget.event.calLink),
+        reminders: [
+          const Duration(minutes: 30),
+          const Duration(minutes: 15),
+        ],
+      );
+    } catch (error, stacktrace) {
+      debugPrint('Failed to add event to calendar: $error\n$stacktrace');
+      await launchUrlString(
+        _buildGoogleCalendarUrl(
+          title: widget.event.space.title,
+          start: widget.event.start.toLocal(),
+          end: widget.event.start
+              .add(Duration(minutes: widget.event.duration))
+              .toLocal(),
+          description: widget.event.space.shortDescription,
+        ),
+      );
+    }
+  }
+
+  String _buildGoogleCalendarUrl({
+    required String title,
+    required DateTime start,
+    required DateTime end,
+    String? description,
+    String? location,
+  }) {
+    String formatDate(DateTime dt) {
+      final iso = dt
+          .toUtc()
+          .toIso8601String()
+          .replaceAll('-', '')
+          .replaceAll(':', '')
+          .split('.')
+          .first;
+      return '${iso}Z';
+    }
+
+    final startUtc = formatDate(start);
+    final endUtc = formatDate(end);
+
+    final Uri url = Uri.parse('https://calendar.google.com/calendar/render')
+        .replace(
+          queryParameters: {
+            'action': 'TEMPLATE',
+            'text': title,
+            'dates': '$startUtc/$endUtc',
+            if (description != null) 'details': description,
+            if (location != null) 'location': location,
+          },
+        );
+
+    return url.toString();
+  }
 }

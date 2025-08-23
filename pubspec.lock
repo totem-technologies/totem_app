@@ -329,6 +329,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.1"
+  eventide:
+    dependency: "direct main"
+    description:
+      name: eventide
+      sha256: d0721bc4c36add2c46f2f39d673e0c8ea9e2eae8c6ee39d781e3b8353e1e26bc
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.10.2"
   fake_async:
     dependency: transitive
     description:
