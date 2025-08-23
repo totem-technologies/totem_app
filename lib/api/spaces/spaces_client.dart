@@ -66,4 +66,16 @@ abstract class SpacesClient {
   /// Get Spaces Summary
   @GET('/api/mobile/protected/spaces/summary')
   Future<SummarySpacesSchema> totemCirclesMobileApiGetSpacesSummary();
+
+  /// Rsvp Confirm
+  @POST('/api/mobile/protected/spaces/rsvp/{event_slug}')
+  Future<bool> totemCirclesMobileApiRsvpConfirm({
+    @Path('event_slug') required String eventSlug,
+  });
+
+  /// Rsvp Cancel
+  @DELETE('/api/mobile/protected/spaces/rsvp/{event_slug}')
+  Future<bool> totemCirclesMobileApiRsvpCancel({
+    @Path('event_slug') required String eventSlug,
+  });
 }

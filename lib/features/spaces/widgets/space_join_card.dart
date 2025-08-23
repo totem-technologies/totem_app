@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:url_launcher/link.dart';
@@ -16,10 +18,17 @@ enum SpaceJoinCardState {
   notJoined,
 }
 
-class SpaceJoinCard extends StatelessWidget {
+class SpaceJoinCard extends ConsumerStatefulWidget {
   const SpaceJoinCard({required this.event, super.key});
 
   final EventDetailSchema event;
+
+  @override
+  ConsumerState<SpaceJoinCard> createState() => _SpaceJoinCardState();
+}
+
+class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
+  late bool _attending = widget.event.attending;
 
   @override
   Widget build(BuildContext context) {
@@ -29,13 +38,13 @@ class SpaceJoinCard extends StatelessWidget {
     final timeFormatter = DateFormat('hh:mm a');
 
     final hasStarted =
-        event.start.isBefore(DateTime.now()) &&
-        event.start
-            .add(Duration(minutes: event.duration))
+        widget.event.start.isBefore(DateTime.now()) &&
+        widget.event.start
+            .add(Duration(minutes: widget.event.duration))
             .isAfter(DateTime.now());
 
-    final hasEnded = event.start
-        .add(Duration(minutes: event.duration))
+    final hasEnded = widget.event.start
+        .add(Duration(minutes: widget.event.duration))
         .isBefore(DateTime.now());
 
     return SafeArea(
@@ -73,11 +82,12 @@ class SpaceJoinCard extends StatelessWidget {
                           case SpaceJoinCardState.joined:
                           case SpaceJoinCardState.notJoined:
                             final isToday =
-                                DateTime.now().day == event.start.day &&
-                                DateTime.now().month == event.start.month &&
-                                DateTime.now().year == event.start.year;
+                                DateTime.now().day == widget.event.start.day &&
+                                DateTime.now().month ==
+                                    widget.event.start.month &&
+                                DateTime.now().year == widget.event.start.year;
                             if (isToday) return 'Today';
-                            return dateFormatter.format(event.start);
+                            return dateFormatter.format(widget.event.start);
                         }
                       }(),
                       style: theme.textTheme.titleMedium?.copyWith(
@@ -89,11 +99,11 @@ class SpaceJoinCard extends StatelessWidget {
                         switch (state) {
                           case SpaceJoinCardState.joined:
                           case SpaceJoinCardState.notJoined:
-                            return '${timeFormatter.format(event.start)}'
-                                    ' ${event.userTimezone ?? ''}'
+                            return '${timeFormatter.format(widget.event.start)}'
+                                    ' ${widget.event.userTimezone ?? ''}'
                                 .trim();
                           case SpaceJoinCardState.joinable:
-                            return timeago.format(event.start);
+                            return timeago.format(widget.event.start);
                           case SpaceJoinCardState.ended:
                           case SpaceJoinCardState.cancelled:
                           case SpaceJoinCardState.closedToNewParticipants:
@@ -114,17 +124,24 @@ class SpaceJoinCard extends StatelessWidget {
                   uri: hasEnded
                       ? null
                       : hasStarted
-                      ? Uri.parse(getFullUrl(event.calLink))
+                      ? Uri.parse(getFullUrl(widget.event.calLink))
                       : null,
                   builder: (context, followLink) {
                     return ElevatedButton(
                       onPressed: () {
-                        if (hasEnded) {
-                          toHome(HomeRoutes.spaces);
-                        } else if (hasStarted) {
-                          followLink?.call();
-                        } else {
-                          // TODO(bdlukaa): Implement RSVP functionality
+                        switch (state) {
+                          case SpaceJoinCardState.ended:
+                          case SpaceJoinCardState.cancelled:
+                          case SpaceJoinCardState.closedToNewParticipants:
+                            toHome(HomeRoutes.spaces);
+                          case SpaceJoinCardState.joinable:
+                            followLink?.call();
+                          case SpaceJoinCardState.joined:
+                            addToCalendar();
+                          case SpaceJoinCardState.full:
+                            toHome(HomeRoutes.spaces);
+                          case SpaceJoinCardState.notJoined:
+                            attend(ref);
                         }
                       },
                       child: Text(
@@ -155,31 +172,45 @@ class SpaceJoinCard extends StatelessWidget {
   }
 
   SpaceJoinCardState get state {
-    if (event.cancelled) return SpaceJoinCardState.cancelled;
+    if (widget.event.cancelled) return SpaceJoinCardState.cancelled;
 
     final hasStarted =
-        event.start.isBefore(DateTime.now()) &&
-        event.start
-            .add(Duration(minutes: event.duration))
+        widget.event.start.isBefore(DateTime.now()) &&
+        widget.event.start
+            .add(Duration(minutes: widget.event.duration))
             .isAfter(DateTime.now());
 
-    final hasEnded = event.start
-        .add(Duration(minutes: event.duration))
+    final hasEnded = widget.event.start
+        .add(Duration(minutes: widget.event.duration))
         .isBefore(DateTime.now());
 
     if (hasEnded) {
       return SpaceJoinCardState.ended;
     } else if (hasStarted) {
-      if (event.joinable) {
+      if (widget.event.joinable) {
         return SpaceJoinCardState.joinable;
       }
     } else {
-      if (event.attending) {
+      if (_attending) {
         return SpaceJoinCardState.joined;
-      } else if (event.seatsLeft <= 0) {
+      } else if (widget.event.seatsLeft <= 0) {
         return SpaceJoinCardState.full;
       }
     }
     return SpaceJoinCardState.notJoined;
   }
+
+  Future<void> attend(WidgetRef ref) async {
+    final mobileApiService = ref.read(mobileApiServiceProvider);
+    final response = await mobileApiService.spaces
+        .totemCirclesMobileApiRsvpConfirm(
+          eventSlug: widget.event.slug,
+        );
+
+    if (response) {
+      setState(() => _attending = true);
+    }
+  }
+
+  void addToCalendar() {}
 }
