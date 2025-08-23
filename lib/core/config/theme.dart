@@ -247,7 +247,7 @@ class AppTheme {
           horizontal: 16,
           vertical: 12,
         ),
-        minimumSize: const Size(20, 48),
+        minimumSize: const Size(20, 56),
       ),
     ),
 

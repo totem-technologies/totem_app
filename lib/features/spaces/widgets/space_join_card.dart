@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -6,6 +10,8 @@ import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/network.dart';
+import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:url_launcher/link.dart';
 
 enum SpaceJoinCardState {
@@ -29,6 +35,7 @@ class SpaceJoinCard extends ConsumerStatefulWidget {
 
 class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   late bool _attending = widget.event.attending;
+  var _loading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -127,40 +134,53 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                       ? Uri.parse(getFullUrl(widget.event.calLink))
                       : null,
                   builder: (context, followLink) {
-                    return ElevatedButton(
-                      onPressed: () {
-                        switch (state) {
-                          case SpaceJoinCardState.ended:
-                          case SpaceJoinCardState.cancelled:
-                          case SpaceJoinCardState.closedToNewParticipants:
-                            toHome(HomeRoutes.spaces);
-                          case SpaceJoinCardState.joinable:
-                            followLink?.call();
-                          case SpaceJoinCardState.joined:
-                            addToCalendar();
-                          case SpaceJoinCardState.full:
-                            toHome(HomeRoutes.spaces);
-                          case SpaceJoinCardState.notJoined:
-                            attend(ref);
-                        }
+                    void onPressed() {
+                      switch (state) {
+                        case SpaceJoinCardState.ended:
+                        case SpaceJoinCardState.cancelled:
+                        case SpaceJoinCardState.closedToNewParticipants:
+                          toHome(HomeRoutes.spaces);
+                        case SpaceJoinCardState.joinable:
+                          followLink?.call();
+                        case SpaceJoinCardState.joined:
+                          addToCalendar();
+                        case SpaceJoinCardState.full:
+                          toHome(HomeRoutes.spaces);
+                        case SpaceJoinCardState.notJoined:
+                          attend(ref);
+                      }
+                    }
+
+                    final content = Text(
+                      switch (state) {
+                        SpaceJoinCardState.ended ||
+                        SpaceJoinCardState.cancelled ||
+                        SpaceJoinCardState.closedToNewParticipants => 'Explore',
+                        SpaceJoinCardState.joinable => 'Join Now',
+                        SpaceJoinCardState.joined => 'Add to calendar',
+                        SpaceJoinCardState.full => 'Explore',
+                        SpaceJoinCardState.notJoined => 'Attend',
                       },
-                      child: Text(
-                        switch (state) {
-                          SpaceJoinCardState.ended ||
-                          SpaceJoinCardState.cancelled ||
-                          SpaceJoinCardState.closedToNewParticipants =>
-                            'Explore',
-                          SpaceJoinCardState.joinable => 'Join Now',
-                          SpaceJoinCardState.joined => 'Add to calendar',
-                          SpaceJoinCardState.full => 'Explore',
-                          SpaceJoinCardState.notJoined => 'Attend',
-                        },
-                        style: TextStyle(
-                          fontWeight: FontWeight.w300,
-                          color: theme.colorScheme.onPrimary,
-                        ),
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w400),
                     );
+
+                    switch (state) {
+                      case SpaceJoinCardState.ended:
+                      case SpaceJoinCardState.cancelled:
+                      case SpaceJoinCardState.closedToNewParticipants:
+                      case SpaceJoinCardState.joined:
+                      case SpaceJoinCardState.full:
+                        return OutlinedButton(
+                          onPressed: onPressed,
+                          child: content,
+                        );
+                      case SpaceJoinCardState.joinable:
+                      case SpaceJoinCardState.notJoined:
+                        return ElevatedButton(
+                          onPressed: onPressed,
+                          child: content,
+                        );
+                    }
                   },
                 ),
               ),
@@ -201,15 +221,73 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   }
 
   Future<void> attend(WidgetRef ref) async {
+    if (_attending || _loading) return;
+
+    _loading = true;
+
     final mobileApiService = ref.read(mobileApiServiceProvider);
     final response = await mobileApiService.spaces
         .totemCirclesMobileApiRsvpConfirm(
           eventSlug: widget.event.slug,
         );
+    _loading = false;
 
     if (response) {
       setState(() => _attending = true);
+      _emitFireworks();
+    } else {
+      if (mounted) {
+        showErrorPopup(
+          context,
+          icon: TotemIcons.spaces,
+          title: 'Failed to attend to this circle',
+          message: 'Please try again later',
+        );
+      }
     }
+  }
+
+  void _emitFireworks() {
+    double randomInRange(double min, double max) {
+      return min + Random().nextDouble() * (max - min);
+    }
+
+    const total = 10;
+    var progress = 0;
+
+    Timer.periodic(const Duration(milliseconds: 250), (timer) {
+      progress++;
+
+      if (progress >= total) {
+        timer.cancel();
+        return;
+      }
+
+      final count = ((1 - progress / total) * 50).toInt();
+
+      Confetti.launch(
+        context,
+        options: ConfettiOptions(
+          particleCount: count,
+          startVelocity: 30,
+          spread: 360,
+          ticks: 60,
+          x: randomInRange(0.1, 0.3),
+          y: Random().nextDouble() - 0.2,
+        ),
+      );
+      Confetti.launch(
+        context,
+        options: ConfettiOptions(
+          particleCount: count,
+          startVelocity: 30,
+          spread: 360,
+          ticks: 60,
+          x: randomInRange(0.7, 0.9),
+          y: Random().nextDouble() - 0.2,
+        ),
+      );
+    });
   }
 
   void addToCalendar() {}
