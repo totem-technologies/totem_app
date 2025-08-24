@@ -1,6 +1,3 @@
-// This file uses Kotlin DSL (build.gradle.kts)
-
-
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration

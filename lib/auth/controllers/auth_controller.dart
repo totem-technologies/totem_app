@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
@@ -366,24 +367,26 @@ class AuthController extends Notifier<AuthState> {
         return;
       }
 
+      final cachedUser = await ref.read(localStorageServiceProvider).getUser();
+      if (cachedUser != null) {
+        logger.i('🔑 Offline mode: Using cached user data');
+        _setState(AuthState.authenticated(user: cachedUser));
+      }
       if (isOffline) {
-        final cachedUser = await ref
-            .read(localStorageServiceProvider)
-            .getUser();
-        if (cachedUser != null) {
-          logger.i('🔑 Offline mode: Using cached user data');
-          _setState(AuthState.authenticated(user: cachedUser));
-        } else {
+        if (cachedUser == null) {
           // If offline and no cached user, we have to assume unauthenticated
           _setState(AuthState.unauthenticated());
         }
       } else {
-        // If online, proceed with the network call
-        final user = await _authRepository.currentUser;
-        await ref.read(localStorageServiceProvider).saveUser(user);
-        _setState(AuthState.authenticated(user: user));
-        _analyticsService.setUserId(user);
-        await _updateFCMToken();
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          logger.i('🔑 Online mode: Validating token with backend');
+          // If online, proceed with the network call
+          final user = await _authRepository.currentUser;
+          await ref.read(localStorageServiceProvider).saveUser(user);
+          _setState(AuthState.authenticated(user: user));
+          _analyticsService.setUserId(user);
+          await _updateFCMToken();
+        });
       }
     } catch (error, stackTrace) {
       ErrorHandler.logError(
