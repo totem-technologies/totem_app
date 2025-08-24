@@ -5,11 +5,11 @@ import 'package:eventide/eventide.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -42,9 +42,6 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    final dateFormatter = DateFormat('EEEE, MMMM dd');
-    final timeFormatter = DateFormat('hh:mm a');
 
     final hasStarted =
         widget.event.start.isBefore(DateTime.now()) &&
@@ -90,13 +87,12 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                             return 'This session is full';
                           case SpaceJoinCardState.joined:
                           case SpaceJoinCardState.notJoined:
-                            final isToday =
-                                DateTime.now().day == widget.event.start.day &&
-                                DateTime.now().month ==
-                                    widget.event.start.month &&
-                                DateTime.now().year == widget.event.start.year;
+                            final isToday = DateUtils.isSameDay(
+                              DateTime.now(),
+                              widget.event.start,
+                            );
                             if (isToday) return 'Today';
-                            return dateFormatter.format(widget.event.start);
+                            return formatEventDate(widget.event.start);
                         }
                       }(),
                       style: theme.textTheme.titleMedium?.copyWith(
@@ -108,9 +104,10 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                         switch (state) {
                           case SpaceJoinCardState.joined:
                           case SpaceJoinCardState.notJoined:
-                            return '${timeFormatter.format(widget.event.start)}'
-                                    ' ${widget.event.userTimezone ?? ''}'
-                                .trim();
+                            return formatEventTime(
+                              widget.event.start,
+                              // widget.event.userTimezone,
+                            );
                           case SpaceJoinCardState.joinable:
                             return timeago.format(widget.event.start);
                           case SpaceJoinCardState.ended:
