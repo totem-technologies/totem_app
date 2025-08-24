@@ -3,6 +3,7 @@ import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
@@ -163,7 +164,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             ],
                           ),
 
-                          Html(data: event.description),
+                          Html(
+                            data: event.description,
+                            style: AppTheme.compactHtmlStyle,
+                          ),
 
                           // TODO(bdlukaa): About this space
                           Text(
@@ -197,7 +201,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             ],
                           ),
 
-                          Html(data: event.space.shortDescription),
+                          Html(
+                            data: event.space.shortDescription,
+                            style: AppTheme.compactHtmlStyle,
+                          ),
 
                           const SizedBox(height: 16),
                           Text(

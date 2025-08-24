@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/blog/widgets/blog_detail_app_bar.dart';
 import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
@@ -101,11 +102,7 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                     onLinkTap: (url, _, _) {
                       launchUrl(Uri.parse(url ?? ''));
                     },
-                    style: {
-                      'body': Style(
-                        margin: Margins.symmetric(horizontal: 16),
-                      ),
-                    },
+                    style: AppTheme.htmlStyle,
                   ),
                 ),
 

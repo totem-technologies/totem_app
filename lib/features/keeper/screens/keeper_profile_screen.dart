@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/keeper/repositories/keeper_repository.dart';
 import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
 import 'package:totem_app/navigation/app_router.dart';
@@ -163,6 +164,7 @@ class KeeperProfileScreen extends ConsumerWidget {
                 ),
                 Html(
                   data: keeper.bioHtml ?? keeper.bio,
+                  style: AppTheme.compactHtmlStyle,
                 ),
                 const SizedBox(height: 20),
                 KeeperSpaces(
