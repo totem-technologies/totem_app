@@ -1,3 +1,6 @@
+// This file uses Kotlin DSL (build.gradle.kts)
+
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -10,7 +13,7 @@ plugins {
 
 android {
     namespace = "org.totem"
-    compileSdk = 35 // flutter.compileSdkVersion
+    compileSdk = 36 // flutter.compileSdkVersion
     ndkVersion = "27.0.12077973" // flutter.ndkVersion
 
     compileOptions {
@@ -30,7 +33,7 @@ android {
         applicationId = "org.totem.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 23 // flutter.minSdkVersion
+        minSdk = 24 // flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
