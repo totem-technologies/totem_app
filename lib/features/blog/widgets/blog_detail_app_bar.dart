@@ -37,55 +37,58 @@ class BlogDetailAppBar extends StatelessWidget {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsetsDirectional.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              spacing: 8,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text(
-                        event.title,
-                        style: theme.textTheme.headlineLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-
-                      RichText(
-                        text: TextSpan(
-                          style: theme.textTheme.bodyLarge?.copyWith(
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsetsDirectional.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                spacing: 8,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          event.title,
+                          style: theme.textTheme.headlineLarge?.copyWith(
                             color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
-                          children: <TextSpan>[
-                            const TextSpan(text: 'with '),
-                            TextSpan(
-                              text: event.author?.name ?? 'Unknown Author',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
                         ),
-                      ),
-                    ],
+
+                        RichText(
+                          text: TextSpan(
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: Colors.white,
+                            ),
+                            children: <TextSpan>[
+                              const TextSpan(text: 'with '),
+                              TextSpan(
+                                text: event.author?.name ?? 'Unknown Author',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                UserAvatar.fromUserSchema(
-                  event.author,
-                  onTap: event.author?.slug != null
-                      ? () {
-                          context.push(
-                            RouteNames.keeperProfile(event.author!.slug!),
-                          );
-                        }
-                      : null,
-                ),
-              ],
+                  UserAvatar.fromUserSchema(
+                    event.author,
+                    onTap: event.author?.slug != null
+                        ? () {
+                            context.push(
+                              RouteNames.keeperProfile(event.author!.slug!),
+                            );
+                          }
+                        : null,
+                  ),
+                ],
+              ),
             ),
           ),
         ],

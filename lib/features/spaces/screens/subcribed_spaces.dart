@@ -19,49 +19,51 @@ class SubscribedSpacesScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(),
-      body: data.when(
-        data: (spaces) {
-          return Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisAlignment: spaces.isEmpty
-                  ? MainAxisAlignment.center
-                  : MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 10,
-              children: [
-                Text(
-                  'Subscribed Spaces',
-                  style: theme.textTheme.titleLarge,
-                  textAlign: TextAlign.center,
-                ),
-                Text(
-                  spaces.isEmpty
-                      ? 'You are not subscribed to any Spaces.'
-                      : 'These are the Spaces you will get notifications for '
-                            'when new sessions are coming up.',
-                  textAlign: TextAlign.center,
-                ),
-                if (spaces.isEmpty)
-                  ElevatedButton(
-                    onPressed: () {
-                      toHome(HomeRoutes.spaces);
-                    },
-                    child: const Text('Browse Spaces'),
-                  )
-                else
-                  for (final space in spaces)
-                    if (space.slug != null)
-                      _SubscribedSpaceTile(
-                        key: ValueKey(space.slug!),
-                        space: space,
-                      ),
-              ],
-            ),
-          );
-        },
-        error: (error, _) => ErrorScreen(error: error),
-        loading: LoadingScreen.new,
+      body: SafeArea(
+        child: data.when(
+          data: (spaces) {
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisAlignment: spaces.isEmpty
+                    ? MainAxisAlignment.center
+                    : MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 10,
+                children: [
+                  Text(
+                    'Subscribed Spaces',
+                    style: theme.textTheme.titleLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                  Text(
+                    spaces.isEmpty
+                        ? 'You are not subscribed to any Spaces.'
+                        : 'These are the Spaces you will get notifications for '
+                              'when new sessions are coming up.',
+                    textAlign: TextAlign.center,
+                  ),
+                  if (spaces.isEmpty)
+                    ElevatedButton(
+                      onPressed: () {
+                        toHome(HomeRoutes.spaces);
+                      },
+                      child: const Text('Browse Spaces'),
+                    )
+                  else
+                    for (final space in spaces)
+                      if (space.slug != null)
+                        _SubscribedSpaceTile(
+                          key: ValueKey(space.slug!),
+                          space: space,
+                        ),
+                ],
+              ),
+            );
+          },
+          error: (error, _) => ErrorScreen(error: error),
+          loading: LoadingScreen.new,
+        ),
       ),
     );
   }

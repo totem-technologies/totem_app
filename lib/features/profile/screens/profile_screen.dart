@@ -29,6 +29,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       appBar: AppBar(title: const TotemLogo(size: 24)),
       body: SafeArea(
         top: false,
+        bottom: false,
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [

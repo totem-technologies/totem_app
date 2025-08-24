@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,7 +37,11 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
               slivers: [
                 SliverAppBar.large(
                   centerTitle: true,
-                  expandedHeight: MediaQuery.sizeOf(context).height * 0.4,
+                  expandedHeight: clampDouble(
+                    MediaQuery.sizeOf(context).height * 0.4,
+                    200,
+                    double.infinity,
+                  ),
                   automaticallyImplyLeading: false,
                   backgroundColor: theme.scaffoldBackgroundColor,
                   flexibleSpace: FlexibleSpaceBar(
@@ -96,25 +102,22 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                   ],
                   title: Text(blog.title),
                 ),
-                SliverToBoxAdapter(
-                  child: Html(
-                    data: blog.contentHtml,
-                    onLinkTap: (url, _, _) {
-                      launchUrl(Uri.parse(url ?? ''));
-                    },
-                    style: AppTheme.htmlStyle,
+                SliverSafeArea(
+                  sliver: SliverList.list(
+                    children: [
+                      Html(
+                        data: blog.contentHtml,
+                        onLinkTap: (url, _, _) {
+                          launchUrl(Uri.parse(url ?? ''));
+                        },
+                        style: AppTheme.htmlStyle,
+                      ),
+                      if (blog.author?.slug != null)
+                        KeeperSpaces(
+                          keeperSlug: blog.author!.slug!,
+                        ),
+                    ],
                   ),
-                ),
-
-                if (blog.author?.slug != null)
-                  SliverToBoxAdapter(
-                    child: KeeperSpaces(
-                      keeperSlug: blog.author!.slug!,
-                    ),
-                  ),
-
-                const SliverSafeArea(
-                  sliver: SliverToBoxAdapter(),
                 ),
               ],
             ),
