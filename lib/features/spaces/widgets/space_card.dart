@@ -225,66 +225,78 @@ class SmallSpaceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: CachedNetworkImageProvider(
-            getFullUrl(space.imageLink ?? ''),
-          ),
-          fit: BoxFit.cover,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          colors: [
-            const Color(0x262F3799).withValues(alpha: 0),
-            const Color(0xFF2F3799),
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: 10,
-        vertical: 20,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 5,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0x99262F37),
-              borderRadius: BorderRadius.circular(20),
+    final theme = Theme.of(context);
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      highlightColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
+      onTap: () {
+        context.push(RouteNames.space(space.nextEvent.slug));
+      },
+      child: Ink(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: CachedNetworkImageProvider(
+              getFullUrl(space.imageLink ?? ''),
             ),
-            child: Text(
-              formatEventDateTime(
-                DateTime.parse(space.nextEvent.start),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.black.withValues(alpha: 0.2),
+              BlendMode.multiply,
+            ),
+          ),
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            colors: [
+              const Color(0x262F3799).withValues(alpha: 0),
+              const Color(0xFF2F3799),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: 10,
+          vertical: 20,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 5,
+          children: [
+            Ink(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0x99262F37),
+                borderRadius: BorderRadius.circular(20),
               ),
+              child: Text(
+                formatEventDateTime(
+                  DateTime.parse(space.nextEvent.start),
+                ),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '${space.nextEvent.seatsLeft} seats left',
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 8,
+                fontSize: 14,
+              ),
+            ),
+            Text(
+              space.title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-          const Spacer(),
-          Text(
-            '${space.nextEvent.seatsLeft} seats left',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-            ),
-          ),
-          Text(
-            space.title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

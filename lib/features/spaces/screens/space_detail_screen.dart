@@ -41,6 +41,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
 
     return eventAsync.when(
       data: (event) {
+        const horizontalPadding = EdgeInsetsDirectional.symmetric(
+          horizontal: 16,
+        );
         return Scaffold(
           body: Stack(
             children: [
@@ -126,9 +129,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                       child: ListView(
                         padding: isPhone
                             ? const EdgeInsetsDirectional.only(
-                                start: 16,
                                 top: 16,
-                                end: 16,
                                 bottom: 124,
                               )
                             : const EdgeInsetsDirectional.only(
@@ -138,111 +139,129 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 bottom: 16 + 64 * 2,
                               ),
                         children: [
-                          Text(
-                            'About this session',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+                          Padding(
+                            padding: horizontalPadding,
+                            child: Text(
+                              'About this session',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
 
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              _buildInfoText(
-                                const TotemIcon(TotemIcons.clockCircle),
-                                Text('${event.duration} minutes'),
-                              ),
-                              _buildInfoText(
-                                const TotemIcon(TotemIcons.seats),
-                                Text(
-                                  event.seatsLeft > 0
-                                      ? '${event.seatsLeft} seats left'
-                                      : 'No seats left',
+                          Padding(
+                            padding: horizontalPadding,
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _buildInfoText(
+                                  const TotemIcon(TotemIcons.clockCircle),
+                                  Text('${event.duration} minutes'),
                                 ),
-                              ),
-                            ],
+                                _buildInfoText(
+                                  const TotemIcon(TotemIcons.seats),
+                                  Text(
+                                    event.seatsLeft > 0
+                                        ? '${event.seatsLeft} seats left'
+                                        : 'No seats left',
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
 
                           Html(
                             data: event.description,
-                            style: AppTheme.compactHtmlStyle,
+                            style: AppTheme.htmlStyle,
                           ),
 
                           // TODO(bdlukaa): About this space
-                          Text(
-                            'About this space',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+                          Padding(
+                            padding: horizontalPadding,
+                            child: Text(
+                              'About this space',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
 
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              _buildInfoText(
-                                const TotemIcon(TotemIcons.person),
-                                Text('${event.subscribers} subscribers'),
-                              ),
-                              _buildInfoText(
-                                const TotemIcon(TotemIcons.priceTag),
-                                Text(
-                                  event.price == 0
-                                      ? 'No cost'
-                                      // TODO(bdlukaa): Format this price
-                                      : 'Cost: \$${event.price}',
+                          Padding(
+                            padding: horizontalPadding,
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _buildInfoText(
+                                  const TotemIcon(TotemIcons.person),
+                                  Text('${event.subscribers} subscribers'),
                                 ),
-                              ),
-                              _buildInfoText(
-                                const TotemIcon(TotemIcons.calendar),
-                                Text(event.space.recurring),
-                              ),
-                            ],
+                                _buildInfoText(
+                                  const TotemIcon(TotemIcons.priceTag),
+                                  Text(
+                                    event.price == 0
+                                        ? 'No cost'
+                                        // TODO(bdlukaa): Format this price
+                                        : 'Cost: \$${event.price}',
+                                  ),
+                                ),
+                                _buildInfoText(
+                                  const TotemIcon(TotemIcons.calendar),
+                                  Text(event.space.recurring),
+                                ),
+                              ],
+                            ),
                           ),
 
                           Html(
                             data: event.space.shortDescription,
-                            style: AppTheme.compactHtmlStyle,
+                            style: AppTheme.htmlStyle,
                           ),
 
                           const SizedBox(height: 16),
-                          Text(
-                            'Meet the keeper',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+                          Padding(
+                            padding: horizontalPadding,
+                            child: Text(
+                              'Meet the keeper',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
 
-                          Row(
-                            spacing: 8,
-                            children: [
-                              UserAvatar.fromUserSchema(event.space.author),
-                              Expanded(
-                                child: Text(
-                                  event.space.author.name ?? 'Keeper',
-                                  style: theme.textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
+                          Padding(
+                            padding: horizontalPadding,
+                            child: Row(
+                              spacing: 8,
+                              children: [
+                                UserAvatar.fromUserSchema(event.space.author),
+                                Expanded(
+                                  child: Text(
+                                    event.space.author.name ?? 'Keeper',
+                                    style: theme.textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              ElevatedButton(
-                                onPressed: () {
-                                  if (event.space.author.slug != null) {
-                                    context.push(
-                                      RouteNames.keeperProfile(
-                                        event.space.author.slug!,
-                                      ),
-                                    );
-                                  }
-                                },
-                                child: const Text(
-                                  'View Profile',
-                                  style: TextStyle(fontSize: 14),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    if (event.space.author.slug != null) {
+                                      context.push(
+                                        RouteNames.keeperProfile(
+                                          event.space.author.slug!,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  child: const Text(
+                                    'View Profile',
+                                    style: TextStyle(fontSize: 14),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
 
                           const SizedBox(height: 32),

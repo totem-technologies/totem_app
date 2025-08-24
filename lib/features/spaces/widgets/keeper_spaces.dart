@@ -24,15 +24,19 @@ class KeeperSpaces extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: 8,
           children: [
-            Text(
-              title ?? 'Upcoming Spaces',
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
+            Padding(
+              padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
+              child: Text(
+                title ?? 'Upcoming Spaces',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             SizedBox(
               height: 210,
               child: ListView.separated(
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
                 scrollDirection: Axis.horizontal,
                 itemCount: spaces.length,
                 itemBuilder: (context, index) {

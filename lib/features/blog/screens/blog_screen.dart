@@ -108,11 +108,8 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
 
                 if (blog.author?.slug != null)
                   SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: KeeperSpaces(
-                        keeperSlug: blog.author!.slug!,
-                      ),
+                    child: KeeperSpaces(
+                      keeperSlug: blog.author!.slug!,
                     ),
                   ),
 

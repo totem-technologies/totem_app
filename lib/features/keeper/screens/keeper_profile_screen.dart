@@ -35,14 +35,15 @@ class KeeperProfileScreen extends ConsumerWidget {
             bottom: false,
             child: ListView(
               padding: EdgeInsetsDirectional.only(
-                start: 16,
-                end: 16,
                 top: 16,
                 bottom: 16 + bottomSafeArea,
               ),
               children: [
                 IntrinsicHeight(
                   child: Container(
+                    margin: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 16,
+                    ),
                     constraints: const BoxConstraints(
                       maxWidth: 400,
                     ),
@@ -156,15 +157,20 @@ class KeeperProfileScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                Text(
-                  'Biography',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 16,
+                  ),
+                  child: Text(
+                    'Biography',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 Html(
                   data: keeper.bioHtml ?? keeper.bio,
-                  style: AppTheme.compactHtmlStyle,
+                  style: AppTheme.htmlStyle,
                 ),
                 const SizedBox(height: 20),
                 KeeperSpaces(
