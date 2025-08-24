@@ -45,3 +45,46 @@ class DeleteAccountDialog extends ConsumerWidget {
     );
   }
 }
+
+Future<void> showLogoutDialog(BuildContext context) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => const LogoutDialog(),
+  );
+}
+
+class LogoutDialog extends ConsumerWidget {
+  const LogoutDialog({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authControllerProvider.notifier);
+
+    return AlertDialog(
+      title: const Text('Are you sure?', textAlign: TextAlign.center),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 16,
+        children: [
+          const Text(
+            'Are you sure you want to log out?',
+            textAlign: TextAlign.center,
+          ),
+          ElevatedButton(
+            onPressed: auth.logout,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF3B30),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Log out'),
+          ),
+          OutlinedButton(
+            onPressed: () => context.pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+}

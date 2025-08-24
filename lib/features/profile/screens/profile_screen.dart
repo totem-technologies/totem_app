@@ -109,7 +109,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ProfileTile(
               icon: const TotemIcon(TotemIcons.logout),
               title: 'Logout',
-              onTap: auth.logout,
+              onTap: () => showLogoutDialog(context),
             ),
             Text(
               'Settings',
@@ -153,9 +153,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ProfileTile(
               icon: const TotemIcon(TotemIcons.closeRounded),
               title: 'Delete account',
-              onTap: () {
-                showDeleteAccountDialog(context);
-              },
+              onTap: () => showDeleteAccountDialog(context),
             ),
           ],
         ),
