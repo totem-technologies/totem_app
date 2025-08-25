@@ -7,7 +7,7 @@ import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 
-const bool isBlogPostUpdateReady = true;
+const bool isBlogPostUpdateReady = false;
 
 class BlogListScreen extends ConsumerWidget {
   const BlogListScreen({super.key});
