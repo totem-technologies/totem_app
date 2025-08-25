@@ -7,7 +7,7 @@ import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 
-const bool isBlogPostUpdateReady = false;
+const bool isBlogPostUpdateReady = true;
 
 class BlogListScreen extends ConsumerWidget {
   const BlogListScreen({super.key});
@@ -20,25 +20,20 @@ class BlogListScreen extends ConsumerWidget {
         padding: EdgeInsetsDirectional.zero,
         children: [
           const Placeholder(fallbackHeight: 350),
-          ListView.builder(
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsetsDirectional.only(
-              start: 20,
-              end: 20,
-              top: 20,
-              bottom: 20,
+          const SizedBox(height: 20),
+          ...List.generate(
+            10,
+            (index) => const Padding(
+              padding: EdgeInsetsDirectional.only(
+                start: 20,
+                end: 20,
+                bottom: 20,
+              ),
+              child: Placeholder(
+                fallbackHeight: 350,
+                fallbackWidth: 350,
+              ),
             ),
-            itemCount: 10,
-            shrinkWrap: true,
-            itemBuilder: (context, index) {
-              return const Padding(
-                padding: EdgeInsetsDirectional.only(bottom: 20),
-                child: Placeholder(
-                  fallbackHeight: 350,
-                  fallbackWidth: 350,
-                ),
-              );
-            },
           ),
         ],
       );
