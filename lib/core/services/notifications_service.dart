@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +13,12 @@ import 'package:totem_app/shared/logger.dart';
 final notificationsProvider = Provider<NotificationsService>((ref) {
   return NotificationsService.instance;
 });
+
+class NotificationType {
+  static const String circleStarting = 'circle_starting';
+  static const String circleAdvertisement = 'circle_advertisement';
+  static const String missedEvent = 'missed_event';
+}
 
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse notificationResponse) {
@@ -109,10 +114,7 @@ class NotificationsService {
 
   void _handleFirebaseMessage(RemoteMessage message) {
     logger.i('⏰ Handling message: ${message.data}');
-
-    final path = message.data['path'] as String?;
-
-    _handlePath(path);
+    _handlePayload(message.data);
   }
 
   void _handleNotificationTap(NotificationResponse notificationResponse) {
@@ -120,8 +122,26 @@ class NotificationsService {
     if (payload != null) {
       logger.d('⏰ Notification payload: $payload');
       final deserializedPayload = jsonDecode(payload) as Map;
-      final path = deserializedPayload['path'] as String?;
-      _handlePath(path);
+      _handlePayload(deserializedPayload);
+    }
+  }
+
+  void _handlePayload(Map<dynamic, dynamic> payload) {
+    final type = payload['type'] as String?;
+    if (type != null) {
+      switch (type) {
+        case NotificationType.circleStarting:
+        case NotificationType.circleAdvertisement:
+        case NotificationType.missedEvent:
+          final eventSlug = payload['event_slug'] as String?;
+          if (eventSlug != null) {
+            _handlePath(RouteNames.space(eventSlug));
+          }
+          return;
+        default:
+          logger.w('⏰ Unknown notification type: $type. No action taken.');
+          return;
+      }
     }
   }
 
@@ -155,10 +175,10 @@ class NotificationsService {
       ),
     );
 
-    final payload = jsonEncode({'path': data['path']});
+    final payload = jsonEncode(data);
 
     flutterLocalNotificationsPlugin.show(
-      Random().nextInt(10000),
+      DateTime.timestamp().millisecondsSinceEpoch,
       title,
       body,
       notificationDetails,
