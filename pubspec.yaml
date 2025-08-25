@@ -52,6 +52,7 @@ dependencies:
   sliver_tools: ^0.2.12
   flutter_confetti: ^0.5.1
   eventide: ^0.10.2
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:

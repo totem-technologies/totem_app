@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/navigation/app_router.dart';
@@ -20,9 +21,24 @@ class NotificationType {
   static const String missedEvent = 'missed_event';
 }
 
+const _backgroundKey = 'initial_payload';
+
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse notificationResponse) {
-  // TODO(bdlukaa): handle action
+  final payload = notificationResponse.payload;
+  if (payload == null) return;
+
+  try {
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setString(_backgroundKey, payload);
+    });
+  } catch (error, stackTrace) {
+    ErrorHandler.logError(
+      error,
+      stackTrace: stackTrace,
+      reason: 'Failed to save background notification payload',
+    );
+  }
 }
 
 class NotificationsService {
@@ -96,6 +112,15 @@ class NotificationsService {
           _handleNotificationTap(
             notificationAppLaunchDetails!.notificationResponse!,
           );
+        }
+      }
+
+      {
+        final prefs = await SharedPreferences.getInstance();
+        final payload = prefs.getString(_backgroundKey);
+        if (payload != null) {
+          _handlePayload(jsonDecode(payload) as Map);
+          await prefs.remove(_backgroundKey);
         }
       }
 
