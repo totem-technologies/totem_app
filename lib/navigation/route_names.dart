@@ -41,8 +41,4 @@ class RouteNames {
     blog,
     blogDetail,
   ];
-
-  static bool isValidRoute(String? route) {
-    return allRoutes.contains(route);
-  }
 }

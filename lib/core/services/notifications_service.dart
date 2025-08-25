@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
@@ -171,9 +172,11 @@ class NotificationsService {
   }
 
   void _handlePath(String? path) {
-    if (path != null && RouteNames.isValidRoute(path)) {
+    logger.i('⏰ Handling path: $path');
+    if (path != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        navigatorKey.currentState?.pushNamed(path);
+        navigatorKey.currentContext?.push(path);
+        logger.i('⏰ Handled path: $path');
       });
     }
   }
@@ -203,7 +206,7 @@ class NotificationsService {
     final payload = jsonEncode(data);
 
     flutterLocalNotificationsPlugin.show(
-      DateTime.timestamp().millisecondsSinceEpoch,
+      DateTime.timestamp().millisecondsSinceEpoch % 2147483647,
       title,
       body,
       notificationDetails,
