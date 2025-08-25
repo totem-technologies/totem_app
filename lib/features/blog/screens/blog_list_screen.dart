@@ -7,12 +7,42 @@ import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 
+const bool isBlogPostUpdateReady = false;
+
 class BlogListScreen extends ConsumerWidget {
   const BlogListScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final blogs = ref.watch(listBlogPostsProvider);
+    if (isBlogPostUpdateReady) {
+      return ListView(
+        padding: EdgeInsetsDirectional.zero,
+        children: [
+          const Placeholder(fallbackHeight: 350),
+          ListView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsetsDirectional.only(
+              start: 20,
+              end: 20,
+              top: 20,
+              bottom: 20,
+            ),
+            itemCount: 10,
+            shrinkWrap: true,
+            itemBuilder: (context, index) {
+              return const Padding(
+                padding: EdgeInsetsDirectional.only(bottom: 20),
+                child: Placeholder(
+                  fallbackHeight: 350,
+                  fallbackWidth: 350,
+                ),
+              );
+            },
+          ),
+        ],
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: const TotemLogo(size: 24)),
       body: SafeArea(
