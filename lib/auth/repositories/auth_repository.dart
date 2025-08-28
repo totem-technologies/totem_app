@@ -63,7 +63,7 @@ class AuthRepository {
 
   Future<UserSchema> get currentUser async {
     return _handleApiCall<UserSchema>(
-      () => apiService.client.totemUsersMobileApiGetCurrentUser(),
+      () => apiService.fallback.totemUsersMobileApiGetCurrentUser(),
       operationName: 'fetch current user',
       genericErrorCode: 'CURRENT_USER_FETCH_FAILED',
     );
@@ -71,7 +71,7 @@ class AuthRepository {
 
   Future<bool> updateCurrentUserProfilePicture(File file) {
     return _handleApiCall<bool>(
-      () => apiService.client.totemUsersMobileApiUpdateCurrentUserImage(
+      () => apiService.fallback.totemUsersMobileApiUpdateCurrentUserImage(
         profileImage: file,
       ),
       operationName: 'update current user profile picture',
@@ -89,7 +89,7 @@ class AuthRepository {
     String? avatarSeed,
   }) async {
     return _handleApiCall<UserSchema>(
-      () => apiService.client.totemUsersMobileApiUpdateCurrentUser(
+      () => apiService.fallback.totemUsersMobileApiUpdateCurrentUser(
         body: UserUpdateSchema(
           name: name,
           email: email,
@@ -106,7 +106,7 @@ class AuthRepository {
 
   Future<OnboardSchema> get onboardStatus async {
     return _handleApiCall<OnboardSchema>(
-      () => apiService.client.totemOnboardMobileApiOnboardGet(),
+      () => apiService.fallback.totemOnboardMobileApiOnboardGet(),
       operationName: 'fetch onboard status',
       genericErrorCode: 'ONBOARD_STATUS_FETCH_FAILED',
     );
@@ -119,7 +119,7 @@ class AuthRepository {
     String? referralOther,
   }) async {
     return _handleApiCall<OnboardSchema>(
-      () => apiService.client.totemOnboardMobileApiOnboardPost(
+      () => apiService.fallback.totemOnboardMobileApiOnboardPost(
         body: OnboardSchema(
           referralSource: referralSource ?? ReferralChoices.valueDefault,
           referralOther: referralOther ?? '',
@@ -137,7 +137,7 @@ class AuthRepository {
     bool newsletterConsent,
   ) async {
     return _handleApiCall<MessageResponse>(
-      () => apiService.client.totemApiAuthRequestPin(
+      () => apiService.fallback.totemApiAuthRequestPin(
         body: PinRequestSchema(
           email: email,
           newsletterConsent: newsletterConsent,
@@ -151,7 +151,7 @@ class AuthRepository {
   /// Verify a PIN code
   Future<TokenResponse> verifyPin(String email, String pin) async {
     return _handleApiCall<TokenResponse>(
-      () => apiService.client.totemApiAuthValidatePin(
+      () => apiService.fallback.totemApiAuthValidatePin(
         body: ValidatePinSchema(email: email, pin: pin),
       ),
       operationName: 'verify PIN',
@@ -162,7 +162,7 @@ class AuthRepository {
   /// Logout by invalidating a refresh token
   Future<MessageResponse> logout(String refreshToken) async {
     return _handleApiCall<MessageResponse>(
-      () => apiService.client.totemApiAuthLogout(
+      () => apiService.fallback.totemApiAuthLogout(
         body: RefreshTokenSchema(refreshToken: refreshToken),
       ),
       operationName: 'logout',
@@ -172,7 +172,7 @@ class AuthRepository {
 
   Future<void> deleteAccount() async {
     return _handleApiCall<void>(
-      () => apiService.client.totemUsersMobileApiDeleteCurrentUser(),
+      () => apiService.fallback.totemUsersMobileApiDeleteCurrentUser(),
       operationName: 'delete account',
       genericErrorCode: 'ACCOUNT_DELETION_FAILED',
     );
@@ -209,7 +209,7 @@ class AuthRepository {
   /// Update FCM token
   Future<void> updateFcmToken(String fcmToken) async {
     return _handleApiCall(
-      () => apiService.client.totemApiMobileApiRegisterFcmToken(
+      () => apiService.fallback.totemApiMobileApiRegisterFcmToken(
         body: FcmTokenRegisterSchema(token: fcmToken),
       ),
       operationName: 'update FCM token',
@@ -220,7 +220,7 @@ class AuthRepository {
   /// Unregister FCM token
   Future<void> unregisterFcmToken(String fcmToken) async {
     return _handleApiCall(
-      () => apiService.client.totemApiMobileApiUnregisterFcmToken(
+      () => apiService.fallback.totemApiMobileApiUnregisterFcmToken(
         token: fcmToken,
       ),
       operationName: 'unregister FCM token',

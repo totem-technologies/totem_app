@@ -52,7 +52,7 @@ Dio _initDio(Ref ref) {
                   await MobileTotemApi(
                     Dio(),
                     baseUrl: AppConfig.mobileApiUrl,
-                  ).client.totemApiAuthRefreshToken(
+                  ).fallback.totemApiAuthRefreshToken(
                     body: RefreshTokenSchema(refreshToken: refreshToken),
                   );
               accessToken = response.accessToken;

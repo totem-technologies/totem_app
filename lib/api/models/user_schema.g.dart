@@ -31,7 +31,7 @@ Map<String, dynamic> _$UserSchemaToJson(UserSchema instance) =>
     };
 
 const _$ProfileAvatarTypeEnumEnumMap = {
-  ProfileAvatarTypeEnum.tD: 'TD',
-  ProfileAvatarTypeEnum.iM: 'IM',
+  ProfileAvatarTypeEnum.td: 'TD',
+  ProfileAvatarTypeEnum.im: 'IM',
   ProfileAvatarTypeEnum.$unknown: r'$unknown',
 };

@@ -64,7 +64,7 @@ class BlogDetailAppBar extends StatelessWidget {
                               color: Colors.white,
                             ),
                             children: <TextSpan>[
-                              const TextSpan(text: 'with '),
+                              const TextSpan(text: 'by '),
                               TextSpan(
                                 text: event.author?.name ?? 'Unknown Author',
                                 style: const TextStyle(

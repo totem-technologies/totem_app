@@ -8,5 +8,5 @@ part 'keeper_repository.g.dart';
 @riverpod
 Future<KeeperProfileSchema> keeperProfile(Ref ref, String slug) async {
   final apiService = ref.watch(mobileApiServiceProvider);
-  return apiService.client.totemUsersMobileApiKeeper(slug: slug);
+  return apiService.fallback.totemUsersMobileApiKeeper(slug: slug);
 }

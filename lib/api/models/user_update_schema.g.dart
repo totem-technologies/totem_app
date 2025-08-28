@@ -32,7 +32,7 @@ Map<String, dynamic> _$UserUpdateSchemaToJson(UserUpdateSchema instance) =>
     };
 
 const _$ProfileAvatarTypeEnumEnumMap = {
-  ProfileAvatarTypeEnum.tD: 'TD',
-  ProfileAvatarTypeEnum.iM: 'IM',
+  ProfileAvatarTypeEnum.td: 'TD',
+  ProfileAvatarTypeEnum.im: 'IM',
   ProfileAvatarTypeEnum.$unknown: r'$unknown',
 };
