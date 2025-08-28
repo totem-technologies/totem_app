@@ -101,4 +101,11 @@ class AppConfig {
       dotenv.env['TERMS_OF_SERVICE_URL'] ?? 'https://www.totem.org/tos/',
     );
   }
+
+  static Uri get communityGuidelinesUrl {
+    return Uri.parse(
+      dotenv.env['COMMUNITY_GUIDELINES_URL'] ??
+          'https://www.totem.org/guidelines/',
+    );
+  }
 }

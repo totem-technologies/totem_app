@@ -23,6 +23,10 @@ dependencies:
   flutter_dotenv: ^6.0.0
   flutter_secure_storage: ^10.0.0-beta.4
   logger: ^2.6.0
+  shared_preferences: ^2.5.3
+
+  # add_2_calendar_new: ^1.0.4
+  eventide: ^0.10.2
 
   # Networking & Serialization
   dio: ^5.8.0+1
@@ -51,8 +55,7 @@ dependencies:
   timeago: ^3.7.1
   sliver_tools: ^0.2.12
   flutter_confetti: ^0.5.1
-  eventide: ^0.10.2
-  shared_preferences: ^2.5.3
+  
 
 dev_dependencies:
   flutter_test:

@@ -6,6 +6,7 @@ import 'package:totem_app/api/models/referral_choices.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/widget/referral_source_modal.dart';
 import 'package:totem_app/auth/widget/suggested_space_card_widget.dart';
+import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/screens/profile_image_picker.dart';
@@ -221,10 +222,10 @@ class _GuidelinesTab extends StatelessWidget {
                 alignment: PlaceholderAlignment.middle,
                 child: GestureDetector(
                   onTap: () async {
-                    const url = 'https://www.totem.org/guidelines/';
-                    if (await canLaunchUrl(Uri.parse(url))) {
+                    final url = AppConfig.communityGuidelinesUrl;
+                    if (await canLaunchUrl(url)) {
                       await launchUrl(
-                        Uri.parse(url),
+                        url,
                         mode: LaunchMode.externalApplication,
                       );
                     }

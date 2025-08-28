@@ -42,7 +42,7 @@ class KeeperProfileScreen extends ConsumerWidget {
                 IntrinsicHeight(
                   child: Container(
                     margin: const EdgeInsetsDirectional.symmetric(
-                      horizontal: 16,
+                      horizontal: 20,
                     ),
                     constraints: const BoxConstraints(
                       maxWidth: 400,
@@ -159,7 +159,7 @@ class KeeperProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 20),
                 Padding(
                   padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: 16,
+                    horizontal: 20,
                   ),
                   child: Text(
                     'Biography',
@@ -168,13 +168,21 @@ class KeeperProfileScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                Html(
-                  data: keeper.bioHtml ?? keeper.bio,
-                  style: AppTheme.htmlStyle,
+                Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 20,
+                  ),
+                  child: Html(
+                    data: keeper.bioHtml ?? keeper.bio,
+                    style: AppTheme.compactHtmlStyle,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 KeeperSpaces(
                   keeperSlug: keeper.user.slug!,
+                  horizontalPadding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 20,
+                  ),
                 ),
               ],
             ),

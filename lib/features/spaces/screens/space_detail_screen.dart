@@ -133,18 +133,25 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                   ref.refresh(eventProvider(widget.eventSlug).future),
               child: SafeArea(
                 top: false,
+                bottom: false,
                 child: ListView(
-                  padding: isPhone
-                      ? const EdgeInsetsDirectional.only(
-                          top: 16,
-                          bottom: 124,
-                        )
-                      : const EdgeInsetsDirectional.only(
-                          start: 80,
-                          end: 80,
-                          top: 16,
-                          bottom: 16 + 64 * 2,
-                        ),
+                  padding:
+                      (isPhone
+                              ? const EdgeInsetsDirectional.only(
+                                  top: 16,
+                                  bottom: 124,
+                                )
+                              : const EdgeInsetsDirectional.only(
+                                  start: 80,
+                                  end: 80,
+                                  top: 16,
+                                  bottom: 16 + 64 * 2,
+                                ))
+                          .add(
+                            EdgeInsetsDirectional.only(
+                              bottom: MediaQuery.paddingOf(context).bottom,
+                            ),
+                          ),
                   children: [
                     Padding(
                       padding: horizontalPadding,

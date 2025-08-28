@@ -143,7 +143,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ),
             Link(
-              uri: Uri.parse('https://www.totem.org/guidelines/'),
+              uri: AppConfig.communityGuidelinesUrl,
               builder: (context, launch) => ProfileTile(
                 icon: const TotemIcon(TotemIcons.community),
                 title: 'Community Guidelines',

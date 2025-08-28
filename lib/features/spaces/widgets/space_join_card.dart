@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:eventide/eventide.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/date.dart';
@@ -14,6 +16,7 @@ import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:url_launcher/link.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 enum SpaceJoinCardState {
@@ -233,7 +236,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
     if (response) {
       setState(() => _attending = true);
-      _emitFireworks();
+      attendingPopup();
     } else {
       if (mounted) {
         showErrorPopup(
@@ -246,7 +249,17 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     }
   }
 
-  void _emitFireworks() {
+  void attendingPopup() {
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AttendingDialog(
+          event: widget.event,
+          onAddToCalendar: addToCalendar,
+        );
+      },
+    );
+
     double randomInRange(double min, double max) {
       return min + Random().nextDouble() * (max - min);
     }
@@ -290,34 +303,35 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   }
 
   Future<void> addToCalendar() async {
-    try {
-      final eventide = Eventide();
-      await eventide.createEventInDefaultCalendar(
+    // TODO(bdlukaa): Integrate this to the phone device
+    // try {
+    //   final eventide = Eventide();
+    //   await eventide.createEventInDefaultCalendar(
+    //     title: widget.event.space.title,
+    //     // description: widget.event.space.shortDescription,
+    //     startDate: widget.event.start.toLocal(),
+    //     endDate: widget.event.start
+    //         .add(Duration(minutes: widget.event.duration))
+    //         .toLocal(),
+    //     url: getFullUrl(widget.event.calLink),
+    //     reminders: [
+    //       const Duration(minutes: 30),
+    //       const Duration(minutes: 15),
+    //     ],
+    //   );
+    // } catch (error, stacktrace) {
+    //   debugPrint('Failed to add event to calendar: $error\n$stacktrace');
+    await launchUrlString(
+      _buildGoogleCalendarUrl(
         title: widget.event.space.title,
-        // description: widget.event.space.shortDescription,
-        startDate: widget.event.start.toLocal(),
-        endDate: widget.event.start
+        start: widget.event.start.toLocal(),
+        end: widget.event.start
             .add(Duration(minutes: widget.event.duration))
             .toLocal(),
-        url: getFullUrl(widget.event.calLink),
-        reminders: [
-          const Duration(minutes: 30),
-          const Duration(minutes: 15),
-        ],
-      );
-    } catch (error, stacktrace) {
-      debugPrint('Failed to add event to calendar: $error\n$stacktrace');
-      await launchUrlString(
-        _buildGoogleCalendarUrl(
-          title: widget.event.space.title,
-          start: widget.event.start.toLocal(),
-          end: widget.event.start
-              .add(Duration(minutes: widget.event.duration))
-              .toLocal(),
-          description: widget.event.space.shortDescription,
-        ),
-      );
-    }
+        description: widget.event.space.shortDescription,
+      ),
+    );
+    // }
   }
 
   String _buildGoogleCalendarUrl({
@@ -353,5 +367,174 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
         );
 
     return url.toString();
+  }
+}
+
+class AttendingDialog extends StatefulWidget {
+  const AttendingDialog({
+    required this.onAddToCalendar,
+    required this.event,
+    super.key,
+  });
+
+  final EventDetailSchema event;
+  final VoidCallback onAddToCalendar;
+
+  @override
+  State<AttendingDialog> createState() => _AttendingDialogState();
+}
+
+class _AttendingDialogState extends State<AttendingDialog> {
+  var _addedToCalendar = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: 14,
+          vertical: 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 10,
+          children: [
+            Row(
+              children: [
+                Builder(
+                  builder: (context) {
+                    return Container(
+                      height: 30,
+                      width: 30,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                      ),
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        iconSize: 18,
+                        color: const Color(0xFF787D7E),
+                        onPressed: () {
+                          final box = context.findRenderObject() as RenderBox?;
+                          SharePlus.instance.share(
+                            ShareParams(
+                              uri: Uri.parse(
+                                'https://totem.org/spaces/event/${widget.event.slug}?utm_source=app&utm_medium=share',
+                              ),
+                              sharePositionOrigin: box != null
+                                  ? box.localToGlobal(
+                                          Offset.zero,
+                                        ) &
+                                        box.size
+                                  : null,
+                            ),
+                          );
+                        },
+                        icon: Icon(Icons.adaptive.share),
+                      ),
+                    );
+                  },
+                ),
+                const Spacer(),
+                Container(
+                  height: 30,
+                  width: 30,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                  ),
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    iconSize: 18,
+                    color: const Color(0xFF787D7E),
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ),
+              ],
+            ),
+            const TotemIcon(
+              TotemIcons.greenCheckbox,
+              size: 95,
+              color: Color(0xFF98BD44),
+            ),
+            Text(
+              "You're going!",
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            const Text.rich(
+              TextSpan(
+                children: <TextSpan>[
+                  TextSpan(
+                    text:
+                        "We'll send you a notification before the session "
+                        'starts.',
+                  ),
+                  TextSpan(text: '\n\n'),
+
+                  TextSpan(
+                    text:
+                        'When you join, you’ll be in a Space where we take '
+                        'turns speaking while holding the virtual Totem — '
+                        'feel free to share when it’s your turn, or simply '
+                        'listen if you prefer.',
+                  ),
+                  TextSpan(text: '\n\n'),
+                  TextSpan(
+                    text: 'Totem is better with friends!',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  TextSpan(
+                    text:
+                        " Share this link with your friends and they'll be "
+                        'able to join as well.',
+                  ),
+                ],
+              ),
+              textAlign: TextAlign.center,
+            ),
+
+            ElevatedButton(
+              onPressed: () {
+                if (!_addedToCalendar) {
+                  widget.onAddToCalendar();
+                  setState(() => _addedToCalendar = true);
+                } else {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: Text(_addedToCalendar ? 'Added!' : 'Add to Calendar'),
+            ),
+            Text.rich(
+              TextSpan(
+                children: [
+                  const TextSpan(
+                    text: 'In the meantime, review our ',
+                  ),
+                  TextSpan(
+                    text: 'Community Guidelines',
+                    style: const TextStyle(
+                      decoration: TextDecoration.underline,
+                    ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () {
+                        launchUrl(AppConfig.communityGuidelinesUrl);
+                      },
+                  ),
+                  const TextSpan(
+                    text: ' to learn more about how to participate.',
+                  ),
+                ],
+              ),
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
