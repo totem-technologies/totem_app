@@ -299,7 +299,6 @@ class AuthController extends Notifier<AuthState> {
       if (refreshToken != null) {
         await _authRepository.logout(refreshToken);
       }
-      await _clearTokens();
       _setState(AuthState.unauthenticated());
       _analyticsService.logLogout();
     } catch (error, stackTrace) {
@@ -308,8 +307,9 @@ class AuthController extends Notifier<AuthState> {
         stackTrace: stackTrace,
         reason: 'Logout failed',
       );
-      await _clearTokens();
       _setState(AuthState.unauthenticated());
+    } finally {
+      await _clearTokens();
     }
   }
 
@@ -329,6 +329,7 @@ class AuthController extends Notifier<AuthState> {
       );
       _setState(AuthState.unauthenticated());
     } finally {
+      await _clearTokens();
       await _clearAllLocalStorage();
     }
   }
@@ -422,12 +423,24 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  /// Deletes the user tokens.
   Future<void> _clearTokens() async {
-    await _secureStorage.delete(key: AppConsts.accessToken);
-    await _secureStorage.delete(key: AppConsts.refreshToken);
-    await ref.read(localStorageServiceProvider).clearUser();
-    // Note: We intentionally don't clear welcome onboarding flag here
-    // so returning users don't see welcome screens again unless they reinstall
+    {
+      final token = await ref.read(notificationsProvider).fcmToken;
+      if (token != null) {
+        await _authRepository.unregisterFcmToken(token);
+        await FirebaseMessaging.instance.deleteToken();
+      }
+    }
+
+    {
+      await _secureStorage.delete(key: AppConsts.accessToken);
+      await _secureStorage.delete(key: AppConsts.refreshToken);
+      await ref.read(localStorageServiceProvider).clearUser();
+      // Note: We intentionally don't clear welcome onboarding flag here
+      // so returning users don't see welcome screens again unless they
+      // reinstall the app.
+    }
   }
 
   Future<void> _clearAllLocalStorage() async {
