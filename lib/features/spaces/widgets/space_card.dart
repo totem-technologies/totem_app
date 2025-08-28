@@ -10,10 +10,16 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class SpaceCard extends StatelessWidget {
-  const SpaceCard({required this.space, super.key, this.compact = false});
+  const SpaceCard({
+    required this.space,
+    super.key,
+    this.compact = false,
+    this.onTap,
+  });
 
   final SpaceDetailSchema space;
   final bool compact;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -26,9 +32,11 @@ class SpaceCard extends StatelessWidget {
         margin: EdgeInsetsDirectional.zero,
         child: InkWell(
           highlightColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
-          onTap: () {
-            context.push(RouteNames.space(space.nextEvent.slug));
-          },
+          onTap:
+              onTap ??
+              () {
+                context.push(RouteNames.space(space.nextEvent.slug));
+              },
           borderRadius: BorderRadius.circular(8),
           child: Stack(
             children: [
@@ -219,9 +227,14 @@ class SpaceCard extends StatelessWidget {
 }
 
 class SmallSpaceCard extends StatelessWidget {
-  const SmallSpaceCard({required this.space, super.key});
+  const SmallSpaceCard({
+    required this.space,
+    this.onTap,
+    super.key,
+  });
 
   final SpaceDetailSchema space;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -229,9 +242,11 @@ class SmallSpaceCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       highlightColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
-      onTap: () {
-        context.push(RouteNames.space(space.nextEvent.slug));
-      },
+      onTap:
+          onTap ??
+          () {
+            context.push(RouteNames.space(space.nextEvent.slug));
+          },
       child: Ink(
         decoration: BoxDecoration(
           image: DecorationImage(
@@ -262,7 +277,7 @@ class SmallSpaceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: 5,
           children: [
-            Ink(
+            Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: const Color(0x99262F37),

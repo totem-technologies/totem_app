@@ -4,11 +4,19 @@ import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 
 class KeeperSpaces extends ConsumerWidget {
-  const KeeperSpaces({required this.keeperSlug, this.title, super.key});
+  const KeeperSpaces({
+    required this.keeperSlug,
+    this.title,
+    this.horizontalPadding = const EdgeInsetsDirectional.symmetric(
+      horizontal: 16,
+    ),
+    super.key,
+  });
 
   final String keeperSlug;
 
   final String? title;
+  final EdgeInsetsGeometry horizontalPadding;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,7 +33,7 @@ class KeeperSpaces extends ConsumerWidget {
           spacing: 8,
           children: [
             Padding(
-              padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
+              padding: horizontalPadding,
               child: Text(
                 title ?? 'Upcoming Spaces',
                 style: theme.textTheme.titleSmall?.copyWith(
@@ -36,7 +44,7 @@ class KeeperSpaces extends ConsumerWidget {
             SizedBox(
               height: 210,
               child: ListView.separated(
-                padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
+                padding: horizontalPadding,
                 scrollDirection: Axis.horizontal,
                 itemCount: spaces.length,
                 itemBuilder: (context, index) {

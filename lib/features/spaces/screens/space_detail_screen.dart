@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:totem_app/api/models/next_event_schema.dart';
+import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
+import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/features/spaces/widgets/space_detail_app_bar.dart';
 import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
@@ -31,6 +35,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     ref.read(analyticsProvider).logSpaceViewed(widget.eventSlug);
   }
 
+  static const horizontalPadding = EdgeInsetsDirectional.symmetric(
+    horizontal: 22,
+  );
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -39,11 +47,13 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     final width = MediaQuery.sizeOf(context).width;
     final isPhone = width < 600;
 
+    final currencyFormatter = NumberFormat.currency(
+      locale: 'en_US',
+      symbol: 'USD \$',
+    );
+
     return eventAsync.when(
       data: (event) {
-        const horizontalPadding = EdgeInsetsDirectional.symmetric(
-          horizontal: 16,
-        );
         return Scaffold(
           body: Stack(
             children: [
@@ -139,87 +149,121 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 bottom: 16 + 64 * 2,
                               ),
                         children: [
+                          Column(
+                            spacing: 10,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildInfoText(
+                                const TotemIcon(TotemIcons.subscribers),
+                                Text('${event.subscribers} subscribers'),
+                                const Text(
+                                  'Be part of a growing community. Join '
+                                  'others who share your interests. Small '
+                                  'but mighty — join today.',
+                                ),
+                              ),
+                              _buildInfoText(
+                                const TotemIcon(TotemIcons.priceTag),
+                                Text(
+                                  event.price == 0
+                                      ? 'No cost'
+                                      : currencyFormatter.format(event.price),
+                                ),
+                                Text(
+                                  event.price == 0
+                                      ? 'Completely free — no hidden fees. '
+                                            'Enjoy all the benefits at no '
+                                            'charge. It costs nothing to get '
+                                            'started.'
+                                      : 'This price grants you full access '
+                                            'to the event. Secure your spot '
+                                            'and enjoy all the activities '
+                                            'and content available.',
+                                ),
+                              ),
+                              _buildInfoText(
+                                const TotemIcon(TotemIcons.recurring),
+                                Text(event.recurring),
+                                const Text(
+                                  'We meet according to the space’s unique '
+                                  'schedule.',
+                                ),
+                              ),
+                            ],
+                          ),
+
                           Padding(
-                            padding: horizontalPadding,
-                            child: Text(
-                              'About this session',
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
+                            padding: horizontalPadding.add(
+                              const EdgeInsetsDirectional.only(
+                                top: 22,
+                                bottom: 4,
                               ),
                             ),
-                          ),
-
-                          Padding(
-                            padding: horizontalPadding,
-                            child: Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                _buildInfoText(
-                                  const TotemIcon(TotemIcons.clockCircle),
-                                  Text('${event.duration} minutes'),
-                                ),
-                                _buildInfoText(
-                                  const TotemIcon(TotemIcons.seats),
-                                  Text(
-                                    event.seatsLeft > 0
-                                        ? '${event.seatsLeft} seats left'
-                                        : 'No seats left',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          Html(
-                            data: event.description,
-                            style: AppTheme.htmlStyle,
-                          ),
-
-                          // TODO(bdlukaa): About this space
-                          Padding(
-                            padding: horizontalPadding,
                             child: Text(
-                              'About this space',
-                              style: theme.textTheme.titleSmall?.copyWith(
+                              'About',
+                              style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
-                            ),
-                          ),
-
-                          Padding(
-                            padding: horizontalPadding,
-                            child: Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                _buildInfoText(
-                                  const TotemIcon(TotemIcons.person),
-                                  Text('${event.subscribers} subscribers'),
-                                ),
-                                _buildInfoText(
-                                  const TotemIcon(TotemIcons.priceTag),
-                                  Text(
-                                    event.price == 0
-                                        ? 'No cost'
-                                        // TODO(bdlukaa): Format this price
-                                        : 'Cost: \$${event.price}',
-                                  ),
-                                ),
-                                _buildInfoText(
-                                  const TotemIcon(TotemIcons.calendar),
-                                  Text(event.space.recurring),
-                                ),
-                              ],
                             ),
                           ),
 
                           Html(
                             data: event.space.shortDescription,
-                            style: AppTheme.htmlStyle,
+                            style: {
+                              ...AppTheme.htmlStyle,
+                              'body': Style(
+                                margin: Margins.symmetric(
+                                  horizontal: horizontalPadding.start,
+                                ),
+                              ),
+                            },
+                          ),
+
+                          Container(
+                            height: 32,
+                            margin: const EdgeInsetsDirectional.only(top: 8),
+                            padding: horizontalPadding,
+                            child: OutlinedButton(
+                              onPressed: () {
+                                // TODO(bdlukaa): Show content
+                              },
+                              style: const ButtonStyle(
+                                padding: WidgetStatePropertyAll(
+                                  EdgeInsets.zero,
+                                ),
+                              ),
+                              child: const Text('Show more'),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // TODO(bdlukaa): Sessions Calendar
+                          Container(
+                            padding: horizontalPadding,
+                            child: IntrinsicHeight(
+                              child: SmallSpaceCard(
+                                space: SpaceDetailSchema(
+                                  author: event.space.author,
+                                  category: '',
+                                  description:
+                                      event.space.shortDescription ?? '',
+                                  imageLink: event.space.image,
+                                  nextEvent: NextEventSchema(
+                                    slug: event.space.slug!,
+                                    start: event.start.toIso8601String(),
+                                    link: event.calLink,
+                                    title: event.title,
+                                    seatsLeft: event.seatsLeft,
+                                  ),
+                                  slug: event.space.slug!,
+                                  title: event.space.title,
+                                ),
+                              ),
+                            ),
                           ),
 
                           const SizedBox(height: 16),
+
                           Padding(
                             padding: horizontalPadding,
                             child: Text(
@@ -267,6 +311,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           const SizedBox(height: 32),
                           KeeperSpaces(
                             keeperSlug: event.space.author.slug!,
+                            horizontalPadding: horizontalPadding,
                           ),
                         ],
                       ),
@@ -289,24 +334,44 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     );
   }
 
-  Widget _buildInfoText(Widget icon, Widget text) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      spacing: 4,
-      children: [
-        IconTheme.merge(
-          data: const IconThemeData(size: 14, color: Color(0xFF787D7E)),
-          child: icon,
-        ),
-        DefaultTextStyle.merge(
-          style: const TextStyle(
-            fontSize: 14,
-            height: 1.5,
-            color: Color(0xFF787D7E),
+  Widget _buildInfoText(Widget icon, Widget text, Widget subtitle) {
+    return Padding(
+      padding: horizontalPadding,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: 10,
+        children: [
+          IconTheme.merge(
+            data: const IconThemeData(size: 24, color: AppTheme.slate),
+            child: icon,
           ),
-          child: text,
-        ),
-      ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DefaultTextStyle.merge(
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 1.5,
+                    color: AppTheme.slate,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  child: text,
+                ),
+                DefaultTextStyle.merge(
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 1.5,
+                    color: AppTheme.slate,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  child: subtitle,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
