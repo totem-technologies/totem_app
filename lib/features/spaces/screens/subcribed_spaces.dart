@@ -18,46 +18,91 @@ class SubscribedSpacesScreen extends ConsumerWidget {
     final data = ref.watch(listSubscribedSpacesProvider);
 
     return Scaffold(
-      appBar: AppBar(),
       body: SafeArea(
         child: data.when(
           data: (spaces) {
-            return Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisAlignment: spaces.isEmpty
-                    ? MainAxisAlignment.center
-                    : MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 10,
-                children: [
-                  Text(
-                    'Subscribed Spaces',
-                    style: theme.textTheme.titleLarge,
-                    textAlign: TextAlign.center,
-                  ),
-                  Text(
-                    spaces.isEmpty
-                        ? 'You are not subscribed to any Spaces.'
-                        : 'These are the Spaces you will get notifications for '
-                              'when new sessions are coming up.',
-                    textAlign: TextAlign.center,
-                  ),
-                  if (spaces.isEmpty)
+            if (spaces.isEmpty) {
+              return Padding(
+                padding: const EdgeInsetsDirectional.all(20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: 10,
+                  children: [
+                    Text(
+                      'Subscribed Spaces',
+                      style: theme.textTheme.titleLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                    const Text(
+                      'You are not subscribed to any Spaces.',
+                      textAlign: TextAlign.center,
+                    ),
                     ElevatedButton(
                       onPressed: () {
                         toHome(HomeRoutes.spaces);
                       },
                       child: const Text('Browse Spaces'),
-                    )
-                  else
-                    for (final space in spaces)
-                      if (space.slug != null)
-                        _SubscribedSpaceTile(
-                          key: ValueKey(space.slug!),
-                          space: space,
+                    ),
+                  ],
+                ),
+              );
+            }
+            return NestedScrollView(
+              headerSliverBuilder: (context, _) {
+                return [
+                  SliverAppBar(
+                    pinned: true,
+                    expandedHeight: 150,
+                    flexibleSpace: FlexibleSpaceBar(
+                      title: Text(
+                        'Subscribed Spaces',
+                        style: theme.textTheme.titleLarge,
+                        textAlign: TextAlign.center,
+                      ),
+                      centerTitle: true,
+                    ),
+                  ),
+                ];
+              },
+              body: RefreshIndicator.adaptive(
+                onRefresh: () =>
+                    ref.refresh(listSubscribedSpacesProvider.future),
+                child: CustomScrollView(
+                  slivers: <Widget>[
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsetsDirectional.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
                         ),
-                ],
+                        child: Text(
+                          'These are the Spaces you will get notifications for '
+                          'when new sessions are coming up.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsetsDirectional.only(
+                        start: 20,
+                        end: 20,
+                        bottom: 20,
+                      ),
+                      sliver: SliverList.separated(
+                        itemBuilder: (BuildContext context, int index) {
+                          final space = spaces[index];
+                          return _SubscribedSpaceTile(
+                            key: ValueKey(space.slug!),
+                            space: space,
+                          );
+                        },
+                        itemCount: spaces.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           },
