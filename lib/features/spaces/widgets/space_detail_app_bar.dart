@@ -50,7 +50,7 @@ class SpaceDetailAppBar extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         Text(
-                          event.title,
+                          event.space.title,
                           style: theme.textTheme.headlineLarge?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
