@@ -36,7 +36,7 @@ class KeeperSpaces extends ConsumerWidget {
               padding: horizontalPadding,
               child: Text(
                 title ?? 'Upcoming Spaces',
-                style: theme.textTheme.titleSmall?.copyWith(
+                style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/next_event_schema.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -15,6 +16,7 @@ import 'package:totem_app/features/spaces/widgets/space_detail_app_bar.dart';
 import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -224,9 +226,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             margin: const EdgeInsetsDirectional.only(top: 8),
                             padding: horizontalPadding,
                             child: OutlinedButton(
-                              onPressed: () {
-                                // TODO(bdlukaa): Show content
-                              },
+                              onPressed: () =>
+                                  _showAboutSpaceSheet(context, event),
                               style: const ButtonStyle(
                                 padding: WidgetStatePropertyAll(
                                   EdgeInsets.zero,
@@ -268,15 +269,19 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             padding: horizontalPadding,
                             child: Text(
                               'Meet the keeper',
-                              style: theme.textTheme.titleSmall?.copyWith(
+                              style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 8),
-
-                          Padding(
-                            padding: horizontalPadding,
+                          const SizedBox(height: 10),
+                          Container(
+                            margin: horizontalPadding,
+                            padding: const EdgeInsetsDirectional.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
                             child: Row(
                               spacing: 8,
                               children: [
@@ -284,12 +289,14 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 Expanded(
                                   child: Text(
                                     event.space.author.name ?? 'Keeper',
-                                    style: theme.textTheme.titleLarge?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                   ),
                                 ),
-                                ElevatedButton(
+                                OutlinedButton(
                                   onPressed: () {
                                     if (event.space.author.slug != null) {
                                       context.push(
@@ -372,6 +379,102 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _showAboutSpaceSheet(
+    BuildContext context,
+    EventDetailSchema event,
+  ) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) {
+        return AboutSpaceSheet(event: event);
+      },
+    );
+  }
+}
+
+class AboutSpaceSheet extends StatelessWidget {
+  const AboutSpaceSheet({required this.event, super.key});
+
+  final EventDetailSchema event;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 1,
+      builder: (context, controller) {
+        return Scaffold(
+          appBar: AppBar(),
+          body: ListView(
+            controller: controller,
+            padding: const EdgeInsetsDirectional.only(
+              start: 20,
+              end: 20,
+              bottom: 20,
+            ),
+            children: [
+              Text('About', style: theme.textTheme.titleLarge),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildInfoText(
+                    const TotemIcon(TotemIcons.subscribers),
+                    Text('${event.subscribers} subscribers'),
+                  ),
+                  _buildInfoText(
+                    const TotemIcon(TotemIcons.priceTag),
+                    Text(
+                      event.price == 0
+                          ? 'No cost'
+                          : NumberFormat.currency(
+                              locale: 'en_US',
+                              symbol: r'USD $',
+                            ).format(event.price),
+                    ),
+                  ),
+                  _buildInfoText(
+                    const TotemIcon(TotemIcons.recurring),
+                    Text(event.recurring.uppercaseFirst()),
+                  ),
+                ],
+              ),
+              Html(
+                data: event.space.shortDescription,
+                shrinkWrap: true,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoText(Widget icon, Widget text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 4,
+      children: [
+        IconTheme.merge(
+          data: const IconThemeData(size: 14, color: Color(0xFF787D7E)),
+          child: icon,
+        ),
+        DefaultTextStyle.merge(
+          style: const TextStyle(
+            fontSize: 14,
+            height: 1.5,
+            color: Color(0xFF787D7E),
+          ),
+          child: text,
+        ),
+      ],
     );
   }
 }
