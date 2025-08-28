@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
@@ -9,12 +8,12 @@ import 'package:totem_app/api/models/next_event_schema.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
+import 'package:totem_app/features/keeper/screens/meet_user_card.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/features/spaces/widgets/space_detail_app_bar.dart';
 import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
-import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -283,44 +282,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Container(
-                      margin: horizontalPadding,
-                      padding: const EdgeInsetsDirectional.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        spacing: 8,
-                        children: [
-                          UserAvatar.fromUserSchema(event.space.author),
-                          Expanded(
-                            child: Text(
-                              event.space.author.name ?? 'Keeper',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          OutlinedButton(
-                            onPressed: () {
-                              if (event.space.author.slug != null) {
-                                context.push(
-                                  RouteNames.keeperProfile(
-                                    event.space.author.slug!,
-                                  ),
-                                );
-                              }
-                            },
-                            child: const Text(
-                              'View Profile',
-                              style: TextStyle(fontSize: 14),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    MeetUserCard(user: event.space.author),
                   ],
                 ),
               ),

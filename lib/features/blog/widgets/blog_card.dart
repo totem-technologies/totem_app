@@ -10,12 +10,14 @@ import 'package:totem_app/shared/widgets/user_avatar.dart';
 class BlogPostCard extends StatelessWidget {
   const BlogPostCard({
     required this.title,
+    required this.subtitle,
     required this.authorName,
     required this.authorImageUrl,
     required this.authorImageSeed,
     required this.publishedDate,
     required this.image,
     required this.slug,
+    required this.readTime,
     this.isLarge = false,
     super.key,
   });
@@ -25,14 +27,17 @@ class BlogPostCard extends StatelessWidget {
     this.isLarge = false,
     super.key,
   }) : title = schema.title,
+       subtitle = schema.subtitle ?? '',
        authorName = schema.author?.name ?? 'Keeper',
        authorImageUrl = schema.author?.profileImage,
        authorImageSeed = schema.author?.profileAvatarSeed ?? '',
        publishedDate = schema.datePublished,
        slug = schema.slug!,
-       image = schema.headerImageUrl ?? '';
+       image = schema.headerImageUrl ?? '',
+       readTime = schema.readTime;
 
   final String title;
+  final String subtitle;
   final String authorName;
   final String? authorImageUrl;
   final String authorImageSeed;
@@ -40,6 +45,7 @@ class BlogPostCard extends StatelessWidget {
   final String image;
   final String slug;
   final bool isLarge;
+  final int readTime;
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +89,24 @@ class BlogPostCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.end,
             spacing: 10,
             children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0x99262F37),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$readTime min read',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.fade,
+                ),
+              ),
+              const Spacer(),
               Text(
                 title,
                 style: TextStyle(
@@ -93,6 +117,16 @@ class BlogPostCard extends StatelessWidget {
                 maxLines: isLarge ? 2 : 3,
                 overflow: TextOverflow.ellipsis,
               ),
+              if (subtitle.isNotEmpty)
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
               Row(
                 spacing: 6,
                 children: [

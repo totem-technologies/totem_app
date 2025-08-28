@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/blog/widgets/blog_detail_app_bar.dart';
+import 'package:totem_app/features/keeper/screens/meet_user_card.dart';
 import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -112,10 +113,28 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                         },
                         style: AppTheme.htmlStyle,
                       ),
-                      if (blog.author?.slug != null)
+                      if (blog.author?.slug != null) ...[
+                        Padding(
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: 16,
+                            vertical: 20,
+                          ),
+                          child: Text(
+                            'Meet the author',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        MeetUserCard(user: blog.author!),
+                        const SizedBox(height: 20),
                         KeeperSpaces(
+                          title:
+                              'Spaces by ${blog.author?.name ?? 'this Author'}',
                           keeperSlug: blog.author!.slug!,
                         ),
+                        const SizedBox(height: 14),
+                      ],
                     ],
                   ),
                 ),
