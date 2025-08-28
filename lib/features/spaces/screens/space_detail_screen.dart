@@ -51,7 +51,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
 
     final currencyFormatter = NumberFormat.currency(
       locale: 'en_US',
-      symbol: 'USD \$',
+      symbol: r'USD $',
     );
 
     return eventAsync.when(
@@ -129,7 +129,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             ),
                           ),
                         ],
-                        title: Text(event.title),
+                        title: Text(event.space.title),
                       ),
                     ];
                   },
@@ -151,47 +151,50 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 bottom: 16 + 64 * 2,
                               ),
                         children: [
-                          Column(
-                            spacing: 10,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildInfoText(
-                                const TotemIcon(TotemIcons.subscribers),
-                                Text('${event.subscribers} subscribers'),
-                                const Text(
-                                  'Be part of a growing community. Join '
-                                  'others who share your interests. Small '
-                                  'but mighty — join today.',
+                          Padding(
+                            padding: horizontalPadding,
+                            child: Column(
+                              spacing: 10,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                InfoText(
+                                  const TotemIcon(TotemIcons.subscribers),
+                                  Text('${event.subscribers} subscribers'),
+                                  const Text(
+                                    'Be part of a growing community. Join '
+                                    'others who share your interests. Small '
+                                    'but mighty — join today.',
+                                  ),
                                 ),
-                              ),
-                              _buildInfoText(
-                                const TotemIcon(TotemIcons.priceTag),
-                                Text(
-                                  event.price == 0
-                                      ? 'No cost'
-                                      : currencyFormatter.format(event.price),
+                                InfoText(
+                                  const TotemIcon(TotemIcons.priceTag),
+                                  Text(
+                                    event.price == 0
+                                        ? 'No cost'
+                                        : currencyFormatter.format(event.price),
+                                  ),
+                                  Text(
+                                    event.price == 0
+                                        ? 'Completely free — no hidden fees. '
+                                              'Enjoy all the benefits at no '
+                                              'charge. It costs nothing to get '
+                                              'started.'
+                                        : 'This price grants you full access '
+                                              'to the event. Secure your spot '
+                                              'and enjoy all the activities '
+                                              'and content available.',
+                                  ),
                                 ),
-                                Text(
-                                  event.price == 0
-                                      ? 'Completely free — no hidden fees. '
-                                            'Enjoy all the benefits at no '
-                                            'charge. It costs nothing to get '
-                                            'started.'
-                                      : 'This price grants you full access '
-                                            'to the event. Secure your spot '
-                                            'and enjoy all the activities '
-                                            'and content available.',
+                                InfoText(
+                                  const TotemIcon(TotemIcons.recurring),
+                                  Text(event.recurring),
+                                  const Text(
+                                    'We meet according to the space’s unique '
+                                    'schedule.',
+                                  ),
                                 ),
-                              ),
-                              _buildInfoText(
-                                const TotemIcon(TotemIcons.recurring),
-                                Text(event.recurring),
-                                const Text(
-                                  'We meet according to the space’s unique '
-                                  'schedule.',
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
 
                           Padding(
@@ -210,7 +213,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           ),
 
                           Html(
-                            data: event.space.shortDescription,
+                            data:
+                                event.space.shortDescription?.isNotEmpty ??
+                                    false
+                                ? event.space.shortDescription
+                                : event.description,
                             style: {
                               ...AppTheme.htmlStyle,
                               'body': Style(
@@ -221,44 +228,46 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             },
                           ),
 
-                          Container(
-                            height: 32,
-                            margin: const EdgeInsetsDirectional.only(top: 8),
-                            padding: horizontalPadding,
-                            child: OutlinedButton(
-                              onPressed: () =>
-                                  _showAboutSpaceSheet(context, event),
-                              style: const ButtonStyle(
-                                padding: WidgetStatePropertyAll(
-                                  EdgeInsets.zero,
+                          if (event.space.shortDescription != null &&
+                              event.space.shortDescription!.isNotEmpty)
+                            Container(
+                              height: 32,
+                              margin: const EdgeInsetsDirectional.only(top: 8),
+                              padding: horizontalPadding,
+                              child: OutlinedButton(
+                                onPressed: () =>
+                                    _showAboutSpaceSheet(context, event),
+                                style: const ButtonStyle(
+                                  padding: WidgetStatePropertyAll(
+                                    EdgeInsets.zero,
+                                  ),
                                 ),
+                                child: const Text('Show more'),
                               ),
-                              child: const Text('Show more'),
                             ),
-                          ),
                           const SizedBox(height: 16),
 
                           // TODO(bdlukaa): Sessions Calendar
                           Container(
                             padding: horizontalPadding,
-                            child: IntrinsicHeight(
-                              child: SmallSpaceCard(
-                                space: SpaceDetailSchema(
-                                  author: event.space.author,
-                                  category: '',
-                                  description:
-                                      event.space.shortDescription ?? '',
-                                  imageLink: event.space.image,
-                                  nextEvent: NextEventSchema(
-                                    slug: event.space.slug!,
-                                    start: event.start.toIso8601String(),
-                                    link: event.calLink,
-                                    title: event.title,
-                                    seatsLeft: event.seatsLeft,
-                                  ),
+                            constraints: const BoxConstraints(maxHeight: 140),
+                            child: SpaceCard(
+                              onTap: () => _showSessionSheet(context, event),
+                              compact: true,
+                              space: SpaceDetailSchema(
+                                author: event.space.author,
+                                category: '',
+                                description: event.space.shortDescription ?? '',
+                                imageLink: event.space.image,
+                                nextEvent: NextEventSchema(
                                   slug: event.space.slug!,
-                                  title: event.space.title,
+                                  start: event.start.toIso8601String(),
+                                  link: event.calLink,
+                                  title: event.title,
+                                  seatsLeft: event.seatsLeft,
                                 ),
+                                slug: event.slug,
+                                title: event.title,
                               ),
                             ),
                           ),
@@ -341,47 +350,6 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     );
   }
 
-  Widget _buildInfoText(Widget icon, Widget text, Widget subtitle) {
-    return Padding(
-      padding: horizontalPadding,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 10,
-        children: [
-          IconTheme.merge(
-            data: const IconThemeData(size: 24, color: AppTheme.slate),
-            child: icon,
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                DefaultTextStyle.merge(
-                  style: const TextStyle(
-                    fontSize: 12,
-                    height: 1.5,
-                    color: AppTheme.slate,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  child: text,
-                ),
-                DefaultTextStyle.merge(
-                  style: const TextStyle(
-                    fontSize: 12,
-                    height: 1.5,
-                    color: AppTheme.slate,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  child: subtitle,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _showAboutSpaceSheet(
     BuildContext context,
     EventDetailSchema event,
@@ -392,6 +360,21 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       useSafeArea: true,
       builder: (context) {
         return AboutSpaceSheet(event: event);
+      },
+    );
+  }
+
+  Future<void> _showSessionSheet(
+    BuildContext context,
+    EventDetailSchema event,
+  ) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) {
+        return SessionSheet(event: event);
       },
     );
   }
@@ -425,11 +408,11 @@ class AboutSpaceSheet extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _buildInfoText(
+                  CompactInfoText(
                     const TotemIcon(TotemIcons.subscribers),
                     Text('${event.subscribers} subscribers'),
                   ),
-                  _buildInfoText(
+                  CompactInfoText(
                     const TotemIcon(TotemIcons.priceTag),
                     Text(
                       event.price == 0
@@ -440,7 +423,7 @@ class AboutSpaceSheet extends StatelessWidget {
                             ).format(event.price),
                     ),
                   ),
-                  _buildInfoText(
+                  CompactInfoText(
                     const TotemIcon(TotemIcons.recurring),
                     Text(event.recurring.uppercaseFirst()),
                   ),
@@ -456,8 +439,150 @@ class AboutSpaceSheet extends StatelessWidget {
       },
     );
   }
+}
 
-  Widget _buildInfoText(Widget icon, Widget text) {
+class SessionSheet extends StatelessWidget {
+  const SessionSheet({required this.event, super.key});
+
+  final EventDetailSchema event;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsetsDirectional.only(
+              start: 20,
+              end: 20,
+              bottom: 20,
+            ),
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(event.title, style: theme.textTheme.titleLarge),
+                        Text.rich(
+                          TextSpan(
+                            text: 'with ',
+                            children: [
+                              TextSpan(
+                                text: event.space.author.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  UserAvatar.fromUserSchema(
+                    event.space.author,
+                    radius: 40,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'About this session',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  CompactInfoText(
+                    const TotemIcon(TotemIcons.clockCircle),
+                    Text('${event.duration} minutes'),
+                  ),
+                  CompactInfoText(
+                    const TotemIcon(TotemIcons.seats),
+                    Text('${event.seatsLeft} seats left'),
+                  ),
+                ],
+              ),
+
+              Html(
+                data: event.description,
+                shrinkWrap: true,
+                style: AppTheme.compactHtmlStyle,
+              ),
+            ],
+          ),
+        ),
+        SpaceJoinCard(event: event),
+      ],
+    );
+  }
+}
+
+class InfoText extends StatelessWidget {
+  const InfoText(this.icon, this.text, this.subtitle, {super.key});
+
+  final Widget icon;
+  final Widget text;
+  final Widget subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 10,
+      children: [
+        IconTheme.merge(
+          data: const IconThemeData(size: 24, color: AppTheme.slate),
+          child: icon,
+        ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DefaultTextStyle.merge(
+                style: const TextStyle(
+                  fontSize: 12,
+                  height: 1.5,
+                  color: AppTheme.slate,
+                  fontWeight: FontWeight.w600,
+                ),
+                child: text,
+              ),
+              DefaultTextStyle.merge(
+                style: const TextStyle(
+                  fontSize: 12,
+                  height: 1.5,
+                  color: AppTheme.slate,
+                  fontWeight: FontWeight.w400,
+                ),
+                child: subtitle,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class CompactInfoText extends StatelessWidget {
+  const CompactInfoText(this.icon, this.text, {super.key});
+
+  final Widget icon;
+  final Widget text;
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       spacing: 4,

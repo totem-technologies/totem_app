@@ -421,6 +421,12 @@ class AppTheme {
       }),
     ),
 
+    /// --- Bottom Sheet Theme ---
+    bottomSheetTheme: const BottomSheetThemeData(
+      dragHandleSize: Size(100, 5),
+      dragHandleColor: Color.fromRGBO(0, 0, 0, 0.12),
+    ),
+
     useMaterial3: true,
 
     pageTransitionsTheme: const PageTransitionsTheme(
