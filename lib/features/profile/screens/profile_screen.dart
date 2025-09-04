@@ -114,7 +114,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               onTap: () => showLogoutDialog(context),
             ),
             Text(
-              'Settings',
+              'Help',
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w600,
               ),

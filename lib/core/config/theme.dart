@@ -388,7 +388,8 @@ class AppTheme {
       ),
       insetPadding: EdgeInsets.all(20),
       // width:
-      //     ui.PlatformDispatcher.instance.views.first.physicalSize.width.clamp(
+      //     ui.PlatformDispatcher.instance.views.first.physicalSize.width.clamp
+      // (
       //       100,
       //       600,
       //     ) -

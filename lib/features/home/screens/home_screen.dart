@@ -28,11 +28,16 @@ class HomeScreen extends ConsumerWidget {
             final upcomingCardWidth =
                 MediaQuery.sizeOf(context).width - 16 * factor;
 
+            // TODO(bdlukaa): This should be handled in the backend response.
+            final upcomingEvents = summary.upcoming.where((event) {
+              return !event.ended;
+            }).toList();
+
             return RefreshIndicator.adaptive(
               onRefresh: () => ref.refresh(spacesSummaryProvider.future),
               child: CustomScrollView(
                 slivers: [
-                  if (summary.upcoming.isNotEmpty)
+                  if (upcomingEvents.isNotEmpty)
                     SliverToBoxAdapter(
                       child: Container(
                         height: 300,
@@ -50,11 +55,11 @@ class HomeScreen extends ConsumerWidget {
                           ),
                           onTap: (index) {
                             context.push(
-                              RouteNames.space(summary.upcoming[index].slug),
+                              RouteNames.space(upcomingEvents[index].slug),
                             );
                           },
                           children: [
-                            for (final event in summary.upcoming)
+                            for (final event in upcomingEvents)
                               SpaceCard(
                                 space: SpaceDetailSchema(
                                   slug: event.space.slug!,
