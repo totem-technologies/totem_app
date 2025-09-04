@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/api/models/blog_post_list_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class BlogPostCard extends StatelessWidget {
@@ -33,7 +34,7 @@ class BlogPostCard extends StatelessWidget {
        authorImageSeed = schema.author?.profileAvatarSeed ?? '',
        publishedDate = schema.datePublished,
        slug = schema.slug!,
-       image = schema.headerImageUrl ?? '',
+       image = schema.headerImageUrl,
        readTime = schema.readTime;
 
   final String title;
@@ -42,7 +43,7 @@ class BlogPostCard extends StatelessWidget {
   final String? authorImageUrl;
   final String authorImageSeed;
   final DateTime? publishedDate;
-  final String image;
+  final String? image;
   final String slug;
   final bool isLarge;
   final int readTime;
@@ -70,7 +71,9 @@ class BlogPostCard extends StatelessWidget {
             ),
           ],
           image: DecorationImage(
-            image: CachedNetworkImageProvider(image),
+            image: image == null || image!.isEmpty
+                ? const AssetImage(TotemAssets.genericBackground)
+                : CachedNetworkImageProvider(image!),
             fit: BoxFit.cover,
           ),
         ),

@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/date.dart';
 
 /// Card used in Suggestions tab, built from EventDetailSchema.
@@ -36,12 +37,12 @@ class SuggestedSpaceCard extends StatelessWidget {
           ),
         ],
         borderRadius: BorderRadius.circular(20),
-        image: backgroundImage == null
-            ? null
-            : DecorationImage(
-                image: CachedNetworkImageProvider(backgroundImage),
-                fit: BoxFit.cover,
-              ),
+        image: DecorationImage(
+          image: backgroundImage != null
+              ? CachedNetworkImageProvider(backgroundImage)
+              : const AssetImage(TotemAssets.genericBackground),
+          fit: BoxFit.cover,
+        ),
         color: backgroundImage == null
             ? theme.colorScheme.primaryContainer
             : null,

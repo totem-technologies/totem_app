@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/network.dart';
@@ -49,9 +50,12 @@ class SpaceCard extends StatelessWidget {
                   placeholder: (context, url) => ColoredBox(
                     color: Colors.black.withValues(alpha: 0.75),
                   ),
-                  errorWidget: (context, url, error) => ColoredBox(
-                    color: Colors.black.withValues(alpha: 0.75),
-                  ),
+                  errorWidget: (context, url, error) {
+                    return Image.asset(
+                      TotemAssets.genericBackground,
+                      fit: BoxFit.cover,
+                    );
+                  },
                 ),
               ),
               PositionedDirectional(

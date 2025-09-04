@@ -31,9 +31,14 @@ class BlogDetailAppBar extends StatelessWidget {
               child: CachedNetworkImage(
                 imageUrl: event.headerImageUrl!,
                 fit: BoxFit.cover,
-                errorWidget: (context, url, error) => const Icon(Icons.error),
                 color: Colors.black38,
                 colorBlendMode: BlendMode.darken,
+                errorWidget: (context, url, error) {
+                  return Image.asset(
+                    'assets/images/welcome_background.jpg',
+                    fit: BoxFit.cover,
+                  );
+                },
               ),
             ),
           ),
