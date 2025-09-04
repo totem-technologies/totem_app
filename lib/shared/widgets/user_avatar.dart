@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_boring_avatars/flutter_boring_avatars.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_app/api/models/profile_avatar_type_enum.dart';
 import 'package:totem_app/api/models/public_user_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 
@@ -24,7 +25,9 @@ class UserAvatar extends ConsumerWidget {
     double borderWidth = 1.5,
   }) {
     return UserAvatar(
-      image: author?.profileImage != null
+      image:
+          author?.profileImage != null &&
+              author?.profileAvatarType == ProfileAvatarTypeEnum.im
           ? CachedNetworkImageProvider(
               author!.profileImage!,
               cacheKey: author.slug,
@@ -50,7 +53,9 @@ class UserAvatar extends ConsumerWidget {
         final user = authState.user;
 
         return UserAvatar(
-          image: user?.profileImage != null
+          image:
+              user?.profileImage != null &&
+                  user?.profileAvatarType == ProfileAvatarTypeEnum.im
               ? CachedNetworkImageProvider(user!.profileImage!)
               : null,
           seed: user?.profileAvatarSeed,

@@ -1,12 +1,15 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:totem_app/api/models/profile_avatar_type_enum.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 import 'package:uuid/uuid.dart';
 
@@ -14,12 +17,9 @@ Future<void> showProfileImagePicker(BuildContext context) async {
   return showModalBottomSheet(
     context: context,
     showDragHandle: true,
-    enableDrag: false,
     builder: (context) => const ProfileImagePicker(),
   );
 }
-
-enum _PickerState { tieDye, image }
 
 class ProfileImagePicker extends ConsumerStatefulWidget {
   const ProfileImagePicker({super.key});
@@ -29,7 +29,8 @@ class ProfileImagePicker extends ConsumerStatefulWidget {
 }
 
 class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
-  _PickerState _state = _PickerState.tieDye;
+  ProfileAvatarTypeEnum? __state;
+  ProfileAvatarTypeEnum get _state => __state!;
   var _loading = false;
 
   final _imagePicker = ImagePicker();
@@ -57,10 +58,12 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
     final updated = await ref
         .read(authControllerProvider.notifier)
         .updateUserProfile(
-          profileImage: _state == _PickerState.image
+          profileAvatarType: _state,
+          profileImage:
+              _pickedImage != null && _state == ProfileAvatarTypeEnum.im
               ? File(_pickedImage!.path)
               : null,
-          avatarSeed: _state == _PickerState.tieDye ? _tieDyeSeed : null,
+          avatarSeed: _state == ProfileAvatarTypeEnum.td ? _tieDyeSeed : null,
         );
 
     if (!mounted) return;
@@ -85,6 +88,10 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final authState = ref.watch(authControllerProvider);
+    final user = authState.user;
+    __state ??= user?.profileAvatarType ?? ProfileAvatarTypeEnum.td;
+
     return PopScope(
       canPop: !_loading,
       child: SafeArea(
@@ -99,9 +106,10 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
               GestureDetector(
                 onTap: () {
                   switch (_state) {
-                    case _PickerState.tieDye:
+                    case ProfileAvatarTypeEnum.$unknown:
+                    case ProfileAvatarTypeEnum.td:
                       _randomizeTieDyeSeed();
-                    case _PickerState.image:
+                    case ProfileAvatarTypeEnum.im:
                       _pickImage();
                   }
                 },
@@ -121,13 +129,20 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                               key: ValueKey(_tieDyeSeed ?? 'default'),
                               radius: 50,
                               seed: _tieDyeSeed,
-                              image: () {
-                                if (_state == _PickerState.image) {
-                                  return asyncSnapshot.hasData
-                                      ? MemoryImage(asyncSnapshot.data!)
-                                      : null;
-                                }
-                              }(),
+                              image:
+                                  () {
+                                        if (_state ==
+                                            ProfileAvatarTypeEnum.im) {
+                                          return asyncSnapshot.hasData
+                                              ? MemoryImage(asyncSnapshot.data!)
+                                              : user?.profileImage != null
+                                              ? CachedNetworkImageProvider(
+                                                  user!.profileImage!,
+                                                )
+                                              : null;
+                                        }
+                                      }()
+                                      as ImageProvider?,
                             ),
                           );
                         },
@@ -149,8 +164,9 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                             child: Center(
                               key: ValueKey(_state),
                               child: TotemIcon(switch (_state) {
-                                _PickerState.tieDye => TotemIcons.edit,
-                                _PickerState.image => TotemIcons.upload,
+                                ProfileAvatarTypeEnum.im => TotemIcons.upload,
+                                ProfileAvatarTypeEnum.td ||
+                                _ => TotemIcons.edit,
                               }),
                             ),
                           ),
@@ -164,9 +180,9 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
               GestureDetector(
                 onTap: () {
                   setState(() {
-                    _state = _state == _PickerState.tieDye
-                        ? _PickerState.image
-                        : _PickerState.tieDye;
+                    __state = _state == ProfileAvatarTypeEnum.td
+                        ? ProfileAvatarTypeEnum.im
+                        : ProfileAvatarTypeEnum.td;
                   });
                 },
                 child: Center(
@@ -181,8 +197,10 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                     child: Stack(
                       children: [
                         AnimatedPositionedDirectional(
-                          start: _state == _PickerState.tieDye ? 0 : 260 / 2,
-                          end: _state == _PickerState.tieDye ? 260 / 2 : 0,
+                          start: _state == ProfileAvatarTypeEnum.td
+                              ? 0
+                              : 260 / 2,
+                          end: _state == ProfileAvatarTypeEnum.td ? 260 / 2 : 0,
                           top: 0,
                           bottom: 0,
                           curve: Curves.easeInOut,
@@ -203,7 +221,7 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                                   duration: const Duration(milliseconds: 200),
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: _state == _PickerState.tieDye
+                                    color: _state == ProfileAvatarTypeEnum.td
                                         ? theme.colorScheme.onPrimary
                                         : theme.colorScheme.onSurface,
                                   ),
@@ -216,7 +234,7 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                                   duration: const Duration(milliseconds: 200),
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: _state == _PickerState.image
+                                    color: _state == ProfileAvatarTypeEnum.im
                                         ? theme.colorScheme.onPrimary
                                         : theme.colorScheme.onSurface,
                                   ),
@@ -233,7 +251,15 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                 ),
               ),
 
-              ElevatedButton(onPressed: _onSave, child: const Text('Save')),
+              ElevatedButton(
+                onPressed: _loading ? () {} : _onSave,
+                child: _loading
+                    ? const LoadingIndicator(
+                        size: 24,
+                        color: Colors.white,
+                      )
+                    : const Text('Save'),
+              ),
             ],
           ),
         ),

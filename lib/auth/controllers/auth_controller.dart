@@ -195,6 +195,7 @@ class AuthController extends Notifier<AuthState> {
     assert(
       profileImage != null ||
           avatarSeed != null ||
+          profileAvatarType != null ||
           name != null ||
           email != null,
       'At least one profile field must be provided for update.',
@@ -227,17 +228,29 @@ class AuthController extends Notifier<AuthState> {
       }
     }
 
-    var shouldUpdateTextProfile = false;
+    var shouldUpdateMetaProfile = false;
     final newName = (name != null && state.user?.name != name) ? name : null;
     final newEmail = (email != null && state.user?.email != email)
         ? email
         : null;
+    final newProfileAvatarType =
+        (profileAvatarType != null &&
+            state.user?.profileAvatarType != profileAvatarType)
+        ? profileAvatarType
+        : null;
+    final newAvatarSeed =
+        (avatarSeed != null && state.user?.profileAvatarSeed != avatarSeed)
+        ? avatarSeed
+        : null;
 
-    if (newName != null || newEmail != null) {
-      shouldUpdateTextProfile = true;
+    if (newName != null ||
+        newEmail != null ||
+        newProfileAvatarType != null ||
+        newAvatarSeed != null) {
+      shouldUpdateMetaProfile = true;
     }
 
-    if (shouldUpdateTextProfile) {
+    if (shouldUpdateMetaProfile) {
       try {
         final backendUpdatedUser = await _authRepository
             .updateCurrentUserProfile(
@@ -267,7 +280,7 @@ class AuthController extends Notifier<AuthState> {
         ),
       );
     } else if (overallSuccess &&
-        (profileImage != null || shouldUpdateTextProfile)) {
+        (profileImage != null || shouldUpdateMetaProfile)) {
       // If an update was attempted and reported success by the repo,
       // but we don't have a new user object from the repo calls,
       // it might be safest to re-fetch the user to ensure UI consistency.
