@@ -71,8 +71,6 @@ class SpaceCard extends StatelessWidget {
                     if (!isContentVisible) {
                       return const SizedBox.shrink();
                     }
-                    final isJoinButtonVisible = constraints.maxWidth > 200;
-
                     final seatsLeft = RichText(
                       maxLines: 1,
                       overflow: TextOverflow.fade,
@@ -176,47 +174,11 @@ class SpaceCard extends StatelessWidget {
                           ),
                         ),
                         if (!compact)
-                          Container(
-                            margin: const EdgeInsetsDirectional.only(
+                          Padding(
+                            padding: const EdgeInsetsDirectional.only(
                               top: 4,
                             ),
-                            height: 30,
-                            child: Row(
-                              spacing: 8,
-                              children: [
-                                Expanded(child: seatsLeft),
-                                if (isJoinButtonVisible)
-                                  Center(
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {},
-                                      label: const Text('Join'),
-                                      icon: const TotemIcon(
-                                        TotemIcons.arrowForward,
-                                      ),
-                                      iconAlignment: IconAlignment.end,
-                                      style: const ButtonStyle(
-                                        minimumSize: WidgetStatePropertyAll(
-                                          Size(0, 28),
-                                        ),
-                                        padding: WidgetStatePropertyAll(
-                                          EdgeInsetsDirectional.only(
-                                            top: 8,
-                                            bottom: 8,
-                                            start: 24,
-                                            end: 15,
-                                          ),
-                                        ),
-                                        textStyle: WidgetStatePropertyAll(
-                                          TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
+                            child: seatsLeft,
                           ),
                       ],
                     );

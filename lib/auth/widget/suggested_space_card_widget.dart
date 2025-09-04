@@ -214,36 +214,15 @@ class SuggestedSpaceCard extends StatelessWidget {
                           ),
                         ),
                         const Spacer(),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.fromLTRB(8, 3, 9, 3),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF987AA5),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                'Join',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '$seatsLeft seats left',
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppTheme.white,
-                                fontWeight: FontWeight.w400,
-                                height: 1,
-                                fontSize: 8,
-                              ),
-                            ),
-                          ],
+                        Text(
+                          '$seatsLeft seats left',
+                          textAlign: TextAlign.end,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppTheme.white,
+                            fontWeight: FontWeight.w400,
+                            height: 1,
+                            fontSize: 8,
+                          ),
                         ),
                       ],
                     ),
