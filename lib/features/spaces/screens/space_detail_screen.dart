@@ -56,244 +56,262 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     return eventAsync.when(
       data: (event) {
         return Scaffold(
-          body: NestedScrollView(
-            headerSliverBuilder: (context, _) {
-              return [
-                SliverAppBar.large(
-                  centerTitle: true,
-                  expandedHeight: MediaQuery.sizeOf(context).height * 0.4,
-                  automaticallyImplyLeading: false,
-                  backgroundColor: theme.scaffoldBackgroundColor,
-                  flexibleSpace: FlexibleSpaceBar(
-                    background: SpaceDetailAppBar(event: event),
-                  ),
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: NestedScrollView(
+                  headerSliverBuilder: (context, _) {
+                    return [
+                      SliverAppBar.large(
+                        centerTitle: true,
+                        expandedHeight: MediaQuery.sizeOf(context).height * 0.4,
+                        automaticallyImplyLeading: false,
+                        backgroundColor: theme.scaffoldBackgroundColor,
+                        flexibleSpace: FlexibleSpaceBar(
+                          background: SpaceDetailAppBar(event: event),
+                        ),
 
-                  leading: Container(
-                    margin: const EdgeInsetsDirectional.only(start: 20),
-                    alignment: Alignment.center,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: theme.scaffoldBackgroundColor,
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: Icon(Icons.adaptive.arrow_back),
-                        iconSize: 24,
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () => popOrHome(context),
-                      ),
-                    ),
-                  ),
-                  actionsPadding: const EdgeInsetsDirectional.only(
-                    end: 20,
-                  ),
-                  actions: [
-                    Container(
-                      height: 36,
-                      alignment: Alignment.center,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: theme.scaffoldBackgroundColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Builder(
-                          builder: (context) {
-                            return IconButton(
-                              icon: Icon(Icons.adaptive.share),
+                        leading: Container(
+                          margin: const EdgeInsetsDirectional.only(start: 20),
+                          alignment: Alignment.center,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: theme.scaffoldBackgroundColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: Icon(Icons.adaptive.arrow_back),
+                              iconSize: 24,
                               visualDensity: VisualDensity.compact,
-                              onPressed: () {
-                                final box =
-                                    context.findRenderObject() as RenderBox?;
-                                SharePlus.instance.share(
-                                  ShareParams(
-                                    uri: Uri.parse(
-                                      'https://totem.org/spaces/event/${event.slug}?utm_source=app&utm_medium=share',
-                                    ),
-                                    sharePositionOrigin: box != null
-                                        ? box.localToGlobal(
-                                                Offset.zero,
-                                              ) &
-                                              box.size
-                                        : null,
-                                  ),
-                                );
-                              },
-                            );
-                          },
+                              onPressed: () => popOrHome(context),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
-                  title: Text(event.space.title),
-                ),
-              ];
-            },
-            body: RefreshIndicator.adaptive(
-              onRefresh: () =>
-                  ref.refresh(eventProvider(widget.eventSlug).future),
-              child: SafeArea(
-                top: false,
-                bottom: false,
-                child: ListView(
-                  padding:
-                      (isPhone
-                              ? const EdgeInsetsDirectional.only(
-                                  top: 16,
-                                  bottom: 124,
-                                )
-                              : const EdgeInsetsDirectional.only(
-                                  start: 80,
-                                  end: 80,
-                                  top: 16,
-                                  bottom: 16 + 64 * 2,
-                                ))
-                          .add(
-                            EdgeInsetsDirectional.only(
-                              bottom: MediaQuery.paddingOf(context).bottom,
-                            ),
-                          ),
-                  children: [
-                    Padding(
-                      padding: horizontalPadding,
-                      child: Column(
-                        spacing: 10,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          InfoText(
-                            const TotemIcon(TotemIcons.subscribers),
-                            Text('${event.subscribers} subscribers'),
-                            const Text(
-                              'Be part of a growing community. Join '
-                              'others who share your interests. Small '
-                              'but mighty — join today.',
-                            ),
-                          ),
-                          InfoText(
-                            const TotemIcon(TotemIcons.priceTag),
-                            Text(
-                              event.price == 0
-                                  ? 'No cost'
-                                  : currencyFormatter.format(event.price),
-                            ),
-                            Text(
-                              event.price == 0
-                                  ? 'Completely free — no hidden fees. '
-                                        'Enjoy all the benefits at no '
-                                        'charge. It costs nothing to get '
-                                        'started.'
-                                  : 'This price grants you full access '
-                                        'to the event. Secure your spot '
-                                        'and enjoy all the activities '
-                                        'and content available.',
-                            ),
-                          ),
-                          InfoText(
-                            const TotemIcon(TotemIcons.recurring),
-                            Text(event.recurring),
-                            const Text(
-                              'We meet according to the space’s unique '
-                              'schedule.',
+                        actionsPadding: const EdgeInsetsDirectional.only(
+                          end: 20,
+                        ),
+                        actions: [
+                          Container(
+                            height: 36,
+                            alignment: Alignment.center,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: theme.scaffoldBackgroundColor,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Builder(
+                                builder: (context) {
+                                  return IconButton(
+                                    icon: Icon(Icons.adaptive.share),
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: () {
+                                      final box =
+                                          context.findRenderObject()
+                                              as RenderBox?;
+                                      SharePlus.instance.share(
+                                        ShareParams(
+                                          uri: Uri.parse(
+                                            'https://totem.org/spaces/event/${event.slug}?utm_source=app&utm_medium=share',
+                                          ),
+                                          sharePositionOrigin: box != null
+                                              ? box.localToGlobal(
+                                                      Offset.zero,
+                                                    ) &
+                                                    box.size
+                                              : null,
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
                             ),
                           ),
                         ],
+                        title: Text(event.space.title),
                       ),
-                    ),
-
-                    Padding(
-                      padding: horizontalPadding.add(
-                        const EdgeInsetsDirectional.only(
-                          top: 22,
-                          bottom: 4,
-                        ),
-                      ),
-                      child: Text(
-                        'About',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-
-                    Html(
-                      data: event.space.shortDescription?.isNotEmpty ?? false
-                          ? event.space.shortDescription
-                          : event.description,
-                      style: {
-                        ...AppTheme.htmlStyle,
-                        'body': Style(
-                          margin: Margins.symmetric(
-                            horizontal: horizontalPadding.start,
-                          ),
-                        ),
-                      },
-                      onLinkTap: (url, _, _) {
-                        if (url != null) launchUrl(Uri.parse(url));
-                      },
-                      onAnchorTap: (url, _, _) {
-                        if (url != null) launchUrl(Uri.parse(url));
-                      },
-                    ),
-
-                    if (event.space.shortDescription != null &&
-                        event.space.shortDescription!.isNotEmpty)
-                      Container(
-                        height: 32,
-                        margin: const EdgeInsetsDirectional.only(top: 8),
-                        padding: horizontalPadding,
-                        child: OutlinedButton(
-                          onPressed: () => _showAboutSpaceSheet(context, event),
-                          style: const ButtonStyle(
-                            padding: WidgetStatePropertyAll(
-                              EdgeInsets.zero,
+                    ];
+                  },
+                  body: RefreshIndicator.adaptive(
+                    onRefresh: () =>
+                        ref.refresh(eventProvider(widget.eventSlug).future),
+                    child: SafeArea(
+                      top: false,
+                      bottom: false,
+                      child: ListView(
+                        padding:
+                            (isPhone
+                                    ? const EdgeInsetsDirectional.only(
+                                        top: 16,
+                                        bottom: 124,
+                                      )
+                                    : const EdgeInsetsDirectional.only(
+                                        start: 80,
+                                        end: 80,
+                                        top: 16,
+                                        bottom: 16 + 64 * 2,
+                                      ))
+                                .add(
+                                  EdgeInsetsDirectional.only(
+                                    bottom: MediaQuery.paddingOf(
+                                      context,
+                                    ).bottom,
+                                  ),
+                                ),
+                        children: [
+                          Padding(
+                            padding: horizontalPadding,
+                            child: Column(
+                              spacing: 10,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                InfoText(
+                                  const TotemIcon(TotemIcons.subscribers),
+                                  Text('${event.subscribers} subscribers'),
+                                  const Text(
+                                    'Be part of a growing community. Join '
+                                    'others who share your interests. Small '
+                                    'but mighty — join today.',
+                                  ),
+                                ),
+                                InfoText(
+                                  const TotemIcon(TotemIcons.priceTag),
+                                  Text(
+                                    event.price == 0
+                                        ? 'No cost'
+                                        : currencyFormatter.format(event.price),
+                                  ),
+                                  Text(
+                                    event.price == 0
+                                        ? 'Completely free — no hidden fees. '
+                                              'Enjoy all the benefits at no '
+                                              'charge. It costs nothing to get '
+                                              'started.'
+                                        : 'This price grants you full access '
+                                              'to the event. Secure your spot '
+                                              'and enjoy all the activities '
+                                              'and content available.',
+                                  ),
+                                ),
+                                InfoText(
+                                  const TotemIcon(TotemIcons.recurring),
+                                  Text(event.recurring),
+                                  const Text(
+                                    'We meet according to the space’s unique '
+                                    'schedule.',
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: const Text('Show more'),
-                        ),
-                      ),
-                    const SizedBox(height: 16),
 
-                    // TODO(bdlukaa): Sessions Calendar
-                    Container(
-                      padding: horizontalPadding,
-                      constraints: const BoxConstraints(maxHeight: 140),
-                      child: SpaceCard(
-                        onTap: () => _showSessionSheet(context, event),
-                        compact: true,
-                        space: SpaceDetailSchema(
-                          author: event.space.author,
-                          category: '',
-                          description: event.space.shortDescription ?? '',
-                          imageLink: event.space.image,
-                          nextEvent: NextEventSchema(
-                            slug: event.space.slug!,
-                            start: event.start.toIso8601String(),
-                            link: event.calLink,
-                            title: event.title,
-                            seatsLeft: event.seatsLeft,
+                          Padding(
+                            padding: horizontalPadding.add(
+                              const EdgeInsetsDirectional.only(
+                                top: 22,
+                                bottom: 4,
+                              ),
+                            ),
+                            child: Text(
+                              'About',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                          slug: event.slug,
-                          title: event.title,
-                        ),
+
+                          Html(
+                            data:
+                                event.space.shortDescription?.isNotEmpty ??
+                                    false
+                                ? event.space.shortDescription
+                                : event.description,
+                            style: {
+                              ...AppTheme.htmlStyle,
+                              'body': Style(
+                                margin: Margins.symmetric(
+                                  horizontal: horizontalPadding.start,
+                                ),
+                              ),
+                            },
+                            onLinkTap: (url, _, _) {
+                              if (url != null) launchUrl(Uri.parse(url));
+                            },
+                            onAnchorTap: (url, _, _) {
+                              if (url != null) launchUrl(Uri.parse(url));
+                            },
+                          ),
+
+                          if (event.space.shortDescription != null &&
+                              event.space.shortDescription!.isNotEmpty)
+                            Container(
+                              height: 32,
+                              margin: const EdgeInsetsDirectional.only(top: 8),
+                              padding: horizontalPadding,
+                              child: OutlinedButton(
+                                onPressed: () =>
+                                    _showAboutSpaceSheet(context, event),
+                                style: const ButtonStyle(
+                                  padding: WidgetStatePropertyAll(
+                                    EdgeInsets.zero,
+                                  ),
+                                ),
+                                child: const Text('Show more'),
+                              ),
+                            ),
+                          const SizedBox(height: 16),
+
+                          // TODO(bdlukaa): Sessions Calendar
+                          Container(
+                            padding: horizontalPadding,
+                            constraints: const BoxConstraints(maxHeight: 140),
+                            child: SpaceCard(
+                              onTap: () => _showSessionSheet(context, event),
+                              compact: true,
+                              space: SpaceDetailSchema(
+                                author: event.space.author,
+                                category: '',
+                                description: event.space.shortDescription ?? '',
+                                imageLink: event.space.image,
+                                nextEvent: NextEventSchema(
+                                  slug: event.space.slug!,
+                                  start: event.start.toIso8601String(),
+                                  link: event.calLink,
+                                  title: event.title,
+                                  seatsLeft: event.seatsLeft,
+                                ),
+                                slug: event.slug,
+                                title: event.title,
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          Padding(
+                            padding: horizontalPadding,
+                            child: Text(
+                              'Meet the keeper',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          MeetUserCard(user: event.space.author),
+                        ],
                       ),
                     ),
-
-                    const SizedBox(height: 16),
-
-                    Padding(
-                      padding: horizontalPadding,
-                      child: Text(
-                        'Meet the keeper',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    MeetUserCard(user: event.space.author),
-                  ],
+                  ),
                 ),
               ),
-            ),
+              PositionedDirectional(
+                start: 0,
+                end: 0,
+                bottom: 0,
+                child: SpaceJoinCard(event: event),
+              ),
+            ],
           ),
         );
       },

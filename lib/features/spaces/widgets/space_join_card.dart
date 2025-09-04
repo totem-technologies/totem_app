@@ -59,6 +59,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     return SafeArea(
       top: false,
       child: Card(
+        elevation: 10,
         child: Padding(
           padding: const EdgeInsetsDirectional.only(
             start: 20,
