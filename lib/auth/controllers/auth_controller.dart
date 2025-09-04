@@ -14,6 +14,7 @@ import 'package:totem_app/core/config/consts.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
+import 'package:totem_app/core/services/cache_service.dart';
 import 'package:totem_app/core/services/local_storage_service.dart';
 import 'package:totem_app/core/services/notifications_service.dart';
 import 'package:totem_app/core/services/secure_storage.dart';
@@ -453,6 +454,10 @@ class AuthController extends Notifier<AuthState> {
       // Note: We intentionally don't clear welcome onboarding flag here
       // so returning users don't see welcome screens again unless they
       // reinstall the app.
+    }
+
+    {
+      await ref.read(cacheServiceProvider).clearCache();
     }
   }
 

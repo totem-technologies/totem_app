@@ -19,6 +19,13 @@ class CacheService {
 
   final SecureStorage _secureStorage;
 
+  Future<void> clearCache() async {
+    await _secureStorage.delete(key: AppConsts.storageSpacesListKey);
+    await _secureStorage.delete(key: AppConsts.storageSpacesSummaryKey);
+    await _secureStorage.delete(key: AppConsts.storageSubscribedSpacesKey);
+    await _secureStorage.delete(key: AppConsts.storageSessionsHistoryKey);
+  }
+
   Future<void> write({
     required String key,
     required Map<String, dynamic> value,
