@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/models/summary_spaces_schema.dart';
@@ -21,9 +22,10 @@ Future<SummarySpacesSchema> spacesSummary(Ref ref) async {
     unawaited(cache.saveSpacesSummary(summary));
 
     return summary;
-  } on DioException catch (_) {
+  } on DioException catch (e) {
     final cachedSummary = await cache.getSpacesSummary();
     if (cachedSummary != null) {
+      debugPrint('Using cached spaces summary due to error: $e');
       return cachedSummary;
     } else {
       rethrow;

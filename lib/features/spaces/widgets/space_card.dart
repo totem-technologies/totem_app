@@ -133,14 +133,14 @@ class SpaceCard extends StatelessWidget {
                         ),
                         const Spacer(),
                         if (compact) seatsLeft,
-                        Text(
+                        AutoSizeText(
                           space.title,
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: compact ? 14 : 24,
                             fontWeight: FontWeight.bold,
                           ),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.fade,
                         ),
                         const SizedBox(height: 4),

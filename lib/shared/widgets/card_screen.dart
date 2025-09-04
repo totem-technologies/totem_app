@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class CardScreen extends StatefulWidget {
   /// Creates a card screen.
@@ -50,90 +51,93 @@ class _CardScreenState extends State<CardScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return PopScope<void>(
-      canPop: !widget.isLoading,
-      child: Scaffold(
-        appBar: widget.appBar,
-        extendBodyBehindAppBar: true,
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            final isPhone = constraints.maxWidth < 600;
-            final showBackground = widget.showBackground == null
-                ? !isPhone
-                : widget.showBackground!;
-            return Stack(
-              alignment: Alignment.center,
-              children: [
-                if (showBackground) ...[
-                  Positioned.fill(
-                    child: ShaderMask(
-                      shaderCallback: (rect) {
-                        const Color gradientColor = Color.fromRGBO(
-                          38,
-                          47,
-                          55,
-                          0.3,
-                        );
-                        return const LinearGradient(
-                          colors: [gradientColor, gradientColor],
-                          stops: [0.3, 1.0],
-                          transform: GradientRotation(168.14 * math.pi / 180),
-                        ).createShader(rect);
-                      },
-                      blendMode: BlendMode.darken,
-                      child: Image.asset(
-                        'assets/images/welcome_background.jpg',
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  if (constraints.maxHeight >= 900 &&
-                      widget.showLogoOnLargeScreens)
+    return AnnotatedRegion(
+      value: SystemUiOverlayStyle.dark,
+      child: PopScope<void>(
+        canPop: !widget.isLoading,
+        child: Scaffold(
+          appBar: widget.appBar,
+          extendBodyBehindAppBar: true,
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              final isPhone = constraints.maxWidth < 600;
+              final showBackground = widget.showBackground == null
+                  ? !isPhone
+                  : widget.showBackground!;
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (showBackground) ...[
                     Positioned.fill(
-                      top: 96,
-                      child: SafeArea(
-                        bottom: false,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.asset(
-                              'assets/logo/logo-black.png',
-                              fit: BoxFit.fitHeight,
-                              color: Colors.white,
-                              height: 70,
-                            ),
-                            const Text(
-                              'Turn Conversations Into Community',
-                              style: TextStyle(
-                                fontSize: 32,
-                                color: Colors.white,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+                      child: ShaderMask(
+                        shaderCallback: (rect) {
+                          const Color gradientColor = Color.fromRGBO(
+                            38,
+                            47,
+                            55,
+                            0.3,
+                          );
+                          return const LinearGradient(
+                            colors: [gradientColor, gradientColor],
+                            stops: [0.3, 1.0],
+                            transform: GradientRotation(168.14 * math.pi / 180),
+                          ).createShader(rect);
+                        },
+                        blendMode: BlendMode.darken,
+                        child: Image.asset(
+                          'assets/images/welcome_background.jpg',
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
-                ],
-                Positioned.fill(
-                  child: SafeArea(
-                    child: Center(
-                      child: SingleChildScrollView(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 500),
-                          child: Card(
-                            child: Form(
-                              key: widget.formKey,
-                              child: Padding(
-                                padding: const EdgeInsetsDirectional.all(24),
-                                child: DefaultTextStyle.merge(
-                                  textAlign: TextAlign.center,
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: widget.children,
+                    if (constraints.maxHeight >= 900 &&
+                        widget.showLogoOnLargeScreens)
+                      Positioned.fill(
+                        top: 96,
+                        child: SafeArea(
+                          bottom: false,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Image.asset(
+                                'assets/logo/logo-black.png',
+                                fit: BoxFit.fitHeight,
+                                color: Colors.white,
+                                height: 70,
+                              ),
+                              const Text(
+                                'Turn Conversations Into Community',
+                                style: TextStyle(
+                                  fontSize: 32,
+                                  color: Colors.white,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                  Positioned.fill(
+                    child: SafeArea(
+                      child: Center(
+                        child: SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 500),
+                            child: Card(
+                              child: Form(
+                                key: widget.formKey,
+                                child: Padding(
+                                  padding: const EdgeInsetsDirectional.all(24),
+                                  child: DefaultTextStyle.merge(
+                                    textAlign: TextAlign.center,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: widget.children,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -143,10 +147,10 @@ class _CardScreenState extends State<CardScreen>
                       ),
                     ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
