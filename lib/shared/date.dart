@@ -4,6 +4,15 @@ import 'package:intl/intl.dart';
 String formatEventDate(DateTime dateTime) {
   try {
     final date = dateTime.toLocal();
+
+    final isToday = DateUtils.isSameDay(DateTime.now(), date);
+    if (isToday) return 'Today';
+    final isTomorrow = DateUtils.isSameDay(
+      DateTime.now().add(const Duration(days: 1)),
+      date,
+    );
+    if (isTomorrow) return 'Tomorrow';
+
     final dateFormat = DateFormat.MMMMEEEEd();
     return dateFormat.format(date);
   } catch (error) {
@@ -21,21 +30,6 @@ String formatEventTime(DateTime dateTime, [String? userTimezone]) {
   }
 }
 
-String formatEventDateTime(DateTime dateTime, [String? userTimezone]) {
-  try {
-    final date = dateTime.toLocal();
-    final dateFormat = DateFormat.yMMMd(); // e.g., Apr 27, 2023
-    final timeFormat = DateFormat.jm(); // e.g., 2:30 PM
-    return '${dateFormat.format(date)}'
-            ' at '
-            '${timeFormat.format(date)} '
-            '${userTimezone ?? ''}'
-        .trim();
-  } catch (error) {
-    return 'Date TBA';
-  }
-}
-
 String buildTimeLabel(DateTime start) {
   try {
     final now = DateTime.now();
@@ -44,9 +38,13 @@ String buildTimeLabel(DateTime start) {
 
     final timeFormatter = DateFormat('hh:mm a');
 
-    if (isToday) {
-      return 'Today, ${timeFormatter.format(date)}';
-    }
+    if (isToday) return 'Today, ${timeFormatter.format(date)}';
+
+    final isTomorrow = DateUtils.isSameDay(
+      now.add(const Duration(days: 1)),
+      date,
+    );
+    if (isTomorrow) return 'Tomorrow, ${timeFormatter.format(date)}';
 
     final dateFormatter = DateFormat('E MMM dd');
     return '${dateFormatter.format(date)}, ${timeFormatter.format(date)}';

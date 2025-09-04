@@ -111,7 +111,7 @@ class SpaceCard extends StatelessWidget {
                               ),
                               Flexible(
                                 child: Text(
-                                  formatEventDateTime(
+                                  buildTimeLabel(
                                     DateTime.parse(space.nextEvent.start),
                                   ),
                                   style: const TextStyle(
@@ -284,7 +284,7 @@ class SmallSpaceCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                formatEventDateTime(
+                buildTimeLabel(
                   DateTime.parse(space.nextEvent.start),
                 ),
                 style: const TextStyle(

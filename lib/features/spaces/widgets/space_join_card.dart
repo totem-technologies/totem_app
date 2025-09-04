@@ -90,11 +90,6 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                             return 'This session is full';
                           case SpaceJoinCardState.joined:
                           case SpaceJoinCardState.notJoined:
-                            final isToday = DateUtils.isSameDay(
-                              DateTime.now(),
-                              widget.event.start,
-                            );
-                            if (isToday) return 'Today';
                             return formatEventDate(widget.event.start);
                         }
                       }(),
