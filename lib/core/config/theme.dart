@@ -374,7 +374,7 @@ class AppTheme {
 
     // --- SnackBar Theme ---
     snackBarTheme: const SnackBarThemeData(
-      backgroundColor: cream,
+      backgroundColor: white,
       contentTextStyle: TextStyle(
         fontFamily: fontFamilySans,
         fontSize: 16,

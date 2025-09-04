@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/screens/profile_image_picker.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -83,6 +84,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           child: Center(
             child: Stack(
               alignment: AlignmentDirectional.center,
+              clipBehavior: Clip.none,
               children: [
                 UserAvatar.currentUser(radius: 50),
                 PositionedDirectional(
@@ -92,7 +94,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                     height: 40,
                     width: 40,
                     decoration: const BoxDecoration(
-                      color: Colors.white,
+                      color: AppTheme.cream,
                       shape: BoxShape.circle,
                     ),
                     alignment: AlignmentDirectional.center,
