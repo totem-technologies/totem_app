@@ -1,3 +1,4 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,8 +23,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     // Get user info from auth state
-    final auth = ref.watch(authControllerProvider.notifier);
-    final user = auth.user;
+    final authState = ref.watch(authControllerProvider);
+    final user = authState.user;
 
     return Scaffold(
       appBar: AppBar(title: const TotemLogo(size: 24)),
@@ -46,9 +47,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         spacing: 10,
                         children: [
                           UserAvatar.currentUser(),
-                          Text(
+                          AutoSizeText(
                             user?.name ?? 'Welcome',
                             style: theme.textTheme.headlineMedium,
+                            maxLines: 1,
                           ),
                         ],
                       ),
