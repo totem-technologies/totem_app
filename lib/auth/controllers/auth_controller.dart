@@ -98,10 +98,10 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> verifyPin(String pin) async {
     final currentEmail = state.email;
-    if (state.status != AuthStatus.awaitingVerification ||
-        currentEmail == null) {
+    if (currentEmail == null) {
       // This should ideally not happen if UI flow is correct
-      _setState(AuthState.error('Invalid state for PIN verification.'));
+      // _setState(AuthState.error('Invalid state for PIN verification.'));
+      _setState(AuthState.error('Something went wrong.'));
       return;
     }
 
@@ -315,6 +315,7 @@ class AuthController extends Notifier<AuthState> {
       }
       _setState(AuthState.unauthenticated());
       _analyticsService.logLogout();
+      await _clearTokens();
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -322,7 +323,6 @@ class AuthController extends Notifier<AuthState> {
         reason: 'Logout failed',
       );
       _setState(AuthState.unauthenticated());
-    } finally {
       await _clearTokens();
     }
   }
@@ -440,14 +440,6 @@ class AuthController extends Notifier<AuthState> {
   /// Deletes the user tokens.
   Future<void> _clearTokens() async {
     {
-      final token = await ref.read(notificationsProvider).fcmToken;
-      if (token != null) {
-        await _authRepository.unregisterFcmToken(token);
-        await FirebaseMessaging.instance.deleteToken();
-      }
-    }
-
-    {
       await _secureStorage.delete(key: AppConsts.accessToken);
       await _secureStorage.delete(key: AppConsts.refreshToken);
       await ref.read(localStorageServiceProvider).clearUser();
@@ -458,6 +450,16 @@ class AuthController extends Notifier<AuthState> {
 
     {
       await ref.read(cacheServiceProvider).clearCache();
+    }
+
+    try {
+      final token = await ref.read(notificationsProvider).fcmToken;
+      if (token != null) {
+        await _authRepository.unregisterFcmToken(token);
+        await FirebaseMessaging.instance.deleteToken();
+      }
+    } catch (_) {
+      // Ignore errors during FCM token deletion/unregistration
     }
   }
 
