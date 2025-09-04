@@ -151,6 +151,7 @@ Exception _handleDioError(DioException error) {
       return AppNetworkException(
         'Unknown error occurred: ${error.message}',
         details: error,
+        code: error.type.name,
       );
 
     case DioExceptionType.badCertificate:

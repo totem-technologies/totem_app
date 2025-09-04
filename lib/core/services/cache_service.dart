@@ -34,6 +34,7 @@ class CacheService {
     final data = {
       'value': value,
       'expirationDate': expirationDate?.toIso8601String(),
+      'timestamp': DateTime.now().toIso8601String(),
     };
     await _secureStorage.write(key: key, value: jsonEncode(data));
   }
@@ -43,10 +44,16 @@ class CacheService {
     final dataJson = await _secureStorage.read(key: key);
     if (dataJson != null) {
       final data = jsonDecode(dataJson) as Map<String, dynamic>;
+      final timeStamp = data['timestamp'] as String?;
+      if (timeStamp == null) {
+        await _secureStorage.delete(key: key);
+        return null;
+      }
+
       final expiration = data['expirationDate'] != null
           ? DateTime.parse(data['expirationDate'] as String)
-          : null;
-      if (expiration == null || DateTime.now().isBefore(expiration)) {
+          : DateTime.parse(timeStamp).add(const Duration(hours: 24));
+      if (DateTime.now().isBefore(expiration)) {
         return data['value'] as Map<String, dynamic>?;
       } else {
         await _secureStorage.delete(key: key);

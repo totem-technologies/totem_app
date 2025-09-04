@@ -50,12 +50,13 @@ Future<List<SpaceSchema>> listSubscribedSpaces(Ref ref) async {
     unawaited(cache.saveSubscribedSpaces(spaces));
     return spaces;
   } on DioException catch (_) {
-    final cachedSpaces = await cache.getSubscribedSpaces();
-    if (cachedSpaces != null) {
-      return cachedSpaces;
-    } else {
-      rethrow;
-    }
+    // final cachedSpaces = await cache.getSubscribedSpaces();
+    // if (cachedSpaces != null) {
+    //   return cachedSpaces;
+    // } else {
+    //   rethrow;
+    // }
+    rethrow;
   }
 }
 
