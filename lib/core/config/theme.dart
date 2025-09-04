@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 
@@ -375,26 +373,26 @@ class AppTheme {
     ),
 
     // --- SnackBar Theme ---
-    snackBarTheme: SnackBarThemeData(
+    snackBarTheme: const SnackBarThemeData(
       backgroundColor: cream,
-      contentTextStyle: const TextStyle(
+      contentTextStyle: TextStyle(
         fontFamily: fontFamilySans,
         fontSize: 16,
         fontWeight: FontWeight.w500,
-        color: white,
+        color: black,
       ),
       actionTextColor: mauve,
       behavior: SnackBarBehavior.floating,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(20)),
       ),
-      insetPadding: const EdgeInsets.all(20),
-      width:
-          ui.PlatformDispatcher.instance.views.first.physicalSize.width.clamp(
-            100,
-            600,
-          ) -
-          40,
+      insetPadding: EdgeInsets.all(20),
+      // width:
+      //     ui.PlatformDispatcher.instance.views.first.physicalSize.width.clamp(
+      //       100,
+      //       600,
+      //     ) -
+      //     40,
     ),
 
     /// --- Bottom Navigation Bar Theme ---
