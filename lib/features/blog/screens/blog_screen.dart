@@ -109,7 +109,10 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                       Html(
                         data: blog.contentHtml,
                         onLinkTap: (url, _, _) {
-                          launchUrl(Uri.parse(url ?? ''));
+                          if (url != null) launchUrl(Uri.parse(url));
+                        },
+                        onAnchorTap: (url, _, _) {
+                          if (url != null) launchUrl(Uri.parse(url));
                         },
                         style: AppTheme.htmlStyle,
                       ),

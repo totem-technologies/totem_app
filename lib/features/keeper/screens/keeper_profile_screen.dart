@@ -11,6 +11,7 @@ import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/link.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class KeeperProfileScreen extends ConsumerWidget {
   const KeeperProfileScreen({required this.slug, super.key});
@@ -175,6 +176,12 @@ class KeeperProfileScreen extends ConsumerWidget {
                   child: Html(
                     data: keeper.bioHtml ?? keeper.bio,
                     style: AppTheme.compactHtmlStyle,
+                    onLinkTap: (url, _, _) {
+                      if (url != null) launchUrl(Uri.parse(url));
+                    },
+                    onAnchorTap: (url, _, _) {
+                      if (url != null) launchUrl(Uri.parse(url));
+                    },
                   ),
                 ),
                 const SizedBox(height: 20),

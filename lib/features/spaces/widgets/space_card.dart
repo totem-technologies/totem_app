@@ -1,3 +1,4 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -306,13 +307,14 @@ class SmallSpaceCard extends StatelessWidget {
                 fontSize: 14,
               ),
             ),
-            Text(
+            AutoSizeText(
               space.title,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
+              maxLines: 2,
             ),
           ],
         ),

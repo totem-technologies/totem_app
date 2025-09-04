@@ -19,6 +19,7 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class EventDetailScreen extends ConsumerStatefulWidget {
   const EventDetailScreen({required this.eventSlug, super.key});
@@ -225,6 +226,12 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           ),
                         ),
                       },
+                      onLinkTap: (url, _, _) {
+                        if (url != null) launchUrl(Uri.parse(url));
+                      },
+                      onAnchorTap: (url, _, _) {
+                        if (url != null) launchUrl(Uri.parse(url));
+                      },
                     ),
 
                     if (event.space.shortDescription != null &&
@@ -377,6 +384,12 @@ class AboutSpaceSheet extends StatelessWidget {
               Html(
                 data: event.space.shortDescription,
                 shrinkWrap: true,
+                onLinkTap: (url, _, _) {
+                  if (url != null) launchUrl(Uri.parse(url));
+                },
+                onAnchorTap: (url, _, _) {
+                  if (url != null) launchUrl(Uri.parse(url));
+                },
               ),
             ],
           ),
@@ -463,6 +476,12 @@ class SessionSheet extends StatelessWidget {
                 data: event.description,
                 shrinkWrap: true,
                 style: AppTheme.compactHtmlStyle,
+                onLinkTap: (url, _, _) {
+                  if (url != null) launchUrl(Uri.parse(url));
+                },
+                onAnchorTap: (url, _, _) {
+                  if (url != null) launchUrl(Uri.parse(url));
+                },
               ),
             ],
           ),
