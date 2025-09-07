@@ -267,7 +267,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           // TODO(bdlukaa): Sessions Calendar
                           Container(
                             padding: horizontalPadding,
-                            constraints: const BoxConstraints(maxHeight: 140),
+                            constraints: const BoxConstraints(maxHeight: 160),
                             child: SpaceCard(
                               onTap: () => _showSessionSheet(context, event),
                               compact: true,
