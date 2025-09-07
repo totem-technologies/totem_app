@@ -2,6 +2,8 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/next_event_schema.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
@@ -18,6 +20,26 @@ class SpaceCard extends StatelessWidget {
     this.compact = false,
     this.onTap,
   });
+
+  factory SpaceCard.fromEventDetailSchema(EventDetailSchema event) {
+    return SpaceCard(
+      space: SpaceDetailSchema(
+        slug: event.space.slug!,
+        title: event.space.title,
+        imageLink: event.space.image,
+        description: event.space.subtitle,
+        author: event.space.author,
+        nextEvent: NextEventSchema(
+          start: event.start.toIso8601String(),
+          link: event.calLink,
+          seatsLeft: event.seatsLeft,
+          slug: event.slug,
+          title: event.title,
+        ),
+        category: '',
+      ),
+    );
+  }
 
   final SpaceDetailSchema space;
   final bool compact;
