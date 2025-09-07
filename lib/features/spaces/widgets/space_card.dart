@@ -262,7 +262,7 @@ class SmallSpaceCard extends StatelessWidget {
               child: ShaderMask(
                 shaderCallback: (rect) {
                   final cardHeight = rect.height;
-                  const gradientHeight = 90.0;
+                  const gradientHeight = 100.0;
                   final startStop = ((cardHeight - gradientHeight) / cardHeight)
                       .clamp(
                         0.0,

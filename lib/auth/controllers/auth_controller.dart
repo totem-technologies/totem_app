@@ -305,17 +305,17 @@ class AuthController extends Notifier<AuthState> {
   Future<void> logout() async {
     if (!isAuthenticated) return;
 
-    _setState(AuthState.loading());
+    // _setState(AuthState.loading());
     try {
       final refreshToken = await _secureStorage.read(
         key: AppConsts.refreshToken,
       );
+      await _clearTokens();
       if (refreshToken != null) {
         await _authRepository.logout(refreshToken);
       }
-      _setState(AuthState.unauthenticated());
       _analyticsService.logLogout();
-      await _clearTokens();
+      _setState(AuthState.unauthenticated());
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -439,13 +439,17 @@ class AuthController extends Notifier<AuthState> {
 
   /// Deletes the user tokens.
   Future<void> _clearTokens() async {
-    {
+    try {
+      logger.i('🔑 Clearing stored tokens and user data');
       await _secureStorage.delete(key: AppConsts.accessToken);
       await _secureStorage.delete(key: AppConsts.refreshToken);
       await ref.read(localStorageServiceProvider).clearUser();
       // Note: We intentionally don't clear welcome onboarding flag here
       // so returning users don't see welcome screens again unless they
       // reinstall the app.
+    } catch (e) {
+      logger.e('🔑 Error clearing tokens: $e');
+      await _secureStorage.deleteAll();
     }
 
     {
