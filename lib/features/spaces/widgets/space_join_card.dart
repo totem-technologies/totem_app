@@ -417,7 +417,9 @@ class _AttendingDialogState extends State<AttendingDialog> {
                           SharePlus.instance.share(
                             ShareParams(
                               uri: Uri.parse(
-                                'https://totem.org/spaces/event/${widget.event.slug}?utm_source=app&utm_medium=share',
+                                '${AppConfig.mobileApiUrl}'
+                                'spaces/event/${widget.event.slug}'
+                                '?utm_source=app&utm_medium=share',
                               ),
                               sharePositionOrigin: box != null
                                   ? box.localToGlobal(
