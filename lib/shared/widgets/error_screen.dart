@@ -286,7 +286,7 @@ class ErrorPopup extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
           color: const Color(0xFFF5F1EC),
           borderRadius: BorderRadius.circular(16),
@@ -294,6 +294,7 @@ class ErrorPopup extends StatelessWidget {
           boxShadow: kElevationToShadow[2],
         ),
         child: Row(
+          spacing: 12,
           children: [
             Container(
               padding: const EdgeInsets.all(8),
@@ -307,8 +308,6 @@ class ErrorPopup extends StatelessWidget {
                 size: 24,
               ),
             ),
-            const SizedBox(width: 16),
-
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -322,7 +321,6 @@ class ErrorPopup extends StatelessWidget {
                       color: Color(0xFF333333),
                     ),
                   ),
-                  const SizedBox(height: 4),
                   Text(
                     message,
                     style: const TextStyle(

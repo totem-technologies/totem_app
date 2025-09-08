@@ -15,6 +15,7 @@ import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
+import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:url_launcher/link.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -67,121 +68,156 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
             top: 10,
             bottom: 10,
           ),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      () {
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          () {
+                            switch (state) {
+                              case SpaceJoinCardState.ended:
+                                return 'Session Ended';
+                              case SpaceJoinCardState.cancelled:
+                                return 'This session has been cancelled';
+                              case SpaceJoinCardState.joinable:
+                                return 'Session Started';
+                              case SpaceJoinCardState.closedToNewParticipants:
+                                return 'This session is closed for new '
+                                    'participants';
+                              case SpaceJoinCardState.full:
+                                return 'This session is full';
+                              case SpaceJoinCardState.joined:
+                              case SpaceJoinCardState.notJoined:
+                                return formatEventDate(widget.event.start);
+                            }
+                          }(),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          () {
+                            switch (state) {
+                              case SpaceJoinCardState.joined:
+                              case SpaceJoinCardState.notJoined:
+                                return formatEventTime(
+                                  widget.event.start,
+                                  // widget.event.userTimezone,
+                                );
+                              case SpaceJoinCardState.joinable:
+                                return timeago.format(widget.event.start);
+                              case SpaceJoinCardState.ended:
+                              case SpaceJoinCardState.cancelled:
+                              case SpaceJoinCardState.closedToNewParticipants:
+                              case SpaceJoinCardState.full:
+                                return 'Explore upcoming sessions';
+                            }
+                          }(),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 115),
+                    child: Link(
+                      uri: hasEnded
+                          ? null
+                          : hasStarted
+                          ? Uri.parse(getFullUrl(widget.event.calLink))
+                          : null,
+                      builder: (context, followLink) {
+                        void onPressed() {
+                          switch (state) {
+                            case SpaceJoinCardState.ended:
+                            case SpaceJoinCardState.cancelled:
+                            case SpaceJoinCardState.closedToNewParticipants:
+                              toHome(HomeRoutes.spaces);
+                            case SpaceJoinCardState.joinable:
+                              followLink?.call();
+                            case SpaceJoinCardState.joined:
+                              addToCalendar();
+                            case SpaceJoinCardState.full:
+                              toHome(HomeRoutes.spaces);
+                            case SpaceJoinCardState.notJoined:
+                              attend(ref);
+                          }
+                        }
+
+                        final content = Text(
+                          switch (state) {
+                            SpaceJoinCardState.ended ||
+                            SpaceJoinCardState.cancelled ||
+                            SpaceJoinCardState.closedToNewParticipants =>
+                              'Explore',
+                            SpaceJoinCardState.joinable => 'Join Now',
+                            SpaceJoinCardState.joined => 'Add to calendar',
+                            SpaceJoinCardState.full => 'Explore',
+                            SpaceJoinCardState.notJoined => 'Attend',
+                          },
+                          style: const TextStyle(fontWeight: FontWeight.w400),
+                        );
+
                         switch (state) {
                           case SpaceJoinCardState.ended:
-                            return 'Session Ended';
                           case SpaceJoinCardState.cancelled:
-                            return 'This session has been cancelled';
-                          case SpaceJoinCardState.joinable:
-                            return 'Session Started';
                           case SpaceJoinCardState.closedToNewParticipants:
-                            return 'This session is closed for new '
-                                'participants';
+                          case SpaceJoinCardState.joined:
                           case SpaceJoinCardState.full:
-                            return 'This session is full';
-                          case SpaceJoinCardState.joined:
-                          case SpaceJoinCardState.notJoined:
-                            return formatEventDate(widget.event.start);
-                        }
-                      }(),
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      () {
-                        switch (state) {
-                          case SpaceJoinCardState.joined:
-                          case SpaceJoinCardState.notJoined:
-                            return formatEventTime(
-                              widget.event.start,
-                              // widget.event.userTimezone,
+                            return OutlinedButton(
+                              onPressed: onPressed,
+                              child: _loading
+                                  ? const LoadingIndicator(size: 24)
+                                  : content,
                             );
                           case SpaceJoinCardState.joinable:
-                            return timeago.format(widget.event.start);
-                          case SpaceJoinCardState.ended:
-                          case SpaceJoinCardState.cancelled:
-                          case SpaceJoinCardState.closedToNewParticipants:
-                          case SpaceJoinCardState.full:
-                            return 'Explore upcoming sessions';
+                          case SpaceJoinCardState.notJoined:
+                            return ElevatedButton(
+                              onPressed: onPressed,
+                              child: _loading
+                                  ? const LoadingIndicator(
+                                      color: Colors.white,
+                                      size: 24,
+                                    )
+                                  : content,
+                            );
                         }
-                      }(),
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              if (state == SpaceJoinCardState.joined) ...[
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(
+                    start: 12,
+                    end: 12,
+                    top: 8,
+                  ),
+                  child: GestureDetector(
+                    onTap: giveUpSpot,
+                    child: Text(
+                      'Give up spot',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w400,
+                        decoration: TextDecoration.underline,
+                        color: theme.hintColor,
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                  ],
+                  ),
                 ),
-              ),
-              ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 115),
-                child: Link(
-                  uri: hasEnded
-                      ? null
-                      : hasStarted
-                      ? Uri.parse(getFullUrl(widget.event.calLink))
-                      : null,
-                  builder: (context, followLink) {
-                    void onPressed() {
-                      switch (state) {
-                        case SpaceJoinCardState.ended:
-                        case SpaceJoinCardState.cancelled:
-                        case SpaceJoinCardState.closedToNewParticipants:
-                          toHome(HomeRoutes.spaces);
-                        case SpaceJoinCardState.joinable:
-                          followLink?.call();
-                        case SpaceJoinCardState.joined:
-                          addToCalendar();
-                        case SpaceJoinCardState.full:
-                          toHome(HomeRoutes.spaces);
-                        case SpaceJoinCardState.notJoined:
-                          attend(ref);
-                      }
-                    }
-
-                    final content = Text(
-                      switch (state) {
-                        SpaceJoinCardState.ended ||
-                        SpaceJoinCardState.cancelled ||
-                        SpaceJoinCardState.closedToNewParticipants => 'Explore',
-                        SpaceJoinCardState.joinable => 'Join Now',
-                        SpaceJoinCardState.joined => 'Add to calendar',
-                        SpaceJoinCardState.full => 'Explore',
-                        SpaceJoinCardState.notJoined => 'Attend',
-                      },
-                      style: const TextStyle(fontWeight: FontWeight.w400),
-                    );
-
-                    switch (state) {
-                      case SpaceJoinCardState.ended:
-                      case SpaceJoinCardState.cancelled:
-                      case SpaceJoinCardState.closedToNewParticipants:
-                      case SpaceJoinCardState.joined:
-                      case SpaceJoinCardState.full:
-                        return OutlinedButton(
-                          onPressed: onPressed,
-                          child: content,
-                        );
-                      case SpaceJoinCardState.joinable:
-                      case SpaceJoinCardState.notJoined:
-                        return ElevatedButton(
-                          onPressed: onPressed,
-                          child: content,
-                        );
-                    }
-                  },
-                ),
-              ),
+              ],
             ],
           ),
         ),
@@ -221,14 +257,15 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   Future<void> attend(WidgetRef ref) async {
     if (_attending || _loading) return;
 
-    _loading = true;
+    setState(() => _loading = true);
 
     final mobileApiService = ref.read(mobileApiServiceProvider);
     final response = await mobileApiService.spaces
         .totemCirclesMobileApiRsvpConfirm(
           eventSlug: widget.event.slug,
         );
-    _loading = false;
+
+    setState(() => _loading = false);
 
     if (response) {
       setState(() => _attending = true);
@@ -363,6 +400,41 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
         );
 
     return url.toString();
+  }
+
+  Future<void> giveUpSpot() async {
+    setState(() {
+      _loading = true;
+    });
+
+    final mobileApiService = ref.read(mobileApiServiceProvider);
+    final response = await mobileApiService.spaces
+        .totemCirclesMobileApiRsvpCancel(
+          eventSlug: widget.event.slug,
+        );
+
+    setState(() => _loading = false);
+
+    if (response) {
+      if (mounted) {
+        setState(() => _attending = false);
+        showErrorPopup(
+          context,
+          icon: TotemIcons.seats,
+          title: 'You gave up your spot',
+          message: 'You can always attend again if a spot opens up.',
+        );
+      }
+    } else {
+      if (mounted) {
+        showErrorPopup(
+          context,
+          icon: TotemIcons.seats,
+          title: 'Failed to give up your spot',
+          message: 'Please try again later',
+        );
+      }
+    }
   }
 }
 
