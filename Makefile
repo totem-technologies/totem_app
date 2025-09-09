@@ -41,7 +41,5 @@ generate_api_models:
 
 githooks:
 	@echo "Setting up git hooks..."
-	chmod +x .githooks/pre-commit
-	chmod +x scripts/check-format.sh
 	git config core.hooksPath .githooks
 	@echo "Git hooks installed successfully!"
