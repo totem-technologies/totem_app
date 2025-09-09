@@ -6,4 +6,4 @@
 set -u
 
 # Run the format check script
-./scripts/check-format.sh
+dart scripts/check_format.dart
