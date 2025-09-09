@@ -1,19 +1,20 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 # Check dart formatting for staged files only
-set -o nounset
-set -o pipefail
+# Works on Windows (Git Bash), macOS, and Linux
+
+set -u
 
 echo "Checking dart formatting..."
-
 # Check if dart is available
-if ! command -v dart &> /dev/null; then
+if ! command -v dart >/dev/null 2>&1; then
     echo "Warning: dart command not found. Skipping format check."
     exit 0
 fi
 
 # Get list of staged .dart files
-STAGED_DART_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep '\.dart$' || true)
+# Use --diff-filter to include Added, Copied, Modified, and Renamed files
+STAGED_DART_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep '\.dart$' 2>/dev/null || true)
 
 # If no dart files are staged, exit successfully
 if [ -z "${STAGED_DART_FILES}" ]; then
@@ -23,26 +24,31 @@ fi
 
 echo "Checking formatting for staged .dart files..."
 
-# Convert newline-separated list to space-separated for dart format
-FILES_TO_CHECK=$(echo "${STAGED_DART_FILES}" | tr '\n' ' ')
+# Count files for display
+FILE_COUNT=$(echo "${STAGED_DART_FILES}" | wc -l | tr -d ' ')
+echo "Found ${FILE_COUNT} staged .dart file(s)"
 
-# Run dart format check on staged files only
-dart format --set-exit-if-changed ${FILES_TO_CHECK} > /dev/null 2>&1
-FORMAT_EXIT_CODE=$?
+# Run dart format check on each file
+# We process files one by one for better portability
+FORMAT_NEEDED=0
+for file in ${STAGED_DART_FILES}; do
+    if [ -f "${file}" ]; then
+        dart format --set-exit-if-changed "${file}" >/dev/null 2>&1 || FORMAT_NEEDED=1
+    fi
+done
 
-if [ "${FORMAT_EXIT_CODE}" -eq 1 ]; then
+if [ "${FORMAT_NEEDED}" -eq 1 ]; then
     echo "❌ Code formatting issues detected in staged files!"
     echo ""
-    echo "Files with formatting issues:"
-    echo "${STAGED_DART_FILES}"
+    echo "Files to format:"
+    for file in ${STAGED_DART_FILES}; do
+        echo "  ${file}"
+    done
     echo ""
     echo "Please stage new changes and commit again."
     echo ""
     exit 1
-elif [ "${FORMAT_EXIT_CODE}" -eq 0 ]; then
-    echo "✅ Code formatting check passed"
-    exit 0
 else
-    echo "Warning: dart format returned unexpected exit code: ${FORMAT_EXIT_CODE}"
+    echo "✅ Code formatting check passed"
     exit 0
 fi
