@@ -39,7 +39,7 @@ jobs:
 
       - name: Check formatting
         run: |
-          dart format --set-exit-if-changed . || (echo "::error::Code needs formatting. Run 'dart format .' locally and commit the changes." && exit 1)
+          dart format --set-exit-if-changed .
 
       - name: Run analysis
         run: flutter analyze
