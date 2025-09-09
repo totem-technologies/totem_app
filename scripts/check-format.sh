@@ -4,6 +4,8 @@
 set -o nounset
 set -o pipefail
 
+echo "Checking dart formatting..."
+
 # Check if dart is available
 if ! command -v dart &> /dev/null; then
     echo "Warning: dart command not found. Skipping format check."
