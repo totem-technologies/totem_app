@@ -1,3 +1,8 @@
+// Script to check code formatting using dart format
+
+// OK to use print
+// ignore_for_file: avoid_print
+
 import 'dart:io';
 
 void main(List<String> args) async {
