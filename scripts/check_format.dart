@@ -29,7 +29,7 @@ void main(List<String> args) async {
     exit(0);
   }
 
-  // Run dart format check on the file
+  // Run dart format check on the files
   final formatResult = await Process.run(
     'dart',
     ['format', '--set-exit-if-changed', ...stagedFiles],
