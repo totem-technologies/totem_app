@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/core/config/app_config.dart';
+
+final livekitServiceProvider = Provider<LiveKitService>((ref) {
+  return LiveKitService();
+});
 
 class LiveKitService {
   LiveKitService();
