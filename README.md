@@ -47,6 +47,7 @@ Make sure you have [Flutter installed](https://docs.flutter.dev/get-started/inst
 git clone https://github.com/totem-technologies/totem_app.git
 cd totem_app
 flutter pub get
+make githooks  # Install git hooks for code formatting
 ```
 
 > \[!NOTE]

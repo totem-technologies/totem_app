@@ -38,3 +38,8 @@ format:
 
 generate_api_models:
 	dart run swagger_parser
+
+githooks:
+	@echo "Setting up git hooks..."
+	git config core.hooksPath .githooks
+	@echo "Git hooks installed successfully!"

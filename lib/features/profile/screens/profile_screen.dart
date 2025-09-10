@@ -123,7 +123,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Link(
               uri: Uri.parse(
                 '${AppConfig.mobileApiUrl}'
-                'users/feedback/'
+                'users/feedback/',
               ),
               target: LinkTarget.self,
               builder: (context, launch) => ProfileTile(
