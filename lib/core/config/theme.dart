@@ -436,6 +436,45 @@ class AppTheme {
     ),
   );
 
+  static ThemeData get darkTheme => ThemeData(
+    brightness: Brightness.dark,
+    primaryColor: mauve,
+    scaffoldBackgroundColor: black,
+    fontFamily: fontFamilySans,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: mauve,
+      brightness: Brightness.dark,
+      surface: const Color(0xFF262F37),
+      onSurface: cream,
+      onPrimary: slate,
+      onSecondary: slate,
+      onError: slate,
+    ),
+    textTheme: const TextTheme(
+      bodyMedium: TextStyle(
+        fontFamily: fontFamilySans,
+        fontSize: 14,
+        fontWeight: FontWeight.normal,
+        color: cream,
+      ),
+    ).apply(bodyColor: cream, displayColor: cream),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: slate,
+      foregroundColor: cream,
+      elevation: 2,
+      titleTextStyle: TextStyle(
+        fontFamily: fontFamilySans,
+        fontSize: 20,
+        fontWeight: FontWeight.w500,
+        color: cream,
+      ),
+      iconTheme: IconThemeData(color: cream),
+      actionsIconTheme: IconThemeData(color: cream),
+      surfaceTintColor: Colors.transparent,
+    ),
+    useMaterial3: true,
+  );
+
   static Map<String, Style> get htmlStyle => {
     'body': Style(
       margin: Margins.symmetric(horizontal: 16),
