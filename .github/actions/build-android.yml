@@ -1,0 +1,91 @@
+name: flutter-build-android
+description: Builds an apk or appbundle
+branding:
+  icon: box
+  color: green
+inputs:
+  working-directory:
+    description: The root directory of the flutter app within this repository
+    default: ./
+  build-cmd:
+    description: The full build command, can be used to add arguments
+    default: flutter build appbundle --release
+  keystore-base64:
+    description: "keystore with which to sign the app"
+    required: true
+  keystore-password:
+    description: "The password for the playstore key used to sign the app"
+    required: true
+  firebase-options-b64:
+    description: "Base64 encoded firebase_options.dart file"
+    required: true
+  google-services-json-b64:
+    description: "Base64 encoded google-services.json file"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check java found
+      id: check_java
+      shell: bash
+      run: |
+        if java --version; then
+            echo "installed=true" >> "$GITHUB_OUTPUT"
+        else
+            echo "installed=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Install java
+      if: steps.check_java.outputs.installed == 'false'
+      uses: actions/setup-java@v5
+      with:
+        distribution: "zulu"
+        java-version: "17.x"
+        cache: "gradle"
+
+    - name: Check flutter found
+      id: check_flutter
+      shell: bash
+      run: |
+        if flutter --version; then
+            echo "installed=true" >> "$GITHUB_OUTPUT"
+        else
+            echo "installed=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Setup flutter
+      if: steps.check_flutter.outputs.installed == 'false'
+      uses: subosito/flutter-action@v2
+      with:
+        channel: "stable"
+        cache: true
+
+    - run: flutter --version
+      shell: bash
+
+    - name: Decode google-services.json and firebase_options.dart
+      run: |
+        echo "$FIREBASE_OPTIONS_B64" | base64 --decode > lib/firebase_options.dart
+        echo "$GOOGLE_SERVICES_JSON_B64" | base64 --decoded > android/app/google-services.json
+      env:
+        FIREBASE_OPTIONS_B64: ${{ inputs.firebase-options-b64 }}
+        GOOGLE_SERVICES_JSON_B64: ${{ inputs.google-services-json-b64 }}
+
+    - name: Decode keystore and create jks and properties file for signing the app
+      shell: bash
+      run: |
+        echo "$KEYSTORE" | base64 --decode > app/keystore.jks
+        echo "storeFile=keystore.jks" >> key.properties
+        echo "keyAlias=upload" >> key.properties
+        echo "storePassword=$KEYSTORE_PASSWORD" >> key.properties
+        echo "keyPassword=$KEYSTORE_PASSWORD" >> key.properties
+      env:
+        KEYSTORE: ${{ inputs.keystore-base64 }}
+        KEYSTORE_PASSWORD: ${{ inputs.keystore-password }}
+      working-directory: ${{ inputs.working-directory }}/android
+
+    - name: Build
+      run: ${{ inputs.build-cmd }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}

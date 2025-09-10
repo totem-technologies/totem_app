@@ -33,29 +33,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: "stable"
-
-      - name: Flutter pub get
-        run: flutter pub get
-
       - name: Create .env file
         run: echo 'API_URL="https://www.totem.org"' > .env
 
-      - name: Decode firebase_options.dart
-        run: |
-          mkdir -p lib
-          echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
-
-      - name: Decode google-services.json
-        run: |
-          mkdir -p android/app
-          echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 -d > android/app/google-services.json
-
       - name: Build Android AppBundle (Release)
-        run: flutter build appbundle --release
+        uses: ./.github/actions/build-android
+        with:
+          keystore-base64: ${{ secrets.ANDROID_KEYSTORE_FILE_BASE64 }}
+          keystore-password: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
+          firebase-options-b64: ${{ secrets.FIREBASE_OPTIONS_B64 }}
+          google-services-json-b64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
 
       - name: Upload AAB to Draft Release
         uses: softprops/action-gh-release@v2
@@ -77,44 +64,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: "stable"
-
-      - name: Install Signing Certificate
-        if: ${{ env.IOS_CERTIFICATE_P12 != '' }}
-        uses: apple-actions/import-codesign-certs@v2
-        with:
-          p12-file-base64: ${{ env.IOS_CERTIFICATE_P12 }}
-          p12-password: ${{ env.IOS_CERTIFICATE_PASSWORD }}
-
-      - name: Install Provisioning Profile
-        if: ${{ env.IOS_PROVISIONING_PROFILE != '' }}
-        run: |
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "$IOS_PROVISIONING_PROFILE" | base64 -D > ~/Library/MobileDevice/Provisioning\ Profiles/app.mobileprovision
-
-      - name: Flutter pub get
-        run: flutter pub get
-
       - name: Create .env file
         run: echo 'API_URL="https://www.totem.org"' > .env
 
-      - name: Decode firebase_options.dart
-        run: |
-          mkdir -p lib
-          echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -D > lib/firebase_options.dart
-
-      - name: Decode GoogleService-Info.plist
-        run: |
-          mkdir -p ios/Runner
-          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}" | base64 -D > ios/Runner/GoogleService-Info.plist
-
-      - name: Build iOS IPA (Release)
-        run: |
-          # flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
-          flutter build ipa --release
+      - uses: ./.github/actions/build-ios
+        with:
+          # always use --export-options-plist=ios/GithubActionsExportOptions.plist
+          build-cmd: flutter build ipa --release --export-options-plist=ios/GithubActionsExportOptions.plist
+          certificate-base64: ${{ secrets.IOS_BUILD_CERTIFICATE_BASE64 }}
+          certificate-password: ${{ secrets.IOS_BUILD_CERTIFICATE_PASSWORD }}
+          provisioning-profile-base64: ${{ secrets.IOS_MOBILE_PROVISIONING_PROFILE_BASE64 }}
+          keychain-password: ${{ secrets.IOS_GITHUB_KEYCHAIN_PASSWORD }}
 
       - name: Upload IPA to Draft Release
         uses: softprops/action-gh-release@v2
