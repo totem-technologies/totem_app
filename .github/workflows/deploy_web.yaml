@@ -2,19 +2,24 @@ name: Deploy to GitHub Pages
 
 on:
   workflow_dispatch:
-  pull_request:
-  push:
+  workflow_run:
+    workflows: ["Flutter Analysis"]
     branches:
       - main
+    types:
+      - completed
 
 jobs:
   deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Create .env file
-        run: echo 'API_URL="https://www.totem.org"' > .env
+        run: echo 'API_URL="https://totem.kbl.io"' > .env
 
       - uses: subosito/flutter-action@v2
         with:
@@ -37,7 +42,7 @@ jobs:
         run: flutter build web
 
       - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build/web

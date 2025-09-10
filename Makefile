@@ -1,3 +1,5 @@
+.PHONY: *
+
 run:
 	@echo "Running app..."
 	flutter run
@@ -43,3 +45,8 @@ githooks:
 	@echo "Setting up git hooks..."
 	git config core.hooksPath .githooks
 	@echo "Git hooks installed successfully!"
+
+release:
+	@echo "Creating release..."
+	@dart run scripts/release.dart
+
