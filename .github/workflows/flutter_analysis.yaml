@@ -22,7 +22,7 @@ jobs:
         run: flutter --version
 
       - name: Create .env file
-        run: echo 'API_URL="https://www.totem.org"' > .env
+        run: echo 'API_URL="https://totem.kbl.io"' > .env
 
       # - name: Install Firebase CLI
       #   run: |

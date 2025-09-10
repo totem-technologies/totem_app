@@ -41,6 +41,11 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Decode firebase_options.dart
+        run: |
+          mkdir -p lib
+          echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
+
       - name: Build Android AppBundle (Release)
         run: flutter build appbundle --release
 
@@ -85,9 +90,15 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Decode firebase_options.dart
+        run: |
+          mkdir -p lib
+          echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
+
       - name: Build iOS IPA (Release)
         run: |
-          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+          # flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+          flutter build ipa --release
 
       - name: Upload IPA to Draft Release
         uses: softprops/action-gh-release@v2
