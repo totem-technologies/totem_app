@@ -44,7 +44,7 @@ void _runRelease() {
     ..writeln('[release] Current version: ${current.asString()}')
     ..write(
       '[release] Enter new version [default ${defaultSuggestion.asString()}]. '
-      'If you omit +build, it will default to +1: ',
+      'If you omit +build, it increments the build number: ',
     );
 
   final input = stdin.readLineSync()?.trim() ?? '';
