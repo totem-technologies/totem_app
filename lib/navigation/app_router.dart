@@ -9,6 +9,7 @@ import 'package:totem_app/auth/screens/login_screen.dart';
 import 'package:totem_app/auth/screens/onboarding_screen.dart';
 import 'package:totem_app/auth/screens/pin_entry_screen.dart';
 import 'package:totem_app/auth/screens/profile_setup_screen.dart';
+import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/blog/screens/blog_list_screen.dart';
 import 'package:totem_app/features/blog/screens/blog_screen.dart';
 import 'package:totem_app/features/home/screens/home_screen.dart';
@@ -61,7 +62,7 @@ class BottomNavScaffold extends StatelessWidget {
           Expanded(child: OfflineIndicatorPage(child: child)),
           TextButton(
             onPressed: () {
-              context.go(RouteNames.videoSessionWelcome);
+              context.push(RouteNames.videoSessionWelcome);
             },
             child: const Text('Join Session'),
           ),
@@ -362,7 +363,10 @@ GoRouter createRouter(WidgetRef ref) {
         path: RouteNames.videoSessionWelcome,
         name: RouteNames.videoSessionWelcome,
         builder: (context, state) {
-          return PreJoinScreen();
+          return Theme(
+            data: AppTheme.darkTheme,
+            child: const PreJoinScreen(),
+          );
         },
       ),
       // GoRoute(

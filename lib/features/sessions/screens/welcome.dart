@@ -1,14 +1,23 @@
+import 'package:auto_size_text/auto_size_text.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/core/config/app_config.dart';
+import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/shared/widgets/loading_indicator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class PreJoinScreen extends StatefulWidget {
+class PreJoinScreen extends ConsumerStatefulWidget {
   const PreJoinScreen({super.key});
 
   @override
-  State<PreJoinScreen> createState() => _PreJoinScreenState();
+  ConsumerState<PreJoinScreen> createState() => _PreJoinScreenState();
 }
 
-class _PreJoinScreenState extends State<PreJoinScreen> {
+class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   LocalVideoTrack? _videoTrack;
   var _isCameraOn = true;
   var _isMicOn = true;
@@ -39,7 +48,6 @@ class _PreJoinScreenState extends State<PreJoinScreen> {
   void _toggleCamera() {
     setState(() {
       _isCameraOn = !_isCameraOn;
-      _videoTrack?.mute(stopOnMute: !_isCameraOn);
     });
   }
 
@@ -64,45 +72,188 @@ class _PreJoinScreenState extends State<PreJoinScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Welcome to this space'),
-      ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text(
-            'It will start soon. '
-            'Verify your audio and video settings before joining.\n'
-            '\n'
-            'Please take a moment to go over the community guidelines.',
+    final theme = Theme.of(context);
+    final auth = ref.watch(authControllerProvider);
+
+    return AnnotatedRegion(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                theme.scaffoldBackgroundColor,
+                AppTheme.mauve,
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: const [0.5, 1],
+            ),
           ),
-          Expanded(
-            child: _videoTrack != null
-                ? VideoTrackRenderer(_videoTrack!)
-                : const Center(child: CircularProgressIndicator()),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          padding: const EdgeInsetsDirectional.all(20),
+          child: SafeArea(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                IconButton(
-                  icon: Icon(_isMicOn ? Icons.mic : Icons.mic_off),
-                  onPressed: _toggleMic,
+                Text(
+                  'Welcome to this Space',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 28,
+                  ),
                 ),
-                IconButton(
-                  icon: Icon(_isCameraOn ? Icons.videocam : Icons.videocam_off),
-                  onPressed: _toggleCamera,
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 20,
+                  ),
+                  child: RichText(
+                    textAlign: TextAlign.center,
+                    text: TextSpan(
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                      children: [
+                        const TextSpan(
+                          text:
+                              'It will start soon. '
+                              'Verify your audio and video settings before '
+                              'joining.\n'
+                              '\n'
+                              'Please take a moment to go over the',
+                        ),
+                        TextSpan(
+                          text: '\ncommunity guidelines',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              launchUrl(AppConfig.communityGuidelinesUrl);
+                            },
+                        ),
+                        const TextSpan(text: '.'),
+                      ],
+                    ),
+                  ),
                 ),
-                ElevatedButton(
-                  onPressed: _joinRoom,
-                  child: const Text('Join Room'),
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 40,
+                      vertical: 10,
+                    ),
+                    alignment: Alignment.center,
+                    // DecoratedBox is overlapping the border
+                    // ignore: use_decorated_box
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(30),
+                        child: AspectRatio(
+                          aspectRatio: 16 / 21,
+                          child: Builder(
+                            builder: (context) {
+                              if (_videoTrack == null) {
+                                return const LoadingIndicator();
+                              } else if (!_isCameraOn) {
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    image: auth.user?.profileImage != null
+                                        ? DecorationImage(
+                                            image: NetworkImage(
+                                              auth.user!.profileImage!,
+                                            ),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : null,
+                                  ),
+                                  alignment: AlignmentDirectional.bottomCenter,
+                                  padding: const EdgeInsets.all(20),
+                                  child: AutoSizeText(
+                                    auth.user?.name ?? 'You',
+                                    style: theme.textTheme.headlineMedium
+                                        ?.copyWith(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          shadows: kElevationToShadow[6],
+                                        ),
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                  ),
+                                );
+                              }
+                              return VideoTrackRenderer(
+                                _videoTrack!,
+                                fit: VideoViewFit.cover,
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0x40000000),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  margin: const EdgeInsets.only(bottom: 20),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: 20,
+                    children: [
+                      buildActionBarButton(
+                        Icon(_isMicOn ? Icons.mic : Icons.mic_off),
+                        _toggleMic,
+                      ),
+                      buildActionBarButton(
+                        Icon(
+                          _isCameraOn ? Icons.videocam : Icons.videocam_off,
+                        ),
+                        _toggleCamera,
+                      ),
+                      SizedBox(
+                        width: 96,
+                        child: buildActionBarButton(
+                          const Text('Join'),
+                          _joinRoom,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildActionBarButton(Widget child, VoidCallback onPressed) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+        decoration: BoxDecoration(
+          color: AppTheme.mauve,
+          // shape: BoxShape.circle,
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(color: Colors.white),
+        ),
+        child: Center(child: child),
       ),
     );
   }
