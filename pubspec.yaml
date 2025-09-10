@@ -57,7 +57,6 @@ dependencies:
   sliver_tools: ^0.2.12
   flutter_confetti: ^0.5.1
   meta:
-  cupertion_icons:
 
 dev_dependencies:
   flutter_test:
