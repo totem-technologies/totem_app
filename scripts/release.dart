@@ -1,9 +1,7 @@
-#!/usr/bin/env dart
-
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
 
 void main(List<String> args) {
   try {

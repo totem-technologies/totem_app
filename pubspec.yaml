@@ -35,7 +35,7 @@ dependencies:
   json_annotation: ^4.9.0
   cached_network_image: ^3.4.1
   connectivity_plus: ^6.1.4
-  uuid: ^4.5.1  
+  uuid: ^4.5.1
 
   # Messaging
   firebase_core: ^4.0.0
@@ -57,7 +57,7 @@ dependencies:
   timeago: ^3.7.1
   sliver_tools: ^0.2.12
   flutter_confetti: ^0.5.1
-  
+  meta:
 
 dev_dependencies:
   flutter_test:
@@ -142,7 +142,7 @@ flutter_native_splash:
   # To position the branding image at the bottom of the screen you can use bottom, bottomRight,
   # and bottomLeft. The default values is bottom if not specified or specified something else.
   #branding_mode: bottom
-  
+
   # Set the branding padding from the bottom of the screen.  The default value is 0
   # (Not supported on web yet)
   # branding_bottom_padding: 24
@@ -150,7 +150,7 @@ flutter_native_splash:
   # The color_dark, background_image_dark, image_dark, branding_dark are parameters that set the background
   # and image when the device is in dark mode. If they are not specified, the app will use the
   # parameters from above.  If there is no parameter above, the app will use the light mode values.
-  # If the image_dark parameter is specified, color_dark or background_image_dark must be specified.  
+  # If the image_dark parameter is specified, color_dark or background_image_dark must be specified.
   # color_dark and background_image_dark cannot both be set.
   #color_dark: "#262F37" # slate
   #background_image_dark: "assets/dark-background.png"
@@ -167,7 +167,7 @@ flutter_native_splash:
     # App icon with an icon background: This should be 960×960 pixels, and fit within a circle
     # 640 pixels in diameter.
     # App icon without an icon background: This should be 1152×1152 pixels, and fit within a circle
-    # 768 pixels in diameter.  To fit a 1152x1152 image within a circle with a 768 diameter, simply 
+    # 768 pixels in diameter.  To fit a 1152x1152 image within a circle with a 768 diameter, simply
     # ensure that the most important design elements of your image are placed within a circular area
     # with a 768 diameter at the center of the 1152x1152 canvas.
     image: "assets/logo/Icon_black_square.png"
