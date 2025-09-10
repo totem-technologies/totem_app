@@ -1,0 +1,56 @@
+name: Publish to Stores on Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish_android:
+    name: Publish Android to Play Internal
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Download AAB from Release
+        uses: robinraju/release-downloader@v1
+        with:
+          tag: ${{ github.event.release.tag_name }}
+          fileName: "*.aab"
+          out-file-path: artifacts
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to Google Play (Internal)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.ANDROID_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ secrets.ANDROID_PACKAGE_NAME }}
+          releaseFiles: artifacts/*.aab
+          track: qa
+          status: completed
+
+  publish_ios:
+    name: Publish iOS to TestFlight
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Download IPA from Release
+        uses: robinraju/release-downloader@v1
+        with:
+          tag: ${{ github.event.release.tag_name }}
+          fileName: "*.ipa"
+          out-file-path: artifacts
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v3
+        with:
+          app-path: artifacts/*.ipa
+          issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          api-key-id: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          api-private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
