@@ -49,3 +49,4 @@ githooks:
 release:
 	@echo "Creating release..."
 	@dart run scripts/release.dart
+
