@@ -65,6 +65,7 @@ runs:
       shell: bash
 
     - name: Decode google-services.json and firebase_options.dart
+      shell: bash
       run: |
         echo "$FIREBASE_OPTIONS_B64" | base64 --decode > lib/firebase_options.dart
         echo "$GOOGLE_SERVICES_JSON_B64" | base64 --decoded > android/app/google-services.json

@@ -26,6 +26,12 @@ inputs:
   keychain-password:
     description: "random string in secrets"
     required: true
+  firebase-options-b64:
+    description: "Base64 encoded firebase_options.dart file"
+    required: true
+  google-service-info-plist-b64:
+    description: "Base64 encoded GoogleService-Info.plist file"
+    required: true
 
 runs:
   using: "composite"
@@ -55,6 +61,15 @@ runs:
       if: ${{ inputs.flutterfire }} == 'true'
       run: dart pub global activate flutterfire_cli --overwrite
       shell: bash
+
+    - name: Decode GoogleService-Info.plist and firebase_options.dart
+      shell: bash
+      run: |
+        echo "$FIREBASE_OPTIONS_B64" | base64 --decode > lib/firebase_options.dart
+        echo "$GOOGLE_SERVICE_INFO_PLIST_B64" | base64 --decoded > ios/Runner/GoogleService-Info.plist
+      env:
+        FIREBASE_OPTIONS_B64: ${{ inputs.firebase-options-b64 }}
+        GOOGLE_SERVICE_INFO_PLIST_B64: ${{ inputs.google-service-info-plist-b64 }}
 
     # see https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development for more info
     - name: Install the Apple certificate and provisioning profile

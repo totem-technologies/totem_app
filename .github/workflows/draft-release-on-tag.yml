@@ -75,6 +75,8 @@ jobs:
           certificate-password: ${{ secrets.IOS_BUILD_CERTIFICATE_PASSWORD }}
           provisioning-profile-base64: ${{ secrets.IOS_MOBILE_PROVISIONING_PROFILE_BASE64 }}
           keychain-password: ${{ secrets.IOS_GITHUB_KEYCHAIN_PASSWORD }}
+          firebase-options-b64: ${{ secrets.FIREBASE_OPTIONS_B64 }}
+          google-service-info-plist-b64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
 
       - name: Upload IPA to Draft Release
         uses: softprops/action-gh-release@v2
