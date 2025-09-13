@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/blog/widgets/blog_card.dart';
+import 'package:totem_app/features/blog/widgets/featured_blog_post.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
@@ -16,26 +17,44 @@ class BlogListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final blogs = ref.watch(listBlogPostsProvider);
     if (isBlogPostUpdateReady) {
-      return ListView(
-        padding: EdgeInsetsDirectional.zero,
-        children: [
-          const Placeholder(fallbackHeight: 350),
-          const SizedBox(height: 20),
-          ...List.generate(
-            10,
-            (index) => const Padding(
-              padding: EdgeInsetsDirectional.only(
-                start: 20,
-                end: 20,
-                bottom: 20,
-              ),
-              child: Placeholder(
-                fallbackHeight: 350,
-                fallbackWidth: 350,
-              ),
-            ),
-          ),
-        ],
+      return blogs.when(
+        data: (data) {
+          if (data.items.isEmpty) {
+            return const Center(child: Text('No blog posts available'));
+          }
+
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              return ListView(
+                padding: EdgeInsetsDirectional.zero,
+                children: [
+                  FeaturedBlogPost.fromBlogPostSchema(data.items.first),
+                  const SizedBox(height: 20),
+                  ...List.generate(
+                    10,
+                    (index) => const Padding(
+                      padding: EdgeInsetsDirectional.only(
+                        start: 20,
+                        end: 20,
+                        bottom: 20,
+                      ),
+                      child: Placeholder(
+                        fallbackHeight: 350,
+                        fallbackWidth: 350,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+        error: (error, _) => ErrorScreen(
+          error: error,
+          showHomeButton: false,
+          onRetry: () => ref.refresh(listBlogPostsProvider.future),
+        ),
+        loading: () => const LoadingIndicator(),
       );
     }
     return Scaffold(
