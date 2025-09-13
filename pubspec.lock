@@ -169,6 +169,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  chat_bubbles:
+    dependency: transitive
+    description:
+      name: chat_bubbles
+      sha256: "902bc84e22f9ce6b993d015457067a37d37eb7478bd7b5b185712d5c5329b866"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.7.0"
   checked_yaml:
     dependency: transitive
     description:
@@ -478,6 +486,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_background:
+    dependency: transitive
+    description:
+      name: flutter_background
+      sha256: "8dad66e3102da2b4046cc3adcf70625578809827170bd78e36e5890c074287d2"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.3.0+1"
   flutter_boring_avatars:
     dependency: "direct main"
     description:
@@ -912,6 +928,15 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.5.0+hotfix.3"
+  livekit_components:
+    dependency: "direct main"
+    description:
+      path: "."
+      ref: HEAD
+      resolved-ref: "6e0ca6d8b752df909b2ea7e9c046a91f10fb78a6"
+      url: "https://github.com/livekit/components-flutter.git"
+    source: git
+    version: "1.2.2+hotfix.1"
   logger:
     dependency: "direct main"
     description:
@@ -968,6 +993,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.1"
+  nested:
+    dependency: transitive
+    description:
+      name: nested
+      sha256: "03bac4c528c64c95c722ec99280375a6f2fc708eec17c7b3f07253b626cd2a20"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
   nm:
     dependency: transitive
     description:
@@ -1136,6 +1169,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.2.0"
+  provider:
+    dependency: transitive
+    description:
+      name: provider
+      sha256: "4e82183fa20e5ca25703ead7e05de9e4cceed1fbd1eadc1ac3cb6f565a09f272"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.1.5+1"
   pub_semver:
     dependency: transitive
     description:
@@ -1152,6 +1193,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.5.0"
+  responsive_builder:
+    dependency: transitive
+    description:
+      name: responsive_builder
+      sha256: "64a5ef3fbe3628e4588a0c2391c3186300e76f58621d8135cc77aac816255a3e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.7.1"
   retrofit:
     dependency: "direct main"
     description:

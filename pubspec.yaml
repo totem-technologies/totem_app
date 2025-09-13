@@ -47,6 +47,9 @@ dependencies:
 
   # Video
   livekit_client: ^2.5.0+hotfix.3
+  livekit_components:
+    git:
+      url: https://github.com/livekit/components-flutter.git
 
   # UI & Utilities
   auto_size_text: ^3.0.0

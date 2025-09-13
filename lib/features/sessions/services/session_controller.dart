@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
 
@@ -43,10 +44,16 @@ class SessionController extends StateNotifier<SessionState> {
         status: SessionStatus.connected,
         room: _livekitService.room,
       );
-    } catch (e) {
+    } catch (error, stackTrace) {
       state = state.copyWith(
         status: SessionStatus.error,
         error: 'Failed to connect to room.',
+      );
+
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to connect to room',
       );
     }
   }
