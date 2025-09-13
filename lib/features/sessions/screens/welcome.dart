@@ -10,6 +10,7 @@ import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/screens/room_screen.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
+import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -215,12 +216,18 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                   children: [
                     ActionBarButton(
                       onPressed: _toggleMic,
-                      child: Icon(_isMicOn ? Icons.mic : Icons.mic_off),
+                      child: TotemIcon(
+                        _isMicOn
+                            ? TotemIcons.microphoneOn
+                            : TotemIcons.microphoneOff,
+                      ),
                     ),
                     ActionBarButton(
                       onPressed: _toggleCamera,
-                      child: Icon(
-                        _isCameraOn ? Icons.videocam : Icons.videocam_off,
+                      child: TotemIcon(
+                        _isCameraOn
+                            ? TotemIcons.cameraOn
+                            : TotemIcons.cameraOff,
                       ),
                     ),
                     SizedBox(

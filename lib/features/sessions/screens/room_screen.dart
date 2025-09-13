@@ -8,6 +8,7 @@ import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/services/session_controller.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
+import 'package:totem_app/shared/totem_icons.dart';
 
 class VideoRoomScreen extends ConsumerStatefulWidget {
   const VideoRoomScreen({
@@ -248,10 +249,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                               deviceCtx.enableMicrophone();
                             }
                           },
-                          child: Icon(
+                          child: TotemIcon(
                             roomCtx.microphoneOpened
-                                ? Icons.mic
-                                : Icons.mic_off,
+                                ? TotemIcons.microphoneOn
+                                : TotemIcons.microphoneOff,
                           ),
                         );
                       },
@@ -266,26 +267,38 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                               deviceCtx.enableCamera();
                             }
                           },
-                          child: Icon(
+                          child: TotemIcon(
                             roomCtx.cameraOpened
-                                ? Icons.videocam
-                                : Icons.videocam_off,
+                                ? TotemIcons.cameraOn
+                                : TotemIcons.cameraOff,
                           ),
                         );
                       },
                     ),
                     ActionBarButton(
                       onPressed: () {
+                        // showSessionChatSheet(context, roomCtx, widget.event);
+                      },
+                      child: const TotemIcon(TotemIcons.reaction),
+                    ),
+                    ActionBarButton(
+                      onPressed: () {
                         showSessionChatSheet(context, roomCtx, widget.event);
                       },
-                      child: const Icon(Icons.chat),
+                      child: const TotemIcon(TotemIcons.chat),
                     ),
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () {},
-                      icon: const Icon(
-                        Icons.more_vert,
-                        color: Colors.white,
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: 40,
+                        maxHeight: 40,
+                      ),
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: () {},
+                        icon: const TotemIcon(
+                          TotemIcons.more,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ],
