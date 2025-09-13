@@ -2,27 +2,50 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/services/session_controller.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 
-class VideoRoomScreen extends ConsumerWidget {
+class VideoRoomScreen extends ConsumerStatefulWidget {
   const VideoRoomScreen({
     required this.roomName,
     required this.token,
+    required this.cameraEnabled,
+    required this.micEnabled,
+    required this.event,
     super.key,
-    this.cameraEnabled = true,
-    this.micEnabled = true,
   });
 
   final String roomName;
   final String token;
   final bool cameraEnabled;
   final bool micEnabled;
+  final EventDetailSchema event;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VideoRoomScreen> createState() => _VideoRoomScreenState();
+}
+
+class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
+  late RoomContext roomContext = RoomContext(
+    // room: sessionState.room,
+    url: 'wss://totem-d7esbgcp.livekit.cloud',
+    token: widget.token,
+    connect: true,
+    onConnected: _onConnected,
+  );
+
+  void _onConnected() {
+    // Set initial camera and mic states
+    roomContext.localParticipant?.setCameraEnabled(widget.cameraEnabled);
+    roomContext.localParticipant?.setMicrophoneEnabled(widget.micEnabled);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final auth = ref.watch(authControllerProvider);
     final sessionState = ref.watch(sessionControllerProvider);
@@ -87,13 +110,12 @@ class VideoRoomScreen extends ConsumerWidget {
     // }
 
     return LivekitRoom(
-      roomContext: RoomContext(
-      ),
+      roomContext: roomContext,
       builder: (context, roomCtx) {
         final room = roomCtx.room;
         final user = room.localParticipant;
 
-        return Container(
+        return DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
@@ -128,9 +150,11 @@ class VideoRoomScreen extends ConsumerWidget {
                               user?.videoTrackPublications
                                   .firstWhereOrNull((pub) => pub.track != null)
                                   ?.track;
-                          if (track != null) {
+
+                          if (track != null && track.isActive) {
                             return VideoTrackRenderer(
                               track,
+                              fit: VideoViewFit.cover,
                             );
                           } else {
                             return Container(
@@ -154,8 +178,6 @@ class VideoRoomScreen extends ConsumerWidget {
                 Flexible(
                   child: ParticipantLoop(
                     showAudioTracks: true,
-                    showVideoTracks: true,
-                    showParticipantPlaceholder: true,
 
                     /// layout builder
                     layoutBuilder: roomCtx.pinnedTracks.isNotEmpty
@@ -254,7 +276,7 @@ class VideoRoomScreen extends ConsumerWidget {
                     ),
                     ActionBarButton(
                       onPressed: () {
-                        // user?.setCameraEnabled(!roomCtx.cameraOpened);
+                        showSessionChatSheet(context, roomCtx, widget.event);
                       },
                       child: const Icon(Icons.chat),
                     ),

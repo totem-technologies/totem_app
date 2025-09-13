@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/screens/login_screen.dart';
 import 'package:totem_app/auth/screens/onboarding_screen.dart';
@@ -57,17 +58,7 @@ class BottomNavScaffold extends StatelessWidget {
     );
 
     return Scaffold(
-      body: Column(
-        children: [
-          Expanded(child: OfflineIndicatorPage(child: child)),
-          TextButton(
-            onPressed: () {
-              context.push(RouteNames.videoSessionWelcome);
-            },
-            child: const Text('Join Session'),
-          ),
-        ],
-      ),
+      body: OfflineIndicatorPage(child: child),
 
       bottomNavigationBar: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
@@ -365,7 +356,7 @@ GoRouter createRouter(WidgetRef ref) {
         builder: (context, state) {
           return Theme(
             data: AppTheme.darkTheme,
-            child: const PreJoinScreen(),
+            child: PreJoinScreen(event: state.extra! as EventDetailSchema),
           );
         },
       ),
