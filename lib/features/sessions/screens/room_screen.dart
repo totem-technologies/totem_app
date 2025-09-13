@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/services/session_controller.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 
 class VideoRoomScreen extends ConsumerWidget {
   const VideoRoomScreen({
@@ -21,6 +24,7 @@ class VideoRoomScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final auth = ref.watch(authControllerProvider);
     final sessionState = ref.watch(sessionControllerProvider);
     final sessionController = ref.read(sessionControllerProvider.notifier);
 
@@ -86,6 +90,9 @@ class VideoRoomScreen extends ConsumerWidget {
       roomContext: RoomContext(
       ),
       builder: (context, roomCtx) {
+        final room = roomCtx.room;
+        final user = room.localParticipant;
+
         return Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -98,21 +105,171 @@ class VideoRoomScreen extends ConsumerWidget {
               stops: const [0.5, 1],
             ),
           ),
-          child: Column(
-            children: [
-              Expanded(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: AppTheme.blue,
-                    borderRadius: BorderRadius.only(
+          child: SafeArea(
+            top: false,
+            child: Column(
+              spacing: 20,
+              children: [
+                AspectRatio(
+                  aspectRatio: 1,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(20),
                       bottomRight: Radius.circular(20),
                     ),
+                    child: DecoratedBox(
+                      decoration: const BoxDecoration(
+                        color: AppTheme.blue,
+                      ),
+                      child: Builder(
+                        builder: (context) {
+                          final track =
+                              roomCtx.localVideoTrack ??
+                              user?.videoTrackPublications
+                                  .firstWhereOrNull((pub) => pub.track != null)
+                                  ?.track;
+                          if (track != null) {
+                            return VideoTrackRenderer(
+                              track,
+                            );
+                          } else {
+                            return Container(
+                              decoration: BoxDecoration(
+                                image: auth.user?.profileImage != null
+                                    ? DecorationImage(
+                                        image: NetworkImage(
+                                          auth.user!.profileImage!,
+                                        ),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              const ControlBar(),
-            ],
+                Flexible(
+                  child: ParticipantLoop(
+                    showAudioTracks: true,
+                    showVideoTracks: true,
+                    showParticipantPlaceholder: true,
+
+                    /// layout builder
+                    layoutBuilder: roomCtx.pinnedTracks.isNotEmpty
+                        ? const CarouselLayoutBuilder()
+                        : const GridLayoutBuilder(),
+
+                    /// participant builder
+                    participantTrackBuilder: (context, identifier) {
+                      // build participant widget for each Track
+                      return Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: Stack(
+                          children: [
+                            /// video track widget in the background
+                            if (identifier.isAudio &&
+                                roomCtx.enableAudioVisulizer)
+                              const AudioVisualizerWidget(
+                                backgroundColor: LKColors.lkDarkBlue,
+                              )
+                            else
+                              IsSpeakingIndicator(
+                                builder: (context, isSpeaking) {
+                                  return isSpeaking != null
+                                      ? IsSpeakingIndicatorWidget(
+                                          isSpeaking: isSpeaking,
+                                          child: const VideoTrackWidget(),
+                                        )
+                                      : const VideoTrackWidget();
+                                },
+                              ),
+
+                            /// focus toggle button at the top right
+                            const Positioned(
+                              top: 0,
+                              right: 0,
+                              child: FocusToggle(),
+                            ),
+
+                            /// track stats at the top left
+                            const Positioned(
+                              top: 8,
+                              left: 0,
+                              child: TrackStatsWidget(),
+                            ),
+
+                            /// status bar at the bottom
+                            const Positioned(
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              child: ParticipantStatusBar(),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                ActionBar(
+                  children: [
+                    MediaDeviceSelectButton(
+                      builder: (context, roomCtx, deviceCtx) {
+                        return ActionBarButton(
+                          onPressed: () {
+                            if (roomCtx.microphoneOpened) {
+                              deviceCtx.disableMicrophone();
+                            } else {
+                              deviceCtx.enableMicrophone();
+                            }
+                          },
+                          child: Icon(
+                            roomCtx.microphoneOpened
+                                ? Icons.mic
+                                : Icons.mic_off,
+                          ),
+                        );
+                      },
+                    ),
+                    MediaDeviceSelectButton(
+                      builder: (context, roomCtx, deviceCtx) {
+                        return ActionBarButton(
+                          onPressed: () {
+                            if (roomCtx.cameraOpened) {
+                              deviceCtx.disableCamera();
+                            } else {
+                              deviceCtx.enableCamera();
+                            }
+                          },
+                          child: Icon(
+                            roomCtx.cameraOpened
+                                ? Icons.videocam
+                                : Icons.videocam_off,
+                          ),
+                        );
+                      },
+                    ),
+                    ActionBarButton(
+                      onPressed: () {
+                        // user?.setCameraEnabled(!roomCtx.cameraOpened);
+                      },
+                      child: const Icon(Icons.chat),
+                    ),
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () {},
+                      icon: const Icon(
+                        Icons.more_vert,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
         return Scaffold(
@@ -249,5 +406,16 @@ class VideoRoomScreen extends ConsumerWidget {
         );
       },
     );
+  }
+}
+
+extension on List<LocalTrackPublication<LocalVideoTrack>> {
+  LocalTrackPublication<LocalVideoTrack>? firstWhereOrNull(
+    bool Function(LocalTrackPublication<LocalVideoTrack> element) test,
+  ) {
+    for (var element in this) {
+      if (test(element)) return element;
+    }
+    return null;
   }
 }

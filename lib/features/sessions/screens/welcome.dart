@@ -7,6 +7,8 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/features/sessions/screens/room_screen.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -78,6 +80,12 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     return AnnotatedRegion(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        extendBodyBehindAppBar: true,
         body: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -200,39 +208,26 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                     ),
                   ),
                 ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0x40000000),
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  margin: const EdgeInsets.only(bottom: 20),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    spacing: 20,
-                    children: [
-                      buildActionBarButton(
-                        Icon(_isMicOn ? Icons.mic : Icons.mic_off),
-                        _toggleMic,
+                ActionBar(
+                  children: [
+                    ActionBarButton(
+                      onPressed: _toggleMic,
+                      child: Icon(_isMicOn ? Icons.mic : Icons.mic_off),
+                    ),
+                    ActionBarButton(
+                      onPressed: _toggleCamera,
+                      child: Icon(
+                        _isCameraOn ? Icons.videocam : Icons.videocam_off,
                       ),
-                      buildActionBarButton(
-                        Icon(
-                          _isCameraOn ? Icons.videocam : Icons.videocam_off,
-                        ),
-                        _toggleCamera,
+                    ),
+                    SizedBox(
+                      width: 96,
+                      child: ActionBarButton(
+                        onPressed: _joinRoom,
+                        child: const Text('Join'),
                       ),
-                      SizedBox(
-                        width: 96,
-                        child: buildActionBarButton(
-                          const Text('Join'),
-                          _joinRoom,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
             ),
