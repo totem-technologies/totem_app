@@ -1,7 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:totem_app/api/models/blog_post_list_schema.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class FeaturedBlogPost extends StatelessWidget {
@@ -47,7 +49,7 @@ class FeaturedBlogPost extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 440,
+      height: 460,
       child: Column(
         children: [
           Expanded(
@@ -127,7 +129,7 @@ class FeaturedBlogPost extends StatelessWidget {
                       ),
                     ),
 
-                    /// TODO(adilsakout): ADD SUBTITLE HERE
+                    // TODO(adilsakout): ADD SUBTITLE HERE
                     Text(
                       'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
                       maxLines: 3,
@@ -185,7 +187,9 @@ class FeaturedBlogPost extends StatelessWidget {
                           ),
                         ),
                         ElevatedButton.icon(
-                          onPressed: () {},
+                          onPressed: () {
+                            context.push(RouteNames.blogPost(slug));
+                          },
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsetsDirectional.only(
                               start: 12,

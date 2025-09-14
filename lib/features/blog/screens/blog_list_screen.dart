@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/blog/widgets/blog_card.dart';
+import 'package:totem_app/features/blog/widgets/blog_post_card.dart';
 import 'package:totem_app/features/blog/widgets/featured_blog_post.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -25,26 +26,34 @@ class BlogListScreen extends ConsumerWidget {
 
           return LayoutBuilder(
             builder: (context, constraints) {
-              return ListView(
-                padding: EdgeInsetsDirectional.zero,
-                children: [
-                  FeaturedBlogPost.fromBlogPostSchema(data.items.first),
-                  const SizedBox(height: 20),
-                  ...List.generate(
-                    10,
-                    (index) => const Padding(
-                      padding: EdgeInsetsDirectional.only(
-                        start: 20,
-                        end: 20,
-                        bottom: 20,
-                      ),
-                      child: Placeholder(
-                        fallbackHeight: 350,
-                        fallbackWidth: 350,
+              return Container(
+                constraints: BoxConstraints(
+                  maxHeight: constraints.maxHeight,
+                ),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                    stops: [0.6, 1],
+                    colors: [
+                      Color(0xffFCEFE4),
+                      Color(0xff435DD0),
+                    ],
+                  ),
+                ),
+                child: ListView(
+                  padding: EdgeInsetsDirectional.zero,
+                  children: [
+                    FeaturedBlogPost.fromBlogPostSchema(data.items.first),
+                    const SizedBox(height: 20),
+                    ...List.generate(
+                      data.items.length,
+                      (index) => NewBlogPostCard.fromBlogPostSchema(
+                        data.items[index],
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               );
             },
           );
