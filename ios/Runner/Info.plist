@@ -56,5 +56,7 @@
 	</array>
 	<key>com.posthog.posthog.AUTO_INIT</key>
 	<false/>
+	<key>NSCalendarsUsageDescription</key>
+	<string>This app needs access to your calendar to help you schedule and manage group sessions.</string>
 </dict>
 </plist>
