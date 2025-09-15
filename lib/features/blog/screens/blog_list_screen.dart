@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/blog/widgets/blog_card.dart';
+import 'package:totem_app/features/blog/widgets/blog_post_card.dart';
+import 'package:totem_app/features/blog/widgets/featured_blog_post.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
+
+const bool isBlogPostUpdateReady = false;
 
 class BlogListScreen extends ConsumerWidget {
   const BlogListScreen({super.key});
@@ -13,6 +17,55 @@ class BlogListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final blogs = ref.watch(listBlogPostsProvider);
+    if (isBlogPostUpdateReady) {
+      return blogs.when(
+        data: (data) {
+          if (data.items.isEmpty) {
+            return const Center(child: Text('No blog posts available'));
+          }
+
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              return Container(
+                constraints: BoxConstraints(
+                  maxHeight: constraints.maxHeight,
+                ),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                    stops: [0.6, 1],
+                    colors: [
+                      Color(0xffFCEFE4),
+                      Color(0xff435DD0),
+                    ],
+                  ),
+                ),
+                child: ListView(
+                  padding: EdgeInsetsDirectional.zero,
+                  children: [
+                    FeaturedBlogPost.fromBlogPostSchema(data.items.first),
+                    const SizedBox(height: 20),
+                    ...List.generate(
+                      data.items.length,
+                      (index) => NewBlogPostCard.fromBlogPostSchema(
+                        data.items[index],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+        error: (error, _) => ErrorScreen(
+          error: error,
+          showHomeButton: false,
+          onRetry: () => ref.refresh(listBlogPostsProvider.future),
+        ),
+        loading: () => const LoadingIndicator(),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: const TotemLogo(size: 24)),
       body: SafeArea(
