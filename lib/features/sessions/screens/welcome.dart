@@ -216,6 +216,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                   children: [
                     ActionBarButton(
                       onPressed: _toggleMic,
+                      active: _isMicOn,
                       child: TotemIcon(
                         _isMicOn
                             ? TotemIcons.microphoneOn
@@ -224,6 +225,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                     ),
                     ActionBarButton(
                       onPressed: _toggleCamera,
+                      active: _isCameraOn,
                       child: TotemIcon(
                         _isCameraOn
                             ? TotemIcons.cameraOn
@@ -234,6 +236,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                       width: 96,
                       child: ActionBarButton(
                         onPressed: _joinRoom,
+                        square: false,
                         child: const Text('Join'),
                       ),
                     ),

@@ -242,6 +242,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                     MediaDeviceSelectButton(
                       builder: (context, roomCtx, deviceCtx) {
                         return ActionBarButton(
+                          active: roomCtx.microphoneOpened,
                           onPressed: () {
                             if (roomCtx.microphoneOpened) {
                               deviceCtx.disableMicrophone();
@@ -260,6 +261,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                     MediaDeviceSelectButton(
                       builder: (context, roomCtx, deviceCtx) {
                         return ActionBarButton(
+                          active: roomCtx.cameraOpened,
                           onPressed: () {
                             if (roomCtx.cameraOpened) {
                               deviceCtx.disableCamera();
