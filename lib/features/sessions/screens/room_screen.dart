@@ -6,7 +6,7 @@ import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
-import 'package:totem_app/features/sessions/services/session_controller.dart';
+import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -32,90 +32,25 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
 }
 
 class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
-  late RoomContext roomContext = RoomContext(
-    // room: sessionState.room,
-    url: 'wss://totem-d7esbgcp.livekit.cloud',
-    token: widget.token,
-    connect: true,
-    onConnected: _onConnected,
-  );
-
-  void _onConnected() {
-    // Set initial camera and mic states
-    roomContext.localParticipant?.setCameraEnabled(widget.cameraEnabled);
-    roomContext.localParticipant?.setMicrophoneEnabled(widget.micEnabled);
-  }
-
   var _showEmojiPicker = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final auth = ref.watch(authControllerProvider);
-    final sessionState = ref.watch(sessionControllerProvider);
-    final sessionController = ref.read(sessionControllerProvider.notifier);
-
-    // Join the session when the widget is built
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   if (sessionState.status == SessionStatus.disconnected) {
-    //     sessionController.joinSession(
-    //       roomName,
-    //       token,
-    //       cameraEnabled: cameraEnabled,
-    //       micEnabled: micEnabled,
-    //     );
-    //   }
-    // });
-
-    // switch (sessionState.status) {
-    //   case SessionStatus.connecting:
-    //     return const Scaffold(
-    //       body: Center(child: CircularProgressIndicator()),
-    //     );
-    //   case SessionStatus.error:
-    //     return Scaffold(
-    //       body: Center(
-    //         child: Column(
-    //           mainAxisAlignment: MainAxisAlignment.center,
-    //           children: [
-    //             Text(sessionState.error ?? 'An unknown error occurred.'),
-    //             const SizedBox(height: 20),
-    //             const Text('Please try again later.'),
-    //             ElevatedButton(
-    //               onPressed: () {
-    //                 sessionController.leaveSession();
-    //                 Navigator.of(context).pop();
-    //               },
-    //               child: const Text('Go Back'),
-    //             ),
-    //             ElevatedButton(
-    //               onPressed: () {
-    //                 sessionController
-    //                   ..leaveSession()
-    //                   ..joinSession(
-    //                     roomName,
-    //                     token,
-    //                     cameraEnabled: cameraEnabled,
-    //                     micEnabled: micEnabled,
-    //                   );
-    //               },
-    //               child: const Text('Try again'),
-    //             ),
-    //           ],
-    //         ),
-    //       ),
-    //     );
-    //   case SessionStatus.disconnected:
-    //     return const Scaffold(
-    //       body: Center(child: Text('Disconnected')),
-    //     );
-    //   case SessionStatus.connected:
-    //     break; // Proceed to render the room
-    // }
+    final session = ref.watch(
+      sessionServiceProvider(
+        SessionOptions(
+          token: widget.token,
+          cameraEnabled: widget.cameraEnabled,
+          microphoneEnabled: widget.micEnabled,
+        ),
+      ),
+    );
 
     return Scaffold(
       body: LivekitRoom(
-        roomContext: roomContext,
+        roomContext: session.room,
         builder: (context, roomCtx) {
           final room = roomCtx.room;
           final user = room.localParticipant;
