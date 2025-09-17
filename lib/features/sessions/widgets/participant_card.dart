@@ -9,7 +9,15 @@ import 'package:livekit_components/livekit_components.dart'
 import 'package:provider/provider.dart';
 
 class SessionParticipantsLayoutBuilder implements ParticipantLayoutBuilder {
-  const SessionParticipantsLayoutBuilder();
+  const SessionParticipantsLayoutBuilder({
+    this.maxPerLineCount,
+  });
+
+  /// The amount of participants to show per line.
+  ///
+  /// If there are less participants than this number, it will show only the
+  /// available participants.
+  final int? maxPerLineCount;
 
   @override
   Widget build(
@@ -20,7 +28,11 @@ class SessionParticipantsLayoutBuilder implements ParticipantLayoutBuilder {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final crossAxisCount = (width / 76).floor().clamp(1, 3);
+        //                          card width + spacing + factor spacing
+        final crossAxisCount = (width / (76 + 10 + 10 / 2)).floor().clamp(
+          1,
+          maxPerLineCount ?? 10,
+        );
         return Center(
           child: GridView.count(
             padding: const EdgeInsetsDirectional.symmetric(

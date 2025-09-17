@@ -43,6 +43,17 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   var _showEmojiPicker = false;
 
+  void _onEmojiReceived(String userIdentity, String emoji) {
+    final userKey = participantKeys[userIdentity];
+    if (userKey != null && userKey.currentContext != null) {
+      displayReaction(
+        context,
+        userKey.currentContext!,
+        emoji,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -53,16 +64,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           token: widget.token,
           cameraEnabled: widget.cameraEnabled,
           microphoneEnabled: widget.micEnabled,
-          onEmojiReceived: (userIdentity, emoji) {
-            final userKey = participantKeys[userIdentity];
-            if (userKey != null && userKey.currentContext != null) {
-              displayReaction(
-                context,
-                userKey.currentContext!,
-                emoji,
-              );
-            }
-          },
+          onEmojiReceived: _onEmojiReceived,
         ),
       ),
     );
@@ -108,36 +110,57 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                             decoration: const BoxDecoration(
                               color: AppTheme.blue,
                             ),
-                            child: Builder(
-                              builder: (context) {
-                                final track =
-                                    roomCtx.localVideoTrack ??
-                                    user?.videoTrackPublications
-                                        .firstWhereOrNull(
-                                          (pub) => pub.track != null,
-                                        )
-                                        ?.track;
+                            child: Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: Builder(
+                                    builder: (context) {
+                                      final track =
+                                          roomCtx.localVideoTrack ??
+                                          user?.videoTrackPublications
+                                              .firstWhereOrNull(
+                                                (pub) => pub.track != null,
+                                              )
+                                              ?.track;
 
-                                if (track != null && track.isActive) {
-                                  return VideoTrackRenderer(
-                                    track,
-                                    fit: VideoViewFit.cover,
-                                  );
-                                } else {
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                      image: auth.user?.profileImage != null
-                                          ? DecorationImage(
-                                              image: NetworkImage(
-                                                auth.user!.profileImage!,
-                                              ),
-                                              fit: BoxFit.cover,
-                                            )
-                                          : null,
+                                      if (track != null && track.isActive) {
+                                        return VideoTrackRenderer(
+                                          track,
+                                          fit: VideoViewFit.cover,
+                                        );
+                                      } else {
+                                        return Container(
+                                          decoration: BoxDecoration(
+                                            image:
+                                                auth.user?.profileImage != null
+                                                ? DecorationImage(
+                                                    image: NetworkImage(
+                                                      auth.user!.profileImage!,
+                                                    ),
+                                                    fit: BoxFit.cover,
+                                                  )
+                                                : null,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  ),
+                                ),
+                                PositionedDirectional(
+                                  end: 20,
+                                  bottom: 20,
+                                  child: Text(
+                                    user?.identity ?? 'Me',
+                                    style: theme.textTheme.titleLarge?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      shadows: [
+                                        const Shadow(blurRadius: 4),
+                                      ],
                                     ),
-                                  );
-                                }
-                              },
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -242,6 +265,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                                   );
                                   if (emoji != null && emoji.isNotEmpty) {
                                     session.sendEmoji(emoji);
+                                    if (user?.identity != null) {
+                                      _onEmojiReceived(user!.identity, emoji);
+                                    }
                                   }
                                   if (mounted) {
                                     setState(() => _showEmojiPicker = false);
