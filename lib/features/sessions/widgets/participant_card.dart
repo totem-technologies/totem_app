@@ -79,11 +79,11 @@ class ParticipantCard extends ConsumerWidget {
     // final room = RoomContext.of(context);
     final participantContext = Provider.of<ParticipantContext>(context);
 
-    // final audioTracks = participantContext.tracks
-    //     .where(
-    //       (t) => t.kind == TrackType.AUDIO || t is AudioTrack,
-    //     )
-    //     .toList();
+    final audioTracks = participantContext.tracks
+        .where(
+          (t) => t.kind == TrackType.AUDIO || t.track is AudioTrack,
+        )
+        .toList();
 
     return AspectRatio(
       aspectRatio: 16 / 21,
@@ -176,6 +176,33 @@ class ParticipantCard extends ConsumerWidget {
                   },
                 ),
               ),
+              if (audioTracks.isNotEmpty)
+                PositionedDirectional(
+                  top: 6,
+                  start: 6,
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0x262F3799),
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    alignment: Alignment.center,
+                    child: SoundWaveformWidget(
+                      audioTrack: audioTracks.first.track! as AudioTrack,
+                      participant: participant,
+                      options: const AudioVisualizerWidgetOptions(
+                        color: Colors.white,
+                        barCount: 3,
+                        barMinOpacity: 0.8,
+                        spacing: 3,
+                        minHeight: 4,
+                        maxHeight: 12,
+                      ),
+                    ),
+                  ),
+                ),
               PositionedDirectional(
                 bottom: 6,
                 start: 0,
