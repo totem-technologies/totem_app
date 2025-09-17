@@ -222,8 +222,17 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                         builder: (context) {
                           return ActionBarButton(
                             active: _showEmojiPicker,
-                            onPressed: () {
-                              showEmojiBar(context);
+                            onPressed: () async {
+                              setState(() {
+                                _showEmojiPicker = true;
+                              });
+                              final emoji = await showEmojiBar(context);
+                              if (emoji != null && emoji.isNotEmpty) {
+                                session.sendEmoji(emoji);
+                              }
+                              setState(() {
+                                _showEmojiPicker = false;
+                              });
                             },
                             child: const TotemIcon(TotemIcons.reaction),
                           );
@@ -363,26 +372,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                                 );
                               },
                             ),
-
-                            /// show control bar at the bottom
-                            const Positioned(
-                              bottom: 30,
-                              left: 0,
-                              right: 0,
-                              child: ControlBar(),
-                            ),
                           ],
                         ),
                       ),
                   ],
-                ),
-
-                /// show toast widget
-                const Positioned(
-                  top: 30,
-                  left: 0,
-                  right: 0,
-                  child: ToastWidget(),
                 ),
               ],
             ),
@@ -392,16 +385,12 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     );
   }
 
-  void showEmojiBar(BuildContext button) async {
-    setState(() {
-      _showEmojiPicker = true;
-    });
-
+  Future<String?> showEmojiBar(BuildContext button) async {
     final box = button.findRenderObject() as RenderBox?;
-    if (box == null) return;
+    if (box == null) return null;
     final overlay =
         Overlay.of(context).context.findRenderObject() as RenderBox?;
-    if (overlay == null) return;
+    if (overlay == null) return null;
     final position = box.localToGlobal(Offset.zero, ancestor: overlay);
 
     final response = await Navigator.of(context).push<String>(
@@ -447,13 +436,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       ),
     );
 
-    if (response != null) {
-      // TODO(bdlukaa): Handle user in messaging
-    }
-
-    setState(() {
-      _showEmojiPicker = false;
-    });
+    return response;
   }
 }
 
