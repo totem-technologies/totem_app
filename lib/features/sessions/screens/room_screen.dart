@@ -183,39 +183,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                                 identifier.participant.identity,
                               ),
                               participant: identifier.participant,
-                              child: Builder(
-                                builder: (context) {
-                                  final videoTrack = identifier
-                                      .participant
-                                      .trackPublications
-                                      .values
-                                      .where(
-                                        (t) =>
-                                            t.track != null &&
-                                            t.kind == TrackType.VIDEO &&
-                                            t.track!.isActive,
-                                      );
-                                  if (videoTrack.isNotEmpty) {
-                                    return VideoTrackRenderer(
-                                      videoTrack.first.track! as VideoTrack,
-                                      fit: VideoViewFit.cover,
-                                    );
-                                  } else {
-                                    return Container(
-                                      decoration: BoxDecoration(
-                                        image: auth.user?.profileImage != null
-                                            ? DecorationImage(
-                                                image: NetworkImage(
-                                                  auth.user!.profileImage!,
-                                                ),
-                                                fit: BoxFit.cover,
-                                              )
-                                            : null,
-                                      ),
-                                    );
-                                  }
-                                },
-                              ),
                             );
                           },
                         ),

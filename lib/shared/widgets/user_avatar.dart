@@ -51,6 +51,9 @@ class UserAvatar extends ConsumerWidget {
     bool showImage = true,
     VoidCallback? onTap,
     double borderWidth = 1.5,
+    BorderRadiusGeometry borderRadius = const BorderRadius.all(
+      Radius.circular(100),
+    ),
   }) {
     return Consumer(
       builder: (context, ref, child) {
@@ -68,6 +71,7 @@ class UserAvatar extends ConsumerWidget {
           showImage: showImage,
           borderWidth: borderWidth,
           onTap: onTap,
+          borderRadius: borderRadius,
         );
       },
     );
@@ -89,22 +93,24 @@ class UserAvatar extends ConsumerWidget {
       // ignore: use_decorated_box
       child: Container(
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
           border: Border.all(color: Colors.white, width: borderWidth),
+          borderRadius: borderRadius,
+          image: showImage && image != null
+              ? DecorationImage(
+                  image: image!,
+                  fit: BoxFit.cover,
+                )
+              : null,
         ),
-        child: ClipOval(
-          child: CircleAvatar(
-            radius: radius,
-            backgroundImage: showImage ? image : null,
-            child: showImage && image == null
-                ? AnimatedBoringAvatar(
-                    name: seed ?? 'default',
-                    type: BoringAvatarType.marble,
-                    duration: const Duration(milliseconds: 300),
-                  )
-                : null,
-          ),
-        ),
+        height: radius * 2,
+        width: radius * 2,
+        child: showImage && image == null
+            ? AnimatedBoringAvatar(
+                name: seed ?? 'default',
+                type: BoringAvatarType.marble,
+                duration: const Duration(milliseconds: 300),
+              )
+            : null,
       ),
     );
   }

@@ -1,7 +1,6 @@
-import 'dart:math' as math;
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
@@ -79,8 +78,6 @@ class LoadingRoomScreen extends StatelessWidget {
                     vertical: 10,
                   ),
                   alignment: Alignment.center,
-                  // DecoratedBox is overlapping the border
-                  // ignore: use_decorated_box
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.black,
@@ -88,31 +85,9 @@ class LoadingRoomScreen extends StatelessWidget {
                       border: Border.all(color: Colors.white, width: 2),
                     ),
                     clipBehavior: Clip.hardEdge,
-                    child: AspectRatio(
+                    child: const AspectRatio(
                       aspectRatio: 16 / 21,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.white.withValues(alpha: 0.95),
-                              Colors.white.withValues(alpha: 0.75),
-                              Colors.white.withValues(alpha: 0.95),
-                              Colors.white.withValues(alpha: 0.75),
-                              Colors.white.withValues(alpha: 0.95),
-                            ],
-                            stops: const [
-                              0.0391, // 3.91%
-                              0.2727, // 27.27%
-                              0.4974, // 49.74%
-                              0.74, // 74.0%
-                              0.9736, // 97.36%
-                            ],
-                            transform: const GradientRotation(
-                              144.63 * math.pi / 180,
-                            ),
-                          ),
-                        ),
-                      ),
+                      child: LoadingPlaceholder(),
                     ),
                   ),
                 ),
@@ -127,6 +102,27 @@ class LoadingRoomScreen extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class LoadingPlaceholder extends StatelessWidget {
+  const LoadingPlaceholder({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade900,
+      highlightColor: Colors.grey.shade500,
+      period: const Duration(seconds: 1),
+      direction: Directionality.of(context) == TextDirection.ltr
+          ? ShimmerDirection.ltr
+          : ShimmerDirection.rtl,
+      child: const DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black,
         ),
       ),
     );
