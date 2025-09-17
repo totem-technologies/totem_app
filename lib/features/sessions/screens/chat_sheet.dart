@@ -134,8 +134,8 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                                   spacing: 10,
                                   children: [
                                     // TODO(bdlukaa): Only show author avatar
-                                    //                for the first message in the
-                                    //                sequence.
+                                    //                for the first message in
+                                    //                the sequence.
                                     UserAvatar.fromUserSchema(
                                       widget.event.space.author,
                                       radius: 20,

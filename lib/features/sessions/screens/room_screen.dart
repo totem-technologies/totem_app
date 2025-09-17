@@ -14,6 +14,7 @@ import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/popups.dart';
 
 class VideoRoomScreen extends ConsumerStatefulWidget {
   const VideoRoomScreen({
@@ -58,7 +59,12 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   bool _hasPendingChatMessages = false;
   void _onChatMessageReceived(String userIdentity, String message) {
     setState(() => _hasPendingChatMessages = !_chatSheetOpen);
-    // TODO(bdlukaa): Show a toast/snackbar with the message
+    showNotificationPopup(
+      context,
+      icon: TotemIcons.chat,
+      title: 'New message',
+      message: message,
+    );
   }
 
   @override
