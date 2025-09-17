@@ -10,6 +10,7 @@ import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/screens/room_screen.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -90,18 +91,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           iconTheme: const IconThemeData(color: Colors.white),
         ),
         extendBodyBehindAppBar: true,
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                theme.scaffoldBackgroundColor,
-                AppTheme.mauve,
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: const [0.5, 1],
-            ),
-          ),
+        body: RoomBackground(
           padding: const EdgeInsetsDirectional.all(20),
           child: SafeArea(
             child: Column(
@@ -166,6 +156,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                         borderRadius: BorderRadius.circular(30),
                         border: Border.all(color: Colors.white, width: 2),
                       ),
+                      clipBehavior: Clip.antiAliasWithSaveLayer,
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(30),
                         child: AspectRatio(
