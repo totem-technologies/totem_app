@@ -54,6 +54,12 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     }
   }
 
+  bool _hasPendingChatMessages = false;
+  void _onChatMessageReceived(String userIdentity, String message) {
+    setState(() => _hasPendingChatMessages = true);
+    // TODO(bdlukaa): Show a toast/snackbar with the message
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -65,6 +71,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           cameraEnabled: widget.cameraEnabled,
           microphoneEnabled: widget.micEnabled,
           onEmojiReceived: _onEmojiReceived,
+          onMessageReceived: _onChatMessageReceived,
         ),
       ),
     );
@@ -279,13 +286,32 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                           ),
                           ActionBarButton(
                             onPressed: () {
+                              setState(() => _hasPendingChatMessages = false);
                               showSessionChatSheet(
                                 context,
                                 roomCtx,
                                 widget.event,
                               );
                             },
-                            child: const TotemIcon(TotemIcons.chat),
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                const TotemIcon(TotemIcons.chat),
+                                if (_hasPendingChatMessages)
+                                  Container(
+                                    height: 4,
+                                    width: 4,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.pink,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                           ConstrainedBox(
                             constraints: const BoxConstraints(

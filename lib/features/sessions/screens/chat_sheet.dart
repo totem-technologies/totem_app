@@ -55,6 +55,9 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final auth = ref.watch(authControllerProvider);
+    // TODO(bdlukaa): Update to auth.user?.slug when response includes slug
+    final isKeeper = widget.event.space.author.slug == auth.user?.email;
+
     return ChatBuilder(
       builder: (context, enabled, chatCtx, messages) {
         void send() {
@@ -78,99 +81,118 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                 child: Padding(
                   padding: const EdgeInsetsDirectional.all(20),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // TODO(bdlukaa): "Only the Keeper can post messages here"
-                      //                message to users who are not Keepers
-                      Expanded(
-                        child: ListView.separated(
-                          controller: scrollController,
-                          itemCount: messages.length,
-                          itemBuilder: (context, index) {
-                            final msg = messages[index];
-                            final isMine =
-                                msg.participant?.identity == auth.user?.email;
-                            if (isMine) {
-                              return Align(
-                                alignment: AlignmentDirectional.centerEnd,
-                                child: Container(
-                                  margin: const EdgeInsetsDirectional.only(
-                                    start: 50,
-                                  ),
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: const BoxDecoration(
-                                    color: AppTheme.slate,
-                                    borderRadius: BorderRadius.all(
-                                      Radius.circular(16),
+                      if (!isKeeper)
+                        const Text(
+                          'Only the Keeper can post messages here',
+                          style: TextStyle(color: Color(0xFF787D7E)),
+                          textAlign: TextAlign.center,
+                        ),
+                      if (messages.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 20),
+                          child: Text(
+                            'No messages yet',
+                            style: TextStyle(color: Color(0xFF787D7E)),
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: ListView.separated(
+                            controller: scrollController,
+                            itemCount: messages.length,
+                            itemBuilder: (context, index) {
+                              final msg = messages[index];
+                              final isMine =
+                                  msg.participant?.identity == auth.user?.email;
+                              if (isMine) {
+                                return Align(
+                                  alignment: AlignmentDirectional.centerEnd,
+                                  child: Container(
+                                    margin: const EdgeInsetsDirectional.only(
+                                      start: 50,
                                     ),
-                                  ),
-                                  child: Text(
-                                    msg.message,
-                                    style: TextStyle(
-                                      color: theme.colorScheme.onPrimary,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            } else {
-                              return Row(
-                                spacing: 10,
-                                children: [
-                                  // TODO(bdlukaa): Only show author avatar
-                                  //                for the first message in the
-                                  //                sequence.
-                                  UserAvatar.fromUserSchema(
-                                    widget.event.space.author,
-                                    radius: 20,
-                                  ),
-                                  Container(
+                                    padding: const EdgeInsets.all(10),
                                     decoration: const BoxDecoration(
-                                      color: Color(0xFFF3F1E9),
+                                      color: AppTheme.slate,
                                       borderRadius: BorderRadius.all(
                                         Radius.circular(16),
                                       ),
                                     ),
-                                    padding: const EdgeInsets.all(10),
-                                    child: Text(msg.message),
+                                    child: Text(
+                                      msg.message,
+                                      style: TextStyle(
+                                        color: theme.colorScheme.onPrimary,
+                                      ),
+                                    ),
                                   ),
-                                ],
-                              );
-                            }
-                          },
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: 10),
+                                );
+                              } else {
+                                return Row(
+                                  spacing: 10,
+                                  children: [
+                                    // TODO(bdlukaa): Only show author avatar
+                                    //                for the first message in the
+                                    //                sequence.
+                                    UserAvatar.fromUserSchema(
+                                      widget.event.space.author,
+                                      radius: 20,
+                                    ),
+                                    Container(
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFF3F1E9),
+                                        borderRadius: BorderRadius.all(
+                                          Radius.circular(16),
+                                        ),
+                                      ),
+                                      padding: const EdgeInsets.all(10),
+                                      child: Text(msg.message),
+                                    ),
+                                  ],
+                                );
+                              }
+                            },
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 10),
+                          ),
                         ),
-                      ),
-                      TextField(
-                        controller: _messageController,
-                        onSubmitted: (_) => send(),
-                        textInputAction: TextInputAction.send,
-                        decoration: InputDecoration(
-                          hintText: 'Message',
-                          border: const OutlineInputBorder(),
-                          suffixIcon: Container(
-                            margin: const EdgeInsetsDirectional.only(
-                              end: 8,
-                              top: 6,
-                              bottom: 6,
-                            ),
-                            constraints: const BoxConstraints(
-                              maxHeight: 42,
-                              maxWidth: 42,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary,
-                              borderRadius: const BorderRadius.all(
-                                Radius.circular(16),
+                      if (isKeeper)
+                        TextField(
+                          controller: _messageController,
+                          onSubmitted: (_) => send(),
+                          textInputAction: TextInputAction.send,
+                          decoration: InputDecoration(
+                            hintText: 'Message',
+                            border: const OutlineInputBorder(),
+                            suffixIcon: Container(
+                              margin: const EdgeInsetsDirectional.only(
+                                end: 8,
+                                top: 6,
+                                bottom: 6,
                               ),
-                            ),
-                            child: IconButton(
-                              icon: const TotemIcon(TotemIcons.send, size: 20),
-                              color: theme.colorScheme.onPrimary,
-                              onPressed: send,
+                              constraints: const BoxConstraints(
+                                maxHeight: 42,
+                                maxWidth: 42,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary,
+                                borderRadius: const BorderRadius.all(
+                                  Radius.circular(16),
+                                ),
+                              ),
+                              child: IconButton(
+                                icon: const TotemIcon(
+                                  TotemIcons.send,
+                                  size: 20,
+                                ),
+                                color: theme.colorScheme.onPrimary,
+                                onPressed: send,
+                              ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
