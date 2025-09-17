@@ -104,7 +104,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               );
             case ConnectionState.connected:
               if (session.isMyTurn) {
-                return const MyTurn();
+                return MyTurn(
+                  actionBar: buildActionBar(session),
+                  getParticipantKey: getParticipantKey,
+                );
               } else {
                 return NotMyTurn(
                   getParticipantKey: getParticipantKey,
@@ -164,30 +167,31 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 );
               },
             ),
-            Builder(
-              builder: (button) {
-                return ActionBarButton(
-                  active: _showEmojiPicker,
-                  onPressed: () async {
-                    setState(() => _showEmojiPicker = true);
-                    final emoji = await showEmojiBar(
-                      button,
-                      context,
-                    );
-                    if (emoji != null && emoji.isNotEmpty) {
-                      session.sendEmoji(emoji);
-                      if (user?.identity != null) {
-                        _onEmojiReceived(user!.identity, emoji);
+            if (!session.isMyTurn)
+              Builder(
+                builder: (button) {
+                  return ActionBarButton(
+                    active: _showEmojiPicker,
+                    onPressed: () async {
+                      setState(() => _showEmojiPicker = true);
+                      final emoji = await showEmojiBar(
+                        button,
+                        context,
+                      );
+                      if (emoji != null && emoji.isNotEmpty) {
+                        session.sendEmoji(emoji);
+                        if (user?.identity != null) {
+                          _onEmojiReceived(user!.identity, emoji);
+                        }
                       }
-                    }
-                    if (mounted) {
-                      setState(() => _showEmojiPicker = false);
-                    }
-                  },
-                  child: const TotemIcon(TotemIcons.reaction),
-                );
-              },
-            ),
+                      if (mounted) {
+                        setState(() => _showEmojiPicker = false);
+                      }
+                    },
+                    child: const TotemIcon(TotemIcons.reaction),
+                  );
+                },
+              ),
             ActionBarButton(
               active: _chatSheetOpen,
               onPressed: () async {
@@ -227,7 +231,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               ),
               child: IconButton(
                 padding: EdgeInsets.zero,
-                onPressed: () {},
+                onPressed: () {
+                  // TODO(bdlukaa): Show more options
+                },
                 icon: const TotemIcon(
                   TotemIcons.more,
                   color: Colors.white,

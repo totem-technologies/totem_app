@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:totem_app/core/config/theme.dart';
 
 class RoomBackground extends StatelessWidget {
   const RoomBackground({
     required this.child,
     this.padding = EdgeInsets.zero,
+    this.overlayStyle = SystemUiOverlayStyle.light,
     super.key,
   });
 
@@ -12,22 +14,27 @@ class RoomBackground extends StatelessWidget {
 
   final EdgeInsetsGeometry padding;
 
+  final SystemUiOverlayStyle overlayStyle;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.black,
-            AppTheme.mauve,
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          stops: [0.5, 1],
+    return AnnotatedRegion(
+      value: overlayStyle,
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.black,
+              AppTheme.mauve,
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            stops: [0.5, 1],
+          ),
         ),
+        padding: padding,
+        child: child,
       ),
-      padding: padding,
-      child: child,
     );
   }
 }
