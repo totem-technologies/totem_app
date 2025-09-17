@@ -1,18 +1,16 @@
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
-import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
+import 'package:totem_app/features/sessions/screens/my_turn.dart';
+import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
-import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
-import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
 
@@ -70,7 +68,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final auth = ref.watch(authControllerProvider);
     final session = ref.watch(
       sessionServiceProvider(
         SessionOptions(
@@ -88,14 +85,13 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         roomContext: session.room,
         builder: (context, roomCtx) {
           final room = roomCtx.room;
-          final user = room.localParticipant;
 
           switch (room.connectionState) {
             case ConnectionState.connecting:
             case ConnectionState.reconnecting:
               return const LoadingRoomScreen();
             case ConnectionState.disconnected:
-              // TODO(bdlukaa): Disconnected from the room
+              // TODO(bdlukaa): Disconnected from the room screen
               return Center(
                 child: Text(
                   'Disconnected from the room',
@@ -107,212 +103,140 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 ),
               );
             case ConnectionState.connected:
-              return RoomBackground(
-                child: SafeArea(
-                  top: false,
-                  child: Column(
-                    spacing: 20,
-                    children: [
-                      AspectRatio(
-                        aspectRatio: 1,
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.only(
-                            bottomLeft: Radius.circular(20),
-                            bottomRight: Radius.circular(20),
-                          ),
-                          child: DecoratedBox(
-                            decoration: const BoxDecoration(
-                              color: AppTheme.blue,
-                            ),
-                            child: Stack(
-                              children: [
-                                Positioned.fill(
-                                  child: Builder(
-                                    builder: (context) {
-                                      final track =
-                                          roomCtx.localVideoTrack ??
-                                          user?.videoTrackPublications
-                                              .firstWhereOrNull(
-                                                (pub) => pub.track != null,
-                                              )
-                                              ?.track;
-
-                                      if (track != null && track.isActive) {
-                                        return VideoTrackRenderer(
-                                          track,
-                                          fit: VideoViewFit.cover,
-                                        );
-                                      } else {
-                                        return Container(
-                                          decoration: BoxDecoration(
-                                            image:
-                                                auth.user?.profileImage != null
-                                                ? DecorationImage(
-                                                    image: NetworkImage(
-                                                      auth.user!.profileImage!,
-                                                    ),
-                                                    fit: BoxFit.cover,
-                                                  )
-                                                : null,
-                                          ),
-                                        );
-                                      }
-                                    },
-                                  ),
-                                ),
-                                PositionedDirectional(
-                                  end: 20,
-                                  bottom: 20,
-                                  child: Text(
-                                    user?.identity ?? 'Me',
-                                    style: theme.textTheme.titleLarge?.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      shadows: [
-                                        const Shadow(blurRadius: 4),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      Flexible(
-                        child: ParticipantLoop(
-                          layoutBuilder:
-                              const SessionParticipantsLayoutBuilder(),
-                          participantTrackBuilder: (context, identifier) {
-                            return ParticipantCard(
-                              key: getParticipantKey(
-                                identifier.participant.identity,
-                              ),
-                              participant: identifier.participant,
-                            );
-                          },
-                        ),
-                      ),
-                      // TODO(bdlukaa): Transcriptions
-                      ActionBar(
-                        children: [
-                          MediaDeviceSelectButton(
-                            builder: (context, roomCtx, deviceCtx) {
-                              return ActionBarButton(
-                                active: roomCtx.microphoneOpened,
-                                onPressed: () {
-                                  if (roomCtx.microphoneOpened) {
-                                    deviceCtx.disableMicrophone();
-                                  } else {
-                                    deviceCtx.enableMicrophone();
-                                  }
-                                },
-                                child: TotemIcon(
-                                  roomCtx.microphoneOpened
-                                      ? TotemIcons.microphoneOn
-                                      : TotemIcons.microphoneOff,
-                                ),
-                              );
-                            },
-                          ),
-                          MediaDeviceSelectButton(
-                            builder: (context, roomCtx, deviceCtx) {
-                              return ActionBarButton(
-                                active: roomCtx.cameraOpened,
-                                onPressed: () {
-                                  if (roomCtx.cameraOpened) {
-                                    deviceCtx.disableCamera();
-                                  } else {
-                                    deviceCtx.enableCamera();
-                                  }
-                                },
-                                child: TotemIcon(
-                                  roomCtx.cameraOpened
-                                      ? TotemIcons.cameraOn
-                                      : TotemIcons.cameraOff,
-                                ),
-                              );
-                            },
-                          ),
-                          Builder(
-                            builder: (button) {
-                              return ActionBarButton(
-                                active: _showEmojiPicker,
-                                onPressed: () async {
-                                  setState(() => _showEmojiPicker = true);
-                                  final emoji = await showEmojiBar(
-                                    button,
-                                    context,
-                                  );
-                                  if (emoji != null && emoji.isNotEmpty) {
-                                    session.sendEmoji(emoji);
-                                    if (user?.identity != null) {
-                                      _onEmojiReceived(user!.identity, emoji);
-                                    }
-                                  }
-                                  if (mounted) {
-                                    setState(() => _showEmojiPicker = false);
-                                  }
-                                },
-                                child: const TotemIcon(TotemIcons.reaction),
-                              );
-                            },
-                          ),
-                          ActionBarButton(
-                            active: _chatSheetOpen,
-                            onPressed: () async {
-                              setState(() {
-                                _hasPendingChatMessages = false;
-                                _chatSheetOpen = true;
-                              });
-                              await showSessionChatSheet(
-                                context,
-                                roomCtx,
-                                widget.event,
-                              );
-                              if (mounted) {
-                                setState(() => _chatSheetOpen = false);
-                              }
-                            },
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                const TotemIcon(TotemIcons.chat),
-                                if (_hasPendingChatMessages)
-                                  Container(
-                                    height: 4,
-                                    width: 4,
-                                    decoration: const BoxDecoration(
-                                      color: AppTheme.green,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(
-                              maxWidth: 40,
-                              maxHeight: 40,
-                            ),
-                            child: IconButton(
-                              padding: EdgeInsets.zero,
-                              onPressed: () {},
-                              icon: const TotemIcon(
-                                TotemIcons.more,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
+              if (session.isMyTurn) {
+                return const MyTurn();
+              } else {
+                return NotMyTurn(
+                  getParticipantKey: getParticipantKey,
+                  actionBar: buildActionBar(session),
+                );
+              }
           }
         },
       ),
+    );
+  }
+
+  Widget buildActionBar(
+    LiveKitService session,
+  ) {
+    return Builder(
+      builder: (context) {
+        final roomCtx = session.room;
+        final user = roomCtx.localParticipant;
+        return ActionBar(
+          children: [
+            MediaDeviceSelectButton(
+              builder: (context, roomCtx, deviceCtx) {
+                return ActionBarButton(
+                  active: roomCtx.microphoneOpened,
+                  onPressed: () {
+                    if (roomCtx.microphoneOpened) {
+                      deviceCtx.disableMicrophone();
+                    } else {
+                      deviceCtx.enableMicrophone();
+                    }
+                  },
+                  child: TotemIcon(
+                    roomCtx.microphoneOpened
+                        ? TotemIcons.microphoneOn
+                        : TotemIcons.microphoneOff,
+                  ),
+                );
+              },
+            ),
+            MediaDeviceSelectButton(
+              builder: (context, roomCtx, deviceCtx) {
+                return ActionBarButton(
+                  active: roomCtx.cameraOpened,
+                  onPressed: () {
+                    if (roomCtx.cameraOpened) {
+                      deviceCtx.disableCamera();
+                    } else {
+                      deviceCtx.enableCamera();
+                    }
+                  },
+                  child: TotemIcon(
+                    roomCtx.cameraOpened
+                        ? TotemIcons.cameraOn
+                        : TotemIcons.cameraOff,
+                  ),
+                );
+              },
+            ),
+            Builder(
+              builder: (button) {
+                return ActionBarButton(
+                  active: _showEmojiPicker,
+                  onPressed: () async {
+                    setState(() => _showEmojiPicker = true);
+                    final emoji = await showEmojiBar(
+                      button,
+                      context,
+                    );
+                    if (emoji != null && emoji.isNotEmpty) {
+                      session.sendEmoji(emoji);
+                      if (user?.identity != null) {
+                        _onEmojiReceived(user!.identity, emoji);
+                      }
+                    }
+                    if (mounted) {
+                      setState(() => _showEmojiPicker = false);
+                    }
+                  },
+                  child: const TotemIcon(TotemIcons.reaction),
+                );
+              },
+            ),
+            ActionBarButton(
+              active: _chatSheetOpen,
+              onPressed: () async {
+                setState(() {
+                  _hasPendingChatMessages = false;
+                  _chatSheetOpen = true;
+                });
+                await showSessionChatSheet(
+                  context,
+                  roomCtx,
+                  widget.event,
+                );
+                if (mounted) {
+                  setState(() => _chatSheetOpen = false);
+                }
+              },
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const TotemIcon(TotemIcons.chat),
+                  if (_hasPendingChatMessages)
+                    Container(
+                      height: 4,
+                      width: 4,
+                      decoration: const BoxDecoration(
+                        color: AppTheme.green,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 40,
+                maxHeight: 40,
+              ),
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                onPressed: () {},
+                icon: const TotemIcon(
+                  TotemIcons.more,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
