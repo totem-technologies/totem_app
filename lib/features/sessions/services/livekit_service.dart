@@ -5,14 +5,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_app/features/sessions/models/session_state.dart';
 
 part 'livekit_service.g.dart';
 
 enum SessionCommunicationTopics {
+  /// Topic for sending emojis.
   emoji('lk-emoji-topic'),
 
+  /// Topic for sending chat messages.
+  ///
   /// Most of the chat functionality is handled by [ChatContextMixin]
-  chat('lk-chat-topic');
+  chat('lk-chat-topic'),
+
+  /// Topic for sending session state updates.
+  state('lk-session-state-topic');
 
   const SessionCommunicationTopics(this.topic);
 
@@ -62,12 +69,15 @@ class SessionOptions {
 
 @riverpod
 LiveKitService sessionService(Ref ref, SessionOptions options) {
-  final service = LiveKitService(options);
+  final service = LiveKitService(options)
+    ..addListener(() {
+      ref.notifyListeners();
+    });
   return service;
 }
 
-class LiveKitService {
-  LiveKitService(this.initialOptions) {
+class LiveKitService extends ValueNotifier<SessionState> {
+  LiveKitService(this.initialOptions) : super(const SessionState.waiting()) {
     room = RoomContext(
       url: 'wss://totem-d7esbgcp.livekit.cloud',
       token: initialOptions.token,
@@ -87,6 +97,7 @@ class LiveKitService {
   final SessionOptions initialOptions;
   late final RoomContext room;
   late final EventsListener<RoomEvent> _listener;
+  SessionState get state => value;
 
   void _onConnected({
     required bool cameraEnabled,
@@ -99,7 +110,17 @@ class LiveKitService {
   void _onDataReceived(DataReceivedEvent event) {
     if (event.topic == null || event.participant == null) return;
 
-    if (event.topic == SessionCommunicationTopics.emoji.topic) {
+    if (event.topic == SessionCommunicationTopics.state.topic) {
+      try {
+        value = SessionState.fromJson(
+          jsonDecode(const Utf8Decoder().convert(event.data))
+              as Map<String, dynamic>,
+        );
+        notifyListeners();
+      } catch (e) {
+        debugPrint('Error decoding session state: $e');
+      }
+    } else if (event.topic == SessionCommunicationTopics.emoji.topic) {
       _onEmojiReceived(
         event.participant!.identity,
         const Utf8Decoder().convert(event.data),

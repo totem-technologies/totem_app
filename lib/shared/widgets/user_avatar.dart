@@ -15,6 +15,7 @@ class UserAvatar extends ConsumerWidget {
     this.showImage = true,
     this.onTap,
     this.borderWidth = 1.5,
+    this.borderRadius = const BorderRadius.all(Radius.circular(100)),
   });
 
   factory UserAvatar.fromUserSchema(
@@ -23,6 +24,9 @@ class UserAvatar extends ConsumerWidget {
     bool showImage = true,
     VoidCallback? onTap,
     double borderWidth = 1.5,
+    BorderRadiusGeometry borderRadius = const BorderRadius.all(
+      Radius.circular(100),
+    ),
   }) {
     return UserAvatar(
       image:
@@ -38,6 +42,7 @@ class UserAvatar extends ConsumerWidget {
       showImage: showImage,
       onTap: onTap,
       borderWidth: borderWidth,
+      borderRadius: borderRadius,
     );
   }
 
@@ -74,6 +79,7 @@ class UserAvatar extends ConsumerWidget {
   final bool showImage;
   final VoidCallback? onTap;
   final double borderWidth;
+  final BorderRadiusGeometry borderRadius;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

@@ -1,50 +1,58 @@
 import 'package:flutter/foundation.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:json_annotation/json_annotation.dart';
 
-enum SessionStatus {
-  disconnected,
-  connecting,
-  connected,
-  error,
-}
+part 'session_state.g.dart';
+
+enum SessionStatus { waiting, started, ending, ended }
 
 @immutable
+@JsonSerializable()
 class SessionState {
   const SessionState({
-    this.status = SessionStatus.disconnected,
-    this.roomName,
-    this.room,
-    this.participantTracks,
-    this.error,
+    required this.status,
+    required this.speakingNow,
+    required this.nextUp,
+    required this.speakingOrder,
   });
-  factory SessionState.disconnected() => const SessionState();
 
+  const SessionState.waiting()
+    : status = SessionStatus.waiting,
+      speakingNow = null,
+      nextUp = null,
+      speakingOrder = const [];
+
+  factory SessionState.fromJson(Map<String, dynamic> json) =>
+      _$SessionStateFromJson(json);
+  Map<String, dynamic> toJson() => _$SessionStateToJson(this);
+
+  /// Current status of the session.
   final SessionStatus status;
-  final String? roomName;
-  final Room? room;
-  final List<ParticipantTrack>? participantTracks;
-  final String? error;
 
-  SessionState copyWith({
-    SessionStatus? status,
-    String? roomName,
-    Room? room,
-    List<ParticipantTrack>? participantTracks,
-    String? error,
-  }) {
-    return SessionState(
-      status: status ?? this.status,
-      roomName: roomName ?? this.roomName,
-      room: room ?? this.room,
-      participantTracks: participantTracks ?? this.participantTracks,
-      error: error ?? this.error,
-    );
+  /// User identity of the participant currently speaking, if any.
+  final String? speakingNow;
+
+  /// User identity of the next participant scheduled to speak, if any.
+  final String? nextUp;
+
+  /// Ordered list of user identities representing the speaking order.
+  final List<String> speakingOrder;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is SessionState &&
+        other.status == status &&
+        other.speakingNow == speakingNow &&
+        other.nextUp == nextUp &&
+        listEquals(other.speakingOrder, speakingOrder);
   }
-}
 
-class ParticipantTrack {
-  const ParticipantTrack({required this.participant, required this.videoTrack});
-
-  final Participant participant;
-  final Track videoTrack;
+  @override
+  int get hashCode {
+    return status.hashCode ^
+        speakingNow.hashCode ^
+        nextUp.hashCode ^
+        speakingOrder.hashCode;
+  }
 }

@@ -54,9 +54,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     }
   }
 
+  bool _chatSheetOpen = false;
   bool _hasPendingChatMessages = false;
   void _onChatMessageReceived(String userIdentity, String message) {
-    setState(() => _hasPendingChatMessages = true);
+    setState(() => _hasPendingChatMessages = !_chatSheetOpen);
     // TODO(bdlukaa): Show a toast/snackbar with the message
   }
 
@@ -285,13 +286,20 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                             },
                           ),
                           ActionBarButton(
-                            onPressed: () {
-                              setState(() => _hasPendingChatMessages = false);
-                              showSessionChatSheet(
+                            active: _chatSheetOpen,
+                            onPressed: () async {
+                              setState(() {
+                                _hasPendingChatMessages = false;
+                                _chatSheetOpen = true;
+                              });
+                              await showSessionChatSheet(
                                 context,
                                 roomCtx,
                                 widget.event,
                               );
+                              if (mounted) {
+                                setState(() => _chatSheetOpen = false);
+                              }
                             },
                             child: Stack(
                               clipBehavior: Clip.none,
@@ -301,13 +309,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                                   Container(
                                     height: 4,
                                     width: 4,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.pink,
+                                    decoration: const BoxDecoration(
+                                      color: AppTheme.green,
                                       shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white,
-                                        width: 1.5,
-                                      ),
                                     ),
                                   ),
                               ],
