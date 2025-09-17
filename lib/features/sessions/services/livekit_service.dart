@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
@@ -11,6 +12,7 @@ enum SessionCommunicationTopics {
   emoji,
 }
 
+@immutable
 class SessionOptions {
   const SessionOptions({
     required this.token,
@@ -21,6 +23,20 @@ class SessionOptions {
   final String token;
   final bool cameraEnabled;
   final bool microphoneEnabled;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is SessionOptions &&
+        other.token == token &&
+        other.cameraEnabled == cameraEnabled &&
+        other.microphoneEnabled == microphoneEnabled;
+  }
+
+  @override
+  int get hashCode =>
+      token.hashCode ^ cameraEnabled.hashCode ^ microphoneEnabled.hashCode;
 }
 
 @riverpod

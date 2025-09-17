@@ -11,6 +11,7 @@ import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
 class VideoRoomScreen extends ConsumerStatefulWidget {
@@ -62,6 +63,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             case ConnectionState.reconnecting:
               return const LoadingRoomScreen();
             case ConnectionState.disconnected:
+              // TODO(bdlukaa): Disconnected from the room
               return Center(
                 child: Text(
                   'Disconnected from the room',
@@ -126,52 +128,50 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                       ),
                       Flexible(
                         child: ParticipantLoop(
-                          showAudioTracks: true,
-
-                          /// layout builder
-                          layoutBuilder: roomCtx.pinnedTracks.isNotEmpty
-                              ? const CarouselLayoutBuilder()
-                              : const GridLayoutBuilder(),
-
-                          /// participant builder
+                          layoutBuilder:
+                              const SessionParticipantsLayoutBuilder(),
                           participantTrackBuilder: (context, identifier) {
+                            return ParticipantCard(
+                              participant: identifier.participant,
+                              child: Builder(
+                                builder: (context) {
+                                  final videoTrack = identifier
+                                      .participant
+                                      .trackPublications
+                                      .values
+                                      .where(
+                                        (t) =>
+                                            t.track != null &&
+                                            t.kind == TrackType.VIDEO &&
+                                            t.track!.isActive,
+                                      );
+                                  if (videoTrack.isNotEmpty) {
+                                    return VideoTrackRenderer(
+                                      videoTrack.first.track! as VideoTrack,
+                                      fit: VideoViewFit.cover,
+                                    );
+                                  } else {
+                                    return Container(
+                                      decoration: BoxDecoration(
+                                        image: auth.user?.profileImage != null
+                                            ? DecorationImage(
+                                                image: NetworkImage(
+                                                  auth.user!.profileImage!,
+                                                ),
+                                                fit: BoxFit.cover,
+                                              )
+                                            : null,
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                            );
                             // build participant widget for each Track
                             return Padding(
                               padding: const EdgeInsets.all(2),
                               child: Stack(
                                 children: [
-                                  /// video track widget in the background
-                                  if (identifier.isAudio &&
-                                      roomCtx.enableAudioVisulizer)
-                                    const AudioVisualizerWidget(
-                                      backgroundColor: LKColors.lkDarkBlue,
-                                    )
-                                  else
-                                    IsSpeakingIndicator(
-                                      builder: (context, isSpeaking) {
-                                        return isSpeaking != null
-                                            ? IsSpeakingIndicatorWidget(
-                                                isSpeaking: isSpeaking,
-                                                child: const VideoTrackWidget(),
-                                              )
-                                            : const VideoTrackWidget();
-                                      },
-                                    ),
-
-                                  /// focus toggle button at the top right
-                                  const Positioned(
-                                    top: 0,
-                                    right: 0,
-                                    child: FocusToggle(),
-                                  ),
-
-                                  /// track stats at the top left
-                                  const Positioned(
-                                    top: 8,
-                                    left: 0,
-                                    child: TrackStatsWidget(),
-                                  ),
-
                                   /// status bar at the bottom
                                   const Positioned(
                                     bottom: 0,
@@ -291,27 +291,11 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               children: [
                 Row(
                   children: [
-                    /// show chat widget on mobile
-                    if (roomCtx.isChatEnabled)
-                      Expanded(
-                        child: ChatBuilder(
-                          builder: (context, enabled, chatCtx, messages) {
-                            return ChatWidget(
-                              messages: messages,
-                              onSend: (message) => chatCtx.sendMessage(message),
-                              onClose: () {
-                                chatCtx.toggleChat(false);
-                              },
-                            );
-                          },
-                        ),
-                      )
-                    else
-                      Expanded(
-                        flex: 6,
-                        child: Stack(
-                          children: <Widget>[
-                            /* Expanded(
+                    Expanded(
+                      flex: 6,
+                      child: Stack(
+                        children: <Widget>[
+                          /* Expanded(
                                         child: TranscriptionBuilder(
                                           builder:
                                               (context, roomCtx, transcriptions) {
@@ -321,72 +305,72 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                                           },
                                         ),
                                       ),*/
-                            /// show participant loop
-                            ParticipantLoop(
-                              showAudioTracks: true,
-                              showVideoTracks: true,
-                              showParticipantPlaceholder: true,
+                          /// show participant loop
+                          ParticipantLoop(
+                            showAudioTracks: true,
+                            showVideoTracks: true,
+                            showParticipantPlaceholder: true,
 
-                              /// layout builder
-                              layoutBuilder: roomCtx.pinnedTracks.isNotEmpty
-                                  ? const CarouselLayoutBuilder()
-                                  : const GridLayoutBuilder(),
+                            /// layout builder
+                            layoutBuilder: roomCtx.pinnedTracks.isNotEmpty
+                                ? const CarouselLayoutBuilder()
+                                : const GridLayoutBuilder(),
 
-                              /// participant builder
-                              participantTrackBuilder: (context, identifier) {
-                                // build participant widget for each Track
-                                return Padding(
-                                  padding: const EdgeInsets.all(2),
-                                  child: Stack(
-                                    children: [
-                                      /// video track widget in the background
-                                      if (identifier.isAudio &&
-                                          roomCtx.enableAudioVisulizer)
-                                        const AudioVisualizerWidget(
-                                          backgroundColor: LKColors.lkDarkBlue,
-                                        )
-                                      else
-                                        IsSpeakingIndicator(
-                                          builder: (context, isSpeaking) {
-                                            return isSpeaking != null
-                                                ? IsSpeakingIndicatorWidget(
-                                                    isSpeaking: isSpeaking,
-                                                    child:
-                                                        const VideoTrackWidget(),
-                                                  )
-                                                : const VideoTrackWidget();
-                                          },
-                                        ),
-
-                                      /// focus toggle button at the top right
-                                      const Positioned(
-                                        top: 0,
-                                        right: 0,
-                                        child: FocusToggle(),
+                            /// participant builder
+                            participantTrackBuilder: (context, identifier) {
+                              // build participant widget for each Track
+                              return Padding(
+                                padding: const EdgeInsets.all(2),
+                                child: Stack(
+                                  children: [
+                                    /// video track widget in the background
+                                    if (identifier.isAudio &&
+                                        roomCtx.enableAudioVisulizer)
+                                      const AudioVisualizerWidget(
+                                        backgroundColor: LKColors.lkDarkBlue,
+                                      )
+                                    else
+                                      IsSpeakingIndicator(
+                                        builder: (context, isSpeaking) {
+                                          return isSpeaking != null
+                                              ? IsSpeakingIndicatorWidget(
+                                                  isSpeaking: isSpeaking,
+                                                  child:
+                                                      const VideoTrackWidget(),
+                                                )
+                                              : const VideoTrackWidget();
+                                        },
                                       ),
 
-                                      /// track stats at the top left
-                                      const Positioned(
-                                        top: 8,
-                                        left: 0,
-                                        child: TrackStatsWidget(),
-                                      ),
+                                    /// focus toggle button at the top right
+                                    const Positioned(
+                                      top: 0,
+                                      right: 0,
+                                      child: FocusToggle(),
+                                    ),
 
-                                      /// status bar at the bottom
-                                      const Positioned(
-                                        bottom: 0,
-                                        left: 0,
-                                        right: 0,
-                                        child: ParticipantStatusBar(),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
+                                    /// track stats at the top left
+                                    const Positioned(
+                                      top: 8,
+                                      left: 0,
+                                      child: TrackStatsWidget(),
+                                    ),
+
+                                    /// status bar at the bottom
+                                    const Positioned(
+                                      bottom: 0,
+                                      left: 0,
+                                      right: 0,
+                                      child: ParticipantStatusBar(),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
+                    ),
                   ],
                 ),
               ],
