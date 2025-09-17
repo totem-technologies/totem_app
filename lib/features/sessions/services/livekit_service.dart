@@ -12,17 +12,21 @@ enum SessionCommunicationTopics {
   emoji,
 }
 
+typedef OnEmojiReceived = void Function(String userIdentity, String emoji);
+
 @immutable
 class SessionOptions {
   const SessionOptions({
     required this.token,
-    this.cameraEnabled = true,
-    this.microphoneEnabled = true,
+    required this.cameraEnabled,
+    required this.microphoneEnabled,
+    required this.onEmojiReceived,
   });
 
   final String token;
   final bool cameraEnabled;
   final bool microphoneEnabled;
+  final OnEmojiReceived onEmojiReceived;
 
   @override
   bool operator ==(Object other) {
@@ -31,12 +35,17 @@ class SessionOptions {
     return other is SessionOptions &&
         other.token == token &&
         other.cameraEnabled == cameraEnabled &&
-        other.microphoneEnabled == microphoneEnabled;
+        other.microphoneEnabled == microphoneEnabled &&
+        other.onEmojiReceived == onEmojiReceived;
   }
 
   @override
-  int get hashCode =>
-      token.hashCode ^ cameraEnabled.hashCode ^ microphoneEnabled.hashCode;
+  int get hashCode {
+    return token.hashCode ^
+        cameraEnabled.hashCode ^
+        microphoneEnabled.hashCode ^
+        onEmojiReceived.hashCode;
+  }
 }
 
 @riverpod
@@ -80,14 +89,15 @@ class LiveKitService {
 
     if (event.topic == SessionCommunicationTopics.emoji.name) {
       _onEmojiReceived(
-        const Utf8Decoder().convert(event.data),
         event.participant!.identity,
+        const Utf8Decoder().convert(event.data),
       );
     }
   }
 
-  void _onEmojiReceived(String emoji, String userId) {
-    // Handle emoji received logic here
+  void _onEmojiReceived(String userIdentity, String emoji) {
+    debugPrint('Emoji received: $emoji from user: $userIdentity');
+    initialOptions.onEmojiReceived(userIdentity, emoji);
   }
 
   void sendEmoji(String emoji) {
@@ -95,5 +105,6 @@ class LiveKitService {
       const Utf8Encoder().convert(emoji),
       topic: SessionCommunicationTopics.emoji.name,
     );
+    debugPrint('Session => Sending emoji: $emoji');
   }
 }

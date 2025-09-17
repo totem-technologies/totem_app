@@ -32,13 +32,17 @@ class SessionParticipantsLayoutBuilder implements ParticipantLayoutBuilder {
             crossAxisSpacing: 10,
             childAspectRatio: 16 / 21,
             shrinkWrap: true,
-            children: List.generate(math.max(children.length, 8), (index) {
-              if (index < children.length) {
-                return children[index].widget;
-              } else {
-                return const SizedBox.shrink();
-              }
-            }),
+            physics: const NeverScrollableScrollPhysics(),
+            children: List.generate(
+              math.max(children.length, crossAxisCount * 2),
+              (index) {
+                if (index < children.length) {
+                  return children[index].widget;
+                } else {
+                  return const SizedBox.shrink();
+                }
+              },
+            ),
           ),
         );
       },
@@ -76,6 +80,7 @@ class ParticipantCard extends StatelessWidget {
               : Colors.white,
           width: 2,
         ),
+        boxShadow: kElevationToShadow[6],
       ),
       clipBehavior: Clip.antiAliasWithSaveLayer,
       child: AspectRatio(

@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -35,6 +36,11 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
 }
 
 class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
+  Map<String, GlobalKey> participantKeys = {};
+  GlobalKey getParticipantKey(String identity) {
+    return participantKeys.putIfAbsent(identity, GlobalKey.new);
+  }
+
   var _showEmojiPicker = false;
 
   @override
@@ -47,6 +53,16 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           token: widget.token,
           cameraEnabled: widget.cameraEnabled,
           microphoneEnabled: widget.micEnabled,
+          onEmojiReceived: (userIdentity, emoji) {
+            final userKey = participantKeys[userIdentity];
+            if (userKey != null && userKey.currentContext != null) {
+              displayReaction(
+                context,
+                userKey.currentContext!,
+                emoji,
+              );
+            }
+          },
         ),
       ),
     );
@@ -132,6 +148,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                               const SessionParticipantsLayoutBuilder(),
                           participantTrackBuilder: (context, identifier) {
                             return ParticipantCard(
+                              key: getParticipantKey(
+                                identifier.participant.identity,
+                              ),
                               participant: identifier.participant,
                               child: Builder(
                                 builder: (context) {
@@ -167,24 +186,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                                 },
                               ),
                             );
-                            // build participant widget for each Track
-                            return Padding(
-                              padding: const EdgeInsets.all(2),
-                              child: Stack(
-                                children: [
-                                  /// status bar at the bottom
-                                  const Positioned(
-                                    bottom: 0,
-                                    left: 0,
-                                    right: 0,
-                                    child: ParticipantStatusBar(),
-                                  ),
-                                ],
-                              ),
-                            );
                           },
                         ),
                       ),
+                      // TODO(bdlukaa): Transcriptions
                       ActionBar(
                         children: [
                           MediaDeviceSelectButton(
@@ -226,20 +231,21 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                             },
                           ),
                           Builder(
-                            builder: (context) {
+                            builder: (button) {
                               return ActionBarButton(
                                 active: _showEmojiPicker,
                                 onPressed: () async {
-                                  setState(() {
-                                    _showEmojiPicker = true;
-                                  });
-                                  final emoji = await showEmojiBar(context);
+                                  setState(() => _showEmojiPicker = true);
+                                  final emoji = await showEmojiBar(
+                                    button,
+                                    context,
+                                  );
                                   if (emoji != null && emoji.isNotEmpty) {
                                     session.sendEmoji(emoji);
                                   }
-                                  setState(() {
-                                    _showEmojiPicker = false;
-                                  });
+                                  if (mounted) {
+                                    setState(() => _showEmojiPicker = false);
+                                  }
                                 },
                                 child: const TotemIcon(TotemIcons.reaction),
                               );
@@ -276,173 +282,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 ),
               );
           }
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text(
-                'LiveKit Components',
-                style: TextStyle(color: Colors.white),
-              ),
-              actions: [
-                /// show clear pin button
-                if (roomCtx.connected) const ClearPinButton(),
-              ],
-            ),
-            body: Stack(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 6,
-                      child: Stack(
-                        children: <Widget>[
-                          /* Expanded(
-                                        child: TranscriptionBuilder(
-                                          builder:
-                                              (context, roomCtx, transcriptions) {
-                                            return TranscriptionWidget(
-                                              transcriptions: transcriptions,
-                                            );
-                                          },
-                                        ),
-                                      ),*/
-                          /// show participant loop
-                          ParticipantLoop(
-                            showAudioTracks: true,
-                            showVideoTracks: true,
-                            showParticipantPlaceholder: true,
-
-                            /// layout builder
-                            layoutBuilder: roomCtx.pinnedTracks.isNotEmpty
-                                ? const CarouselLayoutBuilder()
-                                : const GridLayoutBuilder(),
-
-                            /// participant builder
-                            participantTrackBuilder: (context, identifier) {
-                              // build participant widget for each Track
-                              return Padding(
-                                padding: const EdgeInsets.all(2),
-                                child: Stack(
-                                  children: [
-                                    /// video track widget in the background
-                                    if (identifier.isAudio &&
-                                        roomCtx.enableAudioVisulizer)
-                                      const AudioVisualizerWidget(
-                                        backgroundColor: LKColors.lkDarkBlue,
-                                      )
-                                    else
-                                      IsSpeakingIndicator(
-                                        builder: (context, isSpeaking) {
-                                          return isSpeaking != null
-                                              ? IsSpeakingIndicatorWidget(
-                                                  isSpeaking: isSpeaking,
-                                                  child:
-                                                      const VideoTrackWidget(),
-                                                )
-                                              : const VideoTrackWidget();
-                                        },
-                                      ),
-
-                                    /// focus toggle button at the top right
-                                    const Positioned(
-                                      top: 0,
-                                      right: 0,
-                                      child: FocusToggle(),
-                                    ),
-
-                                    /// track stats at the top left
-                                    const Positioned(
-                                      top: 8,
-                                      left: 0,
-                                      child: TrackStatsWidget(),
-                                    ),
-
-                                    /// status bar at the bottom
-                                    const Positioned(
-                                      bottom: 0,
-                                      left: 0,
-                                      right: 0,
-                                      child: ParticipantStatusBar(),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
         },
       ),
     );
-  }
-
-  Future<String?> showEmojiBar(BuildContext button) async {
-    final box = button.findRenderObject() as RenderBox?;
-    if (box == null) return null;
-    final overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox?;
-    if (overlay == null) return null;
-    final position = box.localToGlobal(Offset.zero, ancestor: overlay);
-
-    final response = await Navigator.of(context).push<String>(
-      PageRouteBuilder<String>(
-        opaque: false,
-        pageBuilder: (context, animation, secondaryAnimation) {
-          return Stack(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  Navigator.of(context).pop();
-                },
-                child: Container(
-                  color: Colors.transparent,
-                ),
-              ),
-              PositionedDirectional(
-                start: 20,
-                end: 20,
-                top: position.dy - 60,
-                child: FadeTransition(
-                  opacity: animation,
-                  child: EmojiBar(
-                    onEmojiSelected: (emoji) {
-                      Navigator.of(context).pop(emoji);
-                    },
-                    emojis: const [
-                      '👍',
-                      '👏',
-                      '😂',
-                      '😍',
-                      '😮',
-                      '😢',
-                      '🔥',
-                      '💯',
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-
-    return response;
-  }
-}
-
-extension on List<LocalTrackPublication<LocalVideoTrack>> {
-  LocalTrackPublication<LocalVideoTrack>? firstWhereOrNull(
-    bool Function(LocalTrackPublication<LocalVideoTrack> element) test,
-  ) {
-    for (final element in this) {
-      if (test(element)) return element;
-    }
-    return null;
   }
 }
