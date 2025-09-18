@@ -1,12 +1,12 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'keeper_repository.dart';
+part of 'user_repository.dart';
 
 // **************************************************************************
 // RiverpodGenerator
 // **************************************************************************
 
-String _$keeperProfileHash() => r'f196795ba98fbc88a9bada39aa9c6f563147d068';
+String _$userProfileHash() => r'b0b5de14b0311b454696aa444c3f449cf1045558';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -29,23 +29,23 @@ class _SystemHash {
   }
 }
 
-/// See also [keeperProfile].
-@ProviderFor(keeperProfile)
-const keeperProfileProvider = KeeperProfileFamily();
+/// See also [userProfile].
+@ProviderFor(userProfile)
+const userProfileProvider = UserProfileFamily();
 
-/// See also [keeperProfile].
-class KeeperProfileFamily extends Family<AsyncValue<KeeperProfileSchema>> {
-  /// See also [keeperProfile].
-  const KeeperProfileFamily();
+/// See also [userProfile].
+class UserProfileFamily extends Family<AsyncValue<PublicUserSchema>> {
+  /// See also [userProfile].
+  const UserProfileFamily();
 
-  /// See also [keeperProfile].
-  KeeperProfileProvider call(String slug) {
-    return KeeperProfileProvider(slug);
+  /// See also [userProfile].
+  UserProfileProvider call(String slug) {
+    return UserProfileProvider(slug);
   }
 
   @override
-  KeeperProfileProvider getProviderOverride(
-    covariant KeeperProfileProvider provider,
+  UserProfileProvider getProviderOverride(
+    covariant UserProfileProvider provider,
   ) {
     return call(provider.slug);
   }
@@ -62,28 +62,26 @@ class KeeperProfileFamily extends Family<AsyncValue<KeeperProfileSchema>> {
       _allTransitiveDependencies;
 
   @override
-  String? get name => r'keeperProfileProvider';
+  String? get name => r'userProfileProvider';
 }
 
-/// See also [keeperProfile].
-class KeeperProfileProvider
-    extends AutoDisposeFutureProvider<KeeperProfileSchema> {
-  /// See also [keeperProfile].
-  KeeperProfileProvider(String slug)
+/// See also [userProfile].
+class UserProfileProvider extends AutoDisposeFutureProvider<PublicUserSchema> {
+  /// See also [userProfile].
+  UserProfileProvider(String slug)
     : this._internal(
-        (ref) => keeperProfile(ref as KeeperProfileRef, slug),
-        from: keeperProfileProvider,
-        name: r'keeperProfileProvider',
+        (ref) => userProfile(ref as UserProfileRef, slug),
+        from: userProfileProvider,
+        name: r'userProfileProvider',
         debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
             ? null
-            : _$keeperProfileHash,
-        dependencies: KeeperProfileFamily._dependencies,
-        allTransitiveDependencies:
-            KeeperProfileFamily._allTransitiveDependencies,
+            : _$userProfileHash,
+        dependencies: UserProfileFamily._dependencies,
+        allTransitiveDependencies: UserProfileFamily._allTransitiveDependencies,
         slug: slug,
       );
 
-  KeeperProfileProvider._internal(
+  UserProfileProvider._internal(
     super._createNotifier, {
     required super.name,
     required super.dependencies,
@@ -97,12 +95,12 @@ class KeeperProfileProvider
 
   @override
   Override overrideWith(
-    FutureOr<KeeperProfileSchema> Function(KeeperProfileRef provider) create,
+    FutureOr<PublicUserSchema> Function(UserProfileRef provider) create,
   ) {
     return ProviderOverride(
       origin: this,
-      override: KeeperProfileProvider._internal(
-        (ref) => create(ref as KeeperProfileRef),
+      override: UserProfileProvider._internal(
+        (ref) => create(ref as UserProfileRef),
         from: from,
         name: null,
         dependencies: null,
@@ -114,13 +112,13 @@ class KeeperProfileProvider
   }
 
   @override
-  AutoDisposeFutureProviderElement<KeeperProfileSchema> createElement() {
-    return _KeeperProfileProviderElement(this);
+  AutoDisposeFutureProviderElement<PublicUserSchema> createElement() {
+    return _UserProfileProviderElement(this);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is KeeperProfileProvider && other.slug == slug;
+    return other is UserProfileProvider && other.slug == slug;
   }
 
   @override
@@ -134,18 +132,18 @@ class KeeperProfileProvider
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-mixin KeeperProfileRef on AutoDisposeFutureProviderRef<KeeperProfileSchema> {
+mixin UserProfileRef on AutoDisposeFutureProviderRef<PublicUserSchema> {
   /// The parameter `slug` of this provider.
   String get slug;
 }
 
-class _KeeperProfileProviderElement
-    extends AutoDisposeFutureProviderElement<KeeperProfileSchema>
-    with KeeperProfileRef {
-  _KeeperProfileProviderElement(super.provider);
+class _UserProfileProviderElement
+    extends AutoDisposeFutureProviderElement<PublicUserSchema>
+    with UserProfileRef {
+  _UserProfileProviderElement(super.provider);
 
   @override
-  String get slug => (origin as KeeperProfileProvider).slug;
+  String get slug => (origin as UserProfileProvider).slug;
 }
 
 // ignore_for_file: type=lint

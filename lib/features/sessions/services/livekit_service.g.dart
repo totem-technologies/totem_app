@@ -1,12 +1,12 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'keeper_repository.dart';
+part of 'livekit_service.dart';
 
 // **************************************************************************
 // RiverpodGenerator
 // **************************************************************************
 
-String _$keeperProfileHash() => r'f196795ba98fbc88a9bada39aa9c6f563147d068';
+String _$sessionServiceHash() => r'57b751ef8b0f2b9055b33fb074c4f20bf289b179';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -29,25 +29,25 @@ class _SystemHash {
   }
 }
 
-/// See also [keeperProfile].
-@ProviderFor(keeperProfile)
-const keeperProfileProvider = KeeperProfileFamily();
+/// See also [sessionService].
+@ProviderFor(sessionService)
+const sessionServiceProvider = SessionServiceFamily();
 
-/// See also [keeperProfile].
-class KeeperProfileFamily extends Family<AsyncValue<KeeperProfileSchema>> {
-  /// See also [keeperProfile].
-  const KeeperProfileFamily();
+/// See also [sessionService].
+class SessionServiceFamily extends Family<LiveKitService> {
+  /// See also [sessionService].
+  const SessionServiceFamily();
 
-  /// See also [keeperProfile].
-  KeeperProfileProvider call(String slug) {
-    return KeeperProfileProvider(slug);
+  /// See also [sessionService].
+  SessionServiceProvider call(SessionOptions options) {
+    return SessionServiceProvider(options);
   }
 
   @override
-  KeeperProfileProvider getProviderOverride(
-    covariant KeeperProfileProvider provider,
+  SessionServiceProvider getProviderOverride(
+    covariant SessionServiceProvider provider,
   ) {
-    return call(provider.slug);
+    return call(provider.options);
   }
 
   static const Iterable<ProviderOrFamily>? _dependencies = null;
@@ -62,71 +62,70 @@ class KeeperProfileFamily extends Family<AsyncValue<KeeperProfileSchema>> {
       _allTransitiveDependencies;
 
   @override
-  String? get name => r'keeperProfileProvider';
+  String? get name => r'sessionServiceProvider';
 }
 
-/// See also [keeperProfile].
-class KeeperProfileProvider
-    extends AutoDisposeFutureProvider<KeeperProfileSchema> {
-  /// See also [keeperProfile].
-  KeeperProfileProvider(String slug)
+/// See also [sessionService].
+class SessionServiceProvider extends AutoDisposeProvider<LiveKitService> {
+  /// See also [sessionService].
+  SessionServiceProvider(SessionOptions options)
     : this._internal(
-        (ref) => keeperProfile(ref as KeeperProfileRef, slug),
-        from: keeperProfileProvider,
-        name: r'keeperProfileProvider',
+        (ref) => sessionService(ref as SessionServiceRef, options),
+        from: sessionServiceProvider,
+        name: r'sessionServiceProvider',
         debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
             ? null
-            : _$keeperProfileHash,
-        dependencies: KeeperProfileFamily._dependencies,
+            : _$sessionServiceHash,
+        dependencies: SessionServiceFamily._dependencies,
         allTransitiveDependencies:
-            KeeperProfileFamily._allTransitiveDependencies,
-        slug: slug,
+            SessionServiceFamily._allTransitiveDependencies,
+        options: options,
       );
 
-  KeeperProfileProvider._internal(
+  SessionServiceProvider._internal(
     super._createNotifier, {
     required super.name,
     required super.dependencies,
     required super.allTransitiveDependencies,
     required super.debugGetCreateSourceHash,
     required super.from,
-    required this.slug,
+    required this.options,
   }) : super.internal();
 
-  final String slug;
+  final SessionOptions options;
 
   @override
   Override overrideWith(
-    FutureOr<KeeperProfileSchema> Function(KeeperProfileRef provider) create,
+    LiveKitService Function(SessionServiceRef provider) create,
   ) {
     return ProviderOverride(
       origin: this,
-      override: KeeperProfileProvider._internal(
-        (ref) => create(ref as KeeperProfileRef),
+      override: SessionServiceProvider._internal(
+        (ref) => create(ref as SessionServiceRef),
         from: from,
         name: null,
         dependencies: null,
         allTransitiveDependencies: null,
         debugGetCreateSourceHash: null,
-        slug: slug,
+        options: options,
       ),
     );
   }
 
   @override
-  AutoDisposeFutureProviderElement<KeeperProfileSchema> createElement() {
-    return _KeeperProfileProviderElement(this);
+  AutoDisposeProviderElement<LiveKitService> createElement() {
+    return _SessionServiceProviderElement(this);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is KeeperProfileProvider && other.slug == slug;
+    return other is SessionServiceProvider && other.options == options;
   }
 
   @override
   int get hashCode {
     var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, slug.hashCode);
+    hash = _SystemHash.combine(hash, options.hashCode);
 
     return _SystemHash.finish(hash);
   }
@@ -134,18 +133,18 @@ class KeeperProfileProvider
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-mixin KeeperProfileRef on AutoDisposeFutureProviderRef<KeeperProfileSchema> {
-  /// The parameter `slug` of this provider.
-  String get slug;
+mixin SessionServiceRef on AutoDisposeProviderRef<LiveKitService> {
+  /// The parameter `options` of this provider.
+  SessionOptions get options;
 }
 
-class _KeeperProfileProviderElement
-    extends AutoDisposeFutureProviderElement<KeeperProfileSchema>
-    with KeeperProfileRef {
-  _KeeperProfileProviderElement(super.provider);
+class _SessionServiceProviderElement
+    extends AutoDisposeProviderElement<LiveKitService>
+    with SessionServiceRef {
+  _SessionServiceProviderElement(super.provider);
 
   @override
-  String get slug => (origin as KeeperProfileProvider).slug;
+  SessionOptions get options => (origin as SessionServiceProvider).options;
 }
 
 // ignore_for_file: type=lint

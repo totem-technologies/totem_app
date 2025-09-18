@@ -4,17 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/screens/login_screen.dart';
 import 'package:totem_app/auth/screens/onboarding_screen.dart';
 import 'package:totem_app/auth/screens/pin_entry_screen.dart';
 import 'package:totem_app/auth/screens/profile_setup_screen.dart';
+import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/blog/screens/blog_list_screen.dart';
 import 'package:totem_app/features/blog/screens/blog_screen.dart';
 import 'package:totem_app/features/home/screens/home_screen.dart';
 import 'package:totem_app/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_details_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_screen.dart';
+import 'package:totem_app/features/sessions/screens/welcome.dart';
 import 'package:totem_app/features/spaces/screens/session_history.dart';
 import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
 import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
@@ -347,14 +350,16 @@ GoRouter createRouter(WidgetRef ref) {
         },
       ),
 
-      // GoRoute(
-      //   path: '/sessions/:id/pre-join',
-      //   name: RouteNames.preJoinSession,
-      //   builder: (context, state) {
-      //     final sessionId = state.pathParameters['id'] ?? '';
-      //     return PreJoinScreen(sessionId: sessionId);
-      //   },
-      // ),
+      GoRoute(
+        path: RouteNames.videoSessionWelcome,
+        name: RouteNames.videoSessionWelcome,
+        builder: (context, state) {
+          return Theme(
+            data: AppTheme.darkTheme,
+            child: PreJoinScreen(event: state.extra! as EventDetailSchema),
+          );
+        },
+      ),
       // GoRoute(
       //   path: '/sessions/:id',
       //   name: RouteNames.videoSession,

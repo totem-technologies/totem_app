@@ -6,7 +6,7 @@ part of 'home_screen_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$spacesSummaryHash() => r'c38b9f29105ac53e7fd04182ccce10fe7b4ee143';
+String _$spacesSummaryHash() => r'8b1ebf701db053f46adf8642e832fb15ea6d17db';
 
 /// See also [spacesSummary].
 @ProviderFor(spacesSummary)

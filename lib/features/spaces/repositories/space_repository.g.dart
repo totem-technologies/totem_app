@@ -162,7 +162,7 @@ class _EventProviderElement
 }
 
 String _$listSubscribedSpacesHash() =>
-    r'e4b73ae7cce24792714775c344deffd39373fe43';
+    r'163a850d3d5db71189d86ea743671679be64bb2f';
 
 /// See also [listSubscribedSpaces].
 @ProviderFor(listSubscribedSpaces)
