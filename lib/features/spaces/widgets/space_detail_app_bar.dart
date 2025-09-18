@@ -154,7 +154,9 @@ class SpaceDetailAppBar extends StatelessWidget {
                             SharePlus.instance.share(
                               ShareParams(
                                 uri: Uri.parse(
-                                  'https://totem.org/spaces/event/${event.slug}?utm_source=app&utm_medium=share',
+                                  '${AppConfig.mobileApiUrl}'
+                                  '/spaces/event/${event.slug}'
+                                  '?utm_source=app&utm_medium=share',
                                 ),
                                 sharePositionOrigin:
                                     box != null

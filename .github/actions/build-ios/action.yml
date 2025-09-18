@@ -1,0 +1,120 @@
+# Adapted from https://github.com/cedvdb/action-flutter-build-ios
+name: flutter-build-ios
+description: Setups the environment to build ios apps with flutter
+branding:
+  icon: box
+  color: green
+inputs:
+  working-directory:
+    description: The root directory of the flutter app within this repository
+    default: ./
+  build-cmd:
+    description: The full build command, can be used to add arguments
+    default: flutter build ipa --release
+  flutterfire:
+    description: "Whether this project uses flutterfire, this is needed because flutterfire cli adds a post build script..."
+    required: false
+    default: "true" # we'll setup flutter fire just in case
+  certificate-base64:
+    description: "base 64 of the p12 certificate"
+    required: true
+  certificate-password:
+    description: "password of the above certificate"
+    required: true
+  provisioning-profile-base64:
+    description: "base 64 of your.mobileprovision"
+    required: true
+  keychain-password:
+    description: "random string in secrets"
+    required: true
+  firebase-options-b64:
+    description: "Base64 encoded firebase_options.dart file"
+    required: true
+  google-service-info-plist-b64:
+    description: "Base64 encoded GoogleService-Info.plist file"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: xcode version
+      run: /usr/bin/xcodebuild -version
+      shell: bash
+
+    - name: Check flutter found
+      id: check_flutter
+      shell: bash
+      run: |
+        if flutter --version; then
+            echo "installed=true" >> "$GITHUB_OUTPUT"
+        else
+            echo "installed=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Setup flutter
+      if: steps.check_flutter.outputs.installed == 'false'
+      uses: subosito/flutter-action@v2
+      with:
+        channel: "stable"
+        cache: true
+
+    - name: Activate flutterfire
+      if: ${{ inputs.flutterfire }} == 'true'
+      run: dart pub global activate flutterfire_cli --overwrite
+      shell: bash
+
+    - name: Decode GoogleService-Info.plist and firebase_options.dart
+      shell: bash
+      run: |
+        echo "$FIREBASE_OPTIONS_B64" | base64 --decode > lib/firebase_options.dart
+        echo "$GOOGLE_SERVICE_INFO_PLIST_B64" | base64 --decode > ios/Runner/GoogleService-Info.plist
+      env:
+        FIREBASE_OPTIONS_B64: ${{ inputs.firebase-options-b64 }}
+        GOOGLE_SERVICE_INFO_PLIST_B64: ${{ inputs.google-service-info-plist-b64 }}
+
+    # see https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development for more info
+    - name: Install the Apple certificate and provisioning profile
+      shell: bash
+      env:
+        IOS_BUILD_CERTIFICATE_BASE64: ${{ inputs.certificate-base64 }}
+        IOS_BUILD_CERTIFICATE_PASSWORD: ${{ inputs.certificate-password }}
+        IOS_MOBILE_PROVISIONING_PROFILE_BASE64: ${{ inputs.provisioning-profile-base64 }}
+        IOS_GITHUB_KEYCHAIN_PASSWORD: ${{ inputs.keychain-password }}
+        # Slight modification in the script from https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development
+        # that adds the uuid to the mobile provision so xcode can find it
+      run: |
+        # create variables
+        CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+        KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+        PP_PATH=$RUNNER_TEMP/temp.mobileprovision
+
+
+        # import certificate and provisioning profile from secrets
+        echo -n "$IOS_BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+        echo -n "$IOS_MOBILE_PROVISIONING_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+
+        # create temporary keychain
+        security create-keychain -p "$IOS_GITHUB_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+        security unlock-keychain -p "$IOS_GITHUB_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+        # import certificate to keychain
+        security import $CERTIFICATE_PATH -P "$IOS_BUILD_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+        security list-keychain -d user -s $KEYCHAIN_PATH
+        security find-identity -v
+
+        # use uuid for the name of provisioning profile
+        UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(/usr/bin/security cms -D -i $PP_PATH))
+
+        # apply provisioning profile
+        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+        cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+
+    - name: List profiles
+      run: cd ~/Library/MobileDevice/Provisioning\ Profiles && ls
+      shell: bash
+
+    - name: Build
+      run: ${{ inputs.build-cmd }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}

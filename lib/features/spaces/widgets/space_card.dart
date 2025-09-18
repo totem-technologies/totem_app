@@ -2,6 +2,8 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/next_event_schema.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
@@ -18,6 +20,26 @@ class SpaceCard extends StatelessWidget {
     this.compact = false,
     this.onTap,
   });
+
+  factory SpaceCard.fromEventDetailSchema(EventDetailSchema event) {
+    return SpaceCard(
+      space: SpaceDetailSchema(
+        slug: event.space.slug!,
+        title: event.space.title,
+        imageLink: event.space.image,
+        description: event.space.subtitle,
+        author: event.space.author,
+        nextEvent: NextEventSchema(
+          start: event.start.toIso8601String(),
+          link: event.calLink,
+          seatsLeft: event.seatsLeft,
+          slug: event.slug,
+          title: event.title,
+        ),
+        category: '',
+      ),
+    );
+  }
 
   final SpaceDetailSchema space;
   final bool compact;
@@ -43,20 +65,38 @@ class SpaceCard extends StatelessWidget {
           child: Stack(
             children: [
               Positioned.fill(
-                child: CachedNetworkImage(
-                  imageUrl: getFullUrl(space.imageLink ?? ''),
-                  fit: BoxFit.cover,
-                  color: Colors.black.withValues(alpha: 0.45),
-                  colorBlendMode: BlendMode.multiply,
-                  placeholder: (context, url) => ColoredBox(
-                    color: Colors.black.withValues(alpha: 0.75),
-                  ),
-                  errorWidget: (context, url, error) {
-                    return Image.asset(
-                      TotemAssets.genericBackground,
-                      fit: BoxFit.cover,
+                child: ShaderMask(
+                  shaderCallback: (rect) {
+                    final cardHeight = rect.height;
+                    const gradientHeight = 135.0;
+                    final startStop =
+                        ((cardHeight - gradientHeight) / cardHeight).clamp(
+                          0.0,
+                          1.0,
+                        );
+                    return LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: const [Colors.transparent, Colors.black],
+                      stops: [startStop, 1.0],
+                    ).createShader(
+                      Rect.fromLTRB(0, 0, rect.width, rect.height),
                     );
                   },
+                  blendMode: BlendMode.darken,
+                  child: CachedNetworkImage(
+                    imageUrl: getFullUrl(space.imageLink ?? ''),
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => ColoredBox(
+                      color: Colors.black.withValues(alpha: 0.75),
+                    ),
+                    errorWidget: (context, url, error) {
+                      return Image.asset(
+                        TotemAssets.genericBackground,
+                        fit: BoxFit.cover,
+                      );
+                    },
+                  ),
                 ),
               ),
               PositionedDirectional(
@@ -214,72 +254,106 @@ class SmallSpaceCard extends StatelessWidget {
           () {
             context.push(RouteNames.space(space.nextEvent.slug));
           },
-      child: Ink(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: CachedNetworkImageProvider(
-              getFullUrl(space.imageLink ?? ''),
-            ),
-            fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(
-              Colors.black.withValues(alpha: 0.2),
-              BlendMode.multiply,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: ShaderMask(
+                shaderCallback: (rect) {
+                  final cardHeight = rect.height;
+                  const gradientHeight = 100.0;
+                  final startStop = ((cardHeight - gradientHeight) / cardHeight)
+                      .clamp(
+                        0.0,
+                        1.0,
+                      );
+                  return LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: const [Colors.transparent, Colors.black],
+                    stops: [startStop, 1.0],
+                  ).createShader(
+                    Rect.fromLTRB(0, 0, rect.width, rect.height),
+                  );
+                },
+                blendMode: BlendMode.darken,
+                child: CachedNetworkImage(
+                  imageUrl: getFullUrl(space.imageLink ?? ''),
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: Colors.black.withValues(alpha: 0.6),
+                  ),
+                  errorWidget: (context, url, error) => Image.asset(
+                    TotemAssets.genericBackground,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
             ),
           ),
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: [
-              const Color(0x262F3799).withValues(alpha: 0),
-              const Color(0xFF2F3799),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: 10,
-          vertical: 20,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 5,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
+          Positioned.fill(
+            child: Container(
               decoration: BoxDecoration(
-                color: const Color(0x99262F37),
                 borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                buildTimeLabel(
-                  DateTime.parse(space.nextEvent.start),
-                ),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 8,
-                  fontWeight: FontWeight.bold,
+                gradient: const LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    Colors.black54,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
               ),
             ),
-            const Spacer(),
-            Text(
-              '${space.nextEvent.seatsLeft} seats left',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-              ),
+          ),
+          PositionedDirectional(
+            top: 10,
+            start: 10,
+            end: 10,
+            bottom: 10,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0x99262F37),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    buildTimeLabel(
+                      DateTime.parse(space.nextEvent.start),
+                    ),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${space.nextEvent.seatsLeft} seats left',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                AutoSizeText(
+                  space.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 2,
+                ),
+              ],
             ),
-            AutoSizeText(
-              space.title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-              maxLines: 2,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

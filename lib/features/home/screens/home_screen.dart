@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_app/api/export.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/navigation/route_names.dart';
@@ -9,11 +8,24 @@ import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  late final _pageController = PageController(viewportFraction: 0.9);
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final summary = ref.watch(spacesSummaryProvider);
 
@@ -22,101 +34,65 @@ class HomeScreen extends ConsumerWidget {
       body: SafeArea(
         child: summary.when(
           data: (summary) {
-            // If there is more than one upcoming event, we will show a
-            // horizontal list of cards with the next card visible.
-            final factor = summary.upcoming.length == 1 ? 1 : 3;
-            final upcomingCardWidth =
-                MediaQuery.sizeOf(context).width - 16 * factor;
-
-            // TODO(bdlukaa): This should be handled in the backend response.
-            final upcomingEvents = summary.upcoming.where((event) {
-              return !event.ended;
-            }).toList();
+            final upcomingEvents = summary.upcoming
+                .where((event) => !event.ended)
+                .toList();
 
             return RefreshIndicator.adaptive(
               onRefresh: () => ref.refresh(spacesSummaryProvider.future),
               child: CustomScrollView(
                 slivers: [
                   if (upcomingEvents.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: Container(
-                        height: 300,
-                        margin: const EdgeInsetsDirectional.symmetric(
-                          horizontal: 8,
+                    if (upcomingEvents.length == 1)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: 16,
+                          ),
+                          child: GestureDetector(
+                            onTap: () {
+                              context.push(
+                                RouteNames.space(upcomingEvents.first.slug),
+                              );
+                            },
+                            child: SpaceCard.fromEventDetailSchema(
+                              upcomingEvents.first,
+                            ),
+                          ),
                         ),
-                        child: CarouselView(
-                          padding: const EdgeInsets.only(
-                            left: 8,
-                            right: 8,
-                          ),
-                          itemExtent: upcomingCardWidth.clamp(
-                            180,
-                            MediaQuery.sizeOf(context).width,
-                          ),
-                          onTap: (index) {
-                            context.push(
-                              RouteNames.space(upcomingEvents[index].slug),
-                            );
-                          },
-                          children: [
-                            for (final event in upcomingEvents)
-                              SpaceCard(
-                                space: SpaceDetailSchema(
-                                  slug: event.space.slug!,
-                                  title: event.space.title,
-                                  imageLink: event.space.image,
-                                  description: event.space.subtitle,
-                                  author: event.space.author,
-                                  nextEvent: NextEventSchema(
-                                    start: event.start.toIso8601String(),
-                                    link: event.calLink,
-                                    seatsLeft: event.seatsLeft,
-                                    slug: event.slug,
-                                    title: event.title,
-                                  ),
-                                  // category: event.space.categories:,
-                                  category: '',
+                      )
+                    else
+                      SliverToBoxAdapter(
+                        child: AspectRatio(
+                          aspectRatio: 1.38,
+                          child: PageView.builder(
+                            padEnds: false,
+                            controller: _pageController,
+                            itemCount: upcomingEvents.length,
+                            itemBuilder: (context, index) {
+                              final event = upcomingEvents[index];
+                              return Padding(
+                                padding: EdgeInsetsDirectional.only(
+                                  start: index == 0 ? 16 : 16,
+                                  end: index == upcomingEvents.length - 1
+                                      ? 16
+                                      : 0,
                                 ),
-                              ),
-                          ],
+                                child: GestureDetector(
+                                  onTap: () {
+                                    context.push(
+                                      RouteNames.space(event.slug),
+                                    );
+                                  },
+                                  child: SpaceCard.fromEventDetailSchema(
+                                    event,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                        // child: ListView.separated(
-                        //   scrollDirection: Axis.horizontal,
-                        //   itemCount: summary.upcoming.length,
-                        //   padding: const EdgeInsetsDirectional.symmetric(
-                        //     horizontal: 16,
-                        //   ),
-                        //   itemBuilder: (context, index) {
-                        //     final event = summary.upcoming[index];
-
-                        //     return SizedBox(
-                        //       width: upcomingCardWidth.clamp(180, 350),
-                        //       child: SpaceCard(
-                        //         space: SpaceDetailSchema(
-                        //           slug: event.space.slug!,
-                        //           title: event.space.title,
-                        //           imageLink: event.space.image,
-                        //           description: event.space.subtitle,
-                        //           author: event.space.author,
-                        //           nextEvent: NextEventSchema(
-                        //             start: event.start.toIso8601String(),
-                        //             link: event.calLink,
-                        //             seatsLeft: event.seatsLeft,
-                        //             slug: event.slug,
-                        //             title: event.title,
-                        //           ),
-                        //           // category: event.space.categories:,
-                        //           category: '',
-                        //         ),
-                        //       ),
-                        //     );
-                        //   },
-                        //   separatorBuilder: (_, _) => const SizedBox(width:
-                        // 16),
-                        // ),
                       ),
-                    ),
-
                   if (summary.forYou.isNotEmpty) ...[
                     SliverToBoxAdapter(
                       child: Padding(

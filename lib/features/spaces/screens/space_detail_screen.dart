@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/next_event_schema.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
+import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/features/keeper/screens/meet_user_card.dart';
@@ -111,7 +112,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                       SharePlus.instance.share(
                                         ShareParams(
                                           uri: Uri.parse(
-                                            'https://totem.org/spaces/event/${event.slug}?utm_source=app&utm_medium=share',
+                                            '${AppConfig.mobileApiUrl}'
+                                            'spaces/event/${event.slug}'
+                                            '?utm_source=app&utm_medium=share',
                                           ),
                                           sharePositionOrigin: box != null
                                               ? box.localToGlobal(
@@ -264,7 +267,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           // TODO(bdlukaa): Sessions Calendar
                           Container(
                             padding: horizontalPadding,
-                            constraints: const BoxConstraints(maxHeight: 140),
+                            constraints: const BoxConstraints(maxHeight: 160),
                             child: SpaceCard(
                               onTap: () => _showSessionSheet(context, event),
                               compact: true,

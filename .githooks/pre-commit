@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+
+# Pre-commit hook to check dart formatting
+# To use this hook, run: make githooks
+
+set -u
+
+# Run the format check script
+dart scripts/check_format.dart

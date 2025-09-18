@@ -11,7 +11,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+
       - name: Install Flutter
         uses: subosito/flutter-action@main
         with:
@@ -21,7 +22,7 @@ jobs:
         run: flutter --version
 
       - name: Create .env file
-        run: echo 'API_URL="https://www.totem.org"' > .env
+        run: echo 'API_URL="https://totem.kbl.io"' > .env
 
       # - name: Install Firebase CLI
       #   run: |
@@ -37,7 +38,8 @@ jobs:
         run: flutter pub get
 
       - name: Check formatting
-        run: dart format --set-exit-if-changed .
+        run: |
+          dart format --set-exit-if-changed .
 
       - name: Run analysis
         run: flutter analyze
