@@ -438,7 +438,7 @@ class AppTheme {
 
   static Map<String, Style> get htmlStyle => {
     'body': Style(
-      margin: Margins.symmetric(horizontal: 16),
+      margin: Margins.symmetric(horizontal: 0),
     ),
     'hr': Style(
       margin: Margins.zero,
