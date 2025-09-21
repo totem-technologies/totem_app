@@ -57,7 +57,18 @@ class FeaturedBlogPost extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.network(image!, fit: BoxFit.cover),
+                CachedNetworkImage(
+                  imageUrl: image ?? '',
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey[300],
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey[300],
+                    child: const Center(child: Icon(Icons.broken_image)),
+                  ),
+                ),
                 Positioned(
                   bottom: 0,
                   left: 0,
