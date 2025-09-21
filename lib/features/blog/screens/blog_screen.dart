@@ -34,6 +34,9 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
       backgroundColor: const Color(0xffFCEFE4),
       body: blogRef.when(
         data: (blog) {
+          final authorSpacesText =
+              'Spaces by ${blog.author?.name ?? 'this Author'}';
+
           return RefreshIndicator.adaptive(
             onRefresh: () => ref.refresh(blogPostProvider(widget.slug).future),
             child: CustomScrollView(
@@ -181,8 +184,7 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                           MeetUserCard(user: blog.author!),
                           const SizedBox(height: 20),
                           KeeperSpaces(
-                            title:
-                                'Spaces by ${blog.author?.name ?? 'this Author'}',
+                            title: authorSpacesText,
                             keeperSlug: blog.author!.slug!,
                           ),
                           const SizedBox(height: 14),
