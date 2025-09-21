@@ -160,22 +160,16 @@ class NewBlogPostCard extends StatelessWidget {
                   ),
                 ),
 
-                // TODO(adilsakout): ADD SUBTITLE HERE
-                Text(
-                  subtitle.isNotEmpty
-                      ? subtitle
-                      : 'Lorem ipsum dolor sit amet, consectetur adipiscing. '
-                            'Sed do eiusmod tempor incididunt ut labore et dolore '
-                            'magna aliqua. Lorem ipsum dolor sit amet, consectetur '
-                            'adipiscing elit. Sed do eiusmod tempor incididunt ut '
-                            'labore et dolore magna aliqua.',
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white,
-                    fontSize: 12,
+                if (subtitle.isNotEmpty)
+                  Text(
+                    subtitle,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.white,
+                      fontSize: 12,
+                    ),
                   ),
-                ),
                 Row(
                   spacing: 6,
                   children: [
