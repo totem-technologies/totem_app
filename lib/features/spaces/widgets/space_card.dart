@@ -205,9 +205,11 @@ class SpaceCard extends StatelessWidget {
                               const TextSpan(text: '  '),
                               WidgetSpan(
                                 alignment: PlaceholderAlignment.middle,
-                                child: UserAvatar.fromUserSchema(
-                                  space.author,
-                                  radius: 25 / 2,
+                                child: IgnorePointer(
+                                  child: UserAvatar.fromUserSchema(
+                                    space.author,
+                                    radius: 25 / 2,
+                                  ),
                                 ),
                               ),
                             ].reversedIf(compact),

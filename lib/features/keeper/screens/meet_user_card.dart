@@ -22,7 +22,16 @@ class MeetUserCard extends StatelessWidget {
       child: Row(
         spacing: 8,
         children: [
-          UserAvatar.fromUserSchema(user),
+          UserAvatar.fromUserSchema(
+            user,
+            onTap: user.slug != null
+                ? () {
+                    context.push(
+                      RouteNames.keeperProfile(user.slug!),
+                    );
+                  }
+                : null,
+          ),
           Expanded(
             child: Text(
               user.name ?? 'Keeper',

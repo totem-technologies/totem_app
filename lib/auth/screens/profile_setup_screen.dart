@@ -321,6 +321,7 @@ class _ProfileTabState extends State<_ProfileTab>
         ),
         const SizedBox(height: 24),
         GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () => showProfileImagePicker(context),
           child: Center(
             child: Stack(

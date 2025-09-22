@@ -152,10 +152,12 @@ class ParticipantCard extends ConsumerWidget {
                       );
                       return user.when(
                         data: (user) {
-                          return UserAvatar.fromUserSchema(
-                            user,
-                            borderRadius: BorderRadius.zero,
-                            borderWidth: 0,
+                          return IgnorePointer(
+                            child: UserAvatar.fromUserSchema(
+                              user,
+                              borderRadius: BorderRadius.zero,
+                              borderWidth: 0,
+                            ),
                           );
                         },
                         error: (error, stackTrace) {
