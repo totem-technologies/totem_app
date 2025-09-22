@@ -8,7 +8,6 @@ import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
-import 'package:totem_app/features/sessions/screens/room_screen.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -64,17 +63,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     });
   }
 
-  void _joinRoom() {
-    // Navigator.of(context).push(
-    //   MaterialPageRoute(
-    //     builder: (context) => VideoRoomScreen(
-    //       roomName: widget.roomName,
-    //       token: widget.token,
-    //       cameraEnabled: _isCameraOn,
-    //       micEnabled: _isMicOn,
-    //     ),
-    //   ),
-    // );
+  Future<void> _joinRoom() async {
+    await _videoTrack?.stop();
+    await _videoTrack?.dispose();
+    // TODO(bdlukaa): Push RoomScreen with options when available
+
+    // Re-initialize the local video track when returning to this screen
+    await _initializeLocalVideo();
   }
 
   @override

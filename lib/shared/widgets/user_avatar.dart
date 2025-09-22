@@ -111,7 +111,7 @@ class UserAvatar extends ConsumerWidget {
               );
             }
           },
-      child: DecoratedBox(
+      child: Container(
         decoration: BoxDecoration(
           border: Border.all(color: Colors.white, width: borderWidth),
           borderRadius: borderRadius,

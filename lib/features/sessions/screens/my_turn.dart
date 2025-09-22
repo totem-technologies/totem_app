@@ -22,6 +22,7 @@ class MyTurn extends StatelessWidget {
           children: [
             Expanded(
               child: ParticipantLoop(
+                // TODO(bdlukaa): Update this layout builder
                 layoutBuilder: const SessionParticipantsLayoutBuilder(),
                 participantTrackBuilder: (context, identifier) {
                   return ParticipantCard(
@@ -60,7 +61,7 @@ class MyTurn extends StatelessWidget {
                       ),
                       child: ElevatedButton(
                         onPressed: () {
-                          // TODO(bdlukaa); Pass the totem
+                          // TODO(bdlukaa): Pass the totem functionality
                         },
                         style: ButtonStyle(
                           shape: WidgetStatePropertyAll(
