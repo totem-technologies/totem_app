@@ -11,6 +11,7 @@ import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/space_gradient_mask.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class SpaceCard extends StatelessWidget {
@@ -65,25 +66,7 @@ class SpaceCard extends StatelessWidget {
           child: Stack(
             children: [
               Positioned.fill(
-                child: ShaderMask(
-                  shaderCallback: (rect) {
-                    final cardHeight = rect.height;
-                    const gradientHeight = 135.0;
-                    final startStop =
-                        ((cardHeight - gradientHeight) / cardHeight).clamp(
-                          0.0,
-                          1.0,
-                        );
-                    return LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: const [Colors.transparent, Colors.black],
-                      stops: [startStop, 1.0],
-                    ).createShader(
-                      Rect.fromLTRB(0, 0, rect.width, rect.height),
-                    );
-                  },
-                  blendMode: BlendMode.darken,
+                child: SpaceGradientMask(
                   child: CachedNetworkImage(
                     imageUrl: getFullUrl(space.imageLink ?? ''),
                     fit: BoxFit.cover,
@@ -261,25 +244,7 @@ class SmallSpaceCard extends StatelessWidget {
           Positioned.fill(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: ShaderMask(
-                shaderCallback: (rect) {
-                  final cardHeight = rect.height;
-                  const gradientHeight = 100.0;
-                  final startStop = ((cardHeight - gradientHeight) / cardHeight)
-                      .clamp(
-                        0.0,
-                        1.0,
-                      );
-                  return LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: const [Colors.transparent, Colors.black],
-                    stops: [startStop, 1.0],
-                  ).createShader(
-                    Rect.fromLTRB(0, 0, rect.width, rect.height),
-                  );
-                },
-                blendMode: BlendMode.darken,
+              child: SpaceGradientMask(
                 child: CachedNetworkImage(
                   imageUrl: getFullUrl(space.imageLink ?? ''),
                   fit: BoxFit.cover,

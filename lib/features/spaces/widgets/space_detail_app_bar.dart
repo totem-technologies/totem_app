@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
+import 'package:totem_app/shared/widgets/space_gradient_mask.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class SpaceDetailAppBar extends StatelessWidget {
@@ -29,17 +30,20 @@ class SpaceDetailAppBar extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(
                 bottom: Radius.circular(25),
               ),
-              child: CachedNetworkImage(
-                imageUrl: event.space.image ?? '',
-                fit: BoxFit.cover,
-                errorWidget: (context, url, error) {
-                  return Image.asset(
-                    TotemAssets.genericBackground,
-                    fit: BoxFit.cover,
-                  );
-                },
-                color: Colors.black38,
-                colorBlendMode: BlendMode.darken,
+              child: SpaceGradientMask(
+                child: CachedNetworkImage(
+                  imageUrl: event.space.image ?? '',
+                  fit: BoxFit.cover,
+                  errorWidget: (context, url, error) {
+                    return Image.asset(
+                      TotemAssets.genericBackground,
+                      fit: BoxFit.cover,
+                    );
+                  },
+                  placeholder: (context, url) => ColoredBox(
+                    color: Colors.black.withValues(alpha: 0.75),
+                  ),
+                ),
               ),
             ),
           ),
