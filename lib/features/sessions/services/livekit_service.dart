@@ -97,7 +97,7 @@ class LiveKitService extends ValueNotifier<SessionState> {
   final SessionOptions initialOptions;
   late final RoomContext room;
   late final EventsListener<RoomEvent> _listener;
-  SessionState get state => value;
+  SessionState get status => value;
 
   void _onConnected({
     required bool cameraEnabled,
@@ -112,11 +112,11 @@ class LiveKitService extends ValueNotifier<SessionState> {
 
     if (event.topic == SessionCommunicationTopics.state.topic) {
       try {
-        value = SessionState.fromJson(
+        final newState = SessionState.fromJson(
           jsonDecode(const Utf8Decoder().convert(event.data))
               as Map<String, dynamic>,
         );
-        notifyListeners();
+        _onStateChanged(newState);
       } catch (e) {
         debugPrint('Error decoding session state: $e');
       }
@@ -144,5 +144,25 @@ class LiveKitService extends ValueNotifier<SessionState> {
       topic: SessionCommunicationTopics.emoji.topic,
     );
     debugPrint('Session => Sending emoji: $emoji');
+  }
+
+  void _onStateChanged(SessionState newState) {
+    final previousState = value;
+
+    if (previousState != newState) {
+      debugPrint('Session state changed: $newState');
+      value = newState;
+      notifyListeners();
+    }
+
+    if (previousState.speakingNow != newState.speakingNow && isMyTurn) {
+      debugPrint('You are now speaking');
+      // TODO(bdlukaa): Handle you are speaking
+    }
+  }
+
+  bool get isMyTurn {
+    return value.speakingNow != null &&
+        value.speakingNow == room.localParticipant?.identity;
   }
 }
