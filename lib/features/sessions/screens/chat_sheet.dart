@@ -139,6 +139,10 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                                     UserAvatar.fromUserSchema(
                                       widget.event.space.author,
                                       radius: 20,
+                                      // TODO(bdlukaa): Open a sheet with the
+                                      //                author's profile when
+                                      //                tapping the avatar.
+                                      // onTap: () {},
                                     ),
                                     Container(
                                       decoration: const BoxDecoration(

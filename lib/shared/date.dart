@@ -13,7 +13,7 @@ String formatEventDate(DateTime dateTime) {
     );
     if (isTomorrow) return 'Tomorrow';
 
-    final dateFormat = DateFormat.MMMMEEEEd();
+    final dateFormat = DateFormat('EEEE, MMM d'); // e.g., Monday, Jan 1
     return dateFormat.format(date);
   } catch (error) {
     return 'Date TBA';

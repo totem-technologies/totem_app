@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
@@ -15,6 +16,7 @@ import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/features/spaces/widgets/space_detail_app_bar.dart';
 import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -111,11 +113,14 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                               as RenderBox?;
                                       SharePlus.instance.share(
                                         ShareParams(
-                                          uri: Uri.parse(
-                                            '${AppConfig.mobileApiUrl}'
-                                            'spaces/event/${event.slug}'
-                                            '?utm_source=app&utm_medium=share',
-                                          ),
+                                          uri: Uri.parse(AppConfig.mobileApiUrl)
+                                              .resolve(
+                                                '/spaces/event/${event.slug}',
+                                              )
+                                              .resolve(
+                                                '?utm_source=app'
+                                                '&utm_medium=share',
+                                              ),
                                           sharePositionOrigin: box != null
                                               ? box.localToGlobal(
                                                       Offset.zero,
@@ -468,6 +473,13 @@ class SessionSheet extends StatelessWidget {
                   UserAvatar.fromUserSchema(
                     event.space.author,
                     radius: 40,
+                    onTap: event.space.slug != null
+                        ? () {
+                            context.push(
+                              RouteNames.keeperProfile(event.space.slug!),
+                            );
+                          }
+                        : null,
                   ),
                 ],
               ),

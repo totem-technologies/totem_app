@@ -488,11 +488,9 @@ class _AttendingDialogState extends State<AttendingDialog> {
                           final box = context.findRenderObject() as RenderBox?;
                           SharePlus.instance.share(
                             ShareParams(
-                              uri: Uri.parse(
-                                '${AppConfig.mobileApiUrl}'
-                                'spaces/event/${widget.event.slug}'
-                                '?utm_source=app&utm_medium=share',
-                              ),
+                              uri: Uri.parse(AppConfig.mobileApiUrl)
+                                  .resolve('/spaces/event/${widget.event.slug}')
+                                  .resolve('?utm_source=app&utm_medium=share'),
                               sharePositionOrigin: box != null
                                   ? box.localToGlobal(
                                           Offset.zero,

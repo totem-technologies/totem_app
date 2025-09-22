@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
+import 'package:totem_app/shared/widgets/space_gradient_mask.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class SpaceDetailAppBar extends StatelessWidget {
@@ -29,17 +30,20 @@ class SpaceDetailAppBar extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(
                 bottom: Radius.circular(25),
               ),
-              child: CachedNetworkImage(
-                imageUrl: event.space.image ?? '',
-                fit: BoxFit.cover,
-                errorWidget: (context, url, error) {
-                  return Image.asset(
-                    TotemAssets.genericBackground,
-                    fit: BoxFit.cover,
-                  );
-                },
-                color: Colors.black38,
-                colorBlendMode: BlendMode.darken,
+              child: SpaceGradientMask(
+                child: CachedNetworkImage(
+                  imageUrl: event.space.image ?? '',
+                  fit: BoxFit.cover,
+                  errorWidget: (context, url, error) {
+                    return Image.asset(
+                      TotemAssets.genericBackground,
+                      fit: BoxFit.cover,
+                    );
+                  },
+                  placeholder: (context, url) => ColoredBox(
+                    color: Colors.black.withValues(alpha: 0.75),
+                  ),
+                ),
               ),
             ),
           ),
@@ -98,83 +102,6 @@ class SpaceDetailAppBar extends StatelessWidget {
               ),
             ),
           ),
-          /* This is now handled by the main app bar
-          Positioned(
-            top: 20,
-            left: 20,
-            right: 20,
-            child: SafeArea(
-              bottom: false,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  DecoratedBox(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: IconButton(
-                      icon: Icon(Icons.adaptive.arrow_back),
-                      iconSize: 24,
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () => popOrHome(context),
-                    ),
-                  ),
-                  DecoratedBox(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Builder(
-                      builder: (context) {
-                        return IconButton(
-                          icon: Icon(Icons.adaptive.share),
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () {
-                            Scrollable.ensureVisible(
-                              context,
-                              duration: const Duration(milliseconds: 180),
-                            );
-                            final box =
-                                context.findRenderObject() as RenderBox?;
-                            SharePlus.instance.share(
-                              ShareParams(
-                                uri: Uri.parse(
-                                  '${AppConfig.mobileApiUrl}'
-                                  '/spaces/event/${event.slug}'
-                                  '?utm_source=app&utm_medium=share',
-                                ),
-                                sharePositionOrigin:
-                                    box != null
-                                        ? box.localToGlobal(Offset.zero) &
-                                            box.size
-                                        : null,
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          */
         ],
       ),
     );
