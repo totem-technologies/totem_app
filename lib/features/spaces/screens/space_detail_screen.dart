@@ -111,11 +111,14 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                               as RenderBox?;
                                       SharePlus.instance.share(
                                         ShareParams(
-                                          uri: Uri.parse(
-                                            '${AppConfig.mobileApiUrl}'
-                                            'spaces/event/${event.slug}'
-                                            '?utm_source=app&utm_medium=share',
-                                          ),
+                                          uri: Uri.parse(AppConfig.mobileApiUrl)
+                                              .resolve(
+                                                '/spaces/event/${event.slug}',
+                                              )
+                                              .resolve(
+                                                '?utm_source=app'
+                                                '&utm_medium=share',
+                                              ),
                                           sharePositionOrigin: box != null
                                               ? box.localToGlobal(
                                                       Offset.zero,

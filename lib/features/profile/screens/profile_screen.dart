@@ -122,9 +122,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             const SizedBox(height: 12),
             Link(
               uri: Uri.parse(
-                '${AppConfig.mobileApiUrl}'
-                'users/feedback/',
-              ),
+                AppConfig.mobileApiUrl,
+              ).resolve('/users/feedback/'),
               target: LinkTarget.self,
               builder: (context, launch) => ProfileTile(
                 icon: const TotemIcon(TotemIcons.feedback),
