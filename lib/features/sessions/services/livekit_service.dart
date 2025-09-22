@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
 
 part 'livekit_service.g.dart';
@@ -79,7 +80,7 @@ LiveKitService sessionService(Ref ref, SessionOptions options) {
 class LiveKitService extends ValueNotifier<SessionState> {
   LiveKitService(this.initialOptions) : super(const SessionState.waiting()) {
     room = RoomContext(
-      url: 'wss://totem-d7esbgcp.livekit.cloud',
+      url: AppConfig.liveKitUrl,
       token: initialOptions.token,
       connect: true,
       onConnected: () {
@@ -103,8 +104,15 @@ class LiveKitService extends ValueNotifier<SessionState> {
     required bool cameraEnabled,
     required bool microphoneEnabled,
   }) {
-    room.localParticipant?.setCameraEnabled(cameraEnabled);
-    room.localParticipant?.setMicrophoneEnabled(microphoneEnabled);
+    if (room.localParticipant == null) {
+      debugPrint(
+        'Error: localParticipant is null when trying to set camera/microphone '
+        'enabled.',
+      );
+      return;
+    }
+    room.localParticipant!.setCameraEnabled(cameraEnabled);
+    room.localParticipant!.setMicrophoneEnabled(microphoneEnabled);
   }
 
   void _onDataReceived(DataReceivedEvent event) {
