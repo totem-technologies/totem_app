@@ -4,10 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
-import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
-import 'package:totem_app/features/sessions/screens/room_screen.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
@@ -76,7 +74,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final auth = ref.watch(authControllerProvider);
 
     return AnnotatedRegion(
       value: SystemUiOverlayStyle.light,
