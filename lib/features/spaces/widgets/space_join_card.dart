@@ -225,6 +225,16 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                       case SpaceJoinCardState.notJoined:
                         return ElevatedButton(
                           onPressed: onPressed,
+                          style: ElevatedButton.styleFrom(
+                            maximumSize: const Size(156, 60),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 22,
+                            ),
+                            backgroundColor: AppTheme.mauve,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(26),
+                            ),
+                          ),
                           child: _loading
                               ? const LoadingIndicator(
                                   color: Colors.white,
@@ -244,7 +254,6 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   }
 
   SpaceJoinCardState get state {
-    return SpaceJoinCardState.joined;
     if (widget.event.cancelled) return SpaceJoinCardState.cancelled;
 
     final hasStarted =
