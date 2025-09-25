@@ -175,9 +175,14 @@ class LiveKitService extends ValueNotifier<SessionState> {
       notifyListeners();
     }
 
-    if (previousState.speakingNow != newState.speakingNow && isMyTurn) {
+    if (previousState.speakingNow != newState.speakingNow) {
       debugPrint('You are now speaking');
-      // TODO(bdlukaa): Handle you are speaking
+
+      if (isMyTurn) {
+        // TODO(bdlukaa): Handle you are speaking
+      } else {
+        // TODO(bdlukaa): Handle you are not speaking
+      }
     }
   }
 
