@@ -84,6 +84,22 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           iconTheme: const IconThemeData(color: Colors.white),
+          leading: Container(
+            margin: const EdgeInsetsDirectional.only(start: 20),
+            alignment: Alignment.center,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                icon: Icon(Icons.adaptive.arrow_back, color: Colors.black),
+                iconSize: 24,
+                visualDensity: VisualDensity.compact,
+                onPressed: () => popOrHome(context),
+              ),
+            ),
+          ),
         ),
         extendBodyBehindAppBar: true,
         body: RoomBackground(
