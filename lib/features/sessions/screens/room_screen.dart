@@ -5,6 +5,7 @@ import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
+import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
 import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
@@ -14,6 +15,7 @@ import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
 
 class VideoRoomScreen extends ConsumerStatefulWidget {
@@ -67,6 +69,27 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     );
   }
 
+  bool _showErrorScreen = false;
+  void _onLivekitError(LiveKitException error) {
+    if (error is ConnectException ||
+        error is MediaConnectException ||
+        error is UnexpectedStateException ||
+        error is NegotiationError ||
+        error is TrackCreateException ||
+        error is TrackPublishException) {
+      setState(() {
+        _showErrorScreen = true;
+      });
+    } else {
+      showErrorPopup(
+        context,
+        icon: TotemIcons.errorOutlined,
+        title: 'Something went wrong',
+        message: 'Check your connection and try again.',
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(
@@ -77,6 +100,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           microphoneEnabled: widget.micEnabled,
           onEmojiReceived: _onEmojiReceived,
           onMessageReceived: _onChatMessageReceived,
+          onLivekitError: _onLivekitError,
         ),
       ),
     );
@@ -93,8 +117,16 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               case ConnectionState.reconnecting:
                 return const LoadingRoomScreen();
               case ConnectionState.disconnected:
-                return SessionEndedScreen(
-                  event: widget.event,
+                return AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: _showErrorScreen
+                      ? RoomErrorScreen(
+                          onRetry: () {
+                            roomCtx.connect();
+                            _showErrorScreen = false;
+                          },
+                        )
+                      : SessionEndedScreen(event: widget.event),
                 );
               case ConnectionState.connected:
                 if (!session.isMyTurn) {
