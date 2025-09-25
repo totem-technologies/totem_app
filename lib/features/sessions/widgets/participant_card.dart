@@ -18,6 +18,7 @@ import 'package:totem_app/shared/widgets/user_avatar.dart';
 class SessionParticipantsLayoutBuilder implements ParticipantLayoutBuilder {
   const SessionParticipantsLayoutBuilder({
     this.maxPerLineCount,
+    this.gap = 10,
   });
 
   /// The amount of participants to show per line.
@@ -25,6 +26,8 @@ class SessionParticipantsLayoutBuilder implements ParticipantLayoutBuilder {
   /// If there are less participants than this number, it will show only the
   /// available participants.
   final int? maxPerLineCount;
+
+  final double gap;
 
   @override
   Widget build(
@@ -47,8 +50,8 @@ class SessionParticipantsLayoutBuilder implements ParticipantLayoutBuilder {
               vertical: 10,
             ),
             crossAxisCount: crossAxisCount,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
+            mainAxisSpacing: gap,
+            crossAxisSpacing: gap,
             childAspectRatio: 16 / 21,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),

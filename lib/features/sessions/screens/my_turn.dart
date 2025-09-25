@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
@@ -15,6 +17,7 @@ class MyTurn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return RoomBackground(
       child: SafeArea(
         child: Column(
@@ -22,8 +25,7 @@ class MyTurn extends StatelessWidget {
           children: [
             Expanded(
               child: ParticipantLoop(
-                // TODO(bdlukaa): Update this layout builder
-                layoutBuilder: const SessionParticipantsLayoutBuilder(),
+                layoutBuilder: const MyTurnLayoutBuilder(),
                 participantTrackBuilder: (context, identifier) {
                   return ParticipantCard(
                     key: getParticipantKey(
@@ -52,7 +54,9 @@ class MyTurn extends StatelessWidget {
                     Text(
                       'When done, press Pass to pass '
                       'the Totem to the next person.',
-                      style: Theme.of(context).textTheme.bodyLarge,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: Colors.black,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     ConstrainedBox(
@@ -81,6 +85,61 @@ class MyTurn extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class MyTurnLayoutBuilder implements ParticipantLayoutBuilder {
+  const MyTurnLayoutBuilder({this.maxPerLineCount, this.gap = 16});
+
+  /// The amount of participants to show per line.
+  ///
+  /// If there are less participants than this number, it will show only the
+  /// available participants.
+  final int? maxPerLineCount;
+
+  final double gap;
+
+  @override
+  Widget build(
+    BuildContext context,
+    List<TrackWidget> children,
+    List<String> pinnedTracks,
+  ) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = math
+            .sqrt(children.length)
+            .ceil()
+            .clamp(
+              1,
+              maxPerLineCount ?? 10,
+            );
+        return Center(
+          child: GridView.count(
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 28,
+              vertical: 10,
+            ),
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: gap,
+            crossAxisSpacing: gap,
+            childAspectRatio: 16 / 21,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            children: List.generate(
+              children.length,
+              (index) {
+                if (index < children.length) {
+                  return children[index].widget;
+                } else {
+                  return SizedBox.shrink(key: ValueKey<int>(index));
+                }
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 }
