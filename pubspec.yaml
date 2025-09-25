@@ -53,6 +53,7 @@ dependencies:
   # UI & Utilities
   auto_size_text: ^3.0.0
   flutter_html: ^3.0.0
+  markdown: ^7.3.0
   # flutter_native_splash: ^2.4.6
   google_fonts: ^6.2.1
   pinput: ^5.0.1
