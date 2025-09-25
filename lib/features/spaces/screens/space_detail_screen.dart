@@ -3,15 +3,15 @@ import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:markdown/markdown.dart' as markdown;
 import 'package:share_plus/share_plus.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
-import 'package:totem_app/api/models/next_event_schema.dart';
-import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/features/keeper/screens/meet_user_card.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
+import 'package:totem_app/features/spaces/widgets/info_text.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/features/spaces/widgets/space_detail_app_bar.dart';
 import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
@@ -230,7 +230,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
 
                           Html(
                             data:
-                                event.space.shortDescription?.isNotEmpty ??
+                                event.space.shortDescription
+                                        ?.trim()
+                                        .isNotEmpty ??
                                     false
                                 ? event.space.shortDescription
                                 : event.description,
@@ -250,8 +252,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             },
                           ),
 
-                          if (event.space.shortDescription != null &&
-                              event.space.shortDescription!.isNotEmpty)
+                          if (event.space.content.trim().isNotEmpty)
                             Container(
                               height: 32,
                               margin: const EdgeInsetsDirectional.only(top: 8),
@@ -273,24 +274,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           Container(
                             padding: horizontalPadding,
                             constraints: const BoxConstraints(maxHeight: 160),
-                            child: SpaceCard(
+                            child: SpaceCard.fromEventDetailSchema(
+                              event,
                               onTap: () => _showSessionSheet(context, event),
                               compact: true,
-                              space: SpaceDetailSchema(
-                                author: event.space.author,
-                                category: '',
-                                description: event.space.shortDescription ?? '',
-                                imageLink: event.space.image,
-                                nextEvent: NextEventSchema(
-                                  slug: event.space.slug!,
-                                  start: event.start.toIso8601String(),
-                                  link: event.calLink,
-                                  title: event.title,
-                                  seatsLeft: event.seatsLeft,
-                                ),
-                                slug: event.slug,
-                                title: event.title,
-                              ),
                             ),
                           ),
 
@@ -336,6 +323,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      clipBehavior: Clip.antiAliasWithSaveLayer,
       builder: (context) {
         return AboutSpaceSheet(event: event);
       },
@@ -366,59 +354,108 @@ class AboutSpaceSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    const titleCurve = Curves.easeOut;
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 1,
       builder: (context, controller) {
-        return Scaffold(
-          appBar: AppBar(),
-          body: ListView(
-            controller: controller,
-            padding: const EdgeInsetsDirectional.only(
-              start: 20,
-              end: 20,
-              bottom: 20,
-            ),
-            children: [
-              Text('About', style: theme.textTheme.titleLarge),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  CompactInfoText(
-                    const TotemIcon(TotemIcons.subscribers),
-                    Text('${event.subscribers} subscribers'),
-                  ),
-                  CompactInfoText(
-                    const TotemIcon(TotemIcons.priceTag),
-                    Text(
-                      event.price == 0
-                          ? 'No cost'
-                          : NumberFormat.currency(
-                              locale: 'en_US',
-                              symbol: r'USD $',
-                            ).format(event.price),
+        return CustomScrollView(
+          controller: controller,
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              backgroundColor: theme.scaffoldBackgroundColor,
+              expandedHeight: 112,
+              flexibleSpace: ListenableBuilder(
+                listenable: Listenable.merge([controller]),
+                builder: (context, child) {
+                  const scrollRange = 56.0;
+                  final progress = (controller.offset / scrollRange).clamp(
+                    0.0,
+                    1.0,
+                  );
+                  final curvedProgress = titleCurve.transform(progress);
+                  const maxAdditionalPadding = 48.0;
+                  final additionalPadding =
+                      maxAdditionalPadding * curvedProgress;
+                  return FlexibleSpaceBar(
+                    titlePadding: EdgeInsetsDirectional.only(
+                      start: 20 + additionalPadding,
+                      bottom: 12,
                     ),
+                    collapseMode: CollapseMode.pin,
+                    expandedTitleScale: 1,
+                    title: Text('About', style: theme.textTheme.titleLarge),
+                  );
+                },
+              ),
+              leading: Container(
+                margin: const EdgeInsetsDirectional.only(start: 20),
+                alignment: Alignment.center,
+                child: DecoratedBox(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
                   ),
-                  CompactInfoText(
-                    const TotemIcon(TotemIcons.recurring),
-                    Text(event.recurring.uppercaseFirst()),
+                  child: IconButton(
+                    icon: Icon(Icons.adaptive.arrow_back),
+                    iconSize: 24,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsetsDirectional.only(
+                top: 8,
+                start: 20,
+                end: 20,
+                bottom: 20,
+              ),
+              sliver: SliverList.list(
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      CompactInfoText(
+                        const TotemIcon(TotemIcons.subscribers),
+                        Text('${event.subscribers} subscribers'),
+                      ),
+                      CompactInfoText(
+                        const TotemIcon(TotemIcons.priceTag),
+                        Text(
+                          event.price == 0
+                              ? 'No cost'
+                              : NumberFormat.currency(
+                                  locale: 'en_US',
+                                  symbol: r'USD $',
+                                ).format(event.price),
+                        ),
+                      ),
+                      CompactInfoText(
+                        const TotemIcon(TotemIcons.recurring),
+                        Text(event.recurring.uppercaseFirst()),
+                      ),
+                    ],
+                  ),
+                  Html(
+                    data: markdown.markdownToHtml(event.space.content),
+                    shrinkWrap: true,
+                    onLinkTap: (url, _, _) {
+                      if (url != null) launchUrl(Uri.parse(url));
+                    },
+                    onAnchorTap: (url, _, _) {
+                      if (url != null) launchUrl(Uri.parse(url));
+                    },
+                    style: {...AppTheme.compactHtmlStyle},
                   ),
                 ],
               ),
-              Html(
-                data: event.space.shortDescription,
-                shrinkWrap: true,
-                onLinkTap: (url, _, _) {
-                  if (url != null) launchUrl(Uri.parse(url));
-                },
-                onAnchorTap: (url, _, _) {
-                  if (url != null) launchUrl(Uri.parse(url));
-                },
-              ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
@@ -434,169 +471,98 @@ class SessionSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Flexible(
-          child: ListView(
-            shrinkWrap: true,
-            padding: const EdgeInsetsDirectional.only(
-              start: 20,
-              end: 20,
-              bottom: 20,
-            ),
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(event.title, style: theme.textTheme.titleLarge),
-                        Text.rich(
-                          TextSpan(
-                            text: 'with ',
-                            children: [
-                              TextSpan(
-                                text: event.space.author.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.8,
+      builder: (context, controller) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: ListView(
+              controller: controller,
+              shrinkWrap: true,
+              padding: const EdgeInsetsDirectional.only(
+                start: 20,
+                end: 20,
+                bottom: 20,
+              ),
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(event.title, style: theme.textTheme.titleLarge),
+                          Text.rich(
+                            TextSpan(
+                              text: 'with ',
+                              children: [
+                                TextSpan(
+                                  text: event.space.author.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
 
-                  UserAvatar.fromUserSchema(
-                    event.space.author,
-                    radius: 40,
-                    onTap: event.space.slug != null
-                        ? () {
-                            context.push(
-                              RouteNames.keeperProfile(event.space.slug!),
-                            );
-                          }
-                        : null,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'About this session',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+                    UserAvatar.fromUserSchema(
+                      event.space.author,
+                      radius: 40,
+                      onTap: event.space.slug != null
+                          ? () {
+                              context.push(
+                                RouteNames.keeperProfile(event.space.slug!),
+                              );
+                            }
+                          : null,
+                    ),
+                  ],
                 ),
-              ),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  CompactInfoText(
-                    const TotemIcon(TotemIcons.clockCircle),
-                    Text('${event.duration} minutes'),
+                const SizedBox(height: 8),
+                Text(
+                  'About this session',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
-                  CompactInfoText(
-                    const TotemIcon(TotemIcons.seats),
-                    Text('${event.seatsLeft} seats left'),
-                  ),
-                ],
-              ),
-
-              Html(
-                data: event.description,
-                shrinkWrap: true,
-                style: AppTheme.compactHtmlStyle,
-                onLinkTap: (url, _, _) {
-                  if (url != null) launchUrl(Uri.parse(url));
-                },
-                onAnchorTap: (url, _, _) {
-                  if (url != null) launchUrl(Uri.parse(url));
-                },
-              ),
-            ],
-          ),
-        ),
-        SpaceJoinCard(event: event),
-      ],
-    );
-  }
-}
-
-class InfoText extends StatelessWidget {
-  const InfoText(this.icon, this.text, this.subtitle, {super.key});
-
-  final Widget icon;
-  final Widget text;
-  final Widget subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      spacing: 10,
-      children: [
-        IconTheme.merge(
-          data: const IconThemeData(size: 24, color: AppTheme.slate),
-          child: icon,
-        ),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DefaultTextStyle.merge(
-                style: const TextStyle(
-                  fontSize: 12,
-                  height: 1.5,
-                  color: AppTheme.slate,
-                  fontWeight: FontWeight.w600,
                 ),
-                child: text,
-              ),
-              DefaultTextStyle.merge(
-                style: const TextStyle(
-                  fontSize: 12,
-                  height: 1.5,
-                  color: AppTheme.slate,
-                  fontWeight: FontWeight.w400,
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    CompactInfoText(
+                      const TotemIcon(TotemIcons.clockCircle),
+                      Text('${event.duration} minutes'),
+                    ),
+                    CompactInfoText(
+                      const TotemIcon(TotemIcons.seats),
+                      Text('${event.seatsLeft} seats left'),
+                    ),
+                  ],
                 ),
-                child: subtitle,
-              ),
-            ],
+
+                Html(
+                  data: event.description,
+                  shrinkWrap: true,
+                  style: AppTheme.compactHtmlStyle,
+                  onLinkTap: (url, _, _) {
+                    if (url != null) launchUrl(Uri.parse(url));
+                  },
+                  onAnchorTap: (url, _, _) {
+                    if (url != null) launchUrl(Uri.parse(url));
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
-    );
-  }
-}
-
-class CompactInfoText extends StatelessWidget {
-  const CompactInfoText(this.icon, this.text, {super.key});
-
-  final Widget icon;
-  final Widget text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      spacing: 4,
-      children: [
-        IconTheme.merge(
-          data: const IconThemeData(size: 14, color: Color(0xFF787D7E)),
-          child: icon,
-        ),
-        DefaultTextStyle.merge(
-          style: const TextStyle(
-            fontSize: 14,
-            height: 1.5,
-            color: Color(0xFF787D7E),
-          ),
-          child: text,
-        ),
-      ],
+          SpaceJoinCard(event: event),
+        ],
+      ),
     );
   }
 }

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/api/models/next_event_schema.dart';
-import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
@@ -69,23 +67,7 @@ class SessionHistoryScreen extends ConsumerWidget {
                   for (final session in data)
                     Padding(
                       padding: const EdgeInsetsDirectional.only(top: 20),
-                      child: SpaceCard(
-                        space: SpaceDetailSchema(
-                          slug: session.space.slug!,
-                          author: session.space.author,
-                          category: '',
-                          imageLink: session.space.image,
-                          nextEvent: NextEventSchema(
-                            link: session.calLink,
-                            seatsLeft: session.seatsLeft,
-                            start: session.start.toIso8601String(),
-                            title: session.title,
-                            slug: session.slug,
-                          ),
-                          description: session.space.subtitle,
-                          title: session.space.title,
-                        ),
-                      ),
+                      child: SpaceCard.fromEventDetailSchema(session),
                     ),
                 ],
               ),

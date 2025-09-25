@@ -15,7 +15,8 @@ class SpaceDetailSchema {
     required this.slug,
     required this.title,
     required this.imageLink,
-    required this.description,
+    required this.shortDescription,
+    required this.content,
     required this.author,
     required this.nextEvent,
     required this.category,
@@ -28,7 +29,9 @@ class SpaceDetailSchema {
   final String title;
   @JsonKey(name: 'image_link')
   final String? imageLink;
-  final String description;
+  @JsonKey(name: 'short_description')
+  final String shortDescription;
+  final String content;
   final PublicUserSchema author;
   final NextEventSchema nextEvent;
   final String? category;

@@ -22,13 +22,18 @@ class SpaceCard extends StatelessWidget {
     this.onTap,
   });
 
-  factory SpaceCard.fromEventDetailSchema(EventDetailSchema event) {
+  factory SpaceCard.fromEventDetailSchema(
+    EventDetailSchema event, {
+    bool compact = false,
+    VoidCallback? onTap,
+  }) {
     return SpaceCard(
       space: SpaceDetailSchema(
         slug: event.space.slug!,
         title: event.space.title,
         imageLink: event.space.image,
-        description: event.space.subtitle,
+        content: event.space.content,
+        shortDescription: event.space.shortDescription ?? '',
         author: event.space.author,
         nextEvent: NextEventSchema(
           start: event.start.toIso8601String(),
@@ -39,6 +44,8 @@ class SpaceCard extends StatelessWidget {
         ),
         category: '',
       ),
+      compact: compact,
+      onTap: onTap,
     );
   }
 

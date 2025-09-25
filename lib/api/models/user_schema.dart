@@ -12,9 +12,12 @@ part 'user_schema.g.dart';
 class UserSchema {
   const UserSchema({
     required this.profileAvatarType,
+    required this.circleCount,
     required this.email,
+    required this.dateCreated,
     this.isStaff = false,
     this.name,
+    this.slug,
     this.apiKey,
     this.profileAvatarSeed,
     this.profileImage,
@@ -25,7 +28,10 @@ class UserSchema {
 
   @JsonKey(name: 'profile_avatar_type')
   final ProfileAvatarTypeEnum profileAvatarType;
+  @JsonKey(name: 'circle_count')
+  final int circleCount;
   final String? name;
+  final String? slug;
 
   /// Designates whether the user can log into this admin site.
   @JsonKey(name: 'is_staff')
@@ -39,6 +45,8 @@ class UserSchema {
   @JsonKey(name: 'profile_image')
   final String? profileImage;
   final String email;
+  @JsonKey(name: 'date_created')
+  final DateTime dateCreated;
 
   Map<String, Object?> toJson() => _$UserSchemaToJson(this);
 }
