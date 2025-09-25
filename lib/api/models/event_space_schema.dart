@@ -18,6 +18,7 @@ class EventSpaceSchema {
     required this.subtitle,
     required this.categories,
     required this.recurring,
+    this.content = '',
     this.slug,
     this.shortDescription,
     this.image,
@@ -45,6 +46,7 @@ class EventSpaceSchema {
 
   /// Image for the Space header, must be under 5mb
   final String? image;
+  final String content;
 
   Map<String, Object?> toJson() => _$EventSpaceSchemaToJson(this);
 }

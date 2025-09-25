@@ -17,6 +17,7 @@ EventSpaceSchema _$EventSpaceSchemaFromJson(Map<String, dynamic> json) =>
           .map((e) => (e as num).toInt())
           .toList(),
       recurring: json['recurring'] as String,
+      content: json['content'] as String? ?? '',
       slug: json['slug'] as String?,
       shortDescription: json['short_description'] as String?,
       image: json['image'] as String?,
@@ -34,4 +35,5 @@ Map<String, dynamic> _$EventSpaceSchemaToJson(EventSpaceSchema instance) =>
       'short_description': instance.shortDescription,
       'recurring': instance.recurring,
       'image': instance.image,
+      'content': instance.content,
     };
