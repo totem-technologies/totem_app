@@ -55,8 +55,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final auth = ref.watch(authControllerProvider);
-    // TODO(bdlukaa): Update to auth.user?.slug when response includes slug
-    final isKeeper = widget.event.space.author.slug == auth.user?.email;
+    final isKeeper = widget.event.space.author.slug == auth.user?.slug;
 
     return ChatBuilder(
       builder: (context, enabled, chatCtx, messages) {
