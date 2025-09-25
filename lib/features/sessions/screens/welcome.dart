@@ -10,6 +10,7 @@ import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
+import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -84,6 +85,22 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           iconTheme: const IconThemeData(color: Colors.white),
+          leading: Container(
+            margin: const EdgeInsetsDirectional.only(start: 20),
+            alignment: Alignment.center,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                icon: Icon(Icons.adaptive.arrow_back, color: Colors.black),
+                iconSize: 24,
+                visualDensity: VisualDensity.compact,
+                onPressed: () => popOrHome(context),
+              ),
+            ),
+          ),
         ),
         extendBodyBehindAppBar: true,
         body: RoomBackground(

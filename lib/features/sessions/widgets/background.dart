@@ -33,7 +33,19 @@ class RoomBackground extends StatelessWidget {
           ),
         ),
         padding: padding,
-        child: child,
+        child: DefaultTextStyle(
+          style: const TextStyle(color: Colors.white),
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              scaffoldBackgroundColor: Colors.transparent,
+              textTheme: Theme.of(context).textTheme.apply(
+                bodyColor: Colors.white,
+                displayColor: Colors.white,
+              ),
+            ),
+            child: child,
+          ),
+        ),
       ),
     );
   }

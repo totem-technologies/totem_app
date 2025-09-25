@@ -73,6 +73,7 @@ class EmojiBar extends StatelessWidget {
       child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        elevation: 6,
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Padding(

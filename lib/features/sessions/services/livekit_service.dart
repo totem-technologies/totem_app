@@ -29,6 +29,7 @@ enum SessionCommunicationTopics {
 
 typedef OnEmojiReceived = void Function(String userIdentity, String emoji);
 typedef OnMessageReceived = void Function(String userIdentity, String message);
+typedef OnLivekitError = void Function(LiveKitException error);
 
 @immutable
 class SessionOptions {
@@ -38,6 +39,7 @@ class SessionOptions {
     required this.microphoneEnabled,
     required this.onEmojiReceived,
     required this.onMessageReceived,
+    required this.onLivekitError,
   });
 
   final String token;
@@ -45,6 +47,7 @@ class SessionOptions {
   final bool microphoneEnabled;
   final OnEmojiReceived onEmojiReceived;
   final OnMessageReceived onMessageReceived;
+  final OnLivekitError onLivekitError;
 
   @override
   bool operator ==(Object other) {
@@ -55,7 +58,8 @@ class SessionOptions {
         other.cameraEnabled == cameraEnabled &&
         other.microphoneEnabled == microphoneEnabled &&
         other.onEmojiReceived == onEmojiReceived &&
-        other.onMessageReceived == onMessageReceived;
+        other.onMessageReceived == onMessageReceived &&
+        other.onLivekitError == onLivekitError;
   }
 
   @override
@@ -64,7 +68,8 @@ class SessionOptions {
         cameraEnabled.hashCode ^
         microphoneEnabled.hashCode ^
         onEmojiReceived.hashCode ^
-        onMessageReceived.hashCode;
+        onMessageReceived.hashCode ^
+        onLivekitError.hashCode;
   }
 }
 
@@ -88,6 +93,13 @@ class LiveKitService extends ValueNotifier<SessionState> {
           cameraEnabled: initialOptions.cameraEnabled,
           microphoneEnabled: initialOptions.microphoneEnabled,
         );
+      },
+      onError: (LiveKitException? error) {
+        if (error == null) return;
+
+        // TODO(bdlukaa): Report errors to sentry
+        debugPrint('LiveKit error: $error');
+        initialOptions.onLivekitError(error);
       },
     );
 

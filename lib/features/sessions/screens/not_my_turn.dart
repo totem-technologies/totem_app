@@ -49,20 +49,36 @@ class NotMyTurn extends ConsumerWidget {
                       Positioned.fill(
                         child: Builder(
                           builder: (context) {
-                            final track =
-                                roomCtx.localVideoTrack ??
-                                user?.videoTrackPublications
-                                    .firstWhereOrNull(
-                                      (pub) => pub.track != null,
-                                    )
-                                    ?.track;
+                            final Participant? speakingCurrently =
+                                roomCtx.participants.firstWhereOrNull((p) {
+                                  // TODO(bdlukaa): Check who the totem is at
+                                  //                this point
+                                  return p.isSpeaking;
+                                }) ??
+                                roomCtx.localParticipant;
 
-                            if (track != null && track.isActive) {
+                            VideoTrack? videoTrack;
+                            if (speakingCurrently != null) {
+                              videoTrack =
+                                  speakingCurrently.videoTrackPublications
+                                          .firstWhereOrNull(
+                                            (pub) =>
+                                                pub.track != null &&
+                                                pub.track!.isActive,
+                                          )
+                                          ?.track
+                                      as VideoTrack?;
+                            }
+
+                            if (videoTrack != null && videoTrack.isActive) {
                               return VideoTrackRenderer(
-                                track,
+                                videoTrack,
                                 fit: VideoViewFit.cover,
                               );
                             } else {
+                              // TODO(bdlukaa): If the person speaking doesn't
+                              //                have the camera on, show their
+                              //                profile image instead.
                               return Container(
                                 decoration: BoxDecoration(
                                   image: auth.user?.profileImage != null
@@ -100,7 +116,7 @@ class NotMyTurn extends ConsumerWidget {
             ),
             Flexible(
               child: ParticipantLoop(
-                layoutBuilder: const SessionParticipantsLayoutBuilder(),
+                layoutBuilder: const NoMyTurnLayoutBuilder(),
                 participantTrackBuilder: (context, identifier) {
                   return ParticipantCard(
                     key: getParticipantKey(
@@ -114,6 +130,64 @@ class NotMyTurn extends ConsumerWidget {
             // TODO(bdlukaa): Transcriptions
             actionBar,
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
+  const NoMyTurnLayoutBuilder({
+    this.maxPerLineCount,
+    this.gap = 10,
+  });
+
+  /// The amount of participants to show per line.
+  ///
+  /// If there are less participants than this number, it will show only the
+  /// available participants.
+  final int? maxPerLineCount;
+
+  final double gap;
+
+  @override
+  Widget build(
+    BuildContext context,
+    List<TrackWidget> children,
+    List<String> pinnedTracks,
+  ) {
+    final itemCount = children.length;
+    int crossAxisCount;
+    if (itemCount <= 3) {
+      crossAxisCount = 3;
+    } else if (itemCount <= 5) {
+      crossAxisCount = itemCount;
+    } else if (itemCount <= 10) {
+      crossAxisCount = (itemCount / 2).ceil();
+    } else {
+      crossAxisCount = 5;
+    }
+    return Center(
+      child: GridView.count(
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: 28,
+          vertical: 10,
+        ),
+        crossAxisCount: crossAxisCount,
+        mainAxisSpacing: gap,
+        crossAxisSpacing: gap,
+        childAspectRatio: 16 / 21,
+        shrinkWrap: true,
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: List.generate(
+          itemCount,
+          (index) {
+            if (index < children.length) {
+              return children[index].widget;
+            } else {
+              return SizedBox.shrink(key: ValueKey<int>(index));
+            }
+          },
         ),
       ),
     );
