@@ -40,6 +40,7 @@ class SessionOptions {
     required this.onEmojiReceived,
     required this.onMessageReceived,
     required this.onLivekitError,
+    required this.onReceiveTotem,
   });
 
   final String token;
@@ -48,6 +49,7 @@ class SessionOptions {
   final OnEmojiReceived onEmojiReceived;
   final OnMessageReceived onMessageReceived;
   final OnLivekitError onLivekitError;
+  final VoidCallback onReceiveTotem;
 
   @override
   bool operator ==(Object other) {
@@ -59,7 +61,8 @@ class SessionOptions {
         other.microphoneEnabled == microphoneEnabled &&
         other.onEmojiReceived == onEmojiReceived &&
         other.onMessageReceived == onMessageReceived &&
-        other.onLivekitError == onLivekitError;
+        other.onLivekitError == onLivekitError &&
+        other.onReceiveTotem == onReceiveTotem;
   }
 
   @override
@@ -69,7 +72,8 @@ class SessionOptions {
         microphoneEnabled.hashCode ^
         onEmojiReceived.hashCode ^
         onMessageReceived.hashCode ^
-        onLivekitError.hashCode;
+        onLivekitError.hashCode ^
+        onReceiveTotem.hashCode;
   }
 }
 
@@ -176,10 +180,9 @@ class LiveKitService extends ValueNotifier<SessionState> {
     }
 
     if (previousState.speakingNow != newState.speakingNow) {
-      debugPrint('You are now speaking');
-
       if (isMyTurn) {
-        // TODO(bdlukaa): Handle you are speaking
+        debugPrint('You are now speaking');
+        initialOptions.onReceiveTotem();
       } else {
         // TODO(bdlukaa): Handle you are not speaking
       }

@@ -6,9 +6,14 @@ import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
 class ReceiveTotemScreen extends StatelessWidget {
-  const ReceiveTotemScreen({required this.actionBar, super.key});
+  const ReceiveTotemScreen({
+    required this.actionBar,
+    required this.onAcceptTotem,
+    super.key,
+  });
 
   final Widget actionBar;
+  final VoidCallback onAcceptTotem;
 
   @override
   Widget build(BuildContext context) {

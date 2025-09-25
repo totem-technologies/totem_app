@@ -9,6 +9,7 @@ import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
 import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
+import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_ended.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
@@ -90,6 +91,19 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     }
   }
 
+  bool _receivingTotem = false;
+  void _onReceiveTotem() {
+    if (mounted) {
+      setState(() => _receivingTotem = true);
+    }
+  }
+
+  void _onAcceptTotem() {
+    if (mounted) {
+      setState(() => _receivingTotem = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(
@@ -101,6 +115,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           onEmojiReceived: _onEmojiReceived,
           onMessageReceived: _onChatMessageReceived,
           onLivekitError: _onLivekitError,
+          onReceiveTotem: _onReceiveTotem,
         ),
       ),
     );
@@ -130,6 +145,12 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 );
               case ConnectionState.connected:
                 if (session.isMyTurn) {
+                  if (_receivingTotem) {
+                    return ReceiveTotemScreen(
+                      actionBar: buildActionBar(session),
+                      onAcceptTotem: _onAcceptTotem,
+                    );
+                  }
                   return MyTurn(
                     actionBar: buildActionBar(session),
                     getParticipantKey: getParticipantKey,
