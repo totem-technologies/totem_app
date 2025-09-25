@@ -129,7 +129,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                       : SessionEndedScreen(event: widget.event),
                 );
               case ConnectionState.connected:
-                if (!session.isMyTurn) {
+                if (session.isMyTurn) {
                   return MyTurn(
                     actionBar: buildActionBar(session),
                     getParticipantKey: getParticipantKey,
