@@ -13,7 +13,6 @@ import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/profile/screens/delete_account.dart';
-import 'package:totem_app/features/sessions/screens/welcome.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/network.dart';
@@ -283,7 +282,9 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   }
 
   Future<void> attend(WidgetRef ref) async {
-    if (_attending || _loading) return;
+    if (_attending || _loading || (kDebugMode && AppConfig.isProduction)) {
+      return;
+    }
 
     setState(() => _loading = true);
 

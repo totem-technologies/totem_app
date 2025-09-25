@@ -8,8 +8,10 @@ import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
 import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
+import 'package:totem_app/features/sessions/screens/session_ended.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
@@ -67,7 +69,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final session = ref.watch(
       sessionServiceProvider(
         SessionOptions(
@@ -81,41 +82,35 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     );
 
     return Scaffold(
-      body: LivekitRoom(
-        roomContext: session.room,
-        builder: (context, roomCtx) {
-          final room = roomCtx.room;
+      body: RoomBackground(
+        child: LivekitRoom(
+          roomContext: session.room,
+          builder: (context, roomCtx) {
+            final room = roomCtx.room;
 
-          switch (room.connectionState) {
-            case ConnectionState.connecting:
-            case ConnectionState.reconnecting:
-              return const LoadingRoomScreen();
-            case ConnectionState.disconnected:
-              // TODO(bdlukaa): Disconnected from the room screen
-              return Center(
-                child: Text(
-                  'Disconnected from the room',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 28,
-                    color: Colors.white,
-                  ),
-                ),
-              );
-            case ConnectionState.connected:
-              if (session.isMyTurn) {
-                return MyTurn(
-                  actionBar: buildActionBar(session),
-                  getParticipantKey: getParticipantKey,
+            switch (room.connectionState) {
+              case ConnectionState.connecting:
+              case ConnectionState.reconnecting:
+                return const LoadingRoomScreen();
+              case ConnectionState.disconnected:
+                return SessionEndedScreen(
+                  event: widget.event,
                 );
-              } else {
-                return NotMyTurn(
-                  getParticipantKey: getParticipantKey,
-                  actionBar: buildActionBar(session),
-                );
-              }
-          }
-        },
+              case ConnectionState.connected:
+                if (!session.isMyTurn) {
+                  return MyTurn(
+                    actionBar: buildActionBar(session),
+                    getParticipantKey: getParticipantKey,
+                  );
+                } else {
+                  return NotMyTurn(
+                    actionBar: buildActionBar(session),
+                    getParticipantKey: getParticipantKey,
+                  );
+                }
+            }
+          },
+        ),
       ),
     );
   }
