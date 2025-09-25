@@ -1,18 +1,16 @@
-import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
-import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
+import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
-import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PreJoinScreen extends ConsumerStatefulWidget {
@@ -76,7 +74,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final auth = ref.watch(authControllerProvider);
 
     return AnnotatedRegion(
       value: SystemUiOverlayStyle.light,
@@ -114,6 +111,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 28,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -154,65 +152,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                   ),
                 ),
                 Expanded(
-                  child: Container(
-                    margin: const EdgeInsetsDirectional.symmetric(
-                      horizontal: 40,
-                      vertical: 10,
-                    ),
-                    alignment: Alignment.center,
-                    // DecoratedBox is overlapping the border
-                    // ignore: use_decorated_box
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      clipBehavior: Clip.antiAliasWithSaveLayer,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(30),
-                        child: AspectRatio(
-                          aspectRatio: 16 / 21,
-                          child: Builder(
-                            builder: (context) {
-                              if (_videoTrack == null) {
-                                return const LoadingIndicator();
-                              } else if (!_isCameraOn) {
-                                return Container(
-                                  decoration: BoxDecoration(
-                                    image: auth.user?.profileImage != null
-                                        ? DecorationImage(
-                                            image: NetworkImage(
-                                              auth.user!.profileImage!,
-                                            ),
-                                            fit: BoxFit.cover,
-                                          )
-                                        : null,
-                                  ),
-                                  alignment: AlignmentDirectional.bottomCenter,
-                                  padding: const EdgeInsets.all(20),
-                                  child: AutoSizeText(
-                                    auth.user?.name ?? 'You',
-                                    style: theme.textTheme.headlineMedium
-                                        ?.copyWith(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          shadows: kElevationToShadow[6],
-                                        ),
-                                    textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                  ),
-                                );
-                              }
-                              return VideoTrackRenderer(
-                                _videoTrack!,
-                                fit: VideoViewFit.cover,
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    ),
+                  child: LocalParticipantVideoCard(
+                    isCameraOn: _isCameraOn,
+                    videoTrack: _videoTrack,
                   ),
                 ),
                 ActionBar(

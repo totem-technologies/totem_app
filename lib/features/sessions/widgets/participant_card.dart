@@ -1,3 +1,4 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart';
@@ -6,11 +7,13 @@ import 'package:livekit_components/livekit_components.dart'
 // livekit_components exports provider
 // ignore: depend_on_referenced_packages
 import 'package:provider/provider.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/widgets/audio_visualizer.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class ParticipantCard extends ConsumerWidget {
@@ -170,6 +173,82 @@ class ParticipantCard extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class LocalParticipantVideoCard extends ConsumerWidget {
+  const LocalParticipantVideoCard({
+    this.isCameraOn = true,
+    this.videoTrack,
+    super.key,
+  });
+
+  final bool isCameraOn;
+  final VideoTrack? videoTrack;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final auth = ref.watch(authControllerProvider);
+    return Container(
+      margin: const EdgeInsetsDirectional.symmetric(
+        horizontal: 40,
+        vertical: 10,
+      ),
+      alignment: Alignment.center,
+      // DecoratedBox is overlapping the border
+      // ignore: use_decorated_box
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: Colors.white, width: 2),
+        ),
+        clipBehavior: Clip.antiAliasWithSaveLayer,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: AspectRatio(
+            aspectRatio: 16 / 21,
+            child: Builder(
+              builder: (context) {
+                if (!isCameraOn) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      image: auth.user?.profileImage != null
+                          ? DecorationImage(
+                              image: NetworkImage(
+                                auth.user!.profileImage!,
+                              ),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    alignment: AlignmentDirectional.bottomCenter,
+                    padding: const EdgeInsets.all(20),
+                    child: AutoSizeText(
+                      auth.user?.name ?? 'You',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        shadows: kElevationToShadow[6],
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                    ),
+                  );
+                } else if (videoTrack == null) {
+                  return const LoadingIndicator();
+                }
+                return VideoTrackRenderer(
+                  videoTrack!,
+                  fit: VideoViewFit.cover,
+                );
+              },
+            ),
           ),
         ),
       ),

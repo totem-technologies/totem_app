@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
+import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
 class MyTurn extends StatelessWidget {
   const MyTurn({
@@ -17,7 +18,6 @@ class MyTurn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return RoomBackground(
       child: SafeArea(
         child: Column(
@@ -36,50 +36,11 @@ class MyTurn extends StatelessWidget {
                 },
               ),
             ),
-            Card(
-              margin: const EdgeInsetsDirectional.symmetric(horizontal: 30),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: Padding(
-                padding: const EdgeInsetsDirectional.only(
-                  top: 20,
-                  start: 30,
-                  end: 30,
-                  bottom: 30,
-                ),
-                child: Column(
-                  spacing: 15,
-                  children: [
-                    Text(
-                      'When done, press Pass to pass '
-                      'the Totem to the next person.',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: Colors.black,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        minWidth: 160,
-                      ),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // TODO(bdlukaa): Pass the totem functionality
-                        },
-                        style: ButtonStyle(
-                          shape: WidgetStatePropertyAll(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                          ),
-                        ),
-                        child: const Text('Pass'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            PassReceiveCard(
+              type: TotemCardTransitionType.pass,
+              onActionPressed: () {
+                // TODO(bdlukaa): Pass the totem functionality
+              },
             ),
             actionBar,
           ],
