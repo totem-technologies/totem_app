@@ -5,8 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
-import 'package:totem_app/api/models/next_event_schema.dart';
-import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
@@ -273,24 +271,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           Container(
                             padding: horizontalPadding,
                             constraints: const BoxConstraints(maxHeight: 160),
-                            child: SpaceCard(
+                            child: SpaceCard.fromEventDetailSchema(
+                              event,
                               onTap: () => _showSessionSheet(context, event),
                               compact: true,
-                              space: SpaceDetailSchema(
-                                author: event.space.author,
-                                category: '',
-                                description: event.space.shortDescription ?? '',
-                                imageLink: event.space.image,
-                                nextEvent: NextEventSchema(
-                                  slug: event.space.slug!,
-                                  start: event.start.toIso8601String(),
-                                  link: event.calLink,
-                                  title: event.title,
-                                  seatsLeft: event.seatsLeft,
-                                ),
-                                slug: event.slug,
-                                title: event.title,
-                              ),
                             ),
                           ),
 
