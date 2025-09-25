@@ -29,7 +29,7 @@ class ReceiveTotemScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsetsDirectional.symmetric(horizontal: 10),
               child: Text(
-                'The totem is being passed to you',
+                'The Totem is being passed to you',
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -54,9 +54,7 @@ class ReceiveTotemScreen extends StatelessWidget {
             ),
             PassReceiveCard(
               type: TotemCardTransitionType.receive,
-              onActionPressed: () {
-                // TODO(bdlukaa): Receive the totem functionality
-              },
+              onActionPressed: onAcceptTotem,
             ),
             actionBar,
           ],
