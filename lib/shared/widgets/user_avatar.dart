@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/models/profile_avatar_type_enum.dart';
 import 'package:totem_app/api/models/public_user_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/shared/network.dart';
 
 class UserAvatar extends ConsumerWidget {
   const UserAvatar({
@@ -35,7 +36,7 @@ class UserAvatar extends ConsumerWidget {
           author?.profileImage != null &&
               author?.profileAvatarType == ProfileAvatarTypeEnum.im
           ? CachedNetworkImageProvider(
-              author!.profileImage!,
+              getFullUrl(author!.profileImage!),
               cacheKey: author.slug,
             )
           : null,
@@ -66,7 +67,10 @@ class UserAvatar extends ConsumerWidget {
           image:
               user?.profileImage != null &&
                   user?.profileAvatarType == ProfileAvatarTypeEnum.im
-              ? CachedNetworkImageProvider(user!.profileImage!)
+              ? CachedNetworkImageProvider(
+                  getFullUrl(user!.profileImage!),
+                  cacheKey: user.slug,
+                )
               : null,
           seed: user?.profileAvatarSeed,
           radius: radius,
