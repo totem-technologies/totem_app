@@ -21,7 +21,6 @@ import 'package:totem_app/shared/widgets/popups.dart';
 
 class VideoRoomScreen extends ConsumerStatefulWidget {
   const VideoRoomScreen({
-    required this.roomName,
     required this.token,
     required this.cameraEnabled,
     required this.micEnabled,
@@ -29,7 +28,6 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
     super.key,
   });
 
-  final String roomName;
   final String token;
   final bool cameraEnabled;
   final bool micEnabled;

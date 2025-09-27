@@ -6,6 +6,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/features/sessions/screens/room_screen.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
@@ -14,9 +15,10 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PreJoinScreen extends ConsumerStatefulWidget {
-  const PreJoinScreen({required this.event, super.key});
+  const PreJoinScreen({required this.event, required this.token, super.key});
 
   final EventDetailSchema event;
+  final String token;
 
   @override
   ConsumerState<PreJoinScreen> createState() => _PreJoinScreenState();
@@ -65,7 +67,21 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   Future<void> _joinRoom() async {
     await _videoTrack?.stop();
     await _videoTrack?.dispose();
-    // TODO(bdlukaa): Push RoomScreen with options when available
+
+    if (mounted) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) {
+            return VideoRoomScreen(
+              cameraEnabled: _isCameraOn,
+              micEnabled: _isMicOn,
+              event: widget.event,
+              token: widget.token,
+            );
+          },
+        ),
+      );
+    }
 
     // Re-initialize the local video track when returning to this screen
     await _initializeLocalVideo();
