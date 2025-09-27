@@ -24,6 +24,7 @@ export 'models/paged_space_detail_schema.dart';
 export 'models/space_detail_schema.dart';
 export 'models/event_detail_schema.dart';
 export 'models/event_space_schema.dart';
+export 'models/meeting_provider_enum.dart';
 export 'models/summary_spaces_schema.dart';
 export 'models/blog_post_list_schema.dart';
 export 'models/paged_blog_post_list_schema.dart';
