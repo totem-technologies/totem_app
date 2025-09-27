@@ -5,6 +5,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'event_space_schema.dart';
+import 'meeting_provider_enum.dart';
 
 part 'event_detail_schema.g.dart';
 
@@ -34,6 +35,7 @@ class EventDetailSchema {
     required this.calLink,
     required this.subscribed,
     required this.userTimezone,
+    required this.meetingProvider,
   });
 
   factory EventDetailSchema.fromJson(Map<String, Object?> json) =>
@@ -68,6 +70,8 @@ class EventDetailSchema {
   final bool? subscribed;
   @JsonKey(name: 'user_timezone')
   final String? userTimezone;
+  @JsonKey(name: 'meeting_provider')
+  final MeetingProviderEnum meetingProvider;
 
   Map<String, Object?> toJson() => _$EventDetailSchemaToJson(this);
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
+import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/widgets/space_gradient_mask.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
@@ -32,7 +33,7 @@ class SpaceDetailAppBar extends StatelessWidget {
               ),
               child: SpaceGradientMask(
                 child: CachedNetworkImage(
-                  imageUrl: event.space.image ?? '',
+                  imageUrl: getFullUrl(event.space.image ?? ''),
                   fit: BoxFit.cover,
                   errorWidget: (context, url, error) {
                     return Image.asset(

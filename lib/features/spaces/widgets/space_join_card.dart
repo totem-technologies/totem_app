@@ -9,10 +9,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/meeting_provider_enum.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/profile/screens/delete_account.dart';
+import 'package:totem_app/features/sessions/screens/welcome.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/network.dart';
@@ -132,7 +134,9 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                 child: Link(
                   uri: hasEnded
                       ? null
-                      : hasStarted
+                      : hasStarted &&
+                            widget.event.meetingProvider ==
+                                MeetingProviderEnum.googleMeet
                       ? Uri.parse(getFullUrl(widget.event.calLink))
                       : null,
                   builder: (context, followLink) {
@@ -185,7 +189,12 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                         case SpaceJoinCardState.closedToNewParticipants:
                           toHome(HomeRoutes.spaces);
                         case SpaceJoinCardState.joinable:
-                          followLink?.call();
+                          if (widget.event.meetingProvider ==
+                              MeetingProviderEnum.livekit) {
+                            joinLivekit();
+                          } else {
+                            followLink?.call();
+                          }
                         case SpaceJoinCardState.joined:
                           addToCalendar();
                         case SpaceJoinCardState.full:
@@ -478,6 +487,40 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
           message: 'Please try again later',
         );
       }
+    }
+  }
+
+  Future<void> joinLivekit() async {
+    debugPrint('Joining livekit');
+    try {
+      setState(() => _loading = true);
+      final apiService = ref.read(mobileApiServiceProvider);
+      final response = await apiService.meetings
+          .totemMeetingsMobileApiGetLivekitToken(eventSlug: widget.event.slug);
+
+      if (mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (context) {
+              return PreJoinScreen(event: widget.event, token: response.token);
+            },
+          ),
+        );
+      }
+    } catch (error, stacktrace) {
+      debugPrint('Failed to get livekit token: $error\n$stacktrace');
+      if (mounted) {
+        showErrorPopup(
+          context,
+          icon: TotemIcons.subscribers,
+          title: 'Failed to join the session',
+          message: 'Please try again later',
+        );
+      }
+      return;
+    } finally {
+      _loading = false;
+      if (mounted) setState(() {});
     }
   }
 }

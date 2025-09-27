@@ -31,31 +31,42 @@ EventDetailSchema _$EventDetailSchemaFromJson(Map<String, dynamic> json) =>
       calLink: json['calLink'] as String,
       subscribed: json['subscribed'] as bool?,
       userTimezone: json['user_timezone'] as String?,
+      meetingProvider: MeetingProviderEnum.fromJson(
+        json['meeting_provider'] as String,
+      ),
     );
 
-Map<String, dynamic> _$EventDetailSchemaToJson(EventDetailSchema instance) =>
-    <String, dynamic>{
-      'slug': instance.slug,
-      'title': instance.title,
-      'space': instance.space,
-      'space_title': instance.spaceTitle,
-      'description': instance.description,
-      'price': instance.price,
-      'seats_left': instance.seatsLeft,
-      'duration': instance.duration,
-      'recurring': instance.recurring,
-      'subscribers': instance.subscribers,
-      'start': instance.start.toIso8601String(),
-      'attending': instance.attending,
-      'open': instance.open,
-      'started': instance.started,
-      'cancelled': instance.cancelled,
-      'joinable': instance.joinable,
-      'ended': instance.ended,
-      'rsvp_url': instance.rsvpUrl,
-      'join_url': instance.joinUrl,
-      'subscribe_url': instance.subscribeUrl,
-      'calLink': instance.calLink,
-      'subscribed': instance.subscribed,
-      'user_timezone': instance.userTimezone,
-    };
+Map<String, dynamic> _$EventDetailSchemaToJson(
+  EventDetailSchema instance,
+) => <String, dynamic>{
+  'slug': instance.slug,
+  'title': instance.title,
+  'space': instance.space,
+  'space_title': instance.spaceTitle,
+  'description': instance.description,
+  'price': instance.price,
+  'seats_left': instance.seatsLeft,
+  'duration': instance.duration,
+  'recurring': instance.recurring,
+  'subscribers': instance.subscribers,
+  'start': instance.start.toIso8601String(),
+  'attending': instance.attending,
+  'open': instance.open,
+  'started': instance.started,
+  'cancelled': instance.cancelled,
+  'joinable': instance.joinable,
+  'ended': instance.ended,
+  'rsvp_url': instance.rsvpUrl,
+  'join_url': instance.joinUrl,
+  'subscribe_url': instance.subscribeUrl,
+  'calLink': instance.calLink,
+  'subscribed': instance.subscribed,
+  'user_timezone': instance.userTimezone,
+  'meeting_provider': _$MeetingProviderEnumEnumMap[instance.meetingProvider]!,
+};
+
+const _$MeetingProviderEnumEnumMap = {
+  MeetingProviderEnum.googleMeet: 'google_meet',
+  MeetingProviderEnum.livekit: 'livekit',
+  MeetingProviderEnum.$unknown: r'$unknown',
+};
