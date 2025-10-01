@@ -19,6 +19,20 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
 
+class VideoRoomScreenRouteArgs {
+  const VideoRoomScreenRouteArgs({
+    required this.token,
+    required this.cameraEnabled,
+    required this.micEnabled,
+    required this.event,
+  });
+
+  final String token;
+  final bool cameraEnabled;
+  final bool micEnabled;
+  final EventDetailSchema event;
+}
+
 class VideoRoomScreen extends ConsumerStatefulWidget {
   const VideoRoomScreen({
     required this.token,

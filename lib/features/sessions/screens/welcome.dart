@@ -2,23 +2,25 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/room_screen.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PreJoinScreen extends ConsumerStatefulWidget {
-  const PreJoinScreen({required this.event, required this.token, super.key});
+  const PreJoinScreen({required this.event, super.key});
 
   final EventDetailSchema event;
-  final String token;
 
   @override
   ConsumerState<PreJoinScreen> createState() => _PreJoinScreenState();
@@ -64,21 +66,18 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     });
   }
 
-  Future<void> _joinRoom() async {
+  Future<void> _joinRoom(String token) async {
     await _videoTrack?.stop();
     await _videoTrack?.dispose();
 
     if (mounted) {
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) {
-            return VideoRoomScreen(
-              cameraEnabled: _isCameraOn,
-              micEnabled: _isMicOn,
-              event: widget.event,
-              token: widget.token,
-            );
-          },
+      await context.push(
+        RouteNames.videoSession(widget.event.slug),
+        extra: VideoRoomScreenRouteArgs(
+          cameraEnabled: _isCameraOn,
+          micEnabled: _isMicOn,
+          event: widget.event,
+          token: token,
         ),
       );
     }
@@ -90,6 +89,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokenData = ref.watch(sessionTokenProvider(widget.event.slug));
 
     return AnnotatedRegion(
       value: SystemUiOverlayStyle.light,
@@ -195,10 +195,22 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                     ),
                     SizedBox(
                       width: 96,
-                      child: ActionBarButton(
-                        onPressed: _joinRoom,
-                        square: false,
-                        child: const Text('Join'),
+                      child: tokenData.when(
+                        data: (token) {
+                          return ActionBarButton(
+                            onPressed: () => _joinRoom(token),
+                            square: false,
+                            child: const Text('Join'),
+                          );
+                        },
+                        loading: () {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        },
+                        error: (error, stackTrace) {
+                          return const Center(child: Text('Error'));
+                        },
                       ),
                     ),
                   ],

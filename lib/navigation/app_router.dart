@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/screens/login_screen.dart';
 import 'package:totem_app/auth/screens/onboarding_screen.dart';
@@ -15,6 +16,8 @@ import 'package:totem_app/features/home/screens/home_screen.dart';
 import 'package:totem_app/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_details_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_screen.dart';
+import 'package:totem_app/features/sessions/screens/room_screen.dart';
+import 'package:totem_app/features/sessions/screens/welcome.dart';
 import 'package:totem_app/features/spaces/screens/session_history.dart';
 import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
 import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
@@ -347,29 +350,26 @@ GoRouter createRouter(WidgetRef ref) {
         },
       ),
 
-      // GoRoute(
-      //   path: RouteNames.videoSessionWelcome,
-      //   name: RouteNames.videoSessionWelcome,
-      //   builder: (context, state) {
-      //     return Theme(
-      //       data: AppTheme.darkTheme,
-      //       child: PreJoinScreen(event: state.extra! as EventDetailSchema),
-      //     );
-      //   },
-      // ),
-      // GoRoute(
-      //   path: '/sessions/:id',
-      //   name: RouteNames.videoSession,
-      //   builder: (context, state) {
-      //     final sessionId = state.pathParameters['id'] ?? '';
-      //     return VideoRoomScreen(sessionId: sessionId);
-      //   },
-      // ),
-      // GoRoute(
-      //   path: '/notifications/settings',
-      //   name: RouteNames.notificationSettings,
-      //   builder: (context, state) => const NotificationSettingsScreen(),
-      // ),
+      GoRoute(
+        path: RouteNames.videoSessionPrejoin,
+        name: RouteNames.videoSessionPrejoin,
+        builder: (context, state) {
+          return PreJoinScreen(event: state.extra! as EventDetailSchema);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.videoSession(':id'),
+        name: RouteNames.videoSession(':id'),
+        builder: (context, state) {
+          final args = state.extra! as VideoRoomScreenRouteArgs;
+          return VideoRoomScreen(
+            cameraEnabled: args.cameraEnabled,
+            micEnabled: args.micEnabled,
+            event: args.event,
+            token: args.token,
+          );
+        },
+      ),
     ],
     errorBuilder: (context, state) => const ErrorScreen(),
   );

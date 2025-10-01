@@ -6,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:totem_app/api/models/event_detail_schema.dart';
@@ -14,8 +15,8 @@ import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/profile/screens/delete_account.dart';
-import 'package:totem_app/features/sessions/screens/welcome.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -492,36 +493,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
   Future<void> joinLivekit() async {
     debugPrint('Joining livekit');
-    try {
-      setState(() => _loading = true);
-      final apiService = ref.read(mobileApiServiceProvider);
-      final response = await apiService.meetings
-          .totemMeetingsMobileApiGetLivekitToken(eventSlug: widget.event.slug);
-
-      if (mounted) {
-        await Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (context) {
-              return PreJoinScreen(event: widget.event, token: response.token);
-            },
-          ),
-        );
-      }
-    } catch (error, stacktrace) {
-      debugPrint('Failed to get livekit token: $error\n$stacktrace');
-      if (mounted) {
-        showErrorPopup(
-          context,
-          icon: TotemIcons.subscribers,
-          title: 'Failed to join the session',
-          message: 'Please try again later',
-        );
-      }
-      return;
-    } finally {
-      _loading = false;
-      if (mounted) setState(() {});
-    }
+    context.goNamed(RouteNames.videoSessionPrejoin, extra: widget.event);
   }
 }
 
