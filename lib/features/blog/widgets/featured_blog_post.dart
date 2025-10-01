@@ -48,58 +48,62 @@ class FeaturedBlogPost extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return SizedBox(
       height: 460,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
             flex: 3,
             child: Stack(
               fit: StackFit.expand,
               children: [
-                CachedNetworkImage(
-                  imageUrl: image ?? '',
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[300],
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.grey[300],
-                    child: const Center(child: Icon(Icons.broken_image)),
+                ShaderMask(
+                  shaderCallback: (rect) {
+                    final cardHeight = rect.height;
+                    const gradientHeight = 135.0;
+                    final startStop =
+                        ((cardHeight - gradientHeight) / cardHeight).clamp(
+                          0.0,
+                          1.0,
+                        );
+                    return LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: const [Colors.transparent, Colors.black],
+                      stops: [startStop, 1.0],
+                    ).createShader(
+                      Rect.fromLTRB(0, 0, rect.width, rect.height),
+                    );
+                  },
+                  blendMode: BlendMode.darken,
+                  child: CachedNetworkImage(
+                    imageUrl: image ?? '',
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey[300],
+                      child: const Center(child: CircularProgressIndicator()),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey[300],
+                      child: const Center(child: Icon(Icons.broken_image)),
+                    ),
                   ),
                 ),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Stack(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withValues(alpha: .9),
-                            ],
-                          ),
-                        ),
-                        child: Text(
-                          title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                        ),
-                      ),
-                    ],
+                PositionedDirectional(
+                  bottom: 20,
+                  start: 20,
+                  end: 20,
+                  child: Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
               ],
@@ -108,124 +112,118 @@ class FeaturedBlogPost extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: SizedBox(
-                width: double.infinity,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 10,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(
-                          0xff262F37,
-                        ).withValues(alpha: .3),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '$readTime min read',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style:
-                            Theme.of(
-                              context,
-                            ).textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
+              padding: const EdgeInsetsDirectional.fromSTEB(20, 20, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 10,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(
+                        0xff262F37,
+                      ).withValues(alpha: .3),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '$readTime min read',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontSize: 12,
                       ),
                     ),
-                    if (subtitle.isNotEmpty)
-                      Text(
-                        subtitle,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.black,
-                          fontSize: 12,
+                  ),
+                  if (subtitle.isNotEmpty)
+                    Text(
+                      subtitle,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.black,
+                        fontSize: 12,
+                      ),
+                    ),
+                  Row(
+                    spacing: 6,
+                    children: [
+                      CircleAvatar(
+                        radius: 18.5,
+                        backgroundColor: Colors.white,
+                        child: UserAvatar(
+                          image: authorImageUrl != null
+                              ? CachedNetworkImageProvider(
+                                  authorImageUrl!,
+                                  cacheKey: slug,
+                                )
+                              : null,
+                          seed: authorImageSeed,
+                          radius: 17.5,
                         ),
                       ),
-                    Row(
-                      spacing: 6,
-                      children: [
-                        CircleAvatar(
-                          radius: 18.5,
-                          backgroundColor: Colors.white,
-                          child: UserAvatar(
-                            image: authorImageUrl != null
-                                ? CachedNetworkImageProvider(
-                                    authorImageUrl!,
-                                    cacheKey: slug,
-                                  )
-                                : null,
-                            seed: authorImageSeed,
-                            radius: 17.5,
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              authorName,
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.fade,
+                            ),
+                            if (publishedDate != null)
                               Text(
-                                authorName,
+                                DateFormat.yMMMd(
+                                  'en_US',
+                                ).format(publishedDate!),
                                 style: const TextStyle(
                                   color: Colors.black,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
+                                  fontSize: 10,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.fade,
                               ),
-                              if (publishedDate != null)
-                                Text(
-                                  DateFormat.yMMMd(
-                                    'en_US',
-                                  ).format(publishedDate!),
-                                  style: const TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 10,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.fade,
-                                ),
-                            ],
+                          ],
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          context.push(RouteNames.blogPost(slug));
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsetsDirectional.only(
+                            start: 12,
+                            end: 10,
+                            top: 4,
+                            bottom: 4,
+                          ),
+                          minimumSize: const Size(100, 42),
+                        ),
+                        label: const Text(
+                          'Read more',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            context.push(RouteNames.blogPost(slug));
-                          },
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsetsDirectional.only(
-                              start: 12,
-                              end: 4,
-                              top: 4,
-                              bottom: 4,
-                            ),
-                            minimumSize: const Size(100, 42),
-                          ),
-                          label: const Text(
-                            'Read more',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          icon: const Icon(
-                            Icons.arrow_forward_ios,
-                            size: 16,
-                          ),
-                          iconAlignment: IconAlignment.end,
+                        icon: const Icon(
+                          Icons.arrow_forward_ios,
+                          size: 16,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                        iconAlignment: IconAlignment.end,
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
