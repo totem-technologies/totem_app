@@ -69,8 +69,8 @@ class FeaturedBlogPost extends StatelessWidget {
                           1.0,
                         );
                     return LinearGradient(
-                      begin: AlignmentDirectional.topCenter,
-                      end: AlignmentDirectional.bottomCenter,
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
                       colors: const [Colors.transparent, Colors.black],
                       stops: [startStop, 1.0],
                     ).createShader(
@@ -85,10 +85,12 @@ class FeaturedBlogPost extends StatelessWidget {
                       color: Colors.grey[300],
                       child: const Center(child: CircularProgressIndicator()),
                     ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[300],
-                      child: const Center(child: Icon(Icons.broken_image)),
-                    ),
+                    errorWidget: (context, url, error) {
+                      return Image.asset(
+                        'assets/images/welcome_background.jpg',
+                        fit: BoxFit.cover,
+                      );
+                    },
                   ),
                 ),
                 PositionedDirectional(

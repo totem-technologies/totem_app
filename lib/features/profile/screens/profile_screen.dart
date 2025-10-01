@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/features/profile/screens/delete_account.dart';
+import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -35,7 +36,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         top: false,
         bottom: false,
         child: ListView(
-          padding: const EdgeInsetsDirectional.all(20),
+          padding: const EdgeInsetsDirectional.only(
+            start: 20,
+            end: 20,
+            top: 20,
+            bottom: BottomNavScaffold.bottomNavHeight + 20,
+          ),
           children: [
             Card(
               margin: EdgeInsetsDirectional.zero,

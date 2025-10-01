@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/blog/widgets/blog_post_card.dart';
 import 'package:totem_app/features/blog/widgets/featured_blog_post.dart';
+import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
@@ -45,7 +46,10 @@ class BlogListScreen extends ConsumerWidget {
                       ),
                     ),
                     SliverPadding(
-                      padding: const EdgeInsetsDirectional.only(top: 20),
+                      padding: const EdgeInsetsDirectional.only(
+                        top: 20,
+                        bottom: BottomNavScaffold.bottomNavHeight,
+                      ),
                       sliver: SliverFixedExtentList.builder(
                         itemExtent: NewBlogPostCard.cardHeight + 20,
                         itemCount: data.items.sublist(1).length,
