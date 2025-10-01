@@ -50,6 +50,8 @@ class BottomNavScaffold extends StatelessWidget {
   final Widget child;
   final String currentPath;
 
+  static const double bottomNavHeight = 70;
+
   @override
   Widget build(BuildContext context) {
     final currentRoute = HomeRoutes.values.firstWhere(
@@ -59,7 +61,7 @@ class BottomNavScaffold extends StatelessWidget {
 
     return Scaffold(
       body: OfflineIndicatorPage(child: child),
-
+      extendBody: true,
       bottomNavigationBar: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         child: NavigationBar(

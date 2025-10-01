@@ -65,7 +65,7 @@ class _CardScreenState extends State<CardScreen>
                   ? !isPhone
                   : widget.showBackground!;
               return Stack(
-                alignment: Alignment.center,
+                alignment: AlignmentDirectional.center,
                 children: [
                   if (showBackground) ...[
                     Positioned.fill(

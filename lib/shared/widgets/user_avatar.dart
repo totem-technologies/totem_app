@@ -205,7 +205,7 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
               },
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(50),
+                  padding: const EdgeInsetsDirectional.all(50),
                   child: Transform.translate(
                     offset: _dragPosition,
                     child: Transform.scale(

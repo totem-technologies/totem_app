@@ -525,7 +525,7 @@ class _AttendingDialogState extends State<AttendingDialog> {
                         color: Colors.white,
                       ),
                       child: IconButton(
-                        padding: EdgeInsets.zero,
+                        padding: EdgeInsetsDirectional.zero,
                         iconSize: 18,
                         color: const Color(0xFF787D7E),
                         onPressed: () {
@@ -558,7 +558,7 @@ class _AttendingDialogState extends State<AttendingDialog> {
                     color: Colors.white,
                   ),
                   child: IconButton(
-                    padding: EdgeInsets.zero,
+                    padding: EdgeInsetsDirectional.zero,
                     iconSize: 18,
                     color: const Color(0xFF787D7E),
                     onPressed: () => Navigator.of(context).pop(),

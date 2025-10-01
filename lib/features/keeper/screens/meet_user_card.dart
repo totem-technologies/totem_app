@@ -5,15 +5,21 @@ import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class MeetUserCard extends StatelessWidget {
-  const MeetUserCard({required this.user, super.key});
+  const MeetUserCard({
+    required this.user,
+    super.key,
+    this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 16),
+  });
 
   final PublicUserSchema user;
+
+  final EdgeInsetsGeometry margin;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: margin,
       padding: const EdgeInsetsDirectional.all(10),
       decoration: BoxDecoration(
         color: Colors.white,

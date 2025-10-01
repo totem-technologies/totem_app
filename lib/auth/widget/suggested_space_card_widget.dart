@@ -53,7 +53,7 @@ class SuggestedSpaceCard extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsetsDirectional.all(10),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: BackdropFilter(
@@ -62,7 +62,7 @@ class SuggestedSpaceCard extends StatelessWidget {
                     alignment: Alignment.topLeft,
                     child: IntrinsicWidth(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
+                        padding: const EdgeInsetsDirectional.symmetric(
                           horizontal: 10,
                           vertical: 5,
                         ),
@@ -105,7 +105,7 @@ class SuggestedSpaceCard extends StatelessWidget {
                 ),
               ),
               child: Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsetsDirectional.all(10),
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(20),

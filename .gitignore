@@ -54,3 +54,7 @@ openapi.json
 
 # VS Code
 .vscode/
+
+# FVM Version Cache
+.fvm/
+.fvmrc

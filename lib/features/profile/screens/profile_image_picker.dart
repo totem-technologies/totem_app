@@ -97,7 +97,7 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsetsDirectional.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -193,7 +193,7 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(30),
                     ),
-                    padding: const EdgeInsets.all(5),
+                    padding: const EdgeInsetsDirectional.all(5),
                     child: Stack(
                       children: [
                         AnimatedPositionedDirectional(

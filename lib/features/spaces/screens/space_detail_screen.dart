@@ -76,7 +76,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
 
                         leading: Container(
                           margin: const EdgeInsetsDirectional.only(start: 20),
-                          alignment: Alignment.center,
+                          alignment: AlignmentDirectional.center,
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               color: theme.scaffoldBackgroundColor,
@@ -96,7 +96,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         actions: [
                           Container(
                             height: 36,
-                            alignment: Alignment.center,
+                            alignment: AlignmentDirectional.center,
                             child: DecoratedBox(
                               decoration: BoxDecoration(
                                 color: theme.scaffoldBackgroundColor,
@@ -262,7 +262,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                     _showAboutSpaceSheet(context, event),
                                 style: const ButtonStyle(
                                   padding: WidgetStatePropertyAll(
-                                    EdgeInsets.zero,
+                                    EdgeInsetsDirectional.zero,
                                   ),
                                 ),
                                 child: const Text('Show more'),

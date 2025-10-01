@@ -418,7 +418,7 @@ class _ProfileTabState extends State<_ProfileTab>
           },
           child: Container(
             height: 53,
-            padding: const EdgeInsets.symmetric(
+            padding: const EdgeInsetsDirectional.symmetric(
               horizontal: 15,
               vertical: 16,
             ),
