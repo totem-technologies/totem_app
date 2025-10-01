@@ -211,9 +211,7 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
             error: error,
             showHomeButton: true,
           ),
-          loading: () {
-            return const LoadingIndicator();
-          },
+          loading: () => const LoadingIndicator(),
         ),
       ),
     );

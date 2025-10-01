@@ -6,6 +6,8 @@ import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/filter.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
@@ -41,7 +43,11 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
       body: spaces.when(
         data: (spacesList) {
           if (spacesList.isEmpty) {
-            return _buildEmptyState();
+            return EmptyIndicator(
+              icon: TotemIcons.spacesFilled,
+              text: 'No spaces available yet.',
+              onRetry: () => ref.refresh(listSpacesProvider.future),
+            );
           }
 
           final allCategories = _extractCategories(spacesList);
@@ -157,19 +163,6 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
             'Try selecting a different category',
             style: TextStyle(color: Colors.grey),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.explore, size: 80),
-          SizedBox(height: 16),
-          Text('No spaces available yet'),
         ],
       ),
     );

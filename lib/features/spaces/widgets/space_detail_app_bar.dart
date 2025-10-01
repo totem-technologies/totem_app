@@ -31,6 +31,7 @@ class SpaceDetailAppBar extends StatelessWidget {
                 bottom: Radius.circular(25),
               ),
               child: SpaceGradientMask(
+                gradientHeight: 200,
                 child: CachedNetworkImage(
                   imageUrl: event.space.image ?? '',
                   fit: BoxFit.cover,
@@ -49,7 +50,7 @@ class SpaceDetailAppBar extends StatelessWidget {
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsetsDirectional.all(16),
+              padding: const EdgeInsetsDirectional.all(20),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 spacing: 8,
@@ -60,12 +61,22 @@ class SpaceDetailAppBar extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         Text(
-                          event.space.title,
+                          event.title,
                           style: theme.textTheme.headlineLarge?.copyWith(
                             color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 28,
+                            shadows: kElevationToShadow[4],
                           ),
                         ),
+                        Text(
+                          event.space.title,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: Colors.white,
+                            fontSize: 18,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
 
                         RichText(
                           text: TextSpan(

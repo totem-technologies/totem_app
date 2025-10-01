@@ -107,7 +107,9 @@ class SpaceCard extends StatelessWidget {
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text: '${space.nextEvent.seatsLeft}',
+                            text: space.nextEvent.seatsLeft == 0
+                                ? 'No'
+                                : '${space.nextEvent.seatsLeft}',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -171,7 +173,17 @@ class SpaceCard extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.fade,
                         ),
-                        const SizedBox(height: 4),
+                        if (space.nextEvent.title != null)
+                          AutoSizeText(
+                            'Next: ${space.nextEvent.title}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        const SizedBox(height: 6),
                         RichText(
                           maxLines: 1,
                           overflow: TextOverflow.fade,
