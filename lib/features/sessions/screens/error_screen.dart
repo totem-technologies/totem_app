@@ -4,9 +4,9 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
 class RoomErrorScreen extends StatelessWidget {
-  const RoomErrorScreen({required this.onRetry, super.key});
+  const RoomErrorScreen({this.onRetry, super.key});
 
-  final VoidCallback onRetry;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -56,25 +56,26 @@ class RoomErrorScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const Spacer(),
-              OutlinedButton(
-                onPressed: onRetry,
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(120, 50),
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: 20,
-                    vertical: 8,
-                  ),
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: BorderSide(
-                      color: theme.colorScheme.onPrimary,
+              if (onRetry != null)
+                OutlinedButton(
+                  onPressed: onRetry,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(120, 50),
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(
+                        color: theme.colorScheme.onPrimary,
+                      ),
                     ),
                   ),
+                  child: const Text('Retry'),
                 ),
-                child: const Text('Retry'),
-              ),
             ],
           ),
         ),

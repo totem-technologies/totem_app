@@ -6,8 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
-import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
+import 'package:totem_app/features/sessions/screens/error_screen.dart';
+import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/screens/room_screen.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
@@ -93,148 +94,129 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
     return AnnotatedRegion(
       value: SystemUiOverlayStyle.light,
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          iconTheme: const IconThemeData(color: Colors.white),
-          leading: Container(
-            margin: const EdgeInsetsDirectional.only(start: 20),
-            alignment: Alignment.center,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: theme.scaffoldBackgroundColor,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: Icon(Icons.adaptive.arrow_back, color: Colors.black),
-                iconSize: 24,
-                visualDensity: VisualDensity.compact,
-                onPressed: () => popOrHome(context),
+      child: tokenData.when(
+        data: (token) => Scaffold(
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            iconTheme: const IconThemeData(color: Colors.white),
+            leading: Container(
+              margin: const EdgeInsetsDirectional.only(start: 20),
+              alignment: Alignment.center,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: theme.scaffoldBackgroundColor,
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.adaptive.arrow_back, color: Colors.black),
+                  iconSize: 24,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => popOrHome(context),
+                ),
               ),
             ),
           ),
-        ),
-        extendBodyBehindAppBar: true,
-        body: RoomBackground(
-          padding: const EdgeInsetsDirectional.all(20),
-          child: SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Welcome to this Space',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 28,
-                    color: Colors.white,
+          extendBodyBehindAppBar: true,
+          body: RoomBackground(
+            padding: const EdgeInsetsDirectional.all(20),
+            child: SafeArea(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Welcome to this Space',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 28,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: 20,
-                  ),
-                  child: RichText(
-                    textAlign: TextAlign.center,
-                    text: TextSpan(
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.8),
-                      ),
-                      children: [
-                        const TextSpan(
-                          text:
-                              'It will start soon. '
-                              'Verify your audio and video settings before '
-                              'joining.\n'
-                              '\n'
-                              'Please take a moment to go over the',
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 20,
+                    ),
+                    child: RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
-                        TextSpan(
-                          text: '\ncommunity guidelines',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.underline,
+                        children: [
+                          const TextSpan(
+                            text:
+                                'It will start soon. '
+                                'Verify your audio and video settings before '
+                                'joining.\n'
+                                '\n'
+                                'Please take a moment to go over the',
                           ),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () {
-                              launchUrl(AppConfig.communityGuidelinesUrl);
-                            },
+                          TextSpan(
+                            text: '\ncommunity guidelines',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () {
+                                launchUrl(AppConfig.communityGuidelinesUrl);
+                              },
+                          ),
+                          const TextSpan(text: '.'),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: LocalParticipantVideoCard(
+                      isCameraOn: _isCameraOn,
+                      videoTrack: _videoTrack,
+                    ),
+                  ),
+                  ActionBar(
+                    children: [
+                      ActionBarButton(
+                        onPressed: _toggleMic,
+                        active: _isMicOn,
+                        child: TotemIcon(
+                          _isMicOn
+                              ? TotemIcons.microphoneOn
+                              : TotemIcons.microphoneOff,
                         ),
-                        const TextSpan(text: '.'),
-                      ],
-                    ),
+                      ),
+                      ActionBarButton(
+                        onPressed: _toggleCamera,
+                        active: _isCameraOn,
+                        child: TotemIcon(
+                          _isCameraOn
+                              ? TotemIcons.cameraOn
+                              : TotemIcons.cameraOff,
+                        ),
+                      ),
+                      SizedBox(
+                        width: 96,
+                        child: ActionBarButton(
+                          onPressed: () => _joinRoom(token),
+                          square: false,
+                          child: const Text('Join'),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                Expanded(
-                  child: LocalParticipantVideoCard(
-                    isCameraOn: _isCameraOn,
-                    videoTrack: _videoTrack,
-                  ),
-                ),
-                ActionBar(
-                  children: [
-                    ActionBarButton(
-                      onPressed: _toggleMic,
-                      active: _isMicOn,
-                      child: TotemIcon(
-                        _isMicOn
-                            ? TotemIcons.microphoneOn
-                            : TotemIcons.microphoneOff,
-                      ),
-                    ),
-                    ActionBarButton(
-                      onPressed: _toggleCamera,
-                      active: _isCameraOn,
-                      child: TotemIcon(
-                        _isCameraOn
-                            ? TotemIcons.cameraOn
-                            : TotemIcons.cameraOff,
-                      ),
-                    ),
-                    SizedBox(
-                      width: 96,
-                      child: tokenData.when(
-                        data: (token) {
-                          return ActionBarButton(
-                            onPressed: () => _joinRoom(token),
-                            square: false,
-                            child: const Text('Join'),
-                          );
-                        },
-                        loading: () {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        },
-                        error: (error, stackTrace) {
-                          return const Center(child: Text('Error'));
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget buildActionBarButton(Widget child, VoidCallback onPressed) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-        decoration: BoxDecoration(
-          color: AppTheme.mauve,
-          // shape: BoxShape.circle,
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: Colors.white),
-        ),
-        child: Center(child: child),
+        error: (error, stackTrace) {
+          return RoomErrorScreen(
+            onRetry: () =>
+                ref.refresh(sessionTokenProvider(widget.event.slug).future),
+          );
+        },
+        loading: LoadingRoomScreen.new,
       ),
     );
   }
