@@ -12,52 +12,55 @@ class BlogListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final blogs = ref.watch(listBlogPostsProvider);
-    return blogs.when(
-      data: (data) {
-        if (data.items.isEmpty) {
-          return const Center(child: Text('No blog posts available'));
-        }
+    return RefreshIndicator(
+      onRefresh: () => ref.refresh(listBlogPostsProvider.future),
+      child: blogs.when(
+        data: (data) {
+          if (data.items.isEmpty) {
+            return const Center(child: Text('No blog posts available'));
+          }
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            return Container(
-              constraints: BoxConstraints(
-                maxHeight: constraints.maxHeight,
-              ),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  stops: [0.6, 1],
-                  colors: [
-                    Color(0xffFCEFE4),
-                    Color(0xff435DD0),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              return Container(
+                constraints: BoxConstraints(
+                  maxHeight: constraints.maxHeight,
+                ),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                    stops: [0.6, 1],
+                    colors: [
+                      Color(0xffFCEFE4),
+                      Color(0xff435DD0),
+                    ],
+                  ),
+                ),
+                child: ListView(
+                  padding: EdgeInsetsDirectional.zero,
+                  children: [
+                    FeaturedBlogPost.fromBlogPostSchema(data.items.first),
+                    const SizedBox(height: 20),
+                    ...List.generate(
+                      data.items.sublist(1).length,
+                      (index) => NewBlogPostCard.fromBlogPostSchema(
+                        data.items[index + 1],
+                      ),
+                    ),
                   ],
                 ),
-              ),
-              child: ListView(
-                padding: EdgeInsetsDirectional.zero,
-                children: [
-                  FeaturedBlogPost.fromBlogPostSchema(data.items.first),
-                  const SizedBox(height: 20),
-                  ...List.generate(
-                    data.items.sublist(1).length,
-                    (index) => NewBlogPostCard.fromBlogPostSchema(
-                      data.items[index + 1],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-      error: (error, _) => ErrorScreen(
-        error: error,
-        showHomeButton: false,
-        onRetry: () => ref.refresh(listBlogPostsProvider.future),
+              );
+            },
+          );
+        },
+        error: (error, _) => ErrorScreen(
+          error: error,
+          showHomeButton: false,
+          onRetry: () => ref.refresh(listBlogPostsProvider.future),
+        ),
+        loading: () => const LoadingIndicator(),
       ),
-      loading: () => const LoadingIndicator(),
     );
   }
 }
