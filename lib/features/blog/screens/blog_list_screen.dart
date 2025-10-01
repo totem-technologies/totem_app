@@ -37,15 +37,24 @@ class BlogListScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                child: ListView(
-                  padding: EdgeInsetsDirectional.zero,
-                  children: [
-                    FeaturedBlogPost.fromBlogPostSchema(data.items.first),
-                    const SizedBox(height: 20),
-                    ...List.generate(
-                      data.items.sublist(1).length,
-                      (index) => NewBlogPostCard.fromBlogPostSchema(
-                        data.items[index + 1],
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: FeaturedBlogPost.fromBlogPostSchema(
+                        data.items.first,
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsetsDirectional.only(top: 20),
+                      sliver: SliverFixedExtentList.builder(
+                        itemExtent: NewBlogPostCard.cardHeight + 20,
+                        itemCount: data.items.sublist(1).length,
+                        itemBuilder: (context, index) => Padding(
+                          padding: const EdgeInsetsDirectional.only(bottom: 20),
+                          child: NewBlogPostCard.fromBlogPostSchema(
+                            data.items[index + 1],
+                          ),
+                        ),
                       ),
                     ),
                   ],

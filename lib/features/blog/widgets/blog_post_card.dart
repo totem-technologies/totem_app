@@ -4,7 +4,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-
 import 'package:totem_app/api/models/blog_post_list_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
@@ -50,6 +49,9 @@ class NewBlogPostCard extends StatelessWidget {
   final bool isLarge;
   final int readTime;
 
+  static const double cardHeight = 350;
+  static const double cardWidth = 350;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -75,8 +77,8 @@ class NewBlogPostCard extends StatelessWidget {
           ),
         ],
       ),
-      height: 350,
-      width: 350,
+      height: cardHeight,
+      width: cardWidth,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
