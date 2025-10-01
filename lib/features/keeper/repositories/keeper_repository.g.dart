@@ -6,7 +6,7 @@ part of 'keeper_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$keeperProfileHash() => r'fedc805446263131ac613a3f65e4469570c7c40b';
+String _$keeperProfileHash() => r'f196795ba98fbc88a9bada39aa9c6f563147d068';
 
 /// Copied from Dart SDK
 class _SystemHash {

@@ -17,6 +17,7 @@ class UserAvatar extends ConsumerWidget {
     this.showImage = true,
     this.onTap,
     this.borderWidth = 1.5,
+    this.borderRadius = const BorderRadius.all(Radius.circular(100)),
   });
 
   factory UserAvatar.fromUserSchema(
@@ -25,6 +26,9 @@ class UserAvatar extends ConsumerWidget {
     bool showImage = true,
     VoidCallback? onTap,
     double borderWidth = 1.5,
+    BorderRadiusGeometry borderRadius = const BorderRadius.all(
+      Radius.circular(100),
+    ),
   }) {
     return UserAvatar(
       image:
@@ -40,6 +44,7 @@ class UserAvatar extends ConsumerWidget {
       showImage: showImage,
       onTap: onTap,
       borderWidth: borderWidth,
+      borderRadius: borderRadius,
     );
   }
 
@@ -48,6 +53,9 @@ class UserAvatar extends ConsumerWidget {
     bool showImage = true,
     VoidCallback? onTap,
     double borderWidth = 1.5,
+    BorderRadiusGeometry borderRadius = const BorderRadius.all(
+      Radius.circular(100),
+    ),
   }) {
     return Consumer(
       builder: (context, ref, child) {
@@ -65,6 +73,7 @@ class UserAvatar extends ConsumerWidget {
           showImage: showImage,
           borderWidth: borderWidth,
           onTap: onTap,
+          borderRadius: borderRadius,
         );
       },
     );
@@ -76,6 +85,7 @@ class UserAvatar extends ConsumerWidget {
   final bool showImage;
   final VoidCallback? onTap;
   final double borderWidth;
+  final BorderRadiusGeometry borderRadius;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -101,24 +111,26 @@ class UserAvatar extends ConsumerWidget {
               );
             }
           },
-      child: DecoratedBox(
+      child: Container(
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
           border: Border.all(color: Colors.white, width: borderWidth),
+          borderRadius: borderRadius,
+          image: showImage && image != null
+              ? DecorationImage(
+                  image: image!,
+                  fit: BoxFit.cover,
+                )
+              : null,
         ),
-        child: ClipOval(
-          child: CircleAvatar(
-            radius: radius,
-            backgroundImage: showImage ? image : null,
-            child: showImage && image == null
-                ? AnimatedBoringAvatar(
-                    name: seed ?? 'default',
-                    type: BoringAvatarType.marble,
-                    duration: const Duration(milliseconds: 300),
-                  )
-                : null,
-          ),
-        ),
+        height: radius * 2,
+        width: radius * 2,
+        child: showImage && image == null
+            ? AnimatedBoringAvatar(
+                name: seed ?? 'default',
+                type: BoringAvatarType.marble,
+                duration: const Duration(milliseconds: 300),
+              )
+            : null,
       ),
     );
   }

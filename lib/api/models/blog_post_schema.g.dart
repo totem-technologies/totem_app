@@ -21,6 +21,7 @@ BlogPostSchema _$BlogPostSchemaFromJson(Map<String, dynamic> json) =>
           ? null
           : DateTime.parse(json['date_published'] as String),
       slug: json['slug'] as String?,
+      summary: json['summary'] as String?,
     );
 
 Map<String, dynamic> _$BlogPostSchemaToJson(BlogPostSchema instance) =>
@@ -34,4 +35,5 @@ Map<String, dynamic> _$BlogPostSchemaToJson(BlogPostSchema instance) =>
       'slug': instance.slug,
       'publish': instance.publish,
       'read_time': instance.readTime,
+      'summary': instance.summary,
     };

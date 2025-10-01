@@ -16,7 +16,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  late final _pageController = PageController(viewportFraction: 0.9);
+  final _pageController = PageController(viewportFraction: 0.9);
 
   @override
   void dispose() {

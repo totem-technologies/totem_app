@@ -17,6 +17,7 @@ class AppTheme {
   static const Color pink = Color(0xFFD999AA);
   static const Color pinkTint = Color(0xFF8B5363);
   static const Color purple = Color(0xFF8B5CF6);
+  static const Color green = Color(0xFF19F554);
 
   // Basic Colors
   static const Color white = Colors.white;
@@ -434,6 +435,45 @@ class AppTheme {
         TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
       },
     ),
+  );
+
+  static ThemeData get darkTheme => ThemeData(
+    brightness: Brightness.dark,
+    primaryColor: mauve,
+    scaffoldBackgroundColor: black,
+    fontFamily: fontFamilySans,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: mauve,
+      brightness: Brightness.dark,
+      surface: const Color(0xFF262F37),
+      onSurface: cream,
+      onPrimary: slate,
+      onSecondary: slate,
+      onError: slate,
+    ),
+    textTheme: const TextTheme(
+      bodyMedium: TextStyle(
+        fontFamily: fontFamilySans,
+        fontSize: 14,
+        fontWeight: FontWeight.normal,
+        color: cream,
+      ),
+    ).apply(bodyColor: cream, displayColor: cream),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: slate,
+      foregroundColor: cream,
+      elevation: 2,
+      titleTextStyle: TextStyle(
+        fontFamily: fontFamilySans,
+        fontSize: 20,
+        fontWeight: FontWeight.w500,
+        color: cream,
+      ),
+      iconTheme: IconThemeData(color: cream),
+      actionsIconTheme: IconThemeData(color: cream),
+      surfaceTintColor: Colors.transparent,
+    ),
+    useMaterial3: true,
   );
 
   static Map<String, Style> get htmlStyle => {

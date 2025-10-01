@@ -44,9 +44,16 @@ dependencies:
   posthog_flutter: ^5.0.0
   intl: ^0.20.2
 
+  # Video
+  livekit_client: ^2.5.0+hotfix.3
+  livekit_components:
+    git:
+      url: https://github.com/livekit/components-flutter.git
+
   # UI & Utilities
   auto_size_text: ^3.0.0
   flutter_html: ^3.0.0
+  markdown: ^7.3.0
   # flutter_native_splash: ^2.4.6
   google_fonts: ^6.2.1
   pinput: ^5.0.1
@@ -56,6 +63,8 @@ dependencies:
   timeago: ^3.7.1
   sliver_tools: ^0.2.12
   flutter_confetti: ^0.5.1
+  shimmer: ^3.0.0
+  collection: ^1.19.1
   meta:
 
 dev_dependencies:

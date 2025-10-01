@@ -34,6 +34,7 @@
 	<array>
 		<string>fetch</string>
 		<string>remote-notification</string>
+		<string>audio</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
@@ -56,5 +57,11 @@
 	</array>
 	<key>com.posthog.posthog.AUTO_INIT</key>
 	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>$(PRODUCT_NAME) uses your camera</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>$(PRODUCT_NAME) uses your microphone</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>This app needs access to your calendar to help you schedule and manage group sessions.</string>
 </dict>
 </plist>

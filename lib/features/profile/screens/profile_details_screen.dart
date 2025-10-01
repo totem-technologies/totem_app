@@ -79,7 +79,6 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
       appBar: AppBar(),
       children: [
         GestureDetector(
-          // onTap: _pickImage,
           onTap: () => showProfileImagePicker(context),
           child: Center(
             child: Stack(

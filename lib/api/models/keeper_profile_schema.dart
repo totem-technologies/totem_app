@@ -23,6 +23,7 @@ class KeeperProfileSchema {
     this.instagramUsername,
     this.website,
     this.xUsername,
+    this.blueskyUsername,
   });
 
   factory KeeperProfileSchema.fromJson(Map<String, Object?> json) =>
@@ -57,6 +58,10 @@ class KeeperProfileSchema {
   /// Your X username, no @ symbol
   @JsonKey(name: 'x_username')
   final String? xUsername;
+
+  /// Your Bluesky username, no @ symbol
+  @JsonKey(name: 'bluesky_username')
+  final String? blueskyUsername;
 
   Map<String, Object?> toJson() => _$KeeperProfileSchemaToJson(this);
 }

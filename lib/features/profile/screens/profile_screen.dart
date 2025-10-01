@@ -2,11 +2,13 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/features/profile/screens/delete_account.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/link.dart';
@@ -22,9 +24,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Get user info from auth state
     final authState = ref.watch(authControllerProvider);
     final user = authState.user;
+
+    if (user == null) return const ErrorScreen();
 
     return Scaffold(
       appBar: AppBar(title: const TotemLogo(size: 24)),
@@ -48,30 +51,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         children: [
                           UserAvatar.currentUser(),
                           AutoSizeText(
-                            user?.name ?? 'Welcome',
+                            user.name ?? 'You',
                             style: theme.textTheme.headlineMedium,
                             maxLines: 1,
                           ),
                         ],
                       ),
                     ),
-                    // TODO(bdlukaa): Add user stats
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            '12',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            '${user.circleCount}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          Text('Sessions joined'),
-                          SizedBox(height: 20),
+                          const Text('Sessions joined'),
+                          const SizedBox(height: 20),
                           Text(
-                            '2',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            DateFormat('MMM, yyyy').format(user.dateCreated),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          Text('Spaces joined'),
+                          const Text('Member Since'),
                         ],
                       ),
                     ),
@@ -122,9 +124,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             const SizedBox(height: 12),
             Link(
               uri: Uri.parse(
-                '${AppConfig.mobileApiUrl}'
-                'users/feedback/',
-              ),
+                AppConfig.mobileApiUrl,
+              ).resolve('/users/feedback/'),
               target: LinkTarget.self,
               builder: (context, launch) => ProfileTile(
                 icon: const TotemIcon(TotemIcons.feedback),

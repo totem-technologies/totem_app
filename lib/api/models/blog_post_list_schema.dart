@@ -18,6 +18,7 @@ class BlogPostListSchema {
     this.subtitle,
     this.datePublished,
     this.slug,
+    this.summary,
   });
 
   factory BlogPostListSchema.fromJson(Map<String, Object?> json) =>
@@ -35,6 +36,9 @@ class BlogPostListSchema {
   /// Estimated reading time in minutes (auto-calculated)
   @JsonKey(name: 'read_time')
   final int readTime;
+
+  /// Short summary of the blog post to show in list pages. No Markdown allowed. Max 2000 characters.
+  final String? summary;
 
   Map<String, Object?> toJson() => _$BlogPostListSchemaToJson(this);
 }

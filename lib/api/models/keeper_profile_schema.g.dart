@@ -20,6 +20,7 @@ KeeperProfileSchema _$KeeperProfileSchemaFromJson(Map<String, dynamic> json) =>
       instagramUsername: json['instagram_username'] as String?,
       website: json['website'] as String?,
       xUsername: json['x_username'] as String?,
+      blueskyUsername: json['bluesky_username'] as String?,
     );
 
 Map<String, dynamic> _$KeeperProfileSchemaToJson(
@@ -37,4 +38,5 @@ Map<String, dynamic> _$KeeperProfileSchemaToJson(
   'instagram_username': instance.instagramUsername,
   'website': instance.website,
   'x_username': instance.xUsername,
+  'bluesky_username': instance.blueskyUsername,
 };

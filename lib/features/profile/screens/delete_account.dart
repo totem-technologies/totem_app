@@ -24,7 +24,7 @@ class DeleteAccountDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authControllerProvider.notifier);
-    return _ConfirmationDialog(
+    return ConfirmationDialog(
       content:
           'This action will permanently delete your account. '
           'Are you sure you want to continue?',
@@ -40,7 +40,7 @@ class LogoutDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authControllerProvider.notifier);
-    return _ConfirmationDialog(
+    return ConfirmationDialog(
       content: 'Are you sure you want to log out?',
       confirmButtonText: 'Log out',
       onConfirm: auth.logout,
@@ -48,11 +48,12 @@ class LogoutDialog extends ConsumerWidget {
   }
 }
 
-class _ConfirmationDialog extends StatefulWidget {
-  const _ConfirmationDialog({
+class ConfirmationDialog extends StatefulWidget {
+  const ConfirmationDialog({
     required this.content,
     required this.confirmButtonText,
     required this.onConfirm,
+    super.key,
   });
 
   final String content;
@@ -60,10 +61,10 @@ class _ConfirmationDialog extends StatefulWidget {
   final Future<void> Function() onConfirm;
 
   @override
-  State<_ConfirmationDialog> createState() => _ConfirmationDialogState();
+  State<ConfirmationDialog> createState() => ConfirmationDialogState();
 }
 
-class _ConfirmationDialogState extends State<_ConfirmationDialog> {
+class ConfirmationDialogState extends State<ConfirmationDialog> {
   var _loading = false;
 
   @override

@@ -43,7 +43,7 @@ class AppConfig {
 
   /// LiveKit configuration
   static String get liveKitUrl {
-    return dotenv.env['LIVEKIT_URL'] ?? 'wss://livekit.totem.org';
+    return dotenv.env['LIVEKIT_URL'] ?? 'wss://totem-d7esbgcp.livekit.cloud';
   }
 
   /// App version information

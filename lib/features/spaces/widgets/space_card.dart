@@ -11,6 +11,7 @@ import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/space_gradient_mask.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class SpaceCard extends StatelessWidget {
@@ -21,13 +22,18 @@ class SpaceCard extends StatelessWidget {
     this.onTap,
   });
 
-  factory SpaceCard.fromEventDetailSchema(EventDetailSchema event) {
+  factory SpaceCard.fromEventDetailSchema(
+    EventDetailSchema event, {
+    bool compact = false,
+    VoidCallback? onTap,
+  }) {
     return SpaceCard(
       space: SpaceDetailSchema(
         slug: event.space.slug!,
         title: event.space.title,
         imageLink: event.space.image,
-        description: event.space.subtitle,
+        content: event.space.content,
+        shortDescription: event.space.shortDescription ?? '',
         author: event.space.author,
         nextEvent: NextEventSchema(
           start: event.start.toIso8601String(),
@@ -38,6 +44,8 @@ class SpaceCard extends StatelessWidget {
         ),
         category: '',
       ),
+      compact: compact,
+      onTap: onTap,
     );
   }
 
@@ -65,25 +73,7 @@ class SpaceCard extends StatelessWidget {
           child: Stack(
             children: [
               Positioned.fill(
-                child: ShaderMask(
-                  shaderCallback: (rect) {
-                    final cardHeight = rect.height;
-                    const gradientHeight = 135.0;
-                    final startStop =
-                        ((cardHeight - gradientHeight) / cardHeight).clamp(
-                          0.0,
-                          1.0,
-                        );
-                    return LinearGradient(
-                      begin: AlignmentDirectional.topCenter,
-                      end: AlignmentDirectional.bottomCenter,
-                      colors: const [Colors.transparent, Colors.black],
-                      stops: [startStop, 1.0],
-                    ).createShader(
-                      Rect.fromLTRB(0, 0, rect.width, rect.height),
-                    );
-                  },
-                  blendMode: BlendMode.darken,
+                child: SpaceGradientMask(
                   child: CachedNetworkImage(
                     imageUrl: getFullUrl(space.imageLink ?? ''),
                     fit: BoxFit.cover,
@@ -138,7 +128,7 @@ class SpaceCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          padding: const EdgeInsetsDirectional.all(8),
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: const Color(0x99262F37),
                             borderRadius: BorderRadius.circular(20),
@@ -205,9 +195,11 @@ class SpaceCard extends StatelessWidget {
                               const TextSpan(text: '  '),
                               WidgetSpan(
                                 alignment: PlaceholderAlignment.middle,
-                                child: UserAvatar.fromUserSchema(
-                                  space.author,
-                                  radius: 25 / 2,
+                                child: IgnorePointer(
+                                  child: UserAvatar.fromUserSchema(
+                                    space.author,
+                                    radius: 25 / 2,
+                                  ),
                                 ),
                               ),
                             ].reversedIf(compact),
@@ -259,25 +251,7 @@ class SmallSpaceCard extends StatelessWidget {
           Positioned.fill(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: ShaderMask(
-                shaderCallback: (rect) {
-                  final cardHeight = rect.height;
-                  const gradientHeight = 100.0;
-                  final startStop = ((cardHeight - gradientHeight) / cardHeight)
-                      .clamp(
-                        0.0,
-                        1.0,
-                      );
-                  return LinearGradient(
-                    begin: AlignmentDirectional.topCenter,
-                    end: AlignmentDirectional.bottomCenter,
-                    colors: const [Colors.transparent, Colors.black],
-                    stops: [startStop, 1.0],
-                  ).createShader(
-                    Rect.fromLTRB(0, 0, rect.width, rect.height),
-                  );
-                },
-                blendMode: BlendMode.darken,
+              child: SpaceGradientMask(
                 child: CachedNetworkImage(
                   imageUrl: getFullUrl(space.imageLink ?? ''),
                   fit: BoxFit.cover,
@@ -301,8 +275,8 @@ class SmallSpaceCard extends StatelessWidget {
                     Colors.transparent,
                     Colors.black54,
                   ],
-                  begin: AlignmentDirectional.topCenter,
-                  end: AlignmentDirectional.bottomCenter,
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
               ),
             ),
@@ -316,7 +290,7 @@ class SmallSpaceCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsetsDirectional.all(8),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: const Color(0x99262F37),
                     borderRadius: BorderRadius.circular(20),
