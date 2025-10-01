@@ -79,6 +79,7 @@ class NotMyTurn extends ConsumerWidget {
                               // TODO(bdlukaa): If the person speaking doesn't
                               //                have the camera on, show their
                               //                profile image instead.
+                              // This depends on the user object for each person
                               return Container(
                                 decoration: BoxDecoration(
                                   image: auth.user?.profileImage != null

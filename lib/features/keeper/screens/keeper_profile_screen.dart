@@ -14,21 +14,29 @@ import 'package:url_launcher/link.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class KeeperProfileScreen extends ConsumerWidget {
-  const KeeperProfileScreen({required this.slug, super.key});
+  const KeeperProfileScreen({
+    required this.slug,
+    this.showAppBar = true,
+    super.key,
+  });
 
   final String slug;
+
+  final bool showAppBar;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final async = ref.watch(keeperProfileProvider(slug));
     return Scaffold(
-      appBar: AppBar(
-        leading: BackButton(
-          onPressed: () => popOrHome(context),
-        ),
-        title: const TotemLogo(size: 24),
-      ),
+      appBar: showAppBar
+          ? AppBar(
+              leading: BackButton(
+                onPressed: () => popOrHome(context),
+              ),
+              title: const TotemLogo(size: 24),
+            )
+          : null,
       body: async.when(
         data: (keeper) {
           final bottomSafeArea = MediaQuery.paddingOf(context).bottom;
