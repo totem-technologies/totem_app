@@ -13,7 +13,7 @@ class MeetUserCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsetsDirectional.symmetric(horizontal: 16),
       padding: const EdgeInsetsDirectional.all(10),
       decoration: BoxDecoration(
         color: Colors.white,

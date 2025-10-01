@@ -55,8 +55,8 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      padding: const EdgeInsets.only(left: 5),
-                      alignment: Alignment.center,
+                      padding: const EdgeInsetsDirectional.only(start: 5),
+                      alignment: AlignmentDirectional.center,
                       icon: Icon(Icons.adaptive.arrow_back, size: 20),
                       iconSize: 20,
                       visualDensity: VisualDensity.compact,
@@ -73,8 +73,8 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        alignment: Alignment.center,
-                        padding: EdgeInsets.zero,
+                        alignment: AlignmentDirectional.center,
+                        padding: EdgeInsetsDirectional.zero,
                         icon: Icon(Icons.adaptive.share),
                         iconSize: 20,
                         visualDensity: VisualDensity.compact,
@@ -100,7 +100,9 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                 SliverSafeArea(
                   top: false, // AppBar handles top safe area
                   sliver: SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 20,
+                    ),
                     sliver: SliverList.list(
                       children: [
                         const SizedBox(height: 20),

@@ -94,7 +94,7 @@ class NewBlogPostCard extends StatelessWidget {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
+                  padding: const EdgeInsetsDirectional.symmetric(
                     horizontal: 10,
                     vertical: 5,
                   ),
@@ -125,15 +125,15 @@ class NewBlogPostCard extends StatelessWidget {
           /// Blur effect applied to bottom content container
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsetsDirectional.all(20),
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(20),
                 bottomRight: Radius.circular(20),
               ),
               gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                begin: AlignmentDirectional.topCenter,
+                end: AlignmentDirectional.bottomCenter,
                 colors: [
                   Colors.transparent,
                   Color(0xff262F37),

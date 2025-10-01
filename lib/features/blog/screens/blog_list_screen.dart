@@ -28,8 +28,8 @@ class BlogListScreen extends ConsumerWidget {
                 ),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
+                    begin: AlignmentDirectional.topEnd,
+                    end: AlignmentDirectional.bottomStart,
                     stops: [0.6, 1],
                     colors: [
                       Color(0xffFCEFE4),

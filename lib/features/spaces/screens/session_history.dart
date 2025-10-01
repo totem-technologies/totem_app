@@ -24,7 +24,7 @@ class SessionHistoryScreen extends ConsumerWidget {
           data: (data) {
             if (data.isEmpty) {
               return Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsetsDirectional.all(20),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -53,7 +53,7 @@ class SessionHistoryScreen extends ConsumerWidget {
             return RefreshIndicator.adaptive(
               onRefresh: () => ref.refresh(listSessionsHistoryProvider.future),
               child: ListView(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsetsDirectional.all(20),
                 children: [
                   Text(
                     'Session History',

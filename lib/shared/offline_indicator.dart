@@ -27,12 +27,15 @@ class _StatusBanner extends StatelessWidget {
         : Colors.green.shade900;
 
     return Align(
-      alignment: Alignment.bottomCenter,
+      alignment: AlignmentDirectional.bottomCenter,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         width: double.infinity,
-        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        padding: const EdgeInsets.all(8),
+        margin: const EdgeInsetsDirectional.symmetric(
+          horizontal: 20,
+          vertical: 8,
+        ),
+        padding: const EdgeInsetsDirectional.all(8),
         decoration: BoxDecoration(
           color: backgroundColor,
           boxShadow: kElevationToShadow[1],
@@ -151,7 +154,7 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
 
     return Stack(
       fit: StackFit.expand,
-      alignment: Alignment.bottomCenter,
+      alignment: AlignmentDirectional.bottomCenter,
       children: [
         Positioned.fill(child: widget.child),
         AnimatedSwitcher(

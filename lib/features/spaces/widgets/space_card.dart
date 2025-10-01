@@ -75,8 +75,8 @@ class SpaceCard extends StatelessWidget {
                           1.0,
                         );
                     return LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
+                      begin: AlignmentDirectional.topCenter,
+                      end: AlignmentDirectional.bottomCenter,
                       colors: const [Colors.transparent, Colors.black],
                       stops: [startStop, 1.0],
                     ).createShader(
@@ -138,7 +138,7 @@ class SpaceCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsetsDirectional.all(8),
                           decoration: BoxDecoration(
                             color: const Color(0x99262F37),
                             borderRadius: BorderRadius.circular(20),
@@ -269,8 +269,8 @@ class SmallSpaceCard extends StatelessWidget {
                         1.0,
                       );
                   return LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+                    begin: AlignmentDirectional.topCenter,
+                    end: AlignmentDirectional.bottomCenter,
                     colors: const [Colors.transparent, Colors.black],
                     stops: [startStop, 1.0],
                   ).createShader(
@@ -301,8 +301,8 @@ class SmallSpaceCard extends StatelessWidget {
                     Colors.transparent,
                     Colors.black54,
                   ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  begin: AlignmentDirectional.topCenter,
+                  end: AlignmentDirectional.bottomCenter,
                 ),
               ),
             ),
@@ -316,7 +316,7 @@ class SmallSpaceCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsetsDirectional.all(8),
                   decoration: BoxDecoration(
                     color: const Color(0x99262F37),
                     borderRadius: BorderRadius.circular(20),

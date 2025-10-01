@@ -32,12 +32,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         top: false,
         bottom: false,
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsetsDirectional.all(20),
           children: [
             Card(
-              margin: EdgeInsets.zero,
+              margin: EdgeInsetsDirectional.zero,
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsetsDirectional.all(20),
                 child: Row(
                   spacing: 10,
                   children: [

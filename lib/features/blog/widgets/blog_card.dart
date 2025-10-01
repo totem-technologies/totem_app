@@ -78,11 +78,14 @@ class BlogPostCard extends StatelessWidget {
           ),
         ),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+          padding: const EdgeInsetsDirectional.symmetric(
+            vertical: 16,
+            horizontal: 10,
+          ),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+              begin: AlignmentDirectional.topCenter,
+              end: AlignmentDirectional.bottomCenter,
               colors: [Colors.transparent, Colors.black45],
             ),
             borderRadius: BorderRadius.circular(20),
@@ -93,7 +96,7 @@ class BlogPostCard extends StatelessWidget {
             spacing: 10,
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsetsDirectional.all(8),
                 decoration: BoxDecoration(
                   color: const Color(0x99262F37),
                   borderRadius: BorderRadius.circular(20),

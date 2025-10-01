@@ -69,8 +69,8 @@ class FeaturedBlogPost extends StatelessWidget {
                           1.0,
                         );
                     return LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
+                      begin: AlignmentDirectional.topCenter,
+                      end: AlignmentDirectional.bottomCenter,
                       colors: const [Colors.transparent, Colors.black],
                       stops: [startStop, 1.0],
                     ).createShader(
@@ -118,7 +118,7 @@ class FeaturedBlogPost extends StatelessWidget {
                 spacing: 10,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
+                    padding: const EdgeInsetsDirectional.symmetric(
                       horizontal: 10,
                       vertical: 5,
                     ),
