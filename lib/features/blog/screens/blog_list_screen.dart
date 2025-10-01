@@ -4,6 +4,8 @@ import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/blog/widgets/blog_post_card.dart';
 import 'package:totem_app/features/blog/widgets/featured_blog_post.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
@@ -18,7 +20,11 @@ class BlogListScreen extends ConsumerWidget {
       child: blogs.when(
         data: (data) {
           if (data.items.isEmpty) {
-            return const Center(child: Text('No blog posts available'));
+            return EmptyIndicator(
+              icon: TotemIcons.blog,
+              text: 'No blog posts available yet',
+              onRetry: () => ref.refresh(listBlogPostsProvider.future),
+            );
           }
 
           return LayoutBuilder(

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
@@ -37,6 +39,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             final upcomingEvents = summary.upcoming
                 .where((event) => !event.ended)
                 .toList();
+
+            if (summary.forYou.isEmpty &&
+                summary.explore.isEmpty &&
+                upcomingEvents.isEmpty) {
+              return EmptyIndicator(
+                icon: TotemIcons.home,
+                onRetry: () => ref.refresh(spacesSummaryProvider.future),
+              );
+            }
 
             return RefreshIndicator.adaptive(
               onRefresh: () => ref.refresh(spacesSummaryProvider.future),
