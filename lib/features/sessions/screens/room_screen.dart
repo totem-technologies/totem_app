@@ -9,6 +9,7 @@ import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
 import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
+import 'package:totem_app/features/sessions/screens/options_sheet.dart';
 import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_ended.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
@@ -132,8 +133,17 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       ),
     );
 
-    return Scaffold(
-      body: RoomBackground(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        final shouldPop = await showLeaveDialog(context) ?? false;
+        if (context.mounted && shouldPop) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: RoomBackground(
         child: LivekitRoom(
           roomContext: session.room,
           builder: (context, roomCtx) {
