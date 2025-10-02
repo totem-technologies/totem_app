@@ -12,7 +12,7 @@
 
 ## 🧭 Overview
 
-Totem is a space for guided group introspection. This Flutter app is the **official open-source mobile client** for the Totem platform.  
+Totem is a space for guided group introspection. This Flutter app is the **official open-source mobile client** for the Totem platform.
 It connects people through structured group sessions and authentic conversations, powered by a thoughtfully crafted UI and backend.
 
 This client targets both **iOS** and **Android**, using **Flutter** and **Riverpod** for a fast, modern, and scalable development experience.
@@ -130,6 +130,31 @@ For example:
 ### 🔔 Notifications
 
 Notifications are handled using Firebase Cloud Messaging (FCM). In the notification data, one may include a `path` key to specify the route to navigate to when the user taps on the notification. Check all the available routes [here](./lib/navigation/route_names.dart).
+
+## 🚢 Release (for developers)
+
+The release process is automated via a Dart script that handles versioning, tagging, and pushing to the repository.
+
+### Prerequisites
+
+Before creating a release, ensure:
+- You are on the `main` branch
+- Your working tree is clean (no uncommitted changes)
+- Your local `main` branch is up-to-date with `origin/main`
+
+### Creating a Release
+
+Run the release command:
+
+```bash
+make release
+```
+
+The script will:
+1. Display the current version from `pubspec.yaml`
+2. Suggest a default version (increments patch and build number)
+3. Prompt you to enter a new version
+
 
 ## 👥 Community
 
