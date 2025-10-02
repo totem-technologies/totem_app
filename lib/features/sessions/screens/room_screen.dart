@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart' hide ConnectionState;
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
-import 'package:livekit_components/livekit_components.dart';
+import 'package:livekit_components/livekit_components.dart'
+    hide RoomConnectionState;
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
@@ -83,7 +84,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     );
   }
 
-  bool _showErrorScreen = false;
   void _onLivekitError(LiveKitException error) {
     if (error is ConnectException ||
         error is MediaConnectException ||
@@ -91,9 +91,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         error is NegotiationError ||
         error is TrackCreateException ||
         error is TrackPublishException) {
-      setState(() {
-        _showErrorScreen = true;
-      });
+      // These errors are shown in the error screen
     } else {
       showErrorPopup(
         context,
@@ -147,25 +145,18 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         child: LivekitRoom(
           roomContext: session.room,
           builder: (context, roomCtx) {
-            final room = roomCtx.room;
-
-            switch (room.connectionState) {
-              case ConnectionState.connecting:
-              case ConnectionState.reconnecting:
-                return const LoadingRoomScreen();
-              case ConnectionState.disconnected:
-                return AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: _showErrorScreen
-                      ? RoomErrorScreen(
-                          onRetry: () {
-                            roomCtx.connect();
-                            _showErrorScreen = false;
-                          },
-                        )
-                      : SessionEndedScreen(event: widget.event),
+            switch (session.connectionState) {
+              case RoomConnectionState.error:
+                return RoomErrorScreen(
+                  onRetry: () {
+                    roomCtx.connect();
+                  },
                 );
-              case ConnectionState.connected:
+              case RoomConnectionState.connecting:
+                return const LoadingRoomScreen();
+              case RoomConnectionState.disconnected:
+                return SessionEndedScreen(event: widget.event);
+              case RoomConnectionState.connected:
                 if (session.isMyTurn) {
                   if (_receivingTotem) {
                     return ReceiveTotemScreen(
