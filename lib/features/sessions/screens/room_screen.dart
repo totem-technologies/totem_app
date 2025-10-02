@@ -169,17 +169,17 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 if (session.isMyTurn) {
                   if (_receivingTotem) {
                     return ReceiveTotemScreen(
-                      actionBar: buildActionBar(context, session),
+                      actionBar: buildActionBar(session),
                       onAcceptTotem: _onAcceptTotem,
                     );
                   }
                   return MyTurn(
-                    actionBar: buildActionBar(context, session),
+                    actionBar: buildActionBar(session),
                     getParticipantKey: getParticipantKey,
                   );
                 } else {
                   return NotMyTurn(
-                    actionBar: buildActionBar(context, session),
+                    actionBar: buildActionBar(session),
                     getParticipantKey: getParticipantKey,
                   );
                 }
@@ -191,126 +191,131 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   }
 
   Widget buildActionBar(
-    BuildContext context,
     LiveKitService session,
   ) {
-    final roomCtx = session.room;
-    final user = roomCtx.localParticipant;
-
-    MediaDeviceContext.of(context)?.toggleCameraPosition();
-
-    return ActionBar(
-      children: [
-        MediaDeviceSelectButton(
-          builder: (context, roomCtx, deviceCtx) {
-            return ActionBarButton(
-              active: roomCtx.microphoneOpened,
-              onPressed: () {
-                if (roomCtx.microphoneOpened) {
-                  deviceCtx.disableMicrophone();
-                } else {
-                  deviceCtx.enableMicrophone();
-                }
-              },
-              child: TotemIcon(
-                roomCtx.microphoneOpened
-                    ? TotemIcons.microphoneOn
-                    : TotemIcons.microphoneOff,
-              ),
-            );
-          },
-        ),
-        MediaDeviceSelectButton(
-          builder: (context, roomCtx, deviceCtx) {
-            return ActionBarButton(
-              active: roomCtx.cameraOpened,
-              onPressed: () {
-                if (roomCtx.cameraOpened) {
-                  deviceCtx.disableCamera();
-                } else {
-                  deviceCtx.enableCamera();
-                }
-              },
-              child: TotemIcon(
-                roomCtx.cameraOpened
-                    ? TotemIcons.cameraOn
-                    : TotemIcons.cameraOff,
-              ),
-            );
-          },
-        ),
-        if (!session.isMyTurn)
-          Builder(
-            builder: (button) {
-              return ActionBarButton(
-                active: _showEmojiPicker,
-                onPressed: () async {
-                  setState(() => _showEmojiPicker = true);
-                  final emoji = await showEmojiBar(
-                    button,
-                    context,
-                  );
-                  if (emoji != null && emoji.isNotEmpty) {
-                    session.sendEmoji(emoji);
-                    if (user?.identity != null) {
-                      _onEmojiReceived(user!.identity, emoji);
+    return Builder(
+      builder: (context) {
+        final deviceCtx = MediaDeviceContext.of(context)!;
+        final roomCtx = session.room;
+        final user = roomCtx.localParticipant;
+        return ActionBar(
+          children: [
+            MediaDeviceSelectButton(
+              builder: (context, roomCtx, deviceCtx) {
+                return ActionBarButton(
+                  active: roomCtx.microphoneOpened,
+                  onPressed: () {
+                    if (roomCtx.microphoneOpened) {
+                      deviceCtx.disableMicrophone();
+                    } else {
+                      deviceCtx.enableMicrophone();
                     }
-                  }
-                  if (mounted) {
-                    setState(() => _showEmojiPicker = false);
-                  }
-                },
-                child: const TotemIcon(TotemIcons.reaction),
-              );
-            },
-          ),
-        ActionBarButton(
-          active: _chatSheetOpen,
-          onPressed: () async {
-            setState(() {
-              _hasPendingChatMessages = false;
-              _chatSheetOpen = true;
-            });
-            await showSessionChatSheet(
-              context,
-              roomCtx,
-              widget.event,
-            );
-            if (mounted) {
-              setState(() => _chatSheetOpen = false);
-            }
-          },
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const TotemIcon(TotemIcons.chat),
-              if (_hasPendingChatMessages)
-                Container(
-                  height: 4,
-                  width: 4,
-                  decoration: const BoxDecoration(
-                    color: AppTheme.green,
-                    shape: BoxShape.circle,
+                  },
+                  child: TotemIcon(
+                    roomCtx.microphoneOpened
+                        ? TotemIcons.microphoneOn
+                        : TotemIcons.microphoneOff,
                   ),
-                ),
-            ],
-          ),
-        ),
-        ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: 40,
-            maxHeight: 40,
-          ),
-          child: IconButton(
-            padding: EdgeInsets.zero,
-            onPressed: () => showOptionsSheet(context),
-            icon: const TotemIcon(
-              TotemIcons.more,
-              color: Colors.white,
+                );
+              },
             ),
-          ),
-        ),
-      ],
+            MediaDeviceSelectButton(
+              builder: (context, roomCtx, deviceCtx) {
+                return ActionBarButton(
+                  active: roomCtx.cameraOpened,
+                  onPressed: () {
+                    if (roomCtx.cameraOpened) {
+                      deviceCtx.disableCamera();
+                    } else {
+                      deviceCtx.enableCamera();
+                    }
+                  },
+                  child: TotemIcon(
+                    roomCtx.cameraOpened
+                        ? TotemIcons.cameraOn
+                        : TotemIcons.cameraOff,
+                  ),
+                );
+              },
+            ),
+            if (!session.isMyTurn)
+              Builder(
+                builder: (button) {
+                  return ActionBarButton(
+                    active: _showEmojiPicker,
+                    onPressed: () async {
+                      setState(() => _showEmojiPicker = true);
+                      final emoji = await showEmojiBar(
+                        button,
+                        context,
+                      );
+                      if (emoji != null && emoji.isNotEmpty) {
+                        session.sendEmoji(emoji);
+                        if (user?.identity != null) {
+                          _onEmojiReceived(user!.identity, emoji);
+                        }
+                      }
+                      if (mounted) {
+                        setState(() => _showEmojiPicker = false);
+                      }
+                    },
+                    child: const TotemIcon(TotemIcons.reaction),
+                  );
+                },
+              ),
+            ActionBarButton(
+              active: _chatSheetOpen,
+              onPressed: () async {
+                setState(() {
+                  _hasPendingChatMessages = false;
+                  _chatSheetOpen = true;
+                });
+                await showSessionChatSheet(
+                  context,
+                  roomCtx,
+                  widget.event,
+                );
+                if (mounted) {
+                  setState(() => _chatSheetOpen = false);
+                }
+              },
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const TotemIcon(TotemIcons.chat),
+                  if (_hasPendingChatMessages)
+                    Container(
+                      height: 4,
+                      width: 4,
+                      decoration: const BoxDecoration(
+                        color: AppTheme.green,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 40,
+                maxHeight: 40,
+              ),
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                onPressed: () => showOptionsSheet(
+                  context,
+                  deviceCtx,
+                  roomCtx,
+                ),
+                icon: const TotemIcon(
+                  TotemIcons.more,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
