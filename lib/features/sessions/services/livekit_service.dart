@@ -6,6 +6,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/config/app_config.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
 
 part 'livekit_service.g.dart';
@@ -113,7 +114,7 @@ class LiveKitService extends ValueNotifier<SessionState> {
   late final EventsListener<RoomEvent> _listener;
   SessionState get status => value;
 
-  var _connectionState = RoomConnectionState.connecting;
+  RoomConnectionState _connectionState = RoomConnectionState.connecting;
   RoomConnectionState get connectionState => _connectionState;
 
   void _onConnected({
@@ -136,9 +137,10 @@ class LiveKitService extends ValueNotifier<SessionState> {
 
   void _onError(LiveKitException? error) {
     if (error == null) return;
-
-    // TODO(bdlukaa): Report errors to sentry
     debugPrint('LiveKit error: $error');
+
+    ErrorHandler.handleLivekitError(error);
+
     _connectionState = RoomConnectionState.error;
     notifyListeners();
     initialOptions.onLivekitError(error);

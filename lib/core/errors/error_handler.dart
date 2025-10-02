@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:livekit_client/livekit_client.dart' show LiveKitException;
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
@@ -201,5 +202,9 @@ class ErrorHandler {
     {
       showErrorSnackBar(context, message);
     }
+  }
+
+  static void handleLivekitError(LiveKitException error) {
+    logError(error, message: error.message);
   }
 }
