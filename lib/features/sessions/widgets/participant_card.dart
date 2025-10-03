@@ -12,6 +12,7 @@ import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/widgets/audio_visualizer.dart';
+import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
@@ -221,7 +222,7 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                       image: auth.user?.profileImage != null
                           ? DecorationImage(
                               image: NetworkImage(
-                                auth.user!.profileImage!,
+                                getFullUrl(auth.user!.profileImage!),
                               ),
                               fit: BoxFit.cover,
                             )

@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart' hide ConnectionState;
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
-import 'package:livekit_components/livekit_components.dart';
+import 'package:livekit_components/livekit_components.dart'
+    hide RoomConnectionState;
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
@@ -9,6 +10,7 @@ import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
 import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
+import 'package:totem_app/features/sessions/screens/options_sheet.dart';
 import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_ended.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
@@ -19,9 +21,22 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
 
+class VideoRoomScreenRouteArgs {
+  const VideoRoomScreenRouteArgs({
+    required this.token,
+    required this.cameraEnabled,
+    required this.micEnabled,
+    required this.event,
+  });
+
+  final String token;
+  final bool cameraEnabled;
+  final bool micEnabled;
+  final EventDetailSchema event;
+}
+
 class VideoRoomScreen extends ConsumerStatefulWidget {
   const VideoRoomScreen({
-    required this.roomName,
     required this.token,
     required this.cameraEnabled,
     required this.micEnabled,
@@ -29,7 +44,6 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
     super.key,
   });
 
-  final String roomName;
   final String token;
   final bool cameraEnabled;
   final bool micEnabled;
@@ -70,7 +84,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     );
   }
 
-  bool _showErrorScreen = false;
   void _onLivekitError(LiveKitException error) {
     if (error is ConnectException ||
         error is MediaConnectException ||
@@ -78,9 +91,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         error is NegotiationError ||
         error is TrackCreateException ||
         error is TrackPublishException) {
-      setState(() {
-        _showErrorScreen = true;
-      });
+      // These errors are shown in the error screen
     } else {
       showErrorPopup(
         context,
@@ -120,30 +131,32 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       ),
     );
 
-    return Scaffold(
-      body: RoomBackground(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        final shouldPop = await showLeaveDialog(context) ?? false;
+        if (context.mounted && shouldPop) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: RoomBackground(
         child: LivekitRoom(
           roomContext: session.room,
           builder: (context, roomCtx) {
-            final room = roomCtx.room;
-
-            switch (room.connectionState) {
-              case ConnectionState.connecting:
-              case ConnectionState.reconnecting:
-                return const LoadingRoomScreen();
-              case ConnectionState.disconnected:
-                return AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: _showErrorScreen
-                      ? RoomErrorScreen(
-                          onRetry: () {
-                            roomCtx.connect();
-                            _showErrorScreen = false;
-                          },
-                        )
-                      : SessionEndedScreen(event: widget.event),
+            switch (session.connectionState) {
+              case RoomConnectionState.error:
+                return RoomErrorScreen(
+                  onRetry: () {
+                    roomCtx.connect();
+                  },
                 );
-              case ConnectionState.connected:
+              case RoomConnectionState.connecting:
+                return const LoadingRoomScreen();
+              case RoomConnectionState.disconnected:
+                return SessionEndedScreen(event: widget.event);
+              case RoomConnectionState.connected:
                 if (session.isMyTurn) {
                   if (_receivingTotem) {
                     return ReceiveTotemScreen(
@@ -173,6 +186,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   ) {
     return Builder(
       builder: (context) {
+        final deviceCtx = MediaDeviceContext.of(context)!;
         final roomCtx = session.room;
         final user = roomCtx.localParticipant;
         return ActionBar(
@@ -279,9 +293,11 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               ),
               child: IconButton(
                 padding: EdgeInsets.zero,
-                onPressed: () {
-                  // TODO(bdlukaa): Show more options
-                },
+                onPressed: () => showOptionsSheet(
+                  context,
+                  deviceCtx,
+                  roomCtx,
+                ),
                 icon: const TotemIcon(
                   TotemIcons.more,
                   color: Colors.white,

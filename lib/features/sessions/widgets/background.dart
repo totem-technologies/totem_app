@@ -43,7 +43,10 @@ class RoomBackground extends StatelessWidget {
                 displayColor: Colors.white,
               ),
             ),
-            child: child,
+            child: Material(
+              type: MaterialType.transparency,
+              child: child,
+            ),
           ),
         ),
       ),

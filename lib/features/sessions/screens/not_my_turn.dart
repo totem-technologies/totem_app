@@ -7,6 +7,7 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
+import 'package:totem_app/shared/network.dart';
 
 class NotMyTurn extends ConsumerWidget {
   const NotMyTurn({
@@ -79,12 +80,15 @@ class NotMyTurn extends ConsumerWidget {
                               // TODO(bdlukaa): If the person speaking doesn't
                               //                have the camera on, show their
                               //                profile image instead.
+                              // This depends on the user object for each person
                               return Container(
                                 decoration: BoxDecoration(
                                   image: auth.user?.profileImage != null
                                       ? DecorationImage(
                                           image: NetworkImage(
-                                            auth.user!.profileImage!,
+                                            getFullUrl(
+                                              auth.user!.profileImage!,
+                                            ),
                                           ),
                                           fit: BoxFit.cover,
                                         )

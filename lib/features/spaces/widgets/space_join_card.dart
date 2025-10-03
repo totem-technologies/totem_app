@@ -6,14 +6,17 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/meeting_provider_enum.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/profile/screens/delete_account.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -132,7 +135,9 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                 child: Link(
                   uri: hasEnded
                       ? null
-                      : hasStarted
+                      : hasStarted &&
+                            widget.event.meetingProvider ==
+                                MeetingProviderEnum.googleMeet
                       ? Uri.parse(getFullUrl(widget.event.calLink))
                       : null,
                   builder: (context, followLink) {
@@ -185,7 +190,12 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                         case SpaceJoinCardState.closedToNewParticipants:
                           toHome(HomeRoutes.spaces);
                         case SpaceJoinCardState.joinable:
-                          followLink?.call();
+                          if (widget.event.meetingProvider ==
+                              MeetingProviderEnum.livekit) {
+                            joinLivekit();
+                          } else {
+                            followLink?.call();
+                          }
                         case SpaceJoinCardState.joined:
                           addToCalendar();
                         case SpaceJoinCardState.full:
@@ -479,6 +489,11 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
         );
       }
     }
+  }
+
+  Future<void> joinLivekit() async {
+    debugPrint('Joining livekit');
+    context.goNamed(RouteNames.videoSessionPrejoin, extra: widget.event);
   }
 }
 

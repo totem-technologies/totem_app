@@ -6,6 +6,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/config/app_config.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
 
 part 'livekit_service.g.dart';
@@ -86,6 +87,8 @@ LiveKitService sessionService(Ref ref, SessionOptions options) {
   return service;
 }
 
+enum RoomConnectionState { connecting, connected, disconnected, error }
+
 class LiveKitService extends ValueNotifier<SessionState> {
   LiveKitService(this.initialOptions) : super(const SessionState.waiting()) {
     room = RoomContext(
@@ -98,13 +101,8 @@ class LiveKitService extends ValueNotifier<SessionState> {
           microphoneEnabled: initialOptions.microphoneEnabled,
         );
       },
-      onError: (LiveKitException? error) {
-        if (error == null) return;
-
-        // TODO(bdlukaa): Report errors to sentry
-        debugPrint('LiveKit error: $error');
-        initialOptions.onLivekitError(error);
-      },
+      onDisconnected: _onDisconnected,
+      onError: _onError,
     );
 
     _listener = room.room.createListener();
@@ -116,19 +114,36 @@ class LiveKitService extends ValueNotifier<SessionState> {
   late final EventsListener<RoomEvent> _listener;
   SessionState get status => value;
 
+  RoomConnectionState _connectionState = RoomConnectionState.connecting;
+  RoomConnectionState get connectionState => _connectionState;
+
   void _onConnected({
     required bool cameraEnabled,
     required bool microphoneEnabled,
   }) {
-    if (room.localParticipant == null) {
-      debugPrint(
-        'Error: localParticipant is null when trying to set camera/microphone '
-        'enabled.',
-      );
-      return;
+    if (room.localParticipant != null) {
+      room.localParticipant!.setCameraEnabled(cameraEnabled);
+      room.localParticipant!.setMicrophoneEnabled(microphoneEnabled);
     }
-    room.localParticipant!.setCameraEnabled(cameraEnabled);
-    room.localParticipant!.setMicrophoneEnabled(microphoneEnabled);
+
+    _connectionState = RoomConnectionState.connected;
+    notifyListeners();
+  }
+
+  void _onDisconnected() {
+    _connectionState = RoomConnectionState.disconnected;
+    notifyListeners();
+  }
+
+  void _onError(LiveKitException? error) {
+    if (error == null) return;
+    debugPrint('LiveKit error: $error');
+
+    ErrorHandler.handleLivekitError(error);
+
+    _connectionState = RoomConnectionState.error;
+    notifyListeners();
+    initialOptions.onLivekitError(error);
   }
 
   void _onDataReceived(DataReceivedEvent event) {

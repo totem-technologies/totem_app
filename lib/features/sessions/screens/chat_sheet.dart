@@ -10,6 +10,7 @@ import 'package:provider/provider.dart' show ChangeNotifierProvider;
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
@@ -138,10 +139,15 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                                     UserAvatar.fromUserSchema(
                                       widget.event.space.author,
                                       radius: 20,
-                                      // TODO(bdlukaa): Open a sheet with the
-                                      //                author's profile when
-                                      //                tapping the avatar.
-                                      // onTap: () {},
+                                      onTap:
+                                          widget.event.space.author.slug != null
+                                          ? () {
+                                              showKeeperProfileSheet(
+                                                context,
+                                                widget.event.space.author.slug!,
+                                              );
+                                            }
+                                          : null,
                                     ),
                                     Container(
                                       decoration: const BoxDecoration(
@@ -202,6 +208,46 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
               ),
             );
           },
+        );
+      },
+    );
+  }
+}
+
+Future<void> showKeeperProfileSheet(
+  BuildContext context,
+  String slug,
+) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    useSafeArea: true,
+    backgroundColor: Colors.white,
+    builder: (context) {
+      return KeeperProfileSheet(slug: slug);
+    },
+  );
+}
+
+class KeeperProfileSheet extends StatelessWidget {
+  const KeeperProfileSheet({required this.slug, super.key});
+
+  final String slug;
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      maxChildSize: 0.8,
+      initialChildSize: 0.8,
+      expand: false,
+      builder: (context, controller) {
+        return PrimaryScrollController(
+          controller: controller,
+          child: KeeperProfileScreen(
+            slug: slug,
+            showAppBar: false,
+          ),
         );
       },
     );

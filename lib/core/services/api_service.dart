@@ -171,7 +171,7 @@ Exception _handleDioError(DioException error) {
       if (statusCode == 403) {
         return AppAuthException(
           'Access denied',
-          code: 'FORBIDDEN',
+          code: 'FORBIDDEN (403)',
           details: error.response?.data,
         );
       }

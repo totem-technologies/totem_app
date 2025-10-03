@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 Future<void> showDeleteAccountDialog(BuildContext context) {
@@ -53,9 +54,11 @@ class ConfirmationDialog extends StatefulWidget {
     required this.content,
     required this.confirmButtonText,
     required this.onConfirm,
+    this.icon,
     super.key,
   });
 
+  final TotemIconData? icon;
   final String content;
   final String confirmButtonText;
   final Future<void> Function() onConfirm;
@@ -76,12 +79,14 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 20,
           children: [
+            if (widget.icon != null)
+              TotemIcon(widget.icon!, size: 90, color: Colors.red),
             Text(
               widget.content,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () async {
                 if (_loading) return;
@@ -96,7 +101,6 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                   ? const LoadingIndicator(color: Colors.white, size: 24)
                   : Text(widget.confirmButtonText),
             ),
-            const SizedBox(height: 16),
             OutlinedButton(
               onPressed: _loading ? null : () => context.pop(),
               child: const Text('Cancel'),
