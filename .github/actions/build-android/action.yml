@@ -78,7 +78,7 @@ runs:
       run: |
         echo "$KEYSTORE" | base64 --decode > app/keystore.jks
         echo "storeFile=keystore.jks" >> key.properties
-        echo "keyAlias=upload" >> key.properties
+        echo "keyAlias=release" >> key.properties
         echo "storePassword=$KEYSTORE_PASSWORD" >> key.properties
         echo "keyPassword=$KEYSTORE_PASSWORD" >> key.properties
       env:
