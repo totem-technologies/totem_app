@@ -5,7 +5,7 @@ import 'package:totem_app/core/config/theme.dart';
 class RoomBackground extends StatelessWidget {
   const RoomBackground({
     required this.child,
-    this.padding = EdgeInsets.zero,
+    this.padding = EdgeInsetsDirectional.zero,
     this.overlayStyle = SystemUiOverlayStyle.light,
     super.key,
   });

@@ -135,7 +135,10 @@ class NotificationPopup extends StatelessWidget {
           start: 15,
           end: 15,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: 15,
+          vertical: 12,
+        ),
         decoration: BoxDecoration(
           color: const Color(0xFFF5F1EC),
           borderRadius: BorderRadius.circular(16),
@@ -146,7 +149,7 @@ class NotificationPopup extends StatelessWidget {
           spacing: 8,
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsetsDirectional.all(8),
               decoration: BoxDecoration(
                 color: iconBackgroundColor ?? AppTheme.mauve,
                 shape: BoxShape.circle,

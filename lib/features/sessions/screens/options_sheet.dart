@@ -175,7 +175,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
               : Colors.white,
           borderRadius: BorderRadius.circular(30),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
         child: Row(
           children: [
             SizedBox.square(
@@ -184,7 +184,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
             ),
             Expanded(
               child: DropdownButton<T>(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 12),
                 isExpanded: true,
                 value: selectedOption,
                 items: options

@@ -29,7 +29,7 @@ class EmptyIndicator extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 fixedSize: const Size(120, 42),
                 minimumSize: Size.zero,
-                padding: EdgeInsets.zero,
+                padding: EdgeInsetsDirectional.zero,
               ),
               child: const Text('Retry'),
             ),

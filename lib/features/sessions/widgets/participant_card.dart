@@ -137,7 +137,7 @@ class ParticipantCard extends ConsumerWidget {
                       shape: BoxShape.circle,
                       color: Color(0x262F3799),
                     ),
-                    padding: const EdgeInsets.all(2),
+                    padding: const EdgeInsetsDirectional.all(2),
                     alignment: Alignment.center,
                     child: SoundWaveformWidget(
                       audioTrack: audioTracks.first.track! as AudioTrack,
@@ -229,7 +229,7 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                           : null,
                     ),
                     alignment: AlignmentDirectional.bottomCenter,
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsetsDirectional.all(20),
                     child: AutoSizeText(
                       auth.user?.name ?? 'You',
                       style: theme.textTheme.headlineMedium?.copyWith(

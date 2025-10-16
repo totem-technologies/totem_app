@@ -50,7 +50,7 @@ class _ErrorScreenState extends State<ErrorScreen> {
       extendBodyBehindAppBar: true,
       body: Center(
         child: Container(
-          margin: const EdgeInsets.all(20),
+          margin: const EdgeInsetsDirectional.all(20),
           constraints: const BoxConstraints(maxWidth: 400),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -160,7 +160,7 @@ class ErrorDialog extends StatelessWidget {
       backgroundColor: Colors.transparent,
       elevation: 0,
       child: Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsetsDirectional.all(24),
         decoration: BoxDecoration(
           color: const Color(0xFFF5F1EC),
           borderRadius: BorderRadius.circular(24),
@@ -169,7 +169,7 @@ class ErrorDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsetsDirectional.all(8),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: const Color(0xFFE53935), width: 2.5),
@@ -210,7 +210,7 @@ class ErrorDialog extends StatelessWidget {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFF44336),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsetsDirectional.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),

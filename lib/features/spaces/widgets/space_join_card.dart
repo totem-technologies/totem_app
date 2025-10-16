@@ -235,7 +235,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                           onPressed: onPressed,
                           style: ElevatedButton.styleFrom(
                             maximumSize: const Size(156, 60),
-                            padding: const EdgeInsets.symmetric(
+                            padding: const EdgeInsetsDirectional.symmetric(
                               horizontal: 22,
                             ),
                             backgroundColor: AppTheme.mauve,

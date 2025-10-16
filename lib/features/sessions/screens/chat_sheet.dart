@@ -91,7 +91,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                         ),
                       if (messages.isEmpty)
                         const Padding(
-                          padding: EdgeInsets.only(top: 20),
+                          padding: EdgeInsetsDirectional.only(top: 20),
                           child: Text(
                             'No messages yet',
                             style: TextStyle(color: Color(0xFF787D7E)),
@@ -114,7 +114,9 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                                     margin: const EdgeInsetsDirectional.only(
                                       start: 50,
                                     ),
-                                    padding: const EdgeInsets.all(10),
+                                    padding: const EdgeInsetsDirectional.all(
+                                      10,
+                                    ),
                                     decoration: const BoxDecoration(
                                       color: AppTheme.slate,
                                       borderRadius: BorderRadius.all(
@@ -156,7 +158,9 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                                           Radius.circular(16),
                                         ),
                                       ),
-                                      padding: const EdgeInsets.all(10),
+                                      padding: const EdgeInsetsDirectional.all(
+                                        10,
+                                      ),
                                       child: Text(msg.message),
                                     ),
                                   ],
