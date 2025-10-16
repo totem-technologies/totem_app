@@ -70,10 +70,11 @@ class ParticipantCard extends ConsumerWidget {
             ),
           ],
         ),
-        clipBehavior: Clip.antiAliasWithSaveLayer,
+        clipBehavior: Clip.hardEdge,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          clipBehavior: Clip.antiAliasWithSaveLayer,
+          // radius - border width
+          borderRadius: BorderRadius.circular(20 - 2),
+          clipBehavior: Clip.hardEdge,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -155,8 +156,8 @@ class ParticipantCard extends ConsumerWidget {
                 ),
               PositionedDirectional(
                 bottom: 6,
-                start: 0,
-                end: 0,
+                start: 4,
+                end: 4,
                 child: Text(
                   participant.name,
                   textAlign: TextAlign.center,

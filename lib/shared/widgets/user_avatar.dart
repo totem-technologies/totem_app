@@ -129,7 +129,8 @@ class UserAvatar extends ConsumerWidget {
         height: radius * 2,
         width: radius * 2,
         child: showImage && image == null
-            ? ClipOval(
+            ? ClipRRect(
+                borderRadius: borderRadius,
                 child: AnimatedBoringAvatar(
                   name: seed ?? 'default',
                   type: BoringAvatarType.marble,
