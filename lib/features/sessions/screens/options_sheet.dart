@@ -125,10 +125,10 @@ class OptionsSheet extends StatelessWidget {
             icon: TotemIcons.leaveCall,
             type: OptionsSheetTileType.destructive,
             onTap: () async {
-              Navigator.of(context).pop();
+              final navigator = Navigator.of(context)..pop();
               final shouldLeave = await showLeaveDialog(context) ?? false;
-              if (shouldLeave && context.mounted) {
-                Navigator.of(context).pop(true);
+              if (shouldLeave && navigator.mounted) {
+                navigator.pop(true);
               }
             },
           ),
