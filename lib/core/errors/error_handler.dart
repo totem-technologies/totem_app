@@ -91,6 +91,7 @@ class ErrorHandler {
   }) {
     final theme = Theme.of(context);
 
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
