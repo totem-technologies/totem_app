@@ -29,8 +29,8 @@ import 'package:url_launcher/url_launcher_string.dart';
 enum SpaceJoinCardState {
   ended,
   cancelled,
+  closed,
   joinable,
-  closedToNewParticipants,
   full,
   joined,
   notJoined,
@@ -91,9 +91,8 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                             return 'This session has been cancelled';
                           case SpaceJoinCardState.joinable:
                             return 'Session Started';
-                          case SpaceJoinCardState.closedToNewParticipants:
-                            return 'This session is closed for new '
-                                'participants';
+                          case SpaceJoinCardState.closed:
+                            return 'This session is closed';
                           case SpaceJoinCardState.full:
                             return 'This session is full';
                           case SpaceJoinCardState.joined:
@@ -118,7 +117,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                             return timeago.format(widget.event.start);
                           case SpaceJoinCardState.ended:
                           case SpaceJoinCardState.cancelled:
-                          case SpaceJoinCardState.closedToNewParticipants:
+                          case SpaceJoinCardState.closed:
                           case SpaceJoinCardState.full:
                             return 'Explore upcoming sessions';
                         }
@@ -187,7 +186,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                       switch (state) {
                         case SpaceJoinCardState.ended:
                         case SpaceJoinCardState.cancelled:
-                        case SpaceJoinCardState.closedToNewParticipants:
+                        case SpaceJoinCardState.closed:
                           toHome(HomeRoutes.spaces);
                         case SpaceJoinCardState.joinable:
                           if (widget.event.meetingProvider ==
@@ -209,7 +208,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                       switch (state) {
                         SpaceJoinCardState.ended ||
                         SpaceJoinCardState.cancelled ||
-                        SpaceJoinCardState.closedToNewParticipants => 'Explore',
+                        SpaceJoinCardState.closed => 'Explore',
                         SpaceJoinCardState.joinable => 'Join Now',
                         SpaceJoinCardState.joined => 'Add to calendar',
                         SpaceJoinCardState.full => 'Explore',
@@ -221,7 +220,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                     switch (state) {
                       case SpaceJoinCardState.ended:
                       case SpaceJoinCardState.cancelled:
-                      case SpaceJoinCardState.closedToNewParticipants:
+                      case SpaceJoinCardState.closed:
                       case SpaceJoinCardState.joined:
                       case SpaceJoinCardState.full:
                         return OutlinedButton(
@@ -264,6 +263,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
   SpaceJoinCardState get state {
     if (widget.event.cancelled) return SpaceJoinCardState.cancelled;
+    if (!widget.event.open) return SpaceJoinCardState.closed;
 
     final hasStarted =
         widget.event.start.isBefore(DateTime.now()) &&

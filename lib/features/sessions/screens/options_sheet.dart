@@ -186,7 +186,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
               child: DropdownButton<T>(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 isExpanded: true,
-                value: options?.first,
+                value: selectedOption,
                 items: options
                     ?.map(
                       (e) => DropdownMenuItem<T>(
