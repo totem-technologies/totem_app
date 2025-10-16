@@ -211,9 +211,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           ),
         ),
         error: (error, stackTrace) {
-          return RoomErrorScreen(
-            onRetry: () =>
-                ref.refresh(sessionTokenProvider(widget.event.slug).future),
+          return RoomBackground(
+            child: RoomErrorScreen(
+              onRetry: () =>
+                  ref.refresh(sessionTokenProvider(widget.event.slug).future),
+            ),
           );
         },
         loading: LoadingRoomScreen.new,
