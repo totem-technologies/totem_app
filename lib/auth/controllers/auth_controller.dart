@@ -316,7 +316,7 @@ class AuthController extends Notifier<AuthState> {
       );
       await _clearTokens();
       if (refreshToken != null) {
-        await _authRepository.logout(refreshToken);
+        unawaited(_authRepository.logout(refreshToken));
       }
       _analyticsService.logLogout();
       _setState(AuthState.unauthenticated());
