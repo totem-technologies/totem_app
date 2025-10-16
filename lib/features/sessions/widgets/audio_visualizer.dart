@@ -178,10 +178,13 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
         ),
       );
       _visualizerListener = _visualizer?.createListener();
-      _visualizerListener?.on<sdk.AudioVisualizerEvent>((e) {
+      _visualizerListener?.on<sdk.AudioVisualizerEvent>((element) {
         if (!mounted) return;
         setState(() {
-          samples = e.event.map((e) => (e! as num).toDouble()).toList();
+          samples = element.event
+              .where((event) => event != null && event is num)
+              .map((event) => (event! as num).toDouble())
+              .toList();
         });
       });
 
