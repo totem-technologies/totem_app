@@ -86,7 +86,8 @@ class ParticipantCard extends ConsumerWidget {
                           (t) =>
                               t.track != null &&
                               t.kind == TrackType.VIDEO &&
-                              t.track!.isActive,
+                              t.track!.isActive &&
+                              t.participant.isCameraEnabled(),
                         );
                     if (videoTrack.isNotEmpty) {
                       return VideoTrackRenderer(
@@ -95,9 +96,7 @@ class ParticipantCard extends ConsumerWidget {
                       );
                     } else {
                       final user = ref.watch(
-                        userProfileProvider(
-                          participant.identity,
-                        ),
+                        userProfileProvider(participant.identity),
                       );
                       return user.when(
                         data: (user) {
