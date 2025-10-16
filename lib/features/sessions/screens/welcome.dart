@@ -72,7 +72,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     await _videoTrack?.dispose();
 
     if (mounted) {
-      await context.push(
+      context.pushReplacement(
         RouteNames.videoSession(widget.event.slug),
         extra: VideoRoomScreenRouteArgs(
           cameraEnabled: _isCameraOn,

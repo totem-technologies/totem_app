@@ -17,6 +17,7 @@ import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
@@ -138,7 +139,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
         final shouldPop = await showLeaveDialog(context) ?? false;
         if (context.mounted && shouldPop) {
-          Navigator.of(context).pop();
+          popOrHome(context);
         }
       },
       child: RoomBackground(
