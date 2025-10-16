@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/features/profile/screens/delete_account.dart';
-import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -40,7 +39,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             start: 20,
             end: 20,
             top: 20,
-            bottom: BottomNavScaffold.bottomNavHeight + 20,
+            bottom: 8, // each tile already has a bottom padding of 12
           ),
           children: [
             Card(

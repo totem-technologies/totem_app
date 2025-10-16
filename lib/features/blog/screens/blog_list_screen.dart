@@ -54,17 +54,15 @@ class BlogListScreen extends ConsumerWidget {
                     SliverPadding(
                       padding: const EdgeInsetsDirectional.only(
                         top: 20,
-                        bottom: BottomNavScaffold.bottomNavHeight,
+                        bottom: BottomNavScaffold.bottomNavHeight + 20,
                       ),
                       sliver: SliverFixedExtentList.builder(
-                        itemExtent: NewBlogPostCard.cardHeight + 20,
+                        itemExtent: NewBlogPostCard.cardHeight + 10,
                         itemCount: data.items.sublist(1).length,
-                        itemBuilder: (context, index) => Padding(
-                          padding: const EdgeInsetsDirectional.only(bottom: 20),
-                          child: NewBlogPostCard.fromBlogPostSchema(
-                            data.items[index + 1],
-                          ),
-                        ),
+                        itemBuilder: (context, index) =>
+                            NewBlogPostCard.fromBlogPostSchema(
+                              data.items[index + 1],
+                            ),
                       ),
                     ),
                   ],
