@@ -116,11 +116,12 @@ class SpaceCard extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const TextSpan(
+                          TextSpan(
                             text: ' seats left',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 10,
+                              shadows: kElevationToShadow[4],
                             ),
                           ),
                         ],
@@ -149,10 +150,11 @@ class SpaceCard extends StatelessWidget {
                                   buildTimeLabel(
                                     DateTime.parse(space.nextEvent.start),
                                   ),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 8,
                                     fontWeight: FontWeight.bold,
+                                    shadows: kElevationToShadow[4],
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.fade,
@@ -176,9 +178,10 @@ class SpaceCard extends StatelessWidget {
                         if (space.nextEvent.title != null)
                           AutoSizeText(
                             'Next: ${space.nextEvent.title}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: Colors.white,
                               fontSize: 9,
+                              shadows: kElevationToShadow[4],
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -311,28 +314,31 @@ class SmallSpaceCard extends StatelessWidget {
                     buildTimeLabel(
                       DateTime.parse(space.nextEvent.start),
                     ),
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white,
                       fontSize: 8,
                       fontWeight: FontWeight.bold,
+                      shadows: kElevationToShadow[4],
                     ),
                   ),
                 ),
                 const Spacer(),
                 Text(
                   '${space.nextEvent.seatsLeft} seats left',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
                     fontSize: 14,
+                    shadows: kElevationToShadow[4],
                   ),
                 ),
                 const SizedBox(height: 5),
                 AutoSizeText(
                   space.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
+                    shadows: kElevationToShadow[4],
                   ),
                   maxLines: 2,
                 ),
