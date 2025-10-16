@@ -70,10 +70,11 @@ class ParticipantCard extends ConsumerWidget {
             ),
           ],
         ),
-        clipBehavior: Clip.antiAliasWithSaveLayer,
+        clipBehavior: Clip.hardEdge,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          clipBehavior: Clip.antiAliasWithSaveLayer,
+          // radius - border width
+          borderRadius: BorderRadius.circular(20 - 2),
+          clipBehavior: Clip.hardEdge,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -137,7 +138,7 @@ class ParticipantCard extends ConsumerWidget {
                       shape: BoxShape.circle,
                       color: Color(0x262F3799),
                     ),
-                    padding: const EdgeInsets.all(2),
+                    padding: const EdgeInsetsDirectional.all(2),
                     alignment: Alignment.center,
                     child: SoundWaveformWidget(
                       audioTrack: audioTracks.first.track! as AudioTrack,
@@ -155,8 +156,8 @@ class ParticipantCard extends ConsumerWidget {
                 ),
               PositionedDirectional(
                 bottom: 6,
-                start: 0,
-                end: 0,
+                start: 4,
+                end: 4,
                 child: Text(
                   participant.name,
                   textAlign: TextAlign.center,
@@ -229,7 +230,7 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                           : null,
                     ),
                     alignment: AlignmentDirectional.bottomCenter,
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsetsDirectional.all(20),
                     child: AutoSizeText(
                       auth.user?.name ?? 'You',
                       style: theme.textTheme.headlineMedium?.copyWith(

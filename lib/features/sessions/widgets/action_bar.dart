@@ -53,8 +53,8 @@ class ActionBar extends StatelessWidget {
         color: const Color(0x40000000),
         borderRadius: BorderRadius.circular(30),
       ),
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.symmetric(
+      margin: const EdgeInsetsDirectional.only(bottom: 20),
+      padding: const EdgeInsetsDirectional.symmetric(
         horizontal: 10,
         vertical: 10,
       ),

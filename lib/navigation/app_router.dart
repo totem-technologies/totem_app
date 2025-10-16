@@ -50,7 +50,7 @@ class BottomNavScaffold extends StatelessWidget {
   final Widget child;
   final String currentPath;
 
-  static const double bottomNavHeight = 70;
+  static const double bottomNavHeight = 80;
 
   @override
   Widget build(BuildContext context) {
@@ -61,10 +61,11 @@ class BottomNavScaffold extends StatelessWidget {
 
     return Scaffold(
       body: OfflineIndicatorPage(child: child),
-      extendBody: true,
+      extendBody: currentRoute == HomeRoutes.blog,
       bottomNavigationBar: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         child: NavigationBar(
+          height: bottomNavHeight,
           onDestinationSelected: (index) {
             for (final route in HomeRoutes.values) {
               logger.i('🛻 Checking route: ${route.path}');

@@ -103,7 +103,7 @@ class NotMyTurn extends ConsumerWidget {
                         end: 20,
                         bottom: 20,
                         child: Text(
-                          user?.identity ?? 'Me',
+                          user?.name ?? 'Me',
                           style: theme.textTheme.titleLarge?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,

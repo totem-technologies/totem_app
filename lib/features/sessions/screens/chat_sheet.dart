@@ -60,47 +60,67 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
 
     return ChatBuilder(
       builder: (context, enabled, chatCtx, messages) {
-        void send() {
-          final message = _messageController.text.trim();
-          if (message.isNotEmpty) {
-            chatCtx.sendMessage(message);
-            _messageController.clear();
-          }
-        }
-
         return DraggableScrollableSheet(
           maxChildSize: 0.9,
           initialChildSize: 0.75,
           expand: false,
           builder: (context, scrollController) {
+            void send() {
+              final message = _messageController.text.trim();
+              if (message.isNotEmpty) {
+                chatCtx.sendMessage(message);
+                _messageController.clear();
+              }
+              scrollController.animateTo(
+                scrollController.position.maxScrollExtent + 80,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+            }
+
             return Scaffold(
               backgroundColor: Colors.transparent,
               // use scaffold to get proper virtual keyboard handling
               body: SafeArea(
                 top: false,
                 child: Padding(
-                  padding: const EdgeInsetsDirectional.all(20),
+                  padding: const EdgeInsetsDirectional.only(
+                    start: 20,
+                    end: 20,
+                    top: 8,
+                    bottom: 20,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       if (!isKeeper)
-                        const Text(
-                          'Only the Keeper can post messages here',
-                          style: TextStyle(color: Color(0xFF787D7E)),
-                          textAlign: TextAlign.center,
-                        ),
-                      if (messages.isEmpty)
                         const Padding(
-                          padding: EdgeInsets.only(top: 20),
+                          padding: EdgeInsetsDirectional.only(bottom: 8),
+                          child: Text(
+                            'Only the Keeper can post messages here',
+                            style: TextStyle(color: Color(0xFF787D7E)),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      if (messages.isEmpty) ...[
+                        const Padding(
+                          padding: EdgeInsetsDirectional.only(
+                            top: 20,
+                            bottom: 8,
+                          ),
                           child: Text(
                             'No messages yet',
                             style: TextStyle(color: Color(0xFF787D7E)),
                             textAlign: TextAlign.center,
                           ),
-                        )
-                      else
+                        ),
+                        const Spacer(),
+                      ] else
                         Expanded(
                           child: ListView.separated(
+                            padding: EdgeInsetsDirectional.only(
+                              bottom: isKeeper ? 8 : 0,
+                            ),
                             controller: scrollController,
                             itemCount: messages.length,
                             itemBuilder: (context, index) {
@@ -114,7 +134,9 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                                     margin: const EdgeInsetsDirectional.only(
                                       start: 50,
                                     ),
-                                    padding: const EdgeInsets.all(10),
+                                    padding: const EdgeInsetsDirectional.all(
+                                      10,
+                                    ),
                                     decoration: const BoxDecoration(
                                       color: AppTheme.slate,
                                       borderRadius: BorderRadius.all(
@@ -124,7 +146,8 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                                     child: Text(
                                       msg.message,
                                       style: TextStyle(
-                                        color: theme.colorScheme.onPrimary,
+                                        color:
+                                            theme.colorScheme.onInverseSurface,
                                       ),
                                     ),
                                   ),
@@ -150,14 +173,21 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                                           : null,
                                     ),
                                     Container(
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFFF3F1E9),
-                                        borderRadius: BorderRadius.all(
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.surface,
+                                        borderRadius: const BorderRadius.all(
                                           Radius.circular(16),
                                         ),
                                       ),
-                                      padding: const EdgeInsets.all(10),
-                                      child: Text(msg.message),
+                                      padding: const EdgeInsetsDirectional.all(
+                                        10,
+                                      ),
+                                      child: Text(
+                                        msg.message,
+                                        style: TextStyle(
+                                          color: theme.colorScheme.onSurface,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 );
@@ -168,36 +198,42 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                           ),
                         ),
                       if (isKeeper)
-                        TextField(
-                          controller: _messageController,
-                          onSubmitted: (_) => send(),
-                          textInputAction: TextInputAction.send,
-                          decoration: InputDecoration(
-                            hintText: 'Message',
-                            border: const OutlineInputBorder(),
-                            suffixIcon: Container(
-                              margin: const EdgeInsetsDirectional.only(
-                                end: 8,
-                                top: 6,
-                                bottom: 6,
-                              ),
-                              constraints: const BoxConstraints(
-                                maxHeight: 42,
-                                maxWidth: 42,
-                              ),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primary,
-                                borderRadius: const BorderRadius.all(
-                                  Radius.circular(16),
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(top: 8),
+                          child: TextField(
+                            controller: _messageController,
+                            onSubmitted: (_) => send(),
+                            textInputAction: TextInputAction.send,
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurface,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Message',
+                              border: const OutlineInputBorder(),
+                              suffixIcon: Container(
+                                margin: const EdgeInsetsDirectional.only(
+                                  end: 8,
+                                  top: 6,
+                                  bottom: 6,
                                 ),
-                              ),
-                              child: IconButton(
-                                icon: const TotemIcon(
-                                  TotemIcons.send,
-                                  size: 20,
+                                constraints: const BoxConstraints(
+                                  maxHeight: 42,
+                                  maxWidth: 42,
                                 ),
-                                color: theme.colorScheme.onPrimary,
-                                onPressed: send,
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary,
+                                  borderRadius: const BorderRadius.all(
+                                    Radius.circular(16),
+                                  ),
+                                ),
+                                child: IconButton(
+                                  icon: const TotemIcon(
+                                    TotemIcons.send,
+                                    size: 20,
+                                  ),
+                                  color: theme.colorScheme.onPrimary,
+                                  onPressed: send,
+                                ),
                               ),
                             ),
                           ),

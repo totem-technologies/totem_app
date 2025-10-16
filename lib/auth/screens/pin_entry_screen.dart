@@ -75,13 +75,14 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
           _isLoading = false;
         });
 
-        String errorMessage = 'Invalid PIN. Please try again.';
+        var errorMessage = 'Invalid PIN. Please try again.';
         if (_attempts >= _maxAttempts) {
-          errorMessage =
-              'Too many failed attempts. Please request a new magic link.';
+          errorMessage = 'Too many failed attempts. Please request a new PIN.';
         } else {
           errorMessage =
-              'Invalid PIN. ${_maxAttempts - _attempts} attempts remaining.';
+              'Invalid PIN.\n'
+              '${(_maxAttempts - _attempts).clamp(1, double.infinity)} '
+              'attempts remaining.';
         }
 
         ErrorHandler.showErrorSnackBar(context, errorMessage);

@@ -5,7 +5,6 @@ import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/filter.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
-import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -92,7 +91,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                           padding: const EdgeInsetsDirectional.only(
                             start: 16,
                             end: 16,
-                            bottom: BottomNavScaffold.bottomNavHeight * 1.5,
+                            bottom: 20,
                           ),
                           sliver: SliverList.separated(
                             itemCount: filteredSpaces.length,

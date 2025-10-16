@@ -292,7 +292,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 maxHeight: 40,
               ),
               child: IconButton(
-                padding: EdgeInsets.zero,
+                padding: EdgeInsetsDirectional.zero,
                 onPressed: () => showOptionsSheet(
                   context,
                   deviceCtx,
