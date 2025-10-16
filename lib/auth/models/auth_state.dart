@@ -23,7 +23,11 @@ class AuthState {
   }
 
   factory AuthState.authenticated({required UserSchema user}) {
-    return AuthState(status: AuthStatus.authenticated, user: user);
+    return AuthState(
+      status: AuthStatus.authenticated,
+      user: user,
+      email: user.email,
+    );
   }
 
   factory AuthState.unauthenticated() {

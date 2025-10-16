@@ -118,8 +118,12 @@ class AuthController extends Notifier<AuthState> {
         ..logLogin(method: 'pin');
       await _updateFCMToken();
     } catch (error, stackTrace) {
-      _handlePinVerificationError(error);
-      ErrorHandler.logError(error, stackTrace: stackTrace);
+      _handlePinVerificationError(
+        error: error,
+        stackTrace: stackTrace,
+        email: currentEmail,
+      );
+
       rethrow;
     }
   }
@@ -476,20 +480,25 @@ class AuthController extends Notifier<AuthState> {
     _setState(AuthState.error(error.toString()));
   }
 
-  void _handlePinVerificationError(dynamic error) {
+  String _handlePinVerificationError({
+    required dynamic error,
+    required StackTrace stackTrace,
+    required String email,
+  }) {
     String errorMessage = 'Authentication failed. Please try again.';
     if (error is AppAuthException) {
       switch (error.code) {
         case 'INVALID_PIN':
           errorMessage = 'Invalid PIN code. Please try again.';
         case 'PIN_ATTEMPTS_EXCEEDED':
-          errorMessage =
-              'Too many failed attempts. Please request a new magic link.';
+          errorMessage = 'Too many failed attempts. Please request a new PIN.';
         default:
           errorMessage = error.message;
       }
     }
-    _setState(AuthState.error(errorMessage));
+    _setState(AuthState.awaitingVerification(email: email));
+    ErrorHandler.logError(error, stackTrace: stackTrace, message: errorMessage);
+    return errorMessage;
   }
 
   Future<void> _updateFCMToken() async {
