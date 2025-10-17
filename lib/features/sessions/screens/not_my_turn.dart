@@ -1,28 +1,26 @@
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
-import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
-import 'package:totem_app/shared/network.dart';
 
 class NotMyTurn extends ConsumerWidget {
   const NotMyTurn({
     required this.getParticipantKey,
     required this.actionBar,
+    required this.sessionState,
     super.key,
   });
 
   final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
+  final SessionState sessionState;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final auth = ref.watch(authControllerProvider);
 
     final roomCtx = RoomContext.of(context)!;
     final room = roomCtx.room;
@@ -48,55 +46,17 @@ class NotMyTurn extends ConsumerWidget {
                   child: Stack(
                     children: [
                       Positioned.fill(
-                        child: Builder(
-                          builder: (context) {
-                            final Participant? speakingCurrently =
-                                roomCtx.participants.firstWhereOrNull((p) {
-                                  // TODO(bdlukaa): Check who the totem is at
-                                  //                this point
-                                  return p.isSpeaking;
-                                }) ??
-                                roomCtx.localParticipant;
-
-                            VideoTrack? videoTrack;
-                            if (speakingCurrently != null) {
-                              videoTrack =
-                                  speakingCurrently.videoTrackPublications
-                                          .firstWhereOrNull(
-                                            (pub) =>
-                                                pub.track != null &&
-                                                pub.track!.isActive,
-                                          )
-                                          ?.track
-                                      as VideoTrack?;
-                            }
-
-                            if (videoTrack != null && videoTrack.isActive) {
-                              return VideoTrackRenderer(
-                                videoTrack,
-                                fit: VideoViewFit.cover,
-                              );
-                            } else {
-                              // TODO(bdlukaa): If the person speaking doesn't
-                              //                have the camera on, show their
-                              //                profile image instead.
-                              // This depends on the user object for each person
-                              return Container(
-                                decoration: BoxDecoration(
-                                  image: auth.user?.profileImage != null
-                                      ? DecorationImage(
-                                          image: NetworkImage(
-                                            getFullUrl(
-                                              auth.user!.profileImage!,
-                                            ),
-                                          ),
-                                          fit: BoxFit.cover,
-                                        )
-                                      : null,
-                                ),
-                              );
-                            }
-                          },
+                        child: ParticipantVideo(
+                          participant: roomCtx.participants.firstWhere(
+                            (participant) {
+                              if (sessionState.speakingNow != null) {
+                                return participant.identity ==
+                                    sessionState.speakingNow;
+                              }
+                              return participant.isSpeaking;
+                            },
+                            orElse: () => roomCtx.localParticipant!,
+                          ),
                         ),
                       ),
                       PositionedDirectional(

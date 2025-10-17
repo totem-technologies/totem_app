@@ -79,52 +79,7 @@ class ParticipantCard extends ConsumerWidget {
             clipBehavior: Clip.none,
             children: [
               Positioned.fill(
-                child: Builder(
-                  builder: (context) {
-                    final videoTrack = participant.trackPublications.values
-                        .where(
-                          (t) =>
-                              t.track != null &&
-                              t.kind == TrackType.VIDEO &&
-                              t.track!.isActive &&
-                              t.participant.isCameraEnabled(),
-                        );
-                    if (videoTrack.isNotEmpty) {
-                      return VideoTrackRenderer(
-                        videoTrack.first.track! as VideoTrack,
-                        fit: VideoViewFit.cover,
-                      );
-                    } else {
-                      final user = ref.watch(
-                        userProfileProvider(participant.identity),
-                      );
-                      return user.when(
-                        data: (user) {
-                          return IgnorePointer(
-                            child: UserAvatar.fromUserSchema(
-                              user,
-                              borderRadius: BorderRadius.zero,
-                              borderWidth: 0,
-                            ),
-                          );
-                        },
-                        error: (error, stackTrace) {
-                          return const ColoredBox(
-                            color: AppTheme.mauve,
-                            child: Center(
-                              child: TotemIcon(
-                                TotemIcons.person,
-                                size: 24,
-                                color: Colors.white,
-                              ),
-                            ),
-                          );
-                        },
-                        loading: LoadingPlaceholder.new,
-                      );
-                    }
-                  },
-                ),
+                child: ParticipantVideo(participant: participant),
               ),
               if (audioTracks.isNotEmpty)
                 PositionedDirectional(
@@ -254,5 +209,56 @@ class LocalParticipantVideoCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+class ParticipantVideo extends ConsumerWidget {
+  const ParticipantVideo({required this.participant, super.key});
+
+  final Participant<TrackPublication<Track>> participant;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final videoTrack = participant.trackPublications.values.where(
+      (t) =>
+          t.track != null &&
+          t.kind == TrackType.VIDEO &&
+          t.track!.isActive &&
+          t.participant.isCameraEnabled(),
+    );
+    if (videoTrack.isNotEmpty) {
+      return VideoTrackRenderer(
+        videoTrack.first.track! as VideoTrack,
+        fit: VideoViewFit.cover,
+      );
+    } else {
+      final user = ref.watch(
+        userProfileProvider(participant.identity),
+      );
+      return user.when(
+        data: (user) {
+          return IgnorePointer(
+            child: UserAvatar.fromUserSchema(
+              user,
+              borderRadius: BorderRadius.zero,
+              borderWidth: 0,
+            ),
+          );
+        },
+        error: (error, stackTrace) {
+          return const ColoredBox(
+            color: AppTheme.mauve,
+            child: Center(
+              child: TotemIcon(
+                TotemIcons.person,
+                size: 24,
+                color: Colors.white,
+              ),
+            ),
+          );
+        },
+        loading: LoadingPlaceholder.new,
+      );
+    }
   }
 }
