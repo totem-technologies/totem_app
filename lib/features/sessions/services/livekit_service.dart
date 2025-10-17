@@ -107,12 +107,36 @@ class LiveKitService extends ValueNotifier<SessionState> {
 
     _listener = room.room.createListener();
     _listener.on<DataReceivedEvent>(_onDataReceived);
+
+    room.addListener(_propagateRoomChanges);
+  }
+
+  void _propagateRoomChanges() {
+    if (room.room.metadata != _lastMetadata) {
+      _lastMetadata = room.room.metadata;
+      if (_lastMetadata != null) {
+        try {
+          debugPrint(
+            'Session => Updating session state from room metadata',
+          );
+          final newState = SessionState.fromJson(
+            jsonDecode(_lastMetadata!) as Map<String, dynamic>,
+          );
+          _onStateChanged(newState);
+        } catch (e) {
+          debugPrint('Error decoding session state: $e');
+        }
+      }
+    }
+    notifyListeners();
   }
 
   final SessionOptions initialOptions;
   late final RoomContext room;
   late final EventsListener<RoomEvent> _listener;
-  SessionState get status => value;
+
+  String? _lastMetadata;
+  SessionState get state => value;
 
   RoomConnectionState _connectionState = RoomConnectionState.connecting;
   RoomConnectionState get connectionState => _connectionState;
@@ -151,11 +175,15 @@ class LiveKitService extends ValueNotifier<SessionState> {
 
     if (event.topic == SessionCommunicationTopics.state.topic) {
       try {
-        final newState = SessionState.fromJson(
-          jsonDecode(const Utf8Decoder().convert(event.data))
-              as Map<String, dynamic>,
+        debugPrint(
+          'Session => Updating session state',
         );
-        _onStateChanged(newState);
+        if (room.room.metadata != null) {
+          final newState = SessionState.fromJson(
+            jsonDecode(room.room.metadata!) as Map<String, dynamic>,
+          );
+          _onStateChanged(newState);
+        }
       } catch (e) {
         debugPrint('Error decoding session state: $e');
       }

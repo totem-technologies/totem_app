@@ -173,6 +173,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                   return NotMyTurn(
                     actionBar: buildActionBar(session),
                     getParticipantKey: getParticipantKey,
+                    sessionState: session.state,
                   );
                 }
             }
