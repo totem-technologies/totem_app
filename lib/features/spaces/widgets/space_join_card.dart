@@ -493,7 +493,10 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
   Future<void> joinLivekit() async {
     debugPrint('Joining livekit');
-    context.goNamed(RouteNames.videoSessionPrejoin, extra: widget.event);
+    await context.pushNamed(
+      RouteNames.videoSessionPrejoin,
+      extra: widget.event,
+    );
   }
 }
 

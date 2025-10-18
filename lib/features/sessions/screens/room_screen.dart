@@ -5,6 +5,7 @@ import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
@@ -17,6 +18,7 @@ import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
@@ -113,6 +115,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     if (mounted) {
       setState(() => _receivingTotem = false);
     }
+    // TODO(bdlukaa): Invoke accept totem api
   }
 
   @override
@@ -120,6 +123,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     final session = ref.watch(
       sessionServiceProvider(
         SessionOptions(
+          event: widget.event,
           token: widget.token,
           cameraEnabled: widget.cameraEnabled,
           microphoneEnabled: widget.micEnabled,
@@ -138,7 +142,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
         final shouldPop = await showLeaveDialog(context) ?? false;
         if (context.mounted && shouldPop) {
-          Navigator.of(context).pop();
+          popOrHome(context);
         }
       },
       child: RoomBackground(
@@ -157,6 +161,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               case RoomConnectionState.disconnected:
                 return SessionEndedScreen(event: widget.event);
               case RoomConnectionState.connected:
+                if (session.state.status == SessionStatus.ended) {
+                  return SessionEndedScreen(event: widget.event);
+                }
+
                 if (session.isMyTurn) {
                   if (_receivingTotem) {
                     return ReceiveTotemScreen(
@@ -167,11 +175,13 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                   return MyTurn(
                     actionBar: buildActionBar(session),
                     getParticipantKey: getParticipantKey,
+                    onPassTotem: session.passTotem,
                   );
                 } else {
                   return NotMyTurn(
                     actionBar: buildActionBar(session),
                     getParticipantKey: getParticipantKey,
+                    sessionState: session.state,
                   );
                 }
             }
