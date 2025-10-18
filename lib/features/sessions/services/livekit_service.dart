@@ -8,6 +8,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
 
 part 'livekit_service.g.dart';
@@ -69,7 +70,7 @@ class SessionOptions {
 
 @riverpod
 LiveKitService sessionService(Ref ref, SessionOptions options) {
-  final service = LiveKitService(options)
+  final service = LiveKitService(ref, options)
     ..addListener(() {
       ref.notifyListeners();
     });
@@ -79,7 +80,7 @@ LiveKitService sessionService(Ref ref, SessionOptions options) {
 enum RoomConnectionState { connecting, connected, disconnected, error }
 
 class LiveKitService extends ChangeNotifier {
-  LiveKitService(this.initialOptions) {
+  LiveKitService(this.ref, this.initialOptions) {
     room = RoomContext(
       url: AppConfig.liveKitUrl,
       token: initialOptions.token,
@@ -99,6 +100,8 @@ class LiveKitService extends ChangeNotifier {
 
     room.addListener(_propagateRoomChanges);
   }
+
+  final Ref ref;
 
   void _propagateRoomChanges() {
     if (room.room.metadata != _lastMetadata) {
@@ -234,9 +237,12 @@ class LiveKitService extends ChangeNotifier {
         state.speakingNow == room.localParticipant?.identity;
   }
 
-  void passTotem() {
+  Future<void> passTotem() async {
     if (!isMyTurn) return;
 
-    // TODO(bdlukaa): Invoke pass totem api
+    final apiService = ref.read(mobileApiServiceProvider);
+    await apiService.meetings.totemMeetingsMobileApiPassTotemEndpoint(
+      eventSlug: initialOptions.event.slug,
+    );
   }
 }

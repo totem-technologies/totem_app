@@ -17,7 +17,7 @@ class MyTurn extends StatelessWidget {
 
   final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
-  final VoidCallback onPassTotem;
+  final Future<void> Function() onPassTotem;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +52,7 @@ class MyTurn extends StatelessWidget {
                       confirmButtonText: 'Pass Totem',
                       onConfirm: () async {
                         Navigator.of(context).pop();
-                        onPassTotem();
+                        return onPassTotem();
                       },
                     );
                   },
