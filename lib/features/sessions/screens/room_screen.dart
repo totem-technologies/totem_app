@@ -5,6 +5,7 @@ import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
@@ -160,6 +161,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               case RoomConnectionState.disconnected:
                 return SessionEndedScreen(event: widget.event);
               case RoomConnectionState.connected:
+                if (session.state.status == SessionStatus.ended) {
+                  return SessionEndedScreen(event: widget.event);
+                }
+
                 if (session.isMyTurn) {
                   if (_receivingTotem) {
                     return ReceiveTotemScreen(
