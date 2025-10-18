@@ -19,10 +19,7 @@ enum SessionCommunicationTopics {
   /// Topic for sending chat messages.
   ///
   /// Most of the chat functionality is handled by [ChatContextMixin]
-  chat('lk-chat-topic'),
-
-  /// Topic for sending session state updates.
-  state('lk-session-state-topic');
+  chat('lk-chat-topic');
 
   const SessionCommunicationTopics(this.topic);
 
@@ -81,8 +78,8 @@ LiveKitService sessionService(Ref ref, SessionOptions options) {
 
 enum RoomConnectionState { connecting, connected, disconnected, error }
 
-class LiveKitService extends ValueNotifier<SessionState> {
-  LiveKitService(this.initialOptions) : super(const SessionState.waiting()) {
+class LiveKitService extends ChangeNotifier {
+  LiveKitService(this.initialOptions) {
     room = RoomContext(
       url: AppConfig.liveKitUrl,
       token: initialOptions.token,
@@ -105,20 +102,23 @@ class LiveKitService extends ValueNotifier<SessionState> {
 
   void _propagateRoomChanges() {
     if (room.room.metadata != _lastMetadata) {
-      _lastMetadata = room.room.metadata;
       if (_lastMetadata != null) {
         try {
           debugPrint(
             'Session => Updating session state from room metadata',
           );
-          final newState = SessionState.fromJson(
+          final previousState = SessionState.fromJson(
             jsonDecode(_lastMetadata!) as Map<String, dynamic>,
           );
-          _onStateChanged(newState);
+          final newState = SessionState.fromJson(
+            jsonDecode(room.room.metadata!) as Map<String, dynamic>,
+          );
+          _onStateChanged(previousState, newState);
         } catch (e) {
           debugPrint('Error decoding session state: $e');
         }
       }
+      _lastMetadata = room.room.metadata;
     }
     notifyListeners();
   }
@@ -128,7 +128,24 @@ class LiveKitService extends ValueNotifier<SessionState> {
   late final EventsListener<RoomEvent> _listener;
 
   String? _lastMetadata;
-  SessionState get state => value;
+  SessionState get state {
+    if (room.room.metadata != null || _lastMetadata != null) {
+      try {
+        return SessionState.fromJson(
+          jsonDecode(room.room.metadata ?? _lastMetadata!)
+              as Map<String, dynamic>,
+        );
+      } catch (error, stackTrace) {
+        debugPrint('Error decoding session state: $error\n$stackTrace');
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Error decoding session state from metadata',
+        );
+      }
+    }
+    return const SessionState.waiting();
+  }
 
   bool get isKeeper {
     return initialOptions.event.space.author.slug ==
@@ -170,21 +187,7 @@ class LiveKitService extends ValueNotifier<SessionState> {
   void _onDataReceived(DataReceivedEvent event) {
     if (event.topic == null || event.participant == null) return;
 
-    if (event.topic == SessionCommunicationTopics.state.topic) {
-      try {
-        debugPrint(
-          'Session => Updating session state',
-        );
-        if (room.room.metadata != null) {
-          final newState = SessionState.fromJson(
-            jsonDecode(room.room.metadata!) as Map<String, dynamic>,
-          );
-          _onStateChanged(newState);
-        }
-      } catch (e) {
-        debugPrint('Error decoding session state: $e');
-      }
-    } else if (event.topic == SessionCommunicationTopics.emoji.topic) {
+    if (event.topic == SessionCommunicationTopics.emoji.topic) {
       _onEmojiReceived(
         event.participant!.identity,
         const Utf8Decoder().convert(event.data),
@@ -210,12 +213,9 @@ class LiveKitService extends ValueNotifier<SessionState> {
     debugPrint('Session => Sending emoji: $emoji');
   }
 
-  void _onStateChanged(SessionState newState) {
-    final previousState = value;
-
+  void _onStateChanged(SessionState previousState, SessionState newState) {
     if (previousState != newState) {
       debugPrint('Session state changed: $newState');
-      value = newState;
       notifyListeners();
     }
 
@@ -230,8 +230,8 @@ class LiveKitService extends ValueNotifier<SessionState> {
   }
 
   bool get isMyTurn {
-    return value.speakingNow != null &&
-        value.speakingNow == room.localParticipant?.identity;
+    return state.speakingNow != null &&
+        state.speakingNow == room.localParticipant?.identity;
   }
 
   void passTotem() {

@@ -27,10 +27,12 @@ class SessionState {
   final SessionStatus status;
 
   /// User identity of the participant currently speaking, if any.
+  @JsonKey(name: 'speaking_now')
   final String? speakingNow;
 
   /// Ordered list of user identities representing the speaking order.
-  final List<String> speakingOrder;
+  @JsonKey(name: 'speaking_order')
+  final List<String>? speakingOrder;
 
   @override
   bool operator ==(Object other) {
@@ -46,4 +48,9 @@ class SessionState {
   int get hashCode {
     return status.hashCode ^ speakingNow.hashCode ^ speakingOrder.hashCode;
   }
+
+  @override
+  String toString() =>
+      'SessionState(status: $status, speakingNow: $speakingNow, '
+      'speakingOrder: $speakingOrder)';
 }

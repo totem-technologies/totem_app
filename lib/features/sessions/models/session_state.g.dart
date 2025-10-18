@@ -8,17 +8,17 @@ part of 'session_state.dart';
 
 SessionState _$SessionStateFromJson(Map<String, dynamic> json) => SessionState(
   status: $enumDecode(_$SessionStatusEnumMap, json['status']),
-  speakingNow: json['speakingNow'] as String?,
-  speakingOrder: (json['speakingOrder'] as List<dynamic>)
-      .map((e) => e as String)
+  speakingNow: json['speaking_now'] as String?,
+  speakingOrder: (json['speaking_order'] as List<dynamic>?)
+      ?.map((e) => e as String)
       .toList(),
 );
 
 Map<String, dynamic> _$SessionStateToJson(SessionState instance) =>
     <String, dynamic>{
       'status': _$SessionStatusEnumMap[instance.status]!,
-      'speakingNow': instance.speakingNow,
-      'speakingOrder': instance.speakingOrder,
+      'speaking_now': instance.speakingNow,
+      'speaking_order': instance.speakingOrder,
     };
 
 const _$SessionStatusEnumMap = {
