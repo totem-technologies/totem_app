@@ -60,26 +60,13 @@ class SessionOptions {
     if (identical(this, other)) return true;
 
     return other is SessionOptions &&
-        other.event == event &&
-        other.token == token &&
-        other.cameraEnabled == cameraEnabled &&
-        other.microphoneEnabled == microphoneEnabled &&
-        other.onEmojiReceived == onEmojiReceived &&
-        other.onMessageReceived == onMessageReceived &&
-        other.onLivekitError == onLivekitError &&
-        other.onReceiveTotem == onReceiveTotem;
+        other.event.slug == event.slug &&
+        other.token == token;
   }
 
   @override
   int get hashCode {
-    return event.hashCode ^
-        token.hashCode ^
-        cameraEnabled.hashCode ^
-        microphoneEnabled.hashCode ^
-        onEmojiReceived.hashCode ^
-        onMessageReceived.hashCode ^
-        onLivekitError.hashCode ^
-        onReceiveTotem.hashCode;
+    return event.slug.hashCode ^ token.hashCode;
   }
 }
 
