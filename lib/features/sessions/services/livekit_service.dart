@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
@@ -35,6 +36,7 @@ typedef OnLivekitError = void Function(LiveKitException error);
 @immutable
 class SessionOptions {
   const SessionOptions({
+    required this.event,
     required this.token,
     required this.cameraEnabled,
     required this.microphoneEnabled,
@@ -44,6 +46,7 @@ class SessionOptions {
     required this.onReceiveTotem,
   });
 
+  final EventDetailSchema event;
   final String token;
   final bool cameraEnabled;
   final bool microphoneEnabled;
@@ -57,6 +60,7 @@ class SessionOptions {
     if (identical(this, other)) return true;
 
     return other is SessionOptions &&
+        other.event == event &&
         other.token == token &&
         other.cameraEnabled == cameraEnabled &&
         other.microphoneEnabled == microphoneEnabled &&
@@ -68,7 +72,8 @@ class SessionOptions {
 
   @override
   int get hashCode {
-    return token.hashCode ^
+    return event.hashCode ^
+        token.hashCode ^
         cameraEnabled.hashCode ^
         microphoneEnabled.hashCode ^
         onEmojiReceived.hashCode ^
@@ -137,6 +142,11 @@ class LiveKitService extends ValueNotifier<SessionState> {
 
   String? _lastMetadata;
   SessionState get state => value;
+
+  bool get isKeeper {
+    return initialOptions.event.space.author.slug ==
+        room.localParticipant?.identity;
+  }
 
   RoomConnectionState _connectionState = RoomConnectionState.connecting;
   RoomConnectionState get connectionState => _connectionState;
@@ -235,5 +245,11 @@ class LiveKitService extends ValueNotifier<SessionState> {
   bool get isMyTurn {
     return value.speakingNow != null &&
         value.speakingNow == room.localParticipant?.identity;
+  }
+
+  void passTotem() {
+    if (!isMyTurn) return;
+
+    // TODO(bdlukaa): Invoke pass totem api
   }
 }

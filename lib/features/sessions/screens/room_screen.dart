@@ -114,6 +114,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     if (mounted) {
       setState(() => _receivingTotem = false);
     }
+    // TODO(bdlukaa): Invoke accept totem api
   }
 
   @override
@@ -121,6 +122,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     final session = ref.watch(
       sessionServiceProvider(
         SessionOptions(
+          event: widget.event,
           token: widget.token,
           cameraEnabled: widget.cameraEnabled,
           microphoneEnabled: widget.micEnabled,
@@ -168,6 +170,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                   return MyTurn(
                     actionBar: buildActionBar(session),
                     getParticipantKey: getParticipantKey,
+                    onPassTotem: session.passTotem,
                   );
                 } else {
                   return NotMyTurn(

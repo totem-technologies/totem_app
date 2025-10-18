@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:livekit_components/livekit_components.dart';
+import 'package:totem_app/features/profile/screens/delete_account.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
@@ -10,11 +11,13 @@ class MyTurn extends StatelessWidget {
   const MyTurn({
     required this.getParticipantKey,
     required this.actionBar,
+    required this.onPassTotem,
     super.key,
   });
 
   final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
+  final VoidCallback onPassTotem;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +42,21 @@ class MyTurn extends StatelessWidget {
             PassReceiveCard(
               type: TotemCardTransitionType.pass,
               onActionPressed: () {
-                // TODO(bdlukaa): Pass the totem functionality
+                showDialog<void>(
+                  context: context,
+                  builder: (context) {
+                    return ConfirmationDialog(
+                      content:
+                          'Are you sure you want to pass the totem to '
+                          'the next participant?',
+                      confirmButtonText: 'Pass Totem',
+                      onConfirm: () async {
+                        Navigator.of(context).pop();
+                        onPassTotem();
+                      },
+                    );
+                  },
+                );
               },
             ),
             actionBar,
