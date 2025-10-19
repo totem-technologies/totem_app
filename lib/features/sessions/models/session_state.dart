@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 
 part 'session_state.g.dart';
 
@@ -13,6 +16,18 @@ class SessionState {
     required this.speakingNow,
     required this.speakingOrder,
   });
+
+  factory SessionState.fromMetadata(String? metadata) {
+    if (metadata == null) return const SessionState.waiting();
+    try {
+      return SessionState.fromJson(
+        jsonDecode(metadata) as Map<String, dynamic>,
+      );
+    } catch (e, st) {
+      ErrorHandler.logError(e, stackTrace: st);
+      return const SessionState.waiting();
+    }
+  }
 
   const SessionState.waiting()
     : status = SessionStatus.waiting,

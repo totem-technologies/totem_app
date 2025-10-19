@@ -6,7 +6,7 @@ part of 'livekit_service.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$sessionServiceHash() => r'cf7ff958edc667782b811647eb97cf7953de7625';
+String _$liveKitServiceHash() => r'86fc6217519a450252e1686691e5eb14da7257e4';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -29,23 +29,30 @@ class _SystemHash {
   }
 }
 
-/// See also [sessionService].
-@ProviderFor(sessionService)
-const sessionServiceProvider = SessionServiceFamily();
+abstract class _$LiveKitService
+    extends BuildlessAutoDisposeNotifier<LiveKitState> {
+  late final SessionOptions options;
 
-/// See also [sessionService].
-class SessionServiceFamily extends Family<LiveKitService> {
-  /// See also [sessionService].
-  const SessionServiceFamily();
+  LiveKitState build(SessionOptions options);
+}
 
-  /// See also [sessionService].
-  SessionServiceProvider call(SessionOptions options) {
-    return SessionServiceProvider(options);
+/// See also [LiveKitService].
+@ProviderFor(LiveKitService)
+const liveKitServiceProvider = LiveKitServiceFamily();
+
+/// See also [LiveKitService].
+class LiveKitServiceFamily extends Family<LiveKitState> {
+  /// See also [LiveKitService].
+  const LiveKitServiceFamily();
+
+  /// See also [LiveKitService].
+  LiveKitServiceProvider call(SessionOptions options) {
+    return LiveKitServiceProvider(options);
   }
 
   @override
-  SessionServiceProvider getProviderOverride(
-    covariant SessionServiceProvider provider,
+  LiveKitServiceProvider getProviderOverride(
+    covariant LiveKitServiceProvider provider,
   ) {
     return call(provider.options);
   }
@@ -62,27 +69,28 @@ class SessionServiceFamily extends Family<LiveKitService> {
       _allTransitiveDependencies;
 
   @override
-  String? get name => r'sessionServiceProvider';
+  String? get name => r'liveKitServiceProvider';
 }
 
-/// See also [sessionService].
-class SessionServiceProvider extends AutoDisposeProvider<LiveKitService> {
-  /// See also [sessionService].
-  SessionServiceProvider(SessionOptions options)
+/// See also [LiveKitService].
+class LiveKitServiceProvider
+    extends AutoDisposeNotifierProviderImpl<LiveKitService, LiveKitState> {
+  /// See also [LiveKitService].
+  LiveKitServiceProvider(SessionOptions options)
     : this._internal(
-        (ref) => sessionService(ref as SessionServiceRef, options),
-        from: sessionServiceProvider,
-        name: r'sessionServiceProvider',
+        () => LiveKitService()..options = options,
+        from: liveKitServiceProvider,
+        name: r'liveKitServiceProvider',
         debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
             ? null
-            : _$sessionServiceHash,
-        dependencies: SessionServiceFamily._dependencies,
+            : _$liveKitServiceHash,
+        dependencies: LiveKitServiceFamily._dependencies,
         allTransitiveDependencies:
-            SessionServiceFamily._allTransitiveDependencies,
+            LiveKitServiceFamily._allTransitiveDependencies,
         options: options,
       );
 
-  SessionServiceProvider._internal(
+  LiveKitServiceProvider._internal(
     super._createNotifier, {
     required super.name,
     required super.dependencies,
@@ -95,13 +103,16 @@ class SessionServiceProvider extends AutoDisposeProvider<LiveKitService> {
   final SessionOptions options;
 
   @override
-  Override overrideWith(
-    LiveKitService Function(SessionServiceRef provider) create,
-  ) {
+  LiveKitState runNotifierBuild(covariant LiveKitService notifier) {
+    return notifier.build(options);
+  }
+
+  @override
+  Override overrideWith(LiveKitService Function() create) {
     return ProviderOverride(
       origin: this,
-      override: SessionServiceProvider._internal(
-        (ref) => create(ref as SessionServiceRef),
+      override: LiveKitServiceProvider._internal(
+        () => create()..options = options,
         from: from,
         name: null,
         dependencies: null,
@@ -113,13 +124,14 @@ class SessionServiceProvider extends AutoDisposeProvider<LiveKitService> {
   }
 
   @override
-  AutoDisposeProviderElement<LiveKitService> createElement() {
-    return _SessionServiceProviderElement(this);
+  AutoDisposeNotifierProviderElement<LiveKitService, LiveKitState>
+  createElement() {
+    return _LiveKitServiceProviderElement(this);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is SessionServiceProvider && other.options == options;
+    return other is LiveKitServiceProvider && other.options == options;
   }
 
   @override
@@ -133,18 +145,18 @@ class SessionServiceProvider extends AutoDisposeProvider<LiveKitService> {
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-mixin SessionServiceRef on AutoDisposeProviderRef<LiveKitService> {
+mixin LiveKitServiceRef on AutoDisposeNotifierProviderRef<LiveKitState> {
   /// The parameter `options` of this provider.
   SessionOptions get options;
 }
 
-class _SessionServiceProviderElement
-    extends AutoDisposeProviderElement<LiveKitService>
-    with SessionServiceRef {
-  _SessionServiceProviderElement(super.provider);
+class _LiveKitServiceProviderElement
+    extends AutoDisposeNotifierProviderElement<LiveKitService, LiveKitState>
+    with LiveKitServiceRef {
+  _LiveKitServiceProviderElement(super.provider);
 
   @override
-  SessionOptions get options => (origin as SessionServiceProvider).options;
+  SessionOptions get options => (origin as LiveKitServiceProvider).options;
 }
 
 // ignore_for_file: type=lint

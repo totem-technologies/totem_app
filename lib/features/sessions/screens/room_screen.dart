@@ -62,7 +62,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   }
 
   var _showEmojiPicker = false;
-
   void _onEmojiReceived(String userIdentity, String emoji) {
     final userKey = participantKeys[userIdentity];
     if (userKey != null && userKey.currentContext != null) {
@@ -120,26 +119,26 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final session = ref.watch(
-      sessionServiceProvider(
-        SessionOptions(
-          event: widget.event,
-          token: widget.token,
-          cameraEnabled: widget.cameraEnabled,
-          microphoneEnabled: widget.micEnabled,
-          onEmojiReceived: _onEmojiReceived,
-          onMessageReceived: _onChatMessageReceived,
-          onLivekitError: _onLivekitError,
-          onReceiveTotem: _onReceiveTotem,
-        ),
-      ),
+    final sessionOptions = SessionOptions(
+      event: widget.event,
+      token: widget.token,
+      cameraEnabled: widget.cameraEnabled,
+      microphoneEnabled: widget.micEnabled,
+      onEmojiReceived: _onEmojiReceived,
+      onMessageReceived: _onChatMessageReceived,
+      onLivekitError: _onLivekitError,
+      onReceiveTotem: _onReceiveTotem,
+    );
+
+    final sessionState = ref.watch(liveKitServiceProvider(sessionOptions));
+    final sessionNotifier = ref.read(
+      liveKitServiceProvider(sessionOptions).notifier,
     );
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-
         final shouldPop = await showLeaveDialog(context) ?? false;
         if (context.mounted && shouldPop) {
           popOrHome(context);
@@ -147,41 +146,37 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       },
       child: RoomBackground(
         child: LivekitRoom(
-          roomContext: session.room,
+          roomContext: sessionNotifier.room,
           builder: (context, roomCtx) {
-            switch (session.connectionState) {
+            switch (sessionState.connectionState) {
               case RoomConnectionState.error:
-                return RoomErrorScreen(
-                  onRetry: () {
-                    roomCtx.connect();
-                  },
-                );
+                return RoomErrorScreen(onRetry: roomCtx.connect);
               case RoomConnectionState.connecting:
                 return const LoadingRoomScreen();
               case RoomConnectionState.disconnected:
                 return SessionEndedScreen(event: widget.event);
               case RoomConnectionState.connected:
-                if (session.state.status == SessionStatus.ended) {
+                if (sessionState.sessionState.status == SessionStatus.ended) {
                   return SessionEndedScreen(event: widget.event);
                 }
 
-                if (session.isMyTurn) {
+                if (sessionState.isMyTurn(sessionNotifier.room)) {
                   if (_receivingTotem) {
                     return ReceiveTotemScreen(
-                      actionBar: buildActionBar(session),
+                      actionBar: buildActionBar(sessionNotifier, sessionState),
                       onAcceptTotem: _onAcceptTotem,
                     );
                   }
                   return MyTurn(
-                    actionBar: buildActionBar(session),
+                    actionBar: buildActionBar(sessionNotifier, sessionState),
                     getParticipantKey: getParticipantKey,
-                    onPassTotem: session.passTotem,
+                    onPassTotem: sessionNotifier.passTotem,
                   );
                 } else {
                   return NotMyTurn(
-                    actionBar: buildActionBar(session),
+                    actionBar: buildActionBar(sessionNotifier, sessionState),
                     getParticipantKey: getParticipantKey,
-                    sessionState: session.state,
+                    sessionState: sessionState.sessionState,
                   );
                 }
             }
@@ -192,12 +187,13 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   }
 
   Widget buildActionBar(
-    LiveKitService session,
+    LiveKitService notifier,
+    LiveKitState state,
   ) {
     return Builder(
       builder: (context) {
         final deviceCtx = MediaDeviceContext.of(context)!;
-        final roomCtx = session.room;
+        final roomCtx = notifier.room;
         final user = roomCtx.localParticipant;
         return ActionBar(
           children: [
@@ -239,19 +235,16 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 );
               },
             ),
-            if (!session.isMyTurn)
+            if (!state.isMyTurn(notifier.room))
               Builder(
                 builder: (button) {
                   return ActionBarButton(
                     active: _showEmojiPicker,
                     onPressed: () async {
                       setState(() => _showEmojiPicker = true);
-                      final emoji = await showEmojiBar(
-                        button,
-                        context,
-                      );
+                      final emoji = await showEmojiBar(button, context);
                       if (emoji != null && emoji.isNotEmpty) {
-                        session.sendEmoji(emoji);
+                        notifier.sendEmoji(emoji);
                         if (user?.identity != null) {
                           _onEmojiReceived(user!.identity, emoji);
                         }
