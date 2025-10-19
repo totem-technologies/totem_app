@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
-import 'package:totem_app/shared/totem_icons.dart';
-import 'package:totem_app/shared/widgets/loading_indicator.dart';
+import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 
 Future<void> showDeleteAccountDialog(BuildContext context) {
   return showDialog<void>(
@@ -45,69 +43,6 @@ class LogoutDialog extends ConsumerWidget {
       content: 'Are you sure you want to log out?',
       confirmButtonText: 'Log out',
       onConfirm: auth.logout,
-    );
-  }
-}
-
-class ConfirmationDialog extends StatefulWidget {
-  const ConfirmationDialog({
-    required this.content,
-    required this.confirmButtonText,
-    required this.onConfirm,
-    this.icon,
-    super.key,
-  });
-
-  final TotemIconData? icon;
-  final String content;
-  final String confirmButtonText;
-  final Future<void> Function() onConfirm;
-
-  @override
-  State<ConfirmationDialog> createState() => ConfirmationDialogState();
-}
-
-class ConfirmationDialogState extends State<ConfirmationDialog> {
-  var _loading = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: !_loading,
-      child: AlertDialog(
-        title: const Text('Are you sure?', textAlign: TextAlign.center),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 20,
-          children: [
-            if (widget.icon != null)
-              TotemIcon(widget.icon!, size: 90, color: Colors.red),
-            Text(
-              widget.content,
-              textAlign: TextAlign.center,
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (_loading) return;
-                setState(() => _loading = true);
-                await widget.onConfirm();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF3B30),
-                foregroundColor: Colors.white,
-              ),
-              child: _loading
-                  ? const LoadingIndicator(color: Colors.white, size: 24)
-                  : Text(widget.confirmButtonText),
-            ),
-            OutlinedButton(
-              onPressed: _loading ? null : () => context.pop(),
-              child: const Text('Cancel'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -2,10 +2,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:livekit_components/livekit_components.dart';
-import 'package:totem_app/features/profile/screens/delete_account.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
+import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 
 class MyTurn extends StatelessWidget {
   const MyTurn({
@@ -47,9 +47,10 @@ class MyTurn extends StatelessWidget {
                   builder: (context) {
                     return ConfirmationDialog(
                       content:
-                          'Are you sure you want to pass the totem to '
-                          'the next participant?',
+                          'Are you sure you want to pass the totem to the next '
+                          'participant?',
                       confirmButtonText: 'Pass Totem',
+                      type: ConfirmationDialogType.standard,
                       onConfirm: () async {
                         Navigator.of(context).pop();
                         return onPassTotem();

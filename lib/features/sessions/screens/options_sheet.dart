@@ -6,9 +6,9 @@ import 'package:livekit_components/livekit_components.dart';
 //
 // ignore: depend_on_referenced_packages
 import 'package:provider/provider.dart';
-import 'package:totem_app/features/profile/screens/delete_account.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 
 Future<bool?> showLeaveDialog(BuildContext context) {
   return showDialog<bool>(
