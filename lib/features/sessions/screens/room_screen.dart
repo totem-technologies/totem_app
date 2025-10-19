@@ -12,7 +12,6 @@ import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
 import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
 import 'package:totem_app/features/sessions/screens/options_sheet.dart';
-import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_ended.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
@@ -148,41 +147,51 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         child: LivekitRoom(
           roomContext: sessionNotifier.room,
           builder: (context, roomCtx) {
-            switch (sessionState.connectionState) {
-              case RoomConnectionState.error:
-                return RoomErrorScreen(onRetry: roomCtx.connect);
-              case RoomConnectionState.connecting:
-                return const LoadingRoomScreen();
-              case RoomConnectionState.disconnected:
-                return SessionEndedScreen(event: widget.event);
-              case RoomConnectionState.connected:
-                if (sessionState.sessionState.status == SessionStatus.ended) {
-                  return SessionEndedScreen(event: widget.event);
-                }
-
-                if (sessionState.isMyTurn(sessionNotifier.room)) {
-                  if (_receivingTotem) {
-                    return ReceiveTotemScreen(
-                      actionBar: buildActionBar(sessionNotifier, sessionState),
-                      onAcceptTotem: _onAcceptTotem,
-                    );
-                  }
-                  return MyTurn(
-                    actionBar: buildActionBar(sessionNotifier, sessionState),
-                    getParticipantKey: getParticipantKey,
-                    onPassTotem: sessionNotifier.passTotem,
-                  );
-                } else {
-                  return NotMyTurn(
-                    actionBar: buildActionBar(sessionNotifier, sessionState),
-                    getParticipantKey: getParticipantKey,
-                    sessionState: sessionState.sessionState,
-                  );
-                }
-            }
+            return Navigator(
+              onDidRemovePage: (page) => {},
+              pages: [
+                MaterialPage(
+                  child: _buildBody(sessionNotifier, sessionState),
+                ),
+              ],
+            );
           },
         ),
       ),
+    );
+  }
+
+  Widget _buildBody(LiveKitService notifier, LiveKitState state) {
+    return Builder(
+      builder: (context) {
+        final roomCtx = notifier.room;
+        switch (state.connectionState) {
+          case RoomConnectionState.error:
+            return RoomErrorScreen(onRetry: roomCtx.connect);
+          case RoomConnectionState.connecting:
+            return const LoadingRoomScreen();
+          case RoomConnectionState.disconnected:
+            return SessionEndedScreen(event: widget.event);
+          case RoomConnectionState.connected:
+            if (state.sessionState.status == SessionStatus.ended) {
+              return SessionEndedScreen(event: widget.event);
+            }
+
+            if (state.isMyTurn(notifier.room)) {
+              return MyTurn(
+                actionBar: buildActionBar(notifier, state),
+                getParticipantKey: getParticipantKey,
+                onPassTotem: notifier.passTotem,
+              );
+            } else {
+              return NotMyTurn(
+                actionBar: buildActionBar(notifier, state),
+                getParticipantKey: getParticipantKey,
+                sessionState: state.sessionState,
+              );
+            }
+        }
+      },
     );
   }
 
@@ -192,7 +201,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   ) {
     return Builder(
       builder: (context) {
-        final deviceCtx = MediaDeviceContext.of(context)!;
         final roomCtx = notifier.room;
         final user = roomCtx.localParticipant;
         return ActionBar(
@@ -298,8 +306,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 padding: EdgeInsetsDirectional.zero,
                 onPressed: () => showOptionsSheet(
                   context,
-                  deviceCtx,
-                  roomCtx,
                 ),
                 icon: const TotemIcon(
                   TotemIcons.more,

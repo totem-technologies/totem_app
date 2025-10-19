@@ -3,9 +3,6 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
-//
-// ignore: depend_on_referenced_packages
-import 'package:provider/provider.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
@@ -27,21 +24,13 @@ Future<bool?> showLeaveDialog(BuildContext context) {
 
 Future<void> showOptionsSheet(
   BuildContext context,
-  MediaDeviceContext deviceContext,
-  RoomContext roomContext,
 ) {
   return showModalBottomSheet(
     context: context,
     showDragHandle: true,
     backgroundColor: const Color(0xFFF3F1E9),
     builder: (context) {
-      return ChangeNotifierProvider.value(
-        value: deviceContext,
-        child: ChangeNotifierProvider.value(
-          value: roomContext,
-          child: const OptionsSheet(),
-        ),
-      );
+      return const OptionsSheet();
     },
   );
 }
@@ -51,7 +40,6 @@ class OptionsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mediaDevice = MediaDeviceContext.of(context)!;
     return Padding(
       padding: const EdgeInsetsDirectional.only(
         start: 20,
@@ -64,11 +52,11 @@ class OptionsSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Builder(
-            builder: (context) {
-              final videoInputs = mediaDevice.videoInputs;
-              final selected = mediaDevice.videoInputs?.firstWhereOrNull((e) {
-                return e.deviceId == mediaDevice.selectedVideoInputDeviceId;
+          MediaDeviceSelectButton(
+            builder: (context, roomCtx, deviceCtx) {
+              final videoInputs = deviceCtx.videoInputs;
+              final selected = deviceCtx.videoInputs?.firstWhereOrNull((e) {
+                return e.deviceId == deviceCtx.selectedVideoInputDeviceId;
               });
               return OptionsSheetTile<MediaDevice>(
                 title: selected?.label ?? 'Default Camera',
@@ -77,17 +65,30 @@ class OptionsSheet extends StatelessWidget {
                 selectedOption: selected,
                 onOptionChanged: (value) {
                   if (value != null) {
-                    mediaDevice.selectVideoInput(value);
+                    // TODO(bdlukaa): Revisit this in the future
+                    // https://github.com/livekit/client-sdk-flutter/issues/863
+                    final userTrack = roomCtx.room.localParticipant
+                        ?.getTrackPublications()
+                        .firstWhereOrNull(
+                          (track) => track.kind == TrackType.VIDEO,
+                        )
+                        ?.track;
+                    userTrack?.restartTrack(
+                      CameraCaptureOptions(
+                        deviceId: value.deviceId,
+                      ),
+                    );
+                    deviceCtx.selectVideoInput(value);
                   }
                 },
               );
             },
           ),
-          Builder(
-            builder: (context) {
-              final audioInputs = mediaDevice.audioInputs;
-              final selected = mediaDevice.audioInputs?.firstWhereOrNull((e) {
-                return e.deviceId == mediaDevice.selectedAudioInputDeviceId;
+          MediaDeviceSelectButton(
+            builder: (context, roomCtx, deviceCtx) {
+              final audioInputs = deviceCtx.audioInputs;
+              final selected = deviceCtx.audioInputs?.firstWhereOrNull((e) {
+                return e.deviceId == deviceCtx.selectedAudioInputDeviceId;
               });
               return OptionsSheetTile<MediaDevice>(
                 title: selected?.label ?? 'Default Microphone',
@@ -95,18 +96,18 @@ class OptionsSheet extends StatelessWidget {
                 selectedOption: selected,
                 onOptionChanged: (value) {
                   if (value != null) {
-                    mediaDevice.selectAudioInput(value);
+                    deviceCtx.selectAudioInput(value);
                   }
                 },
                 icon: TotemIcons.microphoneOn,
               );
             },
           ),
-          Builder(
-            builder: (context) {
-              final audioOutputs = mediaDevice.audioOutputs;
-              final selected = mediaDevice.audioOutputs?.firstWhereOrNull((e) {
-                return e.deviceId == mediaDevice.selectedAudioOutputDeviceId;
+          MediaDeviceSelectButton(
+            builder: (context, roomCtx, deviceCtx) {
+              final audioOutputs = deviceCtx.audioOutputs;
+              final selected = deviceCtx.audioOutputs?.firstWhereOrNull((e) {
+                return e.deviceId == deviceCtx.selectedAudioOutputDeviceId;
               });
               return OptionsSheetTile<MediaDevice>(
                 title: selected?.label ?? 'Default Speaker',
@@ -114,7 +115,7 @@ class OptionsSheet extends StatelessWidget {
                 selectedOption: selected,
                 onOptionChanged: (value) {
                   if (value != null) {
-                    mediaDevice.selectAudioOutput(value);
+                    deviceCtx.selectAudioOutput(value);
                   }
                 },
                 icon: TotemIcons.speaker,

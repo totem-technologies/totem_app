@@ -220,7 +220,7 @@ class ParticipantVideo extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final videoTrack = participant.trackPublications.values.where(
+    final videoTrack = participant.videoTrackPublications.where(
       (t) =>
           t.track != null &&
           t.kind == TrackType.VIDEO &&
@@ -229,7 +229,7 @@ class ParticipantVideo extends ConsumerWidget {
     );
     if (videoTrack.isNotEmpty) {
       return VideoTrackRenderer(
-        videoTrack.first.track! as VideoTrack,
+        videoTrack.last.track! as VideoTrack,
         fit: VideoViewFit.cover,
       );
     } else {
