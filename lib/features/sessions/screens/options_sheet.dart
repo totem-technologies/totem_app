@@ -55,13 +55,18 @@ class OptionsSheet extends StatelessWidget {
           MediaDeviceSelectButton(
             builder: (context, roomCtx, deviceCtx) {
               final videoInputs = deviceCtx.videoInputs;
-              final selected = deviceCtx.videoInputs?.firstWhereOrNull((e) {
-                return e.deviceId == deviceCtx.selectedVideoInputDeviceId;
-              });
+              final selected = deviceCtx.videoInputs?.firstWhere(
+                (e) {
+                  return e.deviceId == deviceCtx.selectedVideoInputDeviceId &&
+                      e.label.isNotEmpty;
+                },
+                orElse: () => deviceCtx.videoInputs!.first,
+              );
               return OptionsSheetTile<MediaDevice>(
-                title: selected?.label ?? 'Default Camera',
+                title: selected?.humanReadableLabel ?? 'Default Camera',
                 icon: TotemIcons.cameraOn,
                 options: videoInputs?.toList(),
+                optionToString: (option) => option.humanReadableLabel,
                 selectedOption: selected,
                 onOptionChanged: (value) {
                   if (value != null) {
@@ -87,12 +92,17 @@ class OptionsSheet extends StatelessWidget {
           MediaDeviceSelectButton(
             builder: (context, roomCtx, deviceCtx) {
               final audioInputs = deviceCtx.audioInputs;
-              final selected = deviceCtx.audioInputs?.firstWhereOrNull((e) {
-                return e.deviceId == deviceCtx.selectedAudioInputDeviceId;
-              });
+              final selected = deviceCtx.audioInputs?.firstWhere(
+                (e) {
+                  return e.deviceId == deviceCtx.selectedAudioInputDeviceId &&
+                      e.label.isNotEmpty;
+                },
+                orElse: () => deviceCtx.audioInputs!.first,
+              );
               return OptionsSheetTile<MediaDevice>(
                 title: selected?.label ?? 'Default Microphone',
                 options: audioInputs?.toList(),
+                optionToString: (option) => option.humanReadableLabel,
                 selectedOption: selected,
                 onOptionChanged: (value) {
                   if (value != null) {
@@ -106,12 +116,17 @@ class OptionsSheet extends StatelessWidget {
           MediaDeviceSelectButton(
             builder: (context, roomCtx, deviceCtx) {
               final audioOutputs = deviceCtx.audioOutputs;
-              final selected = deviceCtx.audioOutputs?.firstWhereOrNull((e) {
-                return e.deviceId == deviceCtx.selectedAudioOutputDeviceId;
-              });
+              final selected = deviceCtx.audioOutputs?.firstWhere(
+                (e) {
+                  return e.deviceId == deviceCtx.selectedAudioOutputDeviceId &&
+                      e.label.isNotEmpty;
+                },
+                orElse: () => deviceCtx.audioOutputs!.first,
+              );
               return OptionsSheetTile<MediaDevice>(
                 title: selected?.label ?? 'Default Speaker',
                 options: audioOutputs?.toList(),
+                optionToString: (option) => option.humanReadableLabel,
                 selectedOption: selected,
                 onOptionChanged: (value) {
                   if (value != null) {
@@ -154,6 +169,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
     this.selectedOption,
     this.options,
     this.onOptionChanged,
+    this.optionToString,
     super.key,
   });
 
@@ -165,6 +181,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
   final T? selectedOption;
   final List<T>? options;
   final ValueChanged<T?>? onOptionChanged;
+  final String Function(T)? optionToString;
 
   @override
   Widget build(BuildContext context) {
@@ -193,7 +210,10 @@ class OptionsSheetTile<T> extends StatelessWidget {
                     ?.map(
                       (e) => DropdownMenuItem<T>(
                         value: e,
-                        child: AutoSizeText(e.toString(), maxLines: 1),
+                        child: AutoSizeText(
+                          optionToString?.call(e) ?? e.toString(),
+                          maxLines: 1,
+                        ),
                       ),
                     )
                     .toList(),
@@ -236,5 +256,23 @@ class OptionsSheetTile<T> extends StatelessWidget {
           ? theme.colorScheme.onErrorContainer
           : null,
     );
+  }
+}
+
+extension on MediaDevice {
+  String get humanReadableLabel {
+    if (label.isNotEmpty) {
+      return label;
+    }
+    switch (kind) {
+      case 'audioinput':
+        return 'Microphone';
+      case 'audiooutput':
+        return 'Speaker';
+      case 'videoinput':
+        return 'Camera';
+      default:
+        return 'Unknown Device';
+    }
   }
 }
