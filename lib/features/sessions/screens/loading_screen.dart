@@ -87,7 +87,7 @@ class LoadingRoomScreen extends StatelessWidget {
                     clipBehavior: Clip.hardEdge,
                     child: const AspectRatio(
                       aspectRatio: 16 / 21,
-                      child: LoadingPlaceholder(),
+                      child: LoadingVideoPlaceholder(),
                     ),
                   ),
                 ),
@@ -108,8 +108,8 @@ class LoadingRoomScreen extends StatelessWidget {
   }
 }
 
-class LoadingPlaceholder extends StatelessWidget {
-  const LoadingPlaceholder({super.key});
+class LoadingVideoPlaceholder extends StatelessWidget {
+  const LoadingVideoPlaceholder({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -120,9 +120,10 @@ class LoadingPlaceholder extends StatelessWidget {
       direction: Directionality.of(context) == TextDirection.ltr
           ? ShimmerDirection.ltr
           : ShimmerDirection.rtl,
-      child: const DecoratedBox(
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: Colors.black,
+          borderRadius: BorderRadius.circular(30),
         ),
       ),
     );

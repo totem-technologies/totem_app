@@ -166,7 +166,8 @@ class LocalParticipantVideoCard extends ConsumerWidget {
         ),
         clipBehavior: Clip.antiAliasWithSaveLayer,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(30),
+          // radius - border width
+          borderRadius: BorderRadius.circular(30 - 2),
           child: AspectRatio(
             aspectRatio: 16 / 21,
             child: Builder(
@@ -257,7 +258,7 @@ class ParticipantVideo extends ConsumerWidget {
             ),
           );
         },
-        loading: LoadingPlaceholder.new,
+        loading: LoadingVideoPlaceholder.new,
       );
     }
   }

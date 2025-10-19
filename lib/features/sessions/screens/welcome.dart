@@ -82,9 +82,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         ),
       );
     }
-
-    // Re-initialize the local video track when returning to this screen
-    await _initializeLocalVideo();
   }
 
   @override
