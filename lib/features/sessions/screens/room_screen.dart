@@ -4,6 +4,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
@@ -213,6 +214,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       builder: (context) {
         final roomCtx = notifier.room;
         final user = roomCtx.localParticipant;
+        final auth = ref.read(authControllerProvider);
+        final isKeeper = widget.event.space.author.slug == auth.user?.slug;
         return ActionBar(
           children: [
             MediaDeviceSelectButton(
@@ -315,6 +318,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 padding: EdgeInsetsDirectional.zero,
                 onPressed: () => showOptionsSheet(
                   context,
+                  isKeeper ? notifier.startSession : null,
                 ),
                 icon: const TotemIcon(
                   TotemIcons.more,

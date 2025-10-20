@@ -205,4 +205,10 @@ class LiveKitService extends _$LiveKitService {
       topic: SessionCommunicationTopics.emoji.topic,
     );
   }
+
+  Future<void> startSession() async {
+    await _apiService.meetings.totemMeetingsMobileApiStartRoomEndpoint(
+      eventSlug: _options.event.slug,
+    );
+  }
 }

@@ -24,19 +24,24 @@ Future<bool?> showLeaveDialog(BuildContext context) {
 
 Future<void> showOptionsSheet(
   BuildContext context,
+  VoidCallback? onStartSession,
 ) {
   return showModalBottomSheet(
     context: context,
     showDragHandle: true,
     backgroundColor: const Color(0xFFF3F1E9),
     builder: (context) {
-      return const OptionsSheet();
+      return OptionsSheet(
+        onStartSession: onStartSession,
+      );
     },
   );
 }
 
 class OptionsSheet extends StatelessWidget {
-  const OptionsSheet({super.key});
+  const OptionsSheet({super.key, required this.onStartSession});
+
+  final VoidCallback? onStartSession;
 
   @override
   Widget build(BuildContext context) {
@@ -143,6 +148,14 @@ class OptionsSheet extends StatelessWidget {
               );
             },
           ),
+          if (onStartSession != null)
+            OptionsSheetTile<void>(
+              title: 'Start session',
+              icon: TotemIcons.arrowForward,
+              onTap: () async {
+                onStartSession!();
+              },
+            ),
           OptionsSheetTile<void>(
             title: 'Leave Session',
             icon: TotemIcons.leaveCall,
