@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' hide ChatMessage;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
@@ -167,7 +167,24 @@ class LiveKitService extends _$LiveKitService {
     if (event.topic == SessionCommunicationTopics.emoji.topic) {
       _options.onEmojiReceived(event.participant!.identity, data);
     } else if (event.topic == SessionCommunicationTopics.chat.topic) {
-      _options.onMessageReceived(event.participant!.identity, data);
+      try {
+        final message = ChatMessage.fromMap(
+          jsonDecode(data) as Map<String, dynamic>,
+          event.participant,
+        );
+        _options.onMessageReceived(
+          event.participant!.identity,
+          message.message,
+        );
+      } catch (error, stackTrace) {
+        debugPrint('Error decoding chat message: $error');
+        debugPrintStack(stackTrace: stackTrace);
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Error decoding chat message',
+        );
+      }
     }
   }
 
