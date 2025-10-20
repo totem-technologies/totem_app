@@ -284,7 +284,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 });
                 await showSessionChatSheet(
                   context,
-                  roomCtx,
                   widget.event,
                 );
                 if (mounted) {
