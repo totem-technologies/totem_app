@@ -52,8 +52,9 @@ class MyTurn extends StatelessWidget {
                       confirmButtonText: 'Pass Totem',
                       type: ConfirmationDialogType.standard,
                       onConfirm: () async {
-                        Navigator.of(context).pop();
-                        return onPassTotem();
+                        final navigator = Navigator.of(context);
+                        await onPassTotem();
+                        navigator.pop();
                       },
                     );
                   },

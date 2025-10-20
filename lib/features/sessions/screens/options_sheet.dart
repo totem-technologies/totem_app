@@ -55,13 +55,15 @@ class OptionsSheet extends StatelessWidget {
           MediaDeviceSelectButton(
             builder: (context, roomCtx, deviceCtx) {
               final videoInputs = deviceCtx.videoInputs;
-              final selected = deviceCtx.videoInputs?.firstWhere(
-                (e) {
-                  return e.deviceId == deviceCtx.selectedVideoInputDeviceId &&
-                      e.label.isNotEmpty;
-                },
-                orElse: () => deviceCtx.videoInputs!.first,
-              );
+              final selected =
+                  deviceCtx.videoInputs?.firstWhereOrNull(
+                    (e) {
+                      return e.deviceId ==
+                              deviceCtx.selectedVideoInputDeviceId &&
+                          e.label.isNotEmpty;
+                    },
+                  ) ??
+                  deviceCtx.videoInputs?.firstOrNull;
               return OptionsSheetTile<MediaDevice>(
                 title: selected?.humanReadableLabel ?? 'Default Camera',
                 icon: TotemIcons.cameraOn,
@@ -92,13 +94,15 @@ class OptionsSheet extends StatelessWidget {
           MediaDeviceSelectButton(
             builder: (context, roomCtx, deviceCtx) {
               final audioInputs = deviceCtx.audioInputs;
-              final selected = deviceCtx.audioInputs?.firstWhere(
-                (e) {
-                  return e.deviceId == deviceCtx.selectedAudioInputDeviceId &&
-                      e.label.isNotEmpty;
-                },
-                orElse: () => deviceCtx.audioInputs!.first,
-              );
+              final selected =
+                  deviceCtx.audioInputs?.firstWhereOrNull(
+                    (e) {
+                      return e.deviceId ==
+                              deviceCtx.selectedAudioInputDeviceId &&
+                          e.label.isNotEmpty;
+                    },
+                  ) ??
+                  deviceCtx.audioInputs?.firstOrNull;
               return OptionsSheetTile<MediaDevice>(
                 title: selected?.label ?? 'Default Microphone',
                 options: audioInputs?.toList(),
@@ -116,13 +120,15 @@ class OptionsSheet extends StatelessWidget {
           MediaDeviceSelectButton(
             builder: (context, roomCtx, deviceCtx) {
               final audioOutputs = deviceCtx.audioOutputs;
-              final selected = deviceCtx.audioOutputs?.firstWhere(
-                (e) {
-                  return e.deviceId == deviceCtx.selectedAudioOutputDeviceId &&
-                      e.label.isNotEmpty;
-                },
-                orElse: () => deviceCtx.audioOutputs!.first,
-              );
+              final selected =
+                  deviceCtx.audioOutputs?.firstWhereOrNull(
+                    (e) {
+                      return e.deviceId ==
+                              deviceCtx.selectedAudioOutputDeviceId &&
+                          e.label.isNotEmpty;
+                    },
+                  ) ??
+                  deviceCtx.audioOutputs?.firstOrNull;
               return OptionsSheetTile<MediaDevice>(
                 title: selected?.label ?? 'Default Speaker',
                 options: audioOutputs?.toList(),

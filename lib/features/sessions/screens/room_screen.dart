@@ -12,6 +12,7 @@ import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
 import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
 import 'package:totem_app/features/sessions/screens/options_sheet.dart';
+import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_ended.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
@@ -176,8 +177,17 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             if (state.sessionState.status == SessionStatus.ended) {
               return SessionEndedScreen(event: widget.event);
             }
+            if (roomCtx.localParticipant == null) {
+              return const LoadingRoomScreen();
+            }
 
             if (state.isMyTurn(notifier.room)) {
+              if (_receivingTotem) {
+                return ReceiveTotemScreen(
+                  actionBar: buildActionBar(notifier, state),
+                  onAcceptTotem: _onAcceptTotem,
+                );
+              }
               return MyTurn(
                 actionBar: buildActionBar(notifier, state),
                 getParticipantKey: getParticipantKey,
