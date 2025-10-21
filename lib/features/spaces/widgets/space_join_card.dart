@@ -49,6 +49,24 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   late bool _attending = widget.event.attending;
   var _loading = false;
 
+  // Refresh every second to update timeago and button states
+  Timer? _timer;
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
