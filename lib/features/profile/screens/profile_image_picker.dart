@@ -163,11 +163,15 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                             switchOutCurve: Curves.easeInOut,
                             child: Center(
                               key: ValueKey(_state),
-                              child: TotemIcon(switch (_state) {
-                                ProfileAvatarTypeEnum.im => TotemIcons.upload,
-                                ProfileAvatarTypeEnum.td ||
-                                _ => TotemIcons.edit,
-                              }),
+                              child: switch (_state) {
+                                ProfileAvatarTypeEnum.im => const TotemIcon(
+                                  TotemIcons.upload,
+                                ),
+                                ProfileAvatarTypeEnum.td || _ => const Icon(
+                                  Icons.shuffle,
+                                  fontWeight: FontWeight.w200,
+                                ),
+                              },
                             ),
                           ),
                         ),
