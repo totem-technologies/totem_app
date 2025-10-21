@@ -78,7 +78,6 @@ class SpaceDetailAppBar extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-
                         RichText(
                           text: TextSpan(
                             style: theme.textTheme.bodyLarge?.copyWith(

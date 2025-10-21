@@ -72,7 +72,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     await _videoTrack?.dispose();
 
     if (mounted) {
-      await context.push(
+      context.pushReplacement(
         RouteNames.videoSession(widget.event.slug),
         extra: VideoRoomScreenRouteArgs(
           cameraEnabled: _isCameraOn,
@@ -82,9 +82,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         ),
       );
     }
-
-    // Re-initialize the local video track when returning to this screen
-    await _initializeLocalVideo();
   }
 
   @override
@@ -211,9 +208,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           ),
         ),
         error: (error, stackTrace) {
-          return RoomErrorScreen(
-            onRetry: () =>
-                ref.refresh(sessionTokenProvider(widget.event.slug).future),
+          return RoomBackground(
+            child: RoomErrorScreen(
+              onRetry: () =>
+                  ref.refresh(sessionTokenProvider(widget.event.slug).future),
+            ),
           );
         },
         loading: LoadingRoomScreen.new,

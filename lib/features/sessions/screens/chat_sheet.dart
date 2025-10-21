@@ -2,11 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'
     hide ChangeNotifierProvider;
 import 'package:livekit_components/livekit_components.dart';
-// package:livekit_components depends on package:provider, but we don't. We need
-// [ChangeNotifierProvider] from package:provider to pass the RoomContext to the
-// chat sheet, so we import it directly here.
-// ignore: depend_on_referenced_packages
-import 'package:provider/provider.dart' show ChangeNotifierProvider;
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -16,7 +11,6 @@ import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 Future<void> showSessionChatSheet(
   BuildContext context,
-  RoomContext roomCtx,
   EventDetailSchema event,
 ) {
   return showModalBottomSheet(
@@ -26,10 +20,7 @@ Future<void> showSessionChatSheet(
     useSafeArea: true,
     backgroundColor: Colors.white,
     builder: (context) {
-      return ChangeNotifierProvider<RoomContext>.value(
-        value: roomCtx,
-        child: SessionChatSheet(event: event),
-      );
+      return SessionChatSheet(event: event);
     },
   );
 }
@@ -128,68 +119,16 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                               final isMine =
                                   msg.participant?.identity == auth.user?.email;
                               if (isMine) {
-                                return Align(
-                                  alignment: AlignmentDirectional.centerEnd,
-                                  child: Container(
-                                    margin: const EdgeInsetsDirectional.only(
-                                      start: 50,
-                                    ),
-                                    padding: const EdgeInsetsDirectional.all(
-                                      10,
-                                    ),
-                                    decoration: const BoxDecoration(
-                                      color: AppTheme.slate,
-                                      borderRadius: BorderRadius.all(
-                                        Radius.circular(16),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      msg.message,
-                                      style: TextStyle(
-                                        color:
-                                            theme.colorScheme.onInverseSurface,
-                                      ),
-                                    ),
-                                  ),
-                                );
+                                return MyChatBubble(message: msg);
                               } else {
-                                return Row(
-                                  spacing: 10,
-                                  children: [
-                                    // TODO(bdlukaa): Only show author avatar
-                                    //                for the first message in
-                                    //                the sequence.
-                                    UserAvatar.fromUserSchema(
-                                      widget.event.space.author,
-                                      radius: 20,
-                                      onTap:
-                                          widget.event.space.author.slug != null
-                                          ? () {
-                                              showKeeperProfileSheet(
-                                                context,
-                                                widget.event.space.author.slug!,
-                                              );
-                                            }
-                                          : null,
-                                    ),
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.surface,
-                                        borderRadius: const BorderRadius.all(
-                                          Radius.circular(16),
-                                        ),
-                                      ),
-                                      padding: const EdgeInsetsDirectional.all(
-                                        10,
-                                      ),
-                                      child: Text(
-                                        msg.message,
-                                        style: TextStyle(
-                                          color: theme.colorScheme.onSurface,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                final showAvatar =
+                                    index == 0 ||
+                                    messages[index - 1].participant?.identity !=
+                                        msg.participant?.identity;
+                                return OtherChatBubble(
+                                  showAvatar: showAvatar,
+                                  message: msg,
+                                  event: widget.event,
                                 );
                               }
                             },
@@ -246,6 +185,101 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
           },
         );
       },
+    );
+  }
+}
+
+class OtherChatBubble extends StatelessWidget {
+  const OtherChatBubble({
+    required this.showAvatar,
+    required this.message,
+    required this.event,
+    super.key,
+  });
+
+  final bool showAvatar;
+  final ChatMessage message;
+  final EventDetailSchema event;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (showAvatar)
+          UserAvatar.fromUserSchema(
+            event.space.author,
+            radius: 20,
+            onTap: event.space.author.slug != null
+                ? () {
+                    showKeeperProfileSheet(
+                      context,
+                      event.space.author.slug!,
+                    );
+                  }
+                : null,
+          )
+        else
+          const SizedBox(width: 40),
+        const SizedBox(width: 10),
+        Flexible(
+          child: Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: const BorderRadius.all(
+                Radius.circular(16),
+              ),
+            ),
+            padding: const EdgeInsetsDirectional.all(
+              10,
+            ),
+            child: Text(
+              message.message,
+              style: TextStyle(
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class MyChatBubble extends StatelessWidget {
+  const MyChatBubble({
+    required this.message,
+    super.key,
+  });
+
+  final ChatMessage message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Align(
+      alignment: AlignmentDirectional.centerEnd,
+      child: Container(
+        margin: const EdgeInsetsDirectional.only(
+          start: 50,
+        ),
+        padding: const EdgeInsetsDirectional.all(
+          10,
+        ),
+        decoration: const BoxDecoration(
+          color: AppTheme.slate,
+          borderRadius: BorderRadius.all(
+            Radius.circular(16),
+          ),
+        ),
+        child: Text(
+          message.message,
+          style: TextStyle(
+            color: theme.colorScheme.onInverseSurface,
+          ),
+        ),
+      ),
     );
   }
 }

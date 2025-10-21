@@ -108,7 +108,6 @@ Dio _initDio(Ref ref) {
 
         return handler.next(options);
       },
-
       onError: (DioException error, handler) {
         // Convert to app-specific exception
         final appException = _handleDioError(error);

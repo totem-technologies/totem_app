@@ -62,7 +62,6 @@ class BlogDetailAppBar extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-
                         RichText(
                           text: TextSpan(
                             style: theme.textTheme.bodyLarge?.copyWith(

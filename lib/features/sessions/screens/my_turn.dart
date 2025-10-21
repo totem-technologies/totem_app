@@ -5,16 +5,19 @@ import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
+import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 
 class MyTurn extends StatelessWidget {
   const MyTurn({
     required this.getParticipantKey,
     required this.actionBar,
+    required this.onPassTotem,
     super.key,
   });
 
   final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
+  final Future<void> Function() onPassTotem;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +42,23 @@ class MyTurn extends StatelessWidget {
             PassReceiveCard(
               type: TotemCardTransitionType.pass,
               onActionPressed: () {
-                // TODO(bdlukaa): Pass the totem functionality
+                showDialog<void>(
+                  context: context,
+                  builder: (context) {
+                    return ConfirmationDialog(
+                      content:
+                          'Are you sure you want to pass the totem to the next '
+                          'participant?',
+                      confirmButtonText: 'Pass Totem',
+                      type: ConfirmationDialogType.standard,
+                      onConfirm: () async {
+                        final navigator = Navigator.of(context);
+                        await onPassTotem();
+                        navigator.pop();
+                      },
+                    );
+                  },
+                );
               },
             ),
             actionBar,

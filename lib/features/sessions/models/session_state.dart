@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 
 part 'session_state.g.dart';
 
@@ -11,14 +14,24 @@ class SessionState {
   const SessionState({
     required this.status,
     required this.speakingNow,
-    required this.nextUp,
     required this.speakingOrder,
   });
+
+  factory SessionState.fromMetadata(String? metadata) {
+    if (metadata == null) return const SessionState.waiting();
+    try {
+      return SessionState.fromJson(
+        jsonDecode(metadata) as Map<String, dynamic>,
+      );
+    } catch (e, st) {
+      ErrorHandler.logError(e, stackTrace: st);
+      return const SessionState.waiting();
+    }
+  }
 
   const SessionState.waiting()
     : status = SessionStatus.waiting,
       speakingNow = null,
-      nextUp = null,
       speakingOrder = const [];
 
   factory SessionState.fromJson(Map<String, dynamic> json) =>
@@ -29,13 +42,12 @@ class SessionState {
   final SessionStatus status;
 
   /// User identity of the participant currently speaking, if any.
+  @JsonKey(name: 'speaking_now')
   final String? speakingNow;
 
-  /// User identity of the next participant scheduled to speak, if any.
-  final String? nextUp;
-
   /// Ordered list of user identities representing the speaking order.
-  final List<String> speakingOrder;
+  @JsonKey(name: 'speaking_order')
+  final List<String>? speakingOrder;
 
   @override
   bool operator ==(Object other) {
@@ -44,15 +56,16 @@ class SessionState {
     return other is SessionState &&
         other.status == status &&
         other.speakingNow == speakingNow &&
-        other.nextUp == nextUp &&
         listEquals(other.speakingOrder, speakingOrder);
   }
 
   @override
   int get hashCode {
-    return status.hashCode ^
-        speakingNow.hashCode ^
-        nextUp.hashCode ^
-        speakingOrder.hashCode;
+    return status.hashCode ^ speakingNow.hashCode ^ speakingOrder.hashCode;
   }
+
+  @override
+  String toString() =>
+      'SessionState(status: $status, speakingNow: $speakingNow, '
+      'speakingOrder: $speakingOrder)';
 }

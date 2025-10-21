@@ -18,4 +18,25 @@ abstract class MeetingsClient {
   Future<LivekitTokenResponseSchema> totemMeetingsMobileApiGetLivekitToken({
     @Path('event_slug') required String eventSlug,
   });
+
+  /// Pass Totem Endpoint
+  @POST('/api/mobile/protected/meetings/event/{event_slug}/pass-totem')
+  Future<void> totemMeetingsMobileApiPassTotemEndpoint({
+    @Path('event_slug') required String eventSlug,
+  });
+
+  /// Start Room Endpoint
+  @POST('/api/mobile/protected/meetings/event/{event_slug}/start')
+  Future<void> totemMeetingsMobileApiStartRoomEndpoint({
+    @Path('event_slug') required String eventSlug,
+  });
+
+  /// Mute Participant Endpoint
+  @POST(
+    '/api/mobile/protected/meetings/event/{event_slug}/mute/{participant_identity}',
+  )
+  Future<void> totemMeetingsMobileApiMuteParticipantEndpoint({
+    @Path('event_slug') required String eventSlug,
+    @Path('participant_identity') required String participantIdentity,
+  });
 }

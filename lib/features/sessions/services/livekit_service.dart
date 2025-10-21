@@ -1,30 +1,24 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' hide ChatMessage;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_app/api/mobile_totem_api.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
 
 part 'livekit_service.g.dart';
 
 enum SessionCommunicationTopics {
-  /// Topic for sending emojis.
   emoji('lk-emoji-topic'),
-
-  /// Topic for sending chat messages.
-  ///
-  /// Most of the chat functionality is handled by [ChatContextMixin]
-  chat('lk-chat-topic'),
-
-  /// Topic for sending session state updates.
-  state('lk-session-state-topic');
+  chat('lk-chat-topic');
 
   const SessionCommunicationTopics(this.topic);
-
   final String topic;
 }
 
@@ -35,6 +29,7 @@ typedef OnLivekitError = void Function(LiveKitException error);
 @immutable
 class SessionOptions {
   const SessionOptions({
+    required this.event,
     required this.token,
     required this.cameraEnabled,
     required this.microphoneEnabled,
@@ -44,6 +39,7 @@ class SessionOptions {
     required this.onReceiveTotem,
   });
 
+  final EventDetailSchema event;
   final String token;
   final bool cameraEnabled;
   final bool microphoneEnabled;
@@ -55,157 +51,164 @@ class SessionOptions {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-
     return other is SessionOptions &&
-        other.token == token &&
-        other.cameraEnabled == cameraEnabled &&
-        other.microphoneEnabled == microphoneEnabled &&
-        other.onEmojiReceived == onEmojiReceived &&
-        other.onMessageReceived == onMessageReceived &&
-        other.onLivekitError == onLivekitError &&
-        other.onReceiveTotem == onReceiveTotem;
+        other.event.slug == event.slug &&
+        other.token == token;
   }
 
   @override
-  int get hashCode {
-    return token.hashCode ^
-        cameraEnabled.hashCode ^
-        microphoneEnabled.hashCode ^
-        onEmojiReceived.hashCode ^
-        onMessageReceived.hashCode ^
-        onLivekitError.hashCode ^
-        onReceiveTotem.hashCode;
-  }
-}
-
-@riverpod
-LiveKitService sessionService(Ref ref, SessionOptions options) {
-  final service = LiveKitService(options)
-    ..addListener(() {
-      ref.notifyListeners();
-    });
-  return service;
+  int get hashCode => event.slug.hashCode ^ token.hashCode;
 }
 
 enum RoomConnectionState { connecting, connected, disconnected, error }
 
-class LiveKitService extends ValueNotifier<SessionState> {
-  LiveKitService(this.initialOptions) : super(const SessionState.waiting()) {
+@immutable
+class LiveKitState {
+  const LiveKitState({
+    this.connectionState = RoomConnectionState.connecting,
+    this.sessionState = const SessionState.waiting(),
+  });
+
+  final RoomConnectionState connectionState;
+  final SessionState sessionState;
+
+  bool isMyTurn(RoomContext room) {
+    return sessionState.speakingNow != null &&
+        sessionState.speakingNow == room.localParticipant?.identity;
+  }
+
+  LiveKitState copyWith({
+    RoomConnectionState? connectionState,
+    SessionState? sessionState,
+  }) {
+    return LiveKitState(
+      connectionState: connectionState ?? this.connectionState,
+      sessionState: sessionState ?? this.sessionState,
+    );
+  }
+}
+
+@riverpod
+class LiveKitService extends _$LiveKitService {
+  late final RoomContext room;
+  late final EventsListener<RoomEvent> _listener;
+  late final MobileTotemApi _apiService;
+  late final SessionOptions _options;
+  String? _lastMetadata;
+
+  @override
+  LiveKitState build(SessionOptions options) {
+    _options = options;
+    _apiService = ref.read(mobileApiServiceProvider);
+
     room = RoomContext(
       url: AppConfig.liveKitUrl,
-      token: initialOptions.token,
+      token: _options.token,
       connect: true,
-      onConnected: () {
-        _onConnected(
-          cameraEnabled: initialOptions.cameraEnabled,
-          microphoneEnabled: initialOptions.microphoneEnabled,
-        );
-      },
+      onConnected: _onConnected,
       onDisconnected: _onDisconnected,
       onError: _onError,
     );
 
     _listener = room.room.createListener();
     _listener.on<DataReceivedEvent>(_onDataReceived);
+    room.addListener(_onRoomChanges);
+
+    ref.onDispose(() {
+      debugPrint('Disposing LiveKitService and closing connections.');
+      _listener.dispose();
+      room
+        ..removeListener(_onRoomChanges)
+        ..dispose();
+    });
+
+    return const LiveKitState();
   }
 
-  final SessionOptions initialOptions;
-  late final RoomContext room;
-  late final EventsListener<RoomEvent> _listener;
-  SessionState get status => value;
-
-  RoomConnectionState _connectionState = RoomConnectionState.connecting;
-  RoomConnectionState get connectionState => _connectionState;
-
-  void _onConnected({
-    required bool cameraEnabled,
-    required bool microphoneEnabled,
-  }) {
-    if (room.localParticipant != null) {
-      room.localParticipant!.setCameraEnabled(cameraEnabled);
-      room.localParticipant!.setMicrophoneEnabled(microphoneEnabled);
-    }
-
-    _connectionState = RoomConnectionState.connected;
-    notifyListeners();
+  void _onConnected() {
+    room.localParticipant?.setCameraEnabled(_options.cameraEnabled);
+    room.localParticipant?.setMicrophoneEnabled(_options.microphoneEnabled);
+    state = state.copyWith(connectionState: RoomConnectionState.connected);
   }
 
   void _onDisconnected() {
-    _connectionState = RoomConnectionState.disconnected;
-    notifyListeners();
+    state = state.copyWith(connectionState: RoomConnectionState.disconnected);
   }
 
   void _onError(LiveKitException? error) {
     if (error == null) return;
     debugPrint('LiveKit error: $error');
-
     ErrorHandler.handleLivekitError(error);
+    state = state.copyWith(connectionState: RoomConnectionState.error);
+    _options.onLivekitError(error);
+  }
 
-    _connectionState = RoomConnectionState.error;
-    notifyListeners();
-    initialOptions.onLivekitError(error);
+  void _onRoomChanges() {
+    final metadata = room.room.metadata;
+    if (metadata != _lastMetadata) {
+      final previousState = SessionState.fromMetadata(_lastMetadata);
+      final newState = SessionState.fromMetadata(metadata);
+
+      if (previousState.speakingNow != newState.speakingNow &&
+          newState.speakingNow == room.localParticipant?.identity) {
+        debugPrint('You are now speaking');
+        _options.onReceiveTotem();
+      }
+
+      state = state.copyWith(sessionState: newState);
+      _lastMetadata = metadata;
+    }
   }
 
   void _onDataReceived(DataReceivedEvent event) {
     if (event.topic == null || event.participant == null) return;
+    final data = const Utf8Decoder().convert(event.data);
 
-    if (event.topic == SessionCommunicationTopics.state.topic) {
-      try {
-        final newState = SessionState.fromJson(
-          jsonDecode(const Utf8Decoder().convert(event.data))
-              as Map<String, dynamic>,
-        );
-        _onStateChanged(newState);
-      } catch (e) {
-        debugPrint('Error decoding session state: $e');
-      }
-    } else if (event.topic == SessionCommunicationTopics.emoji.topic) {
-      _onEmojiReceived(
-        event.participant!.identity,
-        const Utf8Decoder().convert(event.data),
-      );
+    if (event.topic == SessionCommunicationTopics.emoji.topic) {
+      _options.onEmojiReceived(event.participant!.identity, data);
     } else if (event.topic == SessionCommunicationTopics.chat.topic) {
-      initialOptions.onMessageReceived(
-        event.participant!.identity,
-        const Utf8Decoder().convert(event.data),
-      );
+      try {
+        final message = ChatMessage.fromMap(
+          jsonDecode(data) as Map<String, dynamic>,
+          event.participant,
+        );
+        _options.onMessageReceived(
+          event.participant!.identity,
+          message.message,
+        );
+      } catch (error, stackTrace) {
+        debugPrint('Error decoding chat message: $error');
+        debugPrintStack(stackTrace: stackTrace);
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Error decoding chat message',
+        );
+      }
     }
   }
 
-  void _onEmojiReceived(String userIdentity, String emoji) {
-    debugPrint('Emoji received: $emoji from user: $userIdentity');
-    initialOptions.onEmojiReceived(userIdentity, emoji);
+  /// Pass the totem to the next participant in the speaking order.
+  ///
+  /// This fails silently if it's not the user's turn.
+  Future<void> passTotem() async {
+    if (!state.isMyTurn(room)) return;
+    await _apiService.meetings.totemMeetingsMobileApiPassTotemEndpoint(
+      eventSlug: _options.event.slug,
+    );
   }
 
+  /// Send an emoji to other participants.
   void sendEmoji(String emoji) {
     room.localParticipant?.publishData(
       const Utf8Encoder().convert(emoji),
       topic: SessionCommunicationTopics.emoji.topic,
     );
-    debugPrint('Session => Sending emoji: $emoji');
   }
 
-  void _onStateChanged(SessionState newState) {
-    final previousState = value;
-
-    if (previousState != newState) {
-      debugPrint('Session state changed: $newState');
-      value = newState;
-      notifyListeners();
-    }
-
-    if (previousState.speakingNow != newState.speakingNow) {
-      if (isMyTurn) {
-        debugPrint('You are now speaking');
-        initialOptions.onReceiveTotem();
-      } else {
-        // TODO(bdlukaa): Handle you are not speaking
-      }
-    }
-  }
-
-  bool get isMyTurn {
-    return value.speakingNow != null &&
-        value.speakingNow == room.localParticipant?.identity;
+  Future<void> startSession() async {
+    await _apiService.meetings.totemMeetingsMobileApiStartRoomEndpoint(
+      eventSlug: _options.event.slug,
+    );
   }
 }

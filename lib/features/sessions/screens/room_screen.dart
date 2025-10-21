@@ -4,7 +4,9 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
@@ -17,6 +19,7 @@ import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
@@ -60,7 +63,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   }
 
   var _showEmojiPicker = false;
-
   void _onEmojiReceived(String userIdentity, String emoji) {
     final userKey = participantKeys[userIdentity];
     if (userKey != null && userKey.currentContext != null) {
@@ -113,82 +115,107 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     if (mounted) {
       setState(() => _receivingTotem = false);
     }
+    // TODO(bdlukaa): Invoke accept totem api
   }
 
   @override
   Widget build(BuildContext context) {
-    final session = ref.watch(
-      sessionServiceProvider(
-        SessionOptions(
-          token: widget.token,
-          cameraEnabled: widget.cameraEnabled,
-          microphoneEnabled: widget.micEnabled,
-          onEmojiReceived: _onEmojiReceived,
-          onMessageReceived: _onChatMessageReceived,
-          onLivekitError: _onLivekitError,
-          onReceiveTotem: _onReceiveTotem,
-        ),
-      ),
+    final sessionOptions = SessionOptions(
+      event: widget.event,
+      token: widget.token,
+      cameraEnabled: widget.cameraEnabled,
+      microphoneEnabled: widget.micEnabled,
+      onEmojiReceived: _onEmojiReceived,
+      onMessageReceived: _onChatMessageReceived,
+      onLivekitError: _onLivekitError,
+      onReceiveTotem: _onReceiveTotem,
+    );
+
+    final sessionState = ref.watch(liveKitServiceProvider(sessionOptions));
+    final sessionNotifier = ref.read(
+      liveKitServiceProvider(sessionOptions).notifier,
     );
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-
         final shouldPop = await showLeaveDialog(context) ?? false;
         if (context.mounted && shouldPop) {
-          Navigator.of(context).pop();
+          popOrHome(context);
         }
       },
       child: RoomBackground(
         child: LivekitRoom(
-          roomContext: session.room,
+          roomContext: sessionNotifier.room,
           builder: (context, roomCtx) {
-            switch (session.connectionState) {
-              case RoomConnectionState.error:
-                return RoomErrorScreen(
-                  onRetry: () {
-                    roomCtx.connect();
-                  },
-                );
-              case RoomConnectionState.connecting:
-                return const LoadingRoomScreen();
-              case RoomConnectionState.disconnected:
-                return SessionEndedScreen(event: widget.event);
-              case RoomConnectionState.connected:
-                if (session.isMyTurn) {
-                  if (_receivingTotem) {
-                    return ReceiveTotemScreen(
-                      actionBar: buildActionBar(session),
-                      onAcceptTotem: _onAcceptTotem,
-                    );
-                  }
-                  return MyTurn(
-                    actionBar: buildActionBar(session),
-                    getParticipantKey: getParticipantKey,
-                  );
-                } else {
-                  return NotMyTurn(
-                    actionBar: buildActionBar(session),
-                    getParticipantKey: getParticipantKey,
-                  );
-                }
-            }
+            return Navigator(
+              onDidRemovePage: (page) => {},
+              pages: [
+                MaterialPage(
+                  child: _buildBody(sessionNotifier, sessionState),
+                ),
+              ],
+            );
           },
         ),
       ),
     );
   }
 
+  Widget _buildBody(LiveKitService notifier, LiveKitState state) {
+    return Builder(
+      builder: (context) {
+        final roomCtx = notifier.room;
+        switch (state.connectionState) {
+          case RoomConnectionState.error:
+            return RoomErrorScreen(onRetry: roomCtx.connect);
+          case RoomConnectionState.connecting:
+            return const LoadingRoomScreen();
+          case RoomConnectionState.disconnected:
+            return SessionEndedScreen(event: widget.event);
+          case RoomConnectionState.connected:
+            if (state.sessionState.status == SessionStatus.ended) {
+              return SessionEndedScreen(event: widget.event);
+            }
+            if (roomCtx.localParticipant == null) {
+              return const LoadingRoomScreen();
+            }
+
+            if (state.isMyTurn(notifier.room)) {
+              if (_receivingTotem) {
+                return ReceiveTotemScreen(
+                  actionBar: buildActionBar(notifier, state),
+                  onAcceptTotem: _onAcceptTotem,
+                );
+              }
+              return MyTurn(
+                actionBar: buildActionBar(notifier, state),
+                getParticipantKey: getParticipantKey,
+                onPassTotem: notifier.passTotem,
+              );
+            } else {
+              return NotMyTurn(
+                actionBar: buildActionBar(notifier, state),
+                getParticipantKey: getParticipantKey,
+                sessionState: state.sessionState,
+              );
+            }
+        }
+      },
+    );
+  }
+
   Widget buildActionBar(
-    LiveKitService session,
+    LiveKitService notifier,
+    LiveKitState state,
   ) {
     return Builder(
       builder: (context) {
-        final deviceCtx = MediaDeviceContext.of(context)!;
-        final roomCtx = session.room;
+        final roomCtx = notifier.room;
         final user = roomCtx.localParticipant;
+        final auth = ref.read(authControllerProvider);
+        final isKeeper = widget.event.space.author.slug == auth.user?.slug;
         return ActionBar(
           children: [
             MediaDeviceSelectButton(
@@ -229,19 +256,16 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 );
               },
             ),
-            if (!session.isMyTurn)
+            if (!state.isMyTurn(notifier.room))
               Builder(
                 builder: (button) {
                   return ActionBarButton(
                     active: _showEmojiPicker,
                     onPressed: () async {
                       setState(() => _showEmojiPicker = true);
-                      final emoji = await showEmojiBar(
-                        button,
-                        context,
-                      );
+                      final emoji = await showEmojiBar(button, context);
                       if (emoji != null && emoji.isNotEmpty) {
-                        session.sendEmoji(emoji);
+                        notifier.sendEmoji(emoji);
                         if (user?.identity != null) {
                           _onEmojiReceived(user!.identity, emoji);
                         }
@@ -263,7 +287,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 });
                 await showSessionChatSheet(
                   context,
-                  roomCtx,
                   widget.event,
                 );
                 if (mounted) {
@@ -295,8 +318,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 padding: EdgeInsetsDirectional.zero,
                 onPressed: () => showOptionsSheet(
                   context,
-                  deviceCtx,
-                  roomCtx,
+                  isKeeper ? notifier.startSession : null,
                 ),
                 icon: const TotemIcon(
                   TotemIcons.more,

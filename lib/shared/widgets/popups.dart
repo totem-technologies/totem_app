@@ -160,7 +160,6 @@ class NotificationPopup extends StatelessWidget {
                 size: 24,
               ),
             ),
-
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

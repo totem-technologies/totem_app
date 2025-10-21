@@ -63,7 +63,6 @@ class SessionHistoryScreen extends ConsumerWidget {
                     'Here are the recent sessions you have been a part of.',
                     textAlign: TextAlign.center,
                   ),
-
                   for (final session in data)
                     Padding(
                       padding: const EdgeInsetsDirectional.only(top: 20),

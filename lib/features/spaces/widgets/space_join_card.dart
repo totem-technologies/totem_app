@@ -14,12 +14,12 @@ import 'package:totem_app/api/models/meeting_provider_enum.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/api_service.dart';
-import 'package:totem_app/features/profile/screens/delete_account.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:url_launcher/link.dart';
@@ -493,7 +493,10 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
   Future<void> joinLivekit() async {
     debugPrint('Joining livekit');
-    context.goNamed(RouteNames.videoSessionPrejoin, extra: widget.event);
+    await context.pushNamed(
+      RouteNames.videoSessionPrejoin,
+      extra: widget.event,
+    );
   }
 }
 
@@ -601,7 +604,6 @@ class _AttendingDialogState extends State<AttendingDialog> {
                         'starts.',
                   ),
                   TextSpan(text: '\n\n'),
-
                   TextSpan(
                     text:
                         'When you join, you’ll be in a Space where we take '
@@ -623,7 +625,6 @@ class _AttendingDialogState extends State<AttendingDialog> {
               ),
               textAlign: TextAlign.center,
             ),
-
             ElevatedButton(
               onPressed: () {
                 if (!_addedToCalendar) {
