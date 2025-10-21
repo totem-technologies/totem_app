@@ -158,17 +158,17 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                       ? Uri.parse(getFullUrl(widget.event.calLink))
                       : null,
                   builder: (context, followLink) {
+                    const buttonStyle = ButtonStyle(
+                      padding: WidgetStatePropertyAll(
+                        EdgeInsetsDirectional.zero,
+                      ),
+                      maximumSize: WidgetStatePropertyAll(Size.square(46)),
+                      minimumSize: WidgetStatePropertyAll(Size.square(46)),
+                      foregroundColor: WidgetStatePropertyAll(
+                        AppTheme.mauve,
+                      ),
+                    );
                     if (state == SpaceJoinCardState.joined) {
-                      const buttonStyle = ButtonStyle(
-                        padding: WidgetStatePropertyAll(
-                          EdgeInsetsDirectional.zero,
-                        ),
-                        maximumSize: WidgetStatePropertyAll(Size.square(46)),
-                        minimumSize: WidgetStatePropertyAll(Size.square(46)),
-                        foregroundColor: WidgetStatePropertyAll(
-                          AppTheme.mauve,
-                        ),
-                      );
                       return SizedBox(
                         height: 46,
                         child: Row(
@@ -236,9 +236,33 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                     );
 
                     switch (state) {
+                      case SpaceJoinCardState.closed:
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          spacing: 14,
+                          children: [
+                            if (_attending)
+                              Tooltip(
+                                message: 'Give up your spot',
+                                child: OutlinedButton(
+                                  onPressed: giveUpSpot,
+                                  style: buttonStyle,
+                                  child: const TotemIcon(
+                                    TotemIcons.giveUpSpot,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                            OutlinedButton(
+                              onPressed: onPressed,
+                              child: _loading
+                                  ? const LoadingIndicator(size: 24)
+                                  : content,
+                            ),
+                          ],
+                        );
                       case SpaceJoinCardState.ended:
                       case SpaceJoinCardState.cancelled:
-                      case SpaceJoinCardState.closed:
                       case SpaceJoinCardState.joined:
                       case SpaceJoinCardState.full:
                         return OutlinedButton(
