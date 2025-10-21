@@ -104,7 +104,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                       () {
                         switch (state) {
                           case SpaceJoinCardState.ended:
-                            return 'Session Ended';
+                            return 'No more upcoming sessions';
                           case SpaceJoinCardState.cancelled:
                             return 'This session has been cancelled';
                           case SpaceJoinCardState.joinable:
