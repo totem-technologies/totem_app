@@ -57,10 +57,10 @@ class BlogListScreen extends ConsumerWidget {
                         bottom: BottomNavScaffold.bottomNavHeight + 20,
                       ),
                       sliver: SliverFixedExtentList.builder(
-                        itemExtent: NewBlogPostCard.cardHeight + 10,
+                        itemExtent: BlogPostCard.cardHeight + 10,
                         itemCount: data.items.sublist(1).length,
                         itemBuilder: (context, index) =>
-                            NewBlogPostCard.fromBlogPostSchema(
+                            BlogPostCard.fromBlogPostSchema(
                               data.items[index + 1],
                             ),
                       ),
