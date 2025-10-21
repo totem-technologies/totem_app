@@ -169,7 +169,6 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                                 ),
                                 ProfileAvatarTypeEnum.td || _ => const Icon(
                                   Icons.shuffle,
-                                  fontWeight: FontWeight.w200,
                                 ),
                               },
                             ),

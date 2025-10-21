@@ -158,7 +158,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                       ? Uri.parse(getFullUrl(widget.event.calLink))
                       : null,
                   builder: (context, followLink) {
-                    const buttonStyle = ButtonStyle(
+                    const secondaryButtonStyle = ButtonStyle(
                       padding: WidgetStatePropertyAll(
                         EdgeInsetsDirectional.zero,
                       ),
@@ -178,7 +178,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                               message: 'Add to calendar',
                               child: OutlinedButton(
                                 onPressed: addToCalendar,
-                                style: buttonStyle,
+                                style: secondaryButtonStyle,
                                 child: const TotemIcon(
                                   TotemIcons.calendar,
                                   size: 24,
@@ -188,12 +188,14 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                             Tooltip(
                               message: 'Give up your spot',
                               child: OutlinedButton(
-                                onPressed: giveUpSpot,
-                                style: buttonStyle,
-                                child: const TotemIcon(
-                                  TotemIcons.giveUpSpot,
-                                  size: 24,
-                                ),
+                                onPressed: _loading ? null : giveUpSpot,
+                                style: secondaryButtonStyle,
+                                child: _loading
+                                    ? const LoadingIndicator(size: 24)
+                                    : const TotemIcon(
+                                        TotemIcons.giveUpSpot,
+                                        size: 24,
+                                      ),
                               ),
                             ),
                           ],
@@ -245,8 +247,8 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                               Tooltip(
                                 message: 'Give up your spot',
                                 child: OutlinedButton(
-                                  onPressed: giveUpSpot,
-                                  style: buttonStyle,
+                                  onPressed: _loading ? null : giveUpSpot,
+                                  style: secondaryButtonStyle,
                                   child: const TotemIcon(
                                     TotemIcons.giveUpSpot,
                                     size: 24,
@@ -417,7 +419,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   }
 
   Future<void> addToCalendar() async {
-    // TODO(bdlukaa): Integrate this to the phone device
+    // TODO(adil): Integrate this to the phone device
     // try {
     //   final eventide = Eventide();
     //   await eventide.createEventInDefaultCalendar(
