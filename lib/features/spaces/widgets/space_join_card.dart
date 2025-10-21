@@ -604,7 +604,6 @@ class _AttendingDialogState extends State<AttendingDialog> {
                         'starts.',
                   ),
                   TextSpan(text: '\n\n'),
-
                   TextSpan(
                     text:
                         'When you join, you’ll be in a Space where we take '
@@ -626,7 +625,6 @@ class _AttendingDialogState extends State<AttendingDialog> {
               ),
               textAlign: TextAlign.center,
             ),
-
             ElevatedButton(
               onPressed: () {
                 if (!_addedToCalendar) {

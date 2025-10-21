@@ -161,7 +161,6 @@ class NewBlogPostCard extends StatelessWidget {
                     fontSize: 16,
                   ),
                 ),
-
                 if (subtitle.isNotEmpty)
                   Text(
                     subtitle,

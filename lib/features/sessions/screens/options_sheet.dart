@@ -39,7 +39,7 @@ Future<void> showOptionsSheet(
 }
 
 class OptionsSheet extends StatelessWidget {
-  const OptionsSheet({super.key, required this.onStartSession});
+  const OptionsSheet({required this.onStartSession, super.key});
 
   final VoidCallback? onStartSession;
 

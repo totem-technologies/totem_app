@@ -73,7 +73,6 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         flexibleSpace: FlexibleSpaceBar(
                           background: SpaceDetailAppBar(event: event),
                         ),
-
                         leading: Container(
                           margin: const EdgeInsetsDirectional.only(start: 20),
                           alignment: AlignmentDirectional.center,
@@ -510,7 +509,6 @@ class SessionSheet extends StatelessWidget {
                         ],
                       ),
                     ),
-
                     UserAvatar.fromUserSchema(
                       event.space.author,
                       radius: 40,
@@ -545,7 +543,6 @@ class SessionSheet extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 Html(
                   data: event.description,
                   shrinkWrap: true,

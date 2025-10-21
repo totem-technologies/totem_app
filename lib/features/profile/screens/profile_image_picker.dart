@@ -176,7 +176,6 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                   ),
                 ),
               ),
-
               GestureDetector(
                 onTap: () {
                   setState(() {
@@ -250,7 +249,6 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                   ),
                 ),
               ),
-
               ElevatedButton(
                 onPressed: _loading ? () {} : _onSave,
                 child: _loading

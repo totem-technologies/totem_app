@@ -136,7 +136,6 @@ class KeeperProfileScreen extends ConsumerWidget {
                               ),
                               const Text('Hosted Spaces'),
                               const Spacer(),
-
                               Text(
                                 keeper.languages,
                                 style: const TextStyle(
@@ -145,9 +144,7 @@ class KeeperProfileScreen extends ConsumerWidget {
                                 ),
                               ),
                               const Text('Languages'),
-
                               const Spacer(),
-
                               Text(
                                 keeper.monthJoined,
                                 style: const TextStyle(
@@ -156,7 +153,6 @@ class KeeperProfileScreen extends ConsumerWidget {
                                 ),
                               ),
                               const Text('Month Joined'),
-
                               const Spacer(),
                             ],
                           ),

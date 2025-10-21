@@ -191,7 +191,6 @@ class ErrorDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-
             if (message != null) ...[
               Text(
                 message!,
@@ -204,7 +203,6 @@ class ErrorDialog extends StatelessWidget {
               ),
               const SizedBox(height: 24),
             ],
-
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(

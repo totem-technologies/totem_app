@@ -144,9 +144,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           autofillHints: const [AutofillHints.email],
         ),
         const InfoText('Your email will be private.'),
-
         const SizedBox(height: 24),
-
         ElevatedButton(
           onPressed: _loading ? null : _save,
           child: _loading ? const LoadingIndicator() : const Text('Update'),

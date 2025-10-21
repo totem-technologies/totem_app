@@ -251,7 +251,6 @@ GoRouter createRouter(WidgetRef ref) {
               ),
             ],
           ),
-
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
@@ -274,7 +273,6 @@ GoRouter createRouter(WidgetRef ref) {
               ),
             ],
           ),
-
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
