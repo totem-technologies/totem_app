@@ -15,6 +15,7 @@ import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/api_service.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/date.dart';
@@ -227,17 +228,19 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                       }
                     }
 
-                    final content = Text(
-                      switch (state) {
-                        SpaceJoinCardState.ended ||
-                        SpaceJoinCardState.cancelled ||
-                        SpaceJoinCardState.closed => 'Explore',
-                        SpaceJoinCardState.joinable => 'Join Now',
-                        SpaceJoinCardState.joined => 'Add to calendar',
-                        SpaceJoinCardState.full => 'Explore',
-                        SpaceJoinCardState.notJoined => 'Attend',
-                      },
-                      style: const TextStyle(fontWeight: FontWeight.w400),
+                    final content = Center(
+                      child: Text(
+                        switch (state) {
+                          SpaceJoinCardState.ended ||
+                          SpaceJoinCardState.cancelled ||
+                          SpaceJoinCardState.closed => 'Explore',
+                          SpaceJoinCardState.joinable => 'Join Now',
+                          SpaceJoinCardState.joined => 'Add to calendar',
+                          SpaceJoinCardState.full => 'Explore',
+                          SpaceJoinCardState.notJoined => 'Attend',
+                        },
+                        style: const TextStyle(fontWeight: FontWeight.w400),
+                      ),
                     );
 
                     switch (state) {
@@ -259,6 +262,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                                 ),
                               ),
                             OutlinedButton(
+                              style: secondaryButtonStyle,
                               onPressed: onPressed,
                               child: _loading
                                   ? const LoadingIndicator(size: 24)
@@ -281,7 +285,8 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                         return ElevatedButton(
                           onPressed: onPressed,
                           style: ElevatedButton.styleFrom(
-                            maximumSize: const Size(156, 60),
+                            maximumSize: const Size(156, 46),
+                            minimumSize: const Size(46, 46),
                             padding: const EdgeInsetsDirectional.symmetric(
                               horizontal: 22,
                             ),
@@ -339,22 +344,39 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   }
 
   Future<void> attend(WidgetRef ref) async {
-    if (_attending || _loading || (kDebugMode && AppConfig.isProduction)) {
+    if (_attending ||
+        _loading ||
+        (kDebugMode && AppConfig.isProduction) ||
+        !mounted) {
       return;
     }
 
     setState(() => _loading = true);
 
-    final mobileApiService = ref.read(mobileApiServiceProvider);
-    final response = await mobileApiService.spaces
-        .totemCirclesMobileApiRsvpConfirm(eventSlug: event.slug);
+    try {
+      final mobileApiService = ref.read(mobileApiServiceProvider);
+      final response = await mobileApiService.spaces
+          .totemCirclesMobileApiRsvpConfirm(eventSlug: event.slug);
 
-    setState(() => _loading = false);
-
-    if (response.attending) {
-      setState(() => _attending = true);
-      attendingPopup();
-    } else {
+      if (response.attending) {
+        // We still want to wait for the refresh to complete
+        // ignore: unused_result
+        await ref.refresh(spaceProvider(widget.space.slug).future);
+        if (mounted) {
+          setState(() => _attending = true);
+          attendingPopup();
+        }
+      } else {
+        if (mounted) {
+          showErrorPopup(
+            context,
+            icon: TotemIcons.spaces,
+            title: 'Failed to attend to this circle',
+            message: 'Please try again later',
+          );
+        }
+      }
+    } catch (e) {
       if (mounted) {
         showErrorPopup(
           context,
@@ -362,6 +384,10 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
           title: 'Failed to attend to this circle',
           message: 'Please try again later',
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
       }
     }
   }
@@ -385,6 +411,10 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     var progress = 0;
 
     Timer.periodic(const Duration(milliseconds: 250), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       progress++;
 
       if (progress >= total) {
@@ -498,29 +528,39 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
       },
     );
 
-    if (giveUp == null || !giveUp) return;
+    if (giveUp == null || !giveUp || !mounted) return;
 
-    setState(() {
-      _loading = true;
-    });
+    setState(() => _loading = true);
 
-    final mobileApiService = ref.read(mobileApiServiceProvider);
-    final response = await mobileApiService.spaces
-        .totemCirclesMobileApiRsvpCancel(eventSlug: event.slug);
+    try {
+      final mobileApiService = ref.read(mobileApiServiceProvider);
+      final response = await mobileApiService.spaces
+          .totemCirclesMobileApiRsvpCancel(eventSlug: event.slug);
 
-    setState(() => _loading = false);
-
-    if (!response.attending) {
-      if (mounted) {
-        setState(() => _attending = false);
-        showErrorPopup(
-          context,
-          icon: TotemIcons.seats,
-          title: 'You gave up your spot',
-          message: 'You can always attend again if a spot opens up.',
-        );
+      if (!response.attending) {
+        // We still want to wait for the refresh to complete
+        // ignore: unused_result
+        await ref.refresh(spaceProvider(widget.space.slug).future);
+        if (mounted) {
+          setState(() => _attending = false);
+          showErrorPopup(
+            context,
+            icon: TotemIcons.seats,
+            title: 'You gave up your spot',
+            message: 'You can always attend again if a spot opens up.',
+          );
+        }
+      } else {
+        if (mounted) {
+          showErrorPopup(
+            context,
+            icon: TotemIcons.seats,
+            title: 'Failed to give up your spot',
+            message: 'Please try again later',
+          );
+        }
       }
-    } else {
+    } catch (e) {
       if (mounted) {
         showErrorPopup(
           context,
@@ -529,15 +569,16 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
           message: 'Please try again later',
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
   Future<void> joinLivekit() async {
     debugPrint('Joining livekit');
-    await context.pushNamed(
-      RouteNames.videoSessionPrejoin,
-      extra: event.slug,
-    );
+    await context.pushNamed(RouteNames.videoSessionPrejoin, extra: event.slug);
   }
 }
 

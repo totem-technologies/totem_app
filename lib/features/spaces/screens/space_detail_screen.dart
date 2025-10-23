@@ -301,7 +301,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                 start: 0,
                 end: 0,
                 bottom: 0,
-                child: SpaceJoinCard(space: space),
+                child: SpaceJoinCard(key: ValueKey(space), space: space),
               ),
             ],
           ),

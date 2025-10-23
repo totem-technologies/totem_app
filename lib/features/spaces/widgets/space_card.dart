@@ -74,13 +74,7 @@ class SpaceCard extends StatelessWidget {
         margin: EdgeInsetsDirectional.zero,
         child: InkWell(
           highlightColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
-          onTap:
-              onTap ??
-              (space.nextEvent != null
-                  ? () {
-                      context.push(RouteNames.space(space.nextEvent!.slug));
-                    }
-                  : null),
+          onTap: onTap ?? () => context.push(RouteNames.space(space.slug)),
           borderRadius: BorderRadius.circular(8),
           child: Stack(
             children: [
@@ -269,13 +263,7 @@ class SmallSpaceCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       highlightColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
-      onTap:
-          onTap ??
-          (space.nextEvent != null
-              ? () {
-                  context.push(RouteNames.space(space.nextEvent!.slug));
-                }
-              : null),
+      onTap: onTap ?? () => context.push(RouteNames.space(space.slug)),
       child: Stack(
         children: [
           Positioned.fill(
