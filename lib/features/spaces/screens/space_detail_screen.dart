@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:markdown/markdown.dart' as markdown;
 import 'package:share_plus/share_plus.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -25,8 +26,13 @@ import 'package:totem_app/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SpaceDetailScreen extends ConsumerStatefulWidget {
-  const SpaceDetailScreen({required this.slug, super.key});
+  const SpaceDetailScreen({required this.slug, this.eventSlug, super.key});
+
   final String slug;
+
+  /// The slug used to get a specific event. If null, the event will be the
+  /// next upcoming event.
+  final String? eventSlug;
 
   @override
   ConsumerState<SpaceDetailScreen> createState() => _SpaceDetailScreenState();
@@ -47,6 +53,15 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final spaceAsync = ref.watch(spaceProvider(widget.slug));
+    final eventAsync = ref.watch(
+      eventProvider(
+        widget.eventSlug ??
+            spaceAsync.maybeWhen(
+              data: (space) => space.nextEvent?.slug ?? '',
+              orElse: () => '',
+            ),
+      ),
+    );
 
     final width = MediaQuery.sizeOf(context).width;
     final isPhone = width < 600;
@@ -71,7 +86,10 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                         automaticallyImplyLeading: false,
                         backgroundColor: theme.scaffoldBackgroundColor,
                         flexibleSpace: FlexibleSpaceBar(
-                          background: SpaceDetailAppBar(space: space),
+                          background: SpaceDetailAppBar(
+                            space: space,
+                            event: eventAsync,
+                          ),
                         ),
                         leading: Container(
                           margin: const EdgeInsetsDirectional.only(start: 20),
@@ -267,16 +285,22 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                           const SizedBox(height: 16),
 
                           // TODO(bdlukaa): Sessions Calendar
-                          if (space.nextEvent != null)
-                            Container(
+                          eventAsync.when(
+                            data: (event) => Container(
                               padding: horizontalPadding,
-                              constraints: const BoxConstraints(maxHeight: 160),
-                              child: SpaceCard(
-                                space: space,
-                                onTap: () => _showSessionSheet(context, space),
+                              constraints: const BoxConstraints(
+                                maxHeight: 160,
+                              ),
+                              child: SpaceCard.fromEventDetailSchema(
+                                event,
+                                onTap: () =>
+                                    _showSessionSheet(context, space, event),
                                 compact: true,
                               ),
                             ),
+                            loading: () => const SizedBox.shrink(),
+                            error: (err, stack) => const SizedBox.shrink(),
+                          ),
 
                           const SizedBox(height: 16),
 
@@ -297,11 +321,19 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                   ),
                 ),
               ),
-              PositionedDirectional(
-                start: 0,
-                end: 0,
-                bottom: 0,
-                child: SpaceJoinCard(key: ValueKey(space), space: space),
+              eventAsync.when(
+                loading: () => const SizedBox.shrink(),
+                error: (err, stack) => const SizedBox.shrink(),
+                data: (event) => PositionedDirectional(
+                  start: 0,
+                  end: 0,
+                  bottom: 0,
+                  child: SpaceJoinCard(
+                    key: ValueKey('${space.hashCode}${event.hashCode}'),
+                    space: space,
+                    event: event,
+                  ),
+                ),
               ),
             ],
           ),
@@ -330,6 +362,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
   Future<void> _showSessionSheet(
     BuildContext context,
     SpaceDetailSchema space,
+    EventDetailSchema event,
   ) {
     return showModalBottomSheet(
       context: context,
@@ -337,7 +370,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
       useSafeArea: true,
       showDragHandle: true,
       builder: (context) {
-        return SessionSheet(space: space);
+        return SessionSheet(space: space, event: event);
       },
     );
   }
@@ -462,15 +495,15 @@ class AboutSpaceSheet extends StatelessWidget {
 }
 
 class SessionSheet extends StatelessWidget {
-  SessionSheet({required this.space, super.key})
+  SessionSheet({required this.space, required this.event, super.key})
     : assert(space.nextEvent != null, 'space.nextEvent must not be null');
 
   final SpaceDetailSchema space;
+  final EventDetailSchema event;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final event = space.nextEvent!;
 
     return DraggableScrollableSheet(
       expand: false,
@@ -494,7 +527,7 @@ class SessionSheet extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(event.title!, style: theme.textTheme.titleLarge),
+                          Text(event.title, style: theme.textTheme.titleLarge),
                           Text.rich(
                             TextSpan(
                               text: 'with ',
@@ -557,7 +590,7 @@ class SessionSheet extends StatelessWidget {
               ],
             ),
           ),
-          SpaceJoinCard(space: space),
+          SpaceJoinCard(space: space, event: event),
         ],
       ),
     );

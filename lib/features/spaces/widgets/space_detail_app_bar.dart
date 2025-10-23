@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
@@ -9,14 +11,18 @@ import 'package:totem_app/shared/widgets/space_gradient_mask.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class SpaceDetailAppBar extends StatelessWidget {
-  const SpaceDetailAppBar({required this.space, super.key});
+  const SpaceDetailAppBar({
+    required this.space,
+    required this.event,
+    super.key,
+  });
 
   final SpaceDetailSchema space;
+  final AsyncValue<EventDetailSchema> event;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final event = space.nextEvent!;
     return GestureDetector(
       onTap: () {
         Scrollable.ensureVisible(
@@ -62,14 +68,18 @@ class SpaceDetailAppBar extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Text(
-                          event.title!,
-                          style: theme.textTheme.headlineLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 28,
-                            shadows: kElevationToShadow[4],
+                        event.when(
+                          data: (event) => Text(
+                            event.title,
+                            style: theme.textTheme.headlineLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 28,
+                              shadows: kElevationToShadow[4],
+                            ),
                           ),
+                          loading: () => const SizedBox.shrink(),
+                          error: (err, stack) => const SizedBox.shrink(),
                         ),
                         Text(
                           space.title,

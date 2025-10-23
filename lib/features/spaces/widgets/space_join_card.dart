@@ -9,8 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/meeting_provider_enum.dart';
-import 'package:totem_app/api/models/next_event_schema.dart';
 import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -39,16 +39,17 @@ enum SpaceJoinCardState {
 }
 
 class SpaceJoinCard extends ConsumerStatefulWidget {
-  const SpaceJoinCard({required this.space, super.key});
+  const SpaceJoinCard({required this.space, required this.event, super.key});
 
   final SpaceDetailSchema space;
+  final EventDetailSchema event;
 
   @override
   ConsumerState<SpaceJoinCard> createState() => _SpaceJoinCardState();
 }
 
 class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
-  NextEventSchema get event => widget.space.nextEvent!;
+  EventDetailSchema get event => widget.event;
 
   late bool _attending = event.attending;
   var _loading = false;

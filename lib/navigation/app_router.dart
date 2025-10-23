@@ -333,6 +333,16 @@ GoRouter createRouter(WidgetRef ref) {
       ),
 
       GoRoute(
+        path: RouteNames.spaceEvent(':spaceSlug', ':eventSlug'),
+        name: RouteNames.spaceEvent(':spaceSlug', ':eventSlug'),
+        builder: (context, state) {
+          final spaceSlug = state.pathParameters['spaceSlug'] ?? '';
+          final eventSlug = state.pathParameters['eventSlug'];
+          return SpaceDetailScreen(slug: spaceSlug, eventSlug: eventSlug);
+        },
+      ),
+
+      GoRoute(
         path: RouteNames.keeperProfile(':slug'),
         name: RouteNames.keeperProfile(':slug'),
         builder: (context, state) {
