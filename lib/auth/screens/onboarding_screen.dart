@@ -260,6 +260,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             ...List.generate(
                               onboardingData.length,
                               (index) => AnimatedContainer(
+                                key: ValueKey(index),
                                 duration: const Duration(milliseconds: 200),
                                 margin: const EdgeInsets.symmetric(
                                   horizontal: 4,

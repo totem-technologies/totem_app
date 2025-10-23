@@ -211,7 +211,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           loading: () => const LoadingRoomScreen(),
           error: (error, stackTrace) {
             return RoomErrorScreen(
-              onRetry: () => ref.refresh(eventProvider(widget.eventSlug)),
+              onRetry: () =>
+                  ref.refresh(eventProvider(widget.eventSlug).future),
             );
           },
         );
