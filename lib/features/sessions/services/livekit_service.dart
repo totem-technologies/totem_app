@@ -192,9 +192,39 @@ class LiveKitService extends _$LiveKitService {
   /// This fails silently if it's not the user's turn.
   Future<void> passTotem() async {
     if (!state.isMyTurn(room)) return;
-    await _apiService.meetings.totemMeetingsMobileApiPassTotemEndpoint(
-      eventSlug: _options.eventSlug,
-    );
+    try {
+      await _apiService.meetings.totemMeetingsMobileApiPassTotemEndpoint(
+        eventSlug: _options.eventSlug,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Error passing totem: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error passing totem',
+      );
+    }
+  }
+
+  /// Pass the totem to the next participant in the speaking order.
+  ///
+  /// This fails silently if it's not the user's turn.
+  Future<void> acceptTotem() async {
+    if (!state.isMyTurn(room)) return;
+    try {
+      await _apiService.meetings.totemMeetingsMobileApiAcceptTotemEndpoint(
+        eventSlug: _options.eventSlug,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Error accepting totem: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error accepting totem',
+      );
+    }
   }
 
   /// Send an emoji to other participants.

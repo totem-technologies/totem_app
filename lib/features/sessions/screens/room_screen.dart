@@ -112,11 +112,11 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     }
   }
 
-  void _onAcceptTotem() {
+  Future<void> _onAcceptTotem(LiveKitService sessionNotifier) async {
+    await sessionNotifier.acceptTotem();
     if (mounted) {
       setState(() => _receivingTotem = false);
     }
-    // TODO(bdlukaa): Invoke accept totem api
   }
 
   @override
@@ -191,7 +191,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                   if (_receivingTotem) {
                     return ReceiveTotemScreen(
                       actionBar: buildActionBar(notifier, state, event),
-                      onAcceptTotem: _onAcceptTotem,
+                      onAcceptTotem: () => _onAcceptTotem(notifier),
                     );
                   }
                   return MyTurn(

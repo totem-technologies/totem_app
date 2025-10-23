@@ -13,7 +13,7 @@ class ReceiveTotemScreen extends StatelessWidget {
   });
 
   final Widget actionBar;
-  final VoidCallback onAcceptTotem;
+  final Future<void> Function() onAcceptTotem;
 
   @override
   Widget build(BuildContext context) {
