@@ -359,14 +359,16 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
       final response = await mobileApiService.spaces
           .totemCirclesMobileApiRsvpConfirm(eventSlug: event.slug);
 
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+
       if (response.attending) {
-        // We still want to wait for the refresh to complete
-        // ignore: unused_result
-        await ref.refresh(spaceProvider(widget.space.slug).future);
         if (mounted) {
           setState(() => _attending = true);
           attendingPopup();
         }
+        await refresh();
       } else {
         if (mounted) {
           showErrorPopup(
@@ -385,10 +387,6 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
           title: 'Failed to attend to this circle',
           message: 'Please try again later',
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
       }
     }
   }
@@ -538,10 +536,11 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
       final response = await mobileApiService.spaces
           .totemCirclesMobileApiRsvpCancel(eventSlug: event.slug);
 
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+
       if (!response.attending) {
-        // We still want to wait for the refresh to complete
-        // ignore: unused_result
-        await ref.refresh(spaceProvider(widget.space.slug).future);
         if (mounted) {
           setState(() => _attending = false);
           showErrorPopup(
@@ -551,6 +550,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
             message: 'You can always attend again if a spot opens up.',
           );
         }
+        await refresh();
       } else {
         if (mounted) {
           showErrorPopup(
@@ -570,11 +570,16 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
           message: 'Please try again later',
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
     }
+  }
+
+  Future<void> refresh() async {
+    // We still want to wait for the refresh to complete
+    // ignore: unused_result
+    await ref.refresh(eventProvider(event.slug).future);
+    // We still want to wait for the refresh to complete
+    // ignore: unused_result
+    await ref.refresh(spaceProvider(widget.space.slug).future);
   }
 
   Future<void> joinLivekit() async {
