@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/screens/login_screen.dart';
 import 'package:totem_app/auth/screens/onboarding_screen.dart';
@@ -325,11 +324,11 @@ GoRouter createRouter(WidgetRef ref) {
       ),
 
       GoRoute(
-        path: RouteNames.space(':event_slug'),
-        name: RouteNames.space(':event_slug'),
+        path: RouteNames.space(':slug'),
+        name: RouteNames.space(':slug'),
         builder: (context, state) {
-          final eventSlug = state.pathParameters['event_slug'] ?? '';
-          return EventDetailScreen(eventSlug: eventSlug);
+          final slug = state.pathParameters['slug'] ?? '';
+          return SpaceDetailScreen(slug: slug);
         },
       ),
 
@@ -355,7 +354,7 @@ GoRouter createRouter(WidgetRef ref) {
         path: RouteNames.videoSessionPrejoin,
         name: RouteNames.videoSessionPrejoin,
         builder: (context, state) {
-          return PreJoinScreen(event: state.extra! as EventDetailSchema);
+          return PreJoinScreen(eventSlug: state.extra! as String);
         },
       ),
       GoRoute(
@@ -366,7 +365,7 @@ GoRouter createRouter(WidgetRef ref) {
           return VideoRoomScreen(
             cameraEnabled: args.cameraEnabled,
             micEnabled: args.micEnabled,
-            event: args.event,
+            eventSlug: args.eventSlug,
             token: args.token,
           );
         },

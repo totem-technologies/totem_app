@@ -9,8 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/meeting_provider_enum.dart';
+import 'package:totem_app/api/models/next_event_schema.dart';
+import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/api_service.dart';
@@ -37,16 +38,18 @@ enum SpaceJoinCardState {
 }
 
 class SpaceJoinCard extends ConsumerStatefulWidget {
-  const SpaceJoinCard({required this.event, super.key});
+  const SpaceJoinCard({required this.space, super.key});
 
-  final EventDetailSchema event;
+  final SpaceDetailSchema space;
 
   @override
   ConsumerState<SpaceJoinCard> createState() => _SpaceJoinCardState();
 }
 
 class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
-  late bool _attending = widget.event.attending;
+  NextEventSchema get event => widget.space.nextEvent!;
+
+  late bool _attending = event.attending;
   var _loading = false;
 
   // Refresh every second to update timeago and button states
@@ -72,13 +75,13 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     final theme = Theme.of(context);
 
     final hasStarted =
-        widget.event.start.isBefore(DateTime.now()) &&
-        widget.event.start
-            .add(Duration(minutes: widget.event.duration))
+        event.start.isBefore(DateTime.now()) &&
+        event.start
+            .add(Duration(minutes: event.duration))
             .isAfter(DateTime.now());
 
-    final hasEnded = widget.event.start
-        .add(Duration(minutes: widget.event.duration))
+    final hasEnded = event.start
+        .add(Duration(minutes: event.duration))
         .isBefore(DateTime.now());
 
     return SafeArea(
@@ -115,7 +118,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                             return 'This session is full';
                           case SpaceJoinCardState.joined:
                           case SpaceJoinCardState.notJoined:
-                            return formatEventDate(widget.event.start);
+                            return formatEventDate(event.start);
                         }
                       }(),
                       style: theme.textTheme.titleMedium?.copyWith(
@@ -128,11 +131,11 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                           case SpaceJoinCardState.joined:
                           case SpaceJoinCardState.notJoined:
                             return formatEventTime(
-                              widget.event.start,
+                              event.start,
                               // widget.event.userTimezone,
                             );
                           case SpaceJoinCardState.joinable:
-                            return timeago.format(widget.event.start);
+                            return timeago.format(event.start);
                           case SpaceJoinCardState.ended:
                           case SpaceJoinCardState.cancelled:
                           case SpaceJoinCardState.closed:
@@ -153,9 +156,9 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                   uri: hasEnded
                       ? null
                       : hasStarted &&
-                            widget.event.meetingProvider ==
+                            event.meetingProvider ==
                                 MeetingProviderEnum.googleMeet
-                      ? Uri.parse(getFullUrl(widget.event.calLink))
+                      ? Uri.parse(getFullUrl(event.calLink))
                       : null,
                   builder: (context, followLink) {
                     const secondaryButtonStyle = ButtonStyle(
@@ -209,7 +212,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                         case SpaceJoinCardState.closed:
                           toHome(HomeRoutes.spaces);
                         case SpaceJoinCardState.joinable:
-                          if (widget.event.meetingProvider ==
+                          if (event.meetingProvider ==
                               MeetingProviderEnum.livekit) {
                             joinLivekit();
                           } else {
@@ -306,29 +309,29 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   }
 
   SpaceJoinCardState get state {
-    if (widget.event.cancelled) return SpaceJoinCardState.cancelled;
-    if (!widget.event.open) return SpaceJoinCardState.closed;
+    if (event.cancelled) return SpaceJoinCardState.cancelled;
+    if (!event.open) return SpaceJoinCardState.closed;
 
     final hasStarted =
-        widget.event.start.isBefore(DateTime.now()) &&
-        widget.event.start
-            .add(Duration(minutes: widget.event.duration))
+        event.start.isBefore(DateTime.now()) &&
+        event.start
+            .add(Duration(minutes: event.duration))
             .isAfter(DateTime.now());
 
-    final hasEnded = widget.event.start
-        .add(Duration(minutes: widget.event.duration))
+    final hasEnded = event.start
+        .add(Duration(minutes: event.duration))
         .isBefore(DateTime.now());
 
     if (hasEnded) {
       return SpaceJoinCardState.ended;
     } else if (hasStarted) {
-      if (widget.event.joinable) {
+      if (event.joinable) {
         return SpaceJoinCardState.joinable;
       }
     } else {
       if (_attending) {
         return SpaceJoinCardState.joined;
-      } else if (widget.event.seatsLeft <= 0) {
+      } else if (event.seatsLeft <= 0) {
         return SpaceJoinCardState.full;
       }
     }
@@ -344,9 +347,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
     final mobileApiService = ref.read(mobileApiServiceProvider);
     final response = await mobileApiService.spaces
-        .totemCirclesMobileApiRsvpConfirm(
-          eventSlug: widget.event.slug,
-        );
+        .totemCirclesMobileApiRsvpConfirm(eventSlug: event.slug);
 
     setState(() => _loading = false);
 
@@ -370,7 +371,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
       context: context,
       builder: (context) {
         return AttendingDialog(
-          event: widget.event,
+          eventSlug: event.slug,
           onAddToCalendar: addToCalendar,
         );
       },
@@ -439,12 +440,10 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     //   debugPrint('Failed to add event to calendar: $error\n$stacktrace');
     await launchUrlString(
       _buildGoogleCalendarUrl(
-        title: widget.event.space.title,
-        start: widget.event.start.toLocal(),
-        end: widget.event.start
-            .add(Duration(minutes: widget.event.duration))
-            .toLocal(),
-        description: widget.event.space.shortDescription,
+        title: widget.space.title,
+        start: event.start.toLocal(),
+        end: event.start.add(Duration(minutes: event.duration)).toLocal(),
+        description: widget.space.shortDescription,
       ),
     );
     // }
@@ -507,9 +506,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
     final mobileApiService = ref.read(mobileApiServiceProvider);
     final response = await mobileApiService.spaces
-        .totemCirclesMobileApiRsvpCancel(
-          eventSlug: widget.event.slug,
-        );
+        .totemCirclesMobileApiRsvpCancel(eventSlug: event.slug);
 
     setState(() => _loading = false);
 
@@ -539,7 +536,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     debugPrint('Joining livekit');
     await context.pushNamed(
       RouteNames.videoSessionPrejoin,
-      extra: widget.event,
+      extra: event.slug,
     );
   }
 }
@@ -547,11 +544,11 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 class AttendingDialog extends StatefulWidget {
   const AttendingDialog({
     required this.onAddToCalendar,
-    required this.event,
+    required this.eventSlug,
     super.key,
   });
 
-  final EventDetailSchema event;
+  final String eventSlug;
   final VoidCallback onAddToCalendar;
 
   @override
@@ -595,7 +592,7 @@ class _AttendingDialogState extends State<AttendingDialog> {
                           SharePlus.instance.share(
                             ShareParams(
                               uri: Uri.parse(AppConfig.mobileApiUrl)
-                                  .resolve('/spaces/event/${widget.event.slug}')
+                                  .resolve('/spaces/event/${widget.eventSlug}')
                                   .resolve('?utm_source=app&utm_medium=share'),
                               sharePositionOrigin: box != null
                                   ? box.localToGlobal(

@@ -66,6 +66,7 @@ class EventDetailSchema {
   final String? joinUrl;
   @JsonKey(name: 'subscribe_url')
   final String subscribeUrl;
+  @JsonKey(name: 'cal_link')
   final String calLink;
   final bool? subscribed;
   @JsonKey(name: 'user_timezone')

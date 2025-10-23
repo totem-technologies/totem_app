@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/network.dart';
@@ -9,13 +9,14 @@ import 'package:totem_app/shared/widgets/space_gradient_mask.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class SpaceDetailAppBar extends StatelessWidget {
-  const SpaceDetailAppBar({required this.event, super.key});
+  const SpaceDetailAppBar({required this.space, super.key});
 
-  final EventDetailSchema event;
+  final SpaceDetailSchema space;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final event = space.nextEvent!;
     return GestureDetector(
       onTap: () {
         Scrollable.ensureVisible(
@@ -34,7 +35,7 @@ class SpaceDetailAppBar extends StatelessWidget {
               child: SpaceGradientMask(
                 gradientHeight: 200,
                 child: CachedNetworkImage(
-                  imageUrl: getFullUrl(event.space.image ?? ''),
+                  imageUrl: getFullUrl(space.imageLink ?? ''),
                   fit: BoxFit.cover,
                   errorWidget: (context, url, error) {
                     return Image.asset(
@@ -62,7 +63,7 @@ class SpaceDetailAppBar extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         Text(
-                          event.title,
+                          event.title!,
                           style: theme.textTheme.headlineLarge?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
@@ -71,7 +72,7 @@ class SpaceDetailAppBar extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          event.space.title,
+                          space.title,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: Colors.white,
                             fontSize: 18,
@@ -86,7 +87,7 @@ class SpaceDetailAppBar extends StatelessWidget {
                             children: <TextSpan>[
                               const TextSpan(text: 'with '),
                               TextSpan(
-                                text: event.space.author.name,
+                                text: space.author.name,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -98,12 +99,12 @@ class SpaceDetailAppBar extends StatelessWidget {
                     ),
                   ),
                   UserAvatar.fromUserSchema(
-                    event.space.author,
-                    onTap: event.space.author.slug != null
+                    space.author,
+                    onTap: space.author.slug != null
                         ? () {
                             context.push(
                               RouteNames.keeperProfile(
-                                event.space.author.slug!,
+                                space.author.slug!,
                               ),
                             );
                           }

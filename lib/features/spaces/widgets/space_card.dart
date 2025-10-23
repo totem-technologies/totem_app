@@ -35,12 +35,22 @@ class SpaceCard extends StatelessWidget {
         content: event.space.content,
         shortDescription: event.space.shortDescription ?? '',
         author: event.space.author,
+        recurring: event.space.recurring,
+        price: event.price,
+        subscribers: event.subscribers,
         nextEvent: NextEventSchema(
-          start: event.start.toIso8601String(),
+          start: event.start,
           link: event.calLink,
           seatsLeft: event.seatsLeft,
           slug: event.slug,
           title: event.title,
+          attending: event.attending,
+          calLink: event.calLink,
+          cancelled: event.cancelled,
+          duration: event.duration,
+          joinable: event.joinable,
+          meetingProvider: event.meetingProvider,
+          open: event.open,
         ),
         category: '',
       ),
@@ -152,9 +162,7 @@ class SpaceCard extends StatelessWidget {
                                 ),
                                 Flexible(
                                   child: Text(
-                                    buildTimeLabel(
-                                      DateTime.parse(space.nextEvent!.start),
-                                    ),
+                                    buildTimeLabel(space.nextEvent!.start),
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 8,
@@ -319,9 +327,7 @@ class SmallSpaceCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      buildTimeLabel(
-                        DateTime.parse(space.nextEvent!.start),
-                      ),
+                      buildTimeLabel(space.nextEvent!.start),
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 8,

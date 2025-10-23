@@ -28,7 +28,7 @@ EventDetailSchema _$EventDetailSchemaFromJson(Map<String, dynamic> json) =>
       rsvpUrl: json['rsvp_url'] as String,
       joinUrl: json['join_url'] as String?,
       subscribeUrl: json['subscribe_url'] as String,
-      calLink: json['calLink'] as String,
+      calLink: json['cal_link'] as String,
       subscribed: json['subscribed'] as bool?,
       userTimezone: json['user_timezone'] as String?,
       meetingProvider: MeetingProviderEnum.fromJson(
@@ -59,7 +59,7 @@ Map<String, dynamic> _$EventDetailSchemaToJson(
   'rsvp_url': instance.rsvpUrl,
   'join_url': instance.joinUrl,
   'subscribe_url': instance.subscribeUrl,
-  'calLink': instance.calLink,
+  'cal_link': instance.calLink,
   'subscribed': instance.subscribed,
   'user_timezone': instance.userTimezone,
   'meeting_provider': _$MeetingProviderEnumEnumMap[instance.meetingProvider]!,

@@ -19,6 +19,7 @@ import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -29,13 +30,13 @@ class VideoRoomScreenRouteArgs {
     required this.token,
     required this.cameraEnabled,
     required this.micEnabled,
-    required this.event,
+    required this.eventSlug,
   });
 
   final String token;
   final bool cameraEnabled;
   final bool micEnabled;
-  final EventDetailSchema event;
+  final String eventSlug;
 }
 
 class VideoRoomScreen extends ConsumerStatefulWidget {
@@ -43,14 +44,14 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
     required this.token,
     required this.cameraEnabled,
     required this.micEnabled,
-    required this.event,
+    required this.eventSlug,
     super.key,
   });
 
   final String token;
   final bool cameraEnabled;
   final bool micEnabled;
-  final EventDetailSchema event;
+  final String eventSlug;
 
   @override
   ConsumerState<VideoRoomScreen> createState() => _VideoRoomScreenState();
@@ -121,7 +122,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final sessionOptions = SessionOptions(
-      event: widget.event,
+      eventSlug: widget.eventSlug,
       token: widget.token,
       cameraEnabled: widget.cameraEnabled,
       microphoneEnabled: widget.micEnabled,
@@ -164,44 +165,56 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   }
 
   Widget _buildBody(LiveKitService notifier, LiveKitState state) {
-    return Builder(
-      builder: (context) {
-        final roomCtx = notifier.room;
-        switch (state.connectionState) {
-          case RoomConnectionState.error:
-            return RoomErrorScreen(onRetry: roomCtx.connect);
-          case RoomConnectionState.connecting:
-            return const LoadingRoomScreen();
-          case RoomConnectionState.disconnected:
-            return SessionEndedScreen(event: widget.event);
-          case RoomConnectionState.connected:
-            if (state.sessionState.status == SessionStatus.ended) {
-              return SessionEndedScreen(event: widget.event);
-            }
-            if (roomCtx.localParticipant == null) {
-              return const LoadingRoomScreen();
-            }
+    return Consumer(
+      builder: (context, ref, child) {
+        final eventAsync = ref.watch(eventProvider(widget.eventSlug));
 
-            if (state.isMyTurn(notifier.room)) {
-              if (_receivingTotem) {
-                return ReceiveTotemScreen(
-                  actionBar: buildActionBar(notifier, state),
-                  onAcceptTotem: _onAcceptTotem,
-                );
-              }
-              return MyTurn(
-                actionBar: buildActionBar(notifier, state),
-                getParticipantKey: getParticipantKey,
-                onPassTotem: notifier.passTotem,
-              );
-            } else {
-              return NotMyTurn(
-                actionBar: buildActionBar(notifier, state),
-                getParticipantKey: getParticipantKey,
-                sessionState: state.sessionState,
-              );
+        return eventAsync.when(
+          data: (event) {
+            final roomCtx = notifier.room;
+            switch (state.connectionState) {
+              case RoomConnectionState.error:
+                return RoomErrorScreen(onRetry: roomCtx.connect);
+              case RoomConnectionState.connecting:
+                return const LoadingRoomScreen();
+              case RoomConnectionState.disconnected:
+                return SessionEndedScreen(event: event);
+              case RoomConnectionState.connected:
+                if (state.sessionState.status == SessionStatus.ended) {
+                  return SessionEndedScreen(event: event);
+                }
+                if (roomCtx.localParticipant == null) {
+                  return const LoadingRoomScreen();
+                }
+
+                if (state.isMyTurn(notifier.room)) {
+                  if (_receivingTotem) {
+                    return ReceiveTotemScreen(
+                      actionBar: buildActionBar(notifier, state, event),
+                      onAcceptTotem: _onAcceptTotem,
+                    );
+                  }
+                  return MyTurn(
+                    actionBar: buildActionBar(notifier, state, event),
+                    getParticipantKey: getParticipantKey,
+                    onPassTotem: notifier.passTotem,
+                  );
+                } else {
+                  return NotMyTurn(
+                    actionBar: buildActionBar(notifier, state, event),
+                    getParticipantKey: getParticipantKey,
+                    sessionState: state.sessionState,
+                  );
+                }
             }
-        }
+          },
+          loading: () => const LoadingRoomScreen(),
+          error: (error, stackTrace) {
+            return RoomErrorScreen(
+              onRetry: () => ref.refresh(eventProvider(widget.eventSlug)),
+            );
+          },
+        );
       },
     );
   }
@@ -209,13 +222,14 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   Widget buildActionBar(
     LiveKitService notifier,
     LiveKitState state,
+    EventDetailSchema event,
   ) {
     return Builder(
       builder: (context) {
         final roomCtx = notifier.room;
         final user = roomCtx.localParticipant;
         final auth = ref.read(authControllerProvider);
-        final isKeeper = widget.event.space.author.slug == auth.user?.slug;
+        final isKeeper = event.space.author.slug == auth.user?.slug;
         return ActionBar(
           children: [
             MediaDeviceSelectButton(
@@ -285,10 +299,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                   _hasPendingChatMessages = false;
                   _chatSheetOpen = true;
                 });
-                await showSessionChatSheet(
-                  context,
-                  widget.event,
-                );
+                await showSessionChatSheet(context, event);
                 if (mounted) {
                   setState(() => _chatSheetOpen = false);
                 }

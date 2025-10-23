@@ -9,17 +9,40 @@ part of 'next_event_schema.dart';
 NextEventSchema _$NextEventSchemaFromJson(Map<String, dynamic> json) =>
     NextEventSchema(
       slug: json['slug'] as String,
-      start: json['start'] as String,
+      start: DateTime.parse(json['start'] as String),
       link: json['link'] as String,
       title: json['title'] as String?,
       seatsLeft: (json['seats_left'] as num).toInt(),
+      duration: (json['duration'] as num).toInt(),
+      meetingProvider: MeetingProviderEnum.fromJson(
+        json['meeting_provider'] as String,
+      ),
+      calLink: json['cal_link'] as String,
+      attending: json['attending'] as bool,
+      cancelled: json['cancelled'] as bool,
+      open: json['open'] as bool,
+      joinable: json['joinable'] as bool,
     );
 
-Map<String, dynamic> _$NextEventSchemaToJson(NextEventSchema instance) =>
-    <String, dynamic>{
-      'slug': instance.slug,
-      'start': instance.start,
-      'link': instance.link,
-      'title': instance.title,
-      'seats_left': instance.seatsLeft,
-    };
+Map<String, dynamic> _$NextEventSchemaToJson(
+  NextEventSchema instance,
+) => <String, dynamic>{
+  'slug': instance.slug,
+  'start': instance.start.toIso8601String(),
+  'link': instance.link,
+  'title': instance.title,
+  'seats_left': instance.seatsLeft,
+  'duration': instance.duration,
+  'meeting_provider': _$MeetingProviderEnumEnumMap[instance.meetingProvider]!,
+  'cal_link': instance.calLink,
+  'attending': instance.attending,
+  'cancelled': instance.cancelled,
+  'open': instance.open,
+  'joinable': instance.joinable,
+};
+
+const _$MeetingProviderEnumEnumMap = {
+  MeetingProviderEnum.googleMeet: 'google_meet',
+  MeetingProviderEnum.livekit: 'livekit',
+  MeetingProviderEnum.$unknown: r'$unknown',
+};

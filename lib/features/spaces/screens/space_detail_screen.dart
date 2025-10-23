@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:markdown/markdown.dart' as markdown;
 import 'package:share_plus/share_plus.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
@@ -24,19 +24,19 @@ import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class EventDetailScreen extends ConsumerStatefulWidget {
-  const EventDetailScreen({required this.eventSlug, super.key});
-  final String eventSlug;
+class SpaceDetailScreen extends ConsumerStatefulWidget {
+  const SpaceDetailScreen({required this.slug, super.key});
+  final String slug;
 
   @override
-  ConsumerState<EventDetailScreen> createState() => _EventDetailScreenState();
+  ConsumerState<SpaceDetailScreen> createState() => _SpaceDetailScreenState();
 }
 
-class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
+class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
   @override
   void initState() {
     super.initState();
-    ref.read(analyticsProvider).logSpaceViewed(widget.eventSlug);
+    ref.read(analyticsProvider).logSpaceViewed(widget.slug);
   }
 
   static const horizontalPadding = EdgeInsetsDirectional.symmetric(
@@ -46,7 +46,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final eventAsync = ref.watch(eventProvider(widget.eventSlug));
+    final spaceAsync = ref.watch(spaceProvider(widget.slug));
 
     final width = MediaQuery.sizeOf(context).width;
     final isPhone = width < 600;
@@ -56,8 +56,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       symbol: r'USD $',
     );
 
-    return eventAsync.when(
-      data: (event) {
+    return spaceAsync.when(
+      data: (space) {
         return Scaffold(
           body: Stack(
             children: [
@@ -71,7 +71,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         automaticallyImplyLeading: false,
                         backgroundColor: theme.scaffoldBackgroundColor,
                         flexibleSpace: FlexibleSpaceBar(
-                          background: SpaceDetailAppBar(event: event),
+                          background: SpaceDetailAppBar(space: space),
                         ),
                         leading: Container(
                           margin: const EdgeInsetsDirectional.only(start: 20),
@@ -114,7 +114,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                         ShareParams(
                                           uri: Uri.parse(AppConfig.mobileApiUrl)
                                               .resolve(
-                                                '/spaces/event/${event.slug}',
+                                                '/spaces/event/${space.slug}',
                                               )
                                               .resolve(
                                                 '?utm_source=app'
@@ -135,13 +135,13 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             ),
                           ),
                         ],
-                        title: Text(event.space.title),
+                        title: Text(space.title),
                       ),
                     ];
                   },
                   body: RefreshIndicator.adaptive(
                     onRefresh: () =>
-                        ref.refresh(eventProvider(widget.eventSlug).future),
+                        ref.refresh(spaceProvider(widget.slug).future),
                     child: SafeArea(
                       top: false,
                       bottom: false,
@@ -174,7 +174,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                               children: [
                                 InfoText(
                                   const TotemIcon(TotemIcons.subscribers),
-                                  Text('${event.subscribers} subscribers'),
+                                  Text('${space.subscribers} subscribers'),
                                   const Text(
                                     'Be part of a growing community. Join '
                                     'others who share your interests. Small '
@@ -184,12 +184,12 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 InfoText(
                                   const TotemIcon(TotemIcons.priceTag),
                                   Text(
-                                    event.price == 0
+                                    space.price == 0
                                         ? 'No cost'
-                                        : currencyFormatter.format(event.price),
+                                        : currencyFormatter.format(space.price),
                                   ),
                                   Text(
-                                    event.price == 0
+                                    space.price == 0
                                         ? 'Completely free — no hidden fees. '
                                               'Enjoy all the benefits at no '
                                               'charge. It costs nothing to get '
@@ -200,14 +200,15 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                               'and content available.',
                                   ),
                                 ),
-                                InfoText(
-                                  const TotemIcon(TotemIcons.recurring),
-                                  Text(event.recurring),
-                                  const Text(
-                                    'We meet according to the space’s unique '
-                                    'schedule.',
+                                if (space.recurring != null)
+                                  InfoText(
+                                    const TotemIcon(TotemIcons.recurring),
+                                    Text(space.recurring!),
+                                    const Text(
+                                      'We meet according to the space’s unique '
+                                      'schedule.',
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                           ),
@@ -228,13 +229,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           ),
 
                           Html(
-                            data:
-                                event.space.shortDescription
-                                        ?.trim()
-                                        .isNotEmpty ??
-                                    false
-                                ? event.space.shortDescription
-                                : event.description,
+                            data: space.shortDescription.trim().isNotEmpty
+                                ? space.shortDescription
+                                : space.content,
                             style: {
                               ...AppTheme.htmlStyle,
                               'body': Style(
@@ -251,14 +248,14 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             },
                           ),
 
-                          if (event.space.content.trim().isNotEmpty)
+                          if (space.content.trim().isNotEmpty)
                             Container(
                               height: 32,
                               margin: const EdgeInsetsDirectional.only(top: 8),
                               padding: horizontalPadding,
                               child: OutlinedButton(
                                 onPressed: () =>
-                                    _showAboutSpaceSheet(context, event),
+                                    _showAboutSpaceSheet(context, space),
                                 style: const ButtonStyle(
                                   padding: WidgetStatePropertyAll(
                                     EdgeInsetsDirectional.zero,
@@ -270,15 +267,16 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           const SizedBox(height: 16),
 
                           // TODO(bdlukaa): Sessions Calendar
-                          Container(
-                            padding: horizontalPadding,
-                            constraints: const BoxConstraints(maxHeight: 160),
-                            child: SpaceCard.fromEventDetailSchema(
-                              event,
-                              onTap: () => _showSessionSheet(context, event),
-                              compact: true,
+                          if (space.nextEvent != null)
+                            Container(
+                              padding: horizontalPadding,
+                              constraints: const BoxConstraints(maxHeight: 160),
+                              child: SpaceCard(
+                                space: space,
+                                onTap: () => _showSessionSheet(context, space),
+                                compact: true,
+                              ),
                             ),
-                          ),
 
                           const SizedBox(height: 16),
 
@@ -292,7 +290,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          MeetUserCard(user: event.space.author),
+                          MeetUserCard(user: space.author),
                         ],
                       ),
                     ),
@@ -303,7 +301,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 start: 0,
                 end: 0,
                 bottom: 0,
-                child: SpaceJoinCard(event: event),
+                child: SpaceJoinCard(space: space),
               ),
             ],
           ),
@@ -316,7 +314,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
 
   Future<void> _showAboutSpaceSheet(
     BuildContext context,
-    EventDetailSchema event,
+    SpaceDetailSchema space,
   ) {
     return showModalBottomSheet(
       context: context,
@@ -324,14 +322,14 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       useSafeArea: true,
       clipBehavior: Clip.antiAliasWithSaveLayer,
       builder: (context) {
-        return AboutSpaceSheet(event: event);
+        return AboutSpaceSheet(space: space);
       },
     );
   }
 
   Future<void> _showSessionSheet(
     BuildContext context,
-    EventDetailSchema event,
+    SpaceDetailSchema space,
   ) {
     return showModalBottomSheet(
       context: context,
@@ -339,16 +337,16 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       useSafeArea: true,
       showDragHandle: true,
       builder: (context) {
-        return SessionSheet(event: event);
+        return SessionSheet(space: space);
       },
     );
   }
 }
 
 class AboutSpaceSheet extends StatelessWidget {
-  const AboutSpaceSheet({required this.event, super.key});
+  const AboutSpaceSheet({required this.space, super.key});
 
-  final EventDetailSchema event;
+  final SpaceDetailSchema space;
 
   @override
   Widget build(BuildContext context) {
@@ -421,27 +419,29 @@ class AboutSpaceSheet extends StatelessWidget {
                     children: [
                       CompactInfoText(
                         const TotemIcon(TotemIcons.subscribers),
-                        Text('${event.subscribers} subscribers'),
+                        Text('${space.subscribers} subscribers'),
                       ),
                       CompactInfoText(
                         const TotemIcon(TotemIcons.priceTag),
                         Text(
-                          event.price == 0
+                          space.price == 0
                               ? 'No cost'
                               : NumberFormat.currency(
                                   locale: 'en_US',
                                   symbol: r'USD $',
-                                ).format(event.price),
+                                ).format(space.price),
                         ),
                       ),
-                      CompactInfoText(
-                        const TotemIcon(TotemIcons.recurring),
-                        Text(event.recurring.uppercaseFirst()),
-                      ),
+                      if (space.recurring != null &&
+                          space.recurring!.isNotEmpty)
+                        CompactInfoText(
+                          const TotemIcon(TotemIcons.recurring),
+                          Text(space.recurring!.uppercaseFirst()),
+                        ),
                     ],
                   ),
                   Html(
-                    data: markdown.markdownToHtml(event.space.content),
+                    data: markdown.markdownToHtml(space.content),
                     shrinkWrap: true,
                     onLinkTap: (url, _, _) {
                       if (url != null) launchUrl(Uri.parse(url));
@@ -462,13 +462,15 @@ class AboutSpaceSheet extends StatelessWidget {
 }
 
 class SessionSheet extends StatelessWidget {
-  const SessionSheet({required this.event, super.key});
+  SessionSheet({required this.space, super.key})
+    : assert(space.nextEvent != null, 'space.nextEvent must not be null');
 
-  final EventDetailSchema event;
+  final SpaceDetailSchema space;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final event = space.nextEvent!;
 
     return DraggableScrollableSheet(
       expand: false,
@@ -492,13 +494,13 @@ class SessionSheet extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(event.title, style: theme.textTheme.titleLarge),
+                          Text(event.title!, style: theme.textTheme.titleLarge),
                           Text.rich(
                             TextSpan(
                               text: 'with ',
                               children: [
                                 TextSpan(
-                                  text: event.space.author.name,
+                                  text: space.author.name,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -510,15 +512,13 @@ class SessionSheet extends StatelessWidget {
                       ),
                     ),
                     UserAvatar.fromUserSchema(
-                      event.space.author,
+                      space.author,
                       radius: 40,
-                      onTap: event.space.slug != null
-                          ? () {
-                              context.push(
-                                RouteNames.keeperProfile(event.space.slug!),
-                              );
-                            }
-                          : null,
+                      onTap: () {
+                        context.push(
+                          RouteNames.keeperProfile(space.slug),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -544,7 +544,7 @@ class SessionSheet extends StatelessWidget {
                   ],
                 ),
                 Html(
-                  data: event.description,
+                  data: space.content,
                   shrinkWrap: true,
                   style: AppTheme.compactHtmlStyle,
                   onLinkTap: (url, _, _) {
@@ -557,7 +557,7 @@ class SessionSheet extends StatelessWidget {
               ],
             ),
           ),
-          SpaceJoinCard(event: event),
+          SpaceJoinCard(space: space),
         ],
       ),
     );

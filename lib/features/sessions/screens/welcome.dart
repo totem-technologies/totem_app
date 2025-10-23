@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:livekit_client/livekit_client.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
@@ -19,9 +18,9 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PreJoinScreen extends ConsumerStatefulWidget {
-  const PreJoinScreen({required this.event, super.key});
+  const PreJoinScreen({required this.eventSlug, super.key});
 
-  final EventDetailSchema event;
+  final String eventSlug;
 
   @override
   ConsumerState<PreJoinScreen> createState() => _PreJoinScreenState();
@@ -73,11 +72,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
     if (mounted) {
       context.pushReplacement(
-        RouteNames.videoSession(widget.event.slug),
+        RouteNames.videoSession(widget.eventSlug),
         extra: VideoRoomScreenRouteArgs(
           cameraEnabled: _isCameraOn,
           micEnabled: _isMicOn,
-          event: widget.event,
+          eventSlug: widget.eventSlug,
           token: token,
         ),
       );
@@ -87,7 +86,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final tokenData = ref.watch(sessionTokenProvider(widget.event.slug));
+    final tokenData = ref.watch(sessionTokenProvider(widget.eventSlug));
 
     return AnnotatedRegion(
       value: SystemUiOverlayStyle.light,
@@ -211,7 +210,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           return RoomBackground(
             child: RoomErrorScreen(
               onRetry: () =>
-                  ref.refresh(sessionTokenProvider(widget.event.slug).future),
+                  ref.refresh(sessionTokenProvider(widget.eventSlug).future),
             ),
           );
         },
