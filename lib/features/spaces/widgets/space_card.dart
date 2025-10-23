@@ -66,9 +66,11 @@ class SpaceCard extends StatelessWidget {
           highlightColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
           onTap:
               onTap ??
-              () {
-                context.push(RouteNames.space(space.nextEvent.slug));
-              },
+              (space.nextEvent != null
+                  ? () {
+                      context.push(RouteNames.space(space.nextEvent!.slug));
+                    }
+                  : null),
           borderRadius: BorderRadius.circular(8),
           child: Stack(
             children: [
@@ -107,9 +109,11 @@ class SpaceCard extends StatelessWidget {
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text: space.nextEvent.seatsLeft == 0
+                            text:
+                                space.nextEvent == null ||
+                                    space.nextEvent!.seatsLeft == 0
                                 ? 'No'
-                                : '${space.nextEvent.seatsLeft}',
+                                : '${space.nextEvent!.seatsLeft}',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -130,39 +134,40 @@ class SpaceCard extends StatelessWidget {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsetsDirectional.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0x99262F37),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            spacing: 4,
-                            children: [
-                              const TotemIcon(
-                                TotemIcons.calendar,
-                                size: 12,
-                                color: Colors.white,
-                              ),
-                              Flexible(
-                                child: Text(
-                                  buildTimeLabel(
-                                    DateTime.parse(space.nextEvent.start),
-                                  ),
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.bold,
-                                    shadows: kElevationToShadow[4],
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.fade,
+                        if (space.nextEvent != null)
+                          Container(
+                            padding: const EdgeInsetsDirectional.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0x99262F37),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              spacing: 4,
+                              children: [
+                                const TotemIcon(
+                                  TotemIcons.calendar,
+                                  size: 12,
+                                  color: Colors.white,
                                 ),
-                              ),
-                            ],
+                                Flexible(
+                                  child: Text(
+                                    buildTimeLabel(
+                                      DateTime.parse(space.nextEvent!.start),
+                                    ),
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.bold,
+                                      shadows: kElevationToShadow[4],
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.fade,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
                         const Spacer(),
                         if (compact) seatsLeft,
                         AutoSizeText(
@@ -175,9 +180,9 @@ class SpaceCard extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.fade,
                         ),
-                        if (space.nextEvent.title != null)
+                        if (space.nextEvent?.title != null)
                           AutoSizeText(
-                            'Next: ${space.nextEvent.title}',
+                            'Next: ${space.nextEvent!.title}',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 9,
@@ -258,9 +263,11 @@ class SmallSpaceCard extends StatelessWidget {
       highlightColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
       onTap:
           onTap ??
-          () {
-            context.push(RouteNames.space(space.nextEvent.slug));
-          },
+          (space.nextEvent != null
+              ? () {
+                  context.push(RouteNames.space(space.nextEvent!.slug));
+                }
+              : null),
       child: Stack(
         children: [
           Positioned.fill(
@@ -304,27 +311,28 @@ class SmallSpaceCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsetsDirectional.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0x99262F37),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    buildTimeLabel(
-                      DateTime.parse(space.nextEvent.start),
+                if (space.nextEvent != null)
+                  Container(
+                    padding: const EdgeInsetsDirectional.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0x99262F37),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 8,
-                      fontWeight: FontWeight.bold,
-                      shadows: kElevationToShadow[4],
+                    child: Text(
+                      buildTimeLabel(
+                        DateTime.parse(space.nextEvent!.start),
+                      ),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                        shadows: kElevationToShadow[4],
+                      ),
                     ),
                   ),
-                ),
                 const Spacer(),
                 Text(
-                  '${space.nextEvent.seatsLeft} seats left',
+                  '${space.nextEvent?.seatsLeft ?? 'No'} seats left',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 14,

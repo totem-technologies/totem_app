@@ -63,7 +63,7 @@ class AuthRepository {
 
   Future<UserSchema> get currentUser async {
     return _handleApiCall<UserSchema>(
-      () => apiService.fallback.totemUsersMobileApiGetCurrentUser(),
+      () => apiService.users.totemUsersMobileApiGetCurrentUser(),
       operationName: 'fetch current user',
       genericErrorCode: 'CURRENT_USER_FETCH_FAILED',
     );
@@ -71,7 +71,7 @@ class AuthRepository {
 
   Future<bool> updateCurrentUserProfilePicture(File file) {
     return _handleApiCall<bool>(
-      () => apiService.fallback.totemUsersMobileApiUpdateCurrentUserImage(
+      () => apiService.users.totemUsersMobileApiUpdateCurrentUserImage(
         profileImage: file,
       ),
       operationName: 'update current user profile picture',
@@ -89,7 +89,7 @@ class AuthRepository {
     String? avatarSeed,
   }) async {
     return _handleApiCall<UserSchema>(
-      () => apiService.fallback.totemUsersMobileApiUpdateCurrentUser(
+      () => apiService.users.totemUsersMobileApiUpdateCurrentUser(
         body: UserUpdateSchema(
           name: name,
           email: email,
@@ -172,7 +172,7 @@ class AuthRepository {
 
   Future<void> deleteAccount() async {
     return _handleApiCall<void>(
-      () => apiService.fallback.totemUsersMobileApiDeleteCurrentUser(),
+      () => apiService.users.totemUsersMobileApiDeleteCurrentUser(),
       operationName: 'delete account',
       genericErrorCode: 'ACCOUNT_DELETION_FAILED',
     );

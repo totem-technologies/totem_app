@@ -350,7 +350,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
     setState(() => _loading = false);
 
-    if (response) {
+    if (response.attending) {
       setState(() => _attending = true);
       attendingPopup();
     } else {
@@ -513,7 +513,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
     setState(() => _loading = false);
 
-    if (response) {
+    if (!response.attending) {
       if (mounted) {
         setState(() => _attending = false);
         showErrorPopup(
