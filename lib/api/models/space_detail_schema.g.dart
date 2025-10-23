@@ -14,10 +14,15 @@ SpaceDetailSchema _$SpaceDetailSchemaFromJson(Map<String, dynamic> json) =>
       shortDescription: json['short_description'] as String,
       content: json['content'] as String,
       author: PublicUserSchema.fromJson(json['author'] as Map<String, dynamic>),
-      nextEvent: NextEventSchema.fromJson(
-        json['nextEvent'] as Map<String, dynamic>,
-      ),
+      nextEvent: json['next_event'] == null
+          ? null
+          : NextEventSchema.fromJson(
+              json['next_event'] as Map<String, dynamic>,
+            ),
       category: json['category'] as String?,
+      subscribers: (json['subscribers'] as num).toInt(),
+      price: (json['price'] as num).toInt(),
+      recurring: json['recurring'] as String?,
     );
 
 Map<String, dynamic> _$SpaceDetailSchemaToJson(SpaceDetailSchema instance) =>
@@ -28,6 +33,9 @@ Map<String, dynamic> _$SpaceDetailSchemaToJson(SpaceDetailSchema instance) =>
       'short_description': instance.shortDescription,
       'content': instance.content,
       'author': instance.author,
-      'nextEvent': instance.nextEvent,
+      'next_event': instance.nextEvent,
       'category': instance.category,
+      'subscribers': instance.subscribers,
+      'price': instance.price,
+      'recurring': instance.recurring,
     };

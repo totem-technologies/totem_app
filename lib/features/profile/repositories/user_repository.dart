@@ -8,5 +8,5 @@ part 'user_repository.g.dart';
 @riverpod
 Future<PublicUserSchema> userProfile(Ref ref, String slug) {
   final apiService = ref.watch(mobileApiServiceProvider);
-  return apiService.fallback.totemUsersMobileApiGetUserProfile(userSlug: slug);
+  return apiService.users.totemUsersMobileApiGetUserProfile(userSlug: slug);
 }

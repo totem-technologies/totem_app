@@ -40,10 +40,16 @@ abstract class SpacesClient {
     @Query('offset') int? offset = 0,
   });
 
-  /// Get Space Detail
-  @GET('/api/mobile/protected/spaces/spaces/event/{event_slug}')
-  Future<EventDetailSchema> totemCirclesMobileApiGetSpaceDetail({
+  /// Get Event Detail
+  @GET('/api/mobile/protected/spaces/event/{event_slug}')
+  Future<EventDetailSchema> totemCirclesMobileApiGetEventDetail({
     @Path('event_slug') required String eventSlug,
+  });
+
+  /// Get Space Detail
+  @GET('/api/mobile/protected/spaces/space/{space_slug}')
+  Future<SpaceDetailSchema> totemCirclesMobileApiGetSpaceDetail({
+    @Path('space_slug') required String spaceSlug,
   });
 
   /// Get Keeper Spaces
@@ -69,13 +75,13 @@ abstract class SpacesClient {
 
   /// Rsvp Confirm
   @POST('/api/mobile/protected/spaces/rsvp/{event_slug}')
-  Future<bool> totemCirclesMobileApiRsvpConfirm({
+  Future<EventDetailSchema> totemCirclesMobileApiRsvpConfirm({
     @Path('event_slug') required String eventSlug,
   });
 
   /// Rsvp Cancel
   @DELETE('/api/mobile/protected/spaces/rsvp/{event_slug}')
-  Future<bool> totemCirclesMobileApiRsvpCancel({
+  Future<EventDetailSchema> totemCirclesMobileApiRsvpCancel({
     @Path('event_slug') required String eventSlug,
   });
 }

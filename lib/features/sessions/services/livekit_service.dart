@@ -6,7 +6,6 @@ import 'package:livekit_client/livekit_client.dart' hide ChatMessage;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
@@ -29,7 +28,7 @@ typedef OnLivekitError = void Function(LiveKitException error);
 @immutable
 class SessionOptions {
   const SessionOptions({
-    required this.event,
+    required this.eventSlug,
     required this.token,
     required this.cameraEnabled,
     required this.microphoneEnabled,
@@ -39,7 +38,7 @@ class SessionOptions {
     required this.onReceiveTotem,
   });
 
-  final EventDetailSchema event;
+  final String eventSlug;
   final String token;
   final bool cameraEnabled;
   final bool microphoneEnabled;
@@ -52,12 +51,12 @@ class SessionOptions {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is SessionOptions &&
-        other.event.slug == event.slug &&
+        other.eventSlug == eventSlug &&
         other.token == token;
   }
 
   @override
-  int get hashCode => event.slug.hashCode ^ token.hashCode;
+  int get hashCode => eventSlug.hashCode ^ token.hashCode;
 }
 
 enum RoomConnectionState { connecting, connected, disconnected, error }
@@ -193,9 +192,39 @@ class LiveKitService extends _$LiveKitService {
   /// This fails silently if it's not the user's turn.
   Future<void> passTotem() async {
     if (!state.isMyTurn(room)) return;
-    await _apiService.meetings.totemMeetingsMobileApiPassTotemEndpoint(
-      eventSlug: _options.event.slug,
-    );
+    try {
+      await _apiService.meetings.totemMeetingsMobileApiPassTotemEndpoint(
+        eventSlug: _options.eventSlug,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Error passing totem: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error passing totem',
+      );
+    }
+  }
+
+  /// Pass the totem to the next participant in the speaking order.
+  ///
+  /// This fails silently if it's not the user's turn.
+  Future<void> acceptTotem() async {
+    if (!state.isMyTurn(room)) return;
+    try {
+      await _apiService.meetings.totemMeetingsMobileApiAcceptTotemEndpoint(
+        eventSlug: _options.eventSlug,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Error accepting totem: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error accepting totem',
+      );
+    }
   }
 
   /// Send an emoji to other participants.
@@ -208,7 +237,7 @@ class LiveKitService extends _$LiveKitService {
 
   Future<void> startSession() async {
     await _apiService.meetings.totemMeetingsMobileApiStartRoomEndpoint(
-      eventSlug: _options.event.slug,
+      eventSlug: _options.eventSlug,
     );
   }
 }

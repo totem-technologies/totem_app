@@ -23,7 +23,7 @@ final listSpacesProvider = FutureProvider<List<SpaceDetailSchema>>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef ListSpacesRef = FutureProviderRef<List<SpaceDetailSchema>>;
-String _$eventHash() => r'45c7d390bcdc6683294c1783234cff99bc4c79ab';
+String _$eventHash() => r'60445a2aabe84e14ff7e17089355ef0be27a27b2';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -159,6 +159,123 @@ class _EventProviderElement
 
   @override
   String get eventSlug => (origin as EventProvider).eventSlug;
+}
+
+String _$spaceHash() => r'76dea1bd725e131af36ec341588d5d89b1a8c5de';
+
+/// See also [space].
+@ProviderFor(space)
+const spaceProvider = SpaceFamily();
+
+/// See also [space].
+class SpaceFamily extends Family<AsyncValue<SpaceDetailSchema>> {
+  /// See also [space].
+  const SpaceFamily();
+
+  /// See also [space].
+  SpaceProvider call(String spaceSlug) {
+    return SpaceProvider(spaceSlug);
+  }
+
+  @override
+  SpaceProvider getProviderOverride(covariant SpaceProvider provider) {
+    return call(provider.spaceSlug);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'spaceProvider';
+}
+
+/// See also [space].
+class SpaceProvider extends AutoDisposeFutureProvider<SpaceDetailSchema> {
+  /// See also [space].
+  SpaceProvider(String spaceSlug)
+    : this._internal(
+        (ref) => space(ref as SpaceRef, spaceSlug),
+        from: spaceProvider,
+        name: r'spaceProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$spaceHash,
+        dependencies: SpaceFamily._dependencies,
+        allTransitiveDependencies: SpaceFamily._allTransitiveDependencies,
+        spaceSlug: spaceSlug,
+      );
+
+  SpaceProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.spaceSlug,
+  }) : super.internal();
+
+  final String spaceSlug;
+
+  @override
+  Override overrideWith(
+    FutureOr<SpaceDetailSchema> Function(SpaceRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: SpaceProvider._internal(
+        (ref) => create(ref as SpaceRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        spaceSlug: spaceSlug,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<SpaceDetailSchema> createElement() {
+    return _SpaceProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SpaceProvider && other.spaceSlug == spaceSlug;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, spaceSlug.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin SpaceRef on AutoDisposeFutureProviderRef<SpaceDetailSchema> {
+  /// The parameter `spaceSlug` of this provider.
+  String get spaceSlug;
+}
+
+class _SpaceProviderElement
+    extends AutoDisposeFutureProviderElement<SpaceDetailSchema>
+    with SpaceRef {
+  _SpaceProviderElement(super.provider);
+
+  @override
+  String get spaceSlug => (origin as SpaceProvider).spaceSlug;
 }
 
 String _$listSubscribedSpacesHash() =>

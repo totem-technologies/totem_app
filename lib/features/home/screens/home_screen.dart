@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
-import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -60,15 +58,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           padding: const EdgeInsetsDirectional.symmetric(
                             horizontal: 16,
                           ),
-                          child: GestureDetector(
-                            onTap: () {
-                              context.push(
-                                RouteNames.space(upcomingEvents.first.slug),
-                              );
-                            },
-                            child: SpaceCard.fromEventDetailSchema(
-                              upcomingEvents.first,
-                            ),
+                          child: SpaceCard.fromEventDetailSchema(
+                            upcomingEvents.first,
                           ),
                         ),
                       )
@@ -89,16 +80,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       ? 16
                                       : 0,
                                 ),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    context.push(
-                                      RouteNames.space(event.slug),
-                                    );
-                                  },
-                                  child: SpaceCard.fromEventDetailSchema(
-                                    event,
-                                  ),
-                                ),
+                                child: SpaceCard.fromEventDetailSchema(event),
                               );
                             },
                           ),

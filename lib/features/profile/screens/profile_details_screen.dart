@@ -80,12 +80,13 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
       children: [
         GestureDetector(
           onTap: () => showProfileImagePicker(context),
+          behavior: HitTestBehavior.opaque,
           child: Center(
             child: Stack(
               alignment: AlignmentDirectional.center,
               clipBehavior: Clip.none,
               children: [
-                UserAvatar.currentUser(radius: 50),
+                IgnorePointer(child: UserAvatar.currentUser(radius: 50)),
                 PositionedDirectional(
                   bottom: -10,
                   end: -10,

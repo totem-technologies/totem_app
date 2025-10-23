@@ -65,16 +65,31 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
   }
 
+  void _onPrevious() {
+    if (currentPage > 0) {
+      _contentPageController.animateToPage(
+        currentPage - 1,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+      _backgroundPageController.animateToPage(
+        currentPage - 1,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
   void _onNext() {
     if (currentPage < onboardingData.length - 1) {
       _contentPageController.animateToPage(
         currentPage + 1,
-        duration: const Duration(milliseconds: 500),
+        duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
       );
       _backgroundPageController.animateToPage(
         currentPage + 1,
-        duration: const Duration(milliseconds: 500),
+        duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
       );
     } else {
@@ -114,7 +129,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               itemCount: onboardingData.length,
               controller: _backgroundPageController,
               onPageChanged: (index) => setState(() => currentPage = index),
-              physics: const NeverScrollableScrollPhysics(),
               itemBuilder: (context, index) {
                 return Image.asset(
                   onboardingData[index].image,
@@ -243,10 +257,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            ///Page indicator: selected page is pill-shaped
                             ...List.generate(
                               onboardingData.length,
-                              (index) => Container(
+                              (index) => AnimatedContainer(
+                                key: ValueKey(index),
+                                duration: const Duration(milliseconds: 200),
                                 margin: const EdgeInsets.symmetric(
                                   horizontal: 4,
                                 ),
@@ -261,6 +276,28 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               ),
                             ),
                             const Spacer(),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              child: Visibility(
+                                key: ValueKey(currentPage > 0),
+                                visible: currentPage > 0,
+                                child: Semantics(
+                                  label: 'Previous page',
+                                  child: GestureDetector(
+                                    onTap: _onPrevious,
+                                    child: const CircleAvatar(
+                                      radius: 27,
+                                      backgroundColor: AppTheme.mauve,
+                                      child: Icon(
+                                        Icons.arrow_back_ios_new,
+                                        color: AppTheme.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
                             Semantics(
                               label: 'Next page',
                               child: GestureDetector(
@@ -277,6 +314,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 20),
                       ],
                     ),
                   ),

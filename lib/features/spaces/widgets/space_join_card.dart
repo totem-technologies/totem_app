@@ -11,9 +11,11 @@ import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/meeting_provider_enum.dart';
+import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/api_service.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/date.dart';
@@ -37,8 +39,9 @@ enum SpaceJoinCardState {
 }
 
 class SpaceJoinCard extends ConsumerStatefulWidget {
-  const SpaceJoinCard({required this.event, super.key});
+  const SpaceJoinCard({required this.space, required this.event, super.key});
 
+  final SpaceDetailSchema space;
   final EventDetailSchema event;
 
   @override
@@ -46,21 +49,41 @@ class SpaceJoinCard extends ConsumerStatefulWidget {
 }
 
 class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
-  late bool _attending = widget.event.attending;
+  EventDetailSchema get event => widget.event;
+
+  late bool _attending = event.attending;
   var _loading = false;
+
+  // Refresh every second to update timeago and button states
+  Timer? _timer;
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     final hasStarted =
-        widget.event.start.isBefore(DateTime.now()) &&
-        widget.event.start
-            .add(Duration(minutes: widget.event.duration))
+        event.start.isBefore(DateTime.now()) &&
+        event.start
+            .add(Duration(minutes: event.duration))
             .isAfter(DateTime.now());
 
-    final hasEnded = widget.event.start
-        .add(Duration(minutes: widget.event.duration))
+    final hasEnded = event.start
+        .add(Duration(minutes: event.duration))
         .isBefore(DateTime.now());
 
     return SafeArea(
@@ -86,7 +109,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                       () {
                         switch (state) {
                           case SpaceJoinCardState.ended:
-                            return 'Session Ended';
+                            return 'No more upcoming sessions';
                           case SpaceJoinCardState.cancelled:
                             return 'This session has been cancelled';
                           case SpaceJoinCardState.joinable:
@@ -97,7 +120,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                             return 'This session is full';
                           case SpaceJoinCardState.joined:
                           case SpaceJoinCardState.notJoined:
-                            return formatEventDate(widget.event.start);
+                            return formatEventDate(event.start);
                         }
                       }(),
                       style: theme.textTheme.titleMedium?.copyWith(
@@ -110,11 +133,11 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                           case SpaceJoinCardState.joined:
                           case SpaceJoinCardState.notJoined:
                             return formatEventTime(
-                              widget.event.start,
+                              event.start,
                               // widget.event.userTimezone,
                             );
                           case SpaceJoinCardState.joinable:
-                            return timeago.format(widget.event.start);
+                            return timeago.format(event.start);
                           case SpaceJoinCardState.ended:
                           case SpaceJoinCardState.cancelled:
                           case SpaceJoinCardState.closed:
@@ -135,22 +158,22 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                   uri: hasEnded
                       ? null
                       : hasStarted &&
-                            widget.event.meetingProvider ==
+                            event.meetingProvider ==
                                 MeetingProviderEnum.googleMeet
-                      ? Uri.parse(getFullUrl(widget.event.calLink))
+                      ? Uri.parse(getFullUrl(event.calLink))
                       : null,
                   builder: (context, followLink) {
+                    const secondaryButtonStyle = ButtonStyle(
+                      padding: WidgetStatePropertyAll(
+                        EdgeInsetsDirectional.zero,
+                      ),
+                      maximumSize: WidgetStatePropertyAll(Size.square(46)),
+                      minimumSize: WidgetStatePropertyAll(Size.square(46)),
+                      foregroundColor: WidgetStatePropertyAll(
+                        AppTheme.mauve,
+                      ),
+                    );
                     if (state == SpaceJoinCardState.joined) {
-                      const buttonStyle = ButtonStyle(
-                        padding: WidgetStatePropertyAll(
-                          EdgeInsetsDirectional.zero,
-                        ),
-                        maximumSize: WidgetStatePropertyAll(Size.square(46)),
-                        minimumSize: WidgetStatePropertyAll(Size.square(46)),
-                        foregroundColor: WidgetStatePropertyAll(
-                          AppTheme.mauve,
-                        ),
-                      );
                       return SizedBox(
                         height: 46,
                         child: Row(
@@ -160,7 +183,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                               message: 'Add to calendar',
                               child: OutlinedButton(
                                 onPressed: addToCalendar,
-                                style: buttonStyle,
+                                style: secondaryButtonStyle,
                                 child: const TotemIcon(
                                   TotemIcons.calendar,
                                   size: 24,
@@ -170,12 +193,14 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                             Tooltip(
                               message: 'Give up your spot',
                               child: OutlinedButton(
-                                onPressed: giveUpSpot,
-                                style: buttonStyle,
-                                child: const TotemIcon(
-                                  TotemIcons.giveUpSpot,
-                                  size: 24,
-                                ),
+                                onPressed: _loading ? null : giveUpSpot,
+                                style: secondaryButtonStyle,
+                                child: _loading
+                                    ? const LoadingIndicator(size: 24)
+                                    : const TotemIcon(
+                                        TotemIcons.giveUpSpot,
+                                        size: 24,
+                                      ),
                               ),
                             ),
                           ],
@@ -189,7 +214,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                         case SpaceJoinCardState.closed:
                           toHome(HomeRoutes.spaces);
                         case SpaceJoinCardState.joinable:
-                          if (widget.event.meetingProvider ==
+                          if (event.meetingProvider ==
                               MeetingProviderEnum.livekit) {
                             joinLivekit();
                           } else {
@@ -204,23 +229,50 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                       }
                     }
 
-                    final content = Text(
-                      switch (state) {
-                        SpaceJoinCardState.ended ||
-                        SpaceJoinCardState.cancelled ||
-                        SpaceJoinCardState.closed => 'Explore',
-                        SpaceJoinCardState.joinable => 'Join Now',
-                        SpaceJoinCardState.joined => 'Add to calendar',
-                        SpaceJoinCardState.full => 'Explore',
-                        SpaceJoinCardState.notJoined => 'Attend',
-                      },
-                      style: const TextStyle(fontWeight: FontWeight.w400),
+                    final content = Center(
+                      child: Text(
+                        switch (state) {
+                          SpaceJoinCardState.ended ||
+                          SpaceJoinCardState.cancelled ||
+                          SpaceJoinCardState.closed => 'Explore',
+                          SpaceJoinCardState.joinable => 'Join Now',
+                          SpaceJoinCardState.joined => 'Add to calendar',
+                          SpaceJoinCardState.full => 'Explore',
+                          SpaceJoinCardState.notJoined => 'Attend',
+                        },
+                        style: const TextStyle(fontWeight: FontWeight.w400),
+                      ),
                     );
 
                     switch (state) {
+                      case SpaceJoinCardState.closed:
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          spacing: 14,
+                          children: [
+                            if (_attending)
+                              Tooltip(
+                                message: 'Give up your spot',
+                                child: OutlinedButton(
+                                  onPressed: _loading ? null : giveUpSpot,
+                                  style: secondaryButtonStyle,
+                                  child: const TotemIcon(
+                                    TotemIcons.giveUpSpot,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                            OutlinedButton(
+                              style: secondaryButtonStyle,
+                              onPressed: onPressed,
+                              child: _loading
+                                  ? const LoadingIndicator(size: 24)
+                                  : content,
+                            ),
+                          ],
+                        );
                       case SpaceJoinCardState.ended:
                       case SpaceJoinCardState.cancelled:
-                      case SpaceJoinCardState.closed:
                       case SpaceJoinCardState.joined:
                       case SpaceJoinCardState.full:
                         return OutlinedButton(
@@ -234,7 +286,8 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                         return ElevatedButton(
                           onPressed: onPressed,
                           style: ElevatedButton.styleFrom(
-                            maximumSize: const Size(156, 60),
+                            maximumSize: const Size(156, 46),
+                            minimumSize: const Size(46, 46),
                             padding: const EdgeInsetsDirectional.symmetric(
                               horizontal: 22,
                             ),
@@ -262,29 +315,29 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   }
 
   SpaceJoinCardState get state {
-    if (widget.event.cancelled) return SpaceJoinCardState.cancelled;
-    if (!widget.event.open) return SpaceJoinCardState.closed;
+    if (event.cancelled) return SpaceJoinCardState.cancelled;
+    if (!event.open) return SpaceJoinCardState.closed;
 
     final hasStarted =
-        widget.event.start.isBefore(DateTime.now()) &&
-        widget.event.start
-            .add(Duration(minutes: widget.event.duration))
+        event.start.isBefore(DateTime.now()) &&
+        event.start
+            .add(Duration(minutes: event.duration))
             .isAfter(DateTime.now());
 
-    final hasEnded = widget.event.start
-        .add(Duration(minutes: widget.event.duration))
+    final hasEnded = event.start
+        .add(Duration(minutes: event.duration))
         .isBefore(DateTime.now());
 
     if (hasEnded) {
       return SpaceJoinCardState.ended;
     } else if (hasStarted) {
-      if (widget.event.joinable) {
+      if (event.joinable) {
         return SpaceJoinCardState.joinable;
       }
     } else {
       if (_attending) {
         return SpaceJoinCardState.joined;
-      } else if (widget.event.seatsLeft <= 0) {
+      } else if (event.seatsLeft <= 0) {
         return SpaceJoinCardState.full;
       }
     }
@@ -292,24 +345,41 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   }
 
   Future<void> attend(WidgetRef ref) async {
-    if (_attending || _loading || (kDebugMode && AppConfig.isProduction)) {
+    if (_attending ||
+        _loading ||
+        (kDebugMode && AppConfig.isProduction) ||
+        !mounted) {
       return;
     }
 
     setState(() => _loading = true);
 
-    final mobileApiService = ref.read(mobileApiServiceProvider);
-    final response = await mobileApiService.spaces
-        .totemCirclesMobileApiRsvpConfirm(
-          eventSlug: widget.event.slug,
-        );
+    try {
+      final mobileApiService = ref.read(mobileApiServiceProvider);
+      final response = await mobileApiService.spaces
+          .totemCirclesMobileApiRsvpConfirm(eventSlug: event.slug);
 
-    setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
 
-    if (response) {
-      setState(() => _attending = true);
-      attendingPopup();
-    } else {
+      if (response.attending) {
+        if (mounted) {
+          setState(() => _attending = true);
+          attendingPopup();
+        }
+        await refresh();
+      } else {
+        if (mounted) {
+          showErrorPopup(
+            context,
+            icon: TotemIcons.spaces,
+            title: 'Failed to attend to this circle',
+            message: 'Please try again later',
+          );
+        }
+      }
+    } catch (e) {
       if (mounted) {
         showErrorPopup(
           context,
@@ -326,7 +396,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
       context: context,
       builder: (context) {
         return AttendingDialog(
-          event: widget.event,
+          eventSlug: event.slug,
           onAddToCalendar: addToCalendar,
         );
       },
@@ -340,6 +410,10 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     var progress = 0;
 
     Timer.periodic(const Duration(milliseconds: 250), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       progress++;
 
       if (progress >= total) {
@@ -375,7 +449,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   }
 
   Future<void> addToCalendar() async {
-    // TODO(bdlukaa): Integrate this to the phone device
+    // TODO(adil): Integrate this to the phone device
     // try {
     //   final eventide = Eventide();
     //   await eventide.createEventInDefaultCalendar(
@@ -395,12 +469,10 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     //   debugPrint('Failed to add event to calendar: $error\n$stacktrace');
     await launchUrlString(
       _buildGoogleCalendarUrl(
-        title: widget.event.space.title,
-        start: widget.event.start.toLocal(),
-        end: widget.event.start
-            .add(Duration(minutes: widget.event.duration))
-            .toLocal(),
-        description: widget.event.space.shortDescription,
+        title: widget.space.title,
+        start: event.start.toLocal(),
+        end: event.start.add(Duration(minutes: event.duration)).toLocal(),
+        description: widget.space.shortDescription,
       ),
     );
     // }
@@ -455,31 +527,41 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
       },
     );
 
-    if (giveUp == null || !giveUp) return;
+    if (giveUp == null || !giveUp || !mounted) return;
 
-    setState(() {
-      _loading = true;
-    });
+    setState(() => _loading = true);
 
-    final mobileApiService = ref.read(mobileApiServiceProvider);
-    final response = await mobileApiService.spaces
-        .totemCirclesMobileApiRsvpCancel(
-          eventSlug: widget.event.slug,
-        );
+    try {
+      final mobileApiService = ref.read(mobileApiServiceProvider);
+      final response = await mobileApiService.spaces
+          .totemCirclesMobileApiRsvpCancel(eventSlug: event.slug);
 
-    setState(() => _loading = false);
-
-    if (response) {
       if (mounted) {
-        setState(() => _attending = false);
-        showErrorPopup(
-          context,
-          icon: TotemIcons.seats,
-          title: 'You gave up your spot',
-          message: 'You can always attend again if a spot opens up.',
-        );
+        setState(() => _loading = false);
       }
-    } else {
+
+      if (!response.attending) {
+        if (mounted) {
+          setState(() => _attending = false);
+          showErrorPopup(
+            context,
+            icon: TotemIcons.seats,
+            title: 'You gave up your spot',
+            message: 'You can always attend again if a spot opens up.',
+          );
+        }
+        await refresh();
+      } else {
+        if (mounted) {
+          showErrorPopup(
+            context,
+            icon: TotemIcons.seats,
+            title: 'Failed to give up your spot',
+            message: 'Please try again later',
+          );
+        }
+      }
+    } catch (e) {
       if (mounted) {
         showErrorPopup(
           context,
@@ -491,23 +573,29 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     }
   }
 
+  Future<void> refresh() async {
+    // We still want to wait for the refresh to complete
+    // ignore: unused_result
+    await ref.refresh(eventProvider(event.slug).future);
+    // We still want to wait for the refresh to complete
+    // ignore: unused_result
+    await ref.refresh(spaceProvider(widget.space.slug).future);
+  }
+
   Future<void> joinLivekit() async {
     debugPrint('Joining livekit');
-    await context.pushNamed(
-      RouteNames.videoSessionPrejoin,
-      extra: widget.event,
-    );
+    await context.pushNamed(RouteNames.videoSessionPrejoin, extra: event.slug);
   }
 }
 
 class AttendingDialog extends StatefulWidget {
   const AttendingDialog({
     required this.onAddToCalendar,
-    required this.event,
+    required this.eventSlug,
     super.key,
   });
 
-  final EventDetailSchema event;
+  final String eventSlug;
   final VoidCallback onAddToCalendar;
 
   @override
@@ -551,7 +639,7 @@ class _AttendingDialogState extends State<AttendingDialog> {
                           SharePlus.instance.share(
                             ShareParams(
                               uri: Uri.parse(AppConfig.mobileApiUrl)
-                                  .resolve('/spaces/event/${widget.event.slug}')
+                                  .resolve('/spaces/event/${widget.eventSlug}')
                                   .resolve('?utm_source=app&utm_medium=share'),
                               sharePositionOrigin: box != null
                                   ? box.localToGlobal(

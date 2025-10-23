@@ -15,7 +15,9 @@ class RouteNames {
   static const home = '/home';
   static const spaces = '/spaces';
   static const spaceDetail = '/spaces/event/';
-  static String space(String slug) => '/spaces/event/$slug';
+  static String space(String slug) => '/spaces/$slug';
+  static String spaceEvent(String spaceSlug, String eventSlug) =>
+      '/spaces/$spaceSlug/event/$eventSlug';
 
   static const profile = '/profile';
   static const profileDetail = '/profile/detail';
