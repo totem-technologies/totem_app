@@ -495,8 +495,7 @@ class AboutSpaceSheet extends StatelessWidget {
 }
 
 class SessionSheet extends StatelessWidget {
-  SessionSheet({required this.space, required this.event, super.key})
-    : assert(space.nextEvent != null, 'space.nextEvent must not be null');
+  const SessionSheet({required this.space, required this.event, super.key});
 
   final SpaceDetailSchema space;
   final EventDetailSchema event;
