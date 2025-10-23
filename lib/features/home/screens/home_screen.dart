@@ -63,7 +63,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           child: GestureDetector(
                             onTap: () {
                               context.push(
-                                RouteNames.space(upcomingEvents.first.slug),
+                                RouteNames.space(
+                                  upcomingEvents.first.space.slug!,
+                                ),
                               );
                             },
                             child: SpaceCard.fromEventDetailSchema(
@@ -92,7 +94,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 child: GestureDetector(
                                   onTap: () {
                                     context.push(
-                                      RouteNames.space(event.slug),
+                                      RouteNames.space(event.space.slug!),
                                     );
                                   },
                                   child: SpaceCard.fromEventDetailSchema(

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/space_schema.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -129,64 +131,70 @@ class _SubscribedSpaceTileState extends ConsumerState<_SubscribedSpaceTile> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(35),
-      ),
-      padding: const EdgeInsetsDirectional.only(
-        top: 10,
-        start: 20,
-        bottom: 10,
-        end: 15,
-      ),
-      child: Row(
-        children: [
-          Expanded(child: Text(widget.space.title)),
-          GestureDetector(
-            onTap: () async {
-              if (_loading || widget.space.slug == null) return;
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: () {
+        context.push(RouteNames.space(widget.space.slug!));
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(35),
+        ),
+        padding: const EdgeInsetsDirectional.only(
+          top: 10,
+          start: 20,
+          bottom: 10,
+          end: 15,
+        ),
+        child: Row(
+          children: [
+            Expanded(child: Text(widget.space.title)),
+            GestureDetector(
+              onTap: () async {
+                if (_loading || widget.space.slug == null) return;
 
-              setState(() {
-                _loading = true;
-              });
+                setState(() {
+                  _loading = true;
+                });
 
-              try {
-                await ref.read(
-                  unsubscribeFromSpaceProvider(widget.space.slug!).future,
-                );
-              } catch (error) {
-                // This is handled internally
-                // ignore: use_build_context_synchronously
-                await ErrorHandler.handleApiError(context, error);
-              } finally {
-                if (mounted) {
-                  setState(() {
-                    _loading = false;
-                  });
+                try {
+                  await ref.read(
+                    unsubscribeFromSpaceProvider(widget.space.slug!).future,
+                  );
+                } catch (error) {
+                  // This is handled internally
+                  // ignore: use_build_context_synchronously
+                  await ErrorHandler.handleApiError(context, error);
+                } finally {
+                  if (mounted) {
+                    setState(() {
+                      _loading = false;
+                    });
+                  }
                 }
-              }
-            },
-            child: Container(
-              height: 35,
-              width: 72,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF3B30),
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: Center(
-                child: _loading
-                    ? LoadingIndicator(
-                        size: IconTheme.of(context).size ?? 24.0,
-                      )
-                    : const TotemIcon(
-                        TotemIcons.delete,
-                        color: Colors.white,
-                      ),
+              },
+              child: Container(
+                height: 35,
+                width: 72,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF3B30),
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Center(
+                  child: _loading
+                      ? LoadingIndicator(
+                          size: IconTheme.of(context).size ?? 24.0,
+                        )
+                      : TotemIcon(
+                          TotemIcons.delete,
+                          color: theme.colorScheme.onError,
+                        ),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

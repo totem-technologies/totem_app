@@ -15,6 +15,7 @@ class RouteNames {
   static const home = '/home';
   static const spaces = '/spaces';
   static const spaceDetail = '/spaces/event/';
+  // TODO(bdlukaa): Allow specifying the event id as well
   static String space(String slug) => '/spaces/event/$slug';
 
   static const profile = '/profile';
