@@ -4,6 +4,7 @@
 
 // Clients
 export 'fallback/fallback_client.dart';
+export 'users/users_client.dart';
 export 'spaces/spaces_client.dart';
 export 'blog/blog_client.dart';
 export 'meetings/meetings_client.dart';
@@ -15,6 +16,7 @@ export 'models/user_schema.dart';
 export 'models/public_user_schema.dart';
 export 'models/user_update_schema.dart';
 export 'models/keeper_profile_schema.dart';
+export 'models/feedback_schema.dart';
 export 'models/onboard_schema.dart';
 export 'models/referral_choices.dart';
 export 'models/space_schema.dart';

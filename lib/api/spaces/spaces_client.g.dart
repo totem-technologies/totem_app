@@ -139,7 +139,7 @@ class _SpacesClient implements SpacesClient {
   }
 
   @override
-  Future<EventDetailSchema> totemCirclesMobileApiGetSpaceDetail({
+  Future<EventDetailSchema> totemCirclesMobileApiGetEventDetail({
     required String eventSlug,
   }) async {
     final _extra = <String, dynamic>{};
@@ -150,7 +150,7 @@ class _SpacesClient implements SpacesClient {
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/api/mobile/protected/spaces/spaces/event/${eventSlug}',
+            '/api/mobile/protected/spaces/event/${eventSlug}',
             queryParameters: queryParameters,
             data: _data,
           )
@@ -160,6 +160,35 @@ class _SpacesClient implements SpacesClient {
     late EventDetailSchema _value;
     try {
       _value = EventDetailSchema.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<SpaceDetailSchema> totemCirclesMobileApiGetSpaceDetail({
+    required String spaceSlug,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<SpaceDetailSchema>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/api/mobile/protected/spaces/space/${spaceSlug}',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
+    late SpaceDetailSchema _value;
+    try {
+      _value = SpaceDetailSchema.fromJson(_result.data!);
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options);
       rethrow;
@@ -298,14 +327,14 @@ class _SpacesClient implements SpacesClient {
   }
 
   @override
-  Future<bool> totemCirclesMobileApiRsvpConfirm({
+  Future<EventDetailSchema> totemCirclesMobileApiRsvpConfirm({
     required String eventSlug,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<bool>(
+    final _options = _setStreamType<EventDetailSchema>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -315,10 +344,10 @@ class _SpacesClient implements SpacesClient {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<bool>(_options);
-    late bool _value;
+    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
+    late EventDetailSchema _value;
     try {
-      _value = _result.data!;
+      _value = EventDetailSchema.fromJson(_result.data!);
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options);
       rethrow;
@@ -327,14 +356,14 @@ class _SpacesClient implements SpacesClient {
   }
 
   @override
-  Future<bool> totemCirclesMobileApiRsvpCancel({
+  Future<EventDetailSchema> totemCirclesMobileApiRsvpCancel({
     required String eventSlug,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<bool>(
+    final _options = _setStreamType<EventDetailSchema>(
       Options(method: 'DELETE', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -344,10 +373,10 @@ class _SpacesClient implements SpacesClient {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<bool>(_options);
-    late bool _value;
+    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
+    late EventDetailSchema _value;
     try {
-      _value = _result.data!;
+      _value = EventDetailSchema.fromJson(_result.data!);
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options);
       rethrow;

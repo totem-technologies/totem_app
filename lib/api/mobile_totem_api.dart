@@ -5,6 +5,7 @@
 import 'package:dio/dio.dart';
 
 import 'fallback/fallback_client.dart';
+import 'users/users_client.dart';
 import 'spaces/spaces_client.dart';
 import 'blog/blog_client.dart';
 import 'meetings/meetings_client.dart';
@@ -25,12 +26,15 @@ class MobileTotemApi {
   static String get version => '1';
 
   FallbackClient? _fallback;
+  UsersClient? _users;
   SpacesClient? _spaces;
   BlogClient? _blog;
   MeetingsClient? _meetings;
 
   FallbackClient get fallback =>
       _fallback ??= FallbackClient(_dio, baseUrl: _baseUrl);
+
+  UsersClient get users => _users ??= UsersClient(_dio, baseUrl: _baseUrl);
 
   SpacesClient get spaces => _spaces ??= SpacesClient(_dio, baseUrl: _baseUrl);
 

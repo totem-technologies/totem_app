@@ -33,7 +33,8 @@ class SpaceDetailSchema {
   final String shortDescription;
   final String content;
   final PublicUserSchema author;
-  final NextEventSchema nextEvent;
+  @JsonKey(name: 'next_event')
+  final NextEventSchema? nextEvent;
   final String? category;
 
   Map<String, Object?> toJson() => _$SpaceDetailSchemaToJson(this);

@@ -2,23 +2,16 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, unused_import
 
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
 import '../models/fcm_token_register_schema.dart';
 import '../models/fcm_token_response_schema.dart';
-import '../models/keeper_profile_schema.dart';
 import '../models/message_response.dart';
 import '../models/onboard_schema.dart';
 import '../models/pin_request_schema.dart';
-import '../models/public_user_schema.dart';
 import '../models/refresh_token_schema.dart';
 import '../models/token_response.dart';
-import '../models/user_schema.dart';
-import '../models/user_update_schema.dart';
 import '../models/validate_pin_schema.dart';
 
 part 'fallback_client.g.dart';
@@ -41,39 +34,6 @@ abstract class FallbackClient {
   @DELETE('/api/mobile/protected/fcm/unregister/{token}')
   Future<void> totemApiMobileApiUnregisterFcmToken({
     @Path('token') required String token,
-  });
-
-  /// Get Current User
-  @GET('/api/mobile/protected/users/current')
-  Future<UserSchema> totemUsersMobileApiGetCurrentUser();
-
-  /// Get User Profile
-  @GET('/api/mobile/protected/users/profile/{user_slug}')
-  Future<PublicUserSchema> totemUsersMobileApiGetUserProfile({
-    @Path('user_slug') required String userSlug,
-  });
-
-  /// Update Current User
-  @POST('/api/mobile/protected/users/update')
-  Future<UserSchema> totemUsersMobileApiUpdateCurrentUser({
-    @Body() required UserUpdateSchema body,
-  });
-
-  /// Update Current User Image
-  @MultiPart()
-  @POST('/api/mobile/protected/users/update_image')
-  Future<bool> totemUsersMobileApiUpdateCurrentUserImage({
-    @Part(name: 'profile_image') required File profileImage,
-  });
-
-  /// Delete Current User
-  @DELETE('/api/mobile/protected/users/delete')
-  Future<bool> totemUsersMobileApiDeleteCurrentUser();
-
-  /// Keeper
-  @GET('/api/mobile/protected/users/keeper/{slug}')
-  Future<KeeperProfileSchema> totemUsersMobileApiKeeper({
-    @Path('slug') required String slug,
   });
 
   /// Onboard Post

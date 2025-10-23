@@ -6,7 +6,7 @@ part of 'livekit_service.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$liveKitServiceHash() => r'86fc6217519a450252e1686691e5eb14da7257e4';
+String _$liveKitServiceHash() => r'254244b6a0550313e5a41c67632a7ba94294cff4';
 
 /// Copied from Dart SDK
 class _SystemHash {

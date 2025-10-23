@@ -25,6 +25,12 @@ abstract class MeetingsClient {
     @Path('event_slug') required String eventSlug,
   });
 
+  /// Accept Totem Endpoint
+  @POST('/api/mobile/protected/meetings/event/{event_slug}/accept-totem')
+  Future<void> totemMeetingsMobileApiAcceptTotemEndpoint({
+    @Path('event_slug') required String eventSlug,
+  });
+
   /// Start Room Endpoint
   @POST('/api/mobile/protected/meetings/event/{event_slug}/start')
   Future<void> totemMeetingsMobileApiStartRoomEndpoint({
