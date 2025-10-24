@@ -180,11 +180,11 @@ class KeeperProfileScreen extends ConsumerWidget {
                   child: Html(
                     data: keeper.bioHtml ?? keeper.bio,
                     style: AppTheme.compactHtmlStyle,
-                    onLinkTap: (url, _, _) {
-                      if (url != null) launchUrl(Uri.parse(url));
+                    onLinkTap: (url, _, _) async {
+                      if (url != null) await launchUrl(Uri.parse(url));
                     },
-                    onAnchorTap: (url, _, _) {
-                      if (url != null) launchUrl(Uri.parse(url));
+                    onAnchorTap: (url, _, _) async {
+                      if (url != null) await launchUrl(Uri.parse(url));
                     },
                   ),
                 ),

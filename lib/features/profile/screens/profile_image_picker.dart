@@ -104,13 +104,13 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
             spacing: 20,
             children: [
               GestureDetector(
-                onTap: () {
+                onTap: () async {
                   switch (_state) {
                     case ProfileAvatarTypeEnum.$unknown:
                     case ProfileAvatarTypeEnum.td:
                       _randomizeTieDyeSeed();
                     case ProfileAvatarTypeEnum.im:
-                      _pickImage();
+                      await _pickImage();
                   }
                 },
                 child: Center(

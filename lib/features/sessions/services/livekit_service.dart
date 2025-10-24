@@ -115,7 +115,7 @@ class LiveKitService extends _$LiveKitService {
 
     ref.onDispose(() {
       debugPrint('Disposing LiveKitService and closing connections.');
-      _listener.dispose();
+      unawaited(_listener.dispose());
       room
         ..removeListener(_onRoomChanges)
         ..dispose();
@@ -125,8 +125,12 @@ class LiveKitService extends _$LiveKitService {
   }
 
   void _onConnected() {
-    room.localParticipant?.setCameraEnabled(_options.cameraEnabled);
-    room.localParticipant?.setMicrophoneEnabled(_options.microphoneEnabled);
+    if (room.localParticipant == null) return;
+
+    unawaited(room.localParticipant!.setCameraEnabled(_options.cameraEnabled));
+    unawaited(
+      room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled),
+    );
     state = state.copyWith(connectionState: RoomConnectionState.connected);
   }
 
@@ -228,8 +232,8 @@ class LiveKitService extends _$LiveKitService {
   }
 
   /// Send an emoji to other participants.
-  void sendEmoji(String emoji) {
-    room.localParticipant?.publishData(
+  Future<void> sendEmoji(String emoji) async {
+    await room.localParticipant?.publishData(
       const Utf8Encoder().convert(emoji),
       topic: SessionCommunicationTopics.emoji.topic,
     );

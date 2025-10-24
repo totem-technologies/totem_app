@@ -116,12 +116,14 @@ void popOrHome([BuildContext? context]) {
     if (router.canPop()) {
       router.pop();
     } else {
-      router.pushReplacementNamed(RouteNames.welcome);
+      unawaited(router.pushReplacementNamed(RouteNames.welcome));
     }
   } else if (navigatorKey.currentState?.canPop() ?? false) {
     navigatorKey.currentState?.pop();
   } else {
-    navigatorKey.currentState?.pushReplacementNamed(RouteNames.welcome);
+    unawaited(
+      navigatorKey.currentState?.pushReplacementNamed(RouteNames.welcome),
+    );
   }
 }
 
@@ -129,8 +131,10 @@ final shellNavigatorKey = GlobalKey<StatefulNavigationShellState>();
 void toHome(HomeRoutes route) {
   if (shellNavigatorKey.currentState != null) {
     shellNavigatorKey.currentState?.goBranch(route.index);
-  } else {
-    navigatorKey.currentState?.pushReplacementNamed(RouteNames.welcome);
+  } else if (navigatorKey.currentState != null) {
+    unawaited(
+      navigatorKey.currentState!.pushReplacementNamed(RouteNames.welcome),
+    );
   }
 }
 

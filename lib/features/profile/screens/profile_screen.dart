@@ -97,23 +97,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ProfileTile(
               icon: const TotemIcon(TotemIcons.profile),
               title: 'Profile',
-              onTap: () {
-                context.pushNamed(RouteNames.profileDetail);
-              },
+              onTap: () => context.pushNamed(RouteNames.profileDetail),
             ),
             ProfileTile(
               icon: const TotemIcon(TotemIcons.subscribedSpaces),
               title: 'Subscribed Spaces',
-              onTap: () {
-                context.pushNamed(RouteNames.subscribedSpaces);
-              },
+              onTap: () => context.pushNamed(RouteNames.subscribedSpaces),
             ),
             ProfileTile(
               icon: const TotemIcon(TotemIcons.history),
               title: 'Session history',
-              onTap: () {
-                context.pushNamed(RouteNames.sessionHistory);
-              },
+              onTap: () => context.pushNamed(RouteNames.sessionHistory),
             ),
             ProfileTile(
               icon: const TotemIcon(TotemIcons.logout),

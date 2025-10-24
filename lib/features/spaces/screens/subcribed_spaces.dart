@@ -133,9 +133,7 @@ class _SubscribedSpaceTileState extends ConsumerState<_SubscribedSpaceTile> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return GestureDetector(
-      onTap: () {
-        context.push(RouteNames.space(widget.space.slug!));
-      },
+      onTap: () => context.push(RouteNames.space(widget.space.slug!)),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,

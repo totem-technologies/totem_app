@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -34,7 +36,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   @override
   void initState() {
     super.initState();
-    _initializeLocalVideo();
+    unawaited(_initializeLocalVideo());
   }
 
   Future<void> _initializeLocalVideo() async {
@@ -49,8 +51,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   @override
   void dispose() {
-    _videoTrack?.stop();
-    _videoTrack?.dispose();
+    if (_videoTrack != null) {
+      unawaited(_videoTrack!.stop());
+      unawaited(_videoTrack!.dispose());
+    }
     super.dispose();
   }
 
@@ -156,9 +160,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                               decoration: TextDecoration.underline,
                             ),
                             recognizer: TapGestureRecognizer()
-                              ..onTap = () {
-                                launchUrl(AppConfig.communityGuidelinesUrl);
-                              },
+                              ..onTap = () =>
+                                  launchUrl(AppConfig.communityGuidelinesUrl),
                           ),
                           const TextSpan(text: '.'),
                         ],

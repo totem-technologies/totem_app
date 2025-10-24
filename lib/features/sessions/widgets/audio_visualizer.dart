@@ -1,6 +1,7 @@
 // file copied from livekit_components package and modified
 // ignore_for_file: depend_on_referenced_packages
 
+import 'dart:async';
 import 'dart:math' show max;
 
 import 'package:collection/collection.dart';
@@ -141,8 +142,8 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
 
     if (didUpdateParams) {
       // Re-attach listeners
-      _detachListeners();
-      _attachListeners();
+      unawaited(_detachListeners());
+      unawaited(_attachListeners());
     }
   }
 
@@ -214,6 +215,8 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
     _controller = AnimationController(
       duration: Duration(milliseconds: widget.options.durationInMilliseconds),
       vsync: this,
+      // Do not await this future
+      // ignore: discarded_futures
     )..repeat(reverse: true);
 
     _pulseAnimation = CurvedAnimation(
@@ -221,13 +224,13 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
       curve: Curves.easeInOut,
     );
 
-    _attachListeners();
+    unawaited(_attachListeners());
   }
 
   @override
   void dispose() {
     _controller.dispose();
-    _detachListeners();
+    unawaited(_detachListeners());
     super.dispose();
   }
 
