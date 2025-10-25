@@ -228,6 +228,15 @@ class NotificationsService {
   }
 
   Future<void> requestPermissions() {
-    return FirebaseMessaging.instance.requestPermission(provisional: true);
+    try {
+      return FirebaseMessaging.instance.requestPermission(provisional: true);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        reason: 'Failed to request notification permissions',
+      );
+      return Future.value();
+    }
   }
 }
