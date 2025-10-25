@@ -79,9 +79,9 @@ class SpacesFilterChip extends StatelessWidget {
       padding: const EdgeInsetsDirectional.only(end: 8),
       child: Center(
         child: GestureDetector(
-          onTap: () {
+          onTap: () async {
             onTap();
-            Scrollable.ensureVisible(
+            await Scrollable.ensureVisible(
               context,
               duration: const Duration(milliseconds: 300),
               alignment: 0.5,

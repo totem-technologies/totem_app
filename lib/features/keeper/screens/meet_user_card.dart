@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/public_user_schema.dart';
@@ -31,11 +33,7 @@ class MeetUserCard extends StatelessWidget {
           UserAvatar.fromUserSchema(
             user,
             onTap: user.slug != null
-                ? () {
-                    context.push(
-                      RouteNames.keeperProfile(user.slug!),
-                    );
-                  }
+                ? () => context.push(RouteNames.keeperProfile(user.slug!))
                 : null,
           ),
           Expanded(
@@ -50,9 +48,11 @@ class MeetUserCard extends StatelessWidget {
           OutlinedButton(
             onPressed: () {
               if (user.slug != null) {
-                context.push(
-                  RouteNames.keeperProfile(
-                    user.slug!,
+                unawaited(
+                  context.push(
+                    RouteNames.keeperProfile(
+                      user.slug!,
+                    ),
                   ),
                 );
               }

@@ -44,9 +44,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     super.dispose();
   }
 
-  void _nextPage() {
+  Future<void> _nextPage() async {
     if (_pageController.hasClients) {
-      _pageController.nextPage(
+      return _pageController.nextPage(
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeInOut,
       );
@@ -74,7 +74,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             interestTopics: _selectedTopics,
             age: int.tryParse(_ageController.text.trim()),
           );
-      _nextPage();
+      await _nextPage();
     } catch (error, stackTrace) {
       if (mounted) {
         await ErrorHandler.handleApiError(
@@ -93,12 +93,12 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: !_isLoading,
-      onPopInvokedWithResult: (didPop, _) {
+      onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         if (_pageController.hasClients &&
             _pageController.page != null &&
             _pageController.page! > 0) {
-          _pageController.previousPage(
+          await _pageController.previousPage(
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeInOut,
           );
@@ -130,9 +130,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             selectedTopics: _selectedTopics,
             isLoading: _isLoading,
             onTopicSelected: _handleTopicSelection,
-            onContinue: () async {
-              _nextPage();
-            },
+            onContinue: _nextPage,
           ),
           _SuggestionsTab(
             selectedTopics: _selectedTopics,
@@ -403,18 +401,15 @@ class _ProfileTabState extends State<_ProfileTab>
         ),
         const SizedBox(height: 6),
         GestureDetector(
-          onTap: () {
-            showModalBottomSheet<ReferralChoices>(
+          onTap: () async {
+            final value = await showModalBottomSheet<ReferralChoices>(
               isScrollControlled: true,
               context: context,
               builder: (context) => const ReferralSourceModal(),
-            ).then(
-              (value) {
-                if (value != null) {
-                  widget.onReferralSourceSelected(value);
-                }
-              },
             );
+            if (value != null) {
+              widget.onReferralSourceSelected(value);
+            }
           },
           child: Container(
             height: 53,

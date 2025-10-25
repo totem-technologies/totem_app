@@ -156,8 +156,6 @@ class LocalParticipantVideoCard extends ConsumerWidget {
         vertical: 10,
       ),
       alignment: Alignment.center,
-      // DecoratedBox is overlapping the border
-      // ignore: use_decorated_box
       child: Container(
         decoration: BoxDecoration(
           color: Colors.black,

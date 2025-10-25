@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
@@ -75,7 +77,7 @@ class OptionsSheet extends StatelessWidget {
                 options: videoInputs?.toList(),
                 optionToString: (option) => option.humanReadableLabel,
                 selectedOption: selected,
-                onOptionChanged: (value) {
+                onOptionChanged: (value) async {
                   if (value != null) {
                     // TODO(bdlukaa): Revisit this in the future
                     // https://github.com/livekit/client-sdk-flutter/issues/863
@@ -85,12 +87,20 @@ class OptionsSheet extends StatelessWidget {
                           (track) => track.kind == TrackType.VIDEO,
                         )
                         ?.track;
-                    userTrack?.restartTrack(
-                      CameraCaptureOptions(
-                        deviceId: value.deviceId,
-                      ),
-                    );
-                    deviceCtx.selectVideoInput(value);
+                    if (userTrack != null) {
+                      unawaited(
+                        userTrack.restartTrack(
+                          CameraCaptureOptions(
+                            deviceId: value.deviceId,
+                          ),
+                        ),
+                      );
+                    } else {
+                      await roomCtx.room.localParticipant?.publishVideoTrack(
+                        await LocalVideoTrack.createCameraTrack(),
+                      );
+                    }
+                    await deviceCtx.selectVideoInput(value);
                   }
                 },
               );

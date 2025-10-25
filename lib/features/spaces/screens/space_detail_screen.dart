@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -124,11 +126,11 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                   return IconButton(
                                     icon: Icon(Icons.adaptive.share),
                                     visualDensity: VisualDensity.compact,
-                                    onPressed: () {
+                                    onPressed: () async {
                                       final box =
                                           context.findRenderObject()
                                               as RenderBox?;
-                                      SharePlus.instance.share(
+                                      await SharePlus.instance.share(
                                         ShareParams(
                                           uri: Uri.parse(AppConfig.mobileApiUrl)
                                               .resolve(
@@ -259,10 +261,14 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                               ),
                             },
                             onLinkTap: (url, _, _) {
-                              if (url != null) launchUrl(Uri.parse(url));
+                              if (url != null) {
+                                unawaited(launchUrl(Uri.parse(url)));
+                              }
                             },
                             onAnchorTap: (url, _, _) {
-                              if (url != null) launchUrl(Uri.parse(url));
+                              if (url != null) {
+                                unawaited(launchUrl(Uri.parse(url)));
+                              }
                             },
                           ),
 
@@ -477,10 +483,10 @@ class AboutSpaceSheet extends StatelessWidget {
                     data: markdown.markdownToHtml(space.content),
                     shrinkWrap: true,
                     onLinkTap: (url, _, _) {
-                      if (url != null) launchUrl(Uri.parse(url));
+                      if (url != null) unawaited(launchUrl(Uri.parse(url)));
                     },
                     onAnchorTap: (url, _, _) {
-                      if (url != null) launchUrl(Uri.parse(url));
+                      if (url != null) unawaited(launchUrl(Uri.parse(url)));
                     },
                     style: {...AppTheme.compactHtmlStyle},
                   ),
@@ -546,11 +552,8 @@ class SessionSheet extends StatelessWidget {
                     UserAvatar.fromUserSchema(
                       space.author,
                       radius: 40,
-                      onTap: () {
-                        context.push(
-                          RouteNames.keeperProfile(space.slug),
-                        );
-                      },
+                      onTap: () =>
+                          context.push(RouteNames.keeperProfile(space.slug)),
                     ),
                   ],
                 ),
@@ -580,10 +583,10 @@ class SessionSheet extends StatelessWidget {
                   shrinkWrap: true,
                   style: AppTheme.compactHtmlStyle,
                   onLinkTap: (url, _, _) {
-                    if (url != null) launchUrl(Uri.parse(url));
+                    if (url != null) unawaited(launchUrl(Uri.parse(url)));
                   },
                   onAnchorTap: (url, _, _) {
-                    if (url != null) launchUrl(Uri.parse(url));
+                    if (url != null) unawaited(launchUrl(Uri.parse(url)));
                   },
                 ),
               ],

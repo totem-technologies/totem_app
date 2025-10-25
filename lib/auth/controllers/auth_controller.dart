@@ -49,7 +49,7 @@ class AuthController extends Notifier<AuthState> {
   bool get isAuthenticated => state.status == AuthStatus.authenticated;
   bool get isOnboardingCompleted =>
       isAuthenticated &&
-      (state.user?.name != null && state.user!.name!.isNotEmpty == true);
+      (state.user?.name != null && state.user!.name!.isNotEmpty);
 
   UserSchema? get user => state.user;
 
@@ -69,7 +69,7 @@ class AuthController extends Notifier<AuthState> {
   }
 
   void _initialize() {
-    checkExistingAuth();
+    unawaited(checkExistingAuth());
     FirebaseMessaging.instance.onTokenRefresh
         .listen((_) => _updateFCMToken())
         .onError((dynamic error, StackTrace stackTrace) {

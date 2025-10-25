@@ -80,10 +80,10 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                           icon: Icon(Icons.adaptive.share),
                           iconSize: 20,
                           visualDensity: VisualDensity.compact,
-                          onPressed: () {
+                          onPressed: () async {
                             final box =
                                 context.findRenderObject() as RenderBox?;
-                            SharePlus.instance.share(
+                            await SharePlus.instance.share(
                               ShareParams(
                                 uri: Uri.parse(AppConfig.mobileApiUrl)
                                     .resolve('/blog/${blog.slug}')
@@ -169,11 +169,11 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                         ),
                       Html(
                         data: blog.contentHtml,
-                        onLinkTap: (url, _, _) {
-                          if (url != null) launchUrl(Uri.parse(url));
+                        onLinkTap: (url, _, _) async {
+                          if (url != null) await launchUrl(Uri.parse(url));
                         },
-                        onAnchorTap: (url, _, _) {
-                          if (url != null) launchUrl(Uri.parse(url));
+                        onAnchorTap: (url, _, _) async {
+                          if (url != null) await launchUrl(Uri.parse(url));
                         },
                         style: AppTheme.htmlStyle,
                       ),

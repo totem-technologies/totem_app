@@ -55,9 +55,7 @@ class BlogPostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        context.push(RouteNames.blogPost(slug));
-      },
+      onTap: () => context.push(RouteNames.blogPost(slug)),
       child: Container(
         margin: const EdgeInsetsDirectional.only(
           start: 20,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -97,9 +98,9 @@ class UserAvatar extends ConsumerWidget {
     return GestureDetector(
       onTap:
           onTap ??
-          () {
+          () async {
             if (image != null) {
-              showGeneralDialog(
+              await showGeneralDialog(
                 context: context,
                 barrierDismissible: true,
                 barrierLabel: MaterialLocalizations.of(
@@ -206,8 +207,8 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
                   _transformationController.value = Matrix4.identity();
                   setState(() {
                     _dragPosition = Offset.zero;
-                    _controller.reverse();
                   });
+                  unawaited(_controller.reverse());
                 }
               },
               child: Center(

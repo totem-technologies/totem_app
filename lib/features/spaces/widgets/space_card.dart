@@ -76,16 +76,16 @@ class SpaceCard extends StatelessWidget {
           highlightColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
           onTap:
               onTap ??
-              () {
+              () async {
                 if (space.nextEvent != null) {
-                  context.push(
+                  await context.push(
                     RouteNames.spaceEvent(
                       space.slug,
                       space.nextEvent!.slug,
                     ),
                   );
                 } else {
-                  context.push(RouteNames.space(space.slug));
+                  await context.push(RouteNames.space(space.slug));
                 }
               },
           borderRadius: BorderRadius.circular(8),

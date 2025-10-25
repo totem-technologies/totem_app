@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -187,7 +188,7 @@ class _RisingEmojiState extends State<RisingEmoji>
     _frequency = _random.nextDouble() * 2 + 2;
     _movesRight = _random.nextBool();
 
-    _controller.forward().whenComplete(widget.onCompleted);
+    unawaited(_controller.forward().whenComplete(widget.onCompleted));
   }
 
   @override

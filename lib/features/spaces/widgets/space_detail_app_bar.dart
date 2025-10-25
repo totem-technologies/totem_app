@@ -24,8 +24,8 @@ class SpaceDetailAppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return GestureDetector(
-      onTap: () {
-        Scrollable.ensureVisible(
+      onTap: () async {
+        await Scrollable.ensureVisible(
           context,
           duration: const Duration(milliseconds: 180),
           alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
@@ -111,13 +111,9 @@ class SpaceDetailAppBar extends StatelessWidget {
                   UserAvatar.fromUserSchema(
                     space.author,
                     onTap: space.author.slug != null
-                        ? () {
-                            context.push(
-                              RouteNames.keeperProfile(
-                                space.author.slug!,
-                              ),
-                            );
-                          }
+                        ? () => context.push(
+                            RouteNames.keeperProfile(space.author.slug!),
+                          )
                         : null,
                   ),
                 ],

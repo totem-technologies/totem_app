@@ -14,8 +14,8 @@ class BlogDetailAppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return GestureDetector(
-      onTap: () {
-        Scrollable.ensureVisible(
+      onTap: () async {
+        await Scrollable.ensureVisible(
           context,
           duration: const Duration(milliseconds: 180),
           alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
@@ -84,11 +84,9 @@ class BlogDetailAppBar extends StatelessWidget {
                   UserAvatar.fromUserSchema(
                     event.author,
                     onTap: event.author?.slug != null
-                        ? () {
-                            context.push(
-                              RouteNames.keeperProfile(event.author!.slug!),
-                            );
-                          }
+                        ? () => context.push(
+                            RouteNames.keeperProfile(event.author!.slug!),
+                          )
                         : null,
                   ),
                 ],
