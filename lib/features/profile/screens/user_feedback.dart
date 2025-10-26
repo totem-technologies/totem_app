@@ -77,7 +77,6 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
           error,
           stackTrace: stackTrace,
           onRetry: _onSubmitFeedback,
-          showError: true,
         );
       }
     } finally {
