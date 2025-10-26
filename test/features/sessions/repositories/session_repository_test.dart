@@ -64,7 +64,7 @@ void main() {
         ).called(1);
       });
 
-      test('should handle DioException in sessionToken', () async {
+      test('should handle DioException with 404 status', () async {
         const testEventSlug = 'test-event-slug';
         when(
           () => mockMeetingsClient.totemMeetingsMobileApiGetLivekitToken(
@@ -76,7 +76,138 @@ void main() {
             response: Response(
               requestOptions: RequestOptions(path: '/sessions/$testEventSlug'),
               statusCode: 404,
+              data: 'Event not found',
             ),
+          ),
+        );
+
+        expect(
+          () => testGetSessionToken(mockMobileTotemApi, testEventSlug),
+          throwsA(isA<DioException>()),
+        );
+        verify(
+          () => mockMeetingsClient.totemMeetingsMobileApiGetLivekitToken(
+            eventSlug: testEventSlug,
+          ),
+        ).called(1);
+      });
+
+      test('should handle DioException with 401 status', () async {
+        const testEventSlug = 'test-event-slug';
+        when(
+          () => mockMeetingsClient.totemMeetingsMobileApiGetLivekitToken(
+            eventSlug: any(named: 'eventSlug'),
+          ),
+        ).thenThrow(
+          DioException(
+            requestOptions: RequestOptions(path: '/sessions/$testEventSlug'),
+            response: Response(
+              requestOptions: RequestOptions(path: '/sessions/$testEventSlug'),
+              statusCode: 401,
+              data: 'Unauthorized',
+            ),
+          ),
+        );
+
+        expect(
+          () => testGetSessionToken(mockMobileTotemApi, testEventSlug),
+          throwsA(isA<DioException>()),
+        );
+        verify(
+          () => mockMeetingsClient.totemMeetingsMobileApiGetLivekitToken(
+            eventSlug: testEventSlug,
+          ),
+        ).called(1);
+      });
+
+      test('should handle DioException with 500 status', () async {
+        const testEventSlug = 'test-event-slug';
+        when(
+          () => mockMeetingsClient.totemMeetingsMobileApiGetLivekitToken(
+            eventSlug: any(named: 'eventSlug'),
+          ),
+        ).thenThrow(
+          DioException(
+            requestOptions: RequestOptions(path: '/sessions/$testEventSlug'),
+            response: Response(
+              requestOptions: RequestOptions(path: '/sessions/$testEventSlug'),
+              statusCode: 500,
+              data: 'Internal Server Error',
+            ),
+          ),
+        );
+
+        expect(
+          () => testGetSessionToken(mockMobileTotemApi, testEventSlug),
+          throwsA(isA<DioException>()),
+        );
+        verify(
+          () => mockMeetingsClient.totemMeetingsMobileApiGetLivekitToken(
+            eventSlug: testEventSlug,
+          ),
+        ).called(1);
+      });
+
+      test('should handle DioException without response', () async {
+        const testEventSlug = 'test-event-slug';
+        when(
+          () => mockMeetingsClient.totemMeetingsMobileApiGetLivekitToken(
+            eventSlug: any(named: 'eventSlug'),
+          ),
+        ).thenThrow(
+          DioException(
+            requestOptions: RequestOptions(path: '/sessions/$testEventSlug'),
+            type: DioExceptionType.connectionTimeout,
+          ),
+        );
+
+        expect(
+          () => testGetSessionToken(mockMobileTotemApi, testEventSlug),
+          throwsA(isA<DioException>()),
+        );
+        verify(
+          () => mockMeetingsClient.totemMeetingsMobileApiGetLivekitToken(
+            eventSlug: testEventSlug,
+          ),
+        ).called(1);
+      });
+
+      test('should handle network timeout', () async {
+        const testEventSlug = 'test-event-slug';
+        when(
+          () => mockMeetingsClient.totemMeetingsMobileApiGetLivekitToken(
+            eventSlug: any(named: 'eventSlug'),
+          ),
+        ).thenThrow(
+          DioException(
+            requestOptions: RequestOptions(path: '/sessions/$testEventSlug'),
+            type: DioExceptionType.receiveTimeout,
+            message: 'Connection timeout',
+          ),
+        );
+
+        expect(
+          () => testGetSessionToken(mockMobileTotemApi, testEventSlug),
+          throwsA(isA<DioException>()),
+        );
+        verify(
+          () => mockMeetingsClient.totemMeetingsMobileApiGetLivekitToken(
+            eventSlug: testEventSlug,
+          ),
+        ).called(1);
+      });
+
+      test('should handle connection error', () async {
+        const testEventSlug = 'test-event-slug';
+        when(
+          () => mockMeetingsClient.totemMeetingsMobileApiGetLivekitToken(
+            eventSlug: any(named: 'eventSlug'),
+          ),
+        ).thenThrow(
+          DioException(
+            requestOptions: RequestOptions(path: '/sessions/$testEventSlug'),
+            type: DioExceptionType.connectionError,
+            message: 'No internet connection',
           ),
         );
 
