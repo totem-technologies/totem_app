@@ -282,7 +282,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                       setState(() => _showEmojiPicker = true);
                       final emoji = await showEmojiBar(button, context);
                       if (emoji != null && emoji.isNotEmpty) {
-                        notifier.sendEmoji(emoji);
+                        unawaited(notifier.sendEmoji(emoji));
                         if (user?.identity != null) {
                           unawaited(_onEmojiReceived(user!.identity, emoji));
                         }
