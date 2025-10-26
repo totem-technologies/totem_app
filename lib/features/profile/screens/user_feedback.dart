@@ -3,6 +3,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 Future<void> showUserFeedbackDialog(BuildContext context) async {
@@ -42,12 +44,49 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
 
     setState(() => _loading = true);
 
-    // TODO(adil): Implement actual feedback submission logic
-    Navigator.of(context).pop();
+    try {
+      // Submit feedback using the repository
+      final success = await ref.read(
+        submitFeedbackProvider(_feedbackController.text.trim()).future,
+      );
 
-    setState(() {
-      _loading = false;
-    });
+      if (!mounted) return;
+
+      if (success) {
+        // Show success message and close dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Thank you for your feedback! We appreciate your input.',
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        Navigator.of(context).pop();
+      } else {
+        // Handle case where API returns false but no exception
+        ErrorHandler.showErrorSnackBar(
+          context,
+          'Failed to submit feedback. Please try again.',
+        );
+      }
+    } catch (error, stackTrace) {
+      if (mounted) {
+        await ErrorHandler.handleApiError(
+          context,
+          error,
+          stackTrace: stackTrace,
+          onRetry: _onSubmitFeedback,
+          showError: true,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
+    }
   }
 
   @override
