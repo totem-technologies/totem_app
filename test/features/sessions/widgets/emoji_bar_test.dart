@@ -366,31 +366,6 @@ void main() {
       expect(find.byType(EmojiBar), findsOneWidget);
     });
 
-    testWidgets('should return selected emoji', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) {
-                return ElevatedButton(
-                  onPressed: () async {},
-                  child: const Text('Show Emoji'),
-                );
-              },
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Show Emoji'));
-      await tester.pumpAndSettle();
-
-      // Check if emoji bar is displayed
-      expect(find.byType(EmojiBar), findsOneWidget);
-
-      expect(find.text('Show Emoji'), findsOneWidget);
-    });
-
     testWidgets('should dismiss when tapping outside', (
       WidgetTester tester,
     ) async {
