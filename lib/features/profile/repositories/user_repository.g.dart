@@ -6,80 +6,265 @@ part of 'user_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-// GENERATED CODE - DO NOT MODIFY BY HAND
-// ignore_for_file: type=lint, type=warning
+String _$userProfileHash() => r'4a5010b40e22c98352d50d8df2057455f4112ce6';
 
-@ProviderFor(userProfile)
-const userProfileProvider = UserProfileFamily._();
+/// Copied from Dart SDK
+class _SystemHash {
+  _SystemHash._();
 
-final class UserProfileProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<PublicUserSchema>,
-          PublicUserSchema,
-          FutureOr<PublicUserSchema>
-        >
-    with $FutureModifier<PublicUserSchema>, $FutureProvider<PublicUserSchema> {
-  const UserProfileProvider._({
-    required UserProfileFamily super.from,
-    required String super.argument,
-  }) : super(
-         retry: null,
-         name: r'userProfileProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
-
-  @override
-  String debugGetCreateSourceHash() => _$userProfileHash();
-
-  @override
-  String toString() {
-    return r'userProfileProvider'
-        ''
-        '($argument)';
+  static int combine(int hash, int value) {
+    // ignore: parameter_assignments
+    hash = 0x1fffffff & (hash + value);
+    // ignore: parameter_assignments
+    hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
+    return hash ^ (hash >> 6);
   }
 
-  @$internal
-  @override
-  $FutureProviderElement<PublicUserSchema> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
+  static int finish(int hash) {
+    // ignore: parameter_assignments
+    hash = 0x1fffffff & (hash + ((0x03ffffff & hash) << 3));
+    // ignore: parameter_assignments
+    hash = hash ^ (hash >> 11);
+    return 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
+  }
+}
+
+/// See also [userProfile].
+@ProviderFor(userProfile)
+const userProfileProvider = UserProfileFamily();
+
+/// See also [userProfile].
+class UserProfileFamily extends Family<AsyncValue<PublicUserSchema>> {
+  /// See also [userProfile].
+  const UserProfileFamily();
+
+  /// See also [userProfile].
+  UserProfileProvider call(String slug) {
+    return UserProfileProvider(slug);
+  }
 
   @override
-  FutureOr<PublicUserSchema> create(Ref ref) {
-    final argument = this.argument as String;
-    return userProfile(ref, argument);
+  UserProfileProvider getProviderOverride(
+    covariant UserProfileProvider provider,
+  ) {
+    return call(provider.slug);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'userProfileProvider';
+}
+
+/// See also [userProfile].
+class UserProfileProvider extends AutoDisposeFutureProvider<PublicUserSchema> {
+  /// See also [userProfile].
+  UserProfileProvider(String slug)
+    : this._internal(
+        (ref) => userProfile(ref as UserProfileRef, slug),
+        from: userProfileProvider,
+        name: r'userProfileProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$userProfileHash,
+        dependencies: UserProfileFamily._dependencies,
+        allTransitiveDependencies: UserProfileFamily._allTransitiveDependencies,
+        slug: slug,
+      );
+
+  UserProfileProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.slug,
+  }) : super.internal();
+
+  final String slug;
+
+  @override
+  Override overrideWith(
+    FutureOr<PublicUserSchema> Function(UserProfileRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: UserProfileProvider._internal(
+        (ref) => create(ref as UserProfileRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        slug: slug,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<PublicUserSchema> createElement() {
+    return _UserProfileProviderElement(this);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is UserProfileProvider && other.argument == argument;
+    return other is UserProfileProvider && other.slug == slug;
   }
 
   @override
   int get hashCode {
-    return argument.hashCode;
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, slug.hashCode);
+
+    return _SystemHash.finish(hash);
   }
 }
 
-String _$userProfileHash() => r'4a5010b40e22c98352d50d8df2057455f4112ce6';
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin UserProfileRef on AutoDisposeFutureProviderRef<PublicUserSchema> {
+  /// The parameter `slug` of this provider.
+  String get slug;
+}
 
-final class UserProfileFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<PublicUserSchema>, String> {
-  const UserProfileFamily._()
-    : super(
-        retry: null,
-        name: r'userProfileProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
-
-  UserProfileProvider call(String slug) =>
-      UserProfileProvider._(argument: slug, from: this);
+class _UserProfileProviderElement
+    extends AutoDisposeFutureProviderElement<PublicUserSchema>
+    with UserProfileRef {
+  _UserProfileProviderElement(super.provider);
 
   @override
-  String toString() => r'userProfileProvider';
+  String get slug => (origin as UserProfileProvider).slug;
 }
+
+String _$submitFeedbackHash() => r'2723e0b372ac26a6eb233408b389c2ba1a89c5fe';
+
+/// See also [submitFeedback].
+@ProviderFor(submitFeedback)
+const submitFeedbackProvider = SubmitFeedbackFamily();
+
+/// See also [submitFeedback].
+class SubmitFeedbackFamily extends Family<AsyncValue<bool>> {
+  /// See also [submitFeedback].
+  const SubmitFeedbackFamily();
+
+  /// See also [submitFeedback].
+  SubmitFeedbackProvider call(String feedback) {
+    return SubmitFeedbackProvider(feedback);
+  }
+
+  @override
+  SubmitFeedbackProvider getProviderOverride(
+    covariant SubmitFeedbackProvider provider,
+  ) {
+    return call(provider.feedback);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'submitFeedbackProvider';
+}
+
+/// See also [submitFeedback].
+class SubmitFeedbackProvider extends AutoDisposeFutureProvider<bool> {
+  /// See also [submitFeedback].
+  SubmitFeedbackProvider(String feedback)
+    : this._internal(
+        (ref) => submitFeedback(ref as SubmitFeedbackRef, feedback),
+        from: submitFeedbackProvider,
+        name: r'submitFeedbackProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$submitFeedbackHash,
+        dependencies: SubmitFeedbackFamily._dependencies,
+        allTransitiveDependencies:
+            SubmitFeedbackFamily._allTransitiveDependencies,
+        feedback: feedback,
+      );
+
+  SubmitFeedbackProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.feedback,
+  }) : super.internal();
+
+  final String feedback;
+
+  @override
+  Override overrideWith(
+    FutureOr<bool> Function(SubmitFeedbackRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: SubmitFeedbackProvider._internal(
+        (ref) => create(ref as SubmitFeedbackRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        feedback: feedback,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<bool> createElement() {
+    return _SubmitFeedbackProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SubmitFeedbackProvider && other.feedback == feedback;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, feedback.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin SubmitFeedbackRef on AutoDisposeFutureProviderRef<bool> {
+  /// The parameter `feedback` of this provider.
+  String get feedback;
+}
+
+class _SubmitFeedbackProviderElement
+    extends AutoDisposeFutureProviderElement<bool>
+    with SubmitFeedbackRef {
+  _SubmitFeedbackProviderElement(super.provider);
+
+  @override
+  String get feedback => (origin as SubmitFeedbackProvider).feedback;
+}
+
+// ignore_for_file: type=lint
+// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
