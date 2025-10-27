@@ -216,16 +216,16 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                         case SpaceJoinCardState.joinable:
                           if (event.meetingProvider ==
                               MeetingProviderEnum.livekit) {
-                            joinLivekit();
+                            unawaited(joinLivekit());
                           } else {
-                            followLink?.call();
+                            unawaited(followLink?.call());
                           }
                         case SpaceJoinCardState.joined:
-                          addToCalendar();
+                          unawaited(addToCalendar());
                         case SpaceJoinCardState.full:
                           toHome(HomeRoutes.spaces);
                         case SpaceJoinCardState.notJoined:
-                          attend(ref);
+                          unawaited(attend(ref));
                       }
                     }
 
@@ -366,7 +366,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
       if (response.attending) {
         if (mounted) {
           setState(() => _attending = true);
-          attendingPopup();
+          unawaited(attendingPopup());
         }
         await refresh();
       } else {
@@ -391,8 +391,8 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     }
   }
 
-  void attendingPopup() {
-    showDialog<void>(
+  Future<void> attendingPopup() async {
+    await showDialog<void>(
       context: context,
       builder: (context) {
         return AttendingDialog(
@@ -505,8 +505,8 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
             'action': 'TEMPLATE',
             'text': title,
             'dates': '$startUtc/$endUtc',
-            if (description != null) 'details': description,
-            if (location != null) 'location': location,
+            'details': ?description,
+            'location': ?location,
           },
         );
 
@@ -634,9 +634,9 @@ class _AttendingDialogState extends State<AttendingDialog> {
                         padding: EdgeInsetsDirectional.zero,
                         iconSize: 18,
                         color: const Color(0xFF787D7E),
-                        onPressed: () {
+                        onPressed: () async {
                           final box = context.findRenderObject() as RenderBox?;
-                          SharePlus.instance.share(
+                          await SharePlus.instance.share(
                             ShareParams(
                               uri: Uri.parse(AppConfig.mobileApiUrl)
                                   .resolve('/spaces/event/${widget.eventSlug}')
@@ -736,9 +736,8 @@ class _AttendingDialogState extends State<AttendingDialog> {
                       decoration: TextDecoration.underline,
                     ),
                     recognizer: TapGestureRecognizer()
-                      ..onTap = () {
-                        launchUrl(AppConfig.communityGuidelinesUrl);
-                      },
+                      ..onTap = () =>
+                          launchUrl(AppConfig.communityGuidelinesUrl),
                   ),
                   const TextSpan(
                     text: ' to learn more about how to participate.',

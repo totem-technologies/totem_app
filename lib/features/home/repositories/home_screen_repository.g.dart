@@ -6,22 +6,46 @@ part of 'home_screen_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$spacesSummaryHash() => r'8b1ebf701db053f46adf8642e832fb15ea6d17db';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
 
-/// See also [spacesSummary].
 @ProviderFor(spacesSummary)
-final spacesSummaryProvider = FutureProvider<SummarySpacesSchema>.internal(
-  spacesSummary,
-  name: r'spacesSummaryProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$spacesSummaryHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+const spacesSummaryProvider = SpacesSummaryProvider._();
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef SpacesSummaryRef = FutureProviderRef<SummarySpacesSchema>;
-// ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
+final class SpacesSummaryProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<SummarySpacesSchema>,
+          SummarySpacesSchema,
+          FutureOr<SummarySpacesSchema>
+        >
+    with
+        $FutureModifier<SummarySpacesSchema>,
+        $FutureProvider<SummarySpacesSchema> {
+  const SpacesSummaryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'spacesSummaryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$spacesSummaryHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<SummarySpacesSchema> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<SummarySpacesSchema> create(Ref ref) {
+    return spacesSummary(ref);
+  }
+}
+
+String _$spacesSummaryHash() => r'8b1ebf701db053f46adf8642e832fb15ea6d17db';

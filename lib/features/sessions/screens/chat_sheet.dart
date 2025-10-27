@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'
-    hide ChangeNotifierProvider;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
@@ -56,13 +55,13 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
           initialChildSize: 0.75,
           expand: false,
           builder: (context, scrollController) {
-            void send() {
+            Future<void> send() async {
               final message = _messageController.text.trim();
               if (message.isNotEmpty) {
                 chatCtx.sendMessage(message);
                 _messageController.clear();
               }
-              scrollController.animateTo(
+              await scrollController.animateTo(
                 scrollController.position.maxScrollExtent + 80,
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeOut,
@@ -212,12 +211,10 @@ class OtherChatBubble extends StatelessWidget {
             event.space.author,
             radius: 20,
             onTap: event.space.author.slug != null
-                ? () {
-                    showKeeperProfileSheet(
-                      context,
-                      event.space.author.slug!,
-                    );
-                  }
+                ? () => showKeeperProfileSheet(
+                    context,
+                    event.space.author.slug!,
+                  )
                 : null,
           )
         else

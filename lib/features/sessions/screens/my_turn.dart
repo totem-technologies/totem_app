@@ -41,8 +41,8 @@ class MyTurn extends StatelessWidget {
             ),
             PassReceiveCard(
               type: TotemCardTransitionType.pass,
-              onActionPressed: () {
-                showDialog<void>(
+              onActionPressed: () async {
+                await showDialog<void>(
                   context: context,
                   builder: (context) {
                     return ConfirmationDialog(

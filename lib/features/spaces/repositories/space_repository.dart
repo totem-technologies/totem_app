@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/services/api_service.dart';
@@ -132,6 +132,8 @@ Future<List<EventDetailSchema>> listSessionsHistory(Ref ref) async {
 /// `/api/mobile/protected/spaces/recommended` with a request body of
 /// `List<String>` and an optional `limit` query param.
 final recommendedEventsByTopicsKeyProvider =
+    //
+    // ignore: invalid_use_of_internal_member
     FutureProviderFamily<List<EventDetailSchema>, String>((
       ref,
       topicsKey,

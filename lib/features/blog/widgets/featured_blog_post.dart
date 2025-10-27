@@ -198,9 +198,8 @@ class FeaturedBlogPost extends StatelessWidget {
                         ),
                       ),
                       ElevatedButton.icon(
-                        onPressed: () {
-                          context.push(RouteNames.blogPost(slug));
-                        },
+                        onPressed: () =>
+                            context.push(RouteNames.blogPost(slug)),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsetsDirectional.only(
                             start: 12,

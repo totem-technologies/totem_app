@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
@@ -57,26 +59,30 @@ class AnalyticsService {
       '${parameters != null ? '| Params: $parameters' : ''}',
     );
 
-    posthog.capture(eventName: eventName, properties: parameters ?? {});
+    unawaited(
+      posthog.capture(eventName: eventName, properties: parameters ?? {}),
+    );
   }
 
   void setUserId(UserSchema user) {
     if (!_shouldLog()) return;
     logger.i('📊 Setting user ID: ${user.email}');
 
-    posthog.identify(
-      userId: user.email,
-      userProperties: {
-        'email': user.email,
-        if (user.name != null && user.name!.isNotEmpty) 'name': user.name!,
-      },
+    unawaited(
+      posthog.identify(
+        userId: user.email,
+        userProperties: {
+          'email': user.email,
+          if (user.name != null && user.name!.isNotEmpty) 'name': user.name!,
+        },
+      ),
     );
   }
 
   void logLogout() {
     if (!_shouldLog()) return;
     logEvent('user_logged_out');
-    posthog.reset();
+    unawaited(posthog.reset());
   }
 
   void logLogin({String? method}) {
@@ -84,7 +90,7 @@ class AnalyticsService {
 
     logEvent(
       'user_logged_in',
-      parameters: {if (method != null) 'method': method},
+      parameters: {'method': ?method},
     );
   }
 

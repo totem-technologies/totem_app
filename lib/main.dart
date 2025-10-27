@@ -15,8 +15,8 @@ import 'package:totem_app/core/services/observer_service.dart';
 import 'package:totem_app/firebase_options.dart';
 import 'package:totem_app/navigation/app_router.dart';
 
-void main() {
-  runZonedGuarded(
+Future<void> main() async {
+  await runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
@@ -83,7 +83,7 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _router = createRouter(ref);
-    ref.read(notificationsProvider).requestPermissions();
+    unawaited(ref.read(notificationsProvider).requestPermissions());
   }
 
   @override

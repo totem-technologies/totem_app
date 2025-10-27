@@ -28,7 +28,6 @@ class ErrorHandler {
           // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
           ..sendDefaultPii = true;
         //
-        // ignore: require_trailing_commas
       });
     }
   }
@@ -42,7 +41,9 @@ class ErrorHandler {
     if (kDebugMode) {
       logger.e(message ?? reason, error: error, stackTrace: stackTrace);
     } else if (AppConfig.sentryDsn.isNotEmpty) {
-      Sentry.captureException(error, stackTrace: stackTrace, hint: Hint());
+      unawaited(
+        Sentry.captureException(error, stackTrace: stackTrace, hint: Hint()),
+      );
     }
   }
 

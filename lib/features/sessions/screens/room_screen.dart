@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -64,10 +66,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   }
 
   var _showEmojiPicker = false;
-  void _onEmojiReceived(String userIdentity, String emoji) {
+  Future<void> _onEmojiReceived(String userIdentity, String emoji) async {
     final userKey = participantKeys[userIdentity];
     if (userKey != null && userKey.currentContext != null) {
-      displayReaction(
+      await displayReaction(
         context,
         userKey.currentContext!,
         emoji,
@@ -280,9 +282,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                       setState(() => _showEmojiPicker = true);
                       final emoji = await showEmojiBar(button, context);
                       if (emoji != null && emoji.isNotEmpty) {
-                        notifier.sendEmoji(emoji);
+                        unawaited(notifier.sendEmoji(emoji));
                         if (user?.identity != null) {
-                          _onEmojiReceived(user!.identity, emoji);
+                          unawaited(_onEmojiReceived(user!.identity, emoji));
                         }
                       }
                       if (mounted) {

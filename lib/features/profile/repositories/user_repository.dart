@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/models/feedback_schema.dart';
 import 'package:totem_app/api/models/public_user_schema.dart';

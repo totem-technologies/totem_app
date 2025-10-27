@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -40,13 +42,12 @@ class _AnimatedPopupState extends State<AnimatedPopup>
           ),
         );
 
-    _controller.forward();
+    unawaited(_controller.forward());
 
-    Future.delayed(const Duration(seconds: 4), () {
+    Future.delayed(const Duration(seconds: 4), () async {
       if (mounted) {
-        _controller.reverse().then((_) {
-          widget.onDismissed();
-        });
+        await _controller.reverse();
+        widget.onDismissed();
       }
     });
   }

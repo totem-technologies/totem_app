@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -61,39 +63,47 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// Called from didChangeDependencies to ensure MediaQuery is available
   void _preloadImages() {
     for (final onboarding in onboardingData) {
-      precacheImage(AssetImage(onboarding.image), context);
+      unawaited(precacheImage(AssetImage(onboarding.image), context));
     }
   }
 
   void _onPrevious() {
     if (currentPage > 0) {
-      _contentPageController.animateToPage(
-        currentPage - 1,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
+      unawaited(
+        _contentPageController.animateToPage(
+          currentPage - 1,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        ),
       );
-      _backgroundPageController.animateToPage(
-        currentPage - 1,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
+      unawaited(
+        _backgroundPageController.animateToPage(
+          currentPage - 1,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        ),
       );
     }
   }
 
   void _onNext() {
     if (currentPage < onboardingData.length - 1) {
-      _contentPageController.animateToPage(
-        currentPage + 1,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
+      unawaited(
+        _contentPageController.animateToPage(
+          currentPage + 1,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        ),
       );
-      _backgroundPageController.animateToPage(
-        currentPage + 1,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
+      unawaited(
+        _backgroundPageController.animateToPage(
+          currentPage + 1,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        ),
       );
     } else {
-      _onSkip();
+      unawaited(_onSkip());
     }
   }
 

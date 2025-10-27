@@ -62,9 +62,8 @@ class LoadingRoomScreen extends StatelessWidget {
                           decoration: TextDecoration.underline,
                         ),
                         recognizer: TapGestureRecognizer()
-                          ..onTap = () {
-                            launchUrl(AppConfig.communityGuidelinesUrl);
-                          },
+                          ..onTap = () =>
+                              launchUrl(AppConfig.communityGuidelinesUrl),
                       ),
                       const TextSpan(text: '.'),
                     ],

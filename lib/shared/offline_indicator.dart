@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/services/connectivity_service.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
@@ -72,7 +73,7 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
   @override
   void initState() {
     super.initState();
-    _checkInitialConnectivity();
+    unawaited(_checkInitialConnectivity());
   }
 
   Future<void> _checkInitialConnectivity() async {
@@ -117,10 +118,13 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
   }
 
   void _resyncData() {
-    void smartRefresh(ProviderOrFamily provider) {
+    void smartRefresh(
+      //
+      // ignore: strict_raw_type, invalid_use_of_internal_member
+      $FunctionalProvider<AsyncValue, dynamic, dynamic> provider,
+    ) {
       // Workaround for the riverpod typing inconsistency
-      if (!((ref.read(provider as ProviderListenable) as dynamic).hasValue
-          as bool)) {
+      if (!ref.read(provider).hasValue) {
         logger.i('Refreshing $provider due to reconnection');
         ref.invalidate(provider);
       } else {

@@ -1,3 +1,7 @@
+// Do not need to reach main directly
+// ignore_for_file: unreachable_from_main
+
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -16,7 +20,7 @@ final notificationsProvider = Provider<NotificationsService>((ref) {
   return NotificationsService.instance;
 });
 
-class NotificationType {
+final class NotificationType {
   static const String circleStarting = 'circle_starting';
   static const String circleAdvertisement = 'circle_advertisement';
   static const String missedEvent = 'missed_event';
@@ -25,13 +29,15 @@ class NotificationType {
 const _backgroundKey = 'initial_payload';
 
 @pragma('vm:entry-point')
-void notificationTapBackground(NotificationResponse notificationResponse) {
+Future<void> notificationTapBackground(
+  NotificationResponse notificationResponse,
+) async {
   final payload = notificationResponse.payload;
   if (payload == null) return;
 
   try {
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setString(_backgroundKey, payload);
+    await SharedPreferences.getInstance().then((prefs) async {
+      await prefs.setString(_backgroundKey, payload);
     });
   } catch (error, stackTrace) {
     ErrorHandler.logError(
@@ -80,10 +86,12 @@ class NotificationsService {
               '${message.notification}',
             );
 
-            showNotification(
-              title: message.notification?.title ?? '',
-              body: message.notification?.body ?? '',
-              data: message.data,
+            unawaited(
+              showNotification(
+                title: message.notification?.title ?? '',
+                body: message.notification?.body ?? '',
+                data: message.data,
+              ),
             );
           }
         });
@@ -175,18 +183,18 @@ class NotificationsService {
   void _handlePath(String? path) {
     logger.i('⏰ Handling path: $path');
     if (path != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        navigatorKey.currentContext?.push(path);
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         logger.i('⏰ Handled path: $path');
+        await navigatorKey.currentContext?.push(path);
       });
     }
   }
 
-  void showNotification({
+  Future<void> showNotification({
     required String title,
     required String body,
     required Map<String, dynamic> data,
-  }) {
+  }) async {
     const notificationDetails = NotificationDetails(
       android: AndroidNotificationDetails(
         'spaces',
@@ -206,7 +214,7 @@ class NotificationsService {
 
     final payload = jsonEncode(data);
 
-    flutterLocalNotificationsPlugin.show(
+    await flutterLocalNotificationsPlugin.show(
       DateTime.timestamp().millisecondsSinceEpoch % 2147483647,
       title,
       body,
@@ -220,6 +228,15 @@ class NotificationsService {
   }
 
   Future<void> requestPermissions() {
-    return FirebaseMessaging.instance.requestPermission(provisional: true);
+    try {
+      return FirebaseMessaging.instance.requestPermission(provisional: true);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        reason: 'Failed to request notification permissions',
+      );
+      return Future.value();
+    }
   }
 }
