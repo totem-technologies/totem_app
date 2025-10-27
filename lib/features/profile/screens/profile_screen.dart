@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/features/profile/screens/delete_account.dart';
+import 'package:totem_app/features/profile/screens/user_feedback.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -127,16 +128,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            Link(
-              uri: Uri.parse(
-                AppConfig.mobileApiUrl,
-              ).resolve('/users/feedback/'),
-              target: LinkTarget.self,
-              builder: (context, launch) => ProfileTile(
-                icon: const TotemIcon(TotemIcons.feedback),
-                title: 'Feedback',
-                onTap: () => launch?.call(),
-              ),
+            ProfileTile(
+              icon: const TotemIcon(TotemIcons.feedback),
+              title: 'Feedback',
+              onTap: () => showUserFeedbackDialog(context),
             ),
             Link(
               uri: AppConfig.privacyPolicyUrl,

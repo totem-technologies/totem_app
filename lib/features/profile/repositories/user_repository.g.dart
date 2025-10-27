@@ -146,5 +146,125 @@ class _UserProfileProviderElement
   String get slug => (origin as UserProfileProvider).slug;
 }
 
+String _$submitFeedbackHash() => r'2723e0b372ac26a6eb233408b389c2ba1a89c5fe';
+
+/// See also [submitFeedback].
+@ProviderFor(submitFeedback)
+const submitFeedbackProvider = SubmitFeedbackFamily();
+
+/// See also [submitFeedback].
+class SubmitFeedbackFamily extends Family<AsyncValue<bool>> {
+  /// See also [submitFeedback].
+  const SubmitFeedbackFamily();
+
+  /// See also [submitFeedback].
+  SubmitFeedbackProvider call(String feedback) {
+    return SubmitFeedbackProvider(feedback);
+  }
+
+  @override
+  SubmitFeedbackProvider getProviderOverride(
+    covariant SubmitFeedbackProvider provider,
+  ) {
+    return call(provider.feedback);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'submitFeedbackProvider';
+}
+
+/// See also [submitFeedback].
+class SubmitFeedbackProvider extends AutoDisposeFutureProvider<bool> {
+  /// See also [submitFeedback].
+  SubmitFeedbackProvider(String feedback)
+    : this._internal(
+        (ref) => submitFeedback(ref as SubmitFeedbackRef, feedback),
+        from: submitFeedbackProvider,
+        name: r'submitFeedbackProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$submitFeedbackHash,
+        dependencies: SubmitFeedbackFamily._dependencies,
+        allTransitiveDependencies:
+            SubmitFeedbackFamily._allTransitiveDependencies,
+        feedback: feedback,
+      );
+
+  SubmitFeedbackProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.feedback,
+  }) : super.internal();
+
+  final String feedback;
+
+  @override
+  Override overrideWith(
+    FutureOr<bool> Function(SubmitFeedbackRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: SubmitFeedbackProvider._internal(
+        (ref) => create(ref as SubmitFeedbackRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        feedback: feedback,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<bool> createElement() {
+    return _SubmitFeedbackProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SubmitFeedbackProvider && other.feedback == feedback;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, feedback.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin SubmitFeedbackRef on AutoDisposeFutureProviderRef<bool> {
+  /// The parameter `feedback` of this provider.
+  String get feedback;
+}
+
+class _SubmitFeedbackProviderElement
+    extends AutoDisposeFutureProviderElement<bool>
+    with SubmitFeedbackRef {
+  _SubmitFeedbackProviderElement(super.provider);
+
+  @override
+  String get feedback => (origin as SubmitFeedbackProvider).feedback;
+}
+
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
