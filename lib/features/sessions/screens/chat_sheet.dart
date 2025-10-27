@@ -61,7 +61,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                 chatCtx.sendMessage(message);
                 _messageController.clear();
               }
-              return scrollController.animateTo(
+              await scrollController.animateTo(
                 scrollController.position.maxScrollExtent + 80,
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeOut,

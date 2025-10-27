@@ -46,7 +46,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
   Future<void> _nextPage() async {
     if (_pageController.hasClients) {
-      return _pageController.nextPage(
+      await _pageController.nextPage(
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeInOut,
       );
