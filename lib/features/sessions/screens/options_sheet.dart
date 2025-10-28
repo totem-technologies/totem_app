@@ -47,6 +47,7 @@ class OptionsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsetsDirectional.only(
         start: 20,
@@ -178,6 +179,26 @@ class OptionsSheet extends StatelessWidget {
               }
             },
           ),
+
+          Text(
+            'Keeper Settings',
+            style: theme.textTheme.titleMedium,
+          ),
+          OptionsSheetTile<void>(
+            title: 'Reorder Participants',
+            icon: TotemIcons.reorderParticipants,
+            onTap: () async {
+              // TODO(bdlukaa): Implement reordering participants
+            },
+          ),
+          OptionsSheetTile<void>(
+            title: 'Pass to Next',
+            icon: TotemIcons.passToNext,
+            type: OptionsSheetTileType.destructive,
+            onTap: () async {
+              // TODO(bdlukaa): Implement passing to next
+            },
+          ),
         ],
       ),
     );
@@ -284,6 +305,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
       iconColor: type == OptionsSheetTileType.destructive
           ? theme.colorScheme.onErrorContainer
           : null,
+      trailing: onTap != null ? const Icon(Icons.arrow_forward_ios) : null,
     );
   }
 }

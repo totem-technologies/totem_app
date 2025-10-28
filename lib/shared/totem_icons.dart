@@ -450,6 +450,21 @@ class TotemIcons {
 <path d="M1.91997 1.62L8.31997 8.62L14.72 1.62" stroke="#787D7E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 ''';
+
+  static const reorderParticipants = '''
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M16.6667 5H2.5" stroke="#262F37" stroke-width="1.75" stroke-linecap="round"/>
+<path d="M9.16667 9.16675H2.5" stroke="#262F37" stroke-width="1.75" stroke-linecap="round"/>
+<path d="M10 13.3333H2.5" stroke="#262F37" stroke-width="1.75" stroke-linecap="round"/>
+<path d="M12.5 9.58333L14.5833 7.5M14.5833 7.5L16.6667 9.58333M14.5833 7.5V14.1667" stroke="#262F37" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+''';
+
+  static const passToNext = '''
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M16.25 9.99992L12.0833 14.1666M16.25 9.99992L12.0833 5.83325M16.25 9.99992C16.25 9.99992 9.30558 9.99992 7.91667 9.99992C6.52775 9.99992 3.75 9.16659 3.75 5.83325" stroke="#262F37" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+''';
 }
 
 typedef TotemIconData = String;
