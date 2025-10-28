@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
+import 'package:totem_app/features/profile/repositories/user_repository.dart';
+import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
@@ -26,24 +29,24 @@ Future<bool?> showLeaveDialog(BuildContext context) {
 
 Future<void> showOptionsSheet(
   BuildContext context,
-  VoidCallback? onStartSession,
+  LiveKitState state,
+  LiveKitService session,
 ) {
   return showModalBottomSheet(
     context: context,
     showDragHandle: true,
     backgroundColor: const Color(0xFFF3F1E9),
     builder: (context) {
-      return OptionsSheet(
-        onStartSession: onStartSession,
-      );
+      return OptionsSheet(session: session, state: state);
     },
   );
 }
 
 class OptionsSheet extends StatelessWidget {
-  const OptionsSheet({required this.onStartSession, super.key});
+  const OptionsSheet({required this.state, required this.session, super.key});
 
-  final VoidCallback? onStartSession;
+  final LiveKitState state;
+  final LiveKitService session;
 
   @override
   Widget build(BuildContext context) {
@@ -159,14 +162,6 @@ class OptionsSheet extends StatelessWidget {
               );
             },
           ),
-          if (onStartSession != null)
-            OptionsSheetTile<void>(
-              title: 'Start session',
-              icon: TotemIcons.arrowForward,
-              onTap: () async {
-                onStartSession!();
-              },
-            ),
           OptionsSheetTile<void>(
             title: 'Leave Session',
             icon: TotemIcons.leaveCall,
@@ -180,27 +175,67 @@ class OptionsSheet extends StatelessWidget {
             },
           ),
 
-          Text(
-            'Keeper Settings',
-            style: theme.textTheme.titleMedium,
-          ),
-          OptionsSheetTile<void>(
-            title: 'Reorder Participants',
-            icon: TotemIcons.reorderParticipants,
-            onTap: () async {
-              // TODO(bdlukaa): Implement reordering participants
-            },
-          ),
-          OptionsSheetTile<void>(
-            title: 'Pass to Next',
-            icon: TotemIcons.passToNext,
-            type: OptionsSheetTileType.destructive,
-            onTap: () async {
-              // TODO(bdlukaa): Implement passing to next
-            },
-          ),
+          if (session.isKeeper()) ...[
+            Text(
+              'Keeper Settings',
+              style: theme.textTheme.titleMedium,
+            ),
+            OptionsSheetTile<void>(
+              title: 'Start session',
+              icon: TotemIcons.arrowForward,
+              onTap: session.startSession,
+            ),
+            OptionsSheetTile<void>(
+              title: 'Reorder Participants',
+              icon: TotemIcons.reorderParticipants,
+              onTap: () async {
+                // TODO(bdlukaa): Implement reordering participants
+              },
+            ),
+            OptionsSheetTile<void>(
+              title: 'Pass to Next',
+              icon: TotemIcons.passToNext,
+              type: OptionsSheetTileType.destructive,
+              onTap: () => _onPassToNext(context),
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  Future<void> _onPassToNext(BuildContext context) async {
+    if (state.sessionState.nextParticipantIdentity == null) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final nextParticipantIdentity =
+            state.sessionState.nextParticipantIdentity!;
+        return Consumer(
+          builder: (context, ref, child) {
+            final user = ref.watch(
+              userProfileProvider(nextParticipantIdentity),
+            );
+            return ConfirmationDialog(
+              title: null,
+              confirmButtonText: 'Pass',
+              content:
+                  'Pass totem to '
+                  // Need to ignore because text is too long. Will be fixed
+                  // when we add localizations.
+                  // ignore: lines_longer_than_80_chars
+                  '${user.whenData((user) => user.name).value ?? 'the next participant'}?',
+              contentStyle: theme.textTheme.titleMedium,
+              type: ConfirmationDialogType.standard,
+              onConfirm: session.passTotem,
+            );
+          },
+        );
+      },
     );
   }
 }

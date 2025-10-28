@@ -10,6 +10,7 @@ class ConfirmationDialog extends StatefulWidget {
     required this.content,
     required this.confirmButtonText,
     required this.onConfirm,
+    this.contentStyle,
     this.title = 'Are you sure?',
     this.icon,
     this.iconWidget,
@@ -21,6 +22,7 @@ class ConfirmationDialog extends StatefulWidget {
   final Widget? iconWidget;
   final String? title;
   final String content;
+  final TextStyle? contentStyle;
   final String confirmButtonText;
   final Future<void> Function() onConfirm;
   final ConfirmationDialogType type;
@@ -56,6 +58,7 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
             Text(
               widget.content,
               textAlign: TextAlign.center,
+              style: widget.contentStyle,
             ),
             ElevatedButton(
               onPressed: () async {

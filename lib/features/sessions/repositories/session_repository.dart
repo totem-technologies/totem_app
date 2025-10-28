@@ -36,3 +36,11 @@ Future<void> muteParticipant(
     participantIdentity: participantIdentity,
   );
 }
+
+@riverpod
+Future<void> passTotem(Ref ref, String eventSlug) async {
+  final apiService = ref.read(mobileApiServiceProvider);
+  await apiService.meetings.totemMeetingsMobileApiPassTotemEndpoint(
+    eventSlug: eventSlug,
+  );
+}

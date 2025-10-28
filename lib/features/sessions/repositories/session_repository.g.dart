@@ -223,3 +223,72 @@ final class MuteParticipantFamily extends $Family
   @override
   String toString() => r'muteParticipantProvider';
 }
+
+@ProviderFor(passTotem)
+const passTotemProvider = PassTotemFamily._();
+
+final class PassTotemProvider
+    extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
+    with $FutureModifier<void>, $FutureProvider<void> {
+  const PassTotemProvider._({
+    required PassTotemFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'passTotemProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$passTotemHash();
+
+  @override
+  String toString() {
+    return r'passTotemProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<void> create(Ref ref) {
+    final argument = this.argument as String;
+    return passTotem(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is PassTotemProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$passTotemHash() => r'06c72c9359f452adac98521b93d186da7099f5cc';
+
+final class PassTotemFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<void>, String> {
+  const PassTotemFamily._()
+    : super(
+        retry: null,
+        name: r'passTotemProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  PassTotemProvider call(String eventSlug) =>
+      PassTotemProvider._(argument: eventSlug, from: this);
+
+  @override
+  String toString() => r'passTotemProvider';
+}
