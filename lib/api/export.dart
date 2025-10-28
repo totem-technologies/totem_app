@@ -1,6 +1,6 @@
 // coverage:ignore-file
 // GENERATED CODE - DO NOT MODIFY BY HAND
-// ignore_for_file: type=lint, unused_import
+// ignore_for_file: type=lint, unused_import, invalid_annotation_target, unnecessary_import
 
 // Clients
 export 'fallback/fallback_client.dart';
@@ -32,6 +32,7 @@ export 'models/blog_post_list_schema.dart';
 export 'models/paged_blog_post_list_schema.dart';
 export 'models/blog_post_schema.dart';
 export 'models/livekit_token_response_schema.dart';
+export 'models/livekit_mute_participant_schema.dart';
 export 'models/message_response.dart';
 export 'models/error_response.dart';
 export 'models/pin_request_schema.dart';

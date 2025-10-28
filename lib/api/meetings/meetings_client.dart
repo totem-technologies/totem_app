@@ -1,10 +1,11 @@
 // coverage:ignore-file
 // GENERATED CODE - DO NOT MODIFY BY HAND
-// ignore_for_file: type=lint, unused_import
+// ignore_for_file: type=lint, unused_import, invalid_annotation_target, unnecessary_import
 
 import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
+import '../models/livekit_mute_participant_schema.dart';
 import '../models/livekit_token_response_schema.dart';
 
 part 'meetings_client.g.dart';
@@ -44,5 +45,22 @@ abstract class MeetingsClient {
   Future<void> totemMeetingsMobileApiMuteParticipantEndpoint({
     @Path('event_slug') required String eventSlug,
     @Path('participant_identity') required String participantIdentity,
+  });
+
+  /// Remove Participant Endpoint
+  @POST(
+    '/api/mobile/protected/meetings/event/{event_slug}/remove/{participant_identity}',
+  )
+  Future<void> totemMeetingsMobileApiRemoveParticipantEndpoint({
+    @Path('event_slug') required String eventSlug,
+    @Path('participant_identity') required String participantIdentity,
+  });
+
+  /// Reorder Participants Endpoint
+  @POST('/api/mobile/protected/meetings/event/{event_slug}/reorder')
+  Future<LivekitMuteParticipantSchema>
+  totemMeetingsMobileApiReorderParticipantsEndpoint({
+    @Path('event_slug') required String eventSlug,
+    @Body() required LivekitMuteParticipantSchema body,
   });
 }
