@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:livekit_components/livekit_components.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
@@ -12,12 +13,14 @@ class MyTurn extends StatelessWidget {
     required this.getParticipantKey,
     required this.actionBar,
     required this.onPassTotem,
+    required this.event,
     super.key,
   });
 
   final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
   final Future<void> Function() onPassTotem;
+  final EventDetailSchema event;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +38,7 @@ class MyTurn extends StatelessWidget {
                       identifier.participant.identity,
                     ),
                     participant: identifier.participant,
+                    event: event,
                   );
                 },
               ),

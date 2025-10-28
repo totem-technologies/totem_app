@@ -10,3 +10,29 @@ Future<String> sessionToken(Ref ref, String eventSlug) async {
       .totemMeetingsMobileApiGetLivekitToken(eventSlug: eventSlug);
   return response.token;
 }
+
+@riverpod
+Future<void> removeParticipant(
+  Ref ref,
+  String eventSlug,
+  String participantIdentity,
+) async {
+  final apiService = ref.read(mobileApiServiceProvider);
+  await apiService.meetings.totemMeetingsMobileApiRemoveParticipantEndpoint(
+    eventSlug: eventSlug,
+    participantIdentity: participantIdentity,
+  );
+}
+
+@riverpod
+Future<void> muteParticipant(
+  Ref ref,
+  String eventSlug,
+  String participantIdentity,
+) async {
+  final apiService = ref.read(mobileApiServiceProvider);
+  await apiService.meetings.totemMeetingsMobileApiMuteParticipantEndpoint(
+    eventSlug: eventSlug,
+    participantIdentity: participantIdentity,
+  );
+}

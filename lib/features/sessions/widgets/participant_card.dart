@@ -7,24 +7,31 @@ import 'package:livekit_components/livekit_components.dart'
 // livekit_components exports provider
 // ignore: depend_on_referenced_packages
 import 'package:provider/provider.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
+import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/widgets/audio_visualizer.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class ParticipantCard extends ConsumerWidget {
-  const ParticipantCard({required this.participant, super.key});
+  const ParticipantCard({
+    required this.participant,
+    required this.event,
+    super.key,
+  });
 
   final Participant participant;
+  final EventDetailSchema event;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // final room = RoomContext.of(context);
     final participantContext = Provider.of<ParticipantContext>(context);
 
     final audioTracks = participantContext.tracks
@@ -32,6 +39,8 @@ class ParticipantCard extends ConsumerWidget {
           (t) => t.kind == TrackType.AUDIO || t.track is AudioTrack,
         )
         .toList();
+
+    final isKeeper = participant.identity == event.space.author.slug!;
 
     return AspectRatio(
       aspectRatio: 16 / 21,
@@ -108,6 +117,52 @@ class ParticipantCard extends ConsumerWidget {
                     ),
                   ),
                 ),
+              if (isKeeper)
+                PositionedDirectional(
+                  end: 6,
+                  top: 6,
+                  child: PopupMenuButton(
+                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.black.withValues(alpha: 0.8),
+                    position: PopupMenuPosition.under,
+                    itemBuilder: (context) {
+                      return [
+                        PopupMenuItem<void>(
+                          onTap: () {
+                            // TODO(bdlukaa): Implement mute participant
+                          },
+                          child: const Row(
+                            spacing: 8,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TotemIcon(
+                                TotemIcons.microphoneOff,
+                                size: 24,
+                                color: Colors.white,
+                              ),
+                              Text('Mute'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem<void>(
+                          onTap: () => _onRemoveParticipant(context, ref),
+                          child: const Row(
+                            spacing: 8,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TotemIcon(
+                                TotemIcons.removePerson,
+                                size: 24,
+                                color: Colors.white,
+                              ),
+                              Text('Remove'),
+                            ],
+                          ),
+                        ),
+                      ];
+                    },
+                  ),
+                ),
               PositionedDirectional(
                 bottom: 6,
                 start: 4,
@@ -132,6 +187,39 @@ class ParticipantCard extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _onRemoveParticipant(BuildContext context, WidgetRef ref) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        final user = ref.watch(userProfileProvider(participant.identity));
+        return ConfirmationDialog(
+          iconWidget: user
+              .whenData(
+                (user) => UserAvatar.fromUserSchema(
+                  user,
+                  radius: 40,
+                ),
+              )
+              .value,
+          confirmButtonText: 'Remove',
+          content:
+              'Are you sure you want to remove '
+              '${participant.name}?',
+          onConfirm: () async {
+            await ref.read(
+              removeParticipantProvider(
+                event.slug,
+                participant.identity,
+              ).future,
+            );
+            if (!context.mounted) return;
+            Navigator.of(context).pop();
+          },
+        );
+      },
     );
   }
 }

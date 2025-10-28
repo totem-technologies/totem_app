@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_components/livekit_components.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
@@ -11,12 +12,14 @@ class NotMyTurn extends ConsumerWidget {
     required this.getParticipantKey,
     required this.actionBar,
     required this.sessionState,
+    required this.event,
     super.key,
   });
 
   final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
   final SessionState sessionState;
+  final EventDetailSchema event;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -87,6 +90,7 @@ class NotMyTurn extends ConsumerWidget {
                       identifier.participant.identity,
                     ),
                     participant: identifier.participant,
+                    event: event,
                   );
                 },
               ),

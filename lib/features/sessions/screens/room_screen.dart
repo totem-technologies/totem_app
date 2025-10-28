@@ -196,16 +196,19 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                       onAcceptTotem: () => _onAcceptTotem(notifier),
                     );
                   }
+
                   return MyTurn(
                     actionBar: buildActionBar(notifier, state, event),
                     getParticipantKey: getParticipantKey,
                     onPassTotem: notifier.passTotem,
+                    event: event,
                   );
                 } else {
                   return NotMyTurn(
                     actionBar: buildActionBar(notifier, state, event),
                     getParticipantKey: getParticipantKey,
                     sessionState: state.sessionState,
+                    event: event,
                   );
                 }
             }

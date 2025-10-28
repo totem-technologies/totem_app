@@ -11,11 +11,13 @@ class ConfirmationDialog extends StatefulWidget {
     required this.confirmButtonText,
     required this.onConfirm,
     this.icon,
+    this.iconWidget,
     this.type = ConfirmationDialogType.destructive,
     super.key,
   });
 
   final TotemIconData? icon;
+  final Widget? iconWidget;
   final String content;
   final String confirmButtonText;
   final Future<void> Function() onConfirm;
@@ -41,7 +43,12 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
           spacing: 20,
           children: [
             if (widget.icon != null)
-              TotemIcon(widget.icon!, size: 90, color: Colors.red),
+              TotemIcon(widget.icon!, size: 90, color: Colors.red)
+            else if (widget.iconWidget != null)
+              SizedBox.square(
+                dimension: 90,
+                child: Center(child: widget.iconWidget!),
+              ),
             Text(
               widget.content,
               textAlign: TextAlign.center,
