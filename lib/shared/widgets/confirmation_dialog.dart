@@ -10,6 +10,7 @@ class ConfirmationDialog extends StatefulWidget {
     required this.content,
     required this.confirmButtonText,
     required this.onConfirm,
+    this.title = 'Are you sure?',
     this.icon,
     this.iconWidget,
     this.type = ConfirmationDialogType.destructive,
@@ -18,6 +19,7 @@ class ConfirmationDialog extends StatefulWidget {
 
   final TotemIconData? icon;
   final Widget? iconWidget;
+  final String? title;
   final String content;
   final String confirmButtonText;
   final Future<void> Function() onConfirm;
@@ -36,7 +38,9 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
     return PopScope(
       canPop: !_loading,
       child: AlertDialog(
-        title: const Text('Are you sure?', textAlign: TextAlign.center),
+        title: widget.title != null
+            ? Text(widget.title!, textAlign: TextAlign.center)
+            : null,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -47,7 +51,7 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
             else if (widget.iconWidget != null)
               SizedBox.square(
                 dimension: 90,
-                child: Center(child: widget.iconWidget!),
+                child: Center(child: widget.iconWidget),
               ),
             Text(
               widget.content,
@@ -58,6 +62,11 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                 if (_loading) return;
                 setState(() => _loading = true);
                 await widget.onConfirm();
+                if (mounted) {
+                  setState(() {
+                    _loading = false;
+                  });
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: switch (widget.type) {

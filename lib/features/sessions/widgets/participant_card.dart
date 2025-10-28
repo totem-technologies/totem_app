@@ -90,33 +90,46 @@ class ParticipantCard extends ConsumerWidget {
               Positioned.fill(
                 child: ParticipantVideo(participant: participant),
               ),
-              if (audioTracks.isNotEmpty)
-                PositionedDirectional(
-                  top: 6,
-                  start: 6,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(0x262F3799),
-                    ),
-                    padding: const EdgeInsetsDirectional.all(2),
-                    alignment: Alignment.center,
-                    child: SoundWaveformWidget(
-                      audioTrack: audioTracks.first.track! as AudioTrack,
-                      participant: participant,
-                      options: const AudioVisualizerWidgetOptions(
-                        color: Colors.white,
-                        barCount: 3,
-                        barMinOpacity: 0.8,
-                        spacing: 3,
-                        minHeight: 4,
-                        maxHeight: 12,
-                      ),
-                    ),
+              PositionedDirectional(
+                top: 6,
+                start: 6,
+                child: Container(
+                  width: 18,
+                  height: 18,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0x262F3799),
+                  ),
+                  padding: const EdgeInsetsDirectional.all(2),
+                  alignment: Alignment.center,
+                  child: Builder(
+                    builder: (context) {
+                      if (participant.isMuted ||
+                          !participant.hasAudio ||
+                          audioTracks.isEmpty) {
+                        return const TotemIcon(
+                          TotemIcons.microphoneOff,
+                          size: 20,
+                          color: Colors.white,
+                        );
+                      } else {
+                        return SoundWaveformWidget(
+                          audioTrack: audioTracks.first.track! as AudioTrack,
+                          participant: participant,
+                          options: const AudioVisualizerWidgetOptions(
+                            color: Colors.white,
+                            barCount: 3,
+                            barMinOpacity: 0.8,
+                            spacing: 3,
+                            minHeight: 4,
+                            maxHeight: 12,
+                          ),
+                        );
+                      }
+                    },
                   ),
                 ),
+              ),
               if (isKeeper)
                 PositionedDirectional(
                   end: 6,
@@ -127,23 +140,24 @@ class ParticipantCard extends ConsumerWidget {
                     position: PopupMenuPosition.under,
                     itemBuilder: (context) {
                       return [
-                        PopupMenuItem<void>(
-                          onTap: () {
-                            // TODO(bdlukaa): Implement mute participant
-                          },
-                          child: const Row(
-                            spacing: 8,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              TotemIcon(
-                                TotemIcons.microphoneOff,
-                                size: 24,
-                                color: Colors.white,
-                              ),
-                              Text('Mute'),
-                            ],
+                        if (participant.hasAudio)
+                          PopupMenuItem<void>(
+                            onTap: () => _onMuteParticipant(context, ref),
+                            child: Row(
+                              spacing: 8,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const TotemIcon(
+                                  TotemIcons.microphoneOff,
+                                  size: 24,
+                                  color: Colors.white,
+                                ),
+                                Text(
+                                  participant.isMuted ? 'Muted' : 'Mute',
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
                         PopupMenuItem<void>(
                           onTap: () => _onRemoveParticipant(context, ref),
                           child: const Row(
@@ -187,6 +201,39 @@ class ParticipantCard extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _onMuteParticipant(BuildContext context, WidgetRef ref) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        final user = ref.watch(userProfileProvider(participant.identity));
+        return ConfirmationDialog(
+          iconWidget: user
+              .whenData(
+                (user) => UserAvatar.fromUserSchema(
+                  user,
+                  radius: 40,
+                ),
+              )
+              .value,
+          confirmButtonText: 'Mute',
+          title: 'Mute ${participant.name}',
+          content: 'They can unmute themselves anytime.',
+          onConfirm: () async {
+            await ref.read(
+              muteParticipantProvider(
+                event.slug,
+                participant.identity,
+              ).future,
+            );
+            if (!context.mounted) return;
+            Navigator.of(context).pop();
+          },
+          type: ConfirmationDialogType.standard,
+        );
+      },
     );
   }
 
