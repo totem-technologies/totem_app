@@ -114,9 +114,9 @@ runs:
       run: cd ~/Library/MobileDevice/Provisioning\ Profiles && ls
       shell: bash
 
-    - name: update pod repos
-      run: pod install --repo-update
-      shell: bash
+    # - name: update pod repos
+    #   run: cd ios && pod install --repo-update
+    #   shell: bash
 
     - name: Build
       run: ${{ inputs.build-cmd }}
