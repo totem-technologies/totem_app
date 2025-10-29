@@ -2,25 +2,28 @@ PODS:
   - Flutter (1.0.0)
   - flutter_secure_storage (6.0.0):
     - Flutter
-  - flutter_webrtc (1.1.0):
+  - flutter_webrtc (1.2.0):
     - Flutter
-    - WebRTC-SDK (= 137.7151.03)
-  - livekit_client (2.5.0):
+    - WebRTC-SDK (= 137.7151.04)
+  - livekit_client (2.5.3):
     - Flutter
     - flutter_webrtc
-    - WebRTC-SDK (= 137.7151.03)
-  - PostHog (3.30.1)
+    - WebRTC-SDK (= 137.7151.04)
+  - objective_c (0.0.1):
+    - Flutter
+  - PostHog (3.34.0)
   - posthog_flutter (0.0.1):
     - Flutter
     - FlutterMacOS
-    - PostHog (< 4.0.0, >= 3.30.1)
-  - WebRTC-SDK (137.7151.03)
+    - PostHog (< 4.0.0, >= 3.32.0)
+  - WebRTC-SDK (137.7151.04)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
   - flutter_webrtc (from `.symlinks/plugins/flutter_webrtc/ios`)
   - livekit_client (from `.symlinks/plugins/livekit_client/ios`)
+  - objective_c (from `.symlinks/plugins/objective_c/ios`)
   - posthog_flutter (from `.symlinks/plugins/posthog_flutter/ios`)
 
 SPEC REPOS:
@@ -37,17 +40,20 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_webrtc/ios"
   livekit_client:
     :path: ".symlinks/plugins/livekit_client/ios"
+  objective_c:
+    :path: ".symlinks/plugins/objective_c/ios"
   posthog_flutter:
     :path: ".symlinks/plugins/posthog_flutter/ios"
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
-  flutter_webrtc: b0b2e04411747142962164a1cfa43a1af9a0afac
-  livekit_client: f810c81bbbc229a84f60b09e66603ac4e93f7599
-  PostHog: 0667b41aa60982bd45abe5290e7806b7280dffdb
-  posthog_flutter: 1a45ea88edd524e0d6397a0a74c34edcee36ae88
-  WebRTC-SDK: 69d4e56b0b4b27d788e87bab9b9a1326ed05b1e3
+  flutter_webrtc: c3e21fc0dcd9d8eb246ae4d5256fcbeb2f5ecd22
+  livekit_client: 86c8af579274e4b7a215185a8080db2d4e176f40
+  objective_c: 89e720c30d716b036faf9c9684022048eee1eee2
+  PostHog: bbb7eaecb2f5a286d9da3c833cbb18ae08799655
+  posthog_flutter: 9535ac2d4ab65ccb9ace3886dcc0b3105198bad5
+  WebRTC-SDK: 40d4f5ba05cadff14e4db5614aec402a633f007e
 
 PODFILE CHECKSUM: ce2a4dd764e1c7aeed6a7cdc5e61d092b6dc6d32
 
