@@ -368,3 +368,141 @@ final class ReorderParticipantsFamily extends $Family
   @override
   String toString() => r'reorderParticipantsProvider';
 }
+
+@ProviderFor(startSession)
+const startSessionProvider = StartSessionFamily._();
+
+final class StartSessionProvider
+    extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
+    with $FutureModifier<void>, $FutureProvider<void> {
+  const StartSessionProvider._({
+    required StartSessionFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'startSessionProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$startSessionHash();
+
+  @override
+  String toString() {
+    return r'startSessionProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<void> create(Ref ref) {
+    final argument = this.argument as String;
+    return startSession(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is StartSessionProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$startSessionHash() => r'6c9b93d85ad23f519351a3568ed35e78e61670b6';
+
+final class StartSessionFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<void>, String> {
+  const StartSessionFamily._()
+    : super(
+        retry: null,
+        name: r'startSessionProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  StartSessionProvider call(String eventSlug) =>
+      StartSessionProvider._(argument: eventSlug, from: this);
+
+  @override
+  String toString() => r'startSessionProvider';
+}
+
+@ProviderFor(endSession)
+const endSessionProvider = EndSessionFamily._();
+
+final class EndSessionProvider
+    extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
+    with $FutureModifier<void>, $FutureProvider<void> {
+  const EndSessionProvider._({
+    required EndSessionFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'endSessionProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$endSessionHash();
+
+  @override
+  String toString() {
+    return r'endSessionProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<void> create(Ref ref) {
+    final argument = this.argument as String;
+    return endSession(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is EndSessionProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$endSessionHash() => r'106e50abd5fa9f003c9c9ab16ec86d792842335d';
+
+final class EndSessionFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<void>, String> {
+  const EndSessionFamily._()
+    : super(
+        retry: null,
+        name: r'endSessionProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  EndSessionProvider call(String eventSlug) =>
+      EndSessionProvider._(argument: eventSlug, from: this);
+
+  @override
+  String toString() => r'endSessionProvider';
+}

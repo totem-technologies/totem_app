@@ -248,8 +248,30 @@ class LiveKitService extends _$LiveKitService {
   }
 
   Future<void> startSession() async {
-    await _apiService.meetings.totemMeetingsMobileApiStartRoomEndpoint(
-      eventSlug: _options.eventSlug,
-    );
+    try {
+      await ref.read(startSessionProvider(_options.eventSlug).future);
+    } catch (error, stackTrace) {
+      debugPrint('Error starting session: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error starting session',
+      );
+    }
+  }
+
+  Future<void> endSession() async {
+    try {
+      await ref.read(endSessionProvider(_options.eventSlug).future);
+    } catch (error, stackTrace) {
+      debugPrint('Error ending session: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error ending session',
+      );
+    }
   }
 }

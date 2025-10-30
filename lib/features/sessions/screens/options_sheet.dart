@@ -8,6 +8,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
+import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/participant_reorder_widget.dart';
 import 'package:totem_app/navigation/app_router.dart';
@@ -41,18 +42,7 @@ Future<void> showOptionsSheet(
     backgroundColor: const Color(0xFFF3F1E9),
     isScrollControlled: true,
     builder: (context) {
-      return DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        maxChildSize: 0.8,
-        // minChildSize: 0.8,
-        builder: (context, scrollController) {
-          return PrimaryScrollController(
-            controller: scrollController,
-            child: OptionsSheet(session: session, state: state, event: event),
-          );
-        },
-      );
+      return OptionsSheet(session: session, state: state, event: event);
     },
   );
 }
@@ -73,7 +63,8 @@ class OptionsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return ListView(
-      controller: PrimaryScrollController.of(context),
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
       padding: const EdgeInsetsDirectional.only(
         start: 20,
         end: 20,
@@ -198,11 +189,12 @@ class OptionsSheet extends StatelessWidget {
               color: theme.colorScheme.onSurface,
             ),
           ),
-          OptionsSheetTile<void>(
-            title: 'Start session',
-            icon: TotemIcons.arrowForward,
-            onTap: session.startSession,
-          ),
+          if (state.sessionState.status == SessionStatus.waiting)
+            OptionsSheetTile<void>(
+              title: 'Start session',
+              icon: TotemIcons.arrowForward,
+              onTap: session.startSession,
+            ),
           OptionsSheetTile<void>(
             title: 'Reorder Participants',
             icon: TotemIcons.reorderParticipants,
@@ -227,7 +219,17 @@ class OptionsSheet extends StatelessWidget {
             title: 'Pass to Next',
             icon: TotemIcons.passToNext,
             type: OptionsSheetTileType.destructive,
-            onTap: () => _onPassToNext(context),
+            onTap: state.sessionState.status == SessionStatus.started
+                ? () => _onPassToNext(context)
+                : null,
+          ),
+          OptionsSheetTile<void>(
+            title: 'End Session',
+            icon: TotemIcons.cameraOff,
+            type: OptionsSheetTileType.destructive,
+            onTap: state.sessionState.status == SessionStatus.started
+                ? () => _onEndSession(context)
+                : null,
           ),
         ],
       ].expand((x) => [x, const SizedBox(height: 10)]).toList(),
@@ -263,6 +265,24 @@ class OptionsSheet extends StatelessWidget {
               type: ConfirmationDialogType.standard,
               onConfirm: session.passTotem,
             );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _onEndSession(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return ConfirmationDialog(
+          title: 'End Session',
+          content: 'Are you sure you want to end the session?',
+          confirmButtonText: 'End Session',
+          onConfirm: () async {
+            await session.endSession();
+            if (!context.mounted) return;
+            Navigator.of(context).pop();
           },
         );
       },

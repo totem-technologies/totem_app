@@ -58,7 +58,7 @@ final class LiveKitServiceProvider
   }
 }
 
-String _$liveKitServiceHash() => r'b2085b31209321c07c917a654c7b680e3fe932d3';
+String _$liveKitServiceHash() => r'88d4e0e39e7540106598b76fd721a62646282616';
 
 final class LiveKitServiceFamily extends $Family
     with

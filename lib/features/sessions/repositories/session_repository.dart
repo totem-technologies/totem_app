@@ -58,3 +58,19 @@ Future<void> reorderParticipants(
     body: order,
   );
 }
+
+@riverpod
+Future<void> startSession(Ref ref, String eventSlug) async {
+  final apiService = ref.read(mobileApiServiceProvider);
+  await apiService.meetings.totemMeetingsMobileApiStartRoomEndpoint(
+    eventSlug: eventSlug,
+  );
+}
+
+@riverpod
+Future<void> endSession(Ref ref, String eventSlug) async {
+  final apiService = ref.read(mobileApiServiceProvider);
+  await apiService.meetings.totemMeetingsMobileApiEndRoomEndpoint(
+    eventSlug: eventSlug,
+  );
+}
