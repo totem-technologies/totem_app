@@ -429,6 +429,14 @@ class TotemIcons {
 </svg>
 ''';
 
+  static const moreVertical = '''
+<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M13.7216 7.77562C14.9846 7.77562 16.0085 6.75171 16.0085 5.48864C16.0085 4.22558 14.9846 3.20166 13.7216 3.20166C12.4585 3.20166 11.4346 4.22558 11.4346 5.48864C11.4346 6.75171 12.4585 7.77562 13.7216 7.77562Z" fill="white" stroke="white" stroke-width="1.71524"/>
+<path d="M13.7216 16.0088C14.9846 16.0088 16.0085 14.9849 16.0085 13.7218C16.0085 12.4587 14.9846 11.4348 13.7216 11.4348C12.4585 11.4348 11.4346 12.4587 11.4346 13.7218C11.4346 14.9849 12.4585 16.0088 13.7216 16.0088Z" fill="white" stroke="white" stroke-width="1.71524"/>
+<path d="M13.7216 24.2419C14.9846 24.2419 16.0085 23.218 16.0085 21.955C16.0085 20.6919 14.9846 19.668 13.7216 19.668C12.4585 19.668 11.4346 20.6919 11.4346 21.955C11.4346 23.218 12.4585 24.2419 13.7216 24.2419Z" fill="white" stroke="white" stroke-width="1.71524"/>
+</svg>
+''';
+
   static const giveUpSpot = '''
 <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M13.0003 10.8333C15.3936 10.8333 17.3337 8.89322 17.3337 6.49999C17.3337 4.10676 15.3936 2.16666 13.0003 2.16666C10.6071 2.16666 8.66699 4.10676 8.66699 6.49999C8.66699 8.89322 10.6071 10.8333 13.0003 10.8333Z" stroke="#987AA5" stroke-width="1.625"/>
@@ -448,6 +456,37 @@ class TotemIcons {
   static const chevronDown = '''
 <svg width="16" height="10" viewBox="0 0 16 10" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M1.91997 1.62L8.31997 8.62L14.72 1.62" stroke="#787D7E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+''';
+
+  static const reorderParticipants = '''
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M16.6667 5H2.5" stroke="#262F37" stroke-width="1.75" stroke-linecap="round"/>
+<path d="M9.16667 9.16675H2.5" stroke="#262F37" stroke-width="1.75" stroke-linecap="round"/>
+<path d="M10 13.3333H2.5" stroke="#262F37" stroke-width="1.75" stroke-linecap="round"/>
+<path d="M12.5 9.58333L14.5833 7.5M14.5833 7.5L16.6667 9.58333M14.5833 7.5V14.1667" stroke="#262F37" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+''';
+
+  static const passToNext = '''
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M16.25 9.99992L12.0833 14.1666M16.25 9.99992L12.0833 5.83325M16.25 9.99992C16.25 9.99992 9.30558 9.99992 7.91667 9.99992C6.52775 9.99992 3.75 9.16659 3.75 5.83325" stroke="#262F37" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+''';
+
+  static const removePerson = '''
+<svg width="27" height="27" viewBox="0 0 27 27" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M13.418 11.1818C15.8883 11.1818 17.8908 9.17927 17.8908 6.70906C17.8908 4.23884 15.8883 2.23633 13.418 2.23633C10.9478 2.23633 8.94531 4.23884 8.94531 6.70906C8.94531 9.17927 10.9478 11.1818 13.418 11.1818Z" stroke="white" stroke-width="1.67727"/>
+<path d="M16.7727 14.9021C15.7368 14.6663 14.6044 14.5364 13.4181 14.5364C8.47767 14.5364 4.47266 16.7892 4.47266 19.5682C4.47266 22.3472 4.47266 24.6 13.4181 24.6C19.7777 24.6 21.6161 23.4614 22.1475 21.8046" stroke="white" stroke-width="1.67727"/>
+<path d="M20.127 22.3637C22.5972 22.3637 24.5998 20.3612 24.5998 17.8909C24.5998 15.4207 22.5972 13.4182 20.127 13.4182C17.6568 13.4182 15.6543 15.4207 15.6543 17.8909C15.6543 20.3612 17.6568 22.3637 20.127 22.3637Z" stroke="white" stroke-width="1.67727"/>
+<path d="M18.6357 16.4001L21.6176 19.3819M21.6179 16.4001L18.6361 19.3819" stroke="white" stroke-width="1.67727" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+''';
+
+  static const dragHandle = '''
+<svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M8.75781 22.5625H29.2422" stroke="white" stroke-width="3.26562" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8.75781 15.4375H29.2422" stroke="white" stroke-width="3.26562" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 ''';
 }

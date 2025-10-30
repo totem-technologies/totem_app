@@ -7,24 +7,31 @@ import 'package:livekit_components/livekit_components.dart'
 // livekit_components exports provider
 // ignore: depend_on_referenced_packages
 import 'package:provider/provider.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
+import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/widgets/audio_visualizer.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class ParticipantCard extends ConsumerWidget {
-  const ParticipantCard({required this.participant, super.key});
+  const ParticipantCard({
+    required this.participant,
+    required this.event,
+    super.key,
+  });
 
   final Participant participant;
+  final EventDetailSchema event;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // final room = RoomContext.of(context);
     final participantContext = Provider.of<ParticipantContext>(context);
 
     final audioTracks = participantContext.tracks
@@ -32,6 +39,11 @@ class ParticipantCard extends ConsumerWidget {
           (t) => t.kind == TrackType.AUDIO || t.track is AudioTrack,
         )
         .toList();
+
+    final isKeeper = participant.identity == event.space.author.slug!;
+    final auth = ref.watch(authControllerProvider);
+
+    const overlayPadding = 6.0;
 
     return AspectRatio(
       aspectRatio: 16 / 21,
@@ -81,29 +93,136 @@ class ParticipantCard extends ConsumerWidget {
               Positioned.fill(
                 child: ParticipantVideo(participant: participant),
               ),
-              if (audioTracks.isNotEmpty)
+              PositionedDirectional(
+                top: overlayPadding,
+                start: overlayPadding,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.black54,
+                  ),
+                  padding: const EdgeInsetsDirectional.all(2),
+                  alignment: Alignment.center,
+                  child: Builder(
+                    builder: (context) {
+                      if (participant.isMuted ||
+                          !participant.hasAudio ||
+                          audioTracks.isEmpty) {
+                        return const TotemIcon(
+                          TotemIcons.microphoneOff,
+                          size: 20,
+                          color: Colors.white,
+                        );
+                      } else {
+                        return SoundWaveformWidget(
+                          audioTrack: audioTracks.first.track! as AudioTrack,
+                          participant: participant,
+                          options: const AudioVisualizerWidgetOptions(
+                            color: Colors.white,
+                            barCount: 3,
+                            barMinOpacity: 0.8,
+                            spacing: 3,
+                            minHeight: 4,
+                            maxHeight: 12,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ),
+              if (isKeeper && auth.user?.slug != participant.identity)
                 PositionedDirectional(
-                  top: 6,
-                  start: 6,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(0x262F3799),
-                    ),
-                    padding: const EdgeInsetsDirectional.all(2),
-                    alignment: Alignment.center,
-                    child: SoundWaveformWidget(
-                      audioTrack: audioTracks.first.track! as AudioTrack,
-                      participant: participant,
-                      options: const AudioVisualizerWidgetOptions(
+                  end: overlayPadding,
+                  top: overlayPadding,
+                  child: GestureDetector(
+                    onTapUp: (details) async {
+                      final offset = details.globalPosition;
+                      const popupItemTextStyle = TextStyle(
                         color: Colors.white,
-                        barCount: 3,
-                        barMinOpacity: 0.8,
-                        spacing: 3,
-                        minHeight: 4,
-                        maxHeight: 12,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      );
+
+                      final box = context.findRenderObject() as RenderBox?;
+                      if (box == null) return;
+                      final size = box.size;
+                      await showMenu(
+                        context: context,
+                        constraints: const BoxConstraints(),
+                        position: RelativeRect.fromLTRB(
+                          // dx - card width + horizontal padding + factor
+                          offset.dx - size.width + overlayPadding * 2,
+                          // dy + vertical offset
+                          offset.dy + overlayPadding * 2.5,
+                          MediaQuery.widthOf(context) - offset.dx,
+                          MediaQuery.heightOf(context) - offset.dy,
+                        ),
+                        color: Colors.black.withValues(alpha: 0.8),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(16),
+                          ),
+                        ),
+                        elevation: 0,
+                        menuPadding: EdgeInsetsDirectional.zero,
+                        clipBehavior: Clip.hardEdge,
+                        items: [
+                          if (participant.hasAudio)
+                            PopupMenuItem<void>(
+                              enabled: !participant.isMuted,
+                              onTap: () => _onMuteParticipant(context, ref),
+                              textStyle: popupItemTextStyle,
+                              child: Row(
+                                spacing: 8,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const TotemIcon(
+                                    TotemIcons.microphoneOff,
+                                    size: 20,
+                                    color: Colors.white,
+                                  ),
+                                  Text(
+                                    participant.isMuted ? 'Muted' : 'Mute',
+                                    style: popupItemTextStyle,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          PopupMenuItem<void>(
+                            onTap: () => _onRemoveParticipant(context, ref),
+                            textStyle: popupItemTextStyle,
+                            child: const Row(
+                              spacing: 8,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TotemIcon(
+                                  TotemIcons.removePerson,
+                                  size: 20,
+                                  color: Colors.white,
+                                ),
+                                Text('Remove', style: popupItemTextStyle),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black54,
+                      ),
+                      padding: const EdgeInsetsDirectional.all(2),
+                      alignment: Alignment.center,
+                      child: const TotemIcon(
+                        TotemIcons.moreVertical,
+                        size: 20,
+                        color: Colors.white,
                       ),
                     ),
                   ),
@@ -132,6 +251,72 @@ class ParticipantCard extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _onMuteParticipant(BuildContext context, WidgetRef ref) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        final user = ref.watch(userProfileProvider(participant.identity));
+        return ConfirmationDialog(
+          iconWidget: user
+              .whenData(
+                (user) => UserAvatar.fromUserSchema(
+                  user,
+                  radius: 40,
+                ),
+              )
+              .value,
+          confirmButtonText: 'Mute',
+          title: 'Mute ${participant.name}',
+          content: 'They can unmute themselves anytime.',
+          onConfirm: () async {
+            await ref.read(
+              muteParticipantProvider(
+                event.slug,
+                participant.identity,
+              ).future,
+            );
+            if (!context.mounted) return;
+            Navigator.of(context).pop();
+          },
+          type: ConfirmationDialogType.standard,
+        );
+      },
+    );
+  }
+
+  Future<void> _onRemoveParticipant(BuildContext context, WidgetRef ref) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        final user = ref.watch(userProfileProvider(participant.identity));
+        return ConfirmationDialog(
+          iconWidget: user
+              .whenData(
+                (user) => UserAvatar.fromUserSchema(
+                  user,
+                  radius: 40,
+                ),
+              )
+              .value,
+          confirmButtonText: 'Remove',
+          content:
+              'Are you sure you want to remove '
+              '${participant.name}?',
+          onConfirm: () async {
+            await ref.read(
+              removeParticipantProvider(
+                event.slug,
+                participant.identity,
+              ).future,
+            );
+            if (!context.mounted) return;
+            Navigator.of(context).pop();
+          },
+        );
+      },
     );
   }
 }

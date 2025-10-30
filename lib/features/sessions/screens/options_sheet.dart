@@ -3,8 +3,14 @@ import 'dart:async';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/features/profile/repositories/user_repository.dart';
+import 'package:totem_app/features/sessions/models/session_state.dart';
+import 'package:totem_app/features/sessions/services/livekit_service.dart';
+import 'package:totem_app/features/sessions/widgets/participant_reorder_widget.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
@@ -26,160 +32,232 @@ Future<bool?> showLeaveDialog(BuildContext context) {
 
 Future<void> showOptionsSheet(
   BuildContext context,
-  VoidCallback? onStartSession,
+  LiveKitState state,
+  LiveKitService session,
+  EventDetailSchema event,
 ) {
   return showModalBottomSheet(
     context: context,
     showDragHandle: true,
     backgroundColor: const Color(0xFFF3F1E9),
+    isScrollControlled: true,
     builder: (context) {
-      return OptionsSheet(
-        onStartSession: onStartSession,
-      );
+      return OptionsSheet(session: session, state: state, event: event);
     },
   );
 }
 
 class OptionsSheet extends StatelessWidget {
-  const OptionsSheet({required this.onStartSession, super.key});
+  const OptionsSheet({
+    required this.state,
+    required this.session,
+    required this.event,
+    super.key,
+  });
 
-  final VoidCallback? onStartSession;
+  final LiveKitState state;
+  final LiveKitService session;
+  final EventDetailSchema event;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final theme = Theme.of(context);
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
       padding: const EdgeInsetsDirectional.only(
         start: 20,
         end: 20,
         top: 10,
         bottom: 36,
       ),
-      child: Column(
-        spacing: 10,
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          MediaDeviceSelectButton(
-            builder: (context, roomCtx, deviceCtx) {
-              final videoInputs = deviceCtx.videoInputs;
-              final selected =
-                  deviceCtx.videoInputs?.firstWhereOrNull(
-                    (e) {
-                      return e.deviceId ==
-                              deviceCtx.selectedVideoInputDeviceId &&
-                          e.label.isNotEmpty;
-                    },
-                  ) ??
-                  deviceCtx.videoInputs?.firstOrNull;
-              return OptionsSheetTile<MediaDevice>(
-                title: selected?.humanReadableLabel ?? 'Default Camera',
-                icon: TotemIcons.cameraOn,
-                options: videoInputs?.toList(),
-                optionToString: (option) => option.humanReadableLabel,
-                selectedOption: selected,
-                onOptionChanged: (value) async {
-                  if (value != null) {
-                    // TODO(bdlukaa): Revisit this in the future
-                    // https://github.com/livekit/client-sdk-flutter/issues/863
-                    final userTrack = roomCtx.room.localParticipant
-                        ?.getTrackPublications()
-                        .firstWhereOrNull(
-                          (track) => track.kind == TrackType.VIDEO,
-                        )
-                        ?.track;
-                    if (userTrack != null) {
-                      unawaited(
-                        userTrack.restartTrack(
-                          CameraCaptureOptions(
-                            deviceId: value.deviceId,
-                          ),
-                        ),
-                      );
-                    } else {
-                      await roomCtx.room.localParticipant?.publishVideoTrack(
-                        await LocalVideoTrack.createCameraTrack(),
-                      );
-                    }
-                    await deviceCtx.selectVideoInput(value);
-                  }
-                },
-              );
-            },
+      children: [
+        MediaDeviceSelectButton(
+          builder: (context, roomCtx, deviceCtx) {
+            final videoInputs = deviceCtx.videoInputs;
+            final selected =
+                deviceCtx.videoInputs?.firstWhereOrNull(
+                  (e) {
+                    return e.deviceId == deviceCtx.selectedVideoInputDeviceId &&
+                        e.label.isNotEmpty;
+                  },
+                ) ??
+                deviceCtx.videoInputs?.firstOrNull;
+            return OptionsSheetTile<MediaDevice>(
+              title: selected?.humanReadableLabel ?? 'Default Camera',
+              icon: TotemIcons.cameraOn,
+              options: videoInputs?.toList(),
+              optionToString: (option) => option.humanReadableLabel,
+              selectedOption: selected,
+              onOptionChanged: (value) async {
+                if (value != null) {
+                  await session.selectCameraDevice(value);
+                }
+              },
+            );
+          },
+        ),
+        MediaDeviceSelectButton(
+          builder: (context, roomCtx, deviceCtx) {
+            final audioInputs = deviceCtx.audioInputs;
+            final selected =
+                deviceCtx.audioInputs?.firstWhereOrNull(
+                  (e) {
+                    return e.deviceId == deviceCtx.selectedAudioInputDeviceId &&
+                        e.label.isNotEmpty;
+                  },
+                ) ??
+                deviceCtx.audioInputs?.firstOrNull;
+            return OptionsSheetTile<MediaDevice>(
+              title: selected?.label ?? 'Default Microphone',
+              options: audioInputs?.toList(),
+              optionToString: (option) => option.humanReadableLabel,
+              selectedOption: selected,
+              onOptionChanged: (value) async {
+                if (value != null) {
+                  await session.selectAudioDevice(value);
+                }
+              },
+              icon: TotemIcons.microphoneOn,
+            );
+          },
+        ),
+        MediaDeviceSelectButton(
+          builder: (context, roomCtx, deviceCtx) {
+            final audioOutputs = deviceCtx.audioOutputs;
+            final selected =
+                deviceCtx.audioOutputs?.firstWhereOrNull(
+                  (e) {
+                    return e.deviceId ==
+                            deviceCtx.selectedAudioOutputDeviceId &&
+                        e.label.isNotEmpty;
+                  },
+                ) ??
+                deviceCtx.audioOutputs?.firstOrNull;
+            return OptionsSheetTile<MediaDevice>(
+              title: selected?.label ?? 'Default Speaker',
+              options: audioOutputs?.toList(),
+              optionToString: (option) => option.humanReadableLabel,
+              selectedOption: selected,
+              onOptionChanged: (value) async {
+                if (value != null) {
+                  await session.selectAudioOutputDevice(value);
+                }
+              },
+              icon: TotemIcons.speaker,
+            );
+          },
+        ),
+        OptionsSheetTile<void>(
+          title: 'Leave Session',
+          icon: TotemIcons.leaveCall,
+          type: OptionsSheetTileType.destructive,
+          onTap: () async {
+            final navigator = Navigator.of(context)..pop();
+            final shouldLeave = await showLeaveDialog(context) ?? false;
+            if (shouldLeave && navigator.mounted) {
+              popOrHome(navigator.context);
+            }
+          },
+        ),
+
+        if (session.isKeeper()) ...[
+          Text(
+            'Keeper Settings',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
           ),
-          MediaDeviceSelectButton(
-            builder: (context, roomCtx, deviceCtx) {
-              final audioInputs = deviceCtx.audioInputs;
-              final selected =
-                  deviceCtx.audioInputs?.firstWhereOrNull(
-                    (e) {
-                      return e.deviceId ==
-                              deviceCtx.selectedAudioInputDeviceId &&
-                          e.label.isNotEmpty;
-                    },
-                  ) ??
-                  deviceCtx.audioInputs?.firstOrNull;
-              return OptionsSheetTile<MediaDevice>(
-                title: selected?.label ?? 'Default Microphone',
-                options: audioInputs?.toList(),
-                optionToString: (option) => option.humanReadableLabel,
-                selectedOption: selected,
-                onOptionChanged: (value) {
-                  if (value != null) {
-                    deviceCtx.selectAudioInput(value);
-                  }
-                },
-                icon: TotemIcons.microphoneOn,
-              );
-            },
-          ),
-          MediaDeviceSelectButton(
-            builder: (context, roomCtx, deviceCtx) {
-              final audioOutputs = deviceCtx.audioOutputs;
-              final selected =
-                  deviceCtx.audioOutputs?.firstWhereOrNull(
-                    (e) {
-                      return e.deviceId ==
-                              deviceCtx.selectedAudioOutputDeviceId &&
-                          e.label.isNotEmpty;
-                    },
-                  ) ??
-                  deviceCtx.audioOutputs?.firstOrNull;
-              return OptionsSheetTile<MediaDevice>(
-                title: selected?.label ?? 'Default Speaker',
-                options: audioOutputs?.toList(),
-                optionToString: (option) => option.humanReadableLabel,
-                selectedOption: selected,
-                onOptionChanged: (value) {
-                  if (value != null) {
-                    deviceCtx.selectAudioOutput(value);
-                  }
-                },
-                icon: TotemIcons.speaker,
-              );
-            },
-          ),
-          if (onStartSession != null)
+          if (state.sessionState.status == SessionStatus.waiting)
             OptionsSheetTile<void>(
               title: 'Start session',
               icon: TotemIcons.arrowForward,
-              onTap: () async {
-                onStartSession!();
-              },
+              onTap: session.startSession,
             ),
           OptionsSheetTile<void>(
-            title: 'Leave Session',
-            icon: TotemIcons.leaveCall,
-            type: OptionsSheetTileType.destructive,
+            title: 'Reorder Participants',
+            icon: TotemIcons.reorderParticipants,
             onTap: () async {
-              final navigator = Navigator.of(context)..pop();
-              final shouldLeave = await showLeaveDialog(context) ?? false;
-              if (shouldLeave && navigator.mounted) {
-                popOrHome(navigator.context);
-              }
+              Navigator.of(context).pop();
+              await showParticipantReorderWidget(
+                context,
+                session,
+                state,
+                event,
+              );
             },
           ),
+          OptionsSheetTile<void>(
+            title: 'Pass to Next',
+            icon: TotemIcons.passToNext,
+            type: OptionsSheetTileType.destructive,
+            onTap: state.sessionState.status == SessionStatus.started
+                ? () => _onPassToNext(context)
+                : null,
+          ),
+          OptionsSheetTile<void>(
+            title: 'End Session',
+            icon: TotemIcons.cameraOff,
+            type: OptionsSheetTileType.destructive,
+            onTap: state.sessionState.status == SessionStatus.started
+                ? () => _onEndSession(context)
+                : null,
+          ),
         ],
-      ),
+      ].expand((x) => [x, const SizedBox(height: 10)]).toList(),
+    );
+  }
+
+  Future<void> _onPassToNext(BuildContext context) async {
+    if (state.sessionState.nextParticipantIdentity == null) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final nextParticipantIdentity =
+            state.sessionState.nextParticipantIdentity!;
+        return Consumer(
+          builder: (context, ref, child) {
+            final user = ref.watch(
+              userProfileProvider(nextParticipantIdentity),
+            );
+            return ConfirmationDialog(
+              title: null,
+              confirmButtonText: 'Pass',
+              content:
+                  'Pass totem to '
+                  // Need to ignore because text is too long. Will be fixed
+                  // when we add localizations.
+                  // ignore: lines_longer_than_80_chars
+                  '${user.whenData((user) => user.name).value ?? 'the next participant'}?',
+              contentStyle: theme.textTheme.titleMedium,
+              type: ConfirmationDialogType.standard,
+              onConfirm: session.passTotem,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _onEndSession(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return ConfirmationDialog(
+          title: 'End Session',
+          content: 'Are you sure you want to end the session?',
+          confirmButtonText: 'End Session',
+          onConfirm: () async {
+            await session.endSession();
+            if (!context.mounted) return;
+            Navigator.of(context).pop();
+          },
+        );
+      },
     );
   }
 }
@@ -284,6 +362,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
       iconColor: type == OptionsSheetTileType.destructive
           ? theme.colorScheme.onErrorContainer
           : null,
+      trailing: onTap != null ? const Icon(Icons.arrow_forward_ios) : null,
     );
   }
 }

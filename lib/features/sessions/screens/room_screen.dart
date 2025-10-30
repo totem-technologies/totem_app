@@ -6,7 +6,6 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
 import 'package:totem_app/api/models/event_detail_schema.dart';
-import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
@@ -123,103 +122,106 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final sessionOptions = SessionOptions(
-      eventSlug: widget.eventSlug,
-      token: widget.token,
-      cameraEnabled: widget.cameraEnabled,
-      microphoneEnabled: widget.micEnabled,
-      onEmojiReceived: _onEmojiReceived,
-      onMessageReceived: _onChatMessageReceived,
-      onLivekitError: _onLivekitError,
-      onReceiveTotem: _onReceiveTotem,
-    );
+    final eventAsync = ref.watch(eventProvider(widget.eventSlug));
 
-    final sessionState = ref.watch(liveKitServiceProvider(sessionOptions));
-    final sessionNotifier = ref.read(
-      liveKitServiceProvider(sessionOptions).notifier,
-    );
+    return eventAsync.when(
+      data: (event) {
+        final sessionOptions = SessionOptions(
+          eventSlug: widget.eventSlug,
+          keeperSlug: event.space.author.slug!,
+          token: widget.token,
+          cameraEnabled: widget.cameraEnabled,
+          microphoneEnabled: widget.micEnabled,
+          onEmojiReceived: _onEmojiReceived,
+          onMessageReceived: _onChatMessageReceived,
+          onLivekitError: _onLivekitError,
+          onReceiveTotem: _onReceiveTotem,
+        );
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        final shouldPop = await showLeaveDialog(context) ?? false;
-        if (context.mounted && shouldPop) {
-          popOrHome(context);
-        }
-      },
-      child: RoomBackground(
-        child: LivekitRoom(
-          roomContext: sessionNotifier.room,
-          builder: (context, roomCtx) {
-            return Navigator(
-              onDidRemovePage: (page) => {},
-              pages: [
-                MaterialPage(
-                  child: _buildBody(sessionNotifier, sessionState),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
+        final sessionState = ref.watch(liveKitServiceProvider(sessionOptions));
+        final sessionNotifier = ref.read(
+          liveKitServiceProvider(sessionOptions).notifier,
+        );
 
-  Widget _buildBody(LiveKitService notifier, LiveKitState state) {
-    return Consumer(
-      builder: (context, ref, child) {
-        final eventAsync = ref.watch(eventProvider(widget.eventSlug));
-
-        return eventAsync.when(
-          data: (event) {
-            final roomCtx = notifier.room;
-            switch (state.connectionState) {
-              case RoomConnectionState.error:
-                return RoomErrorScreen(onRetry: roomCtx.connect);
-              case RoomConnectionState.connecting:
-                return const LoadingRoomScreen();
-              case RoomConnectionState.disconnected:
-                return SessionEndedScreen(event: event);
-              case RoomConnectionState.connected:
-                if (state.sessionState.status == SessionStatus.ended) {
-                  return SessionEndedScreen(event: event);
-                }
-                if (roomCtx.localParticipant == null) {
-                  return const LoadingRoomScreen();
-                }
-
-                if (state.isMyTurn(notifier.room)) {
-                  if (_receivingTotem) {
-                    return ReceiveTotemScreen(
-                      actionBar: buildActionBar(notifier, state, event),
-                      onAcceptTotem: () => _onAcceptTotem(notifier),
-                    );
-                  }
-                  return MyTurn(
-                    actionBar: buildActionBar(notifier, state, event),
-                    getParticipantKey: getParticipantKey,
-                    onPassTotem: notifier.passTotem,
-                  );
-                } else {
-                  return NotMyTurn(
-                    actionBar: buildActionBar(notifier, state, event),
-                    getParticipantKey: getParticipantKey,
-                    sessionState: state.sessionState,
-                  );
-                }
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) async {
+            if (didPop) return;
+            final shouldPop = await showLeaveDialog(context) ?? false;
+            if (context.mounted && shouldPop) {
+              popOrHome(context);
             }
           },
-          loading: () => const LoadingRoomScreen(),
-          error: (error, stackTrace) {
-            return RoomErrorScreen(
-              onRetry: () =>
-                  ref.refresh(eventProvider(widget.eventSlug).future),
-            );
-          },
+          child: RoomBackground(
+            child: LivekitRoom(
+              roomContext: sessionNotifier.room,
+              builder: (context, roomCtx) {
+                return Navigator(
+                  onDidRemovePage: (page) => {},
+                  pages: [
+                    MaterialPage(
+                      child: _buildBody(event, sessionNotifier, sessionState),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+      loading: () => const LoadingRoomScreen(),
+      error: (error, stackTrace) {
+        return RoomErrorScreen(
+          onRetry: () => ref.refresh(eventProvider(widget.eventSlug).future),
         );
       },
     );
+  }
+
+  Widget _buildBody(
+    EventDetailSchema event,
+    LiveKitService notifier,
+    LiveKitState state,
+  ) {
+    final roomCtx = notifier.room;
+    switch (state.connectionState) {
+      case RoomConnectionState.error:
+        return RoomErrorScreen(onRetry: roomCtx.connect);
+      case RoomConnectionState.connecting:
+        return const LoadingRoomScreen();
+      case RoomConnectionState.disconnected:
+        return SessionEndedScreen(event: event);
+      case RoomConnectionState.connected:
+        if (state.sessionState.status == SessionStatus.ended) {
+          return SessionEndedScreen(event: event);
+        }
+        if (roomCtx.localParticipant == null) {
+          return const LoadingRoomScreen();
+        }
+
+        if (state.isMyTurn(notifier.room)) {
+          if (_receivingTotem) {
+            return ReceiveTotemScreen(
+              actionBar: buildActionBar(notifier, state, event),
+              onAcceptTotem: () => _onAcceptTotem(notifier),
+            );
+          }
+
+          return MyTurn(
+            actionBar: buildActionBar(notifier, state, event),
+            getParticipantKey: getParticipantKey,
+            onPassTotem: notifier.passTotem,
+            event: event,
+          );
+        } else {
+          return NotMyTurn(
+            actionBar: buildActionBar(notifier, state, event),
+            getParticipantKey: getParticipantKey,
+            sessionState: state.sessionState,
+            event: event,
+          );
+        }
+    }
   }
 
   Widget buildActionBar(
@@ -231,8 +233,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       builder: (context) {
         final roomCtx = notifier.room;
         final user = roomCtx.localParticipant;
-        final auth = ref.read(authControllerProvider);
-        final isKeeper = event.space.author.slug == auth.user?.slug;
         return ActionBar(
           children: [
             MediaDeviceSelectButton(
@@ -330,10 +330,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               ),
               child: IconButton(
                 padding: EdgeInsetsDirectional.zero,
-                onPressed: () => showOptionsSheet(
-                  context,
-                  isKeeper ? notifier.startSession : null,
-                ),
+                onPressed: () =>
+                    showOptionsSheet(context, state, notifier, event),
                 icon: const TotemIcon(
                   TotemIcons.more,
                   color: Colors.white,

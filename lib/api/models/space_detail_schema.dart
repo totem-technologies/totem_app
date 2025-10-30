@@ -1,6 +1,6 @@
 // coverage:ignore-file
 // GENERATED CODE - DO NOT MODIFY BY HAND
-// ignore_for_file: type=lint, unused_import
+// ignore_for_file: type=lint, unused_import, invalid_annotation_target, unnecessary_import
 
 import 'package:json_annotation/json_annotation.dart';
 
@@ -21,8 +21,8 @@ class SpaceDetailSchema {
     required this.nextEvent,
     required this.category,
     required this.subscribers,
-    required this.price,
     required this.recurring,
+    required this.price,
   });
 
   factory SpaceDetailSchema.fromJson(Map<String, Object?> json) =>
@@ -40,8 +40,8 @@ class SpaceDetailSchema {
   final NextEventSchema? nextEvent;
   final String? category;
   final int subscribers;
-  final int price;
   final String? recurring;
+  final int price;
 
   Map<String, Object?> toJson() => _$SpaceDetailSchemaToJson(this);
 }

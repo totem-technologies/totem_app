@@ -1,15 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
+import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 
 part 'livekit_service.g.dart';
 
@@ -29,6 +32,7 @@ typedef OnLivekitError = void Function(LiveKitException error);
 class SessionOptions {
   const SessionOptions({
     required this.eventSlug,
+    required this.keeperSlug,
     required this.token,
     required this.cameraEnabled,
     required this.microphoneEnabled,
@@ -39,6 +43,7 @@ class SessionOptions {
   });
 
   final String eventSlug;
+  final String keeperSlug;
   final String token;
   final bool cameraEnabled;
   final bool microphoneEnabled;
@@ -52,11 +57,12 @@ class SessionOptions {
     if (identical(this, other)) return true;
     return other is SessionOptions &&
         other.eventSlug == eventSlug &&
+        other.keeperSlug == keeperSlug &&
         other.token == token;
   }
 
   @override
-  int get hashCode => eventSlug.hashCode ^ token.hashCode;
+  int get hashCode => eventSlug.hashCode ^ keeperSlug.hashCode ^ token.hashCode;
 }
 
 enum RoomConnectionState { connecting, connected, disconnected, error }
@@ -191,15 +197,69 @@ class LiveKitService extends _$LiveKitService {
     }
   }
 
+  // TODO(bdlukaa): Revisit this in the future
+  // https://github.com/livekit/client-sdk-flutter/issues/863
+  Future<void> selectCameraDevice(MediaDevice device) async {
+    final options = CameraCaptureOptions(
+      deviceId: device.deviceId,
+    );
+
+    final userTrack = room.localParticipant
+        ?.getTrackPublications()
+        .firstWhereOrNull(
+          (track) => track.kind == TrackType.VIDEO,
+        )
+        ?.track;
+    if (userTrack != null) {
+      unawaited(
+        userTrack.restartTrack(options),
+      );
+    } else {
+      await room.localParticipant?.publishVideoTrack(
+        await LocalVideoTrack.createCameraTrack(options),
+      );
+    }
+    await room.room.setVideoInputDevice(device);
+  }
+
+  Future<void> selectAudioDevice(MediaDevice device) async {
+    final options = AudioCaptureOptions(
+      deviceId: device.deviceId,
+    );
+
+    final userTrack = room.localParticipant
+        ?.getTrackPublications()
+        .firstWhereOrNull(
+          (track) => track.kind == TrackType.AUDIO,
+        )
+        ?.track;
+    if (userTrack != null) {
+      unawaited(userTrack.restartTrack(options));
+    } else {
+      await room.localParticipant?.publishAudioTrack(
+        await LocalAudioTrack.create(options),
+      );
+    }
+
+    await room.room.setAudioInputDevice(device);
+  }
+
+  Future<void> selectAudioOutputDevice(MediaDevice device) async {
+    await room.room.setAudioOutputDevice(device);
+  }
+
+  bool isKeeper([String? userSlug]) {
+    final auth = ref.read(authControllerProvider);
+    return _options.keeperSlug == (userSlug ?? auth.user?.slug);
+  }
+
   /// Pass the totem to the next participant in the speaking order.
   ///
   /// This fails silently if it's not the user's turn.
   Future<void> passTotem() async {
     if (!state.isMyTurn(room)) return;
     try {
-      await _apiService.meetings.totemMeetingsMobileApiPassTotemEndpoint(
-        eventSlug: _options.eventSlug,
-      );
+      await ref.read(passTotemProvider(options.eventSlug).future);
     } catch (error, stackTrace) {
       debugPrint('Error passing totem: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -240,8 +300,30 @@ class LiveKitService extends _$LiveKitService {
   }
 
   Future<void> startSession() async {
-    await _apiService.meetings.totemMeetingsMobileApiStartRoomEndpoint(
-      eventSlug: _options.eventSlug,
-    );
+    try {
+      await ref.read(startSessionProvider(_options.eventSlug).future);
+    } catch (error, stackTrace) {
+      debugPrint('Error starting session: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error starting session',
+      );
+    }
+  }
+
+  Future<void> endSession() async {
+    try {
+      await ref.read(endSessionProvider(_options.eventSlug).future);
+    } catch (error, stackTrace) {
+      debugPrint('Error ending session: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error ending session',
+      );
+    }
   }
 }

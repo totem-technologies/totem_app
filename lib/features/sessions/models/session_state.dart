@@ -68,4 +68,14 @@ class SessionState {
   String toString() =>
       'SessionState(status: $status, speakingNow: $speakingNow, '
       'speakingOrder: $speakingOrder)';
+
+  String? get nextParticipantIdentity {
+    if (speakingOrder == null || speakingOrder!.isEmpty) return null;
+    if (speakingNow == null) return speakingOrder!.first;
+
+    final currentIndex = speakingOrder!.indexOf(speakingNow!);
+    if (currentIndex == -1) return null;
+    if (currentIndex == speakingOrder!.length - 1) return speakingOrder!.first;
+    return speakingOrder![currentIndex + 1];
+  }
 }

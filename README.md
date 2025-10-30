@@ -67,6 +67,13 @@ flutter run -d chrome --web-browser-flag "--disable-web-security"     # Web (tem
 
 If testing on an iOS device, ensure you're using macOS and have Xcode installed.
 
+On android, When reattaching, use:
+
+```bash
+adb logcat "*:S" flutter:V
+flutter attach
+```
+
 ### 🧪 Testing
 
 Run all tests:
