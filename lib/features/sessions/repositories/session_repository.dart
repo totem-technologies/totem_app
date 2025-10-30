@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_app/api/models/livekit_mute_participant_schema.dart';
 import 'package:totem_app/core/services/api_service.dart';
 
 part 'session_repository.g.dart';
@@ -42,5 +43,18 @@ Future<void> passTotem(Ref ref, String eventSlug) async {
   final apiService = ref.read(mobileApiServiceProvider);
   await apiService.meetings.totemMeetingsMobileApiPassTotemEndpoint(
     eventSlug: eventSlug,
+  );
+}
+
+@riverpod
+Future<void> reorderParticipants(
+  Ref ref,
+  String eventSlug,
+  LivekitMuteParticipantSchema order,
+) async {
+  final apiService = ref.read(mobileApiServiceProvider);
+  await apiService.meetings.totemMeetingsMobileApiReorderParticipantsEndpoint(
+    eventSlug: eventSlug,
+    body: order,
   );
 }

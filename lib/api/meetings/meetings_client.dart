@@ -38,6 +38,12 @@ abstract class MeetingsClient {
     @Path('event_slug') required String eventSlug,
   });
 
+  /// End Room Endpoint
+  @POST('/api/mobile/protected/meetings/event/{event_slug}/end')
+  Future<void> totemMeetingsMobileApiEndRoomEndpoint({
+    @Path('event_slug') required String eventSlug,
+  });
+
   /// Mute Participant Endpoint
   @POST(
     '/api/mobile/protected/meetings/event/{event_slug}/mute/{participant_identity}',

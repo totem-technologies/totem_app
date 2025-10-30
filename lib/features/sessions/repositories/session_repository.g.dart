@@ -292,3 +292,79 @@ final class PassTotemFamily extends $Family
   @override
   String toString() => r'passTotemProvider';
 }
+
+@ProviderFor(reorderParticipants)
+const reorderParticipantsProvider = ReorderParticipantsFamily._();
+
+final class ReorderParticipantsProvider
+    extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
+    with $FutureModifier<void>, $FutureProvider<void> {
+  const ReorderParticipantsProvider._({
+    required ReorderParticipantsFamily super.from,
+    required (String, LivekitMuteParticipantSchema) super.argument,
+  }) : super(
+         retry: null,
+         name: r'reorderParticipantsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$reorderParticipantsHash();
+
+  @override
+  String toString() {
+    return r'reorderParticipantsProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<void> create(Ref ref) {
+    final argument = this.argument as (String, LivekitMuteParticipantSchema);
+    return reorderParticipants(ref, argument.$1, argument.$2);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ReorderParticipantsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$reorderParticipantsHash() =>
+    r'8377aee805ba362d65c10c8a0ba5d38f8e4011aa';
+
+final class ReorderParticipantsFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<void>,
+          (String, LivekitMuteParticipantSchema)
+        > {
+  const ReorderParticipantsFamily._()
+    : super(
+        retry: null,
+        name: r'reorderParticipantsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  ReorderParticipantsProvider call(
+    String eventSlug,
+    LivekitMuteParticipantSchema order,
+  ) => ReorderParticipantsProvider._(argument: (eventSlug, order), from: this);
+
+  @override
+  String toString() => r'reorderParticipantsProvider';
+}
