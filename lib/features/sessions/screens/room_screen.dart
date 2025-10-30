@@ -330,7 +330,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               ),
               child: IconButton(
                 padding: EdgeInsetsDirectional.zero,
-                onPressed: () => showOptionsSheet(context, state, notifier),
+                onPressed: () =>
+                    showOptionsSheet(context, state, notifier, event),
                 icon: const TotemIcon(
                   TotemIcons.more,
                   color: Colors.white,
