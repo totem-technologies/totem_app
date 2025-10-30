@@ -15,6 +15,7 @@ import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/api_service.dart';
+import 'package:totem_app/core/services/calendar_service.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
@@ -26,7 +27,6 @@ import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:url_launcher/link.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 
 enum SpaceJoinCardState {
   ended,
@@ -449,68 +449,41 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   }
 
   Future<void> addToCalendar() async {
-    // TODO(adil): Integrate this to the phone device
-    // try {
-    //   final eventide = Eventide();
-    //   await eventide.createEventInDefaultCalendar(
-    //     title: widget.event.space.title,
-    //     // description: widget.event.space.shortDescription,
-    //     startDate: widget.event.start.toLocal(),
-    //     endDate: widget.event.start
-    //         .add(Duration(minutes: widget.event.duration))
-    //         .toLocal(),
-    //     url: getFullUrl(widget.event.calLink),
-    //     reminders: [
-    //       const Duration(minutes: 30),
-    //       const Duration(minutes: 15),
-    //     ],
-    //   );
-    // } catch (error, stacktrace) {
-    //   debugPrint('Failed to add event to calendar: $error\n$stacktrace');
-    await launchUrlString(
-      _buildGoogleCalendarUrl(
-        title: widget.space.title,
-        start: event.start.toLocal(),
-        end: event.start.add(Duration(minutes: event.duration)).toLocal(),
-        description: widget.space.shortDescription,
-      ),
+    // Create the calendar event with session details
+    final calendarEvent = AppCalendarEvent(
+      title: widget.space.title,
+      description: widget.space.shortDescription,
+      location: getFullUrl(event.calLink),
+      start: event.start.toLocal(),
+      end: event.start.add(Duration(minutes: event.duration)).toLocal(),
+      reminderMinutesBefore: 15,
     );
-    // }
-  }
 
-  String _buildGoogleCalendarUrl({
-    required String title,
-    required DateTime start,
-    required DateTime end,
-    String? description,
-    String? location,
-  }) {
-    String formatDate(DateTime dt) {
-      final iso = dt
-          .toUtc()
-          .toIso8601String()
-          .replaceAll('-', '')
-          .replaceAll(':', '')
-          .split('.')
-          .first;
-      return '${iso}Z';
-    }
+    try {
+      // Attempt to add the event to the device calendar
+      final success = await CalendarService.addToCalendar(calendarEvent);
 
-    final startUtc = formatDate(start);
-    final endUtc = formatDate(end);
-
-    final Uri url = Uri.parse('https://calendar.google.com/calendar/render')
-        .replace(
-          queryParameters: {
-            'action': 'TEMPLATE',
-            'text': title,
-            'dates': '$startUtc/$endUtc',
-            'details': ?description,
-            'location': ?location,
-          },
+      if (!success) {
+        // If the user cancelled or the native calendar failed,
+        if (mounted) {
+          showErrorPopup(
+            context,
+            icon: TotemIcons.calendar,
+            title: 'Failed to add event to calendar',
+            message: 'Please try again later',
+          );
+        }
+      }
+    } catch (error, _) {
+      if (mounted) {
+        showErrorPopup(
+          context,
+          icon: TotemIcons.calendar,
+          title: 'Failed to add event to calendar',
+          message: 'Please try again later',
         );
-
-    return url.toString();
+      }
+    }
   }
 
   Future<void> giveUpSpot() async {
