@@ -41,6 +41,7 @@ class ParticipantCard extends ConsumerWidget {
         .toList();
 
     final isKeeper = participant.identity == event.space.author.slug!;
+    final auth = ref.watch(authControllerProvider);
 
     return AspectRatio(
       aspectRatio: 16 / 21,
@@ -94,11 +95,11 @@ class ParticipantCard extends ConsumerWidget {
                 top: 6,
                 start: 6,
                 child: Container(
-                  width: 18,
-                  height: 18,
+                  width: 20,
+                  height: 20,
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Color(0x262F3799),
+                    color: Colors.black54,
                   ),
                   padding: const EdgeInsetsDirectional.all(2),
                   alignment: Alignment.center,
@@ -130,51 +131,98 @@ class ParticipantCard extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (isKeeper)
+              if (isKeeper && auth.user?.slug != participant.identity)
                 PositionedDirectional(
                   end: 6,
                   top: 6,
-                  child: PopupMenuButton(
-                    borderRadius: BorderRadius.circular(16),
-                    color: Colors.black.withValues(alpha: 0.8),
-                    position: PopupMenuPosition.under,
-                    itemBuilder: (context) {
-                      return [
-                        if (participant.hasAudio)
+                  child: GestureDetector(
+                    onTapUp: (details) async {
+                      final offset = details.globalPosition;
+                      const popupItemTextStyle = TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      );
+
+                      final box = context.findRenderObject() as RenderBox?;
+                      if (box == null) return;
+                      final size = box.size;
+                      await showMenu(
+                        context: context,
+                        constraints: const BoxConstraints(),
+                        position: RelativeRect.fromLTRB(
+                          // dx - card width + horizontal padding + factor
+                          offset.dx - size.width + 6 * 2,
+                          // dy + vertical offset
+                          offset.dy + 16,
+                          MediaQuery.widthOf(context) - offset.dx,
+                          MediaQuery.heightOf(context) - offset.dy,
+                        ),
+                        color: Colors.black.withValues(alpha: 0.8),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(16),
+                          ),
+                        ),
+                        elevation: 0,
+                        menuPadding: EdgeInsetsDirectional.zero,
+                        clipBehavior: Clip.hardEdge,
+                        items: [
+                          if (participant.hasAudio)
+                            PopupMenuItem<void>(
+                              enabled: !participant.isMuted,
+                              onTap: () => _onMuteParticipant(context, ref),
+                              textStyle: popupItemTextStyle,
+                              child: Row(
+                                spacing: 8,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const TotemIcon(
+                                    TotemIcons.microphoneOff,
+                                    size: 20,
+                                    color: Colors.white,
+                                  ),
+                                  Text(
+                                    participant.isMuted ? 'Muted' : 'Mute',
+                                    style: popupItemTextStyle,
+                                  ),
+                                ],
+                              ),
+                            ),
                           PopupMenuItem<void>(
-                            onTap: () => _onMuteParticipant(context, ref),
-                            child: Row(
+                            onTap: () => _onRemoveParticipant(context, ref),
+                            textStyle: popupItemTextStyle,
+                            child: const Row(
                               spacing: 8,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const TotemIcon(
-                                  TotemIcons.microphoneOff,
-                                  size: 24,
+                                TotemIcon(
+                                  TotemIcons.removePerson,
+                                  size: 20,
                                   color: Colors.white,
                                 ),
-                                Text(
-                                  participant.isMuted ? 'Muted' : 'Mute',
-                                ),
+                                Text('Remove', style: popupItemTextStyle),
                               ],
                             ),
                           ),
-                        PopupMenuItem<void>(
-                          onTap: () => _onRemoveParticipant(context, ref),
-                          child: const Row(
-                            spacing: 8,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              TotemIcon(
-                                TotemIcons.removePerson,
-                                size: 24,
-                                color: Colors.white,
-                              ),
-                              Text('Remove'),
-                            ],
-                          ),
-                        ),
-                      ];
+                        ],
+                      );
                     },
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black54,
+                      ),
+                      padding: const EdgeInsetsDirectional.all(2),
+                      alignment: Alignment.center,
+                      child: const TotemIcon(
+                        TotemIcons.moreVertical,
+                        size: 20,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
               PositionedDirectional(
