@@ -91,28 +91,7 @@ class OptionsSheet extends StatelessWidget {
               selectedOption: selected,
               onOptionChanged: (value) async {
                 if (value != null) {
-                  // TODO(bdlukaa): Revisit this in the future
-                  // https://github.com/livekit/client-sdk-flutter/issues/863
-                  final userTrack = roomCtx.room.localParticipant
-                      ?.getTrackPublications()
-                      .firstWhereOrNull(
-                        (track) => track.kind == TrackType.VIDEO,
-                      )
-                      ?.track;
-                  if (userTrack != null) {
-                    unawaited(
-                      userTrack.restartTrack(
-                        CameraCaptureOptions(
-                          deviceId: value.deviceId,
-                        ),
-                      ),
-                    );
-                  } else {
-                    await roomCtx.room.localParticipant?.publishVideoTrack(
-                      await LocalVideoTrack.createCameraTrack(),
-                    );
-                  }
-                  await deviceCtx.selectVideoInput(value);
+                  await session.selectCameraDevice(value);
                 }
               },
             );
@@ -134,9 +113,9 @@ class OptionsSheet extends StatelessWidget {
               options: audioInputs?.toList(),
               optionToString: (option) => option.humanReadableLabel,
               selectedOption: selected,
-              onOptionChanged: (value) {
+              onOptionChanged: (value) async {
                 if (value != null) {
-                  deviceCtx.selectAudioInput(value);
+                  await session.selectAudioDevice(value);
                 }
               },
               icon: TotemIcons.microphoneOn,
@@ -160,9 +139,9 @@ class OptionsSheet extends StatelessWidget {
               options: audioOutputs?.toList(),
               optionToString: (option) => option.humanReadableLabel,
               selectedOption: selected,
-              onOptionChanged: (value) {
+              onOptionChanged: (value) async {
                 if (value != null) {
-                  deviceCtx.selectAudioOutput(value);
+                  await session.selectAudioOutputDevice(value);
                 }
               },
               icon: TotemIcons.speaker,

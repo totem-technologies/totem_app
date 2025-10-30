@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage;
 import 'package:livekit_components/livekit_components.dart';
@@ -194,6 +195,57 @@ class LiveKitService extends _$LiveKitService {
         );
       }
     }
+  }
+
+  // TODO(bdlukaa): Revisit this in the future
+  // https://github.com/livekit/client-sdk-flutter/issues/863
+  Future<void> selectCameraDevice(MediaDevice device) async {
+    final options = CameraCaptureOptions(
+      deviceId: device.deviceId,
+    );
+
+    final userTrack = room.localParticipant
+        ?.getTrackPublications()
+        .firstWhereOrNull(
+          (track) => track.kind == TrackType.VIDEO,
+        )
+        ?.track;
+    if (userTrack != null) {
+      unawaited(
+        userTrack.restartTrack(options),
+      );
+    } else {
+      await room.localParticipant?.publishVideoTrack(
+        await LocalVideoTrack.createCameraTrack(options),
+      );
+    }
+    await room.room.setVideoInputDevice(device);
+  }
+
+  Future<void> selectAudioDevice(MediaDevice device) async {
+    final options = AudioCaptureOptions(
+      deviceId: device.deviceId,
+    );
+
+    final userTrack = room.localParticipant
+        ?.getTrackPublications()
+        .firstWhereOrNull(
+          (track) => track.kind == TrackType.AUDIO,
+        )
+        ?.track;
+    if (userTrack != null) {
+      unawaited(userTrack.restartTrack(options));
+    } else {
+      await room.localParticipant?.publishAudioTrack(
+        await LocalAudioTrack.create(options),
+      );
+    }
+
+    await room.room.setAudioInputDevice(device);
+  }
+
+  Future<void> selectAudioOutputDevice(MediaDevice device) async {
+    await room.room.setAudioOutputDevice(device);
   }
 
   bool isKeeper([String? userSlug]) {
