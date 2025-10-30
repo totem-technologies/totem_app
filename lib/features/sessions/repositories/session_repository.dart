@@ -50,12 +50,12 @@ Future<void> passTotem(Ref ref, String eventSlug) async {
 Future<void> reorderParticipants(
   Ref ref,
   String eventSlug,
-  LivekitMuteParticipantSchema order,
+  List<String> order,
 ) async {
   final apiService = ref.read(mobileApiServiceProvider);
   await apiService.meetings.totemMeetingsMobileApiReorderParticipantsEndpoint(
     eventSlug: eventSlug,
-    body: order,
+    body: LivekitMuteParticipantSchema(order: order),
   );
 }
 

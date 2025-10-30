@@ -16,7 +16,7 @@ class TotemIcons {
 </svg>
 ''';
 
-  static const spaces = '''
+  static const spaces = '''re
 <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M26.7754 14C26.7754 20.9036 21.179 26.5 14.2754 26.5C7.37187 26.5 1.77542 20.9036 1.77542 14C1.77542 7.09644 7.37187 1.5 14.2754 1.5C21.179 1.5 26.7754 7.09644 26.7754 14Z" stroke="#717171" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
@@ -480,6 +480,13 @@ class TotemIcons {
 <path d="M16.7727 14.9021C15.7368 14.6663 14.6044 14.5364 13.4181 14.5364C8.47767 14.5364 4.47266 16.7892 4.47266 19.5682C4.47266 22.3472 4.47266 24.6 13.4181 24.6C19.7777 24.6 21.6161 23.4614 22.1475 21.8046" stroke="white" stroke-width="1.67727"/>
 <path d="M20.127 22.3637C22.5972 22.3637 24.5998 20.3612 24.5998 17.8909C24.5998 15.4207 22.5972 13.4182 20.127 13.4182C17.6568 13.4182 15.6543 15.4207 15.6543 17.8909C15.6543 20.3612 17.6568 22.3637 20.127 22.3637Z" stroke="white" stroke-width="1.67727"/>
 <path d="M18.6357 16.4001L21.6176 19.3819M21.6179 16.4001L18.6361 19.3819" stroke="white" stroke-width="1.67727" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+''';
+
+  static const dragHandle = '''
+<svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M8.75781 22.5625H29.2422" stroke="white" stroke-width="3.26562" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8.75781 15.4375H29.2422" stroke="white" stroke-width="3.26562" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 ''';
 }

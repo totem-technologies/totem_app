@@ -301,7 +301,7 @@ final class ReorderParticipantsProvider
     with $FutureModifier<void>, $FutureProvider<void> {
   const ReorderParticipantsProvider._({
     required ReorderParticipantsFamily super.from,
-    required (String, LivekitMuteParticipantSchema) super.argument,
+    required (String, List<String>) super.argument,
   }) : super(
          retry: null,
          name: r'reorderParticipantsProvider',
@@ -327,7 +327,7 @@ final class ReorderParticipantsProvider
 
   @override
   FutureOr<void> create(Ref ref) {
-    final argument = this.argument as (String, LivekitMuteParticipantSchema);
+    final argument = this.argument as (String, List<String>);
     return reorderParticipants(ref, argument.$1, argument.$2);
   }
 
@@ -343,14 +343,10 @@ final class ReorderParticipantsProvider
 }
 
 String _$reorderParticipantsHash() =>
-    r'8377aee805ba362d65c10c8a0ba5d38f8e4011aa';
+    r'00852e47fbec3e51670acd8b8badc15f2eee0ee2';
 
 final class ReorderParticipantsFamily extends $Family
-    with
-        $FunctionalFamilyOverride<
-          FutureOr<void>,
-          (String, LivekitMuteParticipantSchema)
-        > {
+    with $FunctionalFamilyOverride<FutureOr<void>, (String, List<String>)> {
   const ReorderParticipantsFamily._()
     : super(
         retry: null,
@@ -360,10 +356,8 @@ final class ReorderParticipantsFamily extends $Family
         isAutoDispose: true,
       );
 
-  ReorderParticipantsProvider call(
-    String eventSlug,
-    LivekitMuteParticipantSchema order,
-  ) => ReorderParticipantsProvider._(argument: (eventSlug, order), from: this);
+  ReorderParticipantsProvider call(String eventSlug, List<String> order) =>
+      ReorderParticipantsProvider._(argument: (eventSlug, order), from: this);
 
   @override
   String toString() => r'reorderParticipantsProvider';

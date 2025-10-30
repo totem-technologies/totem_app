@@ -179,18 +179,11 @@ class OptionsSheet extends StatelessWidget {
             icon: TotemIcons.reorderParticipants,
             onTap: () async {
               Navigator.of(context).pop();
-              await showModalBottomSheet<void>(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: const Color(0xFFF3F1E9),
-                builder: (context) => SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.8,
-                  child: ParticipantReorderWidget(
-                    session: session,
-                    state: state,
-                    event: event,
-                  ),
-                ),
+              await showParticipantReorderWidget(
+                context,
+                session,
+                state,
+                event,
               );
             },
           ),
