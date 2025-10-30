@@ -1,6 +1,3 @@
-//
-// ignore_for_file: parameter_assignments
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
