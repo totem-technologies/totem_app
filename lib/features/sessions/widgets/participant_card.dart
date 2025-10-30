@@ -43,6 +43,8 @@ class ParticipantCard extends ConsumerWidget {
     final isKeeper = participant.identity == event.space.author.slug!;
     final auth = ref.watch(authControllerProvider);
 
+    const overlayPadding = 6.0;
+
     return AspectRatio(
       aspectRatio: 16 / 21,
       child: Container(
@@ -92,8 +94,8 @@ class ParticipantCard extends ConsumerWidget {
                 child: ParticipantVideo(participant: participant),
               ),
               PositionedDirectional(
-                top: 6,
-                start: 6,
+                top: overlayPadding,
+                start: overlayPadding,
                 child: Container(
                   width: 20,
                   height: 20,
@@ -133,8 +135,8 @@ class ParticipantCard extends ConsumerWidget {
               ),
               if (isKeeper && auth.user?.slug != participant.identity)
                 PositionedDirectional(
-                  end: 6,
-                  top: 6,
+                  end: overlayPadding,
+                  top: overlayPadding,
                   child: GestureDetector(
                     onTapUp: (details) async {
                       final offset = details.globalPosition;
@@ -152,9 +154,9 @@ class ParticipantCard extends ConsumerWidget {
                         constraints: const BoxConstraints(),
                         position: RelativeRect.fromLTRB(
                           // dx - card width + horizontal padding + factor
-                          offset.dx - size.width + 6 * 2,
+                          offset.dx - size.width + overlayPadding * 2,
                           // dy + vertical offset
-                          offset.dy + 16,
+                          offset.dy + overlayPadding * 2.5,
                           MediaQuery.widthOf(context) - offset.dx,
                           MediaQuery.heightOf(context) - offset.dy,
                         ),

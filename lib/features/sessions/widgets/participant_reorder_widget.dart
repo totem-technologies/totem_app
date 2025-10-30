@@ -128,8 +128,8 @@ class _ParticipantReorderWidgetState
                         ref,
                         _localOrder,
                       );
-                      if (mounted) setState(() => _loading = false);
-                      if (context.mounted) {
+                      if (mounted && context.mounted) {
+                        setState(() => _loading = false);
                         Navigator.of(context).pop();
                       }
                     },
