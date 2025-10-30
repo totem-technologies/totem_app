@@ -16,7 +16,7 @@ class TotemIcons {
 </svg>
 ''';
 
-  static const spaces = '''re
+  static const spaces = '''
 <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M26.7754 14C26.7754 20.9036 21.179 26.5 14.2754 26.5C7.37187 26.5 1.77542 20.9036 1.77542 14C1.77542 7.09644 7.37187 1.5 14.2754 1.5C21.179 1.5 26.7754 7.09644 26.7754 14Z" stroke="#717171" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
