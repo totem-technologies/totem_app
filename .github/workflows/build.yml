@@ -1,0 +1,59 @@
+name: Build Flutter Client
+on:
+  push:
+    branches:
+      - main
+  release:
+    types:
+      - created
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build_android:
+    name: Bluecherry Client Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          submodules: recursive
+
+      # We need to enforce java 17 because newer Flutter packages are
+      # requiring this Java Version.
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+          cache: "gradle"
+          check-latest: true
+      - uses: subosito/flutter-action@v2.8.0
+        with:
+          channel: "stable"
+          # cache: true
+
+      - run: flutter gen-l10n
+      - run: flutter pub get
+      - run: flutter build apk --verbose --split-per-abi
+      - run: flutter build appbundle --verbose
+
+  build_iOS:
+    name: Bluecherry Client iOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          submodules: recursive
+      - uses: subosito/flutter-action@v2.8.0
+        with:
+          channel: "stable"
+          architecture: x64
+          # cache: true
+
+      - run: flutter gen-l10n
+      - run: flutter pub get
+      - run: flutter build ios --verbose --no-codesign
+      - run: flutter build ipa --verbose --no-codesign
