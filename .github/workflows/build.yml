@@ -33,6 +33,14 @@ jobs:
           channel: "stable"
           # cache: true
 
+      - name: Create .env file
+        run: echo 'API_URL="https://totem.kbl.io"' > .env
+
+      - name: Decode firebase_options.dart
+        run: |
+          mkdir -p lib
+          echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
+
       - run: flutter pub get
       - run: flutter build apk --verbose --split-per-abi
       - run: flutter build appbundle --verbose
@@ -51,6 +59,14 @@ jobs:
           channel: "stable"
           architecture: x64
           # cache: true
+      
+      - name: Create .env file
+        run: echo 'API_URL="https://totem.kbl.io"' > .env
+
+      - name: Decode firebase_options.dart
+        run: |
+          mkdir -p lib
+          echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
 
       - run: flutter pub get
       - run: flutter build ios --verbose --no-codesign

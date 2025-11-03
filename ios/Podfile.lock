@@ -42,23 +42,6 @@ PODS:
     - Flutter
   - flutter_secure_storage (6.0.0):
     - Flutter
-<<<<<<< HEAD
-  - flutter_webrtc (1.2.0):
-    - Flutter
-    - WebRTC-SDK (= 137.7151.04)
-  - livekit_client (2.5.3):
-    - Flutter
-    - flutter_webrtc
-    - WebRTC-SDK (= 137.7151.04)
-  - objective_c (0.0.1):
-    - Flutter
-  - PostHog (3.34.0)
-  - posthog_flutter (0.0.1):
-    - Flutter
-    - FlutterMacOS
-    - PostHog (< 4.0.0, >= 3.32.0)
-  - WebRTC-SDK (137.7151.04)
-=======
   - flutter_webrtc (1.1.0):
     - Flutter
     - WebRTC-SDK (= 137.7151.03)
@@ -127,7 +110,6 @@ PODS:
   - url_launcher_ios (0.0.1):
     - Flutter
   - WebRTC-SDK (137.7151.03)
->>>>>>> 581712d (feat: Integrate calendar functionality with EventKit support)
 
 DEPENDENCIES:
   - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
@@ -162,11 +144,8 @@ SPEC REPOS:
     - GoogleUtilities
     - nanopb
     - PostHog
-<<<<<<< HEAD
-=======
     - PromisesObjC
     - Sentry
->>>>>>> 581712d (feat: Integrate calendar functionality with EventKit support)
     - WebRTC-SDK
 
 EXTERNAL SOURCES:
@@ -180,20 +159,11 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/firebase_core/ios"
   firebase_messaging:
     :path: ".symlinks/plugins/firebase_messaging/ios"
-  Flutter:
-    :path: Flutter
   flutter_local_notifications:
     :path: ".symlinks/plugins/flutter_local_notifications/ios"
-  flutter_secure_storage:
     :path: ".symlinks/plugins/flutter_secure_storage/ios"
   flutter_webrtc:
     :path: ".symlinks/plugins/flutter_webrtc/ios"
-<<<<<<< HEAD
-  livekit_client:
-    :path: ".symlinks/plugins/livekit_client/ios"
-  objective_c:
-    :path: ".symlinks/plugins/objective_c/ios"
-=======
   image_picker_ios:
     :path: ".symlinks/plugins/image_picker_ios/ios"
   livekit_client:
@@ -202,7 +172,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/package_info_plus/ios"
   path_provider_foundation:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
->>>>>>> 581712d (feat: Integrate calendar functionality with EventKit support)
   posthog_flutter:
     :path: ".symlinks/plugins/posthog_flutter/ios"
   sentry_flutter:
@@ -212,12 +181,6 @@ EXTERNAL SOURCES:
   shared_preferences_foundation:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   sqflite_darwin:
-    :path: ".symlinks/plugins/sqflite_darwin/darwin"
-  url_launcher_ios:
-    :path: ".symlinks/plugins/url_launcher_ios/ios"
-
-SPEC CHECKSUMS:
-  connectivity_plus: 2a701ffec2c0ae28a48cf7540e279787e77c447d
   device_info_plus: bf2e3232933866d73fe290f2942f2156cdd10342
   eventide: a59fc9d87326700ec76eadf5a2abfd2447ce5e87
   Firebase: 800d487043c0557d9faed71477a38d9aafb08a41
@@ -226,17 +189,7 @@ SPEC CHECKSUMS:
   FirebaseCore: 055f4ab117d5964158c833f3d5e7ec6d91648d4a
   FirebaseCoreInternal: dedc28e569a4be85f38f3d6af1070a2e12018d55
   FirebaseInstallations: d4c7c958f99c8860d7fcece786314ae790e2f988
-  FirebaseMessaging: af49f8d7c0a3d2a017d9302c80946f45a7777dde
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-<<<<<<< HEAD
-  flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
-  flutter_webrtc: c3e21fc0dcd9d8eb246ae4d5256fcbeb2f5ecd22
-  livekit_client: 86c8af579274e4b7a215185a8080db2d4e176f40
-  objective_c: 89e720c30d716b036faf9c9684022048eee1eee2
-  PostHog: bbb7eaecb2f5a286d9da3c833cbb18ae08799655
-  posthog_flutter: 9535ac2d4ab65ccb9ace3886dcc0b3105198bad5
-  WebRTC-SDK: 40d4f5ba05cadff14e4db5614aec402a633f007e
-=======
   flutter_local_notifications: ff50f8405aaa0ccdc7dcfb9022ca192e8ad9688f
   flutter_secure_storage: d33dac7ae2ea08509be337e775f6b59f1ff45f12
   flutter_webrtc: 9fdfc62d01ce7df77d3dad5db2dd61f40ec6060e
@@ -257,7 +210,6 @@ SPEC CHECKSUMS:
   sqflite_darwin: 5a7236e3b501866c1c9befc6771dfd73ffb8702d
   url_launcher_ios: 5334b05cef931de560670eeae103fd3e431ac3fe
   WebRTC-SDK: 69d4e56b0b4b27d788e87bab9b9a1326ed05b1e3
->>>>>>> 581712d (feat: Integrate calendar functionality with EventKit support)
 
 PODFILE CHECKSUM: ce2a4dd764e1c7aeed6a7cdc5e61d092b6dc6d32
 
