@@ -75,7 +75,6 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
             final slug = segments[1];
             return RouteNames.blogPost(slug);
           }
-          break;
 
         case 'spaces':
           debugPrint('segments: $segments');
@@ -101,7 +100,6 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
             final eventSlug = segments[3];
             return RouteNames.spaceEvent(spaceSlug, eventSlug);
           }
-          break;
 
         case 'keeper':
           // /keeper/:slug
@@ -109,7 +107,6 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
             final slug = segments[1];
             return RouteNames.keeperProfile(slug);
           }
-          break;
 
         default:
           // Unknown route pattern, don't deep link
@@ -267,26 +264,26 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                         ),
                       Html(
                         data: blog.contentHtml,
-                        onLinkTap: (url, _, __) async {
+                        onLinkTap: (url, _, _) async {
                           if (url != null) {
                             final appRoute = _parseTotemDeepLink(url);
                             if (appRoute != null && mounted) {
-                              // Navigate to the app route instead of opening browser
-                              context.go(appRoute);
+                              // Navigate to app route instead of browser
+                              await context.push(appRoute);
                             } else {
-                              // Fall back to opening external URL for non-Totem links
+                              // Open external URL for non-Totem links
                               await launchUrl(Uri.parse(url));
                             }
                           }
                         },
-                        onAnchorTap: (url, _, __) async {
+                        onAnchorTap: (url, _, _) async {
                           if (url != null) {
                             final appRoute = _parseTotemDeepLink(url);
                             if (appRoute != null && mounted) {
-                              // Navigate to the app route instead of opening browser
-                              context.go(appRoute);
+                              // Navigate to app route instead of browser
+                              await context.push(appRoute);
                             } else {
-                              // Fall back to opening external URL for non-Totem links
+                              // Open external URL for non-Totem links
                               await launchUrl(Uri.parse(url));
                             }
                           }

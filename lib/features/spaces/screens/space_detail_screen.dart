@@ -57,7 +57,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
     final theme = Theme.of(context);
     final spaceAsync = ref.watch(spaceProvider(widget.slug));
 
-    // Only get slug if it exists, don't fall back to empty string
+    // Determine if we have a valid event slug to watch
     final String? effectiveEventSlug =
         widget.eventSlug ??
         spaceAsync.maybeWhen(
@@ -65,13 +65,13 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
           orElse: () => null,
         );
 
-    debugPrint('effective event slug: $effectiveEventSlug');
+    // Only watch event provider if we have a valid slug
+    final bool hasValidEventSlug =
+        effectiveEventSlug != null && effectiveEventSlug.isNotEmpty;
 
-    // Only watch event provider if we have a non-empty slug
-    final AsyncValue<EventDetailSchema> eventAsync =
-        (effectiveEventSlug == null || effectiveEventSlug.isEmpty)
-        ? const AsyncValue<EventDetailSchema>.loading()
-        : ref.watch(eventProvider(effectiveEventSlug));
+    final AsyncValue<EventDetailSchema>? eventAsync = hasValidEventSlug
+        ? ref.watch(eventProvider(effectiveEventSlug))
+        : null;
 
     final width = MediaQuery.sizeOf(context).width;
     final isPhone = width < 600;
@@ -83,7 +83,6 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
 
     return spaceAsync.when(
       data: (space) {
-        debugPrint('space data received');
         return Scaffold(
           body: Stack(
             children: [
@@ -300,22 +299,23 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                           const SizedBox(height: 16),
 
                           // TODO(bdlukaa): Sessions Calendar
-                          eventAsync.when(
-                            data: (event) => Container(
-                              padding: horizontalPadding,
-                              constraints: const BoxConstraints(
-                                maxHeight: 160,
+                          if (eventAsync != null)
+                            eventAsync.when(
+                              data: (event) => Container(
+                                padding: horizontalPadding,
+                                constraints: const BoxConstraints(
+                                  maxHeight: 160,
+                                ),
+                                child: SpaceCard.fromEventDetailSchema(
+                                  event,
+                                  onTap: () =>
+                                      _showSessionSheet(context, space, event),
+                                  compact: true,
+                                ),
                               ),
-                              child: SpaceCard.fromEventDetailSchema(
-                                event,
-                                onTap: () =>
-                                    _showSessionSheet(context, space, event),
-                                compact: true,
-                              ),
+                              loading: () => const SizedBox.shrink(),
+                              error: (err, stack) => const SizedBox.shrink(),
                             ),
-                            loading: () => const SizedBox.shrink(),
-                            error: (err, stack) => const SizedBox.shrink(),
-                          ),
 
                           const SizedBox(height: 16),
 
@@ -336,20 +336,22 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                   ),
                 ),
               ),
-              eventAsync.when(
-                loading: () => const SizedBox.shrink(),
-                error: (err, stack) => const SizedBox.shrink(),
-                data: (event) => PositionedDirectional(
-                  start: 0,
-                  end: 0,
-                  bottom: 0,
-                  child: SpaceJoinCard(
-                    key: ValueKey('${space.hashCode}${event.hashCode}'),
-                    space: space,
-                    event: event,
+              // TODO(bdlukaa): handle case no next event
+              if (eventAsync != null)
+                eventAsync.when(
+                  loading: () => const SizedBox.shrink(),
+                  error: (err, stack) => const SizedBox.shrink(),
+                  data: (event) => PositionedDirectional(
+                    start: 0,
+                    end: 0,
+                    bottom: 0,
+                    child: SpaceJoinCard(
+                      key: ValueKey('${space.hashCode}${event.hashCode}'),
+                      space: space,
+                      event: event,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         );
