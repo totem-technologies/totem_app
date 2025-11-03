@@ -44,6 +44,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
   @override
   void initState() {
     super.initState();
+    debugPrint('space detail screen init: ${widget.slug}');
     ref.read(analyticsProvider).logSpaceViewed(widget.slug);
   }
 
@@ -55,15 +56,22 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final spaceAsync = ref.watch(spaceProvider(widget.slug));
-    final eventAsync = ref.watch(
-      eventProvider(
+
+    // Only get slug if it exists, don't fall back to empty string
+    final String? effectiveEventSlug =
         widget.eventSlug ??
-            spaceAsync.maybeWhen(
-              data: (space) => space.nextEvent?.slug ?? '',
-              orElse: () => '',
-            ),
-      ),
-    );
+        spaceAsync.maybeWhen(
+          data: (space) => space.nextEvent?.slug,
+          orElse: () => null,
+        );
+
+    debugPrint('effective event slug: $effectiveEventSlug');
+
+    // Only watch event provider if we have a non-empty slug
+    final AsyncValue<EventDetailSchema> eventAsync =
+        (effectiveEventSlug == null || effectiveEventSlug.isEmpty)
+        ? const AsyncValue<EventDetailSchema>.loading()
+        : ref.watch(eventProvider(effectiveEventSlug));
 
     final width = MediaQuery.sizeOf(context).width;
     final isPhone = width < 600;
@@ -75,6 +83,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
 
     return spaceAsync.when(
       data: (space) {
+        debugPrint('space data received');
         return Scaffold(
           body: Stack(
             children: [

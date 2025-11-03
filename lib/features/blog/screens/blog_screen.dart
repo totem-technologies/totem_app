@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:totem_app/core/config/app_config.dart';
@@ -10,6 +11,7 @@ import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/keeper/screens/meet_user_card.dart';
 import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
@@ -25,6 +27,102 @@ class BlogScreen extends ConsumerStatefulWidget {
 }
 
 class _BlogScreenState extends ConsumerState<BlogScreen> {
+  /// Parses a URL and converts it to an app route if it's a Totem deep link.
+  ///
+  /// Returns the app route path if the URL is a Totem domain link that can be
+  /// deep linked into the app, or null if it's an external link.
+  ///
+  /// Supports routes like:
+  /// - /blog/:slug -> /blog/:slug
+  /// - /spaces/:slug -> /spaces/:slug
+  /// - /spaces/:spaceSlug/event/:eventSlug -> /spaces/:spaceSlug/event/:eventSlug
+  /// - /keeper/:slug -> /keeper/:slug
+  String? _parseTotemDeepLink(String urlString) {
+    try {
+      final uri = Uri.parse(urlString);
+
+      // Check if the URL is from a Totem domain
+      // Support totem.org, totem.kbl.io, and the configured mobileApiUrl domain
+      final host = uri.host.toLowerCase();
+      final isTotemDomain =
+          host == 'totem.org' ||
+          host == 'www.totem.org' ||
+          host == 'totem.kbl.io' ||
+          host == Uri.parse(AppConfig.mobileApiUrl).host.toLowerCase();
+
+      if (!isTotemDomain) {
+        return null;
+      }
+
+      final path = uri.path;
+      if (path.isEmpty || path == '/') {
+        return null;
+      }
+
+      // Remove leading slash and split path segments
+      final segments = path.split('/').where((s) => s.isNotEmpty).toList();
+      if (segments.isEmpty) {
+        return null;
+      }
+
+      // Parse different route patterns
+      final firstSegment = segments[0];
+
+      switch (firstSegment) {
+        case 'blog':
+          // /blog/:slug
+          if (segments.length >= 2) {
+            final slug = segments[1];
+            return RouteNames.blogPost(slug);
+          }
+          break;
+
+        case 'spaces':
+          debugPrint('segments: $segments');
+          // /spaces/:slug
+          if (segments.length == 2) {
+            debugPrint(
+              'segments: $segments'
+              'space 1',
+            );
+            final slug = segments[1];
+            return RouteNames.space(slug);
+          }
+          // /spaces/:spaceSlug/event/:eventSlug
+          if (segments.length >= 4 &&
+              segments[1].isNotEmpty &&
+              segments[2] == 'event' &&
+              segments[3].isNotEmpty) {
+            debugPrint(
+              'segments: $segments'
+              'space 2',
+            );
+            final spaceSlug = segments[1];
+            final eventSlug = segments[3];
+            return RouteNames.spaceEvent(spaceSlug, eventSlug);
+          }
+          break;
+
+        case 'keeper':
+          // /keeper/:slug
+          if (segments.length >= 2) {
+            final slug = segments[1];
+            return RouteNames.keeperProfile(slug);
+          }
+          break;
+
+        default:
+          // Unknown route pattern, don't deep link
+          return null;
+      }
+
+      return null;
+    } catch (e) {
+      // Invalid URL, can't parse
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final blogRef = ref.watch(blogPostProvider(widget.slug));
@@ -169,11 +267,29 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                         ),
                       Html(
                         data: blog.contentHtml,
-                        onLinkTap: (url, _, _) async {
-                          if (url != null) await launchUrl(Uri.parse(url));
+                        onLinkTap: (url, _, __) async {
+                          if (url != null) {
+                            final appRoute = _parseTotemDeepLink(url);
+                            if (appRoute != null && mounted) {
+                              // Navigate to the app route instead of opening browser
+                              context.go(appRoute);
+                            } else {
+                              // Fall back to opening external URL for non-Totem links
+                              await launchUrl(Uri.parse(url));
+                            }
+                          }
                         },
-                        onAnchorTap: (url, _, _) async {
-                          if (url != null) await launchUrl(Uri.parse(url));
+                        onAnchorTap: (url, _, __) async {
+                          if (url != null) {
+                            final appRoute = _parseTotemDeepLink(url);
+                            if (appRoute != null && mounted) {
+                              // Navigate to the app route instead of opening browser
+                              context.go(appRoute);
+                            } else {
+                              // Fall back to opening external URL for non-Totem links
+                              await launchUrl(Uri.parse(url));
+                            }
+                          }
                         },
                         style: AppTheme.htmlStyle,
                       ),
