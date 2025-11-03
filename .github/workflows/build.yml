@@ -41,6 +41,40 @@ jobs:
           mkdir -p lib
           echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
 
+      - name: Create mock google-services.json
+        run: |
+          cat > android/app/google-services.json << 'EOF'
+          {
+            "project_info": {
+              "project_number": "123456789000",
+              "project_id": "mock-project-id",
+              "storage_bucket": "mock-project-id.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:123456789000:android:abcdef1234567890",
+                  "android_client_info": {
+                    "package_name": "com.example.mock"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "AIzaMock-Key-1234567890abcdefghijklmno"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+
       - run: flutter pub get
       - run: flutter build apk --verbose --split-per-abi
       - run: flutter build appbundle --verbose
@@ -67,6 +101,45 @@ jobs:
         run: |
           mkdir -p lib
           echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
+
+      - name: Create mock GoogleService-Info.plist
+        run: |
+          cat > ios/Runner/GoogleService-Info.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CLIENT_ID</key>
+            <string>123456789000-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com</string>
+            <key>REVERSED_CLIENT_ID</key>
+            <string>com.googleusercontent.apps.123456789000-abcdefghijklmnopqrstuvwxyz123456</string>
+            <key>API_KEY</key>
+            <string>AIzaMock-Key-1234567890abcdefghijklmno</string>
+            <key>GCM_SENDER_ID</key>
+            <string>123456789000</string>
+            <key>PLIST_VERSION</key>
+            <string>1</string>
+            <key>BUNDLE_ID</key>
+            <string>com.example.mock</string>
+            <key>PROJECT_ID</key>
+            <string>mock-project-id</string>
+            <key>STORAGE_BUCKET</key>
+            <string>mock-project-id.appspot.com</string>
+            <key>IS_ADS_ENABLED</key>
+            <false></false>
+            <key>IS_ANALYTICS_ENABLED</key>
+            <false></false>
+            <key>IS_APPINVITE_ENABLED</key>
+            <true></true>
+            <key>IS_GCM_ENABLED</key>
+            <true></true>
+            <key>IS_SIGNIN_ENABLED</key>
+            <true></true>
+            <key>GOOGLE_APP_ID</key>
+            <string>1:123456789000:ios:abcdef1234567890</string>
+          </dict>
+          </plist>
+          EOF
 
       - run: flutter pub get
       - run: flutter build ios --verbose --no-codesign
