@@ -77,13 +77,8 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
           }
 
         case 'spaces':
-          debugPrint('segments: $segments');
           // /spaces/:slug
           if (segments.length == 2) {
-            debugPrint(
-              'segments: $segments'
-              'space 1',
-            );
             final slug = segments[1];
             return RouteNames.space(slug);
           }
@@ -92,10 +87,6 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
               segments[1].isNotEmpty &&
               segments[2] == 'event' &&
               segments[3].isNotEmpty) {
-            debugPrint(
-              'segments: $segments'
-              'space 2',
-            );
             final spaceSlug = segments[1];
             final eventSlug = segments[3];
             return RouteNames.spaceEvent(spaceSlug, eventSlug);

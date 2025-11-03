@@ -44,7 +44,6 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
   @override
   void initState() {
     super.initState();
-    debugPrint('space detail screen init: ${widget.slug}');
     ref.read(analyticsProvider).logSpaceViewed(widget.slug);
   }
 
