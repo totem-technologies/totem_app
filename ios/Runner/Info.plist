@@ -62,6 +62,8 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>$(PRODUCT_NAME) uses your microphone</string>
 	<key>NSCalendarsUsageDescription</key>
-	<string>This app needs access to your calendar to help you schedule and manage group sessions.</string>
+    <string>This app would like to add events to your calendar so you don’t miss sessions.</string>
+	<key>NSRemindersUsageDescription</key>
+    <string>This app uses reminders to alert you before sessions.</string>
 </dict>
 </plist>
