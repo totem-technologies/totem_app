@@ -33,7 +33,6 @@ jobs:
           channel: "stable"
           # cache: true
 
-      - run: flutter gen-l10n
       - run: flutter pub get
       - run: flutter build apk --verbose --split-per-abi
       - run: flutter build appbundle --verbose
@@ -53,7 +52,6 @@ jobs:
           architecture: x64
           # cache: true
 
-      - run: flutter gen-l10n
       - run: flutter pub get
       - run: flutter build ios --verbose --no-codesign
       - run: flutter build ipa --verbose --no-codesign
