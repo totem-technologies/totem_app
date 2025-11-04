@@ -3,17 +3,12 @@ import java.io.FileInputStream
 
 plugins {
     id("com.android.application")
+    // START: FlutterFire Configuration
+    id("com.google.gms.google-services")
+    // END: FlutterFire Configuration
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-}
-
-// Apply google-services plugin only if google-services.json exists.
-// This prevents CI builds from failing when the file is intentionally absent.
-if (file("google-services.json").exists()) {
-    apply(plugin = "com.google.gms.google-services")
-} else {
-    println("NOTE: google-services.json not found — skipping com.google.gms.google-services plugin")
 }
 
 val keystoreProperties = Properties()

@@ -14,7 +14,8 @@ jobs:
     name: Bluecherry Client Android
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           submodules: recursive
@@ -25,25 +26,36 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: "zulu"
-          java-version: "17"
+          java-version: "17.x"
           cache: "gradle"
           check-latest: true
-      - uses: subosito/flutter-action@v2.8.0
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2.8.0
         with:
           channel: "stable"
-          # cache: true
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
 
       - name: Create .env file
         run: echo 'API_URL="https://totem.kbl.io"' > .env
 
-      - name: Decode firebase_options.dart
+      - name: Decode google-services.json and firebase_options.dart
         run: |
           mkdir -p lib
           echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 -d > android/app/google-services.json
 
-      - run: flutter pub get
-      - run: flutter build apk --verbose --split-per-abi
-      - run: flutter build appbundle --verbose
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --verbose --split-per-abi
+
+      - name: Build App Bundle
+        run: flutter build appbundle --verbose
 
   build_iOS:
     name: Bluecherry Client iOS
@@ -54,20 +66,34 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           submodules: recursive
-      - uses: subosito/flutter-action@v2.8.0
+
+      - name: Xcode version
+        run: /usr/bin/xcodebuild -version
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2.8.0
         with:
           channel: "stable"
           architecture: x64
-          # cache: true
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
       
       - name: Create .env file
         run: echo 'API_URL="https://totem.kbl.io"' > .env
 
-      - name: Decode firebase_options.dart
+      - name: Decode GoogleService-Info.plist and firebase_options.dart
         run: |
           mkdir -p lib
           echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
+          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}" | base64 -d > ios/Runner/GoogleService-Info.plist
 
-      - run: flutter pub get
-      - run: flutter build ios --verbose --no-codesign
-      - run: flutter build ipa --verbose --no-codesign
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build iOS (no codesign)
+        run: flutter build ios --verbose --no-codesign
+
+      - name: Build IPA (no codesign)
+        run: flutter build ipa --verbose --no-codesign
