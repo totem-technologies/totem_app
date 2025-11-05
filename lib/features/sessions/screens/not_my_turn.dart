@@ -39,61 +39,94 @@ class NotMyTurn extends ConsumerWidget {
     return RoomBackground(
       child: SafeArea(
         top: false,
-        child: Column(
-          spacing: 20,
-          children: [
-            AspectRatio(
-              aspectRatio: 1,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
-                ),
-                child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    color: AppTheme.blue,
-                  ),
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: ParticipantVideo(participant: speakingNow),
-                      ),
-                      PositionedDirectional(
-                        end: 20,
-                        bottom: 20,
-                        child: Text(
-                          speakingNow.name,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            shadows: [
-                              const Shadow(blurRadius: 4),
-                            ],
-                          ),
+        child: OrientationBuilder(
+          builder: (context, orientation) {
+            final isLandscape = orientation == Orientation.landscape;
+            final speakerVideo = ClipRRect(
+              borderRadius: BorderRadius.circular(isLandscape ? 12 : 20),
+              child: DecoratedBox(
+                decoration: const BoxDecoration(color: AppTheme.blue),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: ParticipantVideo(participant: speakingNow),
+                    ),
+                    PositionedDirectional(
+                      end: isLandscape ? 12 : 20,
+                      bottom: isLandscape ? 12 : 20,
+                      child: Text(
+                        speakingNow.name,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            const Shadow(blurRadius: 4),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            Flexible(
-              child: ParticipantLoop(
-                layoutBuilder: const NoMyTurnLayoutBuilder(),
-                participantTrackBuilder: (context, identifier) {
-                  return ParticipantCard(
-                    key: getParticipantKey(
-                      identifier.participant.identity,
+            );
+
+            final participantGrid = ParticipantLoop(
+              layoutBuilder: NoMyTurnLayoutBuilder(isLandscape: isLandscape),
+              participantTrackBuilder: (context, identifier) {
+                return ParticipantCard(
+                  key: getParticipantKey(identifier.participant.identity),
+                  participant: identifier.participant,
+                  event: event,
+                );
+              },
+            );
+
+            if (isLandscape) {
+              return Row(
+                spacing: 16,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.only(
+                        start: 16,
+                        top: 16,
+                        bottom: 8,
+                      ),
+                      child: speakerVideo,
                     ),
-                    participant: identifier.participant,
-                    event: event,
-                  );
-                },
-              ),
-            ),
-            // TODO(bdlukaa): Transcriptions
-            actionBar,
-          ],
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      spacing: 16,
+                      children: [
+                        Expanded(child: participantGrid),
+                        Padding(
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: 16,
+                          ),
+                          child: actionBar,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              return Column(
+                spacing: 20,
+                children: [
+                  AspectRatio(
+                    aspectRatio: 1,
+                    child: speakerVideo,
+                  ),
+                  participantGrid,
+                  actionBar,
+                ],
+              );
+            }
+          },
         ),
       ),
     );
@@ -104,6 +137,7 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
   const NoMyTurnLayoutBuilder({
     this.maxPerLineCount,
     this.gap = 10,
+    this.isLandscape = false,
   });
 
   /// The amount of participants to show per line.
@@ -114,6 +148,8 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
 
   final double gap;
 
+  final bool isLandscape;
+
   @override
   Widget build(
     BuildContext context,
@@ -122,25 +158,44 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
   ) {
     final itemCount = children.length;
     int crossAxisCount;
-    if (itemCount <= 3) {
-      crossAxisCount = 3;
-    } else if (itemCount <= 5) {
-      crossAxisCount = itemCount;
-    } else if (itemCount <= 10) {
-      crossAxisCount = (itemCount / 2).ceil();
+    double childAspectRatio;
+
+    if (isLandscape) {
+      // Optimize for landscape: fewer columns, more rows
+      if (itemCount <= 2) {
+        crossAxisCount = 2;
+      } else if (itemCount <= 4) {
+        crossAxisCount = 2;
+      } else if (itemCount <= 6) {
+        crossAxisCount = 3;
+      } else {
+        crossAxisCount = 3;
+      }
+      childAspectRatio = 16 / 21;
     } else {
-      crossAxisCount = 5;
+      // Portrait orientation logic
+      if (itemCount <= 3) {
+        crossAxisCount = 3;
+      } else if (itemCount <= 5) {
+        crossAxisCount = itemCount;
+      } else if (itemCount <= 10) {
+        crossAxisCount = (itemCount / 2).ceil();
+      } else {
+        crossAxisCount = 5;
+      }
+      childAspectRatio = 16 / 21;
     }
+
     return Center(
       child: GridView.count(
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: 28,
-          vertical: 10,
+        padding: EdgeInsetsDirectional.symmetric(
+          horizontal: isLandscape ? 16 : 28,
+          vertical: isLandscape ? 16 : 10,
         ),
         crossAxisCount: crossAxisCount,
         mainAxisSpacing: gap,
         crossAxisSpacing: gap,
-        childAspectRatio: 16 / 21,
+        childAspectRatio: childAspectRatio,
         shrinkWrap: true,
         physics: const AlwaysScrollableScrollPhysics(),
         children: List.generate(

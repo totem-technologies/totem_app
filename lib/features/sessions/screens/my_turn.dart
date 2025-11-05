@@ -26,24 +26,23 @@ class MyTurn extends StatelessWidget {
   Widget build(BuildContext context) {
     return RoomBackground(
       child: SafeArea(
-        child: Column(
-          spacing: 20,
-          children: [
-            Expanded(
-              child: ParticipantLoop(
-                layoutBuilder: const MyTurnLayoutBuilder(),
-                participantTrackBuilder: (context, identifier) {
-                  return ParticipantCard(
-                    key: getParticipantKey(
-                      identifier.participant.identity,
-                    ),
-                    participant: identifier.participant,
-                    event: event,
-                  );
-                },
-              ),
-            ),
-            PassReceiveCard(
+        child: OrientationBuilder(
+          builder: (context, orientation) {
+            final isLandscape = orientation == Orientation.landscape;
+            final participantGrid = ParticipantLoop(
+              layoutBuilder: MyTurnLayoutBuilder(isLandscape: isLandscape),
+              participantTrackBuilder: (context, identifier) {
+                return ParticipantCard(
+                  key: getParticipantKey(
+                    identifier.participant.identity,
+                  ),
+                  participant: identifier.participant,
+                  event: event,
+                );
+              },
+            );
+
+            final passCard = PassReceiveCard(
               type: TotemCardTransitionType.pass,
               onActionPressed: () async {
                 await showDialog<void>(
@@ -64,9 +63,42 @@ class MyTurn extends StatelessWidget {
                   },
                 );
               },
-            ),
-            actionBar,
-          ],
+            );
+            if (isLandscape) {
+              return Row(
+                spacing: 16,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: participantGrid,
+                  ),
+                  SizedBox(
+                    width: 200,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      spacing: 16,
+                      children: [
+                        passCard,
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(end: 16),
+                          child: actionBar,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              return Column(
+                spacing: 20,
+                children: [
+                  Expanded(child: participantGrid),
+                  passCard,
+                  actionBar,
+                ],
+              );
+            }
+          },
         ),
       ),
     );
@@ -74,7 +106,11 @@ class MyTurn extends StatelessWidget {
 }
 
 class MyTurnLayoutBuilder implements ParticipantLayoutBuilder {
-  const MyTurnLayoutBuilder({this.maxPerLineCount, this.gap = 16});
+  const MyTurnLayoutBuilder({
+    this.maxPerLineCount,
+    this.gap = 16,
+    this.isLandscape = false,
+  });
 
   /// The amount of participants to show per line.
   ///
@@ -84,6 +120,8 @@ class MyTurnLayoutBuilder implements ParticipantLayoutBuilder {
 
   final double gap;
 
+  final bool isLandscape;
+
   @override
   Widget build(
     BuildContext context,
@@ -92,23 +130,50 @@ class MyTurnLayoutBuilder implements ParticipantLayoutBuilder {
   ) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = math
-            .sqrt(children.length)
-            .ceil()
-            .clamp(
-              1,
-              maxPerLineCount ?? 10,
-            );
+        final itemCount = children.length;
+        int crossAxisCount;
+        double childAspectRatio;
+
+        if (isLandscape) {
+          // Optimize landscape: more columns, better use of horizontal space
+          if (itemCount <= 2) {
+            crossAxisCount = 2;
+          } else if (itemCount <= 4) {
+            crossAxisCount = 2;
+          } else if (itemCount <= 6) {
+            crossAxisCount = 3;
+          } else if (itemCount <= 9) {
+            crossAxisCount = 3;
+          } else {
+            crossAxisCount = math
+                .sqrt(itemCount)
+                .ceil()
+                .clamp(3, maxPerLineCount ?? 4);
+          }
+          // Slightly wider aspect ratio for landscape
+          childAspectRatio = 18 / 21;
+        } else {
+          // Portrait orientation logic
+          crossAxisCount = math
+              .sqrt(itemCount)
+              .ceil()
+              .clamp(
+                1,
+                maxPerLineCount ?? 10,
+              );
+          childAspectRatio = 16 / 21;
+        }
+
         return Center(
           child: GridView.count(
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 28,
-              vertical: 10,
+            padding: EdgeInsetsDirectional.symmetric(
+              horizontal: isLandscape ? 16 : 28,
+              vertical: isLandscape ? 16 : 10,
             ),
             crossAxisCount: crossAxisCount,
             mainAxisSpacing: gap,
             crossAxisSpacing: gap,
-            childAspectRatio: 16 / 21,
+            childAspectRatio: childAspectRatio,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             children: List.generate(
