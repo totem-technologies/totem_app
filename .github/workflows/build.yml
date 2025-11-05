@@ -1,0 +1,99 @@
+name: Build Flutter Client
+on:
+  push:
+    branches:
+      - main
+  release:
+    types:
+      - created
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build_android:
+    name: Bluecherry Client Android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          submodules: recursive
+
+      # We need to enforce java 17 because newer Flutter packages are
+      # requiring this Java Version.
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17.x"
+          cache: "gradle"
+          check-latest: true
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2.8.0
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Create .env file
+        run: echo 'API_URL="https://totem.kbl.io"' > .env
+
+      - name: Decode google-services.json and firebase_options.dart
+        run: |
+          mkdir -p lib
+          echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 -d > android/app/google-services.json
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --verbose --split-per-abi
+
+      - name: Build App Bundle
+        run: flutter build appbundle --verbose
+
+  build_iOS:
+    name: Bluecherry Client iOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          submodules: recursive
+
+      - name: Xcode version
+        run: /usr/bin/xcodebuild -version
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2.8.0
+        with:
+          channel: "stable"
+          architecture: x64
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+      
+      - name: Create .env file
+        run: echo 'API_URL="https://totem.kbl.io"' > .env
+
+      - name: Decode GoogleService-Info.plist and firebase_options.dart
+        run: |
+          mkdir -p lib
+          echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
+          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}" | base64 -d > ios/Runner/GoogleService-Info.plist
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build iOS (no codesign)
+        run: flutter build ios --verbose --no-codesign
+
+      - name: Build IPA (no codesign)
+        run: flutter build ipa --verbose --no-codesign
