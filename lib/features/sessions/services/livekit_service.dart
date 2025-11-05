@@ -13,6 +13,7 @@ import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 part 'livekit_service.g.dart';
 
@@ -119,12 +120,15 @@ class LiveKitService extends _$LiveKitService {
     _listener.on<DataReceivedEvent>(_onDataReceived);
     room.addListener(_onRoomChanges);
 
+    WakelockPlus.enable();
+
     ref.onDispose(() {
       debugPrint('Disposing LiveKitService and closing connections.');
       unawaited(_listener.dispose());
       room
         ..removeListener(_onRoomChanges)
         ..dispose();
+      WakelockPlus.disable();
     });
 
     return const LiveKitState();
