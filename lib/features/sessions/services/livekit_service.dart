@@ -234,7 +234,6 @@ class LiveKitService extends _$LiveKitService {
       await _apiService.meetings.totemMeetingsMobileApiAcceptTotemEndpoint(
         eventSlug: _options.eventSlug,
       );
-      // TODO(bdlukaa): Umute
     } catch (error, stackTrace) {
       debugPrint('Error accepting totem: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -244,6 +243,7 @@ class LiveKitService extends _$LiveKitService {
         message: 'Error accepting totem',
       );
     }
+    await enableMicrophone();
   }
 
   /// Send an emoji to other participants.

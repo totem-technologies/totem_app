@@ -7,20 +7,14 @@ extension DevicesControl on LiveKitService {
   // TODO(bdlukaa): Revisit this in the future
   // https://github.com/livekit/client-sdk-flutter/issues/863
   Future<void> selectCameraDevice(MediaDevice device) async {
-    final options = CameraCaptureOptions(
-      deviceId: device.deviceId,
-    );
+    final options = CameraCaptureOptions(deviceId: device.deviceId);
 
     final userTrack = room.localParticipant
         ?.getTrackPublications()
-        .firstWhereOrNull(
-          (track) => track.kind == TrackType.VIDEO,
-        )
+        .firstWhereOrNull((track) => track.kind == TrackType.VIDEO)
         ?.track;
     if (userTrack != null) {
-      unawaited(
-        userTrack.restartTrack(options),
-      );
+      unawaited(userTrack.restartTrack(options));
     } else {
       await room.localParticipant?.publishVideoTrack(
         await LocalVideoTrack.createCameraTrack(options),
@@ -31,15 +25,11 @@ extension DevicesControl on LiveKitService {
   }
 
   Future<void> selectAudioDevice(MediaDevice device) async {
-    final options = AudioCaptureOptions(
-      deviceId: device.deviceId,
-    );
+    final options = AudioCaptureOptions(deviceId: device.deviceId);
 
     final userTrack = room.localParticipant
         ?.getTrackPublications()
-        .firstWhereOrNull(
-          (track) => track.kind == TrackType.AUDIO,
-        )
+        .firstWhereOrNull((track) => track.kind == TrackType.AUDIO)
         ?.track;
     if (userTrack != null) {
       unawaited(userTrack.restartTrack(options));
