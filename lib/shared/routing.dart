@@ -39,7 +39,6 @@ class RoutingUtils {
           if (segments.length >= 2) {
             return RouteNames.blogPost(segments[1]);
           }
-          break;
 
         case 'spaces':
           if (segments.length == 2) {
@@ -51,13 +50,11 @@ class RoutingUtils {
               segments[3].isNotEmpty) {
             return RouteNames.spaceEvent(segments[1], segments[3]);
           }
-          break;
 
         case 'keeper':
           if (segments.length >= 2) {
             return RouteNames.keeperProfile(segments[1]);
           }
-          break;
       }
 
       return null;
