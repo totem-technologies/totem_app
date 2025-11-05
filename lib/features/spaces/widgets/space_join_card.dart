@@ -316,7 +316,12 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
   SpaceJoinCardState get state {
     if (event.cancelled) return SpaceJoinCardState.cancelled;
-    if (!event.open) return SpaceJoinCardState.closed;
+
+    final hasEnded = event.start
+        .add(Duration(minutes: event.duration))
+        .isBefore(DateTime.now());
+
+    if (hasEnded) return SpaceJoinCardState.ended;
 
     final hasStarted =
         event.start.isBefore(DateTime.now()) &&
@@ -324,24 +329,17 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
             .add(Duration(minutes: event.duration))
             .isAfter(DateTime.now());
 
-    final hasEnded = event.start
-        .add(Duration(minutes: event.duration))
-        .isBefore(DateTime.now());
-
-    if (hasEnded) {
-      return SpaceJoinCardState.ended;
-    } else if (hasStarted) {
-      if (event.joinable) {
-        return SpaceJoinCardState.joinable;
-      }
+    if (hasStarted && event.joinable) {
+      return SpaceJoinCardState.joinable;
+    } else if (_attending) {
+      return SpaceJoinCardState.joined;
+    } else if (event.seatsLeft <= 0) {
+      return SpaceJoinCardState.full;
+    } else if (!event.open) {
+      return SpaceJoinCardState.closed;
     } else {
-      if (_attending) {
-        return SpaceJoinCardState.joined;
-      } else if (event.seatsLeft <= 0) {
-        return SpaceJoinCardState.full;
-      }
+      return SpaceJoinCardState.notJoined;
     }
-    return SpaceJoinCardState.notJoined;
   }
 
   Future<void> attend(WidgetRef ref) async {
