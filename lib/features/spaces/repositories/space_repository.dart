@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/misc.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/services/api_service.dart';
@@ -127,22 +126,16 @@ Future<List<EventDetailSchema>> listSessionsHistory(Ref ref) async {
   }
 }
 
-/// Recommended spaces based on a list of suggestion names (topics/categories).
-/// Uses the existing mobile API client method which calls
-/// `/api/mobile/protected/spaces/recommended` with a request body of
-/// `List<String>` and an optional `limit` query param.
-final recommendedEventsByTopicsKeyProvider =
-    //
-    // ignore: invalid_use_of_internal_member
-    FutureProviderFamily<List<EventDetailSchema>, String>((
-      ref,
-      topicsKey,
-    ) async {
-      final mobileApiService = ref.watch(mobileApiServiceProvider);
-      final List<String>? body = topicsKey.isEmpty
-          ? null
-          : topicsKey.split('|');
-      final events = await mobileApiService.spaces
-          .totemCirclesMobileApiGetRecommendedSpaces(body: body);
-      return events;
-    });
+@riverpod
+Future<List<EventDetailSchema>> getRecommendedSesssions(
+  Ref ref, [
+  String? topicsKey,
+]) {
+  final mobileApiService = ref.watch(mobileApiServiceProvider);
+  final List<String>? body = topicsKey == null || topicsKey.isEmpty
+      ? null
+      : topicsKey.split('|').toList();
+  return mobileApiService.spaces.totemCirclesMobileApiGetRecommendedSpaces(
+    body: body,
+  );
+}

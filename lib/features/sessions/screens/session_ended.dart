@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/export.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
-class SessionEndedScreen extends StatelessWidget {
+class SessionEndedScreen extends ConsumerWidget {
   const SessionEndedScreen({required this.event, super.key});
 
   final EventDetailSchema event;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final recommended = ref.watch(getRecommendedSesssionsProvider());
     return PopScope(
       canPop: false,
       child: Scaffold(
@@ -57,13 +60,20 @@ class SessionEndedScreen extends StatelessWidget {
                     spacing: 8,
                     children: [
                       Text(
-                        'Next session',
+                        'You may enjoy these spaces',
                         style: theme.textTheme.titleMedium,
                         textAlign: TextAlign.start,
                       ),
-                      // TODO(bdlukaa): Next session
-                      Expanded(
-                        child: SpaceCard.fromEventDetailSchema(event),
+                      ...recommended.when(
+                        data: (data) sync* {
+                          for (final event in data.take(2)) {
+                            yield Flexible(
+                              child: SpaceCard.fromEventDetailSchema(event),
+                            );
+                          }
+                        },
+                        error: (error, _) => [],
+                        loading: () => [],
                       ),
                     ],
                   ),
