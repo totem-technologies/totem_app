@@ -11,7 +11,7 @@ import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/keeper/screens/meet_user_card.dart';
 import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
 import 'package:totem_app/navigation/app_router.dart';
-import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_app/shared/routing.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
@@ -27,90 +27,6 @@ class BlogScreen extends ConsumerStatefulWidget {
 }
 
 class _BlogScreenState extends ConsumerState<BlogScreen> {
-  /// Parses a URL and converts it to an app route if it's a Totem deep link.
-  ///
-  /// Returns the app route path if the URL is a Totem domain link that can be
-  /// deep linked into the app, or null if it's an external link.
-  ///
-  /// Supports routes like:
-  /// - /blog/:slug -> /blog/:slug
-  /// - /spaces/:slug -> /spaces/:slug
-  /// - /spaces/:spaceSlug/event/:eventSlug -> /spaces/:spaceSlug/event/:eventSlug
-  /// - /keeper/:slug -> /keeper/:slug
-  String? _parseTotemDeepLink(String urlString) {
-    try {
-      final uri = Uri.parse(urlString);
-
-      // Check if the URL is from a Totem domain
-      // Support totem.org, totem.kbl.io, and the configured mobileApiUrl domain
-      final host = uri.host.toLowerCase();
-      final isTotemDomain =
-          host == 'totem.org' ||
-          host == 'www.totem.org' ||
-          host == 'totem.kbl.io' ||
-          host == Uri.parse(AppConfig.mobileApiUrl).host.toLowerCase();
-
-      if (!isTotemDomain) {
-        return null;
-      }
-
-      final path = uri.path;
-      if (path.isEmpty || path == '/') {
-        return null;
-      }
-
-      // Remove leading slash and split path segments
-      final segments = path.split('/').where((s) => s.isNotEmpty).toList();
-      if (segments.isEmpty) {
-        return null;
-      }
-
-      // Parse different route patterns
-      final firstSegment = segments[0];
-
-      switch (firstSegment) {
-        case 'blog':
-          // /blog/:slug
-          if (segments.length >= 2) {
-            final slug = segments[1];
-            return RouteNames.blogPost(slug);
-          }
-
-        case 'spaces':
-          // /spaces/:slug
-          if (segments.length == 2) {
-            final slug = segments[1];
-            return RouteNames.space(slug);
-          }
-          // /spaces/:spaceSlug/event/:eventSlug
-          if (segments.length >= 4 &&
-              segments[1].isNotEmpty &&
-              segments[2] == 'event' &&
-              segments[3].isNotEmpty) {
-            final spaceSlug = segments[1];
-            final eventSlug = segments[3];
-            return RouteNames.spaceEvent(spaceSlug, eventSlug);
-          }
-
-        case 'keeper':
-          // /keeper/:slug
-          if (segments.length >= 2) {
-            final slug = segments[1];
-            return RouteNames.keeperProfile(slug);
-          }
-
-        default:
-          // Unknown route pattern, don't deep link
-          return null;
-      }
-
-      return null;
-    } catch (e) {
-      // Invalid URL, can't parse
-      return null;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final blogRef = ref.watch(blogPostProvider(widget.slug));
@@ -257,7 +173,9 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                         data: blog.contentHtml,
                         onLinkTap: (url, _, _) async {
                           if (url != null) {
-                            final appRoute = _parseTotemDeepLink(url);
+                            final appRoute = RoutingUtils.parseTotemDeepLink(
+                              url,
+                            );
                             if (appRoute != null && mounted) {
                               // Navigate to app route instead of browser
                               await context.push(appRoute);
@@ -269,7 +187,9 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                         },
                         onAnchorTap: (url, _, _) async {
                           if (url != null) {
-                            final appRoute = _parseTotemDeepLink(url);
+                            final appRoute = RoutingUtils.parseTotemDeepLink(
+                              url,
+                            );
                             if (appRoute != null && mounted) {
                               // Navigate to app route instead of browser
                               await context.push(appRoute);
