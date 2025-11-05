@@ -26,8 +26,15 @@ class NotMyTurn extends ConsumerWidget {
     final theme = Theme.of(context);
 
     final roomCtx = RoomContext.of(context)!;
-    final room = roomCtx.room;
-    final user = room.localParticipant;
+    final speakingNow = roomCtx.participants.firstWhere(
+      (participant) {
+        if (sessionState.speakingNow != null) {
+          return participant.identity == sessionState.speakingNow;
+        }
+        return participant.isSpeaking;
+      },
+      orElse: () => roomCtx.localParticipant!,
+    );
 
     return RoomBackground(
       child: SafeArea(
@@ -49,24 +56,13 @@ class NotMyTurn extends ConsumerWidget {
                   child: Stack(
                     children: [
                       Positioned.fill(
-                        child: ParticipantVideo(
-                          participant: roomCtx.participants.firstWhere(
-                            (participant) {
-                              if (sessionState.speakingNow != null) {
-                                return participant.identity ==
-                                    sessionState.speakingNow;
-                              }
-                              return participant.isSpeaking;
-                            },
-                            orElse: () => roomCtx.localParticipant!,
-                          ),
-                        ),
+                        child: ParticipantVideo(participant: speakingNow),
                       ),
                       PositionedDirectional(
                         end: 20,
                         bottom: 20,
                         child: Text(
-                          user?.name ?? 'Me',
+                          speakingNow.name,
                           style: theme.textTheme.titleLarge?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,

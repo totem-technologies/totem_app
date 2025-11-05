@@ -120,7 +120,7 @@ class LiveKitService extends _$LiveKitService {
     _listener.on<DataReceivedEvent>(_onDataReceived);
     room.addListener(_onRoomChanges);
 
-    WakelockPlus.enable();
+    unawaited(WakelockPlus.enable());
 
     ref.onDispose(() {
       debugPrint('Disposing LiveKitService and closing connections.');
@@ -128,7 +128,7 @@ class LiveKitService extends _$LiveKitService {
       room
         ..removeListener(_onRoomChanges)
         ..dispose();
-      WakelockPlus.disable();
+      unawaited(WakelockPlus.disable());
     });
 
     return const LiveKitState();
