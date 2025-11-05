@@ -61,6 +61,7 @@ class SessionEndedScreen extends StatelessWidget {
                         style: theme.textTheme.titleMedium,
                         textAlign: TextAlign.start,
                       ),
+                      // TODO(bdlukaa): Next session
                       Expanded(
                         child: SpaceCard.fromEventDetailSchema(event),
                       ),

@@ -15,6 +15,7 @@ import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+part 'devices_control.dart';
 part 'livekit_service.g.dart';
 
 enum SessionCommunicationTopics {
@@ -201,57 +202,6 @@ class LiveKitService extends _$LiveKitService {
     }
   }
 
-  // TODO(bdlukaa): Revisit this in the future
-  // https://github.com/livekit/client-sdk-flutter/issues/863
-  Future<void> selectCameraDevice(MediaDevice device) async {
-    final options = CameraCaptureOptions(
-      deviceId: device.deviceId,
-    );
-
-    final userTrack = room.localParticipant
-        ?.getTrackPublications()
-        .firstWhereOrNull(
-          (track) => track.kind == TrackType.VIDEO,
-        )
-        ?.track;
-    if (userTrack != null) {
-      unawaited(
-        userTrack.restartTrack(options),
-      );
-    } else {
-      await room.localParticipant?.publishVideoTrack(
-        await LocalVideoTrack.createCameraTrack(options),
-      );
-    }
-    await room.room.setVideoInputDevice(device);
-  }
-
-  Future<void> selectAudioDevice(MediaDevice device) async {
-    final options = AudioCaptureOptions(
-      deviceId: device.deviceId,
-    );
-
-    final userTrack = room.localParticipant
-        ?.getTrackPublications()
-        .firstWhereOrNull(
-          (track) => track.kind == TrackType.AUDIO,
-        )
-        ?.track;
-    if (userTrack != null) {
-      unawaited(userTrack.restartTrack(options));
-    } else {
-      await room.localParticipant?.publishAudioTrack(
-        await LocalAudioTrack.create(options),
-      );
-    }
-
-    await room.room.setAudioInputDevice(device);
-  }
-
-  Future<void> selectAudioOutputDevice(MediaDevice device) async {
-    await room.room.setAudioOutputDevice(device);
-  }
-
   bool isKeeper([String? userSlug]) {
     final auth = ref.read(authControllerProvider);
     return _options.keeperSlug == (userSlug ?? auth.user?.slug);
@@ -284,6 +234,7 @@ class LiveKitService extends _$LiveKitService {
       await _apiService.meetings.totemMeetingsMobileApiAcceptTotemEndpoint(
         eventSlug: _options.eventSlug,
       );
+      // TODO(bdlukaa): Umute
     } catch (error, stackTrace) {
       debugPrint('Error accepting totem: $error');
       debugPrintStack(stackTrace: stackTrace);
