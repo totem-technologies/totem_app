@@ -14,6 +14,35 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/space_gradient_mask.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
+SpaceDetailSchema _spaceDetailFromEventDetailSchema(EventDetailSchema event) {
+  return SpaceDetailSchema(
+    slug: event.space.slug!,
+    title: event.space.title,
+    imageLink: event.space.image,
+    content: event.space.content,
+    shortDescription: event.space.shortDescription ?? '',
+    author: event.space.author,
+    recurring: event.space.recurring,
+    price: event.price,
+    subscribers: event.subscribers,
+    nextEvent: NextEventSchema(
+      start: event.start,
+      link: event.calLink,
+      seatsLeft: event.seatsLeft,
+      slug: event.slug,
+      title: event.title,
+      attending: event.attending,
+      calLink: event.calLink,
+      cancelled: event.cancelled,
+      duration: event.duration,
+      joinable: event.joinable,
+      meetingProvider: event.meetingProvider,
+      open: event.open,
+    ),
+    category: '',
+  );
+}
+
 class SpaceCard extends StatelessWidget {
   const SpaceCard({
     required this.space,
@@ -28,32 +57,7 @@ class SpaceCard extends StatelessWidget {
     VoidCallback? onTap,
   }) {
     return SpaceCard(
-      space: SpaceDetailSchema(
-        slug: event.space.slug!,
-        title: event.space.title,
-        imageLink: event.space.image,
-        content: event.space.content,
-        shortDescription: event.space.shortDescription ?? '',
-        author: event.space.author,
-        recurring: event.space.recurring,
-        price: event.price,
-        subscribers: event.subscribers,
-        nextEvent: NextEventSchema(
-          start: event.start,
-          link: event.calLink,
-          seatsLeft: event.seatsLeft,
-          slug: event.slug,
-          title: event.title,
-          attending: event.attending,
-          calLink: event.calLink,
-          cancelled: event.cancelled,
-          duration: event.duration,
-          joinable: event.joinable,
-          meetingProvider: event.meetingProvider,
-          open: event.open,
-        ),
-        category: '',
-      ),
+      space: _spaceDetailFromEventDetailSchema(event),
       compact: compact,
       onTap: onTap,
     );
@@ -271,32 +275,7 @@ class SmallSpaceCard extends StatelessWidget {
     VoidCallback? onTap,
   }) {
     return SmallSpaceCard(
-      space: SpaceDetailSchema(
-        slug: event.space.slug!,
-        title: event.space.title,
-        imageLink: event.space.image,
-        content: event.space.content,
-        shortDescription: event.space.shortDescription ?? '',
-        author: event.space.author,
-        recurring: event.space.recurring,
-        price: event.price,
-        subscribers: event.subscribers,
-        nextEvent: NextEventSchema(
-          start: event.start,
-          link: event.calLink,
-          seatsLeft: event.seatsLeft,
-          slug: event.slug,
-          title: event.title,
-          attending: event.attending,
-          calLink: event.calLink,
-          cancelled: event.cancelled,
-          duration: event.duration,
-          joinable: event.joinable,
-          meetingProvider: event.meetingProvider,
-          open: event.open,
-        ),
-        category: '',
-      ),
+      space: _spaceDetailFromEventDetailSchema(event),
       onTap: onTap,
     );
   }
