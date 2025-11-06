@@ -117,7 +117,8 @@ class ParticipantCard extends ConsumerWidget {
                         );
                       } else {
                         return SoundWaveformWidget(
-                          audioTrack: audioTracks.first.track! as AudioTrack,
+                          audioTrack:
+                              audioTracks.firstOrNull?.track as AudioTrack?,
                           participant: participant,
                           options: const AudioVisualizerWidgetOptions(
                             color: Colors.white,
@@ -137,103 +138,21 @@ class ParticipantCard extends ConsumerWidget {
                 PositionedDirectional(
                   end: overlayPadding,
                   top: overlayPadding,
-                  child: GestureDetector(
-                    onTapUp: (details) async {
-                      final offset = details.globalPosition;
-                      const popupItemTextStyle = TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      );
-
-                      final box = context.findRenderObject() as RenderBox?;
-                      if (box == null) return;
-                      final size = box.size;
-                      await showMenu(
-                        context: context,
-                        constraints: const BoxConstraints(),
-                        position: RelativeRect.fromLTRB(
-                          // dx - card width + horizontal padding + factor
-                          offset.dx - size.width + overlayPadding * 2,
-                          // dy + vertical offset
-                          offset.dy + overlayPadding * 2.5,
-                          MediaQuery.widthOf(context) - offset.dx,
-                          MediaQuery.heightOf(context) - offset.dy,
-                        ),
-                        color: Colors.black.withValues(alpha: 0.8),
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(
-                            Radius.circular(16),
-                          ),
-                        ),
-                        elevation: 0,
-                        menuPadding: EdgeInsetsDirectional.zero,
-                        clipBehavior: Clip.hardEdge,
-                        items: [
-                          if (participant.hasAudio)
-                            PopupMenuItem<void>(
-                              enabled: !participant.isMuted,
-                              onTap: () => _onMuteParticipant(context, ref),
-                              textStyle: popupItemTextStyle,
-                              child: Row(
-                                spacing: 8,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const TotemIcon(
-                                    TotemIcons.microphoneOff,
-                                    size: 20,
-                                    color: Colors.white,
-                                  ),
-                                  Text(
-                                    participant.isMuted ? 'Muted' : 'Mute',
-                                    style: popupItemTextStyle,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          PopupMenuItem<void>(
-                            onTap: () => _onRemoveParticipant(context, ref),
-                            textStyle: popupItemTextStyle,
-                            child: const Row(
-                              spacing: 8,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                TotemIcon(
-                                  TotemIcons.removePerson,
-                                  size: 20,
-                                  color: Colors.white,
-                                ),
-                                Text('Remove', style: popupItemTextStyle),
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.black54,
-                      ),
-                      padding: const EdgeInsetsDirectional.all(2),
-                      alignment: Alignment.center,
-                      child: const TotemIcon(
-                        TotemIcons.moreVertical,
-                        size: 20,
-                        color: Colors.white,
-                      ),
-                    ),
+                  child: _ParticipantMenuButton(
+                    participant: participant,
+                    overlayPadding: overlayPadding,
+                    onMute: () => _onMuteParticipant(context, ref),
+                    onRemove: () => _onRemoveParticipant(context, ref),
                   ),
                 ),
               PositionedDirectional(
                 bottom: 6,
-                start: 4,
-                end: 4,
-                child: Text(
+                start: 6,
+                end: 6,
+                child: AutoSizeText(
                   participant.name,
                   textAlign: TextAlign.center,
+                  maxLines: 1,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -318,6 +237,131 @@ class ParticipantCard extends ConsumerWidget {
         );
       },
     );
+  }
+}
+
+class _ParticipantMenuButton extends StatelessWidget {
+  const _ParticipantMenuButton({
+    required this.participant,
+    required this.overlayPadding,
+    required this.onMute,
+    required this.onRemove,
+  });
+
+  final Participant participant;
+  final double overlayPadding;
+  final VoidCallback onMute;
+  final VoidCallback onRemove;
+
+  static const _menuTextStyle = TextStyle(
+    color: Colors.white,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapUp: (details) => _showParticipantMenu(context, details),
+      child: Container(
+        width: 20,
+        height: 20,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.black54,
+        ),
+        padding: const EdgeInsetsDirectional.all(2),
+        alignment: Alignment.center,
+        child: const TotemIcon(
+          TotemIcons.moreVertical,
+          size: 20,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showParticipantMenu(
+    BuildContext context,
+    TapUpDetails details,
+  ) async {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+
+    final position = _calculateMenuPosition(
+      tapPosition: details.globalPosition,
+      cardSize: box.size,
+      screenSize: MediaQuery.sizeOf(context),
+    );
+
+    await showMenu(
+      context: context,
+      constraints: const BoxConstraints(),
+      position: position,
+      color: Colors.black.withValues(alpha: 0.8),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(16)),
+      ),
+      elevation: 0,
+      menuPadding: EdgeInsetsDirectional.zero,
+      clipBehavior: Clip.hardEdge,
+      items: _buildMenuItems(),
+    );
+  }
+
+  RelativeRect _calculateMenuPosition({
+    required Offset tapPosition,
+    required Size cardSize,
+    required Size screenSize,
+  }) {
+    return RelativeRect.fromLTRB(
+      tapPosition.dx - cardSize.width + overlayPadding * 2,
+      tapPosition.dy + overlayPadding * 2.5,
+      screenSize.width - tapPosition.dx,
+      screenSize.height - tapPosition.dy,
+    );
+  }
+
+  List<PopupMenuEntry<void>> _buildMenuItems() {
+    return [
+      if (participant.hasAudio)
+        PopupMenuItem<void>(
+          enabled: !participant.isMuted,
+          onTap: onMute,
+          textStyle: _menuTextStyle,
+          child: Row(
+            spacing: 8,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const TotemIcon(
+                TotemIcons.microphoneOff,
+                size: 20,
+                color: Colors.white,
+              ),
+              Text(
+                participant.isMuted ? 'Muted' : 'Mute',
+                style: _menuTextStyle,
+              ),
+            ],
+          ),
+        ),
+      PopupMenuItem<void>(
+        onTap: onRemove,
+        textStyle: _menuTextStyle,
+        child: const Row(
+          spacing: 8,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TotemIcon(
+              TotemIcons.removePerson,
+              size: 20,
+              color: Colors.white,
+            ),
+            Text('Remove', style: _menuTextStyle),
+          ],
+        ),
+      ),
+    ];
   }
 }
 
@@ -407,9 +451,11 @@ class ParticipantVideo extends ConsumerWidget {
           t.participant.isCameraEnabled(),
     );
     if (videoTrack.isNotEmpty) {
-      return VideoTrackRenderer(
-        videoTrack.last.track! as VideoTrack,
-        fit: VideoViewFit.cover,
+      return IgnorePointer(
+        child: VideoTrackRenderer(
+          videoTrack.last.track! as VideoTrack,
+          fit: VideoViewFit.cover,
+        ),
       );
     } else {
       final user = ref.watch(
