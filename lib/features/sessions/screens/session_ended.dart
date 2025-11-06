@@ -25,9 +25,11 @@ class SessionEndedScreen extends ConsumerWidget {
               vertical: 8,
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 10,
               children: [
                 Expanded(
-                  flex: 3,
+                  flex: 4,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     spacing: 20,
@@ -52,31 +54,23 @@ class SessionEndedScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    spacing: 8,
-                    children: [
-                      Text(
-                        'You may enjoy these spaces',
-                        style: theme.textTheme.titleMedium,
-                        textAlign: TextAlign.start,
-                      ),
-                      ...recommended.when(
-                        data: (data) sync* {
-                          for (final event in data.take(2)) {
-                            yield Flexible(
-                              child: SpaceCard.fromEventDetailSchema(event),
-                            );
-                          }
-                        },
-                        error: (error, _) => [],
-                        loading: () => [],
-                      ),
-                    ],
-                  ),
+                Text(
+                  'You may enjoy these spaces',
+                  style: theme.textTheme.titleMedium,
+                  textAlign: TextAlign.start,
+                ),
+                ...recommended.when(
+                  data: (data) sync* {
+                    for (final event in data.take(2)) {
+                      yield Flexible(
+                        child: SmallSpaceCard.fromEventDetailSchema(
+                          event,
+                        ),
+                      );
+                    }
+                  },
+                  error: (error, _) => [],
+                  loading: () => [],
                 ),
               ],
             ),

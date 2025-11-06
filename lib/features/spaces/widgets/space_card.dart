@@ -266,6 +266,40 @@ class SmallSpaceCard extends StatelessWidget {
     this.onTap,
     super.key,
   });
+  factory SmallSpaceCard.fromEventDetailSchema(
+    EventDetailSchema event, {
+    VoidCallback? onTap,
+  }) {
+    return SmallSpaceCard(
+      space: SpaceDetailSchema(
+        slug: event.space.slug!,
+        title: event.space.title,
+        imageLink: event.space.image,
+        content: event.space.content,
+        shortDescription: event.space.shortDescription ?? '',
+        author: event.space.author,
+        recurring: event.space.recurring,
+        price: event.price,
+        subscribers: event.subscribers,
+        nextEvent: NextEventSchema(
+          start: event.start,
+          link: event.calLink,
+          seatsLeft: event.seatsLeft,
+          slug: event.slug,
+          title: event.title,
+          attending: event.attending,
+          calLink: event.calLink,
+          cancelled: event.cancelled,
+          duration: event.duration,
+          joinable: event.joinable,
+          meetingProvider: event.meetingProvider,
+          open: event.open,
+        ),
+        category: '',
+      ),
+      onTap: onTap,
+    );
+  }
 
   final SpaceDetailSchema space;
   final VoidCallback? onTap;
