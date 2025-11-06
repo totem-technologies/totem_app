@@ -78,7 +78,7 @@ class OptionsSheet extends StatelessWidget {
             final selected =
                 deviceCtx.videoInputs?.firstWhereOrNull(
                   (e) {
-                    return e.deviceId == deviceCtx.selectedVideoInputDeviceId &&
+                    return e.deviceId == session.selectedCameraDeviceId &&
                         e.label.isNotEmpty;
                   },
                 ) ??
@@ -103,7 +103,7 @@ class OptionsSheet extends StatelessWidget {
             final selected =
                 deviceCtx.audioInputs?.firstWhereOrNull(
                   (e) {
-                    return e.deviceId == deviceCtx.selectedAudioInputDeviceId &&
+                    return e.deviceId == session.selectedAudioDeviceId &&
                         e.label.isNotEmpty;
                   },
                 ) ??
@@ -128,8 +128,7 @@ class OptionsSheet extends StatelessWidget {
             final selected =
                 deviceCtx.audioOutputs?.firstWhereOrNull(
                   (e) {
-                    return e.deviceId ==
-                            deviceCtx.selectedAudioOutputDeviceId &&
+                    return e.deviceId == session.selectedAudioOutputDeviceId &&
                         e.label.isNotEmpty;
                   },
                 ) ??

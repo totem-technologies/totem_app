@@ -4,6 +4,14 @@
 part of 'livekit_service.dart';
 
 extension DevicesControl on LiveKitService {
+  String? get selectedCameraDeviceId {
+    final userTrack = room.localParticipant
+        ?.getTrackPublications()
+        .firstWhereOrNull((track) => track.kind == TrackType.VIDEO)
+        ?.track;
+    return (userTrack?.currentOptions as CameraCaptureOptions?)?.deviceId;
+  }
+
   // TODO(bdlukaa): Revisit this in the future
   // https://github.com/livekit/client-sdk-flutter/issues/863
   Future<void> selectCameraDevice(MediaDevice device) async {
@@ -24,6 +32,14 @@ extension DevicesControl on LiveKitService {
     ref.notifyListeners();
   }
 
+  String? get selectedAudioDeviceId {
+    final userTrack = room.localParticipant
+        ?.getTrackPublications()
+        .firstWhereOrNull((track) => track.kind == TrackType.AUDIO)
+        ?.track;
+    return (userTrack?.currentOptions as AudioCaptureOptions?)?.deviceId;
+  }
+
   Future<void> selectAudioDevice(MediaDevice device) async {
     final options = AudioCaptureOptions(deviceId: device.deviceId);
 
@@ -41,6 +57,10 @@ extension DevicesControl on LiveKitService {
 
     await room.room.setAudioInputDevice(device);
     ref.notifyListeners();
+  }
+
+  String? get selectedAudioOutputDeviceId {
+    return room.room.selectedAudioOutputDeviceId;
   }
 
   Future<void> selectAudioOutputDevice(MediaDevice device) async {
