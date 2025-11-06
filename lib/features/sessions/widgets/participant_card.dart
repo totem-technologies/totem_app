@@ -41,7 +41,9 @@ class ParticipantCard extends ConsumerWidget {
         .toList();
 
     final isKeeper = participant.identity == event.space.author.slug!;
-    final auth = ref.watch(authControllerProvider);
+    final currentUserSlug = ref.watch(
+      authControllerProvider.select((auth) => auth.user?.slug),
+    );
 
     const overlayPadding = 6.0;
 
@@ -134,7 +136,7 @@ class ParticipantCard extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (isKeeper && auth.user?.slug != participant.identity)
+              if (isKeeper && currentUserSlug != participant.identity)
                 PositionedDirectional(
                   end: overlayPadding,
                   top: overlayPadding,
@@ -378,7 +380,9 @@ class LocalParticipantVideoCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final auth = ref.watch(authControllerProvider);
+    final user = ref.watch(
+      authControllerProvider.select((auth) => auth.user),
+    );
     return Container(
       alignment: Alignment.center,
       child: Container(
@@ -398,10 +402,10 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                 if (!isCameraOn) {
                   return Container(
                     decoration: BoxDecoration(
-                      image: auth.user?.profileImage != null
+                      image: user?.profileImage != null
                           ? DecorationImage(
                               image: NetworkImage(
-                                getFullUrl(auth.user!.profileImage!),
+                                getFullUrl(user!.profileImage!),
                               ),
                               fit: BoxFit.cover,
                             )
@@ -410,7 +414,7 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                     alignment: AlignmentDirectional.bottomCenter,
                     padding: const EdgeInsetsDirectional.all(20),
                     child: AutoSizeText(
-                      auth.user?.name ?? 'You',
+                      user?.name ?? 'You',
                       style: theme.textTheme.headlineMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
