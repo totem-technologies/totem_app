@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:totem_app/core/config/app_config.dart';
@@ -10,6 +11,7 @@ import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/keeper/screens/meet_user_card.dart';
 import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/shared/routing.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
@@ -170,10 +172,32 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                       Html(
                         data: blog.contentHtml,
                         onLinkTap: (url, _, _) async {
-                          if (url != null) await launchUrl(Uri.parse(url));
+                          if (url != null) {
+                            final appRoute = RoutingUtils.parseTotemDeepLink(
+                              url,
+                            );
+                            if (appRoute != null && mounted) {
+                              // Navigate to app route instead of browser
+                              await context.push(appRoute);
+                            } else {
+                              // Open external URL for non-Totem links
+                              await launchUrl(Uri.parse(url));
+                            }
+                          }
                         },
                         onAnchorTap: (url, _, _) async {
-                          if (url != null) await launchUrl(Uri.parse(url));
+                          if (url != null) {
+                            final appRoute = RoutingUtils.parseTotemDeepLink(
+                              url,
+                            );
+                            if (appRoute != null && mounted) {
+                              // Navigate to app route instead of browser
+                              await context.push(appRoute);
+                            } else {
+                              // Open external URL for non-Totem links
+                              await launchUrl(Uri.parse(url));
+                            }
+                          }
                         },
                         style: AppTheme.htmlStyle,
                       ),

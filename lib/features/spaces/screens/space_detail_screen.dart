@@ -21,6 +21,7 @@ import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
+import 'package:totem_app/shared/routing.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -55,15 +56,22 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final spaceAsync = ref.watch(spaceProvider(widget.slug));
-    final eventAsync = ref.watch(
-      eventProvider(
+
+    // Determine if we have a valid event slug to watch
+    final String? effectiveEventSlug =
         widget.eventSlug ??
-            spaceAsync.maybeWhen(
-              data: (space) => space.nextEvent?.slug ?? '',
-              orElse: () => '',
-            ),
-      ),
-    );
+        spaceAsync.maybeWhen(
+          data: (space) => space.nextEvent?.slug,
+          orElse: () => null,
+        );
+
+    // Only watch event provider if we have a valid slug
+    final bool hasValidEventSlug =
+        effectiveEventSlug != null && effectiveEventSlug.isNotEmpty;
+
+    final AsyncValue<EventDetailSchema>? eventAsync = hasValidEventSlug
+        ? ref.watch(eventProvider(effectiveEventSlug))
+        : null;
 
     final width = MediaQuery.sizeOf(context).width;
     final isPhone = width < 600;
@@ -260,14 +268,30 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                 ),
                               ),
                             },
-                            onLinkTap: (url, _, _) {
+                            onLinkTap: (url, _, _) async {
                               if (url != null) {
-                                unawaited(launchUrl(Uri.parse(url)));
+                                final appRoute =
+                                    RoutingUtils.parseTotemDeepLink(url);
+                                if (appRoute != null && context.mounted) {
+                                  // Navigate to app route instead of browser
+                                  await context.push(appRoute);
+                                } else {
+                                  // Open external URL for non-Totem links
+                                  unawaited(launchUrl(Uri.parse(url)));
+                                }
                               }
                             },
-                            onAnchorTap: (url, _, _) {
+                            onAnchorTap: (url, _, _) async {
                               if (url != null) {
-                                unawaited(launchUrl(Uri.parse(url)));
+                                final appRoute =
+                                    RoutingUtils.parseTotemDeepLink(url);
+                                if (appRoute != null && context.mounted) {
+                                  // Navigate to app route instead of browser
+                                  await context.push(appRoute);
+                                } else {
+                                  // Open external URL for non-Totem links
+                                  unawaited(launchUrl(Uri.parse(url)));
+                                }
                               }
                             },
                           ),
@@ -291,22 +315,23 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                           const SizedBox(height: 16),
 
                           // TODO(bdlukaa): Sessions Calendar
-                          eventAsync.when(
-                            data: (event) => Container(
-                              padding: horizontalPadding,
-                              constraints: const BoxConstraints(
-                                maxHeight: 160,
+                          if (eventAsync != null)
+                            eventAsync.when(
+                              data: (event) => Container(
+                                padding: horizontalPadding,
+                                constraints: const BoxConstraints(
+                                  maxHeight: 160,
+                                ),
+                                child: SpaceCard.fromEventDetailSchema(
+                                  event,
+                                  onTap: () =>
+                                      _showSessionSheet(context, space, event),
+                                  compact: true,
+                                ),
                               ),
-                              child: SpaceCard.fromEventDetailSchema(
-                                event,
-                                onTap: () =>
-                                    _showSessionSheet(context, space, event),
-                                compact: true,
-                              ),
+                              loading: () => const SizedBox.shrink(),
+                              error: (err, stack) => const SizedBox.shrink(),
                             ),
-                            loading: () => const SizedBox.shrink(),
-                            error: (err, stack) => const SizedBox.shrink(),
-                          ),
 
                           const SizedBox(height: 16),
 
@@ -327,20 +352,22 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                   ),
                 ),
               ),
-              eventAsync.when(
-                loading: () => const SizedBox.shrink(),
-                error: (err, stack) => const SizedBox.shrink(),
-                data: (event) => PositionedDirectional(
-                  start: 0,
-                  end: 0,
-                  bottom: 0,
-                  child: SpaceJoinCard(
-                    key: ValueKey('${space.hashCode}${event.hashCode}'),
-                    space: space,
-                    event: event,
+              // TODO(bdlukaa): handle case no next event
+              if (eventAsync != null)
+                eventAsync.when(
+                  loading: () => const SizedBox.shrink(),
+                  error: (err, stack) => const SizedBox.shrink(),
+                  data: (event) => PositionedDirectional(
+                    start: 0,
+                    end: 0,
+                    bottom: 0,
+                    child: SpaceJoinCard(
+                      key: ValueKey('${space.hashCode}${event.hashCode}'),
+                      space: space,
+                      event: event,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         );
@@ -482,11 +509,29 @@ class AboutSpaceSheet extends StatelessWidget {
                   Html(
                     data: markdown.markdownToHtml(space.content),
                     shrinkWrap: true,
-                    onLinkTap: (url, _, _) {
-                      if (url != null) unawaited(launchUrl(Uri.parse(url)));
+                    onLinkTap: (url, _, _) async {
+                      if (url != null) {
+                        final appRoute = RoutingUtils.parseTotemDeepLink(url);
+                        if (appRoute != null && context.mounted) {
+                          // Navigate to app route instead of browser
+                          await context.push(appRoute);
+                        } else {
+                          // Open external URL for non-Totem links
+                          unawaited(launchUrl(Uri.parse(url)));
+                        }
+                      }
                     },
-                    onAnchorTap: (url, _, _) {
-                      if (url != null) unawaited(launchUrl(Uri.parse(url)));
+                    onAnchorTap: (url, _, _) async {
+                      if (url != null) {
+                        final appRoute = RoutingUtils.parseTotemDeepLink(url);
+                        if (appRoute != null && context.mounted) {
+                          // Navigate to app route instead of browser
+                          await context.push(appRoute);
+                        } else {
+                          // Open external URL for non-Totem links
+                          unawaited(launchUrl(Uri.parse(url)));
+                        }
+                      }
                     },
                     style: {...AppTheme.compactHtmlStyle},
                   ),
@@ -582,11 +627,29 @@ class SessionSheet extends StatelessWidget {
                   data: space.content,
                   shrinkWrap: true,
                   style: AppTheme.compactHtmlStyle,
-                  onLinkTap: (url, _, _) {
-                    if (url != null) unawaited(launchUrl(Uri.parse(url)));
+                  onLinkTap: (url, _, _) async {
+                    if (url != null) {
+                      final appRoute = RoutingUtils.parseTotemDeepLink(url);
+                      if (appRoute != null && context.mounted) {
+                        // Navigate to app route instead of browser
+                        await context.push(appRoute);
+                      } else {
+                        // Open external URL for non-Totem links
+                        unawaited(launchUrl(Uri.parse(url)));
+                      }
+                    }
                   },
-                  onAnchorTap: (url, _, _) {
-                    if (url != null) unawaited(launchUrl(Uri.parse(url)));
+                  onAnchorTap: (url, _, _) async {
+                    if (url != null) {
+                      final appRoute = RoutingUtils.parseTotemDeepLink(url);
+                      if (appRoute != null && context.mounted) {
+                        // Navigate to app route instead of browser
+                        await context.push(appRoute);
+                      } else {
+                        // Open external URL for non-Totem links
+                        unawaited(launchUrl(Uri.parse(url)));
+                      }
+                    }
                   },
                 ),
               ],
