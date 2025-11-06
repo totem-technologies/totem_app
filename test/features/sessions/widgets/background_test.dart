@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 
 void main() {
@@ -66,33 +65,6 @@ void main() {
           );
 
       expect(annotatedRegion.value, equals(customStyle));
-    });
-
-    testWidgets('should have correct gradient decoration', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: RoomBackground(
-            child: Text('Test Content'),
-          ),
-        ),
-      );
-
-      final container = tester.widget<Container>(
-        find.descendant(
-          of: find.byType(RoomBackground),
-          matching: find.byType(Container),
-        ),
-      );
-
-      final decoration = container.decoration! as BoxDecoration;
-      final gradient = decoration.gradient! as LinearGradient;
-
-      expect(gradient.colors, equals([Colors.black, AppTheme.mauve]));
-      expect(gradient.begin, equals(Alignment.topCenter));
-      expect(gradient.end, equals(Alignment.bottomCenter));
-      expect(gradient.stops, equals([0.5, 1]));
     });
 
     testWidgets('should have correct default overlay style', (

@@ -127,9 +127,7 @@ class LiveKitService extends _$LiveKitService {
     ref.onDispose(() {
       debugPrint('Disposing LiveKitService and closing connections.');
       unawaited(_listener.dispose());
-      room
-        ..removeListener(_onRoomChanges)
-        ..dispose();
+      room.removeListener(_onRoomChanges);
       unawaited(WakelockPlus.disable());
     });
 
