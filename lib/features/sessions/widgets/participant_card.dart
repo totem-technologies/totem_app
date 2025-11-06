@@ -336,10 +336,6 @@ class LocalParticipantVideoCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final auth = ref.watch(authControllerProvider);
     return Container(
-      margin: const EdgeInsetsDirectional.symmetric(
-        horizontal: 40,
-        vertical: 10,
-      ),
       alignment: Alignment.center,
       child: Container(
         decoration: BoxDecoration(

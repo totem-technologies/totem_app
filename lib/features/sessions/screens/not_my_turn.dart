@@ -37,67 +37,68 @@ class NotMyTurn extends ConsumerWidget {
     );
 
     return RoomBackground(
-      child: SafeArea(
-        top: false,
-        child: OrientationBuilder(
-          builder: (context, orientation) {
-            final isLandscape = orientation == Orientation.landscape;
-            final speakerVideo = ClipRRect(
-              borderRadius: BorderRadius.circular(isLandscape ? 12 : 20),
-              child: DecoratedBox(
-                decoration: const BoxDecoration(color: AppTheme.blue),
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: ParticipantVideo(participant: speakingNow),
-                    ),
-                    PositionedDirectional(
-                      end: isLandscape ? 12 : 20,
-                      bottom: isLandscape ? 12 : 20,
-                      child: Text(
-                        speakingNow.name,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          shadows: [
-                            const Shadow(blurRadius: 4),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-
-            final participantGrid = ParticipantLoop(
-              layoutBuilder: NoMyTurnLayoutBuilder(isLandscape: isLandscape),
-              participantTrackBuilder: (context, identifier) {
-                return ParticipantCard(
-                  key: getParticipantKey(identifier.participant.identity),
-                  participant: identifier.participant,
-                  event: event,
-                );
-              },
-            );
-
-            if (isLandscape) {
-              return Row(
-                spacing: 16,
+      child: OrientationBuilder(
+        builder: (context, orientation) {
+          final isLandscape = orientation == Orientation.landscape;
+          final speakerVideo = ClipRRect(
+            borderRadius: isLandscape
+                ? const BorderRadiusDirectional.horizontal(
+                    end: Radius.circular(30),
+                  )
+                : const BorderRadiusDirectional.vertical(
+                    bottom: Radius.circular(30),
+                  ),
+            child: DecoratedBox(
+              decoration: const BoxDecoration(color: AppTheme.blue),
+              child: Stack(
                 children: [
-                  Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: const EdgeInsetsDirectional.only(
-                        start: 16,
-                        top: 16,
-                        bottom: 8,
+                  Positioned.fill(
+                    child: ParticipantVideo(participant: speakingNow),
+                  ),
+                  PositionedDirectional(
+                    end: 30,
+                    bottom: 30,
+                    child: Text(
+                      speakingNow.name,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        shadows: [
+                          const Shadow(blurRadius: 4),
+                        ],
                       ),
-                      child: speakerVideo,
                     ),
                   ),
+                ],
+              ),
+            ),
+          );
+
+          final participantGrid = ParticipantLoop(
+            layoutBuilder: NoMyTurnLayoutBuilder(isLandscape: isLandscape),
+            participantTrackBuilder: (context, identifier) {
+              return ParticipantCard(
+                key: getParticipantKey(identifier.participant.identity),
+                participant: identifier.participant,
+                event: event,
+              );
+            },
+          );
+
+          if (isLandscape) {
+            final isLTR = Directionality.of(context) == TextDirection.ltr;
+            return SafeArea(
+              top: false,
+              left: !isLTR,
+              right: isLTR,
+              child: Row(
+                spacing: 16,
+                children: [
+                  AspectRatio(
+                    aspectRatio: 1,
+                    child: speakerVideo,
+                  ),
                   Expanded(
-                    flex: 3,
                     child: Column(
                       spacing: 16,
                       children: [
@@ -112,22 +113,25 @@ class NotMyTurn extends ConsumerWidget {
                     ),
                   ),
                 ],
-              );
-            } else {
-              return Column(
+              ),
+            );
+          } else {
+            return SafeArea(
+              top: false,
+              child: Column(
                 spacing: 20,
                 children: [
                   AspectRatio(
                     aspectRatio: 1,
                     child: speakerVideo,
                   ),
-                  participantGrid,
+                  Expanded(child: participantGrid),
                   actionBar,
                 ],
-              );
-            }
-          },
-        ),
+              ),
+            );
+          }
+        },
       ),
     );
   }

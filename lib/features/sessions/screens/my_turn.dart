@@ -65,23 +65,26 @@ class MyTurn extends StatelessWidget {
               },
             );
             if (isLandscape) {
-              return Row(
+              return Column(
                 spacing: 16,
                 children: [
                   Expanded(
-                    flex: 3,
-                    child: participantGrid,
-                  ),
-                  SizedBox(
-                    width: 200,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Row(
                       spacing: 16,
                       children: [
-                        passCard,
-                        Padding(
-                          padding: const EdgeInsetsDirectional.only(end: 16),
-                          child: actionBar,
+                        Expanded(
+                          child: participantGrid,
+                        ),
+                        Flexible(
+                          child: Column(
+                            spacing: 16,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              passCard,
+                              actionBar,
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -128,6 +131,7 @@ class MyTurnLayoutBuilder implements ParticipantLayoutBuilder {
     List<TrackWidget> children,
     List<String> pinnedTracks,
   ) {
+    // TODO(bdlukaa): Handle more than 16 participants
     return LayoutBuilder(
       builder: (context, constraints) {
         final itemCount = children.length;
@@ -138,20 +142,17 @@ class MyTurnLayoutBuilder implements ParticipantLayoutBuilder {
           // Optimize landscape: more columns, better use of horizontal space
           if (itemCount <= 2) {
             crossAxisCount = 2;
-          } else if (itemCount <= 4) {
-            crossAxisCount = 2;
           } else if (itemCount <= 6) {
             crossAxisCount = 3;
           } else if (itemCount <= 9) {
-            crossAxisCount = 3;
+            crossAxisCount = 4;
           } else {
             crossAxisCount = math
                 .sqrt(itemCount)
                 .ceil()
                 .clamp(3, maxPerLineCount ?? 4);
           }
-          // Slightly wider aspect ratio for landscape
-          childAspectRatio = 18 / 21;
+          childAspectRatio = 16 / 21;
         } else {
           // Portrait orientation logic
           crossAxisCount = math

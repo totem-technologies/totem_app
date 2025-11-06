@@ -28,6 +28,7 @@ class PassReceiveCard extends StatelessWidget {
           bottom: 30,
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           spacing: 15,
           children: [
             Text(
