@@ -20,35 +20,44 @@ class RoomBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnnotatedRegion(
       value: overlayStyle,
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.black,
-              AppTheme.mauve,
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            stops: [0.5, 1],
-          ),
-        ),
-        padding: padding,
-        child: DefaultTextStyle(
-          style: const TextStyle(color: Colors.white),
-          child: Theme(
-            data: Theme.of(context).copyWith(
-              scaffoldBackgroundColor: Colors.transparent,
-              textTheme: Theme.of(context).textTheme.apply(
-                bodyColor: Colors.white,
-                displayColor: Colors.white,
+      child: OrientationBuilder(
+        builder: (context, orientation) {
+          final isLandscape = orientation == Orientation.landscape;
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: const [
+                  Colors.black,
+                  AppTheme.mauve,
+                ],
+                begin: isLandscape
+                    ? AlignmentDirectional.centerStart
+                    : AlignmentDirectional.topCenter,
+                end: isLandscape
+                    ? AlignmentDirectional.centerEnd
+                    : AlignmentDirectional.bottomCenter,
+                stops: const [0.5, 1],
               ),
             ),
-            child: Material(
-              type: MaterialType.transparency,
-              child: child,
+            padding: padding,
+            child: DefaultTextStyle(
+              style: const TextStyle(color: Colors.white),
+              child: Theme(
+                data: Theme.of(context).copyWith(
+                  scaffoldBackgroundColor: Colors.transparent,
+                  textTheme: Theme.of(context).textTheme.apply(
+                    bodyColor: Colors.white,
+                    displayColor: Colors.white,
+                  ),
+                ),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: child,
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

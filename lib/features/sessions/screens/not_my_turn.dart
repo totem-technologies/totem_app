@@ -94,8 +94,7 @@ class NotMyTurn extends ConsumerWidget {
               child: Row(
                 spacing: 16,
                 children: [
-                  AspectRatio(
-                    aspectRatio: 1,
+                  Expanded(
                     child: speakerVideo,
                   ),
                   Expanded(
@@ -121,11 +120,11 @@ class NotMyTurn extends ConsumerWidget {
               child: Column(
                 spacing: 20,
                 children: [
-                  AspectRatio(
-                    aspectRatio: 1,
+                  Expanded(
+                    flex: 2,
                     child: speakerVideo,
                   ),
-                  Expanded(child: participantGrid),
+                  Flexible(child: participantGrid),
                   actionBar,
                 ],
               ),
