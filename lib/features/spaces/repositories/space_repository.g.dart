@@ -505,10 +505,10 @@ final class ListSessionsHistoryProvider
 String _$listSessionsHistoryHash() =>
     r'669b9babcb1f41a9d0e855b3e1592935fb14d10c';
 
-@ProviderFor(getRecommendedSesssions)
-const getRecommendedSesssionsProvider = GetRecommendedSesssionsFamily._();
+@ProviderFor(getRecommendedSessions)
+const getRecommendedSessionsProvider = GetRecommendedSessionsFamily._();
 
-final class GetRecommendedSesssionsProvider
+final class GetRecommendedSessionsProvider
     extends
         $FunctionalProvider<
           AsyncValue<List<EventDetailSchema>>,
@@ -518,23 +518,23 @@ final class GetRecommendedSesssionsProvider
     with
         $FutureModifier<List<EventDetailSchema>>,
         $FutureProvider<List<EventDetailSchema>> {
-  const GetRecommendedSesssionsProvider._({
-    required GetRecommendedSesssionsFamily super.from,
+  const GetRecommendedSessionsProvider._({
+    required GetRecommendedSessionsFamily super.from,
     required String? super.argument,
   }) : super(
          retry: null,
-         name: r'getRecommendedSesssionsProvider',
+         name: r'getRecommendedSessionsProvider',
          isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
 
   @override
-  String debugGetCreateSourceHash() => _$getRecommendedSesssionsHash();
+  String debugGetCreateSourceHash() => _$getRecommendedSessionsHash();
 
   @override
   String toString() {
-    return r'getRecommendedSesssionsProvider'
+    return r'getRecommendedSessionsProvider'
         ''
         '($argument)';
   }
@@ -548,12 +548,12 @@ final class GetRecommendedSesssionsProvider
   @override
   FutureOr<List<EventDetailSchema>> create(Ref ref) {
     final argument = this.argument as String?;
-    return getRecommendedSesssions(ref, argument);
+    return getRecommendedSessions(ref, argument);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is GetRecommendedSesssionsProvider &&
+    return other is GetRecommendedSessionsProvider &&
         other.argument == argument;
   }
 
@@ -563,23 +563,23 @@ final class GetRecommendedSesssionsProvider
   }
 }
 
-String _$getRecommendedSesssionsHash() =>
-    r'ffa6056432455b9b5e9144bb9b20f5ac82bbf730';
+String _$getRecommendedSessionsHash() =>
+    r'c575e9eb802efdbbdd9b4a1d5f8e4efc6ab2ea56';
 
-final class GetRecommendedSesssionsFamily extends $Family
+final class GetRecommendedSessionsFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<EventDetailSchema>>, String?> {
-  const GetRecommendedSesssionsFamily._()
+  const GetRecommendedSessionsFamily._()
     : super(
         retry: null,
-        name: r'getRecommendedSesssionsProvider',
+        name: r'getRecommendedSessionsProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
         isAutoDispose: true,
       );
 
-  GetRecommendedSesssionsProvider call([String? topicsKey]) =>
-      GetRecommendedSesssionsProvider._(argument: topicsKey, from: this);
+  GetRecommendedSessionsProvider call([String? topicsKey]) =>
+      GetRecommendedSessionsProvider._(argument: topicsKey, from: this);
 
   @override
-  String toString() => r'getRecommendedSesssionsProvider';
+  String toString() => r'getRecommendedSessionsProvider';
 }

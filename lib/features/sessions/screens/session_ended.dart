@@ -14,7 +14,7 @@ class SessionEndedScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final recommended = ref.watch(getRecommendedSesssionsProvider());
+    final recommended = ref.watch(getRecommendedSessionsProvider());
     return PopScope(
       canPop: false,
       child: Scaffold(

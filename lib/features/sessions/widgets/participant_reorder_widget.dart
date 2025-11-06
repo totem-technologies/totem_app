@@ -267,7 +267,7 @@ class _ParticipantReorderItem extends ConsumerWidget {
                   color: Colors.white,
                 ),
               ),
-              loading: SizedBox.shrink,
+              loading: () => const SizedBox.shrink(),
             ),
           ),
         ),

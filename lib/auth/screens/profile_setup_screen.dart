@@ -538,7 +538,7 @@ class _SuggestionsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final topicsKey = (selectedTopics.toList()..sort()).join('|');
-    final recommended = ref.watch(getRecommendedSesssionsProvider(topicsKey));
+    final recommended = ref.watch(getRecommendedSessionsProvider(topicsKey));
 
     return CardScreen(
       isLoading: isLoading,
@@ -585,7 +585,7 @@ class _SuggestionsTab extends ConsumerWidget {
                 const SizedBox(height: 8),
                 OutlinedButton(
                   onPressed: () => ref.refresh(
-                    getRecommendedSesssionsProvider(topicsKey).future,
+                    getRecommendedSessionsProvider(topicsKey).future,
                   ),
                   child: const Text('Retry'),
                 ),

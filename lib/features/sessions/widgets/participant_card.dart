@@ -36,7 +36,7 @@ class ParticipantCard extends ConsumerWidget {
 
     final audioTracks = participantContext.tracks
         .where(
-          (t) => t.kind == TrackType.AUDIO || t.track is AudioTrack,
+          (t) => t.kind == TrackType.AUDIO && t.track is AudioTrack,
         )
         .toList();
 

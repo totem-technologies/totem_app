@@ -127,7 +127,7 @@ Future<List<EventDetailSchema>> listSessionsHistory(Ref ref) async {
 }
 
 @riverpod
-Future<List<EventDetailSchema>> getRecommendedSesssions(
+Future<List<EventDetailSchema>> getRecommendedSessions(
   Ref ref, [
   String? topicsKey,
 ]) {
