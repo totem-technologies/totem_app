@@ -45,8 +45,10 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final auth = ref.watch(authControllerProvider);
-    final isKeeper = widget.event.space.author.slug == auth.user?.slug;
+    final user = ref.watch(
+      authControllerProvider.select((auth) => auth.user),
+    );
+    final isKeeper = widget.event.space.author.slug == user?.slug;
 
     return ChatBuilder(
       builder: (context, enabled, chatCtx, messages) {
@@ -116,7 +118,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                             itemBuilder: (context, index) {
                               final msg = messages[index];
                               final isMine =
-                                  msg.participant?.identity == auth.user?.email;
+                                  msg.participant?.identity == user?.email;
                               if (isMine) {
                                 return MyChatBubble(message: msg);
                               } else {

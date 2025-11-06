@@ -26,79 +26,112 @@ class NotMyTurn extends ConsumerWidget {
     final theme = Theme.of(context);
 
     final roomCtx = RoomContext.of(context)!;
-    final room = roomCtx.room;
-    final user = room.localParticipant;
+    final speakingNow = roomCtx.participants.firstWhere(
+      (participant) {
+        if (sessionState.speakingNow != null) {
+          return participant.identity == sessionState.speakingNow;
+        }
+        return participant.isSpeaking;
+      },
+      orElse: () => roomCtx.localParticipant!,
+    );
 
     return RoomBackground(
-      child: SafeArea(
-        top: false,
-        child: Column(
-          spacing: 20,
-          children: [
-            AspectRatio(
-              aspectRatio: 1,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
-                ),
-                child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    color: AppTheme.blue,
+      child: OrientationBuilder(
+        builder: (context, orientation) {
+          final isLandscape = orientation == Orientation.landscape;
+          final speakerVideo = ClipRRect(
+            borderRadius: isLandscape
+                ? const BorderRadiusDirectional.horizontal(
+                    end: Radius.circular(30),
+                  )
+                : const BorderRadiusDirectional.vertical(
+                    bottom: Radius.circular(30),
                   ),
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: ParticipantVideo(
-                          participant: roomCtx.participants.firstWhere(
-                            (participant) {
-                              if (sessionState.speakingNow != null) {
-                                return participant.identity ==
-                                    sessionState.speakingNow;
-                              }
-                              return participant.isSpeaking;
-                            },
-                            orElse: () => roomCtx.localParticipant!,
-                          ),
-                        ),
-                      ),
-                      PositionedDirectional(
-                        end: 20,
-                        bottom: 20,
-                        child: Text(
-                          user?.name ?? 'Me',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            shadows: [
-                              const Shadow(blurRadius: 4),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+            child: DecoratedBox(
+              decoration: const BoxDecoration(color: AppTheme.blue),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: ParticipantVideo(participant: speakingNow),
                   ),
-                ),
-              ),
-            ),
-            Flexible(
-              child: ParticipantLoop(
-                layoutBuilder: const NoMyTurnLayoutBuilder(),
-                participantTrackBuilder: (context, identifier) {
-                  return ParticipantCard(
-                    key: getParticipantKey(
-                      identifier.participant.identity,
+                  PositionedDirectional(
+                    end: 30,
+                    bottom: 30,
+                    child: Text(
+                      speakingNow.name,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        shadows: [
+                          const Shadow(blurRadius: 4),
+                        ],
+                      ),
                     ),
-                    participant: identifier.participant,
-                    event: event,
-                  );
-                },
+                  ),
+                ],
               ),
             ),
-            // TODO(bdlukaa): Transcriptions
-            actionBar,
-          ],
-        ),
+          );
+
+          final participantGrid = ParticipantLoop(
+            layoutBuilder: NoMyTurnLayoutBuilder(isLandscape: isLandscape),
+            participantTrackBuilder: (context, identifier) {
+              return ParticipantCard(
+                key: getParticipantKey(identifier.participant.identity),
+                participant: identifier.participant,
+                event: event,
+              );
+            },
+          );
+
+          if (isLandscape) {
+            final isLTR = Directionality.of(context) == TextDirection.ltr;
+            return SafeArea(
+              top: false,
+              left: !isLTR,
+              right: isLTR,
+              child: Row(
+                spacing: 16,
+                children: [
+                  AspectRatio(
+                    aspectRatio: 1,
+                    child: speakerVideo,
+                  ),
+                  Expanded(
+                    child: Column(
+                      spacing: 16,
+                      children: [
+                        Expanded(child: participantGrid),
+                        Padding(
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: 16,
+                          ),
+                          child: actionBar,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          } else {
+            return SafeArea(
+              top: false,
+              child: Column(
+                spacing: 20,
+                children: [
+                  AspectRatio(
+                    aspectRatio: 1,
+                    child: speakerVideo,
+                  ),
+                  Expanded(child: participantGrid),
+                  actionBar,
+                ],
+              ),
+            );
+          }
+        },
       ),
     );
   }
@@ -108,6 +141,7 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
   const NoMyTurnLayoutBuilder({
     this.maxPerLineCount,
     this.gap = 10,
+    this.isLandscape = false,
   });
 
   /// The amount of participants to show per line.
@@ -118,6 +152,8 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
 
   final double gap;
 
+  final bool isLandscape;
+
   @override
   Widget build(
     BuildContext context,
@@ -126,25 +162,44 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
   ) {
     final itemCount = children.length;
     int crossAxisCount;
-    if (itemCount <= 3) {
-      crossAxisCount = 3;
-    } else if (itemCount <= 5) {
-      crossAxisCount = itemCount;
-    } else if (itemCount <= 10) {
-      crossAxisCount = (itemCount / 2).ceil();
+    double childAspectRatio;
+
+    if (isLandscape) {
+      // Optimize for landscape: fewer columns, more rows
+      if (itemCount <= 2) {
+        crossAxisCount = 2;
+      } else if (itemCount <= 4) {
+        crossAxisCount = 2;
+      } else if (itemCount <= 6) {
+        crossAxisCount = 3;
+      } else {
+        crossAxisCount = 3;
+      }
+      childAspectRatio = 16 / 21;
     } else {
-      crossAxisCount = 5;
+      // Portrait orientation logic
+      if (itemCount <= 3) {
+        crossAxisCount = 3;
+      } else if (itemCount <= 5) {
+        crossAxisCount = itemCount;
+      } else if (itemCount <= 10) {
+        crossAxisCount = (itemCount / 2).ceil();
+      } else {
+        crossAxisCount = 5;
+      }
+      childAspectRatio = 16 / 21;
     }
+
     return Center(
       child: GridView.count(
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: 28,
-          vertical: 10,
+        padding: EdgeInsetsDirectional.symmetric(
+          horizontal: isLandscape ? 16 : 28,
+          vertical: isLandscape ? 16 : 10,
         ),
         crossAxisCount: crossAxisCount,
         mainAxisSpacing: gap,
         crossAxisSpacing: gap,
-        childAspectRatio: 16 / 21,
+        childAspectRatio: childAspectRatio,
         shrinkWrap: true,
         physics: const AlwaysScrollableScrollPhysics(),
         children: List.generate(

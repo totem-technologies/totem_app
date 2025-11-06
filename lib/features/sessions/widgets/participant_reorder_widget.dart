@@ -68,81 +68,106 @@ class _ParticipantReorderWidgetState
       );
     }
 
-    return CustomScrollView(
-      shrinkWrap: true,
-      slivers: [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsetsDirectional.only(
-              start: 16,
-              end: 16,
-              bottom: 16,
-            ),
-            child: Text(
-              'Reorder Participants',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
+    return PopScope(
+      canPop: !_loading,
+      child: CustomScrollView(
+        shrinkWrap: true,
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(
+                start: 20,
+                end: 20,
+                bottom: 6,
               ),
-              textAlign: TextAlign.center,
+              child: Text(
+                'Reorder Participants',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          sliver: SliverReorderableList(
-            itemCount: participants.length,
-            onReorder: (oldIndex, newIndex) {
-              _handleReorder(context, ref, oldIndex, newIndex);
-            },
-            itemBuilder: (context, index) {
-              final participantIdentity = participants[index];
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(
+                start: 20,
+                end: 20,
+                bottom: 20,
+              ),
+              child: Text(
+                'Drag to set participant order',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            sliver: SliverReorderableList(
+              itemCount: participants.length,
+              onReorder: (oldIndex, newIndex) {
+                _handleReorder(context, ref, oldIndex, newIndex);
+              },
+              itemBuilder: (context, index) {
+                final participantIdentity = participants[index];
 
-              return _ParticipantReorderItem(
-                key: ValueKey(participantIdentity),
-                participantIdentity: participantIdentity,
-                index: index,
-              );
-            },
-          ),
-        ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      if (_loading) return;
-                      setState(() => _loading = true);
-                      await _updateParticipantOrder(
-                        context,
-                        ref,
-                        _localOrder,
-                      );
-                      if (mounted && context.mounted) {
-                        setState(() => _loading = false);
-                        Navigator.of(context).pop();
-                      }
-                    },
-                    child: _loading
-                        ? const LoadingIndicator(color: Colors.white, size: 24)
-                        : const Text('Save'),
-                  ),
-                ),
-              ],
+                return _ParticipantReorderItem(
+                  key: ValueKey(participantIdentity),
+                  participantIdentity: participantIdentity,
+                  index: index,
+                  isSpeakingNow:
+                      participantIdentity ==
+                      widget.state.sessionState.speakingNow,
+                );
+              },
             ),
           ),
-        ),
-      ],
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                spacing: 16,
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (_loading) return;
+                        setState(() => _loading = true);
+                        await _updateParticipantOrder(
+                          context,
+                          ref,
+                          _localOrder,
+                        );
+                        if (mounted && context.mounted) {
+                          setState(() => _loading = false);
+                          Navigator.of(context).pop();
+                        }
+                      },
+                      child: _loading
+                          ? const LoadingIndicator(
+                              color: Colors.white,
+                              size: 24,
+                            )
+                          : const Text('Save'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -197,51 +222,52 @@ class _ParticipantReorderItem extends ConsumerWidget {
   const _ParticipantReorderItem({
     required this.participantIdentity,
     required this.index,
+    required this.isSpeakingNow,
     super.key,
   });
 
   final String participantIdentity;
   final int index;
+  final bool isSpeakingNow;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final user = ref.watch(userProfileProvider(participantIdentity));
 
+    final foregroundColor = isSpeakingNow
+        ? theme.colorScheme.onPrimaryContainer
+        : theme.colorScheme.onPrimary;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary,
+        color: isSpeakingNow
+            ? theme.colorScheme.primaryContainer
+            : theme.colorScheme.primaryFixedDim,
         borderRadius: BorderRadius.circular(20),
       ),
       child: ListTile(
         leading: SizedBox(
           width: 32,
           height: 32,
-          child: user.when(
-            data: (userData) => UserAvatar.fromUserSchema(
-              userData,
-              borderRadius: BorderRadius.circular(20),
-              borderWidth: 0,
-            ),
-            error: (error, stackTrace) => const CircleAvatar(
-              backgroundColor: Colors.grey,
-              child: TotemIcon(
-                TotemIcons.person,
-                size: 20,
-                color: Colors.white,
+          child: AnimatedSwitcher(
+            duration: kThemeChangeDuration,
+            child: user.when(
+              data: (userData) => UserAvatar.fromUserSchema(
+                userData,
+                borderRadius: BorderRadius.circular(20),
+                borderWidth: 0,
               ),
-            ),
-            loading: () => const CircleAvatar(
-              backgroundColor: Colors.grey,
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              error: (error, stackTrace) => const CircleAvatar(
+                backgroundColor: Colors.grey,
+                child: TotemIcon(
+                  TotemIcons.person,
+                  size: 20,
+                  color: Colors.white,
                 ),
               ),
+              loading: () => const SizedBox.shrink(),
             ),
           ),
         ),
@@ -250,27 +276,31 @@ class _ParticipantReorderItem extends ConsumerWidget {
             userData.name ?? participantIdentity,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
-              color: theme.colorScheme.onPrimary,
+              color: foregroundColor,
             ),
           ),
           error: (error, stackTrace) => Text(
             participantIdentity,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
-              color: theme.colorScheme.onPrimary,
+              color: foregroundColor,
             ),
           ),
           loading: () => Text(
-            'Loading...',
+            'Loading',
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
+              color: foregroundColor,
             ),
           ),
         ),
-        trailing: TotemIcon(
-          TotemIcons.dragHandle,
-          size: 24,
-          color: theme.colorScheme.onPrimary,
+        trailing: ReorderableDragStartListener(
+          index: index,
+          child: TotemIcon(
+            TotemIcons.dragHandle,
+            size: 24,
+            color: foregroundColor,
+          ),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16),
       ),

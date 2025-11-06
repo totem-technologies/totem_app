@@ -23,10 +23,11 @@ class ReceiveTotemScreen extends StatelessWidget {
     return RoomBackground(
       padding: const EdgeInsetsDirectional.all(20),
       child: SafeArea(
-        child: Column(
-          spacing: 20,
-          children: [
-            Padding(
+        child: OrientationBuilder(
+          builder: (context, orientation) {
+            final isLandscape = orientation == Orientation.landscape;
+
+            final titleWidget = Padding(
               padding: const EdgeInsetsDirectional.symmetric(horizontal: 10),
               child: Text(
                 'The Totem is being passed to you',
@@ -35,29 +36,61 @@ class ReceiveTotemScreen extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
-            ),
-            Expanded(
-              child: LocalParticipantVideoCard(
-                isCameraOn: room.localParticipant!.isCameraEnabled(),
-                videoTrack:
-                    room.localParticipant?.trackPublications.values
-                            .where(
-                              (t) =>
-                                  t.track != null &&
-                                  t.kind == TrackType.VIDEO &&
-                                  t.track!.isActive,
-                            )
-                            .firstOrNull
-                            ?.track
-                        as VideoTrack?,
-              ),
-            ),
-            PassReceiveCard(
+            );
+
+            final videoCard = LocalParticipantVideoCard(
+              isCameraOn: room.localParticipant!.isCameraEnabled(),
+              videoTrack:
+                  room.localParticipant?.trackPublications.values
+                          .where(
+                            (t) =>
+                                t.track != null &&
+                                t.kind == TrackType.VIDEO &&
+                                t.track!.isActive,
+                          )
+                          .firstOrNull
+                          ?.track
+                      as VideoTrack?,
+            );
+
+            final passReceiveCard = PassReceiveCard(
               type: TotemCardTransitionType.receive,
               onActionPressed: onAcceptTotem,
-            ),
-            actionBar,
-          ],
+            );
+
+            if (isLandscape) {
+              return Row(
+                spacing: 16,
+                children: [
+                  Expanded(child: videoCard),
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      spacing: 20,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        titleWidget,
+                        passReceiveCard,
+                        actionBar,
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              return Column(
+                spacing: 20,
+                children: [
+                  titleWidget,
+                  Expanded(
+                    child: videoCard,
+                  ),
+                  passReceiveCard,
+                  actionBar,
+                ],
+              );
+            }
+          },
         ),
       ),
     );

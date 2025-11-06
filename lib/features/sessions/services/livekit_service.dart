@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -13,7 +14,9 @@ import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
+part 'devices_control.dart';
 part 'livekit_service.g.dart';
 
 enum SessionCommunicationTopics {
@@ -119,12 +122,15 @@ class LiveKitService extends _$LiveKitService {
     _listener.on<DataReceivedEvent>(_onDataReceived);
     room.addListener(_onRoomChanges);
 
+    unawaited(WakelockPlus.enable());
+
     ref.onDispose(() {
       debugPrint('Disposing LiveKitService and closing connections.');
       unawaited(_listener.dispose());
       room
         ..removeListener(_onRoomChanges)
         ..dispose();
+      unawaited(WakelockPlus.disable());
     });
 
     return const LiveKitState();
@@ -138,10 +144,20 @@ class LiveKitService extends _$LiveKitService {
       room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled),
     );
     state = state.copyWith(connectionState: RoomConnectionState.connected);
+
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
+    );
   }
 
   void _onDisconnected() {
     state = state.copyWith(connectionState: RoomConnectionState.disconnected);
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.manual,
+        overlays: [SystemUiOverlay.bottom, SystemUiOverlay.top],
+      ),
+    );
   }
 
   void _onError(LiveKitException? error) {
@@ -197,57 +213,6 @@ class LiveKitService extends _$LiveKitService {
     }
   }
 
-  // TODO(bdlukaa): Revisit this in the future
-  // https://github.com/livekit/client-sdk-flutter/issues/863
-  Future<void> selectCameraDevice(MediaDevice device) async {
-    final options = CameraCaptureOptions(
-      deviceId: device.deviceId,
-    );
-
-    final userTrack = room.localParticipant
-        ?.getTrackPublications()
-        .firstWhereOrNull(
-          (track) => track.kind == TrackType.VIDEO,
-        )
-        ?.track;
-    if (userTrack != null) {
-      unawaited(
-        userTrack.restartTrack(options),
-      );
-    } else {
-      await room.localParticipant?.publishVideoTrack(
-        await LocalVideoTrack.createCameraTrack(options),
-      );
-    }
-    await room.room.setVideoInputDevice(device);
-  }
-
-  Future<void> selectAudioDevice(MediaDevice device) async {
-    final options = AudioCaptureOptions(
-      deviceId: device.deviceId,
-    );
-
-    final userTrack = room.localParticipant
-        ?.getTrackPublications()
-        .firstWhereOrNull(
-          (track) => track.kind == TrackType.AUDIO,
-        )
-        ?.track;
-    if (userTrack != null) {
-      unawaited(userTrack.restartTrack(options));
-    } else {
-      await room.localParticipant?.publishAudioTrack(
-        await LocalAudioTrack.create(options),
-      );
-    }
-
-    await room.room.setAudioInputDevice(device);
-  }
-
-  Future<void> selectAudioOutputDevice(MediaDevice device) async {
-    await room.room.setAudioOutputDevice(device);
-  }
-
   bool isKeeper([String? userSlug]) {
     final auth = ref.read(authControllerProvider);
     return _options.keeperSlug == (userSlug ?? auth.user?.slug);
@@ -289,6 +254,7 @@ class LiveKitService extends _$LiveKitService {
         message: 'Error accepting totem',
       );
     }
+    await enableMicrophone();
   }
 
   /// Send an emoji to other participants.

@@ -504,3 +504,82 @@ final class ListSessionsHistoryProvider
 
 String _$listSessionsHistoryHash() =>
     r'669b9babcb1f41a9d0e855b3e1592935fb14d10c';
+
+@ProviderFor(getRecommendedSessions)
+const getRecommendedSessionsProvider = GetRecommendedSessionsFamily._();
+
+final class GetRecommendedSessionsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<EventDetailSchema>>,
+          List<EventDetailSchema>,
+          FutureOr<List<EventDetailSchema>>
+        >
+    with
+        $FutureModifier<List<EventDetailSchema>>,
+        $FutureProvider<List<EventDetailSchema>> {
+  const GetRecommendedSessionsProvider._({
+    required GetRecommendedSessionsFamily super.from,
+    required String? super.argument,
+  }) : super(
+         retry: null,
+         name: r'getRecommendedSessionsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$getRecommendedSessionsHash();
+
+  @override
+  String toString() {
+    return r'getRecommendedSessionsProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<EventDetailSchema>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<EventDetailSchema>> create(Ref ref) {
+    final argument = this.argument as String?;
+    return getRecommendedSessions(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is GetRecommendedSessionsProvider &&
+        other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$getRecommendedSessionsHash() =>
+    r'c575e9eb802efdbbdd9b4a1d5f8e4efc6ab2ea56';
+
+final class GetRecommendedSessionsFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<List<EventDetailSchema>>, String?> {
+  const GetRecommendedSessionsFamily._()
+    : super(
+        retry: null,
+        name: r'getRecommendedSessionsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  GetRecommendedSessionsProvider call([String? topicsKey]) =>
+      GetRecommendedSessionsProvider._(argument: topicsKey, from: this);
+
+  @override
+  String toString() => r'getRecommendedSessionsProvider';
+}

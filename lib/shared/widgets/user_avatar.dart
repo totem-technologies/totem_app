@@ -61,8 +61,9 @@ class UserAvatar extends ConsumerWidget {
   }) {
     return Consumer(
       builder: (context, ref, child) {
-        final authState = ref.watch(authControllerProvider);
-        final user = authState.user;
+        final user = ref.watch(
+          authControllerProvider.select((auth) => auth.user),
+        );
 
         return UserAvatar(
           image:

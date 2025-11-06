@@ -231,47 +231,37 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   ) {
     return Builder(
       builder: (context) {
-        final roomCtx = notifier.room;
-        final user = roomCtx.localParticipant;
+        final room = notifier.room;
+        final user = room.localParticipant;
         return ActionBar(
           children: [
-            MediaDeviceSelectButton(
-              builder: (context, roomCtx, deviceCtx) {
-                return ActionBarButton(
-                  active: roomCtx.microphoneOpened,
-                  onPressed: () {
-                    if (roomCtx.microphoneOpened) {
-                      deviceCtx.disableMicrophone();
-                    } else {
-                      deviceCtx.enableMicrophone();
-                    }
-                  },
-                  child: TotemIcon(
-                    roomCtx.microphoneOpened
-                        ? TotemIcons.microphoneOn
-                        : TotemIcons.microphoneOff,
-                  ),
-                );
+            ActionBarButton(
+              active: room.microphoneOpened,
+              onPressed: () async {
+                if (room.microphoneOpened) {
+                  await notifier.disableMicrophone();
+                } else {
+                  await notifier.enableMicrophone();
+                }
               },
+              child: TotemIcon(
+                room.microphoneOpened
+                    ? TotemIcons.microphoneOn
+                    : TotemIcons.microphoneOff,
+              ),
             ),
-            MediaDeviceSelectButton(
-              builder: (context, roomCtx, deviceCtx) {
-                return ActionBarButton(
-                  active: roomCtx.cameraOpened,
-                  onPressed: () {
-                    if (roomCtx.cameraOpened) {
-                      deviceCtx.disableCamera();
-                    } else {
-                      deviceCtx.enableCamera();
-                    }
-                  },
-                  child: TotemIcon(
-                    roomCtx.cameraOpened
-                        ? TotemIcons.cameraOn
-                        : TotemIcons.cameraOff,
-                  ),
-                );
+            ActionBarButton(
+              active: room.cameraOpened,
+              onPressed: () async {
+                if (room.cameraOpened) {
+                  await notifier.disableCamera();
+                } else {
+                  await notifier.enableCamera();
+                }
               },
+              child: TotemIcon(
+                room.cameraOpened ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+              ),
             ),
             if (!state.isMyTurn(notifier.room))
               Builder(

@@ -41,6 +41,7 @@ Future<void> showOptionsSheet(
     showDragHandle: true,
     backgroundColor: const Color(0xFFF3F1E9),
     isScrollControlled: true,
+    useSafeArea: true,
     builder: (context) {
       return OptionsSheet(session: session, state: state, event: event);
     },
@@ -63,7 +64,6 @@ class OptionsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return ListView(
-      physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       padding: const EdgeInsetsDirectional.only(
         start: 20,
@@ -78,7 +78,7 @@ class OptionsSheet extends StatelessWidget {
             final selected =
                 deviceCtx.videoInputs?.firstWhereOrNull(
                   (e) {
-                    return e.deviceId == deviceCtx.selectedVideoInputDeviceId &&
+                    return e.deviceId == session.selectedCameraDeviceId &&
                         e.label.isNotEmpty;
                   },
                 ) ??
@@ -103,7 +103,7 @@ class OptionsSheet extends StatelessWidget {
             final selected =
                 deviceCtx.audioInputs?.firstWhereOrNull(
                   (e) {
-                    return e.deviceId == deviceCtx.selectedAudioInputDeviceId &&
+                    return e.deviceId == session.selectedAudioDeviceId &&
                         e.label.isNotEmpty;
                   },
                 ) ??
@@ -128,8 +128,7 @@ class OptionsSheet extends StatelessWidget {
             final selected =
                 deviceCtx.audioOutputs?.firstWhereOrNull(
                   (e) {
-                    return e.deviceId ==
-                            deviceCtx.selectedAudioOutputDeviceId &&
+                    return e.deviceId == session.selectedAudioOutputDeviceId &&
                         e.label.isNotEmpty;
                   },
                 ) ??

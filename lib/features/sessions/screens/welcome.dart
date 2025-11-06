@@ -169,9 +169,15 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                     ),
                   ),
                   Expanded(
-                    child: LocalParticipantVideoCard(
-                      isCameraOn: _isCameraOn,
-                      videoTrack: _videoTrack,
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.symmetric(
+                        horizontal: 40,
+                        vertical: 10,
+                      ),
+                      child: LocalParticipantVideoCard(
+                        isCameraOn: _isCameraOn,
+                        videoTrack: _videoTrack,
+                      ),
                     ),
                   ),
                   ActionBar(

@@ -88,8 +88,9 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final authState = ref.watch(authControllerProvider);
-    final user = authState.user;
+    final user = ref.watch(
+      authControllerProvider.select((auth) => auth.user),
+    );
     __state ??= user?.profileAvatarType ?? ProfileAvatarTypeEnum.td;
 
     return PopScope(
