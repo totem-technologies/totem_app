@@ -182,44 +182,49 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        return GestureDetector(
-          behavior: HitTestBehavior.deferToChild,
-          onTap: () => Navigator.of(context).pop(),
-          child: ColoredBox(
-            color: Colors.black.withValues(
-              alpha: clampDouble(0.0 - _controller.value, 0, 1),
-            ),
-            child: InteractiveViewer(
-              transformationController: _transformationController,
-              panEnabled: false,
-              minScale: 1,
-              maxScale: 4,
-              onInteractionUpdate: (details) {
-                setState(() {
-                  _dragPosition += details.focalPointDelta;
-                  final dragDistance = _dragPosition.dy.abs();
-                  _controller.value = (dragDistance / 200).clamp(0.0, 1.0);
-                });
-              },
-              onInteractionEnd: (details) {
-                if (_controller.value > 0.5) {
-                  Navigator.of(context).pop();
-                } else {
-                  _transformationController.value = Matrix4.identity();
+        return Semantics(
+          label: 'Full screen avatar image. Tap to close.',
+          button: true,
+          image: true,
+          child: GestureDetector(
+            behavior: HitTestBehavior.deferToChild,
+            onTap: () => Navigator.of(context).pop(),
+            child: ColoredBox(
+              color: Colors.black.withValues(
+                alpha: clampDouble(0.0 - _controller.value, 0, 1),
+              ),
+              child: InteractiveViewer(
+                transformationController: _transformationController,
+                panEnabled: false,
+                minScale: 1,
+                maxScale: 4,
+                onInteractionUpdate: (details) {
                   setState(() {
-                    _dragPosition = Offset.zero;
+                    _dragPosition += details.focalPointDelta;
+                    final dragDistance = _dragPosition.dy.abs();
+                    _controller.value = (dragDistance / 200).clamp(0.0, 1.0);
                   });
-                  unawaited(_controller.reverse());
-                }
-              },
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.all(50),
-                  child: Transform.translate(
-                    offset: _dragPosition,
-                    child: Transform.scale(
-                      scale: _scaleAnimation.value,
-                      child: child,
+                },
+                onInteractionEnd: (details) {
+                  if (_controller.value > 0.5) {
+                    Navigator.of(context).pop();
+                  } else {
+                    _transformationController.value = Matrix4.identity();
+                    setState(() {
+                      _dragPosition = Offset.zero;
+                    });
+                    unawaited(_controller.reverse());
+                  }
+                },
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.all(50),
+                    child: Transform.translate(
+                      offset: _dragPosition,
+                      child: Transform.scale(
+                        scale: _scaleAnimation.value,
+                        child: child,
+                      ),
                     ),
                   ),
                 ),

@@ -69,192 +69,204 @@ class SpaceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return AspectRatio(
-      aspectRatio: 1.38,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        margin: EdgeInsetsDirectional.zero,
-        child: InkWell(
-          highlightColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
-          onTap:
-              onTap ??
-              () async {
-                if (space.nextEvent != null) {
-                  await context.push(
-                    RouteNames.spaceEvent(
-                      space.slug,
-                      space.nextEvent!.slug,
-                    ),
-                  );
-                } else {
-                  await context.push(RouteNames.space(space.slug));
-                }
-              },
-          borderRadius: BorderRadius.circular(8),
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: SpaceGradientMask(
-                  child: CachedNetworkImage(
-                    imageUrl: getFullUrl(space.imageUrl ?? ''),
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => ColoredBox(
-                      color: Colors.black.withValues(alpha: 0.75),
-                    ),
-                    errorWidget: (context, url, error) {
-                      return Image.asset(
-                        TotemAssets.genericBackground,
+    return Semantics(
+      label:
+          '${space.title}. '
+          '${space.nextEvent != null ? 'Next session '
+                    '${formatEventDate(space.nextEvent!.start)}' : 'View space '
+                    'details'}',
+      button: true,
+      child: AspectRatio(
+        aspectRatio: 1.38,
+        child: Card(
+          clipBehavior: Clip.antiAlias,
+          margin: EdgeInsetsDirectional.zero,
+          child: InkWell(
+            highlightColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
+            onTap:
+                onTap ??
+                () async {
+                  if (space.nextEvent != null) {
+                    await context.push(
+                      RouteNames.spaceEvent(
+                        space.slug,
+                        space.nextEvent!.slug,
+                      ),
+                    );
+                  } else {
+                    await context.push(RouteNames.space(space.slug));
+                  }
+                },
+            borderRadius: BorderRadius.circular(8),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Semantics(
+                    label: 'Space cover image',
+                    image: true,
+                    child: SpaceGradientMask(
+                      child: CachedNetworkImage(
+                        imageUrl: getFullUrl(space.imageUrl ?? ''),
                         fit: BoxFit.cover,
+                        placeholder: (context, url) => ColoredBox(
+                          color: Colors.black.withValues(alpha: 0.75),
+                        ),
+                        errorWidget: (context, url, error) {
+                          return Image.asset(
+                            TotemAssets.genericBackground,
+                            fit: BoxFit.cover,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                PositionedDirectional(
+                  top: compact ? 10.0 : 20.0,
+                  start: compact ? 10.0 : 20.0,
+                  end: compact ? 10.0 : 20.0,
+                  bottom: compact ? 10.0 : 26.0,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // If the width is too small, only show the image.
+                      final isContentVisible = constraints.maxWidth > 66;
+                      if (!isContentVisible) {
+                        return const SizedBox.shrink();
+                      }
+                      final seatsLeft = RichText(
+                        maxLines: 1,
+                        overflow: TextOverflow.fade,
+                        text: TextSpan(
+                          children: [
+                            TextSpan(
+                              text:
+                                  space.nextEvent == null ||
+                                      space.nextEvent!.seatsLeft == 0
+                                  ? 'No'
+                                  : '${space.nextEvent!.seatsLeft}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            TextSpan(
+                              text: ' seats left',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                shadows: kElevationToShadow[4],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (space.nextEvent != null)
+                            Container(
+                              padding: const EdgeInsetsDirectional.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0x99262F37),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                spacing: 4,
+                                children: [
+                                  const TotemIcon(
+                                    TotemIcons.calendar,
+                                    size: 12,
+                                    color: Colors.white,
+                                  ),
+                                  Flexible(
+                                    child: Text(
+                                      buildTimeLabel(space.nextEvent!.start),
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold,
+                                        shadows: kElevationToShadow[4],
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.fade,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          const Spacer(),
+                          if (compact) seatsLeft,
+                          AutoSizeText(
+                            space.title,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: compact ? 14 : 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.fade,
+                          ),
+                          if (space.nextEvent?.title != null)
+                            AutoSizeText(
+                              'Next: ${space.nextEvent!.title}',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                shadows: kElevationToShadow[4],
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          const SizedBox(height: 6),
+                          RichText(
+                            maxLines: 1,
+                            overflow: TextOverflow.fade,
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  children: [
+                                    const TextSpan(text: 'with '),
+                                    TextSpan(
+                                      text: space.author.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                  style: TextStyle(
+                                    fontSize: compact ? 10 : 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const TextSpan(text: '  '),
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.middle,
+                                  child: IgnorePointer(
+                                    child: UserAvatar.fromUserSchema(
+                                      space.author,
+                                      radius: 25 / 2,
+                                    ),
+                                  ),
+                                ),
+                              ].reversedIf(compact),
+                            ),
+                          ),
+                          if (!compact)
+                            Padding(
+                              padding: const EdgeInsetsDirectional.only(
+                                top: 4,
+                              ),
+                              child: seatsLeft,
+                            ),
+                        ],
                       );
                     },
                   ),
                 ),
-              ),
-              PositionedDirectional(
-                top: compact ? 10.0 : 20.0,
-                start: compact ? 10.0 : 20.0,
-                end: compact ? 10.0 : 20.0,
-                bottom: compact ? 10.0 : 26.0,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    // If the width is too small, only show the image.
-                    final isContentVisible = constraints.maxWidth > 66;
-                    if (!isContentVisible) {
-                      return const SizedBox.shrink();
-                    }
-                    final seatsLeft = RichText(
-                      maxLines: 1,
-                      overflow: TextOverflow.fade,
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text:
-                                space.nextEvent == null ||
-                                    space.nextEvent!.seatsLeft == 0
-                                ? 'No'
-                                : '${space.nextEvent!.seatsLeft}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          TextSpan(
-                            text: ' seats left',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              shadows: kElevationToShadow[4],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (space.nextEvent != null)
-                          Container(
-                            padding: const EdgeInsetsDirectional.all(8),
-                            decoration: BoxDecoration(
-                              color: const Color(0x99262F37),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              spacing: 4,
-                              children: [
-                                const TotemIcon(
-                                  TotemIcons.calendar,
-                                  size: 12,
-                                  color: Colors.white,
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    buildTimeLabel(space.nextEvent!.start),
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.bold,
-                                      shadows: kElevationToShadow[4],
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.fade,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        const Spacer(),
-                        if (compact) seatsLeft,
-                        AutoSizeText(
-                          space.title,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: compact ? 14 : 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.fade,
-                        ),
-                        if (space.nextEvent?.title != null)
-                          AutoSizeText(
-                            'Next: ${space.nextEvent!.title}',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              shadows: kElevationToShadow[4],
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        const SizedBox(height: 6),
-                        RichText(
-                          maxLines: 1,
-                          overflow: TextOverflow.fade,
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                children: [
-                                  const TextSpan(text: 'with '),
-                                  TextSpan(
-                                    text: space.author.name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                                style: TextStyle(
-                                  fontSize: compact ? 10 : 16,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const TextSpan(text: '  '),
-                              WidgetSpan(
-                                alignment: PlaceholderAlignment.middle,
-                                child: IgnorePointer(
-                                  child: UserAvatar.fromUserSchema(
-                                    space.author,
-                                    radius: 25 / 2,
-                                  ),
-                                ),
-                              ),
-                            ].reversedIf(compact),
-                          ),
-                        ),
-                        if (!compact)
-                          Padding(
-                            padding: const EdgeInsetsDirectional.only(
-                              top: 4,
-                            ),
-                            child: seatsLeft,
-                          ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

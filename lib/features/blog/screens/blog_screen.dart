@@ -57,13 +57,19 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                         shape: BoxShape.circle,
                       ),
                       alignment: AlignmentDirectional.center,
-                      child: IconButton(
-                        padding: const EdgeInsetsDirectional.only(start: 5),
-                        alignment: AlignmentDirectional.center,
-                        icon: Icon(Icons.adaptive.arrow_back, size: 20),
-                        iconSize: 20,
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () => popOrHome(context),
+                      child: Semantics(
+                        label: MaterialLocalizations.of(
+                          context,
+                        ).backButtonTooltip,
+                        button: true,
+                        child: IconButton(
+                          padding: const EdgeInsetsDirectional.only(start: 5),
+                          alignment: AlignmentDirectional.center,
+                          icon: Icon(Icons.adaptive.arrow_back, size: 20),
+                          iconSize: 20,
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => popOrHome(context),
+                        ),
                       ),
                     ),
                     actionsPadding: const EdgeInsetsDirectional.only(end: 20),
@@ -76,28 +82,33 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                           shape: BoxShape.circle,
                         ),
                         alignment: AlignmentDirectional.center,
-                        child: IconButton(
-                          alignment: AlignmentDirectional.center,
-                          padding: EdgeInsetsDirectional.zero,
-                          icon: Icon(Icons.adaptive.share),
-                          iconSize: 20,
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () async {
-                            final box =
-                                context.findRenderObject() as RenderBox?;
-                            await SharePlus.instance.share(
-                              ShareParams(
-                                uri: Uri.parse(AppConfig.mobileApiUrl)
-                                    .resolve('/blog/${blog.slug}')
-                                    .resolve(
-                                      '?utm_source=app&utm_medium=share',
-                                    ),
-                                sharePositionOrigin: box != null
-                                    ? box.localToGlobal(Offset.zero) & box.size
-                                    : null,
-                              ),
-                            );
-                          },
+                        child: Semantics(
+                          label: 'Share blog post',
+                          button: true,
+                          child: IconButton(
+                            alignment: AlignmentDirectional.center,
+                            padding: EdgeInsetsDirectional.zero,
+                            icon: Icon(Icons.adaptive.share),
+                            iconSize: 20,
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () async {
+                              final box =
+                                  context.findRenderObject() as RenderBox?;
+                              await SharePlus.instance.share(
+                                ShareParams(
+                                  uri: Uri.parse(AppConfig.mobileApiUrl)
+                                      .resolve('/blog/${blog.slug}')
+                                      .resolve(
+                                        '?utm_source=app&utm_medium=share',
+                                      ),
+                                  sharePositionOrigin: box != null
+                                      ? box.localToGlobal(Offset.zero) &
+                                            box.size
+                                      : null,
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ],
@@ -162,11 +173,15 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                       ),
                       const SizedBox(height: 20),
                       if (blog.headerImageUrl != null)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: CachedNetworkImage(
-                            imageUrl: blog.headerImageUrl!,
-                            fit: BoxFit.cover,
+                        Semantics(
+                          label: 'Blog post header image',
+                          image: true,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: CachedNetworkImage(
+                              imageUrl: blog.headerImageUrl!,
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                       Html(

@@ -47,128 +47,140 @@ class ParticipantCard extends ConsumerWidget {
 
     const overlayPadding = 6.0;
 
-    return AspectRatio(
-      aspectRatio: 16 / 21,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: participantContext.isSpeaking
-                ? const Color(0xFFFFD000)
-                : Colors.white,
-            width: 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              offset: const Offset(0, 3),
-              blurRadius: 1,
-              spreadRadius: -2,
+    return Semantics(
+      label:
+          '${participant.name}. '
+          '${participantContext.isSpeaking ? 'Currently speaking' : 'Not '
+                    'speaking'}. '
+          '${participant.isMuted ? 'Microphone muted' : 'Microphone on'}',
+      liveRegion: true,
+      child: AspectRatio(
+        aspectRatio: 16 / 21,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
               color: participantContext.isSpeaking
-                  ? const Color(0x80FFD000)
-                  : Colors.black,
+                  ? const Color(0xFFFFD000)
+                  : Colors.white,
+              width: 2,
             ),
-            BoxShadow(
-              offset: const Offset(0, 2),
-              blurRadius: 2,
-              color: participantContext.isSpeaking
-                  ? const Color(0x80FFD000)
-                  : Colors.black,
-            ),
-            BoxShadow(
-              offset: const Offset(0, 1),
-              blurRadius: 5,
-              color: participantContext.isSpeaking
-                  ? const Color(0x80FFD000)
-                  : Colors.black,
-            ),
-          ],
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: ClipRRect(
-          // radius - border width
-          borderRadius: BorderRadius.circular(20 - 2),
-          clipBehavior: Clip.hardEdge,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned.fill(
-                child: ParticipantVideo(participant: participant),
+            boxShadow: [
+              BoxShadow(
+                offset: const Offset(0, 3),
+                blurRadius: 1,
+                spreadRadius: -2,
+                color: participantContext.isSpeaking
+                    ? const Color(0x80FFD000)
+                    : Colors.black,
               ),
-              PositionedDirectional(
-                top: overlayPadding,
-                start: overlayPadding,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.black54,
-                  ),
-                  padding: const EdgeInsetsDirectional.all(2),
-                  alignment: Alignment.center,
-                  child: Builder(
-                    builder: (context) {
-                      if (participant.isMuted ||
-                          !participant.hasAudio ||
-                          audioTracks.isEmpty) {
-                        return const TotemIcon(
-                          TotemIcons.microphoneOff,
-                          size: 20,
-                          color: Colors.white,
-                        );
-                      } else {
-                        return SoundWaveformWidget(
-                          audioTrack:
-                              audioTracks.firstOrNull?.track as AudioTrack?,
-                          participant: participant,
-                          options: const AudioVisualizerWidgetOptions(
-                            color: Colors.white,
-                            barCount: 3,
-                            barMinOpacity: 0.8,
-                            spacing: 3,
-                            minHeight: 4,
-                            maxHeight: 12,
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ),
+              BoxShadow(
+                offset: const Offset(0, 2),
+                blurRadius: 2,
+                color: participantContext.isSpeaking
+                    ? const Color(0x80FFD000)
+                    : Colors.black,
               ),
-              if (isKeeper && currentUserSlug != participant.identity)
-                PositionedDirectional(
-                  end: overlayPadding,
-                  top: overlayPadding,
-                  child: _ParticipantMenuButton(
-                    participant: participant,
-                    overlayPadding: overlayPadding,
-                    onMute: () => _onMuteParticipant(context, ref),
-                    onRemove: () => _onRemoveParticipant(context, ref),
-                  ),
-                ),
-              PositionedDirectional(
-                bottom: 6,
-                start: 6,
-                end: 6,
-                child: AutoSizeText(
-                  participant.name,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    shadows: [
-                      Shadow(
-                        offset: Offset(0, 1),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                ),
+              BoxShadow(
+                offset: const Offset(0, 1),
+                blurRadius: 5,
+                color: participantContext.isSpeaking
+                    ? const Color(0x80FFD000)
+                    : Colors.black,
               ),
             ],
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: ClipRRect(
+            // radius - border width
+            borderRadius: BorderRadius.circular(20 - 2),
+            clipBehavior: Clip.hardEdge,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned.fill(
+                  child: ParticipantVideo(participant: participant),
+                ),
+                PositionedDirectional(
+                  top: overlayPadding,
+                  start: overlayPadding,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black54,
+                    ),
+                    padding: const EdgeInsetsDirectional.all(2),
+                    alignment: Alignment.center,
+                    child: Builder(
+                      builder: (context) {
+                        if (participant.isMuted ||
+                            !participant.hasAudio ||
+                            audioTracks.isEmpty) {
+                          return const TotemIcon(
+                            TotemIcons.microphoneOff,
+                            size: 20,
+                            color: Colors.white,
+                          );
+                        } else {
+                          return SoundWaveformWidget(
+                            audioTrack:
+                                audioTracks.firstOrNull?.track as AudioTrack?,
+                            participant: participant,
+                            options: const AudioVisualizerWidgetOptions(
+                              color: Colors.white,
+                              barCount: 3,
+                              barMinOpacity: 0.8,
+                              spacing: 3,
+                              minHeight: 4,
+                              maxHeight: 12,
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                if (isKeeper && currentUserSlug != participant.identity)
+                  PositionedDirectional(
+                    end: overlayPadding,
+                    top: overlayPadding,
+                    child: Semantics(
+                      label: 'Participant menu for ${participant.name}',
+                      button: true,
+                      child: _ParticipantMenuButton(
+                        participant: participant,
+                        overlayPadding: overlayPadding,
+                        onMute: () => _onMuteParticipant(context, ref),
+                        onRemove: () => _onRemoveParticipant(context, ref),
+                      ),
+                    ),
+                  ),
+                PositionedDirectional(
+                  bottom: 6,
+                  start: 6,
+                  end: 6,
+                  child: AutoSizeText(
+                    participant.name,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      shadows: [
+                        Shadow(
+                          offset: Offset(0, 1),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

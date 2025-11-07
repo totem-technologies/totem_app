@@ -128,31 +128,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           onFieldSubmitted: (_) => _requestPin(),
           autofocus: true,
         ),
-        Row(
-          children: [
-            Checkbox(
-              value: _newsletterConsent,
-              onChanged: (_) {
-                setState(() {
-                  _newsletterConsent = !_newsletterConsent;
-                });
-              },
-            ),
-            Expanded(
-              child: GestureDetector(
-                onTap: () {
+        Semantics(
+          label: 'Receive email updates',
+          checked: _newsletterConsent,
+          child: Row(
+            children: [
+              Checkbox(
+                value: _newsletterConsent,
+                onChanged: (_) {
                   setState(() {
                     _newsletterConsent = !_newsletterConsent;
                   });
                 },
-                child: Text(
-                  'Yes, receive email updates',
-                  style: theme.textTheme.bodySmall,
-                  textAlign: TextAlign.start,
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _newsletterConsent = !_newsletterConsent;
+                    });
+                  },
+                  child: ExcludeSemantics(
+                    child: Text(
+                      'Yes, receive email updates',
+                      style: theme.textTheme.bodySmall,
+                      textAlign: TextAlign.start,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
 
         const SizedBox(height: 16),

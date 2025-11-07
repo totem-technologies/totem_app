@@ -90,13 +90,18 @@ class KeeperProfileScreen extends ConsumerWidget {
                                     Link(
                                       uri: Uri.parse(keeper.website!),
                                       builder: (context, followLink) {
-                                        return IconButton(
-                                          icon: const TotemIcon(
-                                            TotemIcons.link,
-                                            size: 20,
+                                        return Semantics(
+                                          label: 'Visit keeper website',
+                                          button: true,
+                                          link: true,
+                                          child: IconButton(
+                                            icon: const TotemIcon(
+                                              TotemIcons.link,
+                                              size: 20,
+                                            ),
+                                            onPressed: followLink,
+                                            iconSize: 20,
                                           ),
-                                          onPressed: followLink,
-                                          iconSize: 20,
                                         );
                                       },
                                     ),
@@ -107,13 +112,19 @@ class KeeperProfileScreen extends ConsumerWidget {
                                         'https://instagram.com/${keeper.instagramUsername!}',
                                       ),
                                       builder: (context, followLink) {
-                                        return IconButton(
-                                          icon: const TotemIcon(
-                                            TotemIcons.instagram,
-                                            size: 20,
+                                        return Semantics(
+                                          label:
+                                              'Visit keeper Instagram profile',
+                                          button: true,
+                                          link: true,
+                                          child: IconButton(
+                                            icon: const TotemIcon(
+                                              TotemIcons.instagram,
+                                              size: 20,
+                                            ),
+                                            onPressed: followLink,
+                                            iconSize: 20,
                                           ),
-                                          onPressed: followLink,
-                                          iconSize: 20,
                                         );
                                       },
                                     ),

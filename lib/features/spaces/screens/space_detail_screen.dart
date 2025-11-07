@@ -48,16 +48,14 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
     ref.read(analyticsProvider).logSpaceViewed(widget.slug);
   }
 
-  static const horizontalPadding = EdgeInsetsDirectional.symmetric(
-    horizontal: 22,
-  );
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    const horizontalPadding = EdgeInsetsDirectional.symmetric(
+      horizontal: 22,
+    );
     final spaceAsync = ref.watch(spaceProvider(widget.slug));
 
-    // Determine if we have a valid event slug to watch
     final String? effectiveEventSlug =
         widget.eventSlug ??
         spaceAsync.maybeWhen(
@@ -65,11 +63,8 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
           orElse: () => null,
         );
 
-    // Only watch event provider if we have a valid slug
-    final bool hasValidEventSlug =
-        effectiveEventSlug != null && effectiveEventSlug.isNotEmpty;
-
-    final AsyncValue<EventDetailSchema>? eventAsync = hasValidEventSlug
+    final AsyncValue<EventDetailSchema>? eventAsync =
+        effectiveEventSlug != null && effectiveEventSlug.isNotEmpty
         ? ref.watch(eventProvider(effectiveEventSlug))
         : null;
 
@@ -109,11 +104,16 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                               color: theme.scaffoldBackgroundColor,
                               shape: BoxShape.circle,
                             ),
-                            child: IconButton(
-                              icon: Icon(Icons.adaptive.arrow_back),
-                              iconSize: 24,
-                              visualDensity: VisualDensity.compact,
-                              onPressed: () => popOrHome(context),
+                            child: Semantics(
+                              label: 'Back',
+                              button: true,
+                              child: IconButton(
+                                icon: Icon(Icons.adaptive.arrow_back),
+                                iconSize: 24,
+                                visualDensity: VisualDensity.compact,
+                                tooltip: 'Go back',
+                                onPressed: () => popOrHome(context),
+                              ),
                             ),
                           ),
                         ),
@@ -131,32 +131,40 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                               ),
                               child: Builder(
                                 builder: (context) {
-                                  return IconButton(
-                                    icon: Icon(Icons.adaptive.share),
-                                    visualDensity: VisualDensity.compact,
-                                    onPressed: () async {
-                                      final box =
-                                          context.findRenderObject()
-                                              as RenderBox?;
-                                      await SharePlus.instance.share(
-                                        ShareParams(
-                                          uri: Uri.parse(AppConfig.mobileApiUrl)
-                                              .resolve(
-                                                '/spaces/event/${space.slug}',
-                                              )
-                                              .resolve(
-                                                '?utm_source=app'
-                                                '&utm_medium=share',
-                                              ),
-                                          sharePositionOrigin: box != null
-                                              ? box.localToGlobal(
-                                                      Offset.zero,
-                                                    ) &
-                                                    box.size
-                                              : null,
-                                        ),
-                                      );
-                                    },
+                                  return Semantics(
+                                    label: 'Share space',
+                                    button: true,
+                                    child: IconButton(
+                                      icon: Icon(Icons.adaptive.share),
+                                      visualDensity: VisualDensity.compact,
+                                      tooltip: 'Share this space',
+                                      onPressed: () async {
+                                        final box =
+                                            context.findRenderObject()
+                                                as RenderBox?;
+                                        await SharePlus.instance.share(
+                                          ShareParams(
+                                            uri:
+                                                Uri.parse(
+                                                      AppConfig.mobileApiUrl,
+                                                    )
+                                                    .resolve(
+                                                      '/spaces/event/${space.slug}',
+                                                    )
+                                                    .resolve(
+                                                      '?utm_source=app'
+                                                      '&utm_medium=share',
+                                                    ),
+                                            sharePositionOrigin: box != null
+                                                ? box.localToGlobal(
+                                                        Offset.zero,
+                                                      ) &
+                                                      box.size
+                                                : null,
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   );
                                 },
                               ),
@@ -461,11 +469,15 @@ class AboutSpaceSheet extends StatelessWidget {
                     color: Colors.white,
                     shape: BoxShape.circle,
                   ),
-                  child: IconButton(
-                    icon: Icon(Icons.adaptive.arrow_back),
-                    iconSize: 24,
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => Navigator.of(context).pop(),
+                  child: Semantics(
+                    label: MaterialLocalizations.of(context).closeButtonLabel,
+                    button: true,
+                    child: IconButton(
+                      icon: Icon(Icons.adaptive.arrow_back),
+                      iconSize: 24,
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
                   ),
                 ),
               ),

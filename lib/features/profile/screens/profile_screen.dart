@@ -185,40 +185,46 @@ class ProfileTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsetsDirectional.only(bottom: 12),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(25),
-            color: backgroundColor ?? Colors.white,
-          ),
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: 20,
-            vertical: 10,
-          ),
-          child: Row(
-            spacing: 10,
-            children: [
-              IconTheme.merge(
-                data: IconThemeData(color: foregroundColor, size: 20),
-                child: icon,
-              ),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: foregroundColor,
+      child: Semantics(
+        label: title,
+        button: true,
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(25),
+              color: backgroundColor ?? Colors.white,
+            ),
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 20,
+              vertical: 10,
+            ),
+            child: Row(
+              spacing: 10,
+              children: [
+                IconTheme.merge(
+                  data: IconThemeData(color: foregroundColor, size: 20),
+                  child: icon,
+                ),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: foregroundColor,
+                    ),
                   ),
                 ),
-              ),
-              TotemIcon(
-                TotemIcons.arrowForward,
-                color: foregroundColor,
-                size: 22,
-              ),
-            ],
+                ExcludeSemantics(
+                  child: TotemIcon(
+                    TotemIcons.arrowForward,
+                    color: foregroundColor,
+                    size: 22,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

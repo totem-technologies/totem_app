@@ -179,28 +179,37 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                         child: Row(
                           spacing: 14,
                           children: [
-                            Tooltip(
-                              message: 'Add to calendar',
-                              child: OutlinedButton(
-                                onPressed: addToCalendar,
-                                style: secondaryButtonStyle,
-                                child: const TotemIcon(
-                                  TotemIcons.calendar,
-                                  size: 24,
+                            Semantics(
+                              label: 'Add session to calendar',
+                              button: true,
+                              child: Tooltip(
+                                message: 'Add to calendar',
+                                child: OutlinedButton(
+                                  onPressed: addToCalendar,
+                                  style: secondaryButtonStyle,
+                                  child: const TotemIcon(
+                                    TotemIcons.calendar,
+                                    size: 24,
+                                  ),
                                 ),
                               ),
                             ),
-                            Tooltip(
-                              message: 'Give up your spot',
-                              child: OutlinedButton(
-                                onPressed: _loading ? null : giveUpSpot,
-                                style: secondaryButtonStyle,
-                                child: _loading
-                                    ? const LoadingIndicator(size: 24)
-                                    : const TotemIcon(
-                                        TotemIcons.giveUpSpot,
-                                        size: 24,
-                                      ),
+                            Semantics(
+                              label: 'Give up your spot in this session',
+                              button: true,
+                              enabled: !_loading,
+                              child: Tooltip(
+                                message: 'Give up your spot',
+                                child: OutlinedButton(
+                                  onPressed: _loading ? null : giveUpSpot,
+                                  style: secondaryButtonStyle,
+                                  child: _loading
+                                      ? const LoadingIndicator(size: 24)
+                                      : const TotemIcon(
+                                          TotemIcons.giveUpSpot,
+                                          size: 24,
+                                        ),
+                                ),
                               ),
                             ),
                           ],
@@ -601,27 +610,36 @@ class _AttendingDialogState extends State<AttendingDialog> {
                         shape: BoxShape.circle,
                         color: Colors.white,
                       ),
-                      child: IconButton(
-                        padding: EdgeInsetsDirectional.zero,
-                        iconSize: 18,
-                        color: const Color(0xFF787D7E),
-                        onPressed: () async {
-                          final box = context.findRenderObject() as RenderBox?;
-                          await SharePlus.instance.share(
-                            ShareParams(
-                              uri: Uri.parse(AppConfig.mobileApiUrl)
-                                  .resolve('/spaces/event/${widget.eventSlug}')
-                                  .resolve('?utm_source=app&utm_medium=share'),
-                              sharePositionOrigin: box != null
-                                  ? box.localToGlobal(
-                                          Offset.zero,
-                                        ) &
-                                        box.size
-                                  : null,
-                            ),
-                          );
-                        },
-                        icon: Icon(Icons.adaptive.share),
+                      child: Semantics(
+                        label: 'Share this session',
+                        button: true,
+                        child: IconButton(
+                          padding: EdgeInsetsDirectional.zero,
+                          iconSize: 18,
+                          color: const Color(0xFF787D7E),
+                          onPressed: () async {
+                            final box =
+                                context.findRenderObject() as RenderBox?;
+                            await SharePlus.instance.share(
+                              ShareParams(
+                                uri: Uri.parse(AppConfig.mobileApiUrl)
+                                    .resolve(
+                                      '/spaces/event/${widget.eventSlug}',
+                                    )
+                                    .resolve(
+                                      '?utm_source=app&utm_medium=share',
+                                    ),
+                                sharePositionOrigin: box != null
+                                    ? box.localToGlobal(
+                                            Offset.zero,
+                                          ) &
+                                          box.size
+                                    : null,
+                              ),
+                            );
+                          },
+                          icon: Icon(Icons.adaptive.share),
+                        ),
                       ),
                     );
                   },
@@ -634,12 +652,16 @@ class _AttendingDialogState extends State<AttendingDialog> {
                     shape: BoxShape.circle,
                     color: Colors.white,
                   ),
-                  child: IconButton(
-                    padding: EdgeInsetsDirectional.zero,
-                    iconSize: 18,
-                    color: const Color(0xFF787D7E),
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
+                  child: Semantics(
+                    label: 'Close dialog',
+                    button: true,
+                    child: IconButton(
+                      padding: EdgeInsetsDirectional.zero,
+                      iconSize: 18,
+                      color: const Color(0xFF787D7E),
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
                   ),
                 ),
               ],

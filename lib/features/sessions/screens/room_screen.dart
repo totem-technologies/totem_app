@@ -235,82 +235,105 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         final user = room.localParticipant;
         return ActionBar(
           children: [
-            ActionBarButton(
-              active: room.microphoneOpened,
-              onPressed: () async {
-                if (room.microphoneOpened) {
-                  await notifier.disableMicrophone();
-                } else {
-                  await notifier.enableMicrophone();
-                }
-              },
-              child: TotemIcon(
-                room.microphoneOpened
-                    ? TotemIcons.microphoneOn
-                    : TotemIcons.microphoneOff,
+            Semantics(
+              label: room.microphoneOpened
+                  ? 'Microphone on. Tap to mute'
+                  : 'Microphone off. Tap to unmute',
+              child: ActionBarButton(
+                active: room.microphoneOpened,
+                onPressed: () async {
+                  if (room.microphoneOpened) {
+                    await notifier.disableMicrophone();
+                  } else {
+                    await notifier.enableMicrophone();
+                  }
+                },
+                child: TotemIcon(
+                  room.microphoneOpened
+                      ? TotemIcons.microphoneOn
+                      : TotemIcons.microphoneOff,
+                ),
               ),
             ),
-            ActionBarButton(
-              active: room.cameraOpened,
-              onPressed: () async {
-                if (room.cameraOpened) {
-                  await notifier.disableCamera();
-                } else {
-                  await notifier.enableCamera();
-                }
-              },
-              child: TotemIcon(
-                room.cameraOpened ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+            Semantics(
+              label: room.cameraOpened
+                  ? 'Camera on. Tap to turn off'
+                  : 'Camera off. Tap to turn on',
+              child: ActionBarButton(
+                active: room.cameraOpened,
+                onPressed: () async {
+                  if (room.cameraOpened) {
+                    await notifier.disableCamera();
+                  } else {
+                    await notifier.enableCamera();
+                  }
+                },
+                child: TotemIcon(
+                  room.cameraOpened
+                      ? TotemIcons.cameraOn
+                      : TotemIcons.cameraOff,
+                ),
               ),
             ),
             if (!state.isMyTurn(notifier.room))
               Builder(
                 builder: (button) {
-                  return ActionBarButton(
-                    active: _showEmojiPicker,
-                    onPressed: () async {
-                      setState(() => _showEmojiPicker = true);
-                      final emoji = await showEmojiBar(button, context);
-                      if (emoji != null && emoji.isNotEmpty) {
-                        unawaited(notifier.sendEmoji(emoji));
-                        if (user?.identity != null) {
-                          unawaited(_onEmojiReceived(user!.identity, emoji));
+                  return Semantics(
+                    label: 'Send reaction emoji',
+                    child: ActionBarButton(
+                      active: _showEmojiPicker,
+                      onPressed: () async {
+                        setState(() => _showEmojiPicker = true);
+                        final emoji = await showEmojiBar(button, context);
+                        if (emoji != null && emoji.isNotEmpty) {
+                          unawaited(notifier.sendEmoji(emoji));
+                          if (user?.identity != null) {
+                            unawaited(_onEmojiReceived(user!.identity, emoji));
+                          }
                         }
-                      }
-                      if (mounted) {
-                        setState(() => _showEmojiPicker = false);
-                      }
-                    },
-                    child: const TotemIcon(TotemIcons.reaction),
+                        if (mounted) {
+                          setState(() => _showEmojiPicker = false);
+                        }
+                      },
+                      child: const TotemIcon(TotemIcons.reaction),
+                    ),
                   );
                 },
               ),
-            ActionBarButton(
-              active: _chatSheetOpen,
-              onPressed: () async {
-                setState(() {
-                  _hasPendingChatMessages = false;
-                  _chatSheetOpen = true;
-                });
-                await showSessionChatSheet(context, event);
-                if (mounted) {
-                  setState(() => _chatSheetOpen = false);
-                }
-              },
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  const TotemIcon(TotemIcons.chat),
-                  if (_hasPendingChatMessages)
-                    Container(
-                      height: 4,
-                      width: 4,
-                      decoration: const BoxDecoration(
-                        color: AppTheme.green,
-                        shape: BoxShape.circle,
+            Semantics(
+              label: _hasPendingChatMessages
+                  ? 'Open chat. New messages available'
+                  : 'Open chat',
+              child: ActionBarButton(
+                active: _chatSheetOpen,
+                onPressed: () async {
+                  setState(() {
+                    _hasPendingChatMessages = false;
+                    _chatSheetOpen = true;
+                  });
+                  await showSessionChatSheet(context, event);
+                  if (mounted) {
+                    setState(() => _chatSheetOpen = false);
+                  }
+                },
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const TotemIcon(TotemIcons.chat),
+                    if (_hasPendingChatMessages)
+                      Semantics(
+                        label: 'New message indicator',
+                        child: Container(
+                          height: 4,
+                          width: 4,
+                          decoration: const BoxDecoration(
+                            color: AppTheme.green,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
             ConstrainedBox(
@@ -318,13 +341,18 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 maxWidth: 40,
                 maxHeight: 40,
               ),
-              child: IconButton(
-                padding: EdgeInsetsDirectional.zero,
-                onPressed: () =>
-                    showOptionsSheet(context, state, notifier, event),
-                icon: const TotemIcon(
-                  TotemIcons.more,
-                  color: Colors.white,
+              child: Semantics(
+                label: 'More options',
+                button: true,
+                child: IconButton(
+                  padding: EdgeInsetsDirectional.zero,
+                  onPressed: () =>
+                      showOptionsSheet(context, state, notifier, event),
+                  tooltip: 'More options',
+                  icon: const TotemIcon(
+                    TotemIcons.more,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),

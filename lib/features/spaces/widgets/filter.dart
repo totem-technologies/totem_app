@@ -78,26 +78,31 @@ class SpacesFilterChip extends StatelessWidget {
     return Padding(
       padding: const EdgeInsetsDirectional.only(end: 8),
       child: Center(
-        child: GestureDetector(
-          onTap: () async {
-            onTap();
-            await Scrollable.ensureVisible(
-              context,
-              duration: const Duration(milliseconds: 300),
-              alignment: 0.5,
-            );
-          },
-          child: Chip(
-            label: Text(label),
-            backgroundColor: isSelected
-                ? theme.colorScheme.primary
-                : Colors.transparent,
-            labelStyle: TextStyle(
-              color: isSelected
-                  ? theme.colorScheme.onPrimary
-                  : theme.colorScheme.onSurface,
+        child: Semantics(
+          label: 'Filter by $label',
+          selected: isSelected,
+          button: true,
+          child: GestureDetector(
+            onTap: () async {
+              onTap();
+              await Scrollable.ensureVisible(
+                context,
+                duration: const Duration(milliseconds: 300),
+                alignment: 0.5,
+              );
+            },
+            child: Chip(
+              label: Text(label),
+              backgroundColor: isSelected
+                  ? theme.colorScheme.primary
+                  : Colors.transparent,
+              labelStyle: TextStyle(
+                color: isSelected
+                    ? theme.colorScheme.onPrimary
+                    : theme.colorScheme.onSurface,
+              ),
+              padding: const EdgeInsetsDirectional.symmetric(horizontal: 8),
             ),
-            padding: const EdgeInsetsDirectional.symmetric(horizontal: 8),
           ),
         ),
       ),
