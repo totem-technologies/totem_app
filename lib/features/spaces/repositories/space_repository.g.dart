@@ -15,13 +15,13 @@ const listSpacesProvider = ListSpacesProvider._();
 final class ListSpacesProvider
     extends
         $FunctionalProvider<
-          AsyncValue<List<SpaceDetailSchema>>,
-          List<SpaceDetailSchema>,
-          FutureOr<List<SpaceDetailSchema>>
+          AsyncValue<List<SpaceSchema>>,
+          List<SpaceSchema>,
+          FutureOr<List<SpaceSchema>>
         >
     with
-        $FutureModifier<List<SpaceDetailSchema>>,
-        $FutureProvider<List<SpaceDetailSchema>> {
+        $FutureModifier<List<SpaceSchema>>,
+        $FutureProvider<List<SpaceSchema>> {
   const ListSpacesProvider._()
     : super(
         from: null,
@@ -38,17 +38,17 @@ final class ListSpacesProvider
 
   @$internal
   @override
-  $FutureProviderElement<List<SpaceDetailSchema>> $createElement(
+  $FutureProviderElement<List<SpaceSchema>> $createElement(
     $ProviderPointer pointer,
   ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<List<SpaceDetailSchema>> create(Ref ref) {
+  FutureOr<List<SpaceSchema>> create(Ref ref) {
     return listSpaces(ref);
   }
 }
 
-String _$listSpacesHash() => r'c17a7ffbca65ff4ee39431b66791b74eed094662';
+String _$listSpacesHash() => r'454bd2e4a1018e4369c6de99db757a0b6b776cf4';
 
 @ProviderFor(event)
 const eventProvider = EventFamily._();
@@ -391,13 +391,13 @@ const listSpacesByKeeperProvider = ListSpacesByKeeperFamily._();
 final class ListSpacesByKeeperProvider
     extends
         $FunctionalProvider<
-          AsyncValue<List<SpaceDetailSchema>>,
-          List<SpaceDetailSchema>,
-          FutureOr<List<SpaceDetailSchema>>
+          AsyncValue<List<SpaceSchema>>,
+          List<SpaceSchema>,
+          FutureOr<List<SpaceSchema>>
         >
     with
-        $FutureModifier<List<SpaceDetailSchema>>,
-        $FutureProvider<List<SpaceDetailSchema>> {
+        $FutureModifier<List<SpaceSchema>>,
+        $FutureProvider<List<SpaceSchema>> {
   const ListSpacesByKeeperProvider._({
     required ListSpacesByKeeperFamily super.from,
     required String super.argument,
@@ -421,12 +421,12 @@ final class ListSpacesByKeeperProvider
 
   @$internal
   @override
-  $FutureProviderElement<List<SpaceDetailSchema>> $createElement(
+  $FutureProviderElement<List<SpaceSchema>> $createElement(
     $ProviderPointer pointer,
   ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<List<SpaceDetailSchema>> create(Ref ref) {
+  FutureOr<List<SpaceSchema>> create(Ref ref) {
     final argument = this.argument as String;
     return listSpacesByKeeper(ref, argument);
   }
@@ -443,10 +443,10 @@ final class ListSpacesByKeeperProvider
 }
 
 String _$listSpacesByKeeperHash() =>
-    r'f8156433ac38a512659635c1c84e29fd765ff02a';
+    r'a89cb523d95ed9173b8ca7112b40f7f6a4791bec';
 
 final class ListSpacesByKeeperFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<List<SpaceDetailSchema>>, String> {
+    with $FunctionalFamilyOverride<FutureOr<List<SpaceSchema>>, String> {
   const ListSpacesByKeeperFamily._()
     : super(
         retry: null,
