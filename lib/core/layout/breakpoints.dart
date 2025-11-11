@@ -6,17 +6,14 @@ enum DeviceType {
   /// Mobile phone in landscape mode
   mobileLandscape,
 
-  /// Tablet in portrait mode (reserved for future use)
+  /// Tablet in portrait mode
   tabletPortrait,
 
-  /// Tablet in landscape mode (reserved for future use)
+  /// Tablet in landscape mode
   tabletLandscape,
 
-  /// Desktop device (reserved for future use)
+  /// Desktop device
   desktop,
-
-  /// Web browser (reserved for future use)
-  web,
 }
 
 /// Configuration for responsive breakpoints.

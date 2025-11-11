@@ -14,21 +14,6 @@ class LayoutInfo {
     required this.breakpoints,
   });
 
-  /// The determined device type
-  final DeviceType deviceType;
-
-  /// Current screen size
-  final Size screenSize;
-
-  /// Current orientation
-  final Orientation orientation;
-
-  /// Safe area padding (for notches, status bars, etc.)
-  final EdgeInsets safeAreaPadding;
-
-  /// Breakpoint configuration used
-  final BreakpointConfig breakpoints;
-
   /// Creates a [LayoutInfo] from the current [BuildContext].
   factory LayoutInfo.fromContext(
     BuildContext context, {
@@ -57,6 +42,21 @@ class LayoutInfo {
       breakpoints: breakpoints,
     );
   }
+
+  /// The determined device type
+  final DeviceType deviceType;
+
+  /// Current screen size
+  final Size screenSize;
+
+  /// Current orientation
+  final Orientation orientation;
+
+  /// Safe area padding (for notches, status bars, etc.)
+  final EdgeInsets safeAreaPadding;
+
+  /// Breakpoint configuration used
+  final BreakpointConfig breakpoints;
 
   /// Determines the device type based on size and orientation.
   static DeviceType _determineDeviceType(
@@ -107,9 +107,6 @@ class LayoutInfo {
   /// Whether the current device is desktop (reserved for future use)
   bool get isDesktop => deviceType == DeviceType.desktop;
 
-  /// Whether the current device is web (reserved for future use)
-  bool get isWeb => deviceType == DeviceType.web;
-
   /// Whether the current orientation is portrait
   bool get isPortrait =>
       deviceType == DeviceType.mobilePortrait ||
@@ -124,15 +121,14 @@ class LayoutInfo {
   double get horizontalPadding {
     switch (deviceType) {
       case DeviceType.mobilePortrait:
-        return 16.0;
+        return 16;
       case DeviceType.mobileLandscape:
-        return 24.0;
+        return 24;
       case DeviceType.tabletPortrait:
       case DeviceType.tabletLandscape:
-        return 32.0;
+        return 32;
       case DeviceType.desktop:
-      case DeviceType.web:
-        return 48.0;
+        return 48;
     }
   }
 
@@ -140,15 +136,14 @@ class LayoutInfo {
   double get verticalPadding {
     switch (deviceType) {
       case DeviceType.mobilePortrait:
-        return 16.0;
+        return 16;
       case DeviceType.mobileLandscape:
-        return 12.0;
+        return 12;
       case DeviceType.tabletPortrait:
       case DeviceType.tabletLandscape:
-        return 24.0;
+        return 24;
       case DeviceType.desktop:
-      case DeviceType.web:
-        return 32.0;
+        return 32;
     }
   }
 
@@ -162,10 +157,9 @@ class LayoutInfo {
         return null; // No constraint on mobile
       case DeviceType.tabletPortrait:
       case DeviceType.tabletLandscape:
-        return 768.0;
+        return 768;
       case DeviceType.desktop:
-      case DeviceType.web:
-        return 1200.0;
+        return 1200;
     }
   }
 
@@ -181,7 +175,6 @@ class LayoutInfo {
       case DeviceType.tabletLandscape:
         return 3;
       case DeviceType.desktop:
-      case DeviceType.web:
         return 4;
     }
   }
@@ -191,13 +184,12 @@ class LayoutInfo {
     switch (deviceType) {
       case DeviceType.mobilePortrait:
       case DeviceType.mobileLandscape:
-        return 16.0;
+        return 16;
       case DeviceType.tabletPortrait:
       case DeviceType.tabletLandscape:
-        return 24.0;
+        return 24;
       case DeviceType.desktop:
-      case DeviceType.web:
-        return 32.0;
+        return 32;
     }
   }
 

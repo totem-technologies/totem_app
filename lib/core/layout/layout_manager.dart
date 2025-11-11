@@ -65,7 +65,7 @@ class ResponsiveLayoutManager extends StatelessWidget {
   }
 }
 
-/// Internal widget that provides [LayoutInfo] to descendants via InheritedWidget.
+/// Internal widget that provides [LayoutInfo] to descendants.
 class _LayoutInfoProvider extends InheritedWidget {
   const _LayoutInfoProvider({
     required this.layoutInfo,
@@ -185,14 +185,6 @@ class AdaptiveLayout extends StatelessWidget {
                 tabletPortrait ??
                 mobileLandscape ??
                 mobilePortrait;
-
-          case DeviceType.web:
-            return web ??
-                desktop ??
-                tabletLandscape ??
-                tabletPortrait ??
-                mobileLandscape ??
-                mobilePortrait;
         }
       },
     );
@@ -201,7 +193,8 @@ class AdaptiveLayout extends StatelessWidget {
 
 /// A widget that constrains its child to a maximum width based on device type.
 ///
-/// This is useful for preventing content from becoming too wide on large screens.
+/// This is useful for preventing content from becoming too wide on large
+/// screens.
 class ResponsiveContainer extends StatelessWidget {
   const ResponsiveContainer({
     required this.child,
