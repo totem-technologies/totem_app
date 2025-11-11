@@ -76,22 +76,13 @@ class LayoutInfo {
           : DeviceType.mobileLandscape;
     }
 
-    // Reserved for future implementation
-    // When implementing tablet support, add:
-    // if (shortestSide <= breakpoints.tabletMaxWidth) {
-    //   return orientation == Orientation.portrait
-    //       ? DeviceType.tabletPortrait
-    //       : DeviceType.tabletLandscape;
-    // }
+    if (shortestSide <= breakpoints.tabletMaxWidth) {
+      return orientation == Orientation.portrait
+          ? DeviceType.tabletPortrait
+          : DeviceType.tabletLandscape;
+    }
 
-    // Reserved for future implementation
-    // When implementing desktop/web support, add platform checks here
-    // and return DeviceType.desktop or DeviceType.web
-
-    // Default to mobile for now
-    return orientation == Orientation.portrait
-        ? DeviceType.mobilePortrait
-        : DeviceType.mobileLandscape;
+    return DeviceType.desktop;
   }
 
   /// Whether the current device is a mobile phone
@@ -189,7 +180,7 @@ class LayoutInfo {
       case DeviceType.tabletLandscape:
         return 24;
       case DeviceType.desktop:
-        return 32;
+        return 24;
     }
   }
 
