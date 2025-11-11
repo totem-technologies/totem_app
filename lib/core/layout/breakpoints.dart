@@ -23,7 +23,7 @@ enum DeviceType {
 class BreakpointConfig {
   const BreakpointConfig({
     this.mobileMaxWidth = 600,
-    this.tabletMaxWidth = 1024,
+    this.tabletMaxWidth = 900,
     this.desktopMinWidth = 1025,
   });
 

@@ -64,19 +64,13 @@ class LayoutInfo {
     Orientation orientation,
     BreakpointConfig breakpoints,
   ) {
-    final width = size.width;
-    final height = size.height;
-    final shortestSide = width < height ? width : height;
-
-    // For now, we only handle mobile devices
-    // Future implementation will check for tablets, desktop, and web
-    if (shortestSide <= breakpoints.mobileMaxWidth) {
+    if (size.width <= breakpoints.mobileMaxWidth) {
       return orientation == Orientation.portrait
           ? DeviceType.mobilePortrait
           : DeviceType.mobileLandscape;
     }
 
-    if (shortestSide <= breakpoints.tabletMaxWidth) {
+    if (size.width <= breakpoints.tabletMaxWidth) {
       return orientation == Orientation.portrait
           ? DeviceType.tabletPortrait
           : DeviceType.tabletLandscape;
