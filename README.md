@@ -62,7 +62,7 @@ For development:
 ```bash
 flutter run -d android    # Android
 flutter run -d ios        # iOS
-flutter run -d chrome --web-browser-flag "--disable-web-security"     # Web (temporary testing)
+flutter run -d chrome --wasm --web-browser-flag "--disable-web-security"     # Web (temporary testing)
 ```
 
 If testing on an iOS device, ensure you're using macOS and have Xcode installed.

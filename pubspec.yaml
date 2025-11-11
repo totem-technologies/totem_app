@@ -92,6 +92,10 @@ dev_dependencies:
   # App Icon and Splash Screens
   flutter_launcher_icons: ^0.14.3
 
+dependency_overrides:
+  flutter_secure_storage_web: ^2.0.0
+  flutter_secure_storage_platform_interface: ^2.0.1
+
 flutter:
   uses-material-design: true
 
