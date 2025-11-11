@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/core/layout/layout.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
@@ -23,8 +25,6 @@ class NotMyTurn extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
     final roomCtx = RoomContext.of(context)!;
     final speakingNow = roomCtx.participants.firstWhere(
       (participant) {
@@ -37,100 +37,193 @@ class NotMyTurn extends ConsumerWidget {
     );
 
     return RoomBackground(
-      child: OrientationBuilder(
-        builder: (context, orientation) {
-          final isLandscape = orientation == Orientation.landscape;
-          final speakerVideo = ClipRRect(
-            borderRadius: isLandscape
-                ? const BorderRadiusDirectional.horizontal(
-                    end: Radius.circular(30),
-                  )
-                : const BorderRadiusDirectional.vertical(
-                    bottom: Radius.circular(30),
-                  ),
-            child: DecoratedBox(
-              decoration: const BoxDecoration(color: AppTheme.blue),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: ParticipantVideo(participant: speakingNow),
-                  ),
-                  PositionedDirectional(
-                    end: 30,
-                    bottom: 30,
-                    child: Text(
-                      speakingNow.name,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
-                          const Shadow(blurRadius: 4),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+      child: AdaptiveLayout(
+        mobilePortrait: _NotMyTurnPortrait(
+          getParticipantKey: getParticipantKey,
+          actionBar: actionBar,
+          event: event,
+          speakingNow: speakingNow,
+        ),
+        mobileLandscape: _NotMyTurnLandscape(
+          getParticipantKey: getParticipantKey,
+          actionBar: actionBar,
+          event: event,
+          speakingNow: speakingNow,
+        ),
+      ),
+    );
+  }
+}
+
+/// Portrait layout for NotMyTurn screen
+class _NotMyTurnPortrait extends StatelessWidget {
+  const _NotMyTurnPortrait({
+    required this.getParticipantKey,
+    required this.actionBar,
+    required this.event,
+    required this.speakingNow,
+  });
+
+  final GlobalKey Function(String) getParticipantKey;
+  final Widget actionBar;
+  final EventDetailSchema event;
+  final Participant speakingNow;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final layoutInfo = context.layoutInfo;
+
+    final speakerVideo = ClipRRect(
+      borderRadius: const BorderRadiusDirectional.vertical(
+        bottom: Radius.circular(30),
+      ),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(color: AppTheme.blue),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: ParticipantVideo(participant: speakingNow),
+            ),
+            PositionedDirectional(
+              end: 30,
+              bottom: 30,
+              child: Text(
+                speakingNow.name,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  shadows: [
+                    const Shadow(blurRadius: 4),
+                  ],
+                ),
               ),
             ),
-          );
+          ],
+        ),
+      ),
+    );
 
-          final participantGrid = ParticipantLoop(
-            layoutBuilder: NoMyTurnLayoutBuilder(isLandscape: isLandscape),
-            participantTrackBuilder: (context, identifier) {
-              return ParticipantCard(
-                key: getParticipantKey(identifier.participant.identity),
-                participant: identifier.participant,
-                event: event,
-              );
-            },
-          );
+    final participantGrid = ParticipantLoop(
+      layoutBuilder: NoMyTurnLayoutBuilder(
+        layoutInfo: layoutInfo,
+      ),
+      participantTrackBuilder: (context, identifier) {
+        return ParticipantCard(
+          key: getParticipantKey(identifier.participant.identity),
+          participant: identifier.participant,
+          event: event,
+        );
+      },
+    );
 
-          if (isLandscape) {
-            final isLTR = Directionality.of(context) == TextDirection.ltr;
-            return SafeArea(
-              top: false,
-              left: !isLTR,
-              right: isLTR,
-              child: Row(
-                spacing: 16,
-                children: [
-                  Expanded(
-                    child: speakerVideo,
-                  ),
-                  Expanded(
-                    child: Column(
-                      spacing: 16,
-                      children: [
-                        Expanded(child: participantGrid),
-                        Padding(
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: 16,
-                          ),
-                          child: actionBar,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+    return SafeArea(
+      top: false,
+      child: Column(
+        spacing: 20,
+        children: [
+          Expanded(
+            flex: 2,
+            child: speakerVideo,
+          ),
+          Flexible(child: participantGrid),
+          actionBar,
+        ],
+      ),
+    );
+  }
+}
+
+/// Landscape layout for NotMyTurn screen
+class _NotMyTurnLandscape extends StatelessWidget {
+  const _NotMyTurnLandscape({
+    required this.getParticipantKey,
+    required this.actionBar,
+    required this.event,
+    required this.speakingNow,
+  });
+
+  final GlobalKey Function(String) getParticipantKey;
+  final Widget actionBar;
+  final EventDetailSchema event;
+  final Participant speakingNow;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final layoutInfo = context.layoutInfo;
+    final spacing = layoutInfo.gridSpacing;
+
+    final speakerVideo = ClipRRect(
+      borderRadius: const BorderRadiusDirectional.horizontal(
+        end: Radius.circular(30),
+      ),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(color: AppTheme.blue),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: ParticipantVideo(participant: speakingNow),
+            ),
+            PositionedDirectional(
+              end: 30,
+              bottom: 30,
+              child: Text(
+                speakingNow.name,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  shadows: [
+                    const Shadow(blurRadius: 4),
+                  ],
+                ),
               ),
-            );
-          } else {
-            return SafeArea(
-              top: false,
-              child: Column(
-                spacing: 20,
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: speakerVideo,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final participantGrid = ParticipantLoop(
+      layoutBuilder: NoMyTurnLayoutBuilder(
+        isLandscape: true,
+        layoutInfo: layoutInfo,
+      ),
+      participantTrackBuilder: (context, identifier) {
+        return ParticipantCard(
+          key: getParticipantKey(identifier.participant.identity),
+          participant: identifier.participant,
+          event: event,
+        );
+      },
+    );
+
+    final isLTR = Directionality.of(context) == TextDirection.ltr;
+    return SafeArea(
+      top: false,
+      left: !isLTR,
+      right: isLTR,
+      child: Row(
+        spacing: spacing,
+        children: [
+          Expanded(
+            child: speakerVideo,
+          ),
+          Expanded(
+            child: Column(
+              spacing: spacing,
+              children: [
+                Expanded(child: participantGrid),
+                Padding(
+                  padding: EdgeInsetsDirectional.symmetric(
+                    horizontal: layoutInfo.horizontalPadding,
                   ),
-                  Flexible(child: participantGrid),
-                  actionBar,
-                ],
-              ),
-            );
-          }
-        },
+                  child: actionBar,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -138,6 +231,7 @@ class NotMyTurn extends ConsumerWidget {
 
 class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
   const NoMyTurnLayoutBuilder({
+    required this.layoutInfo,
     this.maxPerLineCount,
     this.gap = 10,
     this.isLandscape = false,
@@ -152,6 +246,8 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
   final double gap;
 
   final bool isLandscape;
+
+  final LayoutInfo layoutInfo;
 
   @override
   Widget build(
@@ -192,8 +288,8 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
     return Center(
       child: GridView.count(
         padding: EdgeInsetsDirectional.symmetric(
-          horizontal: isLandscape ? 16 : 28,
-          vertical: isLandscape ? 16 : 10,
+          horizontal: layoutInfo.horizontalPadding,
+          vertical: layoutInfo.verticalPadding,
         ),
         crossAxisCount: crossAxisCount,
         mainAxisSpacing: gap,
