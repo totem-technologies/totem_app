@@ -143,29 +143,30 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           liveKitServiceProvider(sessionOptions).notifier,
         );
 
-        return PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (didPop, result) async {
-            if (didPop) return;
-            final shouldPop = await showLeaveDialog(context) ?? false;
-            if (context.mounted && shouldPop) {
-              popOrHome(context);
-            }
-          },
-          child: RoomBackground(
-            child: LivekitRoom(
-              roomContext: sessionNotifier.room,
-              builder: (context, roomCtx) {
-                return Navigator(
-                  onDidRemovePage: (page) => {},
-                  pages: [
-                    MaterialPage(
+        return RoomBackground(
+          child: LivekitRoom(
+            roomContext: sessionNotifier.room,
+            builder: (context, roomCtx) {
+              return Navigator(
+                onDidRemovePage: (page) => {},
+                pages: [
+                  MaterialPage(
+                    child: PopScope(
+                      canPop: false,
+                      onPopInvokedWithResult: (didPop, result) async {
+                        if (didPop) return;
+                        final shouldPop =
+                            await showLeaveDialog(context) ?? false;
+                        if (context.mounted && shouldPop) {
+                          popOrHome(context);
+                        }
+                      },
                       child: _buildBody(event, sessionNotifier, sessionState),
                     ),
-                  ],
-                );
-              },
-            ),
+                  ),
+                ],
+              );
+            },
           ),
         );
       },
