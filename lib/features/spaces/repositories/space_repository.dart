@@ -9,7 +9,7 @@ import 'package:totem_app/core/services/cache_service.dart';
 part 'space_repository.g.dart';
 
 @Riverpod(keepAlive: true)
-Future<List<SpaceSchema>> listSpaces(Ref ref) async {
+Future<List<SpaceDetailSchema>> listSpaces(Ref ref) async {
   final mobileApiService = ref.watch(mobileApiServiceProvider);
   final cache = ref.watch(cacheServiceProvider);
 
@@ -96,7 +96,7 @@ Future<bool> unsubscribeFromSpace(
 }
 
 @riverpod
-Future<List<SpaceSchema>> listSpacesByKeeper(
+Future<List<SpaceDetailSchema>> listSpacesByKeeper(
   Ref ref,
   String keeperSlug,
 ) async {

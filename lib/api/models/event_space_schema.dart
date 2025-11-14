@@ -16,6 +16,7 @@ class EventSpaceSchema {
     required this.dateCreated,
     required this.dateModified,
     required this.subtitle,
+    required this.categories,
     required this.recurring,
     this.content = '',
     this.slug,
@@ -34,6 +35,7 @@ class EventSpaceSchema {
   @JsonKey(name: 'date_modified')
   final DateTime dateModified;
   final String subtitle;
+  final List<int> categories;
 
   /// Short description, max 255 characters
   @JsonKey(name: 'short_description')

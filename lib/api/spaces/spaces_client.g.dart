@@ -105,7 +105,7 @@ class _SpacesClient implements SpacesClient {
   }
 
   @override
-  Future<PagedSpaceSchema> totemCirclesMobileApiListSpaces({
+  Future<PagedSpaceDetailSchema> totemCirclesMobileApiListSpaces({
     int? limit = 100,
     int? offset = 0,
   }) async {
@@ -117,7 +117,7 @@ class _SpacesClient implements SpacesClient {
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<PagedSpaceSchema>(
+    final _options = _setStreamType<PagedSpaceDetailSchema>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -128,9 +128,9 @@ class _SpacesClient implements SpacesClient {
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late PagedSpaceSchema _value;
+    late PagedSpaceDetailSchema _value;
     try {
-      _value = PagedSpaceSchema.fromJson(_result.data!);
+      _value = PagedSpaceDetailSchema.fromJson(_result.data!);
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options);
       rethrow;
@@ -197,14 +197,14 @@ class _SpacesClient implements SpacesClient {
   }
 
   @override
-  Future<List<SpaceSchema>> totemCirclesMobileApiGetKeeperSpaces({
+  Future<List<SpaceDetailSchema>> totemCirclesMobileApiGetKeeperSpaces({
     required String slug,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<List<SpaceSchema>>(
+    final _options = _setStreamType<List<SpaceDetailSchema>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -215,10 +215,13 @@ class _SpacesClient implements SpacesClient {
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
     final _result = await _dio.fetch<List<dynamic>>(_options);
-    late List<SpaceSchema> _value;
+    late List<SpaceDetailSchema> _value;
     try {
       _value = _result.data!
-          .map((dynamic i) => SpaceSchema.fromJson(i as Map<String, dynamic>))
+          .map(
+            (dynamic i) =>
+                SpaceDetailSchema.fromJson(i as Map<String, dynamic>),
+          )
           .toList();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options);

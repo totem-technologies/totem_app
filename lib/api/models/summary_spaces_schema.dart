@@ -5,7 +5,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'event_detail_schema.dart';
-import 'space_schema.dart';
+import 'space_detail_schema.dart';
 
 part 'summary_spaces_schema.g.dart';
 
@@ -22,8 +22,8 @@ class SummarySpacesSchema {
 
   final List<EventDetailSchema> upcoming;
   @JsonKey(name: 'for_you')
-  final List<SpaceSchema> forYou;
-  final List<SpaceSchema> explore;
+  final List<SpaceDetailSchema> forYou;
+  final List<SpaceDetailSchema> explore;
 
   Map<String, Object?> toJson() => _$SummarySpacesSchemaToJson(this);
 }

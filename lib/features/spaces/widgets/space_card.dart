@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/next_event_schema.dart';
-import 'package:totem_app/api/models/space_schema.dart';
+import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/date.dart';
@@ -14,30 +14,32 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/space_gradient_mask.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
-SpaceSchema _spaceDetailFromEventDetailSchema(EventDetailSchema event) {
-  return SpaceSchema(
-    title: event.space.title,
+SpaceDetailSchema _spaceDetailFromEventDetailSchema(EventDetailSchema event) {
+  return SpaceDetailSchema(
     slug: event.space.slug!,
-    dateCreated: event.space.dateCreated,
-    dateModified: event.space.dateModified,
-    subtitle: event.space.subtitle,
+    title: event.space.title,
+    imageLink: event.space.image,
+    content: event.space.content,
+    shortDescription: event.space.shortDescription ?? '',
     author: event.space.author,
+    recurring: event.space.recurring,
+    price: event.price,
+    subscribers: event.subscribers,
     nextEvent: NextEventSchema(
       start: event.start,
       link: event.calLink,
       seatsLeft: event.seatsLeft,
-      title: event.title,
       slug: event.slug,
-      duration: event.duration,
-      meetingProvider: event.meetingProvider,
-      calLink: event.calLink,
+      title: event.title,
       attending: event.attending,
+      calLink: event.calLink,
       cancelled: event.cancelled,
-      open: event.open,
+      duration: event.duration,
       joinable: event.joinable,
+      meetingProvider: event.meetingProvider,
+      open: event.open,
     ),
-    imageUrl: event.space.image,
-    categories: [],
+    category: '',
   );
 }
 
@@ -61,7 +63,7 @@ class SpaceCard extends StatelessWidget {
     );
   }
 
-  final SpaceSchema space;
+  final SpaceDetailSchema space;
   final bool compact;
   final VoidCallback? onTap;
 
@@ -106,7 +108,7 @@ class SpaceCard extends StatelessWidget {
                     image: true,
                     child: SpaceGradientMask(
                       child: CachedNetworkImage(
-                        imageUrl: getFullUrl(space.imageUrl ?? ''),
+                        imageUrl: getFullUrl(space.imageLink ?? ''),
                         fit: BoxFit.cover,
                         placeholder: (context, url) => ColoredBox(
                           color: Colors.black.withValues(alpha: 0.75),
@@ -290,7 +292,7 @@ class SmallSpaceCard extends StatelessWidget {
     );
   }
 
-  final SpaceSchema space;
+  final SpaceDetailSchema space;
   final VoidCallback? onTap;
 
   @override
@@ -307,7 +309,7 @@ class SmallSpaceCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               child: SpaceGradientMask(
                 child: CachedNetworkImage(
-                  imageUrl: getFullUrl(space.imageUrl ?? ''),
+                  imageUrl: getFullUrl(space.imageLink ?? ''),
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
                     color: Colors.black.withValues(alpha: 0.6),

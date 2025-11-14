@@ -14,6 +14,7 @@ class PublicUserSchema {
     required this.profileAvatarType,
     required this.dateCreated,
     this.isStaff = false,
+    this.circleCount,
     this.name,
     this.slug,
     this.profileAvatarSeed,
@@ -25,6 +26,8 @@ class PublicUserSchema {
 
   @JsonKey(name: 'profile_avatar_type')
   final ProfileAvatarTypeEnum profileAvatarType;
+  @JsonKey(name: 'circle_count')
+  final int? circleCount;
   final String? name;
   final String? slug;
 

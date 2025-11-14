@@ -12,10 +12,10 @@ SummarySpacesSchema _$SummarySpacesSchemaFromJson(Map<String, dynamic> json) =>
           .map((e) => EventDetailSchema.fromJson(e as Map<String, dynamic>))
           .toList(),
       forYou: (json['for_you'] as List<dynamic>)
-          .map((e) => SpaceSchema.fromJson(e as Map<String, dynamic>))
+          .map((e) => SpaceDetailSchema.fromJson(e as Map<String, dynamic>))
           .toList(),
       explore: (json['explore'] as List<dynamic>)
-          .map((e) => SpaceSchema.fromJson(e as Map<String, dynamic>))
+          .map((e) => SpaceDetailSchema.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
 

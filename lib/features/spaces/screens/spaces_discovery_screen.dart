@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sliver_tools/sliver_tools.dart';
-import 'package:totem_app/api/models/space_schema.dart';
+import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/filter.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
@@ -50,12 +50,11 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
           }
 
           final allCategories = _extractCategories(spacesList);
+
           final filteredSpaces = selectedCategory == null
               ? spacesList
               : spacesList
-                    .where(
-                      (space) => space.categories.contains(selectedCategory),
-                    )
+                    .where((space) => space.category == selectedCategory)
                     .toList();
 
           return RefreshIndicator.adaptive(
@@ -134,11 +133,11 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
     );
   }
 
-  List<String> _extractCategories(List<SpaceSchema> spaces) {
+  List<String> _extractCategories(List<SpaceDetailSchema> spaces) {
     final categories =
         spaces
-            .map((space) => space.categories)
-            .expand((category) => category)
+            .map((space) => space.category)
+            .where((category) => category != null)
             .cast<String>()
             .toSet()
             .toList()

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/api/models/space_schema.dart';
 import 'package:totem_app/api/models/summary_spaces_schema.dart';
 import 'package:totem_app/core/config/consts.dart';
@@ -63,7 +64,7 @@ class CacheService {
 
   // Spaces cache methods
 
-  Future<void> saveSpaces(List<SpaceSchema> spaces) {
+  Future<void> saveSpaces(List<SpaceDetailSchema> spaces) {
     return write(
       key: AppConsts.storageSpacesListKey,
       value: {
@@ -72,18 +73,13 @@ class CacheService {
     );
   }
 
-  Future<List<SpaceSchema>?> getSpaces() async {
+  Future<List<SpaceDetailSchema>?> getSpaces() async {
     final data = await read(AppConsts.storageSpacesListKey);
-    try {
-      return (data?['spaces'] as List?)
-          ?.map<SpaceSchema>(
-            (json) => SpaceSchema.fromJson(json as Map<String, dynamic>),
-          )
-          .toList();
-    } catch (e) {
-      debugPrint('Error parsing spaces: $e');
-      return null;
-    }
+    return (data?['spaces'] as List?)
+        ?.map<SpaceDetailSchema>(
+          (json) => SpaceDetailSchema.fromJson(json as Map<String, dynamic>),
+        )
+        .toList();
   }
 
   Future<void> clearSpaces() async {

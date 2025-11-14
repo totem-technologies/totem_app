@@ -18,11 +18,11 @@ class SpaceDetailSchema {
     required this.shortDescription,
     required this.content,
     required this.author,
+    required this.nextEvent,
     required this.category,
     required this.subscribers,
     required this.recurring,
     required this.price,
-    required this.nextEvents,
   });
 
   factory SpaceDetailSchema.fromJson(Map<String, Object?> json) =>
@@ -36,12 +36,12 @@ class SpaceDetailSchema {
   final String shortDescription;
   final String content;
   final PublicUserSchema author;
+  @JsonKey(name: 'next_event')
+  final NextEventSchema? nextEvent;
   final String? category;
   final int subscribers;
   final String? recurring;
   final int price;
-  @JsonKey(name: 'next_events')
-  final List<NextEventSchema> nextEvents;
 
   Map<String, Object?> toJson() => _$SpaceDetailSchemaToJson(this);
 }
