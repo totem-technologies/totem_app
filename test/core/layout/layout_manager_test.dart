@@ -36,7 +36,7 @@ void main() {
       await tester.pumpWidget(
         MediaQuery(
           data: const MediaQueryData(
-            size: Size(800, 400),
+            size: Size(600, 300),
           ),
           child: MaterialApp(
             home: Builder(
@@ -107,7 +107,7 @@ void main() {
       await tester.pumpWidget(
         MediaQuery(
           data: const MediaQueryData(
-            size: Size(800, 400),
+            size: Size(600, 300),
           ),
           child: MaterialApp(
             home: Builder(
@@ -172,7 +172,7 @@ void main() {
       expect(layoutInfos.last, DeviceType.mobilePortrait);
 
       // Change to landscape
-      await tester.pumpWidget(buildWithSize(const Size(800, 400)));
+      await tester.pumpWidget(buildWithSize(const Size(600, 300)));
       await tester.pump();
 
       expect(layoutInfos.last, DeviceType.mobileLandscape);
@@ -343,7 +343,7 @@ void main() {
       const config = BreakpointConfig.defaultConfig;
 
       expect(config.mobileMaxWidth, 600);
-      expect(config.tabletMaxWidth, 1024);
+      expect(config.tabletMaxWidth, 900);
       expect(config.desktopMinWidth, 1025);
     });
 
