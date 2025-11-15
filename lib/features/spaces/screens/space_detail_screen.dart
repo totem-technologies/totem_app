@@ -24,6 +24,7 @@ import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/html.dart';
 import 'package:totem_app/shared/routing.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
@@ -625,7 +626,7 @@ class SessionSheet extends StatelessWidget {
                     ),
                     CompactInfoText(
                       const TotemIcon(TotemIcons.seats),
-                      Text('${event.seatsLeft} seats left'),
+                      buildSeatsLeftText(event.seatsLeft),
                     ),
                   ],
                 ),
