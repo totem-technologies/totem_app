@@ -104,49 +104,54 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: 20,
             children: [
-              GestureDetector(
-                onTap: () async {
-                  switch (_state) {
-                    case ProfileAvatarTypeEnum.$unknown:
-                    case ProfileAvatarTypeEnum.td:
-                      _randomizeTieDyeSeed();
-                    case ProfileAvatarTypeEnum.im:
-                      await _pickImage();
-                  }
-                },
-                child: Center(
+              Center(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () async {
+                    switch (_state) {
+                      case ProfileAvatarTypeEnum.$unknown:
+                      case ProfileAvatarTypeEnum.td:
+                        _randomizeTieDyeSeed();
+                      case ProfileAvatarTypeEnum.im:
+                        await _pickImage();
+                    }
+                  },
                   child: Stack(
                     clipBehavior: Clip.none,
                     alignment: AlignmentDirectional.center,
                     children: [
-                      FutureBuilder<Uint8List?>(
-                        future: _pickedImage?.readAsBytes(),
-                        builder: (context, asyncSnapshot) {
-                          return AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 150),
-                            switchInCurve: Curves.easeInOut,
-                            switchOutCurve: Curves.easeInOut,
-                            child: UserAvatar(
-                              key: ValueKey(_tieDyeSeed ?? 'default'),
-                              radius: 50,
-                              seed: _tieDyeSeed,
-                              image:
-                                  () {
-                                        if (_state ==
-                                            ProfileAvatarTypeEnum.im) {
-                                          return asyncSnapshot.hasData
-                                              ? MemoryImage(asyncSnapshot.data!)
-                                              : user?.profileImage != null
-                                              ? CachedNetworkImageProvider(
-                                                  user!.profileImage!,
-                                                )
-                                              : null;
-                                        }
-                                      }()
-                                      as ImageProvider?,
-                            ),
-                          );
-                        },
+                      IgnorePointer(
+                        child: FutureBuilder<Uint8List?>(
+                          future: _pickedImage?.readAsBytes(),
+                          builder: (context, asyncSnapshot) {
+                            return AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 150),
+                              switchInCurve: Curves.easeInOut,
+                              switchOutCurve: Curves.easeInOut,
+                              child: UserAvatar(
+                                key: ValueKey(_tieDyeSeed ?? 'default'),
+                                radius: 50,
+                                seed: _tieDyeSeed,
+                                image:
+                                    () {
+                                          if (_state ==
+                                              ProfileAvatarTypeEnum.im) {
+                                            return asyncSnapshot.hasData
+                                                ? MemoryImage(
+                                                    asyncSnapshot.data!,
+                                                  )
+                                                : user?.profileImage != null
+                                                ? CachedNetworkImageProvider(
+                                                    user!.profileImage!,
+                                                  )
+                                                : null;
+                                          }
+                                        }()
+                                        as ImageProvider?,
+                              ),
+                            );
+                          },
+                        ),
                       ),
                       PositionedDirectional(
                         bottom: -10,
