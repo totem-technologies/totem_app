@@ -597,8 +597,11 @@ class SessionSheet extends StatelessWidget {
                     UserAvatar.fromUserSchema(
                       space.author,
                       radius: 40,
-                      onTap: () =>
-                          context.push(RouteNames.keeperProfile(space.slug)),
+                      onTap: space.author.slug != null
+                          ? () => context.push(
+                              RouteNames.keeperProfile(space.author.slug!),
+                            )
+                          : null,
                     ),
                   ],
                 ),
