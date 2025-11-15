@@ -93,7 +93,8 @@ class ErrorHandler {
     final theme = Theme.of(context);
 
     ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
+    late ScaffoldFeatureController<SnackBar, SnackBarClosedReason> controller;
+    controller = ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           spacing: 12,
@@ -111,7 +112,7 @@ class ErrorHandler {
         action: SnackBarAction(
           label: 'Dismiss',
           onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            controller.close();
           },
         ),
       ),
