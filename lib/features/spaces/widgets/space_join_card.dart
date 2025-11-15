@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -105,7 +106,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
+                    AutoSizeText(
                       () {
                         switch (state) {
                           case SpaceJoinCardState.ended:
@@ -126,6 +127,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
+                      maxLines: 1,
                     ),
                     Text(
                       () {
