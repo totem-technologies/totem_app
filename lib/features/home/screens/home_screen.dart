@@ -32,6 +32,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       appBar: AppBar(title: const TotemLogo(size: 24)),
       body: SafeArea(
+        bottom: false,
         child: summary.when(
           data: (summary) {
             final upcomingEvents = summary.upcoming
@@ -130,34 +131,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
                     ),
-                    SliverPadding(
-                      padding: const EdgeInsetsDirectional.only(
-                        start: 16,
-                        end: 16,
-                        bottom: 16,
-                      ),
-                      sliver: SliverGrid.builder(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: () {
-                            final screenWidth = MediaQuery.sizeOf(
-                              context,
-                            ).width;
-                            if (screenWidth < 600) {
-                              return 2; // Small screens
-                            } else if (screenWidth < 900) {
-                              return 3; // Medium screens
-                            }
-                            return 4; // Large screens
-                          }(),
-                          childAspectRatio: 16 / 21,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
+                    SliverSafeArea(
+                      top: false,
+                      sliver: SliverPadding(
+                        padding: const EdgeInsetsDirectional.only(
+                          start: 16,
+                          end: 16,
+                          bottom: 16,
                         ),
-                        itemCount: summary.explore.length,
-                        itemBuilder: (context, index) {
-                          final space = summary.explore[index];
-                          return SpaceCard(space: space, compact: true);
-                        },
+                        sliver: SliverGrid.builder(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: () {
+                                  final screenWidth = MediaQuery.sizeOf(
+                                    context,
+                                  ).width;
+                                  if (screenWidth < 600) {
+                                    return 2; // Small screens
+                                  } else if (screenWidth < 900) {
+                                    return 3; // Medium screens
+                                  }
+                                  return 4; // Large screens
+                                }(),
+                                childAspectRatio: 16 / 21,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                              ),
+                          itemCount: summary.explore.length,
+                          itemBuilder: (context, index) {
+                            final space = summary.explore[index];
+                            return SpaceCard(space: space, compact: true);
+                          },
+                        ),
                       ),
                     ),
                   ],

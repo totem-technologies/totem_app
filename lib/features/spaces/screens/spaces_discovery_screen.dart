@@ -61,63 +61,66 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
             onRefresh: () => ref.refresh(listSpacesProvider.future),
             child: CustomScrollView(
               slivers: [
-                MultiSliver(
-                  children: <Widget>[
-                    SliverFloatingHeader(
-                      animationStyle: const AnimationStyle(
-                        curve: Curves.easeInOut,
-                        duration: Duration(milliseconds: 300),
-                      ),
-                      child: SpacesFilterBar(
-                        categories: allCategories,
-                        selectedCategory: selectedCategory,
-                        onCategorySelected: (category) {
-                          ref
-                              .read(selectedCategoryProvider.notifier)
-                              .toggleCategory(category);
-                        },
-                      ),
-                    ),
-                    if (filteredSpaces.isEmpty)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: _buildNoResultsMessage(
-                          selectedCategory ?? 'All',
+                SliverSafeArea(
+                  top: false,
+                  sliver: MultiSliver(
+                    children: <Widget>[
+                      SliverFloatingHeader(
+                        animationStyle: const AnimationStyle(
+                          curve: Curves.easeInOut,
+                          duration: Duration(milliseconds: 300),
                         ),
-                      )
-                    else ...[
-                      if (!isLargeScreen)
-                        SliverPadding(
-                          padding: const EdgeInsetsDirectional.only(
-                            start: 16,
-                            end: 16,
-                            bottom: 20,
-                          ),
-                          sliver: SliverList.separated(
-                            itemCount: filteredSpaces.length,
-                            itemBuilder: (_, index) =>
-                                SpaceCard(space: filteredSpaces[index]),
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 16),
+                        child: SpacesFilterBar(
+                          categories: allCategories,
+                          selectedCategory: selectedCategory,
+                          onCategorySelected: (category) {
+                            ref
+                                .read(selectedCategoryProvider.notifier)
+                                .toggleCategory(category);
+                          },
+                        ),
+                      ),
+                      if (filteredSpaces.isEmpty)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: _buildNoResultsMessage(
+                            selectedCategory ?? 'All',
                           ),
                         )
-                      else
-                        SliverPadding(
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: 100,
+                      else ...[
+                        if (!isLargeScreen)
+                          SliverPadding(
+                            padding: const EdgeInsetsDirectional.only(
+                              start: 16,
+                              end: 16,
+                              bottom: 20,
+                            ),
+                            sliver: SliverList.separated(
+                              itemCount: filteredSpaces.length,
+                              itemBuilder: (_, index) =>
+                                  SpaceCard(space: filteredSpaces[index]),
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 16),
+                            ),
+                          )
+                        else
+                          SliverPadding(
+                            padding: const EdgeInsetsDirectional.symmetric(
+                              horizontal: 100,
+                            ),
+                            sliver: SliverGrid.count(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 16,
+                              crossAxisSpacing: 16,
+                              childAspectRatio: 16 / 14,
+                              children: filteredSpaces
+                                  .map((space) => SpaceCard(space: space))
+                                  .toList(),
+                            ),
                           ),
-                          sliver: SliverGrid.count(
-                            crossAxisCount: 2,
-                            mainAxisSpacing: 16,
-                            crossAxisSpacing: 16,
-                            childAspectRatio: 16 / 14,
-                            children: filteredSpaces
-                                .map((space) => SpaceCard(space: space))
-                                .toList(),
-                          ),
-                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ],
             ),

@@ -6,6 +6,7 @@ import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/date.dart';
+import 'package:totem_app/shared/utils.dart';
 
 /// Card used in Suggestions tab, built from EventDetailSchema.
 class SuggestedSpaceCard extends StatelessWidget {
@@ -23,7 +24,6 @@ class SuggestedSpaceCard extends StatelessWidget {
     final timeLabel = buildTimeLabel(event.start);
     final title = event.title.isNotEmpty ? event.title : event.spaceTitle;
     final keeperName = event.space.author.name ?? 'Keeper';
-    final seatsLeft = event.seatsLeft;
 
     return Container(
       height: 120,
@@ -214,15 +214,14 @@ class SuggestedSpaceCard extends StatelessWidget {
                           ),
                         ),
                         const Spacer(),
-                        Text(
-                          '$seatsLeft seats left',
-                          textAlign: TextAlign.end,
+                        DefaultTextStyle.merge(
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: AppTheme.white,
                             fontWeight: FontWeight.w400,
                             height: 1,
                             fontSize: 8,
                           ),
+                          child: buildSeatsLeftText(event.seatsLeft),
                         ),
                       ],
                     ),

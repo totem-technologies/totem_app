@@ -11,6 +11,7 @@ import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/space_gradient_mask.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
@@ -124,32 +125,15 @@ class SpaceCard extends StatelessWidget {
                     if (!isContentVisible) {
                       return const SizedBox.shrink();
                     }
-                    final seatsLeft = RichText(
-                      maxLines: 1,
-                      overflow: TextOverflow.fade,
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text:
-                                space.nextEvent == null ||
-                                    space.nextEvent!.seatsLeft == 0
-                                ? 'No'
-                                : '${space.nextEvent!.seatsLeft}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          TextSpan(
-                            text: ' seats left',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              shadows: kElevationToShadow[4],
-                            ),
-                          ),
-                        ],
+                    final seatsLeft = DefaultTextStyle.merge(
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        shadows: kElevationToShadow[4],
+                      ),
+                      child: buildSeatsLeftText(
+                        space.nextEvent?.seatsLeft ?? 0,
                       ),
                     );
                     return Column(

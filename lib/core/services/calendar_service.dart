@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 
-class AppCalendarEvent {
+final class AppCalendarEvent {
   const AppCalendarEvent({
     required this.title,
     required this.description,
@@ -10,6 +10,7 @@ class AppCalendarEvent {
     this.allDay = false,
     this.reminderMinutesBefore,
   });
+
   final String title;
   final String description;
   final String location;
@@ -40,10 +41,8 @@ class CalendarService {
         'addToCalendar',
         event.toMap(),
       );
-      // result can be `true` if success, or `false` if user cancelled / failed
       return result ?? false;
     } on PlatformException catch (_) {
-      // you can log e.message
       return false;
     }
   }

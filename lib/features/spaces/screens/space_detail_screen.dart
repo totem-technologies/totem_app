@@ -21,8 +21,10 @@ import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
+import 'package:totem_app/shared/html.dart';
 import 'package:totem_app/shared/routing.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
@@ -168,8 +170,15 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                     ];
                   },
                   body: RefreshIndicator.adaptive(
-                    onRefresh: () =>
+                    onRefresh: () {
+                      return Future.wait([
                         ref.refresh(spaceProvider(widget.slug).future),
+                        if (hasValidEventSlug)
+                          ref.refresh(
+                            eventProvider(effectiveEventSlug).future,
+                          ),
+                      ]);
+                    },
                     child: SafeArea(
                       top: false,
                       bottom: false,
@@ -268,6 +277,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                 ),
                               ),
                             },
+                            extensions: [TotemImageHtmlExtension()],
                             onLinkTap: (url, _, _) async {
                               if (url != null) {
                                 final appRoute =
@@ -534,6 +544,7 @@ class AboutSpaceSheet extends StatelessWidget {
                       }
                     },
                     style: {...AppTheme.compactHtmlStyle},
+                    extensions: [TotemImageHtmlExtension()],
                   ),
                 ],
               ),
@@ -597,8 +608,11 @@ class SessionSheet extends StatelessWidget {
                     UserAvatar.fromUserSchema(
                       space.author,
                       radius: 40,
-                      onTap: () =>
-                          context.push(RouteNames.keeperProfile(space.slug)),
+                      onTap: space.author.slug != null
+                          ? () => context.push(
+                              RouteNames.keeperProfile(space.author.slug!),
+                            )
+                          : null,
                     ),
                   ],
                 ),
@@ -619,7 +633,7 @@ class SessionSheet extends StatelessWidget {
                     ),
                     CompactInfoText(
                       const TotemIcon(TotemIcons.seats),
-                      Text('${event.seatsLeft} seats left'),
+                      buildSeatsLeftText(event.seatsLeft),
                     ),
                   ],
                 ),
@@ -627,6 +641,7 @@ class SessionSheet extends StatelessWidget {
                   data: space.content,
                   shrinkWrap: true,
                   style: AppTheme.compactHtmlStyle,
+                  extensions: [TotemImageHtmlExtension()],
                   onLinkTap: (url, _, _) async {
                     if (url != null) {
                       final appRoute = RoutingUtils.parseTotemDeepLink(url);

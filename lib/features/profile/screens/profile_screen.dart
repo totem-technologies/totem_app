@@ -33,132 +33,136 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const TotemLogo(size: 24)),
-      body: SafeArea(
-        top: false,
-        bottom: false,
-        child: ListView(
-          padding: const EdgeInsetsDirectional.only(
-            start: 20,
-            end: 20,
-            top: 20,
-            bottom: 8, // each tile already has a bottom padding of 12
-          ),
-          children: [
-            Card(
-              margin: EdgeInsetsDirectional.zero,
-              child: Padding(
-                padding: const EdgeInsetsDirectional.all(20),
-                child: Row(
-                  spacing: 10,
-                  children: [
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(minWidth: 146),
-                      child: Column(
-                        spacing: 10,
-                        children: [
-                          UserAvatar.currentUser(),
-                          AutoSizeText(
-                            user.name ?? 'You',
-                            style: theme.textTheme.headlineMedium,
-                            maxLines: 1,
-                          ),
-                        ],
+      body: Builder(
+        builder: (context) {
+          return ListView(
+            padding: const EdgeInsetsDirectional.only(
+              start: 20,
+              end: 20,
+              top: 20,
+              bottom: 8, // each tile already has a bottom padding of 12
+            ).add(MediaQuery.paddingOf(context)),
+            children: [
+              Card(
+                margin: EdgeInsetsDirectional.zero,
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.all(20),
+                  child: Row(
+                    spacing: 10,
+                    children: [
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 146),
+                        child: Column(
+                          spacing: 10,
+                          children: [
+                            UserAvatar.currentUser(),
+                            AutoSizeText(
+                              user.name ?? 'You',
+                              style: theme.textTheme.headlineMedium,
+                              maxLines: 1,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '${user.circleCount}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const Text('Sessions joined'),
-                          const SizedBox(height: 20),
-                          Text(
-                            DateFormat('MMM, yyyy').format(user.dateCreated),
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const Text('Member Since'),
-                        ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '${user.circleCount}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Text('Sessions joined'),
+                            const SizedBox(height: 20),
+                            Text(
+                              DateFormat('MMM, yyyy').format(user.dateCreated),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Text('Member Since'),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Account',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
+              const SizedBox(height: 20),
+              Text(
+                'Account',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            ProfileTile(
-              icon: const TotemIcon(TotemIcons.profile),
-              title: 'Profile',
-              onTap: () => context.pushNamed(RouteNames.profileDetail),
-            ),
-            ProfileTile(
-              icon: const TotemIcon(TotemIcons.subscribedSpaces),
-              title: 'Subscribed Spaces',
-              onTap: () => context.pushNamed(RouteNames.subscribedSpaces),
-            ),
-            ProfileTile(
-              icon: const TotemIcon(TotemIcons.history),
-              title: 'Session history',
-              onTap: () => context.pushNamed(RouteNames.sessionHistory),
-            ),
-            ProfileTile(
-              icon: const TotemIcon(TotemIcons.logout),
-              title: 'Logout',
-              onTap: () => showLogoutDialog(context),
-            ),
-            Text(
-              'Help',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
+              const SizedBox(height: 12),
+              ProfileTile(
+                icon: const TotemIcon(TotemIcons.profile),
+                title: 'Profile',
+                onTap: () => context.pushNamed(RouteNames.profileDetail),
               ),
-            ),
-            const SizedBox(height: 12),
-            ProfileTile(
-              icon: const TotemIcon(TotemIcons.feedback),
-              title: 'Feedback',
-              onTap: () => showUserFeedbackDialog(context),
-            ),
-            Link(
-              uri: AppConfig.privacyPolicyUrl,
-              builder: (context, launch) => ProfileTile(
-                icon: const TotemIcon(TotemIcons.lock),
-                title: 'Privacy Policy',
-                onTap: () => launch?.call(),
+              ProfileTile(
+                icon: const TotemIcon(TotemIcons.subscribedSpaces),
+                title: 'Subscribed Spaces',
+                onTap: () => context.pushNamed(RouteNames.subscribedSpaces),
               ),
-            ),
-            Link(
-              uri: AppConfig.termsOfServiceUrl,
-              builder: (context, launch) => ProfileTile(
-                icon: const TotemIcon(TotemIcons.safe),
-                title: 'Terms',
-                onTap: () => launch?.call(),
+              ProfileTile(
+                icon: const TotemIcon(TotemIcons.history),
+                title: 'Session history',
+                onTap: () => context.pushNamed(RouteNames.sessionHistory),
               ),
-            ),
-            Link(
-              uri: AppConfig.communityGuidelinesUrl,
-              builder: (context, launch) => ProfileTile(
-                icon: const TotemIcon(TotemIcons.community),
-                title: 'Community Guidelines',
-                onTap: () => launch?.call(),
+              ProfileTile(
+                icon: const TotemIcon(TotemIcons.logout),
+                title: 'Logout',
+                onTap: () => showLogoutDialog(context),
               ),
-            ),
-            ProfileTile(
-              icon: const TotemIcon(TotemIcons.closeRounded),
-              title: 'Delete account',
-              onTap: () => showDeleteAccountDialog(context),
-            ),
-          ],
-        ),
+              Text(
+                'Help',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ProfileTile(
+                icon: const TotemIcon(TotemIcons.feedback),
+                title: 'Feedback',
+                onTap: () => showUserFeedbackDialog(context),
+              ),
+              Link(
+                uri: AppConfig.privacyPolicyUrl,
+                builder: (context, launch) => ProfileTile(
+                  icon: const TotemIcon(TotemIcons.lock),
+                  title: 'Privacy Policy',
+                  onTap: () => launch?.call(),
+                ),
+              ),
+              Link(
+                uri: AppConfig.termsOfServiceUrl,
+                builder: (context, launch) => ProfileTile(
+                  icon: const TotemIcon(TotemIcons.safe),
+                  title: 'Terms',
+                  onTap: () => launch?.call(),
+                ),
+              ),
+              Link(
+                uri: AppConfig.communityGuidelinesUrl,
+                builder: (context, launch) => ProfileTile(
+                  icon: const TotemIcon(TotemIcons.community),
+                  title: 'Community Guidelines',
+                  onTap: () => launch?.call(),
+                ),
+              ),
+              ProfileTile(
+                icon: const TotemIcon(TotemIcons.closeRounded),
+                title: 'Delete account',
+                onTap: () => showDeleteAccountDialog(context),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

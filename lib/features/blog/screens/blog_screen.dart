@@ -11,6 +11,7 @@ import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/keeper/screens/meet_user_card.dart';
 import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/shared/html.dart';
 import 'package:totem_app/shared/routing.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -200,6 +201,7 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                           }
                         },
                         style: AppTheme.htmlStyle,
+                        extensions: [TotemImageHtmlExtension()],
                       ),
                       if (blog.author?.slug != null) ...[
                         Padding(
