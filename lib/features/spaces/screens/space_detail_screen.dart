@@ -21,6 +21,7 @@ import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
+import 'package:totem_app/shared/html.dart';
 import 'package:totem_app/shared/routing.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -268,6 +269,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                 ),
                               ),
                             },
+                            extensions: [TotemImageHtmlExtension()],
                             onLinkTap: (url, _, _) async {
                               if (url != null) {
                                 final appRoute =
@@ -534,6 +536,7 @@ class AboutSpaceSheet extends StatelessWidget {
                       }
                     },
                     style: {...AppTheme.compactHtmlStyle},
+                    extensions: [TotemImageHtmlExtension()],
                   ),
                 ],
               ),
@@ -630,6 +633,7 @@ class SessionSheet extends StatelessWidget {
                   data: space.content,
                   shrinkWrap: true,
                   style: AppTheme.compactHtmlStyle,
+                  extensions: [TotemImageHtmlExtension()],
                   onLinkTap: (url, _, _) async {
                     if (url != null) {
                       final appRoute = RoutingUtils.parseTotemDeepLink(url);
