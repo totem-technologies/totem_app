@@ -60,7 +60,7 @@ class BottomNavScaffold extends StatelessWidget {
 
     return Scaffold(
       body: OfflineIndicatorPage(child: child),
-      extendBody: currentRoute == HomeRoutes.blog,
+      extendBody: true,
       bottomNavigationBar: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         child: NavigationBar(
