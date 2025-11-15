@@ -451,22 +451,21 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   }
 
   Future<void> addToCalendar() async {
-    // Create the calendar event with session details
+    // Reference:
+    // https://github.com/totem-technologies/totem-server/blob/main/assets/js/components/AddToCalendarButton.tsx#L29-L43
     final calendarEvent = AppCalendarEvent(
-      title: widget.space.title,
+      title: '[TOTEM] ${widget.event.title} - ${widget.space.title}',
       description: widget.space.shortDescription,
       location: getFullUrl(event.calLink),
       start: event.start.toLocal(),
       end: event.start.add(Duration(minutes: event.duration)).toLocal(),
-      reminderMinutesBefore: 15,
+      reminderMinutesBefore: 10,
     );
 
     try {
-      // Attempt to add the event to the device calendar
       final success = await CalendarService.addToCalendar(calendarEvent);
 
       if (!success) {
-        // If the user cancelled or the native calendar failed,
         if (mounted) {
           showErrorPopup(
             context,
