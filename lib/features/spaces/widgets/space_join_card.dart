@@ -73,15 +73,13 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     super.dispose();
   }
 
+  static const Duration joinBeforeTime = Duration(minutes: 10);
+  bool get canJoinNow =>
+      event.start.isAfter(DateTime.now().subtract(joinBeforeTime));
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    final hasStarted =
-        event.start.isBefore(DateTime.now()) &&
-        event.start
-            .add(Duration(minutes: event.duration))
-            .isAfter(DateTime.now());
 
     final hasEnded = event.start
         .add(Duration(minutes: event.duration))
@@ -134,12 +132,12 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                         switch (state) {
                           case SpaceJoinCardState.joined:
                           case SpaceJoinCardState.notJoined:
-                            return formatEventTime(
-                              event.start,
-                              // widget.event.userTimezone,
-                            );
+                            return formatEventTime(event.start);
                           case SpaceJoinCardState.joinable:
-                            return timeago.format(event.start);
+                            return timeago.format(
+                              event.start,
+                              allowFromNow: true,
+                            );
                           case SpaceJoinCardState.ended:
                           case SpaceJoinCardState.cancelled:
                           case SpaceJoinCardState.closed:
@@ -159,7 +157,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                 child: Link(
                   uri: hasEnded
                       ? null
-                      : hasStarted &&
+                      : canJoinNow &&
                             event.meetingProvider ==
                                 MeetingProviderEnum.googleMeet
                       ? Uri.parse(getFullUrl(event.calLink))
@@ -327,13 +325,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
     if (hasEnded) return SpaceJoinCardState.ended;
 
-    final hasStarted =
-        event.start.isBefore(DateTime.now()) &&
-        event.start
-            .add(Duration(minutes: event.duration))
-            .isAfter(DateTime.now());
-
-    if (hasStarted && event.joinable) {
+    if (canJoinNow && event.joinable) {
       return SpaceJoinCardState.joinable;
     } else if (_attending) {
       return SpaceJoinCardState.joined;

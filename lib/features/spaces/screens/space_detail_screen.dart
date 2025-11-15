@@ -170,8 +170,15 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                     ];
                   },
                   body: RefreshIndicator.adaptive(
-                    onRefresh: () =>
+                    onRefresh: () {
+                      return Future.wait([
                         ref.refresh(spaceProvider(widget.slug).future),
+                        if (hasValidEventSlug)
+                          ref.refresh(
+                            eventProvider(effectiveEventSlug).future,
+                          ),
+                      ]);
+                    },
                     child: SafeArea(
                       top: false,
                       bottom: false,
