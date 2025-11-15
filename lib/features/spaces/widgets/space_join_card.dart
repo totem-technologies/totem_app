@@ -250,6 +250,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                       case SpaceJoinCardState.closed:
                         return Row(
                           mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.end,
                           spacing: 14,
                           children: [
                             if (_attending)
@@ -264,8 +265,9 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                                   ),
                                 ),
                               ),
+
                             OutlinedButton(
-                              style: secondaryButtonStyle,
+                              style: _attending ? secondaryButtonStyle : null,
                               onPressed: onPressed,
                               child: _loading
                                   ? const LoadingIndicator(size: 24)
