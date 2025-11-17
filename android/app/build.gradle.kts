@@ -20,7 +20,7 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "org.totem"
     compileSdk = 36 // flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973" // flutter.ndkVersion
+    ndkVersion = "28.2.13676358" // flutter.ndkVersion
 
     compileOptions {
         // Flag to enable support for the new language APIs

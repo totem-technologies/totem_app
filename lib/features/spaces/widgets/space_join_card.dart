@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -72,15 +73,13 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     super.dispose();
   }
 
+  static const Duration joinBeforeTime = Duration(minutes: 10);
+  bool get canJoinNow =>
+      event.start.isAfter(DateTime.now().subtract(joinBeforeTime));
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    final hasStarted =
-        event.start.isBefore(DateTime.now()) &&
-        event.start
-            .add(Duration(minutes: event.duration))
-            .isAfter(DateTime.now());
 
     final hasEnded = event.start
         .add(Duration(minutes: event.duration))
@@ -105,7 +104,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
+                    AutoSizeText(
                       () {
                         switch (state) {
                           case SpaceJoinCardState.ended:
@@ -126,18 +125,19 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
+                      maxLines: 1,
                     ),
                     Text(
                       () {
                         switch (state) {
                           case SpaceJoinCardState.joined:
                           case SpaceJoinCardState.notJoined:
-                            return formatEventTime(
-                              event.start,
-                              // widget.event.userTimezone,
-                            );
+                            return formatEventTime(event.start);
                           case SpaceJoinCardState.joinable:
-                            return timeago.format(event.start);
+                            return timeago.format(
+                              event.start,
+                              allowFromNow: true,
+                            );
                           case SpaceJoinCardState.ended:
                           case SpaceJoinCardState.cancelled:
                           case SpaceJoinCardState.closed:
@@ -157,7 +157,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                 child: Link(
                   uri: hasEnded
                       ? null
-                      : hasStarted &&
+                      : canJoinNow &&
                             event.meetingProvider ==
                                 MeetingProviderEnum.googleMeet
                       ? Uri.parse(getFullUrl(event.calLink))
@@ -248,6 +248,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                       case SpaceJoinCardState.closed:
                         return Row(
                           mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.end,
                           spacing: 14,
                           children: [
                             if (_attending)
@@ -262,8 +263,9 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                                   ),
                                 ),
                               ),
+
                             OutlinedButton(
-                              style: secondaryButtonStyle,
+                              style: _attending ? secondaryButtonStyle : null,
                               onPressed: onPressed,
                               child: _loading
                                   ? const LoadingIndicator(size: 24)
@@ -323,13 +325,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
     if (hasEnded) return SpaceJoinCardState.ended;
 
-    final hasStarted =
-        event.start.isBefore(DateTime.now()) &&
-        event.start
-            .add(Duration(minutes: event.duration))
-            .isAfter(DateTime.now());
-
-    if (hasStarted && event.joinable) {
+    if (canJoinNow && event.joinable) {
       return SpaceJoinCardState.joinable;
     } else if (_attending) {
       return SpaceJoinCardState.joined;
@@ -447,22 +443,21 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   }
 
   Future<void> addToCalendar() async {
-    // Create the calendar event with session details
+    // Reference:
+    // https://github.com/totem-technologies/totem-server/blob/main/assets/js/components/AddToCalendarButton.tsx#L29-L43
     final calendarEvent = AppCalendarEvent(
-      title: widget.space.title,
+      title: '[TOTEM] ${widget.event.title} - ${widget.space.title}',
       description: widget.space.shortDescription,
       location: getFullUrl(event.calLink),
       start: event.start.toLocal(),
       end: event.start.add(Duration(minutes: event.duration)).toLocal(),
-      reminderMinutesBefore: 15,
+      reminderMinutesBefore: 10,
     );
 
     try {
-      // Attempt to add the event to the device calendar
       final success = await CalendarService.addToCalendar(calendarEvent);
 
       if (!success) {
-        // If the user cancelled or the native calendar failed,
         if (mounted) {
           showErrorPopup(
             context,

@@ -48,13 +48,7 @@ class MeetUserCard extends StatelessWidget {
           OutlinedButton(
             onPressed: () {
               if (user.slug != null) {
-                unawaited(
-                  context.push(
-                    RouteNames.keeperProfile(
-                      user.slug!,
-                    ),
-                  ),
-                );
+                unawaited(context.push(RouteNames.keeperProfile(user.slug!)));
               }
             },
             child: const Text(

@@ -5,6 +5,7 @@ import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/keeper/repositories/keeper_repository.dart';
 import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/shared/html.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -186,6 +187,7 @@ class KeeperProfileScreen extends ConsumerWidget {
                     onAnchorTap: (url, _, _) async {
                       if (url != null) await launchUrl(Uri.parse(url));
                     },
+                    extensions: [TotemImageHtmlExtension()],
                   ),
                 ),
                 const SizedBox(height: 20),
