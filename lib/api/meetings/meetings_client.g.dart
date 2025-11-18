@@ -2,6 +2,8 @@
 
 part of 'meetings_client.dart';
 
+// dart format off
+
 // **************************************************************************
 // RetrofitGenerator
 // **************************************************************************
@@ -233,3 +235,5 @@ class _MeetingsClient implements MeetingsClient {
     return Uri.parse(dioBaseUrl).resolveUri(url).toString();
   }
 }
+
+// dart format on

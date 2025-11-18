@@ -2,6 +2,8 @@
 
 part of 'users_client.dart';
 
+// dart format off
+
 // **************************************************************************
 // RetrofitGenerator
 // **************************************************************************
@@ -259,3 +261,5 @@ class _UsersClient implements UsersClient {
     return Uri.parse(dioBaseUrl).resolveUri(url).toString();
   }
 }
+
+// dart format on

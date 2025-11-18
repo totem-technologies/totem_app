@@ -2,6 +2,8 @@
 
 part of 'spaces_client.dart';
 
+// dart format off
+
 // **************************************************************************
 // RetrofitGenerator
 // **************************************************************************
@@ -414,3 +416,5 @@ class _SpacesClient implements SpacesClient {
     return Uri.parse(dioBaseUrl).resolveUri(url).toString();
   }
 }
+
+// dart format on
