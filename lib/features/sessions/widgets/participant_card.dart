@@ -40,10 +40,10 @@ class ParticipantCard extends ConsumerWidget {
         )
         .toList();
 
-    final isKeeper = participant.identity == event.space.author.slug!;
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );
+    final isKeeper = currentUserSlug == event.space.author.slug!;
 
     const overlayPadding = 6.0;
 
