@@ -52,120 +52,124 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               onRefresh: () => ref.refresh(spacesSummaryProvider.future),
               child: CustomScrollView(
                 slivers: [
-                  if (upcomingEvents.isNotEmpty)
-                    if (upcomingEvents.length == 1)
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: 16,
-                          ),
-                          child: SpaceCard.fromEventDetailSchema(
-                            upcomingEvents.first,
-                          ),
-                        ),
-                      )
-                    else
-                      SliverToBoxAdapter(
-                        child: AspectRatio(
-                          aspectRatio: 1.38,
-                          child: PageView.builder(
-                            padEnds: false,
-                            controller: _pageController,
-                            itemCount: upcomingEvents.length,
-                            itemBuilder: (context, index) {
-                              final event = upcomingEvents[index];
-                              return Padding(
-                                padding: EdgeInsetsDirectional.only(
-                                  start: index == 0 ? 16 : 16,
-                                  end: index == upcomingEvents.length - 1
-                                      ? 16
-                                      : 0,
-                                ),
-                                child: SpaceCard.fromEventDetailSchema(event),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                  if (summary.forYou.isNotEmpty) ...[
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.all(16),
-                        child: Text(
-                          'Spaces for you',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: SizedBox(
-                        height: 180,
-                        child: ListView.separated(
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: 16,
-                          ),
-                          scrollDirection: Axis.horizontal,
-                          itemCount: summary.forYou.length,
-                          itemBuilder: (context, index) {
-                            final space = summary.forYou[index];
-                            return SpaceCard(space: space, compact: true);
-                          },
-                          separatorBuilder: (_, _) => const SizedBox(width: 16),
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (summary.explore.isNotEmpty) ...[
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.all(16),
-                        child: Text(
-                          'Explore spaces',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SliverSafeArea(
-                      top: false,
-                      sliver: SliverPadding(
-                        padding: const EdgeInsetsDirectional.only(
-                          start: 16,
-                          end: 16,
-                          bottom: 16,
-                        ),
-                        sliver: SliverGrid.builder(
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: () {
-                                  final screenWidth = MediaQuery.sizeOf(
-                                    context,
-                                  ).width;
-                                  if (screenWidth < 600) {
-                                    return 2; // Small screens
-                                  } else if (screenWidth < 900) {
-                                    return 3; // Medium screens
-                                  }
-                                  return 4; // Large screens
-                                }(),
-                                childAspectRatio: 16 / 21,
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
+                  SliverSafeArea(
+                    sliver: SliverList.list(
+                      children: [
+                        if (upcomingEvents.isNotEmpty)
+                          if (upcomingEvents.length == 1)
+                            Padding(
+                              padding: const EdgeInsetsDirectional.symmetric(
+                                horizontal: 16,
                               ),
-                          itemCount: summary.explore.length,
-                          itemBuilder: (context, index) {
-                            final space = summary.explore[index];
-                            return SpaceCard(space: space, compact: true);
-                          },
-                        ),
-                      ),
+                              child: SpaceCard.fromEventDetailSchema(
+                                upcomingEvents.first,
+                              ),
+                            )
+                          else
+                            OrientationBuilder(
+                              builder: (context, orientation) {
+                                return AspectRatio(
+                                  aspectRatio:
+                                      orientation == Orientation.portrait
+                                      ? 1.38
+                                      : 16 / 9,
+                                  child: PageView.builder(
+                                    padEnds: false,
+                                    controller: _pageController,
+                                    itemCount: upcomingEvents.length,
+                                    itemBuilder: (context, index) {
+                                      final event = upcomingEvents[index];
+                                      return Padding(
+                                        padding: EdgeInsetsDirectional.only(
+                                          start: index == 0 ? 16 : 16,
+                                          end:
+                                              index == upcomingEvents.length - 1
+                                              ? 16
+                                              : 0,
+                                        ),
+                                        child: SpaceCard.fromEventDetailSchema(
+                                          event,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                        if (summary.forYou.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsetsDirectional.all(16),
+                            child: Text(
+                              'Spaces for you',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            height: 180,
+                            child: ListView.separated(
+                              padding: const EdgeInsetsDirectional.symmetric(
+                                horizontal: 16,
+                              ),
+                              scrollDirection: Axis.horizontal,
+                              itemCount: summary.forYou.length,
+                              itemBuilder: (context, index) {
+                                final space = summary.forYou[index];
+                                return SpaceCard(space: space, compact: true);
+                              },
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(width: 16),
+                            ),
+                          ),
+                        ],
+                        if (summary.explore.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsetsDirectional.all(16),
+                            child: Text(
+                              'Explore spaces',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsetsDirectional.only(
+                              start: 16,
+                              end: 16,
+                              bottom: 16,
+                            ),
+                            child: SliverGrid.builder(
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: () {
+                                      final screenWidth = MediaQuery.sizeOf(
+                                        context,
+                                      ).width;
+                                      if (screenWidth < 600) {
+                                        return 2; // Small screens
+                                      } else if (screenWidth < 900) {
+                                        return 3; // Medium screens
+                                      }
+                                      return 4; // Large screens
+                                    }(),
+                                    childAspectRatio: 16 / 21,
+                                    crossAxisSpacing: 16,
+                                    mainAxisSpacing: 16,
+                                  ),
+                              itemCount: summary.explore.length,
+                              itemBuilder: (context, index) {
+                                final space = summary.explore[index];
+                                return SpaceCard(space: space, compact: true);
+                              },
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ],
+                  ),
                 ],
               ),
             );
