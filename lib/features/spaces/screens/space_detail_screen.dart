@@ -5,7 +5,6 @@ import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:markdown/markdown.dart' as markdown;
 import 'package:share_plus/share_plus.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
@@ -268,7 +267,9 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                           Html(
                             data: space.shortDescription.trim().isNotEmpty
                                 ? space.shortDescription
-                                : space.content,
+                                : space.content.trim().length > 200
+                                ? '${space.content.substring(0, 200)}...'
+                                : space.content.trim(),
                             style: {
                               ...AppTheme.htmlStyle,
                               'body': Style(
@@ -517,7 +518,9 @@ class AboutSpaceSheet extends StatelessWidget {
                     ],
                   ),
                   Html(
-                    data: markdown.markdownToHtml(space.content),
+                    data: space.content,
+                    style: {...AppTheme.compactHtmlStyle},
+                    extensions: [TotemImageHtmlExtension()],
                     shrinkWrap: true,
                     onLinkTap: (url, _, _) async {
                       if (url != null) {
@@ -543,8 +546,6 @@ class AboutSpaceSheet extends StatelessWidget {
                         }
                       }
                     },
-                    style: {...AppTheme.compactHtmlStyle},
-                    extensions: [TotemImageHtmlExtension()],
                   ),
                 ],
               ),
@@ -638,7 +639,7 @@ class SessionSheet extends StatelessWidget {
                   ],
                 ),
                 Html(
-                  data: space.content,
+                  data: event.content,
                   shrinkWrap: true,
                   style: AppTheme.compactHtmlStyle,
                   extensions: [TotemImageHtmlExtension()],
