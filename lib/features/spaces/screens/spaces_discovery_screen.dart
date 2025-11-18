@@ -8,7 +8,6 @@ import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
-import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 
 // Provider to track the selected category filter
@@ -131,7 +130,15 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
           showHomeButton: false,
           onRetry: () => ref.refresh(listSpacesProvider.future),
         ),
-        loading: () => const LoadingIndicator(),
+        loading: () {
+          return ListView.separated(
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsetsDirectional.all(16),
+            itemBuilder: (_, _) => SpaceCard.shimmer(),
+            separatorBuilder: (_, _) => const SizedBox(height: 16),
+            itemCount: (MediaQuery.heightOf(context) / 100).round(),
+          );
+        },
       ),
     );
   }

@@ -56,7 +56,7 @@ MobileSpaceDetailSchema _dummySpaceDetail() {
   return MobileSpaceDetailSchema(
     slug: 'dummy-space',
     title: 'Dummy Space',
-    imageLink: 'https://via.placeholder.com/150',
+    imageLink: 'https://placehold.co/400',
     shortDescription: 'Dummy Space',
     content: 'Dummy Space',
     author: PublicUserSchema(
@@ -65,7 +65,7 @@ MobileSpaceDetailSchema _dummySpaceDetail() {
       name: 'Dummy User',
       slug: 'dummy-user',
       profileAvatarSeed: 'dummy-seed',
-      profileImage: 'https://via.placeholder.com/150',
+      profileImage: 'https://placehold.co/400',
       circleCount: 0,
     ),
     category: 'Dummy Category',
@@ -75,12 +75,12 @@ MobileSpaceDetailSchema _dummySpaceDetail() {
     nextEvents: [
       NextEventSchema(
         start: DateTime.now(),
-        link: 'https://via.placeholder.com/150',
+        link: 'https://placehold.co/400',
         seatsLeft: 0,
         slug: 'dummy-event',
         title: 'Dummy Event',
         attending: false,
-        calLink: 'https://via.placeholder.com/150',
+        calLink: 'https://placehold.co/400',
         duration: 0,
         meetingProvider: MeetingProviderEnum.googleMeet,
         cancelled: false,
