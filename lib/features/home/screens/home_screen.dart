@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
+import 'package:totem_app/features/home/screens/home_loading_screen.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
-import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -170,7 +170,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             );
           },
-          loading: LoadingScreen.new,
+          loading: () => const HomeLoadingScreen(),
           error: (error, stackTrace) {
             return ErrorScreen(
               error: error,

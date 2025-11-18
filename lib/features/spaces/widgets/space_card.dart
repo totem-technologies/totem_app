@@ -2,9 +2,13 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/meeting_provider_enum.dart';
 import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
 import 'package:totem_app/api/models/next_event_schema.dart';
+import 'package:totem_app/api/models/profile_avatar_type_enum.dart';
+import 'package:totem_app/api/models/public_user_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/date.dart';
@@ -48,6 +52,45 @@ MobileSpaceDetailSchema _spaceDetailFromEventDetailSchema(
   );
 }
 
+MobileSpaceDetailSchema _dummySpaceDetail() {
+  return MobileSpaceDetailSchema(
+    slug: 'dummy-space',
+    title: 'Dummy Space',
+    imageLink: 'https://via.placeholder.com/150',
+    shortDescription: 'Dummy Space',
+    content: 'Dummy Space',
+    author: PublicUserSchema(
+      profileAvatarType: ProfileAvatarTypeEnum.im,
+      dateCreated: DateTime.now(),
+      name: 'Dummy User',
+      slug: 'dummy-user',
+      profileAvatarSeed: 'dummy-seed',
+      profileImage: 'https://via.placeholder.com/150',
+      circleCount: 0,
+    ),
+    category: 'Dummy Category',
+    subscribers: 0,
+    recurring: 'Dummy Recurring',
+    price: 0,
+    nextEvents: [
+      NextEventSchema(
+        start: DateTime.now(),
+        link: 'https://via.placeholder.com/150',
+        seatsLeft: 0,
+        slug: 'dummy-event',
+        title: 'Dummy Event',
+        attending: false,
+        calLink: 'https://via.placeholder.com/150',
+        duration: 0,
+        meetingProvider: MeetingProviderEnum.googleMeet,
+        cancelled: false,
+        open: true,
+        joinable: true,
+      ),
+    ],
+  );
+}
+
 class SpaceCard extends StatelessWidget {
   const SpaceCard({
     required this.space,
@@ -65,6 +108,14 @@ class SpaceCard extends StatelessWidget {
       space: _spaceDetailFromEventDetailSchema(event),
       compact: compact,
       onTap: onTap,
+    );
+  }
+
+  static Widget shimmer({bool compact = false}) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: SpaceCard(space: _dummySpaceDetail(), compact: compact),
     );
   }
 
@@ -260,6 +311,7 @@ class SmallSpaceCard extends StatelessWidget {
     this.onTap,
     super.key,
   });
+
   factory SmallSpaceCard.fromEventDetailSchema(
     EventDetailSchema event, {
     VoidCallback? onTap,
@@ -272,6 +324,14 @@ class SmallSpaceCard extends StatelessWidget {
 
   final MobileSpaceDetailSchema space;
   final VoidCallback? onTap;
+
+  static Widget shimmer() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: SmallSpaceCard(space: _dummySpaceDetail()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
