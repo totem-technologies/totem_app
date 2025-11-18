@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:markdown/markdown.dart' as markdown;
 import 'package:share_plus/share_plus.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
-import 'package:totem_app/api/models/space_detail_schema.dart';
+import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
@@ -63,7 +63,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
     final String? effectiveEventSlug =
         widget.eventSlug ??
         spaceAsync.maybeWhen(
-          data: (space) => space.nextEvent?.slug,
+          data: (space) => space.nextEvents.firstOrNull?.slug,
           orElse: () => null,
         );
 
@@ -389,7 +389,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
 
   Future<void> _showAboutSpaceSheet(
     BuildContext context,
-    SpaceDetailSchema space,
+    MobileSpaceDetailSchema space,
   ) {
     return showModalBottomSheet(
       context: context,
@@ -404,7 +404,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
 
   Future<void> _showSessionSheet(
     BuildContext context,
-    SpaceDetailSchema space,
+    MobileSpaceDetailSchema space,
     EventDetailSchema event,
   ) {
     return showModalBottomSheet(
@@ -422,7 +422,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
 class AboutSpaceSheet extends StatelessWidget {
   const AboutSpaceSheet({required this.space, super.key});
 
-  final SpaceDetailSchema space;
+  final MobileSpaceDetailSchema space;
 
   @override
   Widget build(BuildContext context) {
@@ -559,7 +559,7 @@ class AboutSpaceSheet extends StatelessWidget {
 class SessionSheet extends StatelessWidget {
   const SessionSheet({required this.space, required this.event, super.key});
 
-  final SpaceDetailSchema space;
+  final MobileSpaceDetailSchema space;
   final EventDetailSchema event;
 
   @override

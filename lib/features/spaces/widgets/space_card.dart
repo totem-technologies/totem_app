@@ -3,8 +3,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
 import 'package:totem_app/api/models/next_event_schema.dart';
-import 'package:totem_app/api/models/space_detail_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/date.dart';
@@ -15,32 +15,36 @@ import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/space_gradient_mask.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
-SpaceDetailSchema _spaceDetailFromEventDetailSchema(EventDetailSchema event) {
-  return SpaceDetailSchema(
-    slug: event.space.slug!,
+MobileSpaceDetailSchema _spaceDetailFromEventDetailSchema(
+  EventDetailSchema event,
+) {
+  return MobileSpaceDetailSchema(
+    slug: event.space.slug,
     title: event.space.title,
-    imageLink: event.space.image,
+    imageLink: event.space.imageLink,
     content: event.space.content,
-    shortDescription: event.space.shortDescription ?? '',
+    shortDescription: event.space.shortDescription,
     author: event.space.author,
     recurring: event.space.recurring,
-    price: event.price,
-    subscribers: event.subscribers,
-    nextEvent: NextEventSchema(
-      start: event.start,
-      link: event.calLink,
-      seatsLeft: event.seatsLeft,
-      slug: event.slug,
-      title: event.title,
-      attending: event.attending,
-      calLink: event.calLink,
-      cancelled: event.cancelled,
-      duration: event.duration,
-      joinable: event.joinable,
-      meetingProvider: event.meetingProvider,
-      open: event.open,
-    ),
-    category: '',
+    price: event.space.price,
+    subscribers: event.space.subscribers,
+    nextEvents: [
+      NextEventSchema(
+        start: event.start,
+        link: event.calLink,
+        seatsLeft: event.seatsLeft,
+        slug: event.slug,
+        title: event.title,
+        attending: event.attending,
+        calLink: event.calLink,
+        cancelled: event.cancelled,
+        duration: event.duration,
+        joinable: event.joinable,
+        meetingProvider: event.meetingProvider,
+        open: event.open,
+      ),
+    ],
+    category: event.space.category,
   );
 }
 
@@ -64,13 +68,15 @@ class SpaceCard extends StatelessWidget {
     );
   }
 
-  final SpaceDetailSchema space;
+  final MobileSpaceDetailSchema space;
   final bool compact;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    final nextEvent = space.nextEvents.firstOrNull;
 
     return AspectRatio(
       aspectRatio: 1.38,
@@ -82,11 +88,11 @@ class SpaceCard extends StatelessWidget {
           onTap:
               onTap ??
               () async {
-                if (space.nextEvent != null) {
+                if (nextEvent != null) {
                   await context.push(
                     RouteNames.spaceEvent(
                       space.slug,
-                      space.nextEvent!.slug,
+                      nextEvent.slug,
                     ),
                   );
                 } else {
@@ -133,13 +139,13 @@ class SpaceCard extends StatelessWidget {
                         shadows: kElevationToShadow[4],
                       ),
                       child: buildSeatsLeftText(
-                        space.nextEvent?.seatsLeft ?? 0,
+                        nextEvent?.seatsLeft ?? 0,
                       ),
                     );
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (space.nextEvent != null)
+                        if (nextEvent != null)
                           Container(
                             padding: const EdgeInsetsDirectional.all(8),
                             decoration: BoxDecoration(
@@ -157,7 +163,7 @@ class SpaceCard extends StatelessWidget {
                                 ),
                                 Flexible(
                                   child: Text(
-                                    buildTimeLabel(space.nextEvent!.start),
+                                    buildTimeLabel(nextEvent.start),
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 8,
@@ -183,9 +189,9 @@ class SpaceCard extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.fade,
                         ),
-                        if (space.nextEvent?.title != null)
+                        if (nextEvent?.title != null)
                           AutoSizeText(
-                            'Next: ${space.nextEvent!.title}',
+                            'Next: ${nextEvent!.title}',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 9,
@@ -264,12 +270,15 @@ class SmallSpaceCard extends StatelessWidget {
     );
   }
 
-  final SpaceDetailSchema space;
+  final MobileSpaceDetailSchema space;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    final nextEvent = space.nextEvents.firstOrNull;
+
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       highlightColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
@@ -317,7 +326,7 @@ class SmallSpaceCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (space.nextEvent != null)
+                if (nextEvent != null)
                   Container(
                     padding: const EdgeInsetsDirectional.all(8),
                     decoration: BoxDecoration(
@@ -325,7 +334,7 @@ class SmallSpaceCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      buildTimeLabel(space.nextEvent!.start),
+                      buildTimeLabel(nextEvent.start),
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 8,
@@ -336,7 +345,7 @@ class SmallSpaceCard extends StatelessWidget {
                   ),
                 const Spacer(),
                 Text(
-                  '${space.nextEvent?.seatsLeft ?? 'No'} seats left',
+                  '${nextEvent?.seatsLeft ?? 'No'} seats left',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 14,

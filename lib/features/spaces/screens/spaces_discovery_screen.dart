@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sliver_tools/sliver_tools.dart';
-import 'package:totem_app/api/models/space_detail_schema.dart';
+import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/filter.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
@@ -136,7 +136,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
     );
   }
 
-  List<String> _extractCategories(List<SpaceDetailSchema> spaces) {
+  List<String> _extractCategories(List<MobileSpaceDetailSchema> spaces) {
     final categories =
         spaces
             .map((space) => space.category)
