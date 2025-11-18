@@ -182,17 +182,19 @@ class SpaceCard extends StatelessWidget {
                     if (!isContentVisible) {
                       return const SizedBox.shrink();
                     }
-                    final seatsLeft = DefaultTextStyle.merge(
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        shadows: kElevationToShadow[4],
-                      ),
-                      child: buildSeatsLeftText(
-                        nextEvent?.seatsLeft ?? 0,
-                      ),
-                    );
+                    final seatsLeft = nextEvent != null
+                        ? DefaultTextStyle.merge(
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              shadows: kElevationToShadow[4],
+                            ),
+                            child: buildSeatsLeftText(
+                              nextEvent.seatsLeft,
+                            ),
+                          )
+                        : const SizedBox.shrink();
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -380,8 +382,8 @@ class SmallSpaceCard extends StatelessWidget {
           ),
           PositionedDirectional(
             top: 10,
-            start: 10,
-            end: 10,
+            start: 12,
+            end: 12,
             bottom: 10,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -404,15 +406,17 @@ class SmallSpaceCard extends StatelessWidget {
                     ),
                   ),
                 const Spacer(),
-                Text(
-                  '${nextEvent?.seatsLeft ?? 'No'} seats left',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    shadows: kElevationToShadow[4],
+                if (nextEvent != null) ...[
+                  DefaultTextStyle.merge(
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      shadows: kElevationToShadow[4],
+                    ),
+                    child: buildSeatsLeftText(nextEvent.seatsLeft),
                   ),
-                ),
-                const SizedBox(height: 5),
+                  const SizedBox(height: 5),
+                ],
                 AutoSizeText(
                   space.title,
                   style: TextStyle(
