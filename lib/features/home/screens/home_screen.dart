@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
@@ -9,16 +10,11 @@ import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 
-class HomeScreen extends ConsumerStatefulWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends ConsumerState<HomeScreen> {
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final summary = ref.watch(spacesSummaryProvider);
 
@@ -45,150 +41,149 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               onRefresh: () => ref.refresh(spacesSummaryProvider.future),
               child: CustomScrollView(
                 slivers: [
-                  SliverSafeArea(
-                    sliver: SliverPadding(
-                      padding: const EdgeInsetsDirectional.only(
-                        bottom: 16,
-                      ),
-                      sliver: SliverList.list(
-                        children: [
-                          if (upcomingEvents.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsetsDirectional.only(
-                                start: 16,
-                                end: 16,
-                                bottom: 16,
-                              ),
-                              child: Text(
-                                'Your upcoming sessions',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          if (upcomingEvents.length == 1)
-                            Container(
-                              constraints: BoxConstraints(
-                                maxHeight: clampDouble(
-                                  MediaQuery.heightOf(context) * 0.3,
-                                  200,
-                                  300,
-                                ),
-                              ),
-                              padding: const EdgeInsetsDirectional.symmetric(
-                                horizontal: 16,
-                              ),
-                              child: SpaceCard.fromEventDetailSchema(
-                                upcomingEvents.first,
-                              ),
-                            )
-                          else
-                            SizedBox(
-                              height: clampDouble(
-                                MediaQuery.heightOf(context) * 0.3,
-                                200,
-                                300,
-                              ),
-                              child: ListView.separated(
-                                padding: const EdgeInsetsDirectional.symmetric(
-                                  horizontal: 16,
-                                ),
-                                scrollDirection: Axis.horizontal,
-                                itemCount: upcomingEvents.length,
-                                itemBuilder: (context, index) {
-                                  final event = upcomingEvents[index];
-                                  return ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                      maxWidth: clampDouble(
-                                        MediaQuery.widthOf(context) * 0.8,
-                                        200,
-                                        400,
-                                      ),
-                                    ),
-                                    child: SpaceCard.fromEventDetailSchema(
-                                      event,
-                                    ),
-                                  );
-                                },
-                                separatorBuilder: (_, _) =>
-                                    const SizedBox(width: 16),
-                              ),
-                            ),
-                          if (summary.forYou.isNotEmpty) ...[
-                            Padding(
-                              padding: const EdgeInsetsDirectional.all(16),
-                              child: Text(
-                                'Spaces for you',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                            SizedBox(
-                              height: 180,
-                              child: ListView.separated(
-                                padding: const EdgeInsetsDirectional.symmetric(
-                                  horizontal: 16,
-                                ),
-                                scrollDirection: Axis.horizontal,
-                                itemCount: summary.forYou.length,
-                                itemBuilder: (context, index) {
-                                  final space = summary.forYou[index];
-                                  return SpaceCard(space: space, compact: true);
-                                },
-                                separatorBuilder: (_, _) =>
-                                    const SizedBox(width: 16),
-                              ),
-                            ),
-                          ],
-                          if (summary.explore.isNotEmpty) ...[
-                            Padding(
-                              padding: const EdgeInsetsDirectional.all(16),
-                              child: Text(
-                                'Explore spaces',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsetsDirectional.only(
-                                start: 16,
-                                end: 16,
-                              ),
-                              child: SliverGrid.builder(
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: () {
-                                        final screenWidth = MediaQuery.sizeOf(
-                                          context,
-                                        ).width;
-                                        if (screenWidth < 600) {
-                                          return 2; // Small screens
-                                        } else if (screenWidth < 900) {
-                                          return 3; // Medium screens
-                                        }
-                                        return 4; // Large screens
-                                      }(),
-                                      childAspectRatio: 16 / 21,
-                                      crossAxisSpacing: 16,
-                                      mainAxisSpacing: 16,
-                                    ),
-                                itemCount: summary.explore.length,
-                                itemBuilder: (context, index) {
-                                  final space = summary.explore[index];
-                                  return SpaceCard(space: space, compact: true);
-                                },
-                              ),
-                            ),
-                          ],
-                        ],
+                  if (upcomingEvents.isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.only(
+                          start: 16,
+                          end: 16,
+                          bottom: 16,
+                        ),
+                        child: Text(
+                          'Your upcoming sessions',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    if (upcomingEvents.length == 1)
+                      SliverToBoxAdapter(
+                        child: Container(
+                          constraints: BoxConstraints(
+                            maxHeight: clampDouble(
+                              MediaQuery.heightOf(context) * 0.3,
+                              200,
+                              300,
+                            ),
+                          ),
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: 16,
+                          ),
+                          child: SpaceCard.fromEventDetailSchema(
+                            upcomingEvents.first,
+                          ),
+                        ),
+                      )
+                    else
+                      SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: clampDouble(
+                            MediaQuery.heightOf(context) * 0.3,
+                            200,
+                            300,
+                          ),
+                          child: ListView.separated(
+                            padding: const EdgeInsetsDirectional.symmetric(
+                              horizontal: 16,
+                            ),
+                            scrollDirection: Axis.horizontal,
+                            itemCount: upcomingEvents.length,
+                            itemBuilder: (context, index) {
+                              final event = upcomingEvents[index];
+                              return ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: clampDouble(
+                                    MediaQuery.widthOf(context) * 0.8,
+                                    200,
+                                    400,
+                                  ),
+                                ),
+                                child: SpaceCard.fromEventDetailSchema(event),
+                              );
+                            },
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(width: 16),
+                          ),
+                        ),
+                      ),
+                  ],
+                  if (summary.forYou.isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.all(16),
+                        child: Text(
+                          'Spaces for you',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 180,
+                        child: ListView.separated(
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: 16,
+                          ),
+                          scrollDirection: Axis.horizontal,
+                          itemCount: summary.forYou.length,
+                          itemBuilder: (context, index) {
+                            final space = summary.forYou[index];
+                            return SpaceCard(space: space, compact: true);
+                          },
+                          separatorBuilder: (_, _) => const SizedBox(width: 16),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (summary.explore.isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.all(16),
+                        child: Text(
+                          'Explore spaces',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsetsDirectional.only(
+                        start: 16,
+                        end: 16,
+                        bottom: 16,
+                      ),
+                      sliver: SliverGrid.builder(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: () {
+                            final screenWidth = MediaQuery.sizeOf(
+                              context,
+                            ).width;
+                            if (screenWidth < 600) {
+                              return 2; // Small screens
+                            } else if (screenWidth < 900) {
+                              return 3; // Medium screens
+                            }
+                            return 4; // Large screens
+                          }(),
+                          childAspectRatio: 16 / 21,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: summary.explore.length,
+                        itemBuilder: (context, index) {
+                          final space = summary.explore[index];
+                          return SpaceCard(space: space, compact: true);
+                        },
+                      ),
+                    ),
+                  ],
                 ],
               ),
             );
