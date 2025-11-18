@@ -60,7 +60,7 @@ extension DevicesControl on LiveKitService {
   }
 
   String? get selectedAudioOutputDeviceId {
-    return room.room.selectedAudioOutputDeviceId;
+    return room.room.engine.roomOptions.defaultAudioOutputOptions.deviceId;
   }
 
   Future<void> selectAudioOutputDevice(MediaDevice device) async {

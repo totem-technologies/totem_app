@@ -124,6 +124,7 @@ class OptionsSheet extends StatelessWidget {
         ),
         MediaDeviceSelectButton(
           builder: (context, roomCtx, deviceCtx) {
+            // TODO(bdlukaa): Hide "Earpice" from the list of audio outputs
             final audioOutputs = deviceCtx.audioOutputs;
             final selected =
                 deviceCtx.audioOutputs?.firstWhereOrNull(
