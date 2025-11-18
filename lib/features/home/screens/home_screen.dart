@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
@@ -16,14 +17,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  final _pageController = PageController(viewportFraction: 0.9);
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -53,11 +46,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: CustomScrollView(
                 slivers: [
                   SliverSafeArea(
-                    sliver: SliverList.list(
-                      children: [
-                        if (upcomingEvents.isNotEmpty)
-                          if (upcomingEvents.length == 1)
+                    sliver: SliverPadding(
+                      padding: const EdgeInsetsDirectional.only(
+                        bottom: 16,
+                      ),
+                      sliver: SliverList.list(
+                        children: [
+                          if (upcomingEvents.isNotEmpty)
                             Padding(
+                              padding: const EdgeInsetsDirectional.only(
+                                start: 16,
+                                end: 16,
+                                bottom: 16,
+                              ),
+                              child: Text(
+                                'Your upcoming sessions',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          if (upcomingEvents.length == 1)
+                            Container(
+                              constraints: BoxConstraints(
+                                maxHeight: clampDouble(
+                                  MediaQuery.heightOf(context) * 0.3,
+                                  200,
+                                  300,
+                                ),
+                              ),
                               padding: const EdgeInsetsDirectional.symmetric(
                                 horizontal: 16,
                               ),
@@ -66,108 +84,109 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ),
                             )
                           else
-                            OrientationBuilder(
-                              builder: (context, orientation) {
-                                return AspectRatio(
-                                  aspectRatio:
-                                      orientation == Orientation.portrait
-                                      ? 1.38
-                                      : 16 / 9,
-                                  child: PageView.builder(
-                                    padEnds: false,
-                                    controller: _pageController,
-                                    itemCount: upcomingEvents.length,
-                                    itemBuilder: (context, index) {
-                                      final event = upcomingEvents[index];
-                                      return Padding(
-                                        padding: EdgeInsetsDirectional.only(
-                                          start: index == 0 ? 16 : 16,
-                                          end:
-                                              index == upcomingEvents.length - 1
-                                              ? 16
-                                              : 0,
-                                        ),
-                                        child: SpaceCard.fromEventDetailSchema(
-                                          event,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                );
-                              },
-                            ),
-                        if (summary.forYou.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsetsDirectional.all(16),
-                            child: Text(
-                              'Spaces for you',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w500,
-                                fontSize: 14,
+                            SizedBox(
+                              height: clampDouble(
+                                MediaQuery.heightOf(context) * 0.3,
+                                200,
+                                300,
+                              ),
+                              child: ListView.separated(
+                                padding: const EdgeInsetsDirectional.symmetric(
+                                  horizontal: 16,
+                                ),
+                                scrollDirection: Axis.horizontal,
+                                itemCount: upcomingEvents.length,
+                                itemBuilder: (context, index) {
+                                  final event = upcomingEvents[index];
+                                  return ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxWidth: clampDouble(
+                                        MediaQuery.widthOf(context) * 0.8,
+                                        200,
+                                        400,
+                                      ),
+                                    ),
+                                    child: SpaceCard.fromEventDetailSchema(
+                                      event,
+                                    ),
+                                  );
+                                },
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(width: 16),
                               ),
                             ),
-                          ),
-                          SizedBox(
-                            height: 180,
-                            child: ListView.separated(
-                              padding: const EdgeInsetsDirectional.symmetric(
-                                horizontal: 16,
+                          if (summary.forYou.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsetsDirectional.all(16),
+                              child: Text(
+                                'Spaces for you',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                ),
                               ),
-                              scrollDirection: Axis.horizontal,
-                              itemCount: summary.forYou.length,
-                              itemBuilder: (context, index) {
-                                final space = summary.forYou[index];
-                                return SpaceCard(space: space, compact: true);
-                              },
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(width: 16),
                             ),
-                          ),
+                            SizedBox(
+                              height: 180,
+                              child: ListView.separated(
+                                padding: const EdgeInsetsDirectional.symmetric(
+                                  horizontal: 16,
+                                ),
+                                scrollDirection: Axis.horizontal,
+                                itemCount: summary.forYou.length,
+                                itemBuilder: (context, index) {
+                                  final space = summary.forYou[index];
+                                  return SpaceCard(space: space, compact: true);
+                                },
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(width: 16),
+                              ),
+                            ),
+                          ],
+                          if (summary.explore.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsetsDirectional.all(16),
+                              child: Text(
+                                'Explore spaces',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsetsDirectional.only(
+                                start: 16,
+                                end: 16,
+                              ),
+                              child: SliverGrid.builder(
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: () {
+                                        final screenWidth = MediaQuery.sizeOf(
+                                          context,
+                                        ).width;
+                                        if (screenWidth < 600) {
+                                          return 2; // Small screens
+                                        } else if (screenWidth < 900) {
+                                          return 3; // Medium screens
+                                        }
+                                        return 4; // Large screens
+                                      }(),
+                                      childAspectRatio: 16 / 21,
+                                      crossAxisSpacing: 16,
+                                      mainAxisSpacing: 16,
+                                    ),
+                                itemCount: summary.explore.length,
+                                itemBuilder: (context, index) {
+                                  final space = summary.explore[index];
+                                  return SpaceCard(space: space, compact: true);
+                                },
+                              ),
+                            ),
+                          ],
                         ],
-                        if (summary.explore.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsetsDirectional.all(16),
-                            child: Text(
-                              'Explore spaces',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w500,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsetsDirectional.only(
-                              start: 16,
-                              end: 16,
-                              bottom: 16,
-                            ),
-                            child: SliverGrid.builder(
-                              gridDelegate:
-                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: () {
-                                      final screenWidth = MediaQuery.sizeOf(
-                                        context,
-                                      ).width;
-                                      if (screenWidth < 600) {
-                                        return 2; // Small screens
-                                      } else if (screenWidth < 900) {
-                                        return 3; // Medium screens
-                                      }
-                                      return 4; // Large screens
-                                    }(),
-                                    childAspectRatio: 16 / 21,
-                                    crossAxisSpacing: 16,
-                                    mainAxisSpacing: 16,
-                                  ),
-                              itemCount: summary.explore.length,
-                              itemBuilder: (context, index) {
-                                final space = summary.explore[index];
-                                return SpaceCard(space: space, compact: true);
-                              },
-                            ),
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
                   ),
                 ],
