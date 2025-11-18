@@ -18,7 +18,7 @@ class _SpacesClient implements SpacesClient {
   final ParseErrorLogger? errorLogger;
 
   @override
-  Future<bool> totemCirclesMobileApiSubscribeToSpace({
+  Future<bool> totemCirclesMobileApiMobileApiSubscribeToSpace({
     required String spaceSlug,
   }) async {
     final _extra = <String, dynamic>{};
@@ -47,7 +47,7 @@ class _SpacesClient implements SpacesClient {
   }
 
   @override
-  Future<bool> totemCirclesMobileApiUnsubscribeToSpace({
+  Future<bool> totemCirclesMobileApiMobileApiUnsubscribeToSpace({
     required String spaceSlug,
   }) async {
     final _extra = <String, dynamic>{};
@@ -76,7 +76,8 @@ class _SpacesClient implements SpacesClient {
   }
 
   @override
-  Future<List<SpaceSchema>> totemCirclesMobileApiListSubscriptions() async {
+  Future<List<SpaceSchema>>
+  totemCirclesMobileApiMobileApiListSubscriptions() async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
@@ -105,7 +106,8 @@ class _SpacesClient implements SpacesClient {
   }
 
   @override
-  Future<PagedSpaceDetailSchema> totemCirclesMobileApiListSpaces({
+  Future<PagedMobileSpaceDetailSchema>
+  totemCirclesMobileApiMobileApiListSpaces({
     int? limit = 100,
     int? offset = 0,
   }) async {
@@ -117,7 +119,7 @@ class _SpacesClient implements SpacesClient {
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<PagedSpaceDetailSchema>(
+    final _options = _setStreamType<PagedMobileSpaceDetailSchema>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -128,9 +130,9 @@ class _SpacesClient implements SpacesClient {
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late PagedSpaceDetailSchema _value;
+    late PagedMobileSpaceDetailSchema _value;
     try {
-      _value = PagedSpaceDetailSchema.fromJson(_result.data!);
+      _value = PagedMobileSpaceDetailSchema.fromJson(_result.data!);
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options);
       rethrow;
@@ -139,7 +141,7 @@ class _SpacesClient implements SpacesClient {
   }
 
   @override
-  Future<EventDetailSchema> totemCirclesMobileApiGetEventDetail({
+  Future<EventDetailSchema> totemCirclesMobileApiMobileApiGetEventDetail({
     required String eventSlug,
   }) async {
     final _extra = <String, dynamic>{};
@@ -168,14 +170,14 @@ class _SpacesClient implements SpacesClient {
   }
 
   @override
-  Future<SpaceDetailSchema> totemCirclesMobileApiGetSpaceDetail({
+  Future<MobileSpaceDetailSchema> totemCirclesMobileApiMobileApiGetSpaceDetail({
     required String spaceSlug,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<SpaceDetailSchema>(
+    final _options = _setStreamType<MobileSpaceDetailSchema>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -186,9 +188,9 @@ class _SpacesClient implements SpacesClient {
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late SpaceDetailSchema _value;
+    late MobileSpaceDetailSchema _value;
     try {
-      _value = SpaceDetailSchema.fromJson(_result.data!);
+      _value = MobileSpaceDetailSchema.fromJson(_result.data!);
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options);
       rethrow;
@@ -197,14 +199,13 @@ class _SpacesClient implements SpacesClient {
   }
 
   @override
-  Future<List<SpaceDetailSchema>> totemCirclesMobileApiGetKeeperSpaces({
-    required String slug,
-  }) async {
+  Future<List<MobileSpaceDetailSchema>>
+  totemCirclesMobileApiMobileApiGetKeeperSpaces({required String slug}) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<List<SpaceDetailSchema>>(
+    final _options = _setStreamType<List<MobileSpaceDetailSchema>>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -215,12 +216,12 @@ class _SpacesClient implements SpacesClient {
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
     final _result = await _dio.fetch<List<dynamic>>(_options);
-    late List<SpaceDetailSchema> _value;
+    late List<MobileSpaceDetailSchema> _value;
     try {
       _value = _result.data!
           .map(
             (dynamic i) =>
-                SpaceDetailSchema.fromJson(i as Map<String, dynamic>),
+                MobileSpaceDetailSchema.fromJson(i as Map<String, dynamic>),
           )
           .toList();
     } on Object catch (e, s) {
@@ -232,7 +233,7 @@ class _SpacesClient implements SpacesClient {
 
   @override
   Future<List<EventDetailSchema>>
-  totemCirclesMobileApiGetSessionsHistory() async {
+  totemCirclesMobileApiMobileApiGetSessionsHistory() async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
@@ -264,7 +265,8 @@ class _SpacesClient implements SpacesClient {
   }
 
   @override
-  Future<List<EventDetailSchema>> totemCirclesMobileApiGetRecommendedSpaces({
+  Future<List<EventDetailSchema>>
+  totemCirclesMobileApiMobileApiGetRecommendedSpaces({
     List<String>? body,
     int? limit = 3,
   }) async {
@@ -300,7 +302,8 @@ class _SpacesClient implements SpacesClient {
   }
 
   @override
-  Future<SummarySpacesSchema> totemCirclesMobileApiGetSpacesSummary() async {
+  Future<SummarySpacesSchema>
+  totemCirclesMobileApiMobileApiGetSpacesSummary() async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
@@ -327,7 +330,7 @@ class _SpacesClient implements SpacesClient {
   }
 
   @override
-  Future<EventDetailSchema> totemCirclesMobileApiRsvpConfirm({
+  Future<EventDetailSchema> totemCirclesMobileApiMobileApiRsvpConfirm({
     required String eventSlug,
   }) async {
     final _extra = <String, dynamic>{};
@@ -356,7 +359,7 @@ class _SpacesClient implements SpacesClient {
   }
 
   @override
-  Future<EventDetailSchema> totemCirclesMobileApiRsvpCancel({
+  Future<EventDetailSchema> totemCirclesMobileApiMobileApiRsvpCancel({
     required String eventSlug,
   }) async {
     final _extra = <String, dynamic>{};
