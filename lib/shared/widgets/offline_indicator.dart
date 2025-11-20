@@ -161,23 +161,25 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
       alignment: AlignmentDirectional.bottomCenter,
       children: [
         Positioned.fill(child: widget.child),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 350),
-          transitionBuilder: (child, animation) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 1.5),
-                end: Offset.zero,
-              ).animate(animation),
-              child: FadeTransition(
-                opacity: animation,
-                child: child,
-              ),
-            );
-          },
-          child: _status != ConnectivityStatus.online
-              ? _StatusBanner(status: _status)
-              : const SizedBox.shrink(key: ValueKey('online')),
+        SafeArea(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 350),
+            transitionBuilder: (child, animation) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 1.5),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: FadeTransition(
+                  opacity: animation,
+                  child: child,
+                ),
+              );
+            },
+            child: _status != ConnectivityStatus.online
+                ? _StatusBanner(status: _status)
+                : const SizedBox.shrink(key: ValueKey('online')),
+          ),
         ),
       ],
     );
