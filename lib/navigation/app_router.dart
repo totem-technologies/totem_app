@@ -12,6 +12,7 @@ import 'package:totem_app/auth/screens/profile_setup_screen.dart';
 import 'package:totem_app/features/blog/screens/blog_list_screen.dart';
 import 'package:totem_app/features/blog/screens/blog_screen.dart';
 import 'package:totem_app/features/home/screens/home_screen.dart';
+import 'package:totem_app/features/home/widgets/ongoing_session_join_card.dart';
 import 'package:totem_app/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_details_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_screen.dart';
@@ -23,9 +24,9 @@ import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
 import 'package:totem_app/features/spaces/screens/subcribed_spaces.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/logger.dart';
-import 'package:totem_app/shared/offline_indicator.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
+import 'package:totem_app/shared/widgets/offline_indicator.dart';
 
 enum HomeRoutes {
   home(RouteNames.home),
@@ -61,50 +62,62 @@ class BottomNavScaffold extends StatelessWidget {
     return Scaffold(
       body: OfflineIndicatorPage(child: child),
       extendBody: true,
-      bottomNavigationBar: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        child: NavigationBar(
-          height: bottomNavHeight,
-          onDestinationSelected: (index) {
-            for (final route in HomeRoutes.values) {
-              logger.i('🛻 Checking route: ${route.path}');
-              if (index == route.index && currentRoute != route) {
-                logger.i('🛻 Navigating to: ${route.path}');
-                context.go(route.path);
-                return;
-              }
-            }
-          },
-          selectedIndex: currentRoute.index,
-          destinations: const [
-            NavigationDestination(
-              icon: TotemIcon(TotemIcons.home),
-              selectedIcon: TotemIcon(TotemIcons.homeFilled, fillColor: false),
-              label: 'Home',
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const OnjoingSessionJoinCard(),
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+            child: NavigationBar(
+              height: bottomNavHeight,
+              onDestinationSelected: (index) {
+                for (final route in HomeRoutes.values) {
+                  logger.i('🛻 Checking route: ${route.path}');
+                  if (index == route.index && currentRoute != route) {
+                    logger.i('🛻 Navigating to: ${route.path}');
+                    context.go(route.path);
+                    return;
+                  }
+                }
+              },
+              selectedIndex: currentRoute.index,
+              destinations: const [
+                NavigationDestination(
+                  icon: TotemIcon(TotemIcons.home),
+                  selectedIcon: TotemIcon(
+                    TotemIcons.homeFilled,
+                    fillColor: false,
+                  ),
+                  label: 'Home',
+                ),
+                NavigationDestination(
+                  icon: TotemIcon(TotemIcons.spaces),
+                  selectedIcon: TotemIcon(
+                    TotemIcons.spacesFilled,
+                    fillColor: false,
+                  ),
+                  label: 'Spaces',
+                ),
+                NavigationDestination(
+                  icon: TotemIcon(TotemIcons.blog),
+                  selectedIcon: TotemIcon(
+                    TotemIcons.blogFilled,
+                    fillColor: false,
+                  ),
+                  label: 'Blog',
+                ),
+                NavigationDestination(
+                  icon: TotemIcon(TotemIcons.profile),
+                  selectedIcon: TotemIcon(
+                    TotemIcons.profileFilled,
+                    fillColor: false,
+                  ),
+                  label: 'Profile',
+                ),
+              ],
             ),
-            NavigationDestination(
-              icon: TotemIcon(TotemIcons.spaces),
-              selectedIcon: TotemIcon(
-                TotemIcons.spacesFilled,
-                fillColor: false,
-              ),
-              label: 'Spaces',
-            ),
-            NavigationDestination(
-              icon: TotemIcon(TotemIcons.blog),
-              selectedIcon: TotemIcon(TotemIcons.blogFilled, fillColor: false),
-              label: 'Blog',
-            ),
-            NavigationDestination(
-              icon: TotemIcon(TotemIcons.profile),
-              selectedIcon: TotemIcon(
-                TotemIcons.profileFilled,
-                fillColor: false,
-              ),
-              label: 'Profile',
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
