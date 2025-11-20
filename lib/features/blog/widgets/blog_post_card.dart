@@ -1,10 +1,9 @@
-import 'dart:ui';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:totem_app/api/models/blog_post_list_schema.dart';
+import 'package:totem_app/features/blog/widgets/badge.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
@@ -21,6 +20,7 @@ class BlogPostCard extends StatelessWidget {
     required this.image,
     required this.slug,
     required this.readTime,
+    required this.isPublished,
     super.key,
   });
 
@@ -36,7 +36,8 @@ class BlogPostCard extends StatelessWidget {
        publishedDate = schema.datePublished,
        slug = schema.slug!,
        image = schema.headerImageUrl,
-       readTime = schema.readTime;
+       readTime = schema.readTime,
+       isPublished = schema.publish;
 
   final String title;
   final String subtitle;
@@ -48,6 +49,7 @@ class BlogPostCard extends StatelessWidget {
   final String slug;
   final bool isLarge;
   final int readTime;
+  final bool isPublished;
 
   static const double cardHeight = 350;
   static const double cardWidth = 350;
@@ -85,41 +87,19 @@ class BlogPostCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              margin: const EdgeInsetsDirectional.only(
+            Padding(
+              padding: const EdgeInsetsDirectional.only(
                 start: 20,
                 end: 20,
                 top: 20,
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xff262F37).withValues(alpha: .3),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: .2),
-                        width: 0.5,
-                      ),
-                    ),
-                    child: Text(
-                      '$readTime min read',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  BlogPostCardBadge(text: '$readTime min read'),
+                  if (!isPublished) const BlogPostCardBadge(text: 'Draft'),
+                ],
               ),
             ),
             const Spacer(),

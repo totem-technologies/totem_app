@@ -16,7 +16,7 @@ Future<SummarySpacesSchema> spacesSummary(Ref ref) async {
 
   try {
     final summary = await mobileApiService.spaces
-        .totemCirclesMobileApiGetSpacesSummary();
+        .totemCirclesMobileApiMobileApiGetSpacesSummary();
 
     unawaited(cache.saveSpacesSummary(summary));
 

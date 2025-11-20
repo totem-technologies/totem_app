@@ -3,7 +3,7 @@ description: "Guided introspection groups."
 publish_to: "none"
 version: 0.0.27+26
 environment:
-  sdk: ^3.8.0
+  sdk: ^3.9.0
 
 dependencies:
   flutter:
@@ -14,7 +14,7 @@ dependencies:
   riverpod_annotation: ^3.0.3
 
   # Routing
-  go_router: ^16.2.0
+  go_router: ^17.0.0
   url_launcher: ^6.3.1
   share_plus: ^12.0.1
 
@@ -87,7 +87,7 @@ dev_dependencies:
   swagger_parser: ^1.22.0
   retrofit_generator: ^10.0.0
   json_serializable: ^6.9.5
-  build_runner: ^2.5.4
+  build_runner: ^2.10.3
 
   # App Icon and Splash Screens
   flutter_launcher_icons: ^0.14.3

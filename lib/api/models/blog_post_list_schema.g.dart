@@ -9,6 +9,7 @@ part of 'blog_post_list_schema.dart';
 BlogPostListSchema _$BlogPostListSchemaFromJson(Map<String, dynamic> json) =>
     BlogPostListSchema(
       title: json['title'] as String,
+      publish: json['publish'] as bool? ?? false,
       readTime: (json['read_time'] as num?)?.toInt() ?? 1,
       author: json['author'] == null
           ? null
@@ -30,6 +31,7 @@ Map<String, dynamic> _$BlogPostListSchemaToJson(BlogPostListSchema instance) =>
       'subtitle': instance.subtitle,
       'date_published': instance.datePublished?.toIso8601String(),
       'slug': instance.slug,
+      'publish': instance.publish,
       'read_time': instance.readTime,
       'summary': instance.summary,
     };

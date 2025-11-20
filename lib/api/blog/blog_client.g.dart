@@ -2,6 +2,8 @@
 
 part of 'blog_client.dart';
 
+// dart format off
+
 // **************************************************************************
 // RetrofitGenerator
 // **************************************************************************
@@ -105,3 +107,5 @@ class _BlogClient implements BlogClient {
     return Uri.parse(dioBaseUrl).resolveUri(url).toString();
   }
 }
+
+// dart format on

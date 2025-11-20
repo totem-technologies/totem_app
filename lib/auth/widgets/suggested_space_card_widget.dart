@@ -20,9 +20,9 @@ class SuggestedSpaceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final backgroundImage = event.space.image;
+    final backgroundImage = event.space.imageLink;
     final timeLabel = buildTimeLabel(event.start);
-    final title = event.title.isNotEmpty ? event.title : event.spaceTitle;
+    final title = event.title.isNotEmpty ? event.title : event.space.title;
     final keeperName = event.space.author.name ?? 'Keeper';
 
     return Container(

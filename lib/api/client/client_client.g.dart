@@ -2,6 +2,8 @@
 
 part of 'client_client.dart';
 
+// dart format off
+
 // **************************************************************************
 // RetrofitGenerator
 // **************************************************************************
@@ -457,3 +459,5 @@ class _ClientClient implements ClientClient {
     return Uri.parse(dioBaseUrl).resolveUri(url).toString();
   }
 }
+
+// dart format on

@@ -5,7 +5,6 @@ import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
@@ -397,7 +396,7 @@ class AuthController extends Notifier<AuthState> {
           _setState(AuthState.unauthenticated());
         }
       } else {
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await (() async {
           logger.i('🔑 Online mode: Validating token with backend');
           // If online, proceed with the network call
           final user = await _authRepository.currentUser;
@@ -405,7 +404,15 @@ class AuthController extends Notifier<AuthState> {
           _setState(AuthState.authenticated(user: user));
           _analyticsService.setUserId(user);
           await _updateFCMToken();
-        });
+        })().timeout(
+          const Duration(seconds: 4),
+          onTimeout: () async {
+            // TODO(bdlukaa): Revisit this to see if we can handle this better.
+            logger.i(
+              '🔑 Token validation timed out, skipping token validation',
+            );
+          },
+        );
       }
     } catch (error, stackTrace) {
       ErrorHandler.logError(

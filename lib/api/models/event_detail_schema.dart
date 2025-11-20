@@ -4,8 +4,8 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'event_space_schema.dart';
 import 'meeting_provider_enum.dart';
+import 'mobile_space_detail_schema.dart';
 
 part 'event_detail_schema.g.dart';
 
@@ -15,13 +15,9 @@ class EventDetailSchema {
     required this.slug,
     required this.title,
     required this.space,
-    required this.spaceTitle,
-    required this.description,
-    required this.price,
+    required this.content,
     required this.seatsLeft,
     required this.duration,
-    required this.recurring,
-    required this.subscribers,
     required this.start,
     required this.attending,
     required this.open,
@@ -43,16 +39,11 @@ class EventDetailSchema {
 
   final String slug;
   final String title;
-  final EventSpaceSchema space;
-  @JsonKey(name: 'space_title')
-  final String spaceTitle;
-  final String description;
-  final int price;
+  final MobileSpaceDetailSchema space;
+  final String content;
   @JsonKey(name: 'seats_left')
   final int seatsLeft;
   final int duration;
-  final String recurring;
-  final int subscribers;
   final DateTime start;
   final bool attending;
   final bool open;
