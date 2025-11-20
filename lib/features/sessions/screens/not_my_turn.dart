@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_components/livekit_components.dart';
+// We need the defaultSorting function from livekit_components
+// ignore: implementation_imports
 import 'package:livekit_components/src/ui/layout/sorting.dart'
     show defaultSorting;
 import 'package:totem_app/api/models/event_detail_schema.dart';
