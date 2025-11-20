@@ -12,7 +12,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/meeting_provider_enum.dart';
-import 'package:totem_app/api/models/space_detail_schema.dart';
+import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/api_service.dart';
@@ -42,7 +42,7 @@ enum SpaceJoinCardState {
 class SpaceJoinCard extends ConsumerStatefulWidget {
   const SpaceJoinCard({required this.space, required this.event, super.key});
 
-  final SpaceDetailSchema space;
+  final MobileSpaceDetailSchema space;
   final EventDetailSchema event;
 
   @override
@@ -351,7 +351,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     try {
       final mobileApiService = ref.read(mobileApiServiceProvider);
       final response = await mobileApiService.spaces
-          .totemCirclesMobileApiRsvpConfirm(eventSlug: event.slug);
+          .totemCirclesMobileApiMobileApiRsvpConfirm(eventSlug: event.slug);
 
       if (mounted) {
         setState(() => _loading = false);
@@ -500,7 +500,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     try {
       final mobileApiService = ref.read(mobileApiServiceProvider);
       final response = await mobileApiService.spaces
-          .totemCirclesMobileApiRsvpCancel(eventSlug: event.slug);
+          .totemCirclesMobileApiMobileApiRsvpCancel(eventSlug: event.slug);
 
       if (mounted) {
         setState(() => _loading = false);

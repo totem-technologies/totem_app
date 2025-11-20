@@ -18,7 +18,7 @@ Future<SummarySpacesSchema> testSpacesSummary(
 ) async {
   try {
     final summary = await apiService.spaces
-        .totemCirclesMobileApiGetSpacesSummary();
+        .totemCirclesMobileApiMobileApiGetSpacesSummary();
     await cacheService.saveSpacesSummary(summary);
     return summary;
   } on DioException catch (_) {
@@ -65,7 +65,8 @@ void main() {
         );
 
         when(
-          () => mockSpacesClient.totemCirclesMobileApiGetSpacesSummary(),
+          () =>
+              mockSpacesClient.totemCirclesMobileApiMobileApiGetSpacesSummary(),
         ).thenAnswer((_) async => testSummary);
         when(
           () => mockCacheService.saveSpacesSummary(any()),
@@ -83,7 +84,8 @@ void main() {
         expect(result.forYou, hasLength(0));
         expect(result.explore, hasLength(0));
         verify(
-          () => mockSpacesClient.totemCirclesMobileApiGetSpacesSummary(),
+          () =>
+              mockSpacesClient.totemCirclesMobileApiMobileApiGetSpacesSummary(),
         ).called(1);
         verify(() => mockCacheService.saveSpacesSummary(testSummary)).called(1);
       });
@@ -99,7 +101,8 @@ void main() {
           );
 
           when(
-            () => mockSpacesClient.totemCirclesMobileApiGetSpacesSummary(),
+            () => mockSpacesClient
+                .totemCirclesMobileApiMobileApiGetSpacesSummary(),
           ).thenThrow(
             DioException(
               requestOptions: RequestOptions(path: '/spaces/summary'),
@@ -123,7 +126,8 @@ void main() {
           expect(result, equals(cachedSummary));
           expect(result.forYou, hasLength(0));
           verify(
-            () => mockSpacesClient.totemCirclesMobileApiGetSpacesSummary(),
+            () => mockSpacesClient
+                .totemCirclesMobileApiMobileApiGetSpacesSummary(),
           ).called(1);
           verify(() => mockCacheService.getSpacesSummary()).called(1);
         },
@@ -134,7 +138,8 @@ void main() {
         () async {
           // Arrange
           when(
-            () => mockSpacesClient.totemCirclesMobileApiGetSpacesSummary(),
+            () => mockSpacesClient
+                .totemCirclesMobileApiMobileApiGetSpacesSummary(),
           ).thenThrow(
             DioException(
               requestOptions: RequestOptions(path: '/spaces/summary'),
@@ -154,7 +159,8 @@ void main() {
             throwsA(isA<DioException>()),
           );
           verify(
-            () => mockSpacesClient.totemCirclesMobileApiGetSpacesSummary(),
+            () => mockSpacesClient
+                .totemCirclesMobileApiMobileApiGetSpacesSummary(),
           ).called(1);
           verify(() => mockCacheService.getSpacesSummary()).called(1);
         },

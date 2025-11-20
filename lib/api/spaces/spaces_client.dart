@@ -6,8 +6,8 @@ import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
 import '../models/event_detail_schema.dart';
-import '../models/paged_space_detail_schema.dart';
-import '../models/space_detail_schema.dart';
+import '../models/mobile_space_detail_schema.dart';
+import '../models/paged_mobile_space_detail_schema.dart';
 import '../models/space_schema.dart';
 import '../models/summary_spaces_schema.dart';
 
@@ -19,69 +19,73 @@ abstract class SpacesClient {
 
   /// Subscribe To Space
   @POST('/api/mobile/protected/spaces/subscribe/{space_slug}')
-  Future<bool> totemCirclesMobileApiSubscribeToSpace({
+  Future<bool> totemCirclesMobileApiMobileApiSubscribeToSpace({
     @Path('space_slug') required String spaceSlug,
   });
 
   /// Unsubscribe To Space
   @DELETE('/api/mobile/protected/spaces/subscribe/{space_slug}')
-  Future<bool> totemCirclesMobileApiUnsubscribeToSpace({
+  Future<bool> totemCirclesMobileApiMobileApiUnsubscribeToSpace({
     @Path('space_slug') required String spaceSlug,
   });
 
   /// List Subscriptions
   @GET('/api/mobile/protected/spaces/subscribe')
-  Future<List<SpaceSchema>> totemCirclesMobileApiListSubscriptions();
+  Future<List<SpaceSchema>> totemCirclesMobileApiMobileApiListSubscriptions();
 
   /// List Spaces
   @GET('/api/mobile/protected/spaces/')
-  Future<PagedSpaceDetailSchema> totemCirclesMobileApiListSpaces({
+  Future<PagedMobileSpaceDetailSchema>
+  totemCirclesMobileApiMobileApiListSpaces({
     @Query('limit') int? limit = 100,
     @Query('offset') int? offset = 0,
   });
 
   /// Get Event Detail
   @GET('/api/mobile/protected/spaces/event/{event_slug}')
-  Future<EventDetailSchema> totemCirclesMobileApiGetEventDetail({
+  Future<EventDetailSchema> totemCirclesMobileApiMobileApiGetEventDetail({
     @Path('event_slug') required String eventSlug,
   });
 
   /// Get Space Detail
   @GET('/api/mobile/protected/spaces/space/{space_slug}')
-  Future<SpaceDetailSchema> totemCirclesMobileApiGetSpaceDetail({
+  Future<MobileSpaceDetailSchema> totemCirclesMobileApiMobileApiGetSpaceDetail({
     @Path('space_slug') required String spaceSlug,
   });
 
   /// Get Keeper Spaces
   @GET('/api/mobile/protected/spaces/keeper/{slug}/')
-  Future<List<SpaceDetailSchema>> totemCirclesMobileApiGetKeeperSpaces({
+  Future<List<MobileSpaceDetailSchema>>
+  totemCirclesMobileApiMobileApiGetKeeperSpaces({
     @Path('slug') required String slug,
   });
 
   /// Get Sessions History
   @GET('/api/mobile/protected/spaces/sessions/history')
-  Future<List<EventDetailSchema>> totemCirclesMobileApiGetSessionsHistory();
+  Future<List<EventDetailSchema>>
+  totemCirclesMobileApiMobileApiGetSessionsHistory();
 
   /// Get Recommended Spaces
   @GET('/api/mobile/protected/spaces/recommended')
-  Future<List<EventDetailSchema>> totemCirclesMobileApiGetRecommendedSpaces({
+  Future<List<EventDetailSchema>>
+  totemCirclesMobileApiMobileApiGetRecommendedSpaces({
     @Body() List<String>? body,
     @Query('limit') int? limit = 3,
   });
 
   /// Get Spaces Summary
   @GET('/api/mobile/protected/spaces/summary')
-  Future<SummarySpacesSchema> totemCirclesMobileApiGetSpacesSummary();
+  Future<SummarySpacesSchema> totemCirclesMobileApiMobileApiGetSpacesSummary();
 
   /// Rsvp Confirm
   @POST('/api/mobile/protected/spaces/rsvp/{event_slug}')
-  Future<EventDetailSchema> totemCirclesMobileApiRsvpConfirm({
+  Future<EventDetailSchema> totemCirclesMobileApiMobileApiRsvpConfirm({
     @Path('event_slug') required String eventSlug,
   });
 
   /// Rsvp Cancel
   @DELETE('/api/mobile/protected/spaces/rsvp/{event_slug}')
-  Future<EventDetailSchema> totemCirclesMobileApiRsvpCancel({
+  Future<EventDetailSchema> totemCirclesMobileApiMobileApiRsvpCancel({
     @Path('event_slug') required String eventSlug,
   });
 }

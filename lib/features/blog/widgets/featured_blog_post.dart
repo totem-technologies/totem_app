@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:totem_app/api/models/blog_post_list_schema.dart';
+import 'package:totem_app/features/blog/widgets/badge.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
@@ -17,6 +18,7 @@ class FeaturedBlogPost extends StatelessWidget {
     required this.image,
     required this.slug,
     required this.readTime,
+    required this.isPublished,
     this.isLarge = false,
     super.key,
   });
@@ -33,8 +35,8 @@ class FeaturedBlogPost extends StatelessWidget {
        publishedDate = schema.datePublished,
        slug = schema.slug!,
        image = schema.headerImageUrl,
-       readTime = schema.readTime;
-
+       readTime = schema.readTime,
+       isPublished = schema.publish;
   final String title;
   final String subtitle;
   final String authorName;
@@ -45,6 +47,7 @@ class FeaturedBlogPost extends StatelessWidget {
   final String slug;
   final bool isLarge;
   final int readTime;
+  final bool isPublished;
 
   @override
   Widget build(BuildContext context) {
@@ -119,26 +122,13 @@ class FeaturedBlogPost extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: 10,
                 children: [
-                  Container(
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(
-                        0xff262F37,
-                      ).withValues(alpha: .3),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '$readTime min read',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontSize: 12,
-                      ),
-                    ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      BlogPostCardBadge(text: '$readTime min read'),
+                      if (!isPublished) const BlogPostCardBadge(text: 'Draft'),
+                    ],
                   ),
                   if (subtitle.isNotEmpty)
                     Text(

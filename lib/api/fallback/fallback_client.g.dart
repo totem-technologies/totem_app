@@ -2,6 +2,8 @@
 
 part of 'fallback_client.dart';
 
+// dart format off
+
 // **************************************************************************
 // RetrofitGenerator
 // **************************************************************************
@@ -272,3 +274,5 @@ class _FallbackClient implements FallbackClient {
     return Uri.parse(dioBaseUrl).resolveUri(url).toString();
   }
 }
+
+// dart format on

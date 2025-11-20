@@ -1,31 +1,20 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
+import 'package:totem_app/features/home/screens/home_loading_screen.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
-import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 
-class HomeScreen extends ConsumerStatefulWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends ConsumerState<HomeScreen> {
-  final _pageController = PageController(viewportFraction: 0.9);
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final summary = ref.watch(spacesSummaryProvider);
 
@@ -52,10 +41,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               onRefresh: () => ref.refresh(spacesSummaryProvider.future),
               child: CustomScrollView(
                 slivers: [
-                  if (upcomingEvents.isNotEmpty)
+                  if (upcomingEvents.isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.only(
+                          start: 16,
+                          end: 16,
+                          bottom: 16,
+                        ),
+                        child: Text(
+                          'Your upcoming sessions',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
                     if (upcomingEvents.length == 1)
                       SliverToBoxAdapter(
-                        child: Padding(
+                        child: Container(
+                          constraints: BoxConstraints(
+                            maxHeight: clampDouble(
+                              MediaQuery.heightOf(context) * 0.3,
+                              200,
+                              300,
+                            ),
+                          ),
                           padding: const EdgeInsetsDirectional.symmetric(
                             horizontal: 16,
                           ),
@@ -66,27 +78,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       )
                     else
                       SliverToBoxAdapter(
-                        child: AspectRatio(
-                          aspectRatio: 1.38,
-                          child: PageView.builder(
-                            padEnds: false,
-                            controller: _pageController,
+                        child: SizedBox(
+                          height: clampDouble(
+                            MediaQuery.heightOf(context) * 0.3,
+                            200,
+                            300,
+                          ),
+                          child: ListView.separated(
+                            padding: const EdgeInsetsDirectional.symmetric(
+                              horizontal: 16,
+                            ),
+                            scrollDirection: Axis.horizontal,
                             itemCount: upcomingEvents.length,
                             itemBuilder: (context, index) {
                               final event = upcomingEvents[index];
-                              return Padding(
-                                padding: EdgeInsetsDirectional.only(
-                                  start: index == 0 ? 16 : 16,
-                                  end: index == upcomingEvents.length - 1
-                                      ? 16
-                                      : 0,
+                              return ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: clampDouble(
+                                    MediaQuery.widthOf(context) * 0.8,
+                                    200,
+                                    400,
+                                  ),
                                 ),
                                 child: SpaceCard.fromEventDetailSchema(event),
                               );
                             },
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(width: 16),
                           ),
                         ),
                       ),
+                  ],
                   if (summary.forYou.isNotEmpty) ...[
                     SliverToBoxAdapter(
                       child: Padding(
@@ -131,38 +153,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
                     ),
-                    SliverSafeArea(
-                      top: false,
-                      sliver: SliverPadding(
-                        padding: const EdgeInsetsDirectional.only(
-                          start: 16,
-                          end: 16,
-                          bottom: 16,
+                    SliverPadding(
+                      padding: const EdgeInsetsDirectional.only(
+                        start: 16,
+                        end: 16,
+                        bottom: 16,
+                      ),
+                      sliver: SliverGrid.builder(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: () {
+                            final screenWidth = MediaQuery.sizeOf(
+                              context,
+                            ).width;
+                            if (screenWidth < 600) {
+                              return 2; // Small screens
+                            } else if (screenWidth < 900) {
+                              return 3; // Medium screens
+                            }
+                            return 4; // Large screens
+                          }(),
+                          childAspectRatio: 16 / 21,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
                         ),
-                        sliver: SliverGrid.builder(
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: () {
-                                  final screenWidth = MediaQuery.sizeOf(
-                                    context,
-                                  ).width;
-                                  if (screenWidth < 600) {
-                                    return 2; // Small screens
-                                  } else if (screenWidth < 900) {
-                                    return 3; // Medium screens
-                                  }
-                                  return 4; // Large screens
-                                }(),
-                                childAspectRatio: 16 / 21,
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
-                              ),
-                          itemCount: summary.explore.length,
-                          itemBuilder: (context, index) {
-                            final space = summary.explore[index];
-                            return SpaceCard(space: space, compact: true);
-                          },
-                        ),
+                        itemCount: summary.explore.length,
+                        itemBuilder: (context, index) {
+                          final space = summary.explore[index];
+                          return SpaceCard(space: space, compact: true);
+                        },
                       ),
                     ),
                   ],
@@ -170,7 +188,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             );
           },
-          loading: LoadingScreen.new,
+          loading: () => const HomeLoadingScreen(),
           error: (error, stackTrace) {
             return ErrorScreen(
               error: error,
