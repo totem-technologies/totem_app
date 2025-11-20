@@ -233,7 +233,9 @@ class OptionsSheet extends StatelessWidget {
                   // when we add localizations.
                   // ignore: lines_longer_than_80_chars
                   '${user.whenData((user) => user.name).value ?? 'the next participant'}?',
-              contentStyle: theme.textTheme.titleMedium,
+              contentStyle: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
               type: ConfirmationDialogType.standard,
               onConfirm: session.passTotem,
             );
