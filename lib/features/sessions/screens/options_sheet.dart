@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
@@ -184,9 +185,25 @@ class OptionsSheet extends ConsumerWidget {
                       confirmButtonText: 'Start Session',
                       type: ConfirmationDialogType.standard,
                       onConfirm: () async {
-                        await session.startSession();
-                        if (!context.mounted) return;
-                        Navigator.of(context).pop();
+                        try {
+                          await session.startSession();
+                          if (!context.mounted) return;
+                          Navigator.of(context).pop();
+                        } catch (error) {
+                          if (!context.mounted) return;
+                          Navigator.of(context).pop();
+                          await ErrorHandler.handleApiError(
+                            context,
+                            error,
+                            onRetry: () async {
+                              try {
+                                await session.startSession();
+                              } catch (e) {
+                                // Error already handled by handleApiError
+                              }
+                            },
+                          );
+                        }
                       },
                     );
                   },
@@ -289,7 +306,29 @@ class OptionsSheet extends ConsumerWidget {
                 color: theme.colorScheme.onSurface,
               ),
               type: ConfirmationDialogType.standard,
-              onConfirm: session.passTotem,
+              onConfirm: () async {
+                try {
+                  await session.passTotem();
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
+                } catch (error) {
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                    await ErrorHandler.handleApiError(
+                      context,
+                      error,
+                      onRetry: () async {
+                        try {
+                          await session.passTotem();
+                        } catch (e) {
+                          // Error already handled by handleApiError
+                        }
+                      },
+                    );
+                  }
+                }
+              },
             );
           },
         );
@@ -306,9 +345,25 @@ class OptionsSheet extends ConsumerWidget {
           content: 'Are you sure you want to end the session?',
           confirmButtonText: 'End Session',
           onConfirm: () async {
-            await session.endSession();
-            if (!context.mounted) return;
-            Navigator.of(context).pop();
+            try {
+              await session.endSession();
+              if (!context.mounted) return;
+              Navigator.of(context).pop();
+            } catch (error) {
+              if (!context.mounted) return;
+              Navigator.of(context).pop();
+              await ErrorHandler.handleApiError(
+                context,
+                error,
+                onRetry: () async {
+                  try {
+                    await session.endSession();
+                  } catch (e) {
+                    // Error already handled by handleApiError
+                  }
+                },
+              );
+            }
           },
         );
       },

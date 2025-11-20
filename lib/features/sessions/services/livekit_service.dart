@@ -9,6 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
+import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
@@ -215,10 +216,18 @@ class LiveKitService extends _$LiveKitService {
   /// Pass the totem to the next participant in the speaking order.
   ///
   /// This fails silently if it's not the user's turn.
+  /// Throws an exception if the operation fails.
   Future<void> passTotem() async {
     if (!state.isMyTurn(room)) return;
     try {
-      await ref.read(passTotemProvider(options.eventSlug).future);
+      await ref
+          .read(passTotemProvider(options.eventSlug).future)
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
     } catch (error, stackTrace) {
       debugPrint('Error passing totem: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -227,18 +236,28 @@ class LiveKitService extends _$LiveKitService {
         stackTrace: stackTrace,
         message: 'Error passing totem',
       );
+      rethrow;
     }
   }
 
-  /// Pass the totem to the next participant in the speaking order.
+  /// Accept the totem when it's passed to the user.
   ///
   /// This fails silently if it's not the user's turn.
+  /// Throws an exception if the operation fails.
   Future<void> acceptTotem() async {
     if (!state.isMyTurn(room)) return;
     try {
-      await _apiService.meetings.totemMeetingsMobileApiAcceptTotemEndpoint(
-        eventSlug: _options.eventSlug,
-      );
+      await _apiService.meetings
+          .totemMeetingsMobileApiAcceptTotemEndpoint(
+            eventSlug: _options.eventSlug,
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
+      await enableMicrophone();
     } catch (error, stackTrace) {
       debugPrint('Error accepting totem: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -247,21 +266,45 @@ class LiveKitService extends _$LiveKitService {
         stackTrace: stackTrace,
         message: 'Error accepting totem',
       );
+      rethrow;
     }
-    await enableMicrophone();
   }
 
   /// Send an emoji to other participants.
+  /// This operation is fire-and-forget and doesn't throw errors.
   Future<void> sendEmoji(String emoji) async {
-    await room.localParticipant?.publishData(
-      const Utf8Encoder().convert(emoji),
-      topic: SessionCommunicationTopics.emoji.topic,
-    );
+    try {
+      await room.localParticipant
+          ?.publishData(
+            const Utf8Encoder().convert(emoji),
+            topic: SessionCommunicationTopics.emoji.topic,
+          )
+          .timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              debugPrint('Warning: Sending emoji timed out');
+            },
+          );
+    } catch (error, stackTrace) {
+      debugPrint('Error sending emoji: $error');
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error sending emoji',
+      );
+    }
   }
 
   Future<void> startSession() async {
     try {
-      await ref.read(startSessionProvider(_options.eventSlug).future);
+      await ref
+          .read(startSessionProvider(_options.eventSlug).future)
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
     } catch (error, stackTrace) {
       debugPrint('Error starting session: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -270,12 +313,20 @@ class LiveKitService extends _$LiveKitService {
         stackTrace: stackTrace,
         message: 'Error starting session',
       );
+      rethrow;
     }
   }
 
   Future<void> endSession() async {
     try {
-      await ref.read(endSessionProvider(_options.eventSlug).future);
+      await ref
+          .read(endSessionProvider(_options.eventSlug).future)
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
     } catch (error, stackTrace) {
       debugPrint('Error ending session: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -284,6 +335,7 @@ class LiveKitService extends _$LiveKitService {
         stackTrace: stackTrace,
         message: 'Error ending session',
       );
+      rethrow;
     }
   }
 }
