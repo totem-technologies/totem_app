@@ -25,6 +25,12 @@ final _dio = Dio();
 
 /// Initialize Dio instance with interceptors and base configuration
 Dio _initDio(Ref ref) {
+  _dio.options = BaseOptions(
+    connectTimeout: const Duration(seconds: 30),
+    receiveTimeout: const Duration(seconds: 30),
+    sendTimeout: const Duration(seconds: 30),
+  );
+
   _dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {

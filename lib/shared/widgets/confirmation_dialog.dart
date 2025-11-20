@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
@@ -64,7 +67,19 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
               onPressed: () async {
                 if (_loading) return;
                 setState(() => _loading = true);
-                await widget.onConfirm();
+                await widget.onConfirm().timeout(
+                  const Duration(seconds: 10),
+                  onTimeout: () {
+                    if (context.mounted) {
+                      unawaited(
+                        ErrorHandler.showErrorDialog(
+                          context,
+                          message: 'Something went wrong. Please try again.',
+                        ),
+                      );
+                    }
+                  },
+                );
                 if (mounted) {
                   setState(() {
                     _loading = false;

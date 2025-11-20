@@ -3,13 +3,13 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
+import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
@@ -66,6 +66,13 @@ class SessionOptions {
 
   @override
   int get hashCode => eventSlug.hashCode ^ keeperSlug.hashCode ^ token.hashCode;
+
+  @override
+  String toString() {
+    return 'SessionOptions(eventSlug: $eventSlug, keeperSlug: $keeperSlug, '
+        'token: $token, cameraEnabled: $cameraEnabled, '
+        'microphoneEnabled: $microphoneEnabled)';
+  }
 }
 
 enum RoomConnectionState { connecting, connected, disconnected, error }
@@ -142,20 +149,10 @@ class LiveKitService extends _$LiveKitService {
       room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled),
     );
     state = state.copyWith(connectionState: RoomConnectionState.connected);
-
-    unawaited(
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
-    );
   }
 
   void _onDisconnected() {
     state = state.copyWith(connectionState: RoomConnectionState.disconnected);
-    unawaited(
-      SystemChrome.setEnabledSystemUIMode(
-        SystemUiMode.manual,
-        overlays: [SystemUiOverlay.bottom, SystemUiOverlay.top],
-      ),
-    );
   }
 
   void _onError(LiveKitException? error) {
@@ -219,10 +216,18 @@ class LiveKitService extends _$LiveKitService {
   /// Pass the totem to the next participant in the speaking order.
   ///
   /// This fails silently if it's not the user's turn.
+  /// Throws an exception if the operation fails.
   Future<void> passTotem() async {
     if (!state.isMyTurn(room)) return;
     try {
-      await ref.read(passTotemProvider(options.eventSlug).future);
+      await ref
+          .read(passTotemProvider(options.eventSlug).future)
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
     } catch (error, stackTrace) {
       debugPrint('Error passing totem: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -231,18 +236,28 @@ class LiveKitService extends _$LiveKitService {
         stackTrace: stackTrace,
         message: 'Error passing totem',
       );
+      rethrow;
     }
   }
 
-  /// Pass the totem to the next participant in the speaking order.
+  /// Accept the totem when it's passed to the user.
   ///
   /// This fails silently if it's not the user's turn.
+  /// Throws an exception if the operation fails.
   Future<void> acceptTotem() async {
     if (!state.isMyTurn(room)) return;
     try {
-      await _apiService.meetings.totemMeetingsMobileApiAcceptTotemEndpoint(
-        eventSlug: _options.eventSlug,
-      );
+      await _apiService.meetings
+          .totemMeetingsMobileApiAcceptTotemEndpoint(
+            eventSlug: _options.eventSlug,
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
+      await enableMicrophone();
     } catch (error, stackTrace) {
       debugPrint('Error accepting totem: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -251,21 +266,45 @@ class LiveKitService extends _$LiveKitService {
         stackTrace: stackTrace,
         message: 'Error accepting totem',
       );
+      rethrow;
     }
-    await enableMicrophone();
   }
 
   /// Send an emoji to other participants.
+  /// This operation is fire-and-forget and doesn't throw errors.
   Future<void> sendEmoji(String emoji) async {
-    await room.localParticipant?.publishData(
-      const Utf8Encoder().convert(emoji),
-      topic: SessionCommunicationTopics.emoji.topic,
-    );
+    try {
+      await room.localParticipant
+          ?.publishData(
+            const Utf8Encoder().convert(emoji),
+            topic: SessionCommunicationTopics.emoji.topic,
+          )
+          .timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              debugPrint('Warning: Sending emoji timed out');
+            },
+          );
+    } catch (error, stackTrace) {
+      debugPrint('Error sending emoji: $error');
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error sending emoji',
+      );
+    }
   }
 
   Future<void> startSession() async {
     try {
-      await ref.read(startSessionProvider(_options.eventSlug).future);
+      await ref
+          .read(startSessionProvider(_options.eventSlug).future)
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
     } catch (error, stackTrace) {
       debugPrint('Error starting session: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -274,12 +313,20 @@ class LiveKitService extends _$LiveKitService {
         stackTrace: stackTrace,
         message: 'Error starting session',
       );
+      rethrow;
     }
   }
 
   Future<void> endSession() async {
     try {
-      await ref.read(endSessionProvider(_options.eventSlug).future);
+      await ref
+          .read(endSessionProvider(_options.eventSlug).future)
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
     } catch (error, stackTrace) {
       debugPrint('Error ending session: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -288,6 +335,7 @@ class LiveKitService extends _$LiveKitService {
         stackTrace: stackTrace,
         message: 'Error ending session',
       );
+      rethrow;
     }
   }
 }

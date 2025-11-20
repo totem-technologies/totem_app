@@ -3,10 +3,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
+import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
+import 'package:totem_app/shared/widgets/popups.dart';
 
 class MyTurn extends StatelessWidget {
   const MyTurn({
@@ -45,7 +48,7 @@ class MyTurn extends StatelessWidget {
             final passCard = PassReceiveCard(
               type: TotemCardTransitionType.pass,
               onActionPressed: () async {
-                await showDialog<void>(
+                final passed = await showDialog<bool?>(
                   context: context,
                   builder: (context) {
                     return ConfirmationDialog(
@@ -56,12 +59,50 @@ class MyTurn extends StatelessWidget {
                       type: ConfirmationDialogType.standard,
                       onConfirm: () async {
                         final navigator = Navigator.of(context);
-                        await onPassTotem();
-                        navigator.pop();
+                        try {
+                          await onPassTotem();
+                          if (context.mounted) {
+                            navigator.pop(true);
+                          }
+                        } catch (error) {
+                          if (context.mounted) {
+                            navigator.pop(false);
+                            await ErrorHandler.handleApiError(
+                              context,
+                              error,
+                              onRetry: () async {
+                                try {
+                                  await onPassTotem();
+                                  if (context.mounted) {
+                                    showNotificationPopup(
+                                      context,
+                                      icon: TotemIcons.passToNext,
+                                      title: 'Totem Passed',
+                                      message:
+                                          'The totem has been passed '
+                                          'to the next participant.',
+                                    );
+                                  }
+                                } catch (e) {
+                                  // Error already handled by handleApiError
+                                }
+                              },
+                            );
+                          }
+                        }
                       },
                     );
                   },
                 );
+                if (passed != null && passed && context.mounted) {
+                  showNotificationPopup(
+                    context,
+                    icon: TotemIcons.passToNext,
+                    title: 'Totem Passed',
+                    message:
+                        'The totem has been passed to the next participant.',
+                  );
+                }
               },
             );
             if (isLandscape) {

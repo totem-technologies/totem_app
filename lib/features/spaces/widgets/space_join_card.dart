@@ -21,6 +21,7 @@ import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/date.dart';
+import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
@@ -72,10 +73,6 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     _timer?.cancel();
     super.dispose();
   }
-
-  static const Duration joinBeforeTime = Duration(minutes: 10);
-  bool get canJoinNow =>
-      event.start.isAfter(DateTime.now().subtract(joinBeforeTime));
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +154,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                 child: Link(
                   uri: hasEnded
                       ? null
-                      : canJoinNow &&
+                      : event.canJoinNow &&
                             event.meetingProvider ==
                                 MeetingProviderEnum.googleMeet
                       ? Uri.parse(getFullUrl(event.calLink))
@@ -325,7 +322,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
     if (hasEnded) return SpaceJoinCardState.ended;
 
-    if (canJoinNow && event.joinable) {
+    if (event.canJoinNow && event.joinable) {
       return SpaceJoinCardState.joinable;
     } else if (_attending) {
       return SpaceJoinCardState.joined;

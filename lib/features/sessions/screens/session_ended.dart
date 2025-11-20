@@ -54,19 +54,22 @@ class SessionEndedScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Text(
-                  'You may enjoy these spaces',
-                  style: theme.textTheme.titleMedium,
-                  textAlign: TextAlign.start,
-                ),
+
                 ...recommended.when(
                   data: (data) sync* {
-                    for (final event in data.take(2)) {
-                      yield Flexible(
-                        child: SmallSpaceCard.fromEventDetailSchema(
-                          event,
-                        ),
+                    if (data.isNotEmpty) {
+                      yield Text(
+                        'You may enjoy these spaces',
+                        style: theme.textTheme.titleMedium,
+                        textAlign: TextAlign.start,
                       );
+                      for (final event in data.take(2)) {
+                        yield Flexible(
+                          child: SmallSpaceCard.fromEventDetailSchema(
+                            event,
+                          ),
+                        );
+                      }
                     }
                   },
                   error: (error, _) => [],

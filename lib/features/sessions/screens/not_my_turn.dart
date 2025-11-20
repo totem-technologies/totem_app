@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_components/livekit_components.dart';
+// We need the defaultSorting function from livekit_components
+// ignore: implementation_imports
+import 'package:livekit_components/src/ui/layout/sorting.dart'
+    show defaultSorting;
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
@@ -30,8 +34,10 @@ class NotMyTurn extends ConsumerWidget {
       (participant) {
         if (sessionState.speakingNow != null) {
           return participant.identity == sessionState.speakingNow;
+        } else {
+          // If no one is speaking right now, show the keeper's video
+          return participant.identity == event.space.author.slug!;
         }
-        return participant.isSpeaking;
       },
       orElse: () => roomCtx.localParticipant!,
     );
@@ -76,6 +82,38 @@ class NotMyTurn extends ConsumerWidget {
 
           final participantGrid = ParticipantLoop(
             layoutBuilder: NoMyTurnLayoutBuilder(isLandscape: isLandscape),
+            sorting: (originalTracks) {
+              final tracks = originalTracks.where((track) {
+                // Only show tracks from participants other than the speaking
+                // now
+                return track.trackIdentifier.participant.identity !=
+                    speakingNow.identity;
+              });
+
+              if (sessionState.speakingOrder != null &&
+                  sessionState.speakingOrder!.isNotEmpty) {
+                final sortedTracks = <TrackWidget>[];
+                final tracksMap = {
+                  for (final t in tracks)
+                    t.trackIdentifier.participant.identity: t,
+                };
+
+                for (final identity in sessionState.speakingOrder!) {
+                  if (tracksMap.containsKey(identity)) {
+                    sortedTracks.add(tracksMap[identity]!);
+                  }
+                }
+                for (final MapEntry(:key, :value) in tracksMap.entries) {
+                  if (!sessionState.speakingOrder!.contains(key)) {
+                    sortedTracks.add(value);
+                  }
+                }
+
+                return sortedTracks;
+              }
+
+              return defaultSorting(tracks.toList());
+            },
             participantTrackBuilder: (context, identifier) {
               return ParticipantCard(
                 key: getParticipantKey(identifier.participant.identity),

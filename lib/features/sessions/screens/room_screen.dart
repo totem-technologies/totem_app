@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
@@ -59,6 +61,22 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
 }
 
 class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
+    );
+  }
+
+  @override
+  void dispose() {
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge),
+    );
+    super.dispose();
+  }
+
   Map<String, GlobalKey> participantKeys = {};
   GlobalKey getParticipantKey(String identity) {
     return participantKeys.putIfAbsent(identity, GlobalKey.new);
@@ -114,9 +132,20 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   }
 
   Future<void> _onAcceptTotem(LiveKitService sessionNotifier) async {
-    await sessionNotifier.acceptTotem();
-    if (mounted) {
-      setState(() => _receivingTotem = false);
+    try {
+      await sessionNotifier.acceptTotem();
+      if (mounted) {
+        setState(() => _receivingTotem = false);
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _receivingTotem = false);
+        await ErrorHandler.handleApiError(
+          context,
+          error,
+          onRetry: () => _onAcceptTotem(sessionNotifier),
+        );
+      }
     }
   }
 

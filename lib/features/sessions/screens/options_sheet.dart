@@ -7,11 +7,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/participant_reorder_widget.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 
@@ -48,7 +50,7 @@ Future<void> showOptionsSheet(
   );
 }
 
-class OptionsSheet extends StatelessWidget {
+class OptionsSheet extends ConsumerWidget {
   const OptionsSheet({
     required this.state,
     required this.session,
@@ -61,7 +63,7 @@ class OptionsSheet extends StatelessWidget {
   final EventDetailSchema event;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return ListView(
       shrinkWrap: true,
@@ -124,6 +126,7 @@ class OptionsSheet extends StatelessWidget {
         ),
         MediaDeviceSelectButton(
           builder: (context, roomCtx, deviceCtx) {
+            // TODO(bdlukaa): Hide "Earpice" from the list of audio outputs
             final audioOutputs = deviceCtx.audioOutputs;
             final selected =
                 deviceCtx.audioOutputs?.firstWhereOrNull(
@@ -171,7 +174,41 @@ class OptionsSheet extends StatelessWidget {
             OptionsSheetTile<void>(
               title: 'Start session',
               icon: TotemIcons.arrowForward,
-              onTap: session.startSession,
+              onTap: () async {
+                Navigator.of(context).pop();
+                return showDialog(
+                  context: context,
+                  builder: (context) {
+                    return ConfirmationDialog(
+                      title: 'Start Session',
+                      content: 'Are you sure you want to start the session?',
+                      confirmButtonText: 'Start Session',
+                      type: ConfirmationDialogType.standard,
+                      onConfirm: () async {
+                        try {
+                          await session.startSession();
+                          if (!context.mounted) return;
+                          Navigator.of(context).pop();
+                        } catch (error) {
+                          if (!context.mounted) return;
+                          Navigator.of(context).pop();
+                          await ErrorHandler.handleApiError(
+                            context,
+                            error,
+                            onRetry: () async {
+                              try {
+                                await session.startSession();
+                              } catch (e) {
+                                // Error already handled by handleApiError
+                              }
+                            },
+                          );
+                        }
+                      },
+                    );
+                  },
+                );
+              },
             ),
           OptionsSheetTile<void>(
             title: 'Reorder Participants',
@@ -191,7 +228,10 @@ class OptionsSheet extends StatelessWidget {
             icon: TotemIcons.passToNext,
             type: OptionsSheetTileType.destructive,
             onTap: state.sessionState.status == SessionStatus.started
-                ? () => _onPassToNext(context)
+                ? () async {
+                    Navigator.of(context).pop();
+                    return _onPassToNext(context);
+                  }
                 : null,
           ),
           OptionsSheetTile<void>(
@@ -201,6 +241,36 @@ class OptionsSheet extends StatelessWidget {
             onTap: state.sessionState.status == SessionStatus.started
                 ? () => _onEndSession(context)
                 : null,
+          ),
+          Text(
+            'Session State',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          OptionsSheetTile<void>(
+            title:
+                'Session Status: '
+                '${state.sessionState.status.name.uppercaseFirst()}',
+            icon: TotemIcons.checkboxOutlined,
+          ),
+          Builder(
+            builder: (context) {
+              final String? userName = state.sessionState.speakingNow != null
+                  ? ref
+                        .watch(
+                          userProfileProvider(state.sessionState.speakingNow!),
+                        )
+                        .whenData((user) => user.name ?? user.slug)
+                        .value
+                  : null;
+              return OptionsSheetTile<void>(
+                title:
+                    'Speaking now: '
+                    '${userName ?? 'None'}',
+                icon: TotemIcons.community,
+              );
+            },
           ),
         ],
       ].expand((x) => [x, const SizedBox(height: 10)]).toList(),
@@ -232,9 +302,33 @@ class OptionsSheet extends StatelessWidget {
                   // when we add localizations.
                   // ignore: lines_longer_than_80_chars
                   '${user.whenData((user) => user.name).value ?? 'the next participant'}?',
-              contentStyle: theme.textTheme.titleMedium,
+              contentStyle: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
               type: ConfirmationDialogType.standard,
-              onConfirm: session.passTotem,
+              onConfirm: () async {
+                try {
+                  await session.passTotem();
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
+                } catch (error) {
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                    await ErrorHandler.handleApiError(
+                      context,
+                      error,
+                      onRetry: () async {
+                        try {
+                          await session.passTotem();
+                        } catch (e) {
+                          // Error already handled by handleApiError
+                        }
+                      },
+                    );
+                  }
+                }
+              },
             );
           },
         );
@@ -251,9 +345,25 @@ class OptionsSheet extends StatelessWidget {
           content: 'Are you sure you want to end the session?',
           confirmButtonText: 'End Session',
           onConfirm: () async {
-            await session.endSession();
-            if (!context.mounted) return;
-            Navigator.of(context).pop();
+            try {
+              await session.endSession();
+              if (!context.mounted) return;
+              Navigator.of(context).pop();
+            } catch (error) {
+              if (!context.mounted) return;
+              Navigator.of(context).pop();
+              await ErrorHandler.handleApiError(
+                context,
+                error,
+                onRetry: () async {
+                  try {
+                    await session.endSession();
+                  } catch (e) {
+                    // Error already handled by handleApiError
+                  }
+                },
+              );
+            }
           },
         );
       },

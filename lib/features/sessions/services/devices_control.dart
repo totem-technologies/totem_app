@@ -9,7 +9,10 @@ extension DevicesControl on LiveKitService {
         ?.getTrackPublications()
         .firstWhereOrNull((track) => track.kind == TrackType.VIDEO)
         ?.track;
-    return (userTrack?.currentOptions as CameraCaptureOptions?)?.deviceId;
+    if (userTrack?.currentOptions is CameraCaptureOptions) {
+      return (userTrack!.currentOptions as CameraCaptureOptions).deviceId;
+    }
+    return room.room.engine.roomOptions.defaultCameraCaptureOptions.deviceId;
   }
 
   // TODO(bdlukaa): Revisit this in the future
@@ -60,7 +63,7 @@ extension DevicesControl on LiveKitService {
   }
 
   String? get selectedAudioOutputDeviceId {
-    return room.room.selectedAudioOutputDeviceId;
+    return room.room.engine.roomOptions.defaultAudioOutputOptions.deviceId;
   }
 
   Future<void> selectAudioOutputDevice(MediaDevice device) async {
