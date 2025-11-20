@@ -12,6 +12,7 @@ import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/participant_reorder_widget.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 
@@ -48,7 +49,7 @@ Future<void> showOptionsSheet(
   );
 }
 
-class OptionsSheet extends StatelessWidget {
+class OptionsSheet extends ConsumerWidget {
   const OptionsSheet({
     required this.state,
     required this.session,
@@ -61,7 +62,7 @@ class OptionsSheet extends StatelessWidget {
   final EventDetailSchema event;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return ListView(
       shrinkWrap: true,
@@ -172,7 +173,25 @@ class OptionsSheet extends StatelessWidget {
             OptionsSheetTile<void>(
               title: 'Start session',
               icon: TotemIcons.arrowForward,
-              onTap: session.startSession,
+              onTap: () async {
+                Navigator.of(context).pop();
+                return showDialog(
+                  context: context,
+                  builder: (context) {
+                    return ConfirmationDialog(
+                      title: 'Start Session',
+                      content: 'Are you sure you want to start the session?',
+                      confirmButtonText: 'Start Session',
+                      type: ConfirmationDialogType.standard,
+                      onConfirm: () async {
+                        await session.startSession();
+                        if (!context.mounted) return;
+                        Navigator.of(context).pop();
+                      },
+                    );
+                  },
+                );
+              },
             ),
           OptionsSheetTile<void>(
             title: 'Reorder Participants',
@@ -192,7 +211,10 @@ class OptionsSheet extends StatelessWidget {
             icon: TotemIcons.passToNext,
             type: OptionsSheetTileType.destructive,
             onTap: state.sessionState.status == SessionStatus.started
-                ? () => _onPassToNext(context)
+                ? () async {
+                    Navigator.of(context).pop();
+                    return _onPassToNext(context);
+                  }
                 : null,
           ),
           OptionsSheetTile<void>(
@@ -202,6 +224,36 @@ class OptionsSheet extends StatelessWidget {
             onTap: state.sessionState.status == SessionStatus.started
                 ? () => _onEndSession(context)
                 : null,
+          ),
+          Text(
+            'Session State',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          OptionsSheetTile<void>(
+            title:
+                'Session Status: '
+                '${state.sessionState.status.name.uppercaseFirst()}',
+            icon: TotemIcons.checkboxOutlined,
+          ),
+          Builder(
+            builder: (context) {
+              final String? userName = state.sessionState.speakingNow != null
+                  ? ref
+                        .watch(
+                          userProfileProvider(state.sessionState.speakingNow!),
+                        )
+                        .whenData((user) => user.name ?? user.slug)
+                        .value
+                  : null;
+              return OptionsSheetTile<void>(
+                title:
+                    'Speaking now: '
+                    '${userName ?? 'None'}',
+                icon: TotemIcons.community,
+              );
+            },
           ),
         ],
       ].expand((x) => [x, const SizedBox(height: 10)]).toList(),

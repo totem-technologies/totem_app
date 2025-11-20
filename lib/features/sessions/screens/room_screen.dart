@@ -7,7 +7,6 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
 import 'package:totem_app/api/models/event_detail_schema.dart';
-import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
@@ -141,8 +140,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final eventAsync = ref.watch(eventProvider(widget.eventSlug));
-    final user = ref.watch(authControllerProvider.select((auth) => auth.user));
-    // final user = ref.watch(authControllerProvider.select((auth) => auth.user));
 
     return eventAsync.when(
       data: (event) {
