@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
+import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class OnjoingSessionJoinCard extends ConsumerWidget {
   const OnjoingSessionJoinCard({super.key});
@@ -23,7 +24,7 @@ class OnjoingSessionJoinCard extends ConsumerWidget {
             if (event != null) {
               return Card(
                 margin: const EdgeInsetsDirectional.symmetric(
-                  horizontal: 16,
+                  horizontal: 20,
                   vertical: 10,
                 ),
                 child: Padding(
@@ -31,16 +32,22 @@ class OnjoingSessionJoinCard extends ConsumerWidget {
                   child: Row(
                     spacing: 10,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Ongoing Session',
-                            style: theme.textTheme.titleSmall,
-                          ),
-                          Text(event.title),
-                        ],
+                      UserAvatar.fromUserSchema(event.space.author),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Ongoing Session',
+                              style: theme.textTheme.titleSmall,
+                            ),
+                            Text(
+                              event.title,
+                              style: theme.textTheme.titleMedium,
+                            ),
+                          ],
+                        ),
                       ),
                       ElevatedButton(
                         onPressed: () async {
