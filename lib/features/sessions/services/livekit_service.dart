@@ -3,7 +3,6 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -66,6 +65,13 @@ class SessionOptions {
 
   @override
   int get hashCode => eventSlug.hashCode ^ keeperSlug.hashCode ^ token.hashCode;
+
+  @override
+  String toString() {
+    return 'SessionOptions(eventSlug: $eventSlug, keeperSlug: $keeperSlug, '
+        'token: $token, cameraEnabled: $cameraEnabled, '
+        'microphoneEnabled: $microphoneEnabled)';
+  }
 }
 
 enum RoomConnectionState { connecting, connected, disconnected, error }
@@ -142,20 +148,10 @@ class LiveKitService extends _$LiveKitService {
       room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled),
     );
     state = state.copyWith(connectionState: RoomConnectionState.connected);
-
-    unawaited(
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
-    );
   }
 
   void _onDisconnected() {
     state = state.copyWith(connectionState: RoomConnectionState.disconnected);
-    unawaited(
-      SystemChrome.setEnabledSystemUIMode(
-        SystemUiMode.manual,
-        overlays: [SystemUiOverlay.bottom, SystemUiOverlay.top],
-      ),
-    );
   }
 
   void _onError(LiveKitException? error) {

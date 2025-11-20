@@ -61,6 +61,22 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
 }
 
 class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
+    );
+  }
+
+  @override
+  void dispose() {
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge),
+    );
+    super.dispose();
+  }
+
   Map<String, GlobalKey> participantKeys = {};
   GlobalKey getParticipantKey(String identity) {
     return participantKeys.putIfAbsent(identity, GlobalKey.new);
@@ -126,6 +142,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   Widget build(BuildContext context) {
     final eventAsync = ref.watch(eventProvider(widget.eventSlug));
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
+    // final user = ref.watch(authControllerProvider.select((auth) => auth.user));
 
     return eventAsync.when(
       data: (event) {
@@ -156,23 +173,18 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             }
           },
           child: RoomBackground(
-            child: SensitiveContent(
-              sensitivity: user?.isStaff ?? false
-                  ? ContentSensitivity.notSensitive
-                  : ContentSensitivity.sensitive,
-              child: LivekitRoom(
-                roomContext: sessionNotifier.room,
-                builder: (context, roomCtx) {
-                  return Navigator(
-                    onDidRemovePage: (page) => {},
-                    pages: [
-                      MaterialPage(
-                        child: _buildBody(event, sessionNotifier, sessionState),
-                      ),
-                    ],
-                  );
-                },
-              ),
+            child: LivekitRoom(
+              roomContext: sessionNotifier.room,
+              builder: (context, roomCtx) {
+                return Navigator(
+                  onDidRemovePage: (page) => {},
+                  pages: [
+                    MaterialPage(
+                      child: _buildBody(event, sessionNotifier, sessionState),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         );
