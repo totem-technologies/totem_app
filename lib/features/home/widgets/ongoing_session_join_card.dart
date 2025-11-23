@@ -1,3 +1,4 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,16 +24,17 @@ class OnjoingSessionJoinCard extends ConsumerWidget {
             );
             if (event != null) {
               return Card(
-                margin: const EdgeInsetsDirectional.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
+                margin: const EdgeInsetsDirectional.only(
+                  start: 20,
+                  end: 20,
+                  bottom: 10,
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(10),
                   child: Row(
                     spacing: 10,
                     children: [
-                      UserAvatar.fromUserSchema(event.space.author),
+                      UserAvatar.fromUserSchema(event.space.author, radius: 24),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,9 +44,10 @@ class OnjoingSessionJoinCard extends ConsumerWidget {
                               'Ongoing Session',
                               style: theme.textTheme.titleSmall,
                             ),
-                            Text(
+                            AutoSizeText(
                               event.title,
                               style: theme.textTheme.titleMedium,
+                              maxLines: 1,
                             ),
                           ],
                         ),
@@ -55,6 +58,13 @@ class OnjoingSessionJoinCard extends ConsumerWidget {
                             RouteNames.spaceEvent(event.space.slug, event.slug),
                           );
                         },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          minimumSize: const Size.square(46),
+                        ),
                         child: const Text('Join now'),
                       ),
                     ],
