@@ -7,14 +7,18 @@ import 'package:livekit_client/livekit_client.dart' hide ChatMessage;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
+import 'package:totem_app/api/models/session_state.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
-import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+
+export 'package:totem_app/api/models/session_state.dart';
+export 'package:totem_app/api/models/session_status.dart';
+export 'package:totem_app/features/sessions/services/utils.dart';
 
 part 'devices_control.dart';
 part 'livekit_service.g.dart';
@@ -81,7 +85,7 @@ enum RoomConnectionState { connecting, connected, disconnected, error }
 class LiveKitState {
   const LiveKitState({
     this.connectionState = RoomConnectionState.connecting,
-    this.sessionState = const SessionState.waiting(),
+    this.sessionState = const SessionState(speakingOrder: []),
   });
 
   final RoomConnectionState connectionState;
@@ -165,9 +169,23 @@ class LiveKitService extends _$LiveKitService {
 
   void _onRoomChanges() {
     final metadata = room.room.metadata;
-    if (metadata != _lastMetadata) {
-      final previousState = SessionState.fromMetadata(_lastMetadata);
-      final newState = SessionState.fromMetadata(metadata);
+    if (metadata == null) return;
+    if (_lastMetadata == null) {
+      _lastMetadata = metadata;
+      state = state.copyWith(
+        sessionState: SessionState.fromJson(
+          jsonDecode(metadata) as Map<String, dynamic>,
+        ),
+      );
+      return;
+    }
+    if (_lastMetadata != null && metadata != _lastMetadata) {
+      final previousState = SessionState.fromJson(
+        jsonDecode(_lastMetadata!) as Map<String, dynamic>,
+      );
+      final newState = SessionState.fromJson(
+        jsonDecode(metadata) as Map<String, dynamic>,
+      );
 
       if (previousState.speakingNow != newState.speakingNow &&
           newState.speakingNow == room.localParticipant?.identity) {

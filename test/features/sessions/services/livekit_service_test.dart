@@ -11,7 +11,6 @@ import 'package:livekit_components/livekit_components.dart'
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/api/meetings/meetings_client.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
-import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
 
 // Mock classes
@@ -79,7 +78,9 @@ class TestLiveKitService {
     final metadata = room.room.metadata;
     if (metadata != null) {
       try {
-        final newState = SessionState.fromMetadata(metadata);
+        final newState = SessionState.fromJson(
+          jsonDecode(metadata) as Map<String, dynamic>,
+        );
         final previousSpeakingNow = testState.sessionState.speakingNow;
         testState = testState.copyWith(sessionState: newState);
 
@@ -92,7 +93,7 @@ class TestLiveKitService {
       } catch (e) {
         // Handle invalid metadata gracefully
         testState = testState.copyWith(
-          sessionState: const SessionState.waiting(),
+          sessionState: const SessionState(speakingOrder: []),
         );
       }
     }
@@ -322,7 +323,6 @@ void main() {
       test('should return false when no one is speaking', () {
         const sessionState = SessionState(
           status: SessionStatus.started,
-          speakingNow: null,
           speakingOrder: [testUserIdentity, 'other-user'],
         );
         liveKitService.testState = const LiveKitState(
