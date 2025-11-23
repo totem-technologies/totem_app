@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_components/livekit_components.dart';
-// We need the defaultSorting function from livekit_components
-// ignore: implementation_imports
-import 'package:livekit_components/src/ui/layout/sorting.dart'
-    show defaultSorting;
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/models/session_state.dart';
+import 'package:totem_app/features/sessions/services/utils.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 
@@ -83,36 +80,12 @@ class NotMyTurn extends ConsumerWidget {
           final participantGrid = ParticipantLoop(
             layoutBuilder: NoMyTurnLayoutBuilder(isLandscape: isLandscape),
             sorting: (originalTracks) {
-              final tracks = originalTracks.where((track) {
-                // Only show tracks from participants other than the speaking
-                // now
-                return track.trackIdentifier.participant.identity !=
-                    speakingNow.identity;
-              });
-
-              if (sessionState.speakingOrder != null &&
-                  sessionState.speakingOrder!.isNotEmpty) {
-                final sortedTracks = <TrackWidget>[];
-                final tracksMap = {
-                  for (final t in tracks)
-                    t.trackIdentifier.participant.identity: t,
-                };
-
-                for (final identity in sessionState.speakingOrder!) {
-                  if (tracksMap.containsKey(identity)) {
-                    sortedTracks.add(tracksMap[identity]!);
-                  }
-                }
-                for (final MapEntry(:key, :value) in tracksMap.entries) {
-                  if (!sessionState.speakingOrder!.contains(key)) {
-                    sortedTracks.add(value);
-                  }
-                }
-
-                return sortedTracks;
-              }
-
-              return defaultSorting(tracks.toList());
+              return tracksSorting(
+                context: context,
+                originalTracks: originalTracks,
+                sessionState: sessionState,
+                event: event,
+              );
             },
             participantTrackBuilder: (context, identifier) {
               return ParticipantCard(
@@ -199,11 +172,9 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
     List<String> pinnedTracks,
   ) {
     final itemCount = children.length;
-    if (itemCount == 0) {
-      return const SizedBox.shrink();
-    }
+    if (itemCount == 0) return const SizedBox.shrink();
 
-    int crossAxisCount;
+    late final int crossAxisCount;
     if (isLandscape) {
       if (itemCount <= 2) {
         crossAxisCount = 2;
@@ -215,7 +186,6 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
         crossAxisCount = 4;
       }
     } else {
-      // Portrait orientation logic
       if (itemCount <= 3) {
         crossAxisCount = 3;
       } else if (itemCount <= 5) {
@@ -227,9 +197,7 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
       }
     }
 
-    // Calculate number of rows needed
     final rowCount = (itemCount / crossAxisCount).ceil();
-
     return Padding(
       padding: EdgeInsetsDirectional.symmetric(
         horizontal: isLandscape ? 16 : 28,

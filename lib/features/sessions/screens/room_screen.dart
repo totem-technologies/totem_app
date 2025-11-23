@@ -240,6 +240,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             actionBar: buildActionBar(notifier, state, event),
             getParticipantKey: getParticipantKey,
             onPassTotem: notifier.passTotem,
+            sessionState: state.sessionState,
             event: event,
           );
         } else {
