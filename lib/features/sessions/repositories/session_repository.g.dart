@@ -58,7 +58,7 @@ final class SessionTokenProvider
   }
 }
 
-String _$sessionTokenHash() => r'849b90e856cbe312b13624b9feab25626bf69a2d';
+String _$sessionTokenHash() => r'2010067213029e15f816e4cd1ebad1c751bcf273';
 
 final class SessionTokenFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<String>, String> {
@@ -127,7 +127,7 @@ final class RemoveParticipantProvider
   }
 }
 
-String _$removeParticipantHash() => r'976553041a0fdd7ae21190a395af6940f2313ff3';
+String _$removeParticipantHash() => r'4b168d1342db5cffb7d23d038c0ca7c5e6845afa';
 
 final class RemoveParticipantFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, (String, String)> {
@@ -201,7 +201,7 @@ final class MuteParticipantProvider
   }
 }
 
-String _$muteParticipantHash() => r'270bc7b1ee9ce164c570da193ec60908bea24083';
+String _$muteParticipantHash() => r'7accc66145a3802610b60fd3cc60c18208c04053';
 
 final class MuteParticipantFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, (String, String)> {
@@ -273,7 +273,7 @@ final class PassTotemProvider
   }
 }
 
-String _$passTotemHash() => r'06c72c9359f452adac98521b93d186da7099f5cc';
+String _$passTotemHash() => r'b293625a8b38cb84fca755774865d3522f2ddc15';
 
 final class PassTotemFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, String> {
@@ -343,7 +343,7 @@ final class ReorderParticipantsProvider
 }
 
 String _$reorderParticipantsHash() =>
-    r'00852e47fbec3e51670acd8b8badc15f2eee0ee2';
+    r'0361b40d175c319c63b39a37745106cae6866c65';
 
 final class ReorderParticipantsFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, (String, List<String>)> {
@@ -412,7 +412,7 @@ final class StartSessionProvider
   }
 }
 
-String _$startSessionHash() => r'6c9b93d85ad23f519351a3568ed35e78e61670b6';
+String _$startSessionHash() => r'977e62042860dafaca7506470ad76d4c4623564c';
 
 final class StartSessionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, String> {
@@ -481,7 +481,7 @@ final class EndSessionProvider
   }
 }
 
-String _$endSessionHash() => r'106e50abd5fa9f003c9c9ab16ec86d792842335d';
+String _$endSessionHash() => r'27b4830ef4d164b9d56782747bc1460f58b04fcc';
 
 final class EndSessionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, String> {
