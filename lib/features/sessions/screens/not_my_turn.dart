@@ -116,7 +116,6 @@ class NotMyTurn extends ConsumerWidget {
             },
             participantTrackBuilder: (context, identifier) {
               return ParticipantCard(
-                key: getParticipantKey(identifier.participant.identity),
                 participant: identifier.participant,
                 event: event,
               );
@@ -133,9 +132,11 @@ class NotMyTurn extends ConsumerWidget {
                 spacing: 16,
                 children: [
                   Expanded(
+                    flex: 2,
                     child: speakerVideo,
                   ),
                   Expanded(
+                    flex: 3,
                     child: Column(
                       spacing: 16,
                       children: [
@@ -159,10 +160,10 @@ class NotMyTurn extends ConsumerWidget {
                 spacing: 20,
                 children: [
                   Expanded(
-                    flex: 2,
+                    flex: 3,
                     child: speakerVideo,
                   ),
-                  Flexible(child: participantGrid),
+                  Flexible(flex: 2, child: participantGrid),
                   actionBar,
                 ],
               ),
@@ -198,11 +199,12 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
     List<String> pinnedTracks,
   ) {
     final itemCount = children.length;
-    int crossAxisCount;
-    double childAspectRatio;
+    if (itemCount == 0) {
+      return const SizedBox.shrink();
+    }
 
+    int crossAxisCount;
     if (isLandscape) {
-      // Optimize for landscape: fewer columns, more rows
       if (itemCount <= 2) {
         crossAxisCount = 2;
       } else if (itemCount <= 4) {
@@ -210,9 +212,8 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
       } else if (itemCount <= 6) {
         crossAxisCount = 3;
       } else {
-        crossAxisCount = 3;
+        crossAxisCount = 4;
       }
-      childAspectRatio = 16 / 21;
     } else {
       // Portrait orientation logic
       if (itemCount <= 3) {
@@ -224,29 +225,44 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
       } else {
         crossAxisCount = 5;
       }
-      childAspectRatio = 16 / 21;
     }
 
-    return Center(
-      child: GridView.count(
-        padding: EdgeInsetsDirectional.symmetric(
-          horizontal: isLandscape ? 16 : 28,
-          vertical: isLandscape ? 16 : 10,
-        ),
-        crossAxisCount: crossAxisCount,
-        mainAxisSpacing: gap,
-        crossAxisSpacing: gap,
-        childAspectRatio: childAspectRatio,
-        shrinkWrap: true,
-        physics: const AlwaysScrollableScrollPhysics(),
+    // Calculate number of rows needed
+    final rowCount = (itemCount / crossAxisCount).ceil();
+
+    return Padding(
+      padding: EdgeInsetsDirectional.symmetric(
+        horizontal: isLandscape ? 16 : 28,
+        vertical: isLandscape ? 16 : 10,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        spacing: gap,
         children: List.generate(
-          itemCount,
-          (index) {
-            if (index < children.length) {
-              return children[index].widget;
-            } else {
-              return SizedBox.shrink(key: ValueKey<int>(index));
-            }
+          rowCount,
+          (rowIndex) {
+            final startIndex = rowIndex * crossAxisCount;
+
+            return Expanded(
+              child: Row(
+                spacing: gap,
+                children: List.generate(
+                  crossAxisCount,
+                  (colIndex) {
+                    final itemIndex = startIndex + colIndex;
+                    if (itemIndex < itemCount) {
+                      return Expanded(
+                        child: children[itemIndex].widget,
+                      );
+                    } else {
+                      return const Expanded(
+                        child: SizedBox.shrink(),
+                      );
+                    }
+                  },
+                ),
+              ),
+            );
           },
         ),
       ),
