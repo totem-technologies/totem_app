@@ -7,8 +7,8 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/totem_status.dart';
 import 'package:totem_app/core/config/theme.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
@@ -130,35 +130,27 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         error is TrackPublishException) {
       // These errors are shown in the error screen
     } else {
-      showErrorPopup(
-        context,
-        icon: TotemIcons.errorOutlined,
-        title: 'Something went wrong',
-        message: 'Check your connection and try again.',
-      );
-    }
-  }
-
-  bool _receivingTotem = false;
-  void _onReceiveTotem() {
-    if (mounted) {
-      setState(() => _receivingTotem = true);
+      if (mounted) {
+        showErrorPopup(
+          context,
+          icon: TotemIcons.errorOutlined,
+          title: 'Something went wrong',
+          message: 'Check your connection and try again.',
+        );
+      }
     }
   }
 
   Future<void> _onAcceptTotem(LiveKitService sessionNotifier) async {
     try {
       await sessionNotifier.acceptTotem();
-      if (mounted) {
-        setState(() => _receivingTotem = false);
-      }
     } catch (error) {
       if (mounted) {
-        setState(() => _receivingTotem = false);
-        await ErrorHandler.handleApiError(
+        showErrorPopup(
           context,
-          error,
-          onRetry: () => _onAcceptTotem(sessionNotifier),
+          icon: TotemIcons.errorOutlined,
+          title: 'Something went wrong',
+          message: 'We were unable to accept the totem. Please try again.',
         );
       }
     }
@@ -182,7 +174,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           onEmojiReceived: _onEmojiReceived,
           onMessageReceived: _onChatMessageReceived,
           onLivekitError: _onLivekitError,
-          onReceiveTotem: _onReceiveTotem,
         );
 
         final sessionState = ref.watch(liveKitServiceProvider(sessionOptions));
@@ -270,7 +261,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         }
 
         if (state.isMyTurn(notifier.room)) {
-          if (_receivingTotem) {
+          if (state.sessionState.totemStatus == TotemStatus.passing) {
             return ReceiveTotemScreen(
               actionBar: buildActionBar(notifier, state, event),
               onAcceptTotem: () => _onAcceptTotem(notifier),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/session_state.dart';
+import 'package:totem_app/api/models/totem_status.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/services/utils.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
@@ -30,6 +31,9 @@ class NotMyTurn extends ConsumerWidget {
     final speakingNow = roomCtx.participants.firstWhere(
       (participant) {
         if (sessionState.speakingNow != null) {
+          if (sessionState.totemStatus == TotemStatus.passing) {
+            return participant.identity == event.space.author.slug!;
+          }
           return participant.identity == sessionState.speakingNow;
         } else {
           // If no one is speaking right now, show the keeper's video
@@ -81,7 +85,7 @@ class NotMyTurn extends ConsumerWidget {
             layoutBuilder: NoMyTurnLayoutBuilder(isLandscape: isLandscape),
             sorting: (originalTracks) {
               return tracksSorting(
-                context: context,
+                speakingNow: speakingNow.identity,
                 originalTracks: originalTracks,
                 sessionState: sessionState,
                 event: event,

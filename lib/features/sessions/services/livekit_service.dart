@@ -46,7 +46,6 @@ class SessionOptions {
     required this.onEmojiReceived,
     required this.onMessageReceived,
     required this.onLivekitError,
-    required this.onReceiveTotem,
     required this.cameraOptions,
     required this.audioOptions,
     required this.audioOutputOptions,
@@ -61,7 +60,6 @@ class SessionOptions {
   final OnEmojiReceived onEmojiReceived;
   final OnMessageReceived onMessageReceived;
   final OnLivekitError onLivekitError;
-  final VoidCallback onReceiveTotem;
 
   final CameraCaptureOptions cameraOptions;
   final AudioCaptureOptions audioOptions;
@@ -201,18 +199,12 @@ class LiveKitService extends _$LiveKitService {
       return;
     }
     if (_lastMetadata != null && metadata != _lastMetadata) {
-      final previousState = SessionState.fromJson(
-        jsonDecode(_lastMetadata!) as Map<String, dynamic>,
-      );
+      // final previousState = SessionState.fromJson(
+      //   jsonDecode(_lastMetadata!) as Map<String, dynamic>,
+      // );
       final newState = SessionState.fromJson(
         jsonDecode(metadata) as Map<String, dynamic>,
       );
-
-      if (previousState.speakingNow != newState.speakingNow &&
-          newState.speakingNow == room.localParticipant?.identity) {
-        debugPrint('You are now speaking');
-        _options.onReceiveTotem();
-      }
 
       state = state.copyWith(sessionState: newState);
       _lastMetadata = metadata;

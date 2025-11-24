@@ -40,7 +40,7 @@ class MyTurn extends StatelessWidget {
               layoutBuilder: MyTurnLayoutBuilder(isLandscape: isLandscape),
               sorting: (originalTracks) {
                 return tracksSorting(
-                  context: context,
+                  speakingNow: sessionState.speakingNow!,
                   originalTracks: originalTracks,
                   sessionState: sessionState,
                   event: event,

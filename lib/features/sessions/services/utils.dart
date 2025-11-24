@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:livekit_components/livekit_components.dart';
 // We need the defaultSorting function from livekit_components
 // ignore: implementation_imports
@@ -8,30 +7,18 @@ import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/session_state.dart';
 
 List<TrackWidget> tracksSorting({
-  required BuildContext context,
   required List<TrackWidget> originalTracks,
   required SessionState sessionState,
   required EventDetailSchema event,
+  required String speakingNow,
 
   /// Whether to show the track of the participant who is currently speaking.
   bool showSpeakingNow = false,
 }) {
-  final roomCtx = RoomContext.of(context)!;
-  final speakingNow = roomCtx.participants.firstWhere(
-    (participant) {
-      if (sessionState.speakingNow != null) {
-        return participant.identity == sessionState.speakingNow;
-      } else {
-        // If no one is speaking right now, show the keeper's video
-        return participant.identity == event.space.author.slug!;
-      }
-    },
-    orElse: () => roomCtx.localParticipant!,
-  );
   final tracks = originalTracks.where((track) {
     // Only show tracks from participants other than the speaking
     // now
-    if (track.trackIdentifier.participant.identity == speakingNow.identity) {
+    if (track.trackIdentifier.participant.identity == speakingNow) {
       return showSpeakingNow;
     }
     return true;
