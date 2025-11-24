@@ -113,6 +113,14 @@ class LiveKitState {
       sessionState: sessionState ?? this.sessionState,
     );
   }
+
+  @override
+  String toString() {
+    return 'LiveKitState('
+        'connectionState: $connectionState, '
+        'sessionState: $sessionState'
+        ')';
+  }
 }
 
 @riverpod

@@ -74,6 +74,8 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
 }
 
 class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
+  final _navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
@@ -192,6 +194,27 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           canPop: false,
           onPopInvokedWithResult: (didPop, result) async {
             if (didPop) return;
+
+            // Checks if there is any other route above the first route.
+            //   This route would be a modal sheet or a dialog.
+            final navigator = _navigatorKey.currentState;
+            if (navigator?.canPop() ?? false) {
+              navigator!.pop();
+              return;
+            }
+
+            // If there is no other route above the first route, the user is
+            // trying to leave the session.
+
+            // If the session is not connected or connecting, leave the session.
+            if (sessionState.connectionState !=
+                    RoomConnectionState.connecting &&
+                sessionState.connectionState != RoomConnectionState.connected) {
+              popOrHome(context);
+              return;
+            }
+
+            // If the session is connected, show a dialog to confirm the action.
             final shouldPop = await showLeaveDialog(context) ?? false;
             if (context.mounted && shouldPop) {
               popOrHome(context);
@@ -202,6 +225,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               roomContext: sessionNotifier.room,
               builder: (context, roomCtx) {
                 return Navigator(
+                  key: _navigatorKey,
                   clipBehavior: Clip.none,
                   onDidRemovePage: (page) => {},
                   pages: [
