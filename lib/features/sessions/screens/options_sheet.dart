@@ -164,7 +164,7 @@ class OptionsSheet extends ConsumerWidget {
 
         if (session.isKeeper()) ...[
           Text(
-            'Keeper Settings',
+            'Keeper Options',
             style: theme.textTheme.titleMedium?.copyWith(
               color: theme.colorScheme.onSurface,
             ),
@@ -223,24 +223,35 @@ class OptionsSheet extends ConsumerWidget {
             },
           ),
           OptionsSheetTile<void>(
-            title: 'Pass to Next',
-            icon: TotemIcons.passToNext,
+            title: 'Mute everyone',
+            icon: TotemIcons.microphoneOff,
             type: OptionsSheetTileType.destructive,
-            onTap: state.sessionState.status == SessionStatus.started
-                ? () async {
-                    Navigator.of(context).pop();
-                    return _onPassToNext(context);
-                  }
-                : null,
+            onTap: () async {
+              Navigator.of(context).pop();
+              return _onMuteEveryone(context);
+            },
           ),
-          OptionsSheetTile<void>(
-            title: 'End Session',
-            icon: TotemIcons.cameraOff,
-            type: OptionsSheetTileType.destructive,
-            onTap: state.sessionState.status == SessionStatus.started
-                ? () => _onEndSession(context)
-                : null,
-          ),
+          if (state.sessionState.status == SessionStatus.started)
+            OptionsSheetTile<void>(
+              title: 'Pass to Next',
+              icon: TotemIcons.passToNext,
+              type: OptionsSheetTileType.destructive,
+              onTap: state.sessionState.status == SessionStatus.started
+                  ? () async {
+                      Navigator.of(context).pop();
+                      return _onPassToNext(context);
+                    }
+                  : null,
+            ),
+          if (state.sessionState.status != SessionStatus.ended)
+            OptionsSheetTile<void>(
+              title: 'End Session',
+              icon: TotemIcons.cameraOff,
+              type: OptionsSheetTileType.destructive,
+              onTap: state.sessionState.status == SessionStatus.started
+                  ? () => _onEndSession(context)
+                  : null,
+            ),
           Text(
             'Session State',
             style: theme.textTheme.titleMedium?.copyWith(
@@ -252,6 +263,12 @@ class OptionsSheet extends ConsumerWidget {
                 'Session Status: '
                 '${state.sessionState.status.name.uppercaseFirst()}',
             icon: TotemIcons.checkboxOutlined,
+          ),
+          OptionsSheetTile<void>(
+            title:
+                'Totem Status: '
+                '${state.sessionState.totemStatus.name.uppercaseFirst()}',
+            icon: TotemIcons.feedback,
           ),
           Builder(
             builder: (context) {
@@ -274,6 +291,10 @@ class OptionsSheet extends ConsumerWidget {
         ],
       ].expand((x) => [x, const SizedBox(height: 10)]).toList(),
     );
+  }
+
+  Future<void> _onMuteEveryone(BuildContext context) async {
+    await session.muteEveryone();
   }
 
   Future<void> _onPassToNext(BuildContext context) async {

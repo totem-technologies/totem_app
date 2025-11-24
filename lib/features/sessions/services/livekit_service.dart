@@ -369,4 +369,34 @@ class LiveKitService extends _$LiveKitService {
       rethrow;
     }
   }
+
+  Future<void> muteEveryone() async {
+    try {
+      await ref
+          .read(
+            muteEveryoneProvider(
+              _options.eventSlug,
+              room.participants
+                  .where((p) => !p.isMuted || !p.isMicrophoneEnabled())
+                  .map((p) => p.identity)
+                  .toList(),
+            ).future,
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
+    } catch (error, stackTrace) {
+      debugPrint('Error ending session: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error ending session',
+      );
+      rethrow;
+    }
+  }
 }

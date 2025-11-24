@@ -152,12 +152,23 @@ final class RemoveParticipantFamily extends $Family
   String toString() => r'removeParticipantProvider';
 }
 
+/// Mutes a participant.
+///
+/// An error can be thrown if the participant is already muted.
+
 @ProviderFor(muteParticipant)
 const muteParticipantProvider = MuteParticipantFamily._();
+
+/// Mutes a participant.
+///
+/// An error can be thrown if the participant is already muted.
 
 final class MuteParticipantProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
     with $FutureModifier<void>, $FutureProvider<void> {
+  /// Mutes a participant.
+  ///
+  /// An error can be thrown if the participant is already muted.
   const MuteParticipantProvider._({
     required MuteParticipantFamily super.from,
     required (String, String) super.argument,
@@ -203,6 +214,10 @@ final class MuteParticipantProvider
 
 String _$muteParticipantHash() => r'7accc66145a3802610b60fd3cc60c18208c04053';
 
+/// Mutes a participant.
+///
+/// An error can be thrown if the participant is already muted.
+
 final class MuteParticipantFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, (String, String)> {
   const MuteParticipantFamily._()
@@ -214,6 +229,10 @@ final class MuteParticipantFamily extends $Family
         isAutoDispose: true,
       );
 
+  /// Mutes a participant.
+  ///
+  /// An error can be thrown if the participant is already muted.
+
   MuteParticipantProvider call(String eventSlug, String participantIdentity) =>
       MuteParticipantProvider._(
         argument: (eventSlug, participantIdentity),
@@ -222,6 +241,80 @@ final class MuteParticipantFamily extends $Family
 
   @override
   String toString() => r'muteParticipantProvider';
+}
+
+@ProviderFor(muteEveryone)
+const muteEveryoneProvider = MuteEveryoneFamily._();
+
+final class MuteEveryoneProvider
+    extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
+    with $FutureModifier<void>, $FutureProvider<void> {
+  const MuteEveryoneProvider._({
+    required MuteEveryoneFamily super.from,
+    required (String, List<String>) super.argument,
+  }) : super(
+         retry: null,
+         name: r'muteEveryoneProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$muteEveryoneHash();
+
+  @override
+  String toString() {
+    return r'muteEveryoneProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<void> create(Ref ref) {
+    final argument = this.argument as (String, List<String>);
+    return muteEveryone(ref, argument.$1, argument.$2);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is MuteEveryoneProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$muteEveryoneHash() => r'1bf35924f370b2554deeaea506a276be00208bd8';
+
+final class MuteEveryoneFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<void>, (String, List<String>)> {
+  const MuteEveryoneFamily._()
+    : super(
+        retry: null,
+        name: r'muteEveryoneProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  MuteEveryoneProvider call(
+    String eventSlug,
+    List<String> participantIdentities,
+  ) => MuteEveryoneProvider._(
+    argument: (eventSlug, participantIdentities),
+    from: this,
+  );
+
+  @override
+  String toString() => r'muteEveryoneProvider';
 }
 
 @ProviderFor(passTotem)
