@@ -15,5 +15,9 @@ extension StringExtension on String {
 
 extension EventDetailSchemaExtension on EventDetailSchema {
   static const Duration joinBeforeTime = Duration(minutes: 10);
-  bool get canJoinNow => start.isAfter(DateTime.now().subtract(joinBeforeTime));
+  bool get canJoinNow {
+    final now = DateTime.now();
+    final end = start.add(Duration(minutes: duration));
+    return start.isBefore(now.add(joinBeforeTime)) && end.isAfter(now);
+  }
 }
