@@ -136,7 +136,7 @@ class NotMyTurn extends ConsumerWidget {
                     flex: 3,
                     child: speakerVideo,
                   ),
-                  Flexible(flex: 2, child: participantGrid),
+                  Expanded(flex: 2, child: participantGrid),
                   actionBar,
                 ],
               ),

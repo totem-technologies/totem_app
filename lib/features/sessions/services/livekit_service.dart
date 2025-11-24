@@ -47,6 +47,9 @@ class SessionOptions {
     required this.onMessageReceived,
     required this.onLivekitError,
     required this.onReceiveTotem,
+    required this.cameraOptions,
+    required this.audioOptions,
+    required this.audioOutputOptions,
   });
 
   final String eventSlug;
@@ -54,10 +57,15 @@ class SessionOptions {
   final String token;
   final bool cameraEnabled;
   final bool microphoneEnabled;
+
   final OnEmojiReceived onEmojiReceived;
   final OnMessageReceived onMessageReceived;
   final OnLivekitError onLivekitError;
   final VoidCallback onReceiveTotem;
+
+  final CameraCaptureOptions cameraOptions;
+  final AudioCaptureOptions audioOptions;
+  final AudioOutputOptions audioOutputOptions;
 
   @override
   bool operator ==(Object other) {
@@ -127,6 +135,11 @@ class LiveKitService extends _$LiveKitService {
       onConnected: _onConnected,
       onDisconnected: _onDisconnected,
       onError: _onError,
+      roomOptions: RoomOptions(
+        defaultCameraCaptureOptions: _options.cameraOptions,
+        defaultAudioCaptureOptions: _options.audioOptions,
+        defaultAudioOutputOptions: _options.audioOutputOptions,
+      ),
     );
 
     _listener = room.room.createListener();

@@ -370,6 +370,149 @@ class OptionsSheet extends ConsumerWidget {
   }
 }
 
+Future<void> showPrejoinOptionsSheet(
+  BuildContext context, {
+  required CameraCaptureOptions cameraOptions,
+  required AudioCaptureOptions audioOptions,
+  required AudioOutputOptions audioOutputOptions,
+  required ValueChanged<CameraCaptureOptions> onCameraChanged,
+  required ValueChanged<AudioCaptureOptions> onAudioChanged,
+  required ValueChanged<AudioOutputOptions> onAudioOutputChanged,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (context) {
+      return PrejoinOptionsSheet(
+        onCameraChanged: onCameraChanged,
+        onAudioChanged: onAudioChanged,
+        onAudioOutputChanged: onAudioOutputChanged,
+        cameraOptions: cameraOptions,
+        audioOptions: audioOptions,
+        audioOutputOptions: audioOutputOptions,
+      );
+    },
+  );
+}
+
+class PrejoinOptionsSheet extends StatelessWidget {
+  const PrejoinOptionsSheet({
+    required this.cameraOptions,
+    required this.audioOptions,
+    required this.audioOutputOptions,
+    required this.onCameraChanged,
+    required this.onAudioChanged,
+    required this.onAudioOutputChanged,
+    super.key,
+  });
+
+  final CameraCaptureOptions cameraOptions;
+  final AudioCaptureOptions audioOptions;
+  final AudioOutputOptions audioOutputOptions;
+
+  final ValueChanged<CameraCaptureOptions> onCameraChanged;
+  final ValueChanged<AudioCaptureOptions> onAudioChanged;
+  final ValueChanged<AudioOutputOptions> onAudioOutputChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      shrinkWrap: true,
+      padding: const EdgeInsetsDirectional.only(
+        start: 20,
+        end: 20,
+        top: 10,
+        bottom: 36,
+      ),
+      children: [
+        FutureBuilder(
+          future: Hardware.instance.videoInputs(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const SizedBox.shrink();
+            final videoInputs = snapshot.data;
+            final selected =
+                videoInputs?.firstWhereOrNull(
+                  (e) => e.deviceId == cameraOptions.deviceId,
+                ) ??
+                videoInputs?.firstOrNull;
+            return OptionsSheetTile<MediaDevice>(
+              title: selected?.humanReadableLabel ?? 'Default Camera',
+              icon: TotemIcons.cameraOn,
+              options: videoInputs?.toList(),
+              optionToString: (option) => option.humanReadableLabel,
+              selectedOption: selected,
+              onOptionChanged: (value) async {
+                if (value != null) {
+                  onCameraChanged(
+                    CameraCaptureOptions(deviceId: value.deviceId),
+                  );
+                  Navigator.of(context).pop();
+                }
+              },
+            );
+          },
+        ),
+        const SizedBox(height: 10),
+        FutureBuilder(
+          future: Hardware.instance.audioInputs(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const SizedBox.shrink();
+            final audioInputs = snapshot.data;
+            final selected =
+                audioInputs?.firstWhereOrNull(
+                  (e) => e.deviceId == audioOptions.deviceId,
+                ) ??
+                audioInputs?.firstOrNull;
+            return OptionsSheetTile<MediaDevice>(
+              title: selected?.label ?? 'Default Microphone',
+              options: audioInputs?.toList(),
+              optionToString: (option) => option.humanReadableLabel,
+              selectedOption: selected,
+              onOptionChanged: (value) async {
+                if (value != null) {
+                  onAudioChanged(
+                    AudioCaptureOptions(deviceId: value.deviceId),
+                  );
+                  Navigator.of(context).pop();
+                }
+              },
+              icon: TotemIcons.microphoneOn,
+            );
+          },
+        ),
+        const SizedBox(height: 10),
+        FutureBuilder(
+          future: Hardware.instance.audioOutputs(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const SizedBox.shrink();
+            final audioOutputs = snapshot.data;
+            final selected =
+                audioOutputs?.firstWhereOrNull(
+                  (e) => e.deviceId == audioOptions.deviceId,
+                ) ??
+                audioOutputs?.firstOrNull;
+            return OptionsSheetTile<MediaDevice>(
+              title: selected?.label ?? 'Default Speaker',
+              options: audioOutputs?.toList(),
+              optionToString: (option) => option.humanReadableLabel,
+              selectedOption: selected,
+              onOptionChanged: (value) async {
+                if (value != null) {
+                  onAudioOutputChanged(
+                    AudioOutputOptions(deviceId: value.deviceId),
+                  );
+                  Navigator.of(context).pop();
+                }
+              },
+              icon: TotemIcons.speaker,
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
 enum OptionsSheetTileType {
   destructive,
   normal,

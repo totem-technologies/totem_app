@@ -33,12 +33,19 @@ class VideoRoomScreenRouteArgs {
     required this.cameraEnabled,
     required this.micEnabled,
     required this.eventSlug,
+    required this.cameraOptions,
+    required this.audioOptions,
+    required this.audioOutputOptions,
   });
 
   final String token;
   final bool cameraEnabled;
   final bool micEnabled;
   final String eventSlug;
+
+  final CameraCaptureOptions cameraOptions;
+  final AudioCaptureOptions audioOptions;
+  final AudioOutputOptions audioOutputOptions;
 }
 
 class VideoRoomScreen extends ConsumerStatefulWidget {
@@ -47,6 +54,9 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
     required this.cameraEnabled,
     required this.micEnabled,
     required this.eventSlug,
+    required this.cameraOptions,
+    required this.audioOptions,
+    required this.audioOutputOptions,
     super.key,
   });
 
@@ -54,6 +64,10 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
   final bool cameraEnabled;
   final bool micEnabled;
   final String eventSlug;
+
+  final CameraCaptureOptions cameraOptions;
+  final AudioCaptureOptions audioOptions;
+  final AudioOutputOptions audioOutputOptions;
 
   @override
   ConsumerState<VideoRoomScreen> createState() => _VideoRoomScreenState();
@@ -160,6 +174,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           token: widget.token,
           cameraEnabled: widget.cameraEnabled,
           microphoneEnabled: widget.micEnabled,
+          cameraOptions: widget.cameraOptions,
+          audioOptions: widget.audioOptions,
+          audioOutputOptions: widget.audioOutputOptions,
           onEmojiReceived: _onEmojiReceived,
           onMessageReceived: _onChatMessageReceived,
           onLivekitError: _onLivekitError,
@@ -185,6 +202,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               roomContext: sessionNotifier.room,
               builder: (context, roomCtx) {
                 return Navigator(
+                  clipBehavior: Clip.none,
                   onDidRemovePage: (page) => {},
                   pages: [
                     MaterialPage(

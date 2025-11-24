@@ -185,6 +185,9 @@ void main() {
       onMessageReceived: (userIdentity, message) {},
       onLivekitError: (error) {},
       onReceiveTotem: () {},
+      cameraOptions: const CameraCaptureOptions(),
+      audioOptions: const AudioCaptureOptions(),
+      audioOutputOptions: const AudioOutputOptions(),
     );
 
     setUpAll(() {
@@ -199,6 +202,9 @@ void main() {
           onMessageReceived: (userIdentity, message) {},
           onLivekitError: (error) {},
           onReceiveTotem: () {},
+          cameraOptions: const CameraCaptureOptions(),
+          audioOptions: const AudioCaptureOptions(),
+          audioOutputOptions: const AudioOutputOptions(),
         ),
       );
     });
@@ -413,6 +419,9 @@ void main() {
             onMessageReceived: (userIdentity, message) {},
             onLivekitError: (error) {},
             onReceiveTotem: () => totemReceived = true,
+            cameraOptions: const CameraCaptureOptions(),
+            audioOptions: const AudioCaptureOptions(),
+            audioOutputOptions: const AudioOutputOptions(),
           );
 
           final serviceWithCallback =
@@ -473,6 +482,9 @@ void main() {
           onMessageReceived: (userIdentity, message) {},
           onLivekitError: (error) {},
           onReceiveTotem: () {},
+          cameraOptions: const CameraCaptureOptions(),
+          audioOptions: const AudioCaptureOptions(),
+          audioOutputOptions: const AudioOutputOptions(),
         );
 
         final serviceWithCallback = TestLiveKitService(
@@ -513,6 +525,9 @@ void main() {
           },
           onLivekitError: (error) {},
           onReceiveTotem: () {},
+          cameraOptions: const CameraCaptureOptions(),
+          audioOptions: const AudioCaptureOptions(),
+          audioOutputOptions: const AudioOutputOptions(),
         );
 
         final serviceWithCallback = TestLiveKitService(
@@ -558,6 +573,9 @@ void main() {
           },
           onLivekitError: (error) {},
           onReceiveTotem: () {},
+          cameraOptions: const CameraCaptureOptions(),
+          audioOptions: const AudioCaptureOptions(),
+          audioOutputOptions: const AudioOutputOptions(),
         );
 
         final serviceWithCallback = TestLiveKitService(
@@ -593,6 +611,9 @@ void main() {
           },
           onLivekitError: (error) {},
           onReceiveTotem: () {},
+          cameraOptions: const CameraCaptureOptions(),
+          audioOptions: const AudioCaptureOptions(),
+          audioOutputOptions: const AudioOutputOptions(),
         );
 
         final serviceWithCallback = TestLiveKitService(
