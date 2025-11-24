@@ -169,7 +169,9 @@ class LiveKitService extends _$LiveKitService {
 
     unawaited(room.localParticipant!.setCameraEnabled(_options.cameraEnabled));
     unawaited(
-      room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled),
+      // TODO(bdlukaa): Revisit this in the future - Microphone Starts Disabled
+      // room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
+      room.localParticipant!.setMicrophoneEnabled(false),
     );
     state = state.copyWith(connectionState: RoomConnectionState.connected);
   }

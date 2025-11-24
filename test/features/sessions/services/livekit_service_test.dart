@@ -81,15 +81,7 @@ class TestLiveKitService {
         final newState = SessionState.fromJson(
           jsonDecode(metadata) as Map<String, dynamic>,
         );
-        final previousSpeakingNow = testState.sessionState.speakingNow;
         testState = testState.copyWith(sessionState: newState);
-
-        // Check if totem was passed to current user
-        if (previousSpeakingNow != testUserIdentity &&
-            newState.speakingNow == testUserIdentity &&
-            room.localParticipant?.identity == testUserIdentity) {
-          _options.onReceiveTotem();
-        }
       } catch (e) {
         // Handle invalid metadata gracefully
         testState = testState.copyWith(
@@ -184,7 +176,6 @@ void main() {
       onEmojiReceived: (userIdentity, emoji) {},
       onMessageReceived: (userIdentity, message) {},
       onLivekitError: (error) {},
-      onReceiveTotem: () {},
       cameraOptions: const CameraCaptureOptions(),
       audioOptions: const AudioCaptureOptions(),
       audioOutputOptions: const AudioOutputOptions(),
@@ -201,7 +192,6 @@ void main() {
           onEmojiReceived: (userIdentity, emoji) {},
           onMessageReceived: (userIdentity, message) {},
           onLivekitError: (error) {},
-          onReceiveTotem: () {},
           cameraOptions: const CameraCaptureOptions(),
           audioOptions: const AudioCaptureOptions(),
           audioOutputOptions: const AudioOutputOptions(),
@@ -404,56 +394,6 @@ void main() {
         expect(state.sessionState.speakingNow, isNull);
         expect(state.sessionState.speakingOrder, isEmpty);
       });
-
-      test(
-        'should trigger onReceiveTotem when speaking now changes to current user',
-        () {
-          var totemReceived = false;
-          final optionsWithTotemCallback = SessionOptions(
-            eventSlug: testEventSlug,
-            keeperSlug: testUserIdentity,
-            token: testToken,
-            cameraEnabled: true,
-            microphoneEnabled: true,
-            onEmojiReceived: (userIdentity, emoji) {},
-            onMessageReceived: (userIdentity, message) {},
-            onLivekitError: (error) {},
-            onReceiveTotem: () => totemReceived = true,
-            cameraOptions: const CameraCaptureOptions(),
-            audioOptions: const AudioCaptureOptions(),
-            audioOutputOptions: const AudioOutputOptions(),
-          );
-
-          final serviceWithCallback =
-              TestLiveKitService(
-                  mockRoomContext: mockRoomContext,
-                  mockApiService: mockApiService,
-                  options: optionsWithTotemCallback,
-                )
-                // Set initial state with different speaker
-                ..testState = const LiveKitState(
-                  connectionState: RoomConnectionState.connected,
-                  sessionState: SessionState(
-                    status: SessionStatus.started,
-                    speakingNow: 'other-user',
-                    speakingOrder: [testUserIdentity, 'other-user'],
-                  ),
-                );
-
-          // Update metadata to current user speaking
-          when(() => mockRoom.metadata).thenReturn('''
-        {
-          "status": "started",
-          "speaking_now": "$testUserIdentity",
-          "speaking_order": ["$testUserIdentity", "other-user"]
-        }
-        ''');
-
-          serviceWithCallback.testOnRoomChanges();
-
-          expect(totemReceived, isTrue);
-        },
-      );
     });
 
     group('Data Received Events', () {
@@ -481,7 +421,6 @@ void main() {
           },
           onMessageReceived: (userIdentity, message) {},
           onLivekitError: (error) {},
-          onReceiveTotem: () {},
           cameraOptions: const CameraCaptureOptions(),
           audioOptions: const AudioCaptureOptions(),
           audioOutputOptions: const AudioOutputOptions(),
@@ -524,7 +463,6 @@ void main() {
             receivedMessage = msg;
           },
           onLivekitError: (error) {},
-          onReceiveTotem: () {},
           cameraOptions: const CameraCaptureOptions(),
           audioOptions: const AudioCaptureOptions(),
           audioOutputOptions: const AudioOutputOptions(),
@@ -572,7 +510,6 @@ void main() {
             messageReceived = true;
           },
           onLivekitError: (error) {},
-          onReceiveTotem: () {},
           cameraOptions: const CameraCaptureOptions(),
           audioOptions: const AudioCaptureOptions(),
           audioOutputOptions: const AudioOutputOptions(),
@@ -610,7 +547,6 @@ void main() {
             callbackCalled = true;
           },
           onLivekitError: (error) {},
-          onReceiveTotem: () {},
           cameraOptions: const CameraCaptureOptions(),
           audioOptions: const AudioCaptureOptions(),
           audioOutputOptions: const AudioOutputOptions(),
