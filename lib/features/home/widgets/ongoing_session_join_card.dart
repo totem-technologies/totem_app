@@ -3,6 +3,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
@@ -15,12 +16,13 @@ class OnjoingSessionJoinCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final summary = ref.watch(spacesSummaryProvider);
+    final user = ref.watch(authControllerProvider.select((auth) => auth.user));
     if (summary.hasValue) {
       return summary.when(
         data: (summary) {
           if (summary.upcoming.isNotEmpty) {
             final event = summary.upcoming.firstWhereOrNull(
-              (event) => event.canJoinNow,
+              (event) => event.canJoinNow(user),
             );
             if (event != null) {
               return Card(
