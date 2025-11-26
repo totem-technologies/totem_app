@@ -7,9 +7,8 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/totem_status.dart';
 import 'package:totem_app/core/config/theme.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
@@ -34,12 +33,19 @@ class VideoRoomScreenRouteArgs {
     required this.cameraEnabled,
     required this.micEnabled,
     required this.eventSlug,
+    required this.cameraOptions,
+    required this.audioOptions,
+    required this.audioOutputOptions,
   });
 
   final String token;
   final bool cameraEnabled;
   final bool micEnabled;
   final String eventSlug;
+
+  final CameraCaptureOptions cameraOptions;
+  final AudioCaptureOptions audioOptions;
+  final AudioOutputOptions audioOutputOptions;
 }
 
 class VideoRoomScreen extends ConsumerStatefulWidget {
@@ -48,6 +54,9 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
     required this.cameraEnabled,
     required this.micEnabled,
     required this.eventSlug,
+    required this.cameraOptions,
+    required this.audioOptions,
+    required this.audioOutputOptions,
     super.key,
   });
 
@@ -56,11 +65,17 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
   final bool micEnabled;
   final String eventSlug;
 
+  final CameraCaptureOptions cameraOptions;
+  final AudioCaptureOptions audioOptions;
+  final AudioOutputOptions audioOutputOptions;
+
   @override
   ConsumerState<VideoRoomScreen> createState() => _VideoRoomScreenState();
 }
 
 class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
+  final _navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
@@ -77,26 +92,27 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     super.dispose();
   }
 
+  // TODO(bdlukaa): Investigate if this is still needed.
   Map<String, GlobalKey> participantKeys = {};
   GlobalKey getParticipantKey(String identity) {
     return participantKeys.putIfAbsent(identity, GlobalKey.new);
   }
 
   var _showEmojiPicker = false;
+  final _reactions = <MapEntry<String, String>>[];
   Future<void> _onEmojiReceived(String userIdentity, String emoji) async {
-    final userKey = participantKeys[userIdentity];
-    if (userKey != null && userKey.currentContext != null) {
-      await displayReaction(
-        context,
-        userKey.currentContext!,
-        emoji,
-      );
-    }
+    if (!mounted) return;
+    final entry = MapEntry(userIdentity, emoji);
+    setState(() => _reactions.add(entry));
+    await displayReaction(context, emoji);
+    _reactions.remove(entry);
+    if (mounted) setState(() {});
   }
 
   bool _chatSheetOpen = false;
   bool _hasPendingChatMessages = false;
   void _onChatMessageReceived(String userIdentity, String message) {
+    if (!mounted) return;
     setState(() => _hasPendingChatMessages = !_chatSheetOpen);
     showNotificationPopup(
       context,
@@ -115,35 +131,27 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         error is TrackPublishException) {
       // These errors are shown in the error screen
     } else {
-      showErrorPopup(
-        context,
-        icon: TotemIcons.errorOutlined,
-        title: 'Something went wrong',
-        message: 'Check your connection and try again.',
-      );
-    }
-  }
-
-  bool _receivingTotem = false;
-  void _onReceiveTotem() {
-    if (mounted) {
-      setState(() => _receivingTotem = true);
+      if (mounted) {
+        showErrorPopup(
+          context,
+          icon: TotemIcons.errorOutlined,
+          title: 'Something went wrong',
+          message: 'Check your connection and try again.',
+        );
+      }
     }
   }
 
   Future<void> _onAcceptTotem(LiveKitService sessionNotifier) async {
     try {
       await sessionNotifier.acceptTotem();
-      if (mounted) {
-        setState(() => _receivingTotem = false);
-      }
     } catch (error) {
       if (mounted) {
-        setState(() => _receivingTotem = false);
-        await ErrorHandler.handleApiError(
+        showErrorPopup(
           context,
-          error,
-          onRetry: () => _onAcceptTotem(sessionNotifier),
+          icon: TotemIcons.errorOutlined,
+          title: 'Something went wrong',
+          message: 'We were unable to accept the totem. Please try again.',
         );
       }
     }
@@ -161,10 +169,12 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           token: widget.token,
           cameraEnabled: widget.cameraEnabled,
           microphoneEnabled: widget.micEnabled,
+          cameraOptions: widget.cameraOptions,
+          audioOptions: widget.audioOptions,
+          audioOutputOptions: widget.audioOutputOptions,
           onEmojiReceived: _onEmojiReceived,
           onMessageReceived: _onChatMessageReceived,
           onLivekitError: _onLivekitError,
-          onReceiveTotem: _onReceiveTotem,
         );
 
         final sessionState = ref.watch(liveKitServiceProvider(sessionOptions));
@@ -176,6 +186,27 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           canPop: false,
           onPopInvokedWithResult: (didPop, result) async {
             if (didPop) return;
+
+            // Checks if there is any other route above the first route.
+            //   This route would be a modal sheet or a dialog.
+            final navigator = _navigatorKey.currentState;
+            if (navigator?.canPop() ?? false) {
+              navigator!.pop();
+              return;
+            }
+
+            // If there is no other route above the first route, the user is
+            // trying to leave the session.
+
+            // If the session is not connected or connecting, leave the session.
+            if (sessionState.connectionState !=
+                    RoomConnectionState.connecting &&
+                sessionState.connectionState != RoomConnectionState.connected) {
+              popOrHome(context);
+              return;
+            }
+
+            // If the session is connected, show a dialog to confirm the action.
             final shouldPop = await showLeaveDialog(context) ?? false;
             if (context.mounted && shouldPop) {
               popOrHome(context);
@@ -186,6 +217,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               roomContext: sessionNotifier.room,
               builder: (context, roomCtx) {
                 return Navigator(
+                  key: _navigatorKey,
+                  clipBehavior: Clip.none,
                   onDidRemovePage: (page) => {},
                   pages: [
                     MaterialPage(
@@ -229,7 +262,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         }
 
         if (state.isMyTurn(notifier.room)) {
-          if (_receivingTotem) {
+          if (state.sessionState.totemStatus == TotemStatus.passing) {
             return ReceiveTotemScreen(
               actionBar: buildActionBar(notifier, state, event),
               onAcceptTotem: () => _onAcceptTotem(notifier),
@@ -240,14 +273,18 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             actionBar: buildActionBar(notifier, state, event),
             getParticipantKey: getParticipantKey,
             onPassTotem: notifier.passTotem,
+            sessionState: state.sessionState,
             event: event,
+            emojis: _reactions,
           );
         } else {
           return NotMyTurn(
             actionBar: buildActionBar(notifier, state, event),
             getParticipantKey: getParticipantKey,
             sessionState: state.sessionState,
+            session: notifier,
             event: event,
+            emojis: _reactions,
           );
         }
     }

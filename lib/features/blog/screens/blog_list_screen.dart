@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/blog/widgets/blog_post_card.dart';
 import 'package:totem_app/features/blog/widgets/featured_blog_post.dart';
-import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -51,18 +50,21 @@ class BlogListScreen extends ConsumerWidget {
                         data.items.first,
                       ),
                     ),
-                    SliverPadding(
-                      padding: const EdgeInsetsDirectional.only(
-                        top: 20,
-                        bottom: BottomNavScaffold.bottomNavHeight + 20,
-                      ),
-                      sliver: SliverFixedExtentList.builder(
-                        itemExtent: BlogPostCard.cardHeight + 10,
-                        itemCount: data.items.sublist(1).length,
-                        itemBuilder: (context, index) =>
-                            BlogPostCard.fromBlogPostSchema(
-                              data.items[index + 1],
-                            ),
+                    SliverSafeArea(
+                      top: false,
+                      sliver: SliverPadding(
+                        padding: const EdgeInsetsDirectional.only(
+                          top: 20,
+                          bottom: 20,
+                        ),
+                        sliver: SliverFixedExtentList.builder(
+                          itemExtent: BlogPostCard.cardHeight + 10,
+                          itemCount: data.items.sublist(1).length,
+                          itemBuilder: (context, index) =>
+                              BlogPostCard.fromBlogPostSchema(
+                                data.items[index + 1],
+                              ),
+                        ),
                       ),
                     ),
                   ],

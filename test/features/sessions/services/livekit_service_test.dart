@@ -11,7 +11,6 @@ import 'package:livekit_components/livekit_components.dart'
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/api/meetings/meetings_client.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
-import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
 
 // Mock classes
@@ -79,20 +78,14 @@ class TestLiveKitService {
     final metadata = room.room.metadata;
     if (metadata != null) {
       try {
-        final newState = SessionState.fromMetadata(metadata);
-        final previousSpeakingNow = testState.sessionState.speakingNow;
+        final newState = SessionState.fromJson(
+          jsonDecode(metadata) as Map<String, dynamic>,
+        );
         testState = testState.copyWith(sessionState: newState);
-
-        // Check if totem was passed to current user
-        if (previousSpeakingNow != testUserIdentity &&
-            newState.speakingNow == testUserIdentity &&
-            room.localParticipant?.identity == testUserIdentity) {
-          _options.onReceiveTotem();
-        }
       } catch (e) {
         // Handle invalid metadata gracefully
         testState = testState.copyWith(
-          sessionState: const SessionState.waiting(),
+          sessionState: const SessionState(speakingOrder: []),
         );
       }
     }
@@ -183,7 +176,9 @@ void main() {
       onEmojiReceived: (userIdentity, emoji) {},
       onMessageReceived: (userIdentity, message) {},
       onLivekitError: (error) {},
-      onReceiveTotem: () {},
+      cameraOptions: const CameraCaptureOptions(),
+      audioOptions: const AudioCaptureOptions(),
+      audioOutputOptions: const AudioOutputOptions(),
     );
 
     setUpAll(() {
@@ -197,7 +192,9 @@ void main() {
           onEmojiReceived: (userIdentity, emoji) {},
           onMessageReceived: (userIdentity, message) {},
           onLivekitError: (error) {},
-          onReceiveTotem: () {},
+          cameraOptions: const CameraCaptureOptions(),
+          audioOptions: const AudioCaptureOptions(),
+          audioOutputOptions: const AudioOutputOptions(),
         ),
       );
     });
@@ -322,7 +319,6 @@ void main() {
       test('should return false when no one is speaking', () {
         const sessionState = SessionState(
           status: SessionStatus.started,
-          speakingNow: null,
           speakingOrder: [testUserIdentity, 'other-user'],
         );
         liveKitService.testState = const LiveKitState(
@@ -398,53 +394,6 @@ void main() {
         expect(state.sessionState.speakingNow, isNull);
         expect(state.sessionState.speakingOrder, isEmpty);
       });
-
-      test(
-        'should trigger onReceiveTotem when speaking now changes to current user',
-        () {
-          var totemReceived = false;
-          final optionsWithTotemCallback = SessionOptions(
-            eventSlug: testEventSlug,
-            keeperSlug: testUserIdentity,
-            token: testToken,
-            cameraEnabled: true,
-            microphoneEnabled: true,
-            onEmojiReceived: (userIdentity, emoji) {},
-            onMessageReceived: (userIdentity, message) {},
-            onLivekitError: (error) {},
-            onReceiveTotem: () => totemReceived = true,
-          );
-
-          final serviceWithCallback =
-              TestLiveKitService(
-                  mockRoomContext: mockRoomContext,
-                  mockApiService: mockApiService,
-                  options: optionsWithTotemCallback,
-                )
-                // Set initial state with different speaker
-                ..testState = const LiveKitState(
-                  connectionState: RoomConnectionState.connected,
-                  sessionState: SessionState(
-                    status: SessionStatus.started,
-                    speakingNow: 'other-user',
-                    speakingOrder: [testUserIdentity, 'other-user'],
-                  ),
-                );
-
-          // Update metadata to current user speaking
-          when(() => mockRoom.metadata).thenReturn('''
-        {
-          "status": "started",
-          "speaking_now": "$testUserIdentity",
-          "speaking_order": ["$testUserIdentity", "other-user"]
-        }
-        ''');
-
-          serviceWithCallback.testOnRoomChanges();
-
-          expect(totemReceived, isTrue);
-        },
-      );
     });
 
     group('Data Received Events', () {
@@ -472,7 +421,9 @@ void main() {
           },
           onMessageReceived: (userIdentity, message) {},
           onLivekitError: (error) {},
-          onReceiveTotem: () {},
+          cameraOptions: const CameraCaptureOptions(),
+          audioOptions: const AudioCaptureOptions(),
+          audioOutputOptions: const AudioOutputOptions(),
         );
 
         final serviceWithCallback = TestLiveKitService(
@@ -512,7 +463,9 @@ void main() {
             receivedMessage = msg;
           },
           onLivekitError: (error) {},
-          onReceiveTotem: () {},
+          cameraOptions: const CameraCaptureOptions(),
+          audioOptions: const AudioCaptureOptions(),
+          audioOutputOptions: const AudioOutputOptions(),
         );
 
         final serviceWithCallback = TestLiveKitService(
@@ -557,7 +510,9 @@ void main() {
             messageReceived = true;
           },
           onLivekitError: (error) {},
-          onReceiveTotem: () {},
+          cameraOptions: const CameraCaptureOptions(),
+          audioOptions: const AudioCaptureOptions(),
+          audioOutputOptions: const AudioOutputOptions(),
         );
 
         final serviceWithCallback = TestLiveKitService(
@@ -592,7 +547,9 @@ void main() {
             callbackCalled = true;
           },
           onLivekitError: (error) {},
-          onReceiveTotem: () {},
+          cameraOptions: const CameraCaptureOptions(),
+          audioOptions: const AudioCaptureOptions(),
+          audioOutputOptions: const AudioOutputOptions(),
         );
 
         final serviceWithCallback = TestLiveKitService(

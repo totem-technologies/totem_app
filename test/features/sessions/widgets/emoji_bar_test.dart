@@ -408,7 +408,7 @@ void main() {
               builder: (context) {
                 return ElevatedButton(
                   onPressed: () async {
-                    await displayReaction(context, context, '👍');
+                    await displayReaction(context, '👍');
                   },
                   child: const Text('Show Reaction'),
                 );
@@ -436,7 +436,7 @@ void main() {
                 return ElevatedButton(
                   onPressed: () async {
                     // Pass a context that doesn't have a render box
-                    await displayReaction(context, context, '👍');
+                    await displayReaction(context, '👍');
                   },
                   child: const Text('Show Reaction'),
                 );

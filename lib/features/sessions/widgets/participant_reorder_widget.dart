@@ -52,9 +52,7 @@ class _ParticipantReorderWidgetState
   @override
   void initState() {
     super.initState();
-    _localOrder = List<String>.from(
-      widget.state.sessionState.speakingOrder ?? [],
-    );
+    _localOrder = List<String>.from(widget.state.sessionState.speakingOrder);
   }
 
   @override

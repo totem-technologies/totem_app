@@ -13,6 +13,7 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/meeting_provider_enum.dart';
 import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/api_service.dart';
@@ -36,7 +37,7 @@ enum SpaceJoinCardState {
   closed,
   joinable,
   full,
-  joined,
+  attending,
   notJoined,
 }
 
@@ -55,6 +56,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
   late bool _attending = event.attending;
   var _loading = false;
+  var _joined = false;
 
   // Refresh every second to update timeago and button states
   Timer? _timer;
@@ -78,9 +80,33 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final user = ref.watch(authControllerProvider.select((auth) => auth.user));
+
     final hasEnded = event.start
         .add(Duration(minutes: event.duration))
         .isBefore(DateTime.now());
+
+    final state = () {
+      if (event.cancelled) return SpaceJoinCardState.cancelled;
+
+      final hasEnded = event.start
+          .add(Duration(minutes: event.duration))
+          .isBefore(DateTime.now());
+
+      if (hasEnded) return SpaceJoinCardState.ended;
+
+      if (_joined || (event.canJoinNow(user) && event.joinable)) {
+        return SpaceJoinCardState.joinable;
+      } else if (_attending) {
+        return SpaceJoinCardState.attending;
+      } else if (event.seatsLeft <= 0) {
+        return SpaceJoinCardState.full;
+      } else if (!event.open) {
+        return SpaceJoinCardState.closed;
+      } else {
+        return SpaceJoinCardState.notJoined;
+      }
+    }();
 
     return SafeArea(
       top: false,
@@ -114,7 +140,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                             return 'This session is closed';
                           case SpaceJoinCardState.full:
                             return 'This session is full';
-                          case SpaceJoinCardState.joined:
+                          case SpaceJoinCardState.attending:
                           case SpaceJoinCardState.notJoined:
                             return formatEventDate(event.start);
                         }
@@ -127,7 +153,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                     Text(
                       () {
                         switch (state) {
-                          case SpaceJoinCardState.joined:
+                          case SpaceJoinCardState.attending:
                           case SpaceJoinCardState.notJoined:
                             return formatEventTime(event.start);
                           case SpaceJoinCardState.joinable:
@@ -154,7 +180,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                 child: Link(
                   uri: hasEnded
                       ? null
-                      : event.canJoinNow &&
+                      : event.canJoinNow(user) &&
                             event.meetingProvider ==
                                 MeetingProviderEnum.googleMeet
                       ? Uri.parse(getFullUrl(event.calLink))
@@ -170,7 +196,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                         AppTheme.mauve,
                       ),
                     );
-                    if (state == SpaceJoinCardState.joined) {
+                    if (state == SpaceJoinCardState.attending) {
                       return SizedBox(
                         height: 46,
                         child: Row(
@@ -217,7 +243,8 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                           } else {
                             unawaited(followLink?.call());
                           }
-                        case SpaceJoinCardState.joined:
+                          _joined = true;
+                        case SpaceJoinCardState.attending:
                           unawaited(addToCalendar());
                         case SpaceJoinCardState.full:
                           toHome(HomeRoutes.spaces);
@@ -233,7 +260,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                           SpaceJoinCardState.cancelled ||
                           SpaceJoinCardState.closed => 'Explore',
                           SpaceJoinCardState.joinable => 'Join Now',
-                          SpaceJoinCardState.joined => 'Add to calendar',
+                          SpaceJoinCardState.attending => 'Add to calendar',
                           SpaceJoinCardState.full => 'Explore',
                           SpaceJoinCardState.notJoined => 'Attend',
                         },
@@ -272,7 +299,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                         );
                       case SpaceJoinCardState.ended:
                       case SpaceJoinCardState.cancelled:
-                      case SpaceJoinCardState.joined:
+                      case SpaceJoinCardState.attending:
                       case SpaceJoinCardState.full:
                         return OutlinedButton(
                           onPressed: onPressed,
@@ -311,28 +338,6 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
         ),
       ),
     );
-  }
-
-  SpaceJoinCardState get state {
-    if (event.cancelled) return SpaceJoinCardState.cancelled;
-
-    final hasEnded = event.start
-        .add(Duration(minutes: event.duration))
-        .isBefore(DateTime.now());
-
-    if (hasEnded) return SpaceJoinCardState.ended;
-
-    if (event.canJoinNow && event.joinable) {
-      return SpaceJoinCardState.joinable;
-    } else if (_attending) {
-      return SpaceJoinCardState.joined;
-    } else if (event.seatsLeft <= 0) {
-      return SpaceJoinCardState.full;
-    } else if (!event.open) {
-      return SpaceJoinCardState.closed;
-    } else {
-      return SpaceJoinCardState.notJoined;
-    }
   }
 
   Future<void> attend(WidgetRef ref) async {

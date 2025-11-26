@@ -74,6 +74,12 @@ adb logcat "*:S" flutter:V
 flutter attach
 ```
 
+or
+
+```bash
+flutter run --use-application-binary=build\app\outputs\apk\debug\app-debug.apk
+```
+
 ### 🧪 Testing
 
 Run all tests:

@@ -10,6 +10,7 @@ import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
+import 'package:totem_app/features/sessions/screens/options_sheet.dart';
 import 'package:totem_app/features/sessions/screens/room_screen.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
@@ -33,6 +34,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   var _isCameraOn = true;
   var _isMicOn = true;
 
+  var _cameraOptions = const CameraCaptureOptions();
+  var _audioOptions = const AudioCaptureOptions();
+  var _audioOutputOptions = const AudioOutputOptions();
+
   @override
   void initState() {
     super.initState();
@@ -40,8 +45,12 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   Future<void> _initializeLocalVideo() async {
+    if (_videoTrack != null) {
+      await _videoTrack!.stop();
+      await _videoTrack!.dispose();
+    }
     try {
-      _videoTrack = await LocalVideoTrack.createCameraTrack();
+      _videoTrack = await LocalVideoTrack.createCameraTrack(_cameraOptions);
       await _videoTrack!.start();
       setState(() {});
     } catch (e) {
@@ -78,6 +87,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       context.pushReplacement(
         RouteNames.videoSession(widget.eventSlug),
         extra: VideoRoomScreenRouteArgs(
+          cameraOptions: _cameraOptions,
+          audioOptions: _audioOptions,
+          audioOutputOptions: _audioOutputOptions,
           cameraEnabled: _isCameraOn,
           micEnabled: _isMicOn,
           eventSlug: widget.eventSlug,
@@ -198,6 +210,35 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                           _isCameraOn
                               ? TotemIcons.cameraOn
                               : TotemIcons.cameraOff,
+                        ),
+                      ),
+                      ActionBarButton(
+                        onPressed: () async {
+                          await showPrejoinOptionsSheet(
+                            context,
+                            cameraOptions: _cameraOptions,
+                            audioOptions: _audioOptions,
+                            audioOutputOptions: _audioOutputOptions,
+                            onCameraChanged: (options) async {
+                              setState(() {
+                                _cameraOptions = options;
+                              });
+                              await _initializeLocalVideo();
+                            },
+                            onAudioChanged: (options) {
+                              setState(() {
+                                _audioOptions = options;
+                              });
+                            },
+                            onAudioOutputChanged: (options) {
+                              setState(() {
+                                _audioOutputOptions = options;
+                              });
+                            },
+                          );
+                        },
+                        child: const Center(
+                          child: TotemIcon(TotemIcons.more, size: 18),
                         ),
                       ),
                       SizedBox(
