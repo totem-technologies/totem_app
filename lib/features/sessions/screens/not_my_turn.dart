@@ -14,6 +14,7 @@ class NotMyTurn extends ConsumerWidget {
     required this.sessionState,
     required this.session,
     required this.event,
+    required this.emojis,
     super.key,
   });
 
@@ -22,6 +23,7 @@ class NotMyTurn extends ConsumerWidget {
   final SessionState sessionState;
   final LiveKitService session;
   final EventDetailSchema event;
+  final List<MapEntry<String, String>> emojis;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -50,15 +52,43 @@ class NotMyTurn extends ConsumerWidget {
                     ),
                   ),
                   PositionedDirectional(
-                    end: 30,
-                    bottom: 30,
-                    child: Text(
-                      session.speakingNow.name,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
-                          const Shadow(blurRadius: 4),
+                    start: 20,
+                    end: 20,
+                    bottom: 20,
+                    child: SafeArea(
+                      bottom: false,
+                      child: Row(
+                        spacing: 12,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.black54,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 0.5,
+                              ),
+                              boxShadow: kElevationToShadow[6],
+                            ),
+                            padding: const EdgeInsetsDirectional.all(4),
+                            child: SpeakingIndicator(
+                              participant: session.speakingNow,
+                            ),
+                          ),
+                          Flexible(
+                            child: Text(
+                              session.speakingNow.name,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                shadows: kElevationToShadow[6],
+                              ),
+                              textAlign: TextAlign.end,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -80,8 +110,15 @@ class NotMyTurn extends ConsumerWidget {
             },
             participantTrackBuilder: (context, identifier) {
               return ParticipantCard(
+                key: getParticipantKey(identifier.participant.identity),
                 participant: identifier.participant,
                 event: event,
+                emojis: emojis
+                    .where(
+                      (entry) => entry.key == identifier.participant.identity,
+                    )
+                    .map((entry) => entry.value)
+                    .toList(),
               );
             },
           );

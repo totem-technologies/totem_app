@@ -24,26 +24,22 @@ class ParticipantCard extends ConsumerWidget {
   const ParticipantCard({
     required this.participant,
     required this.event,
+    required this.emojis,
     super.key,
   });
 
   final Participant participant;
   final EventDetailSchema event;
+  final List<String> emojis;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final participantContext = Provider.of<ParticipantContext>(context);
 
-    final audioTracks = participantContext.tracks
-        .where(
-          (t) => t.kind == TrackType.AUDIO && t.track is AudioTrack,
-        )
-        .toList();
-
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );
-    final isKeeper = currentUserSlug == event.space.author.slug!;
+    final amKeeper = currentUserSlug == event.space.author.slug!;
 
     const overlayPadding = 6.0;
 
@@ -98,45 +94,44 @@ class ParticipantCard extends ConsumerWidget {
               PositionedDirectional(
                 top: overlayPadding,
                 start: overlayPadding,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.black54,
-                  ),
-                  padding: const EdgeInsetsDirectional.all(2),
-                  alignment: Alignment.center,
-                  child: Builder(
-                    builder: (context) {
-                      if (participant.isMuted ||
-                          !participant.hasAudio ||
-                          audioTracks.isEmpty) {
-                        return const TotemIcon(
-                          TotemIcons.microphoneOff,
-                          size: 20,
-                          color: Colors.white,
-                        );
-                      } else {
-                        return SoundWaveformWidget(
-                          audioTrack:
-                              audioTracks.firstOrNull?.track as AudioTrack?,
-                          participant: participant,
-                          options: const AudioVisualizerWidgetOptions(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  switchInCurve: Curves.easeInOut,
+                  switchOutCurve: Curves.easeInOut,
+                  child: emojis.isNotEmpty
+                      ? Container(
+                          key: Key(emojis.first),
+                          width: 20,
+                          height: 20,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
                             color: Colors.white,
-                            barCount: 3,
-                            barMinOpacity: 0.8,
-                            spacing: 3,
-                            minHeight: 4,
-                            maxHeight: 12,
                           ),
-                        );
-                      }
-                    },
-                  ),
+                          // padding: const EdgeInsetsDirectional.all(0),
+                          alignment: Alignment.center,
+                          child: Text(
+                            emojis.first,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              textBaseline: TextBaseline.ideographic,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      : Container(
+                          width: 20,
+                          height: 20,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.black54,
+                          ),
+                          padding: const EdgeInsetsDirectional.all(2),
+                          alignment: Alignment.center,
+                          child: SpeakingIndicator(participant: participant),
+                        ),
                 ),
               ),
-              if (isKeeper && currentUserSlug != participant.identity)
+              if (amKeeper && currentUserSlug != participant.identity)
                 PositionedDirectional(
                   end: overlayPadding,
                   top: overlayPadding,
@@ -364,6 +359,40 @@ class _ParticipantMenuButton extends StatelessWidget {
         ),
       ),
     ];
+  }
+}
+
+class SpeakingIndicator extends StatelessWidget {
+  const SpeakingIndicator({required this.participant, super.key});
+
+  final Participant participant;
+
+  @override
+  Widget build(BuildContext context) {
+    final audioTracks = participant
+        .getTrackPublications()
+        .where((t) => t.kind == TrackType.AUDIO && t.track is AudioTrack)
+        .toList();
+    if (participant.isMuted || !participant.hasAudio || audioTracks.isEmpty) {
+      return const TotemIcon(
+        TotemIcons.microphoneOff,
+        size: 20,
+        color: Colors.white,
+      );
+    } else {
+      return SoundWaveformWidget(
+        audioTrack: audioTracks.firstOrNull?.track as AudioTrack?,
+        participant: participant,
+        options: const AudioVisualizerWidgetOptions(
+          color: Colors.white,
+          barCount: 3,
+          barMinOpacity: 0.8,
+          spacing: 3,
+          minHeight: 4,
+          maxHeight: 12,
+        ),
+      );
+    }
   }
 }
 

@@ -90,7 +90,10 @@ class EmojiBar extends StatelessWidget {
                   onTap: () => onEmojiSelected(emoji),
                   child: Text(
                     emoji,
-                    style: const TextStyle(fontSize: 24),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      textBaseline: TextBaseline.ideographic,
+                    ),
                   ),
                 );
               }).toList(),
@@ -117,6 +120,7 @@ Future<void> displayReaction(
 
   final overlay = Overlay.of(context);
 
+  final completer = Completer<void>();
   late final OverlayEntry entry;
   entry = OverlayEntry(
     builder: (context) {
@@ -128,12 +132,14 @@ Future<void> displayReaction(
           if (entry.mounted) {
             entry.remove();
           }
+          completer.complete();
         },
       );
     },
   );
 
   overlay.insert(entry);
+  return completer.future;
 }
 
 class RisingEmoji extends StatefulWidget {
@@ -142,7 +148,7 @@ class RisingEmoji extends StatefulWidget {
     required this.startX,
     required this.startY,
     required this.onCompleted,
-    this.duration = const Duration(milliseconds: 3000),
+    this.duration = const Duration(milliseconds: 2000),
     super.key,
   });
 
@@ -207,7 +213,7 @@ class _RisingEmojiState extends State<RisingEmoji>
         final screenHeight = MediaQuery.heightOf(context);
 
         // Vertical position (bottom to top)
-        final bottom = screenHeight * _animation.value;
+        final bottom = (screenHeight / 2) * _animation.value;
 
         // Horizontal position (sine wave for curvy effect)
         final initialLeft = widget.startX;
@@ -223,7 +229,13 @@ class _RisingEmojiState extends State<RisingEmoji>
             child: IgnorePointer(
               child: FadeTransition(
                 opacity: _opacityAnimation,
-                child: Text(widget.emoji, style: const TextStyle(fontSize: 22)),
+                child: Text(
+                  widget.emoji,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    textBaseline: TextBaseline.ideographic,
+                  ),
+                ),
               ),
             ),
           ),

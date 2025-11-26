@@ -92,22 +92,27 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     super.dispose();
   }
 
+  // TODO(bdlukaa): Investigate if this is still needed.
   Map<String, GlobalKey> participantKeys = {};
   GlobalKey getParticipantKey(String identity) {
     return participantKeys.putIfAbsent(identity, GlobalKey.new);
   }
 
   var _showEmojiPicker = false;
+  final _reactions = <MapEntry<String, String>>[];
   Future<void> _onEmojiReceived(String userIdentity, String emoji) async {
-    final userKey = participantKeys[userIdentity];
-    if (userKey != null && userKey.currentContext != null) {
-      await displayReaction(context, emoji);
-    }
+    if (!mounted) return;
+    final entry = MapEntry(userIdentity, emoji);
+    setState(() => _reactions.add(entry));
+    await displayReaction(context, emoji);
+    _reactions.remove(entry);
+    if (mounted) setState(() {});
   }
 
   bool _chatSheetOpen = false;
   bool _hasPendingChatMessages = false;
   void _onChatMessageReceived(String userIdentity, String message) {
+    if (!mounted) return;
     setState(() => _hasPendingChatMessages = !_chatSheetOpen);
     showNotificationPopup(
       context,
@@ -270,6 +275,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             onPassTotem: notifier.passTotem,
             sessionState: state.sessionState,
             event: event,
+            emojis: _reactions,
           );
         } else {
           return NotMyTurn(
@@ -278,6 +284,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             sessionState: state.sessionState,
             session: notifier,
             event: event,
+            emojis: _reactions,
           );
         }
     }
