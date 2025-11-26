@@ -101,11 +101,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   Future<void> _onEmojiReceived(String userIdentity, String emoji) async {
     final userKey = participantKeys[userIdentity];
     if (userKey != null && userKey.currentContext != null) {
-      await displayReaction(
-        context,
-        userKey.currentContext!,
-        emoji,
-      );
+      await displayReaction(context, emoji);
     }
   }
 
@@ -280,6 +276,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             actionBar: buildActionBar(notifier, state, event),
             getParticipantKey: getParticipantKey,
             sessionState: state.sessionState,
+            session: notifier,
             event: event,
           );
         }

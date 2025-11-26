@@ -8,6 +8,7 @@ import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
 import 'package:totem_app/api/models/session_state.dart';
+import 'package:totem_app/api/models/totem_status.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
@@ -145,6 +146,16 @@ class LiveKitService extends _$LiveKitService {
         defaultCameraCaptureOptions: _options.cameraOptions,
         defaultAudioCaptureOptions: _options.audioOptions,
         defaultAudioOutputOptions: _options.audioOutputOptions,
+
+        // TODO(bdlukaa): Bandwidth optmizations
+        // dynacast: false,
+        // defaultVideoPublishOptions: const VideoPublishOptions(
+        //    simulcast: true
+        // ),
+        // defaultAudioPublishOptions: AudioPublishOptions(),
+
+        /// https://docs.livekit.io/home/client/tracks/subscribe/#adaptive-stream
+        adaptiveStream: true,
       ),
     );
 
@@ -208,6 +219,13 @@ class LiveKitService extends _$LiveKitService {
         jsonDecode(metadata) as Map<String, dynamic>,
       );
 
+      // if (previousState.speakingNow != newState.speakingNow) {
+      //    if (newState.speakingNow == room.localParticipant?.identity) {
+      //      debugPrint('You are now speaking');
+      //      _options.onReceiveTotem();
+      //    }
+      // }
+
       state = state.copyWith(sessionState: newState);
       _lastMetadata = metadata;
     }
@@ -244,6 +262,24 @@ class LiveKitService extends _$LiveKitService {
   bool isKeeper([String? userSlug]) {
     final auth = ref.read(authControllerProvider);
     return _options.keeperSlug == (userSlug ?? auth.user?.slug);
+  }
+
+  /// Get the participant who is currently speaking.
+  Participant get speakingNow {
+    return room.participants.firstWhere(
+      (participant) {
+        if (state.sessionState.speakingNow != null) {
+          if (state.sessionState.totemStatus == TotemStatus.passing) {
+            return participant.identity == options.keeperSlug;
+          }
+          return participant.identity == state.sessionState.speakingNow;
+        } else {
+          // If no one is speaking right now, show the keeper's video
+          return participant.identity == options.keeperSlug;
+        }
+      },
+      orElse: () => room.localParticipant!,
+    );
   }
 
   /// Pass the totem to the next participant in the speaking order.

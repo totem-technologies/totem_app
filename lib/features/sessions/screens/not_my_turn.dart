@@ -2,10 +2,8 @@ import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
-import 'package:totem_app/api/models/session_state.dart';
-import 'package:totem_app/api/models/totem_status.dart';
 import 'package:totem_app/core/config/theme.dart';
-import 'package:totem_app/features/sessions/services/utils.dart';
+import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 
@@ -14,6 +12,7 @@ class NotMyTurn extends ConsumerWidget {
     required this.getParticipantKey,
     required this.actionBar,
     required this.sessionState,
+    required this.session,
     required this.event,
     super.key,
   });
@@ -21,27 +20,12 @@ class NotMyTurn extends ConsumerWidget {
   final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
   final SessionState sessionState;
+  final LiveKitService session;
   final EventDetailSchema event;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-
-    final roomCtx = RoomContext.of(context)!;
-    final speakingNow = roomCtx.participants.firstWhere(
-      (participant) {
-        if (sessionState.speakingNow != null) {
-          if (sessionState.totemStatus == TotemStatus.passing) {
-            return participant.identity == event.space.author.slug!;
-          }
-          return participant.identity == sessionState.speakingNow;
-        } else {
-          // If no one is speaking right now, show the keeper's video
-          return participant.identity == event.space.author.slug!;
-        }
-      },
-      orElse: () => roomCtx.localParticipant!,
-    );
 
     return RoomBackground(
       child: OrientationBuilder(
@@ -60,13 +44,16 @@ class NotMyTurn extends ConsumerWidget {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: ParticipantVideo(participant: speakingNow),
+                    child: ParticipantVideo(
+                      key: getParticipantKey(session.speakingNow.identity),
+                      participant: session.speakingNow,
+                    ),
                   ),
                   PositionedDirectional(
                     end: 30,
                     bottom: 30,
                     child: Text(
-                      speakingNow.name,
+                      session.speakingNow.name,
                       style: theme.textTheme.titleLarge?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -85,7 +72,7 @@ class NotMyTurn extends ConsumerWidget {
             layoutBuilder: NoMyTurnLayoutBuilder(isLandscape: isLandscape),
             sorting: (originalTracks) {
               return tracksSorting(
-                speakingNow: speakingNow.identity,
+                speakingNow: session.speakingNow.identity,
                 originalTracks: originalTracks,
                 sessionState: sessionState,
                 event: event,
@@ -108,10 +95,7 @@ class NotMyTurn extends ConsumerWidget {
               child: Row(
                 spacing: 16,
                 children: [
-                  Expanded(
-                    flex: 2,
-                    child: speakerVideo,
-                  ),
+                  Expanded(flex: 2, child: speakerVideo),
                   Expanded(
                     flex: 3,
                     child: Column(
