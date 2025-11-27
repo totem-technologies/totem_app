@@ -14,6 +14,7 @@ import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/features/keeper/screens/meet_user_card.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/info_text.dart';
+import 'package:totem_app/features/spaces/widgets/sessions_calendar.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/features/spaces/widgets/space_detail_app_bar.dart';
 import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
@@ -325,7 +326,9 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                             ),
                           const SizedBox(height: 16),
 
-                          // TODO(bdlukaa): Sessions Calendar
+                          SessionsCalendar(
+                            nextEvents: space.nextEvents,
+                          ),
                           if (eventAsync != null)
                             eventAsync.when(
                               data: (event) => Container(
