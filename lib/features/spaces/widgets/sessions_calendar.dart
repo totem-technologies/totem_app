@@ -164,6 +164,8 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
     });
   }
 
+  // Check if a given day has an open event (available to join)
+  // Compares only year/month/day (ignoring time) to determine if it's an open event day
   bool _isEventOpen(DateTime? day) {
     if (day == null) return false;
 
@@ -178,6 +180,8 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
     });
   }
 
+  // Check if a given day has an event that the user is attending
+  // Compares only year/month/day (ignoring time) to determine if it's an attended event day
   bool _isUserAttending(DateTime? day) {
     if (day == null) return false;
 
