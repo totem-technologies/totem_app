@@ -141,22 +141,25 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
     return day.year == _currentMonth.year && day.month == _currentMonth.month;
   }
 
+  // Normalize a DateTime to just year/month/day, removing time components
+  // This ensures consistent date comparisons regardless of time values
+  // Used throughout the calendar to compare dates without considering hours/minutes/seconds
+  DateTime _normalizeDate(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
+  }
+
   // Check if a given day matches any event date from nextEvents
   // Compares only year/month/day (ignoring time) to determine if it's an event day
   bool _isEventDay(DateTime? day) {
     if (day == null) return false;
 
     // Normalize the calendar day to just year/month/day for comparison
-    final dayDate = DateTime(day.year, day.month, day.day);
+    final dayDate = _normalizeDate(day);
 
     // Check if any event's start date matches this day
     return widget.nextEvents.any((event) {
       // Normalize event start date to just year/month/day for comparison
-      final eventDate = DateTime(
-        event.start.year,
-        event.start.month,
-        event.start.day,
-      );
+      final eventDate = _normalizeDate(event.start);
       return dayDate == eventDate;
     });
   }
@@ -165,16 +168,12 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
     if (day == null) return false;
 
     // Normalize the calendar day to just year/month/day for comparison
-    final dayDate = DateTime(day.year, day.month, day.day);
+    final dayDate = _normalizeDate(day);
 
     // Check if any event's start date matches this day
     return widget.nextEvents.any((event) {
       // Normalize event start date to just year/month/day for comparison
-      final eventDate = DateTime(
-        event.start.year,
-        event.start.month,
-        event.start.day,
-      );
+      final eventDate = _normalizeDate(event.start);
       return dayDate == eventDate && event.open;
     });
   }
@@ -183,17 +182,13 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
     if (day == null) return false;
 
     // Normalize the calendar day to just year/month/day for comparison
-    final dayDate = DateTime(day.year, day.month, day.day);
+    final dayDate = _normalizeDate(day);
 
     // Check if any event's start date matches
     // this day and the user is attending the event
     return widget.nextEvents.any((event) {
       // Normalize event start date to just year/month/day for comparison
-      final eventDate = DateTime(
-        event.start.year,
-        event.start.month,
-        event.start.day,
-      );
+      final eventDate = _normalizeDate(event.start);
       return dayDate == eventDate && event.attending;
     });
   }
@@ -204,16 +199,12 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
     if (day == null) return [];
 
     // Normalize the calendar day to just year/month/day for comparison
-    final dayDate = DateTime(day.year, day.month, day.day);
+    final dayDate = _normalizeDate(day);
 
     // Filter events that match this day
     return widget.nextEvents.where((event) {
       // Normalize event start date to just year/month/day for comparison
-      final eventDate = DateTime(
-        event.start.year,
-        event.start.month,
-        event.start.day,
-      );
+      final eventDate = _normalizeDate(event.start);
       return dayDate == eventDate;
     }).toList();
   }
