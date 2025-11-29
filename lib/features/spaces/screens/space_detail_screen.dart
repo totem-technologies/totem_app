@@ -328,6 +328,22 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
 
                           SessionsCalendar(
                             nextEvents: space.nextEvents,
+                            onEventDayTap: (day, events) {
+                              // Navigate to the first event's detail page when
+                              // a day is tapped. This allows keyboard/screen
+                              // reader users to access event details
+                              if (events.isNotEmpty) {
+                                final event = events.first;
+                                unawaited(
+                                  context.push(
+                                    RouteNames.spaceEvent(
+                                      space.slug,
+                                      event.slug,
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
                           ),
                           if (eventAsync != null)
                             eventAsync.when(
