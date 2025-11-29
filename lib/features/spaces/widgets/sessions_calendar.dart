@@ -302,10 +302,8 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
           child: Text(
             '${day.day}',
             style: TextStyle(
-              // White text for event days, otherwise black/grey based on current month
-              color: isEventDay
-                  ? Colors.white
-                  : (isCurrentMonth ? Colors.black : Colors.grey),
+              // black/grey based on current month
+              color: (isCurrentMonth ? Colors.black : Colors.grey),
             ),
           ),
         ),
