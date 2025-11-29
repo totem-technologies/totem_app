@@ -31,16 +31,30 @@ void main() {
     );
   }
 
+  // Helper function to wrap the SessionsCalendar widget with proper constraints
+  // This ensures the calendar has enough space to render without overflow
+  Widget wrapCalendar({
+    required List<NextEventSchema> events,
+    void Function(DateTime, List<NextEventSchema>)? onEventDayTap,
+  }) {
+    return MaterialApp(
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: SessionsCalendar(
+            nextEvents: events,
+            onEventDayTap: onEventDayTap,
+          ),
+        ),
+      ),
+    );
+  }
+
   group('SessionsCalendar Initialization', () {
     testWidgets(
       'should initialize with current month when no events provided',
       (WidgetTester tester) async {
         await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
-              body: SessionsCalendar(nextEvents: []),
-            ),
-          ),
+          wrapCalendar(events: const []),
         );
 
         expect(find.textContaining(RegExp(r'\w+ \d{4}')), findsOneWidget);
@@ -55,11 +69,7 @@ void main() {
         final events = [createEvent(start: eventDate)];
 
         await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: SessionsCalendar(nextEvents: events),
-            ),
-          ),
+          wrapCalendar(events: events),
         );
 
         // Check that March 2025 is displayed
@@ -76,11 +86,7 @@ void main() {
       final events = [firstEvent, secondEvent];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: events),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       // Should display May 2025 (first event's month)
@@ -96,11 +102,7 @@ void main() {
       final events = [createEvent(start: eventDate)];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: events),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       // Verify initial month
@@ -123,11 +125,7 @@ void main() {
       final events = [createEvent(start: eventDate)];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: events),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       // Verify initial month
@@ -150,11 +148,7 @@ void main() {
       final events = [createEvent(start: eventDate)];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: events),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       // Start in January 2025
@@ -180,11 +174,7 @@ void main() {
       final events = [createEvent(start: eventDate)];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: events),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       // Calendar should have 35 cells (5 rows x 7 columns)
@@ -197,11 +187,7 @@ void main() {
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: []),
-          ),
-        ),
+        wrapCalendar(events: const []),
       );
 
       // Check for day abbreviations: S, M, T, W, T, F, S
@@ -221,11 +207,7 @@ void main() {
         final events = [createEvent(start: eventDate)];
 
         await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: SessionsCalendar(nextEvents: events),
-            ),
-          ),
+          wrapCalendar(events: events),
         );
 
         // June 1, 2025 is a Sunday, so the first day should be June 1
@@ -248,11 +230,7 @@ void main() {
         ];
 
         await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: SessionsCalendar(nextEvents: events),
-            ),
-          ),
+          wrapCalendar(events: events),
         );
 
         // Find the day cell for June 15
@@ -289,11 +267,7 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: events),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       // Find the day cell for June 15
@@ -331,11 +305,7 @@ void main() {
         ];
 
         await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: SessionsCalendar(nextEvents: events),
-            ),
-          ),
+          wrapCalendar(events: events),
         );
 
         // Find the day cell for June 15
@@ -367,11 +337,7 @@ void main() {
       final events = [createEvent(start: eventDate)];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: events),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       // Find a day without an event (e.g., June 20)
@@ -410,11 +376,7 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: events),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       // The day should still be highlighted (as an event day)
@@ -436,11 +398,7 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: events),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       // Should show mauve filled (attending), not mauve border (open)
@@ -471,16 +429,12 @@ void main() {
       final events = [createEvent(start: eventDate)];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(
-              nextEvents: events,
-              onEventDayTap: (day, eventList) {
-                tappedDay = day;
-                tappedEvents = eventList;
-              },
-            ),
-          ),
+        wrapCalendar(
+          events: events,
+          onEventDayTap: (day, eventList) {
+            tappedDay = day;
+            tappedEvents = eventList;
+          },
         ),
       );
 
@@ -508,15 +462,11 @@ void main() {
       final events = [createEvent(start: eventDate)];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(
-              nextEvents: events,
-              onEventDayTap: (day, eventList) {
-                callbackCalled = true;
-              },
-            ),
-          ),
+        wrapCalendar(
+          events: events,
+          onEventDayTap: (day, eventList) {
+            callbackCalled = true;
+          },
         ),
       );
 
@@ -536,13 +486,7 @@ void main() {
       final events = [createEvent(start: eventDate)];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(
-              nextEvents: events,
-            ),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       // Tap on the event day - should not crash
@@ -566,15 +510,11 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(
-              nextEvents: events,
-              onEventDayTap: (day, eventList) {
-                tappedEvents = eventList;
-              },
-            ),
-          ),
+        wrapCalendar(
+          events: events,
+          onEventDayTap: (day, eventList) {
+            tappedEvents = eventList;
+          },
         ),
       );
 
@@ -597,11 +537,7 @@ void main() {
       final events = [createEvent(start: eventDate)];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: events),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       // Find a day in the current month without an event
@@ -618,11 +554,7 @@ void main() {
       final events = [createEvent(start: eventDate)];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: events),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       // June 2025 starts on Sunday, so we should see May days
@@ -644,11 +576,7 @@ void main() {
         ];
 
         await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: SessionsCalendar(nextEvents: events),
-            ),
-          ),
+          wrapCalendar(events: events),
         );
 
         final day15 = find.text('15');
@@ -669,11 +597,7 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: events),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       final day15 = find.text('15');
@@ -693,11 +617,7 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: events),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       final day15 = find.text('15');
@@ -719,11 +639,7 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: events),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       // All events should be recognized for the same day
@@ -744,11 +660,7 @@ void main() {
 
     testWidgets('should handle empty events list', (WidgetTester tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: []),
-          ),
-        ),
+        wrapCalendar(events: const []),
       );
 
       // Should render without errors
@@ -766,11 +678,7 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: events),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       // Should start on May (first event)
@@ -798,11 +706,7 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionsCalendar(nextEvents: events),
-          ),
-        ),
+        wrapCalendar(events: events),
       );
 
       // Both should be recognized as the same day
