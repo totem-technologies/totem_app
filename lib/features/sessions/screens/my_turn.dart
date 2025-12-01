@@ -10,7 +10,6 @@ import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 import 'package:totem_app/shared/totem_icons.dart';
-import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
 
 class MyTurn extends StatelessWidget {
@@ -66,61 +65,45 @@ class MyTurn extends StatelessWidget {
             final passCard = PassReceiveCard(
               type: TotemCardTransitionType.pass,
               onActionPressed: () async {
-                final passed = await showDialog<bool?>(
-                  context: context,
-                  builder: (context) {
-                    return ConfirmationDialog(
-                      content:
-                          'Are you sure you want to pass the totem to the next '
-                          'participant?',
-                      confirmButtonText: 'Pass Totem',
-                      type: ConfirmationDialogType.standard,
-                      onConfirm: () async {
-                        final navigator = Navigator.of(context);
+                try {
+                  await onPassTotem();
+                  if (context.mounted) {
+                    showNotificationPopup(
+                      context,
+                      icon: TotemIcons.passToNext,
+                      title: 'Totem Passed',
+                      message:
+                          'The totem has been passed to the next participant.',
+                    );
+                  }
+                  return true;
+                } catch (error) {
+                  if (context.mounted) {
+                    await ErrorHandler.handleApiError(
+                      context,
+                      error,
+                      onRetry: () async {
                         try {
                           await onPassTotem();
                           if (context.mounted) {
-                            navigator.pop(true);
-                          }
-                        } catch (error) {
-                          if (context.mounted) {
-                            navigator.pop(false);
-                            await ErrorHandler.handleApiError(
+                            showNotificationPopup(
                               context,
-                              error,
-                              onRetry: () async {
-                                try {
-                                  await onPassTotem();
-                                  if (context.mounted) {
-                                    showNotificationPopup(
-                                      context,
-                                      icon: TotemIcons.passToNext,
-                                      title: 'Totem Passed',
-                                      message:
-                                          'The totem has been passed '
-                                          'to the next participant.',
-                                    );
-                                  }
-                                } catch (e) {
-                                  // Error already handled by handleApiError
-                                }
-                              },
+                              icon: TotemIcons.passToNext,
+                              title: 'Totem Passed',
+                              message:
+                                  'The totem has been passed '
+                                  'to the next participant.',
                             );
                           }
+                        } catch (e) {
+                          // Error already handled by handleApiError
                         }
                       },
                     );
-                  },
-                );
-                if (passed != null && passed && context.mounted) {
-                  showNotificationPopup(
-                    context,
-                    icon: TotemIcons.passToNext,
-                    title: 'Totem Passed',
-                    message:
-                        'The totem has been passed to the next participant.',
-                  );
+                  }
                 }
+
+                return false;
               },
             );
             if (isLandscape) {

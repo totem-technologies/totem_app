@@ -55,7 +55,14 @@ class ReceiveTotemScreen extends StatelessWidget {
 
             final passReceiveCard = PassReceiveCard(
               type: TotemCardTransitionType.receive,
-              onActionPressed: onAcceptTotem,
+              onActionPressed: () async {
+                try {
+                  await onAcceptTotem();
+                  return true;
+                } catch (error) {
+                  return false;
+                }
+              },
             );
 
             if (isLandscape) {

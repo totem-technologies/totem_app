@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
+import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
 class NotMyTurn extends ConsumerWidget {
   const NotMyTurn({
@@ -123,6 +125,41 @@ class NotMyTurn extends ConsumerWidget {
             },
           );
 
+          final startCard = Builder(
+            builder: (context) {
+              if (sessionState.status != SessionStatus.waiting) {
+                return const SizedBox.shrink();
+              } else if (session.isKeeper()) {
+                return PassReceiveCard(
+                  type: TotemCardTransitionType.start,
+                  onActionPressed: () async {
+                    try {
+                      await session.startSession();
+                      return true;
+                    } catch (error) {
+                      if (context.mounted) {
+                        await ErrorHandler.handleApiError(
+                          context,
+                          error,
+                          onRetry: () async {
+                            try {
+                              await session.startSession();
+                            } catch (e) {
+                              // Error already handled by handleApiError
+                            }
+                          },
+                        );
+                      }
+                      return false;
+                    }
+                  },
+                );
+              }
+
+              return const SizedBox.shrink();
+            },
+          );
+
           if (isLandscape) {
             final isLTR = Directionality.of(context) == TextDirection.ltr;
             return SafeArea(
@@ -139,6 +176,7 @@ class NotMyTurn extends ConsumerWidget {
                       spacing: 16,
                       children: [
                         Expanded(child: participantGrid),
+                        startCard,
                         Padding(
                           padding: const EdgeInsetsDirectional.symmetric(
                             horizontal: 16,
@@ -162,6 +200,7 @@ class NotMyTurn extends ConsumerWidget {
                     child: speakerVideo,
                   ),
                   Expanded(flex: 2, child: participantGrid),
+                  startCard,
                   actionBar,
                 ],
               ),

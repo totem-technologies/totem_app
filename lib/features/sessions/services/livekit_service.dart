@@ -287,7 +287,7 @@ class LiveKitService extends _$LiveKitService {
   /// This fails silently if it's not the user's turn.
   /// Throws an exception if the operation fails.
   Future<void> passTotem() async {
-    if (!state.isMyTurn(room)) return;
+    if (!state.isMyTurn(room) && !isKeeper()) return;
     try {
       await ref
           .read(passTotemProvider(options.eventSlug).future)

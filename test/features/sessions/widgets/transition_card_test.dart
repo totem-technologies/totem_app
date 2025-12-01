@@ -10,7 +10,7 @@ void main() {
           home: Scaffold(
             body: PassReceiveCard(
               type: TotemCardTransitionType.pass,
-              onActionPressed: () {},
+              onActionPressed: () async => true,
             ),
           ),
         ),
@@ -32,7 +32,7 @@ void main() {
           home: Scaffold(
             body: PassReceiveCard(
               type: TotemCardTransitionType.receive,
-              onActionPressed: () {},
+              onActionPressed: () async => true,
             ),
           ),
         ),
@@ -43,24 +43,64 @@ void main() {
       expect(find.text('Receive'), findsOneWidget);
     });
 
-    testWidgets('should handle pass button press', (WidgetTester tester) async {
+    testWidgets('should render with start type', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: PassReceiveCard(
+              type: TotemCardTransitionType.start,
+              onActionPressed: () async => true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(PassReceiveCard), findsOneWidget);
+      expect(
+        find.text(
+          'Bring participants out of the waiting room and begin '
+          'the conversation.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Start Session'), findsOneWidget);
+    });
+
+    testWidgets('should handle pass slide action', (WidgetTester tester) async {
       var pressed = false;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: PassReceiveCard(
               type: TotemCardTransitionType.pass,
-              onActionPressed: () => pressed = true,
+              onActionPressed: () async {
+                pressed = true;
+                return true;
+              },
             ),
           ),
         ),
       );
 
-      await tester.tap(find.text('Pass'));
+      // Find the slide button container
+      final gestureFinder = find.byType(GestureDetector);
+      expect(gestureFinder, findsOneWidget);
+
+      // Simulate sliding gesture - drag to complete
+      final RenderBox box = tester.renderObject(gestureFinder);
+      final size = box.size;
+
+      // Start drag
+      final startPosition = Offset(0, size.height / 2);
+      final endPosition = Offset(size.width * 0.95, size.height / 2);
+      
+      await tester.drag(gestureFinder, endPosition - startPosition);
+      await tester.pumpAndSettle();
+
       expect(pressed, isTrue);
     });
 
-    testWidgets('should handle receive button press', (
+    testWidgets('should handle receive slide action', (
       WidgetTester tester,
     ) async {
       var pressed = false;
@@ -69,13 +109,29 @@ void main() {
           home: Scaffold(
             body: PassReceiveCard(
               type: TotemCardTransitionType.receive,
-              onActionPressed: () => pressed = true,
+              onActionPressed: () async {
+                pressed = true;
+                return true;
+              },
             ),
           ),
         ),
       );
 
-      await tester.tap(find.text('Receive'));
+      // Find the slide button container
+      final gestureFinder = find.byType(GestureDetector);
+      expect(gestureFinder, findsOneWidget);
+
+      // Simulate sliding gesture
+      final RenderBox box = tester.renderObject(gestureFinder);
+      final size = box.size;
+
+      final startPosition = Offset(0, size.height / 2);
+      final endPosition = Offset(size.width * 0.95, size.height / 2);
+      
+      await tester.drag(gestureFinder, endPosition - startPosition);
+      await tester.pumpAndSettle();
+
       expect(pressed, isTrue);
     });
 
@@ -87,7 +143,7 @@ void main() {
           home: Scaffold(
             body: PassReceiveCard(
               type: TotemCardTransitionType.pass,
-              onActionPressed: () {},
+              onActionPressed: () async => true,
             ),
           ),
         ),
@@ -114,7 +170,7 @@ void main() {
       );
     });
 
-    testWidgets('should handle disabled button gracefully', (
+    testWidgets('should handle async callback gracefully', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
@@ -122,14 +178,54 @@ void main() {
           home: Scaffold(
             body: PassReceiveCard(
               type: TotemCardTransitionType.pass,
-              onActionPressed: () {}, // Empty callback
+              onActionPressed: () async => true,
             ),
           ),
         ),
       );
 
-      await tester.tap(find.text('Pass'));
-      // Should not throw or crash
+      final gestureFinder = find.byType(GestureDetector);
+      final RenderBox box = tester.renderObject(gestureFinder);
+      final size = box.size;
+
+      // Try to slide - should not throw or crash
+      final startPosition = Offset(0, size.height / 2);
+      final endPosition = Offset(size.width * 0.95, size.height / 2);
+      
+      await tester.drag(gestureFinder, endPosition - startPosition);
+      await tester.pumpAndSettle();
+      
+      // Should complete without errors
+      expect(gestureFinder, findsOneWidget);
+    });
+
+    testWidgets('should handle callback returning false', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: PassReceiveCard(
+              type: TotemCardTransitionType.pass,
+              onActionPressed: () async => false,
+            ),
+          ),
+        ),
+      );
+
+      final gestureFinder = find.byType(GestureDetector);
+      final RenderBox box = tester.renderObject(gestureFinder);
+      final size = box.size;
+
+      // Slide to trigger callback
+      final startPosition = Offset(0, size.height / 2);
+      final endPosition = Offset(size.width * 0.95, size.height / 2);
+      
+      await tester.drag(gestureFinder, endPosition - startPosition);
+      await tester.pumpAndSettle();
+
+      // Widget should still exist after callback returns false
+      expect(gestureFinder, findsOneWidget);
     });
 
     testWidgets('should render correctly with different themes', (
@@ -141,7 +237,7 @@ void main() {
           home: Scaffold(
             body: PassReceiveCard(
               type: TotemCardTransitionType.pass,
-              onActionPressed: () {},
+              onActionPressed: () async => true,
             ),
           ),
         ),
@@ -156,49 +252,86 @@ void main() {
       expect(find.text('Pass'), findsOneWidget);
     });
 
-    testWidgets('should maintain accessibility', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: PassReceiveCard(
-              type: TotemCardTransitionType.pass,
-              onActionPressed: () {},
-            ),
-          ),
-        ),
-      );
-
-      // Verify button is tappable
-      expect(tester.getSemantics(find.text('Pass')), isNotNull);
-    });
-
-    testWidgets('should handle rapid button presses', (
+    testWidgets('should show loading indicator during async operation', (
       WidgetTester tester,
     ) async {
-      var pressCount = 0;
+      var callbackStarted = false;
+      var callbackComplete = false;
+
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: PassReceiveCard(
               type: TotemCardTransitionType.pass,
-              onActionPressed: () => pressCount++,
+              onActionPressed: () async {
+                callbackStarted = true;
+                await Future<void>.delayed(const Duration(milliseconds: 100));
+                callbackComplete = true;
+                return true;
+              },
             ),
           ),
         ),
       );
 
-      // Rapid taps
-      await tester.tap(find.text('Pass'));
-      await tester.tap(find.text('Pass'));
-      await tester.tap(find.text('Pass'));
+      final gestureFinder = find.byType(GestureDetector);
+      final RenderBox box = tester.renderObject(gestureFinder);
+      final size = box.size;
 
-      expect(pressCount, equals(3));
+      // Slide to trigger callback
+      final startPosition = Offset(0, size.height / 2);
+      final endPosition = Offset(size.width * 0.95, size.height / 2);
+      
+      await tester.drag(gestureFinder, endPosition - startPosition);
+      await tester.pump();
+
+      // Check that loading indicator appears
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(callbackStarted, isTrue);
+
+      // Wait for callback to complete
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+
+      expect(callbackComplete, isTrue);
+    });
+
+    testWidgets('should snap back if slide is incomplete', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: PassReceiveCard(
+              type: TotemCardTransitionType.pass,
+              onActionPressed: () async => true,
+            ),
+          ),
+        ),
+      );
+
+      final gestureFinder = find.byType(GestureDetector);
+      final RenderBox box = tester.renderObject(gestureFinder);
+      final size = box.size;
+
+      // Slide only partway (not enough to trigger action)
+      final startPosition = Offset(0, size.height / 2);
+      final endPosition = Offset(size.width * 0.3, size.height / 2);
+      
+      await tester.drag(gestureFinder, endPosition - startPosition);
+      await tester.pump();
+      
+      // Release - should snap back
+      await tester.pumpAndSettle();
+
+      // Widget should still be in original state
+      expect(gestureFinder, findsOneWidget);
     });
   });
 
   group('TotemCardTransitionType Tests', () {
     test('should have correct enum values', () {
-      expect(TotemCardTransitionType.values.length, equals(2));
+      expect(TotemCardTransitionType.values.length, equals(3));
       expect(
         TotemCardTransitionType.values,
         contains(TotemCardTransitionType.pass),
@@ -206,6 +339,10 @@ void main() {
       expect(
         TotemCardTransitionType.values,
         contains(TotemCardTransitionType.receive),
+      );
+      expect(
+        TotemCardTransitionType.values,
+        contains(TotemCardTransitionType.start),
       );
     });
 
@@ -217,6 +354,10 @@ void main() {
       expect(
         TotemCardTransitionType.receive.toString(),
         equals('TotemCardTransitionType.receive'),
+      );
+      expect(
+        TotemCardTransitionType.start.toString(),
+        equals('TotemCardTransitionType.start'),
       );
     });
   });
