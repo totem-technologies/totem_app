@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 
 enum TotemCardTransitionType { pass, receive, start }
 
-class PassReceiveCard extends StatelessWidget {
-  const PassReceiveCard({
+class TransitionCard extends StatelessWidget {
+  const TransitionCard({
     required this.type,
     required this.onActionPressed,
     super.key,

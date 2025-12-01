@@ -3,12 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
 void main() {
-  group('PassReceiveCard Tests', () {
+  group('TransitionCard Tests', () {
     testWidgets('should render with pass type', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: PassReceiveCard(
+            body: TransitionCard(
               type: TotemCardTransitionType.pass,
               onActionPressed: () async => true,
             ),
@@ -16,7 +16,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(PassReceiveCard), findsOneWidget);
+      expect(find.byType(TransitionCard), findsOneWidget);
       expect(
         find.text(
           'When done, press Pass to pass the Totem to the next person.',
@@ -30,7 +30,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: PassReceiveCard(
+            body: TransitionCard(
               type: TotemCardTransitionType.receive,
               onActionPressed: () async => true,
             ),
@@ -38,7 +38,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(PassReceiveCard), findsOneWidget);
+      expect(find.byType(TransitionCard), findsOneWidget);
       expect(find.text('Check camera & mic then tap Receive'), findsOneWidget);
       expect(find.text('Receive'), findsOneWidget);
     });
@@ -47,7 +47,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: PassReceiveCard(
+            body: TransitionCard(
               type: TotemCardTransitionType.start,
               onActionPressed: () async => true,
             ),
@@ -55,7 +55,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(PassReceiveCard), findsOneWidget);
+      expect(find.byType(TransitionCard), findsOneWidget);
       expect(
         find.text(
           'Bring participants out of the waiting room and begin '
@@ -71,7 +71,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: PassReceiveCard(
+            body: TransitionCard(
               type: TotemCardTransitionType.pass,
               onActionPressed: () async {
                 pressed = true;
@@ -93,7 +93,7 @@ void main() {
       // Start drag
       final startPosition = Offset(0, size.height / 2);
       final endPosition = Offset(size.width * 0.95, size.height / 2);
-      
+
       await tester.drag(gestureFinder, endPosition - startPosition);
       await tester.pumpAndSettle();
 
@@ -107,7 +107,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: PassReceiveCard(
+            body: TransitionCard(
               type: TotemCardTransitionType.receive,
               onActionPressed: () async {
                 pressed = true;
@@ -128,7 +128,7 @@ void main() {
 
       final startPosition = Offset(0, size.height / 2);
       final endPosition = Offset(size.width * 0.95, size.height / 2);
-      
+
       await tester.drag(gestureFinder, endPosition - startPosition);
       await tester.pumpAndSettle();
 
@@ -141,7 +141,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: PassReceiveCard(
+            body: TransitionCard(
               type: TotemCardTransitionType.pass,
               onActionPressed: () async => true,
             ),
@@ -151,7 +151,7 @@ void main() {
 
       final card = tester.widget<Card>(
         find.descendant(
-          of: find.byType(PassReceiveCard),
+          of: find.byType(TransitionCard),
           matching: find.byType(Card),
         ),
       );
@@ -176,7 +176,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: PassReceiveCard(
+            body: TransitionCard(
               type: TotemCardTransitionType.pass,
               onActionPressed: () async => true,
             ),
@@ -191,10 +191,10 @@ void main() {
       // Try to slide - should not throw or crash
       final startPosition = Offset(0, size.height / 2);
       final endPosition = Offset(size.width * 0.95, size.height / 2);
-      
+
       await tester.drag(gestureFinder, endPosition - startPosition);
       await tester.pumpAndSettle();
-      
+
       // Should complete without errors
       expect(gestureFinder, findsOneWidget);
     });
@@ -205,7 +205,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: PassReceiveCard(
+            body: TransitionCard(
               type: TotemCardTransitionType.pass,
               onActionPressed: () async => false,
             ),
@@ -220,7 +220,7 @@ void main() {
       // Slide to trigger callback
       final startPosition = Offset(0, size.height / 2);
       final endPosition = Offset(size.width * 0.95, size.height / 2);
-      
+
       await tester.drag(gestureFinder, endPosition - startPosition);
       await tester.pumpAndSettle();
 
@@ -235,7 +235,7 @@ void main() {
         MaterialApp(
           theme: ThemeData.dark(),
           home: Scaffold(
-            body: PassReceiveCard(
+            body: TransitionCard(
               type: TotemCardTransitionType.pass,
               onActionPressed: () async => true,
             ),
@@ -261,7 +261,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: PassReceiveCard(
+            body: TransitionCard(
               type: TotemCardTransitionType.pass,
               onActionPressed: () async {
                 callbackStarted = true;
@@ -281,7 +281,7 @@ void main() {
       // Slide to trigger callback
       final startPosition = Offset(0, size.height / 2);
       final endPosition = Offset(size.width * 0.95, size.height / 2);
-      
+
       await tester.drag(gestureFinder, endPosition - startPosition);
       await tester.pump();
 
@@ -302,7 +302,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: PassReceiveCard(
+            body: TransitionCard(
               type: TotemCardTransitionType.pass,
               onActionPressed: () async => true,
             ),
@@ -317,10 +317,10 @@ void main() {
       // Slide only partway (not enough to trigger action)
       final startPosition = Offset(0, size.height / 2);
       final endPosition = Offset(size.width * 0.3, size.height / 2);
-      
+
       await tester.drag(gestureFinder, endPosition - startPosition);
       await tester.pump();
-      
+
       // Release - should snap back
       await tester.pumpAndSettle();
 

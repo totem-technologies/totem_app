@@ -62,7 +62,7 @@ class MyTurn extends StatelessWidget {
               },
             );
 
-            final passCard = PassReceiveCard(
+            final passCard = TransitionCard(
               type: TotemCardTransitionType.pass,
               onActionPressed: () async {
                 try {

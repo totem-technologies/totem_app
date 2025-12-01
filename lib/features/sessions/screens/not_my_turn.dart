@@ -49,8 +49,8 @@ class NotMyTurn extends ConsumerWidget {
                 children: [
                   Positioned.fill(
                     child: ParticipantVideo(
-                      key: getParticipantKey(session.speakingNow.identity),
-                      participant: session.speakingNow,
+                      key: getParticipantKey(session.speakingNow().identity),
+                      participant: session.speakingNow(),
                     ),
                   ),
                   PositionedDirectional(
@@ -77,12 +77,12 @@ class NotMyTurn extends ConsumerWidget {
                             ),
                             padding: const EdgeInsetsDirectional.all(4),
                             child: SpeakingIndicator(
-                              participant: session.speakingNow,
+                              participant: session.speakingNow(),
                             ),
                           ),
                           Flexible(
                             child: Text(
-                              session.speakingNow.name,
+                              session.speakingNow().name,
                               style: theme.textTheme.titleLarge?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -104,7 +104,7 @@ class NotMyTurn extends ConsumerWidget {
             layoutBuilder: NoMyTurnLayoutBuilder(isLandscape: isLandscape),
             sorting: (originalTracks) {
               return tracksSorting(
-                speakingNow: session.speakingNow.identity,
+                speakingNow: session.speakingNow().identity,
                 originalTracks: originalTracks,
                 sessionState: sessionState,
                 event: event,
@@ -130,7 +130,7 @@ class NotMyTurn extends ConsumerWidget {
               if (sessionState.status != SessionStatus.waiting) {
                 return const SizedBox.shrink();
               } else if (session.isKeeper()) {
-                return PassReceiveCard(
+                return TransitionCard(
                   type: TotemCardTransitionType.start,
                   onActionPressed: () async {
                     try {

@@ -265,7 +265,7 @@ class LiveKitService extends _$LiveKitService {
   }
 
   /// Get the participant who is currently speaking.
-  Participant get speakingNow {
+  Participant speakingNow() {
     return room.participants.firstWhere(
       (participant) {
         if (state.sessionState.speakingNow != null) {

@@ -53,7 +53,7 @@ class ReceiveTotemScreen extends StatelessWidget {
                       as VideoTrack?,
             );
 
-            final passReceiveCard = PassReceiveCard(
+            final passReceiveCard = TransitionCard(
               type: TotemCardTransitionType.receive,
               onActionPressed: () async {
                 try {
