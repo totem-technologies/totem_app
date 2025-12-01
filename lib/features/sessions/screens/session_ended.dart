@@ -77,7 +77,7 @@ class SessionEndedScreen extends ConsumerWidget {
                           event.space,
                           nextEvents: [nextEvent],
                         ),
-                        onTap: () => context.push(
+                        onTap: () => context.pushReplacement(
                           RouteNames.spaceEvent(
                             event.space.slug,
                             nextEvent.slug,

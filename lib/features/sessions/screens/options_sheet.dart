@@ -125,8 +125,9 @@ class OptionsSheet extends ConsumerWidget {
         ),
         MediaDeviceSelectButton(
           builder: (context, roomCtx, deviceCtx) {
-            // TODO(bdlukaa): Hide "Earpice" from the list of audio outputs
-            final audioOutputs = deviceCtx.audioOutputs;
+            final audioOutputs = deviceCtx.audioOutputs?.where((device) {
+              return device.label.isNotEmpty && device.label != 'Earpiece';
+            });
             final selected =
                 deviceCtx.audioOutputs?.firstWhereOrNull(
                   (e) {
@@ -506,7 +507,9 @@ class PrejoinOptionsSheet extends StatelessWidget {
           future: Hardware.instance.audioOutputs(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) return const SizedBox.shrink();
-            final audioOutputs = snapshot.data;
+            final audioOutputs = snapshot.data?.where((device) {
+              return device.label.isNotEmpty && device.label != 'Earpiece';
+            });
             final selected =
                 audioOutputs?.firstWhereOrNull(
                   (e) => e.deviceId == audioOptions.deviceId,
