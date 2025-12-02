@@ -74,7 +74,7 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
   }
 
   List<DateTime?> _generateCalendarDays() {
-    final List<DateTime?> days = List.filled(35, null);
+    final days = List<DateTime?>.filled(35, null);
 
     final firstDayIndex = _firstDayOfWeek;
     if (firstDayIndex > 0) {
@@ -226,24 +226,16 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
     Widget dayCellContent;
 
     if (!isEventDay) {
-      dayCellContent = Container(
-        margin: const EdgeInsetsDirectional.all(5),
-        width: 25,
-        height: 25,
-        child: Center(
-          child: Text(
-            '${day.day}',
-            style: TextStyle(
-              color: (isCurrentMonth ? Colors.black : Colors.grey),
-            ),
+      dayCellContent = Center(
+        child: Text(
+          '${day.day}',
+          style: TextStyle(
+            color: (isCurrentMonth ? Colors.black : AppTheme.grey),
           ),
         ),
       );
     } else if (_isUserAttending(day)) {
-      dayCellContent = Container(
-        margin: const EdgeInsetsDirectional.all(5),
-        width: 25,
-        height: 25,
+      dayCellContent = DecoratedBox(
         decoration: const BoxDecoration(
           color: AppTheme.mauve,
           shape: BoxShape.circle,
@@ -251,17 +243,12 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
         child: Center(
           child: Text(
             '${day.day}',
-            style: const TextStyle(
-              color: AppTheme.white,
-            ),
+            style: const TextStyle(color: AppTheme.white),
           ),
         ),
       );
     } else if (_isEventOpen(day)) {
-      dayCellContent = Container(
-        margin: const EdgeInsetsDirectional.all(5),
-        width: 25,
-        height: 25,
+      dayCellContent = DecoratedBox(
         decoration: BoxDecoration(
           border: Border.all(
             color: AppTheme.mauve,
@@ -281,10 +268,7 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
         ),
       );
     } else {
-      dayCellContent = Container(
-        margin: const EdgeInsetsDirectional.all(5),
-        width: 25,
-        height: 25,
+      dayCellContent = DecoratedBox(
         decoration: const BoxDecoration(
           color: AppTheme.grey,
           shape: BoxShape.circle,
@@ -308,7 +292,12 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
               widget.onEventDayTap!(day, eventsForDay);
             }
           : null,
-      child: dayCellContent,
+      child: Container(
+        margin: const EdgeInsetsDirectional.all(5),
+        width: 20,
+        height: 20,
+        child: dayCellContent,
+      ),
     );
 
     if (isEventDay && widget.onEventDayTap != null) {
@@ -334,6 +323,7 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
       ),
       width: double.infinity,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
             height: 40,
@@ -363,12 +353,15 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
             ),
           ),
           SizedBox(
-            height: 40,
+            height: 30,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: List.generate(
                 7,
-                (index) => Text(days[index]),
+                (index) => Text(
+                  days[index],
+                  style: const TextStyle(color: AppTheme.slate),
+                ),
               ).toList(),
             ),
           ),
