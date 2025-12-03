@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -159,7 +160,10 @@ class LiveKitService extends _$LiveKitService {
     );
 
     _listener = room.room.createListener();
-    _listener.on<DataReceivedEvent>(_onDataReceived);
+    _listener
+      ..on<DataReceivedEvent>(_onDataReceived)
+      ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
+      ..on<ParticipantConnectedEvent>(_onParticipantConnected);
     room.addListener(_onRoomChanges);
 
     unawaited(WakelockPlus.enable());
@@ -258,9 +262,41 @@ class LiveKitService extends _$LiveKitService {
     }
   }
 
+  bool _hasKeeperDisconnected = false;
+  bool get hasKeeperDisconnected => _hasKeeperDisconnected;
+
+  Future<void> _onParticipantDisconnected(
+    ParticipantDisconnectedEvent event,
+  ) async {
+    if (isKeeper(event.participant.identity)) {
+      await _onKeeperLeave();
+    }
+  }
+
+  void _onParticipantConnected(ParticipantConnectedEvent event) {
+    if (isKeeper(event.participant.identity)) {
+      _onKeeperJoin();
+    }
+  }
+
+  Future<void> _onKeeperLeave() async {
+    _hasKeeperDisconnected = true;
+    ref.notifyListeners();
+    await disableMicrophone();
+  }
+
+  void _onKeeperJoin() {
+    _hasKeeperDisconnected = false;
+  }
+
   bool isKeeper([String? userSlug]) {
-    final auth = ref.read(authControllerProvider);
-    return _options.keeperSlug == (userSlug ?? auth.user?.slug);
+    if (userSlug == null) {
+      final currentUserSlug = ref.read(
+        authControllerProvider.select((auth) => auth.user?.slug),
+      );
+      userSlug = currentUserSlug;
+    }
+    return _options.keeperSlug == userSlug;
   }
 
   /// Get the participant who is currently speaking.

@@ -92,7 +92,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     super.dispose();
   }
 
-  // TODO(bdlukaa): Investigate if this is still needed.
   Map<String, GlobalKey> participantKeys = {};
   GlobalKey getParticipantKey(String identity) {
     return participantKeys.putIfAbsent(identity, GlobalKey.new);
