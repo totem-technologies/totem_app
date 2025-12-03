@@ -1,0 +1,107 @@
+// We need to access LivekitService.ref to notify listeners
+// ignore: lines_longer_than_80_chars
+// ignore_for_file: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+
+part of 'livekit_service.dart';
+
+extension KeeperControl on LiveKitService {
+  /// Get the participant who is currently speaking.
+  Participant speakingNow() {
+    return room.participants.firstWhere(
+      (participant) {
+        if (state.sessionState.speakingNow != null) {
+          if (state.sessionState.totemStatus == TotemStatus.passing) {
+            return participant.identity == options.keeperSlug;
+          }
+          return participant.identity == state.sessionState.speakingNow;
+        } else {
+          // If no one is speaking right now, show the keeper's video
+          return participant.identity == options.keeperSlug;
+        }
+      },
+      orElse: () => room.localParticipant!,
+    );
+  }
+
+  Future<void> _onKeeperLeave() async {
+    _hasKeeperDisconnected = true;
+    ref.notifyListeners();
+    await disableMicrophone();
+  }
+
+  void _onKeeperJoin() {
+    _hasKeeperDisconnected = false;
+  }
+
+  Future<void> startSession() async {
+    if (!isKeeper()) return;
+    try {
+      await ref
+          .read(startSessionProvider(_options.eventSlug).future)
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
+    } catch (error, stackTrace) {
+      debugPrint('Error starting session: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error starting session',
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> endSession() async {
+    if (!isKeeper()) return;
+    try {
+      await ref
+          .read(endSessionProvider(_options.eventSlug).future)
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error ending session',
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> muteEveryone() async {
+    try {
+      await ref
+          .read(
+            muteEveryoneProvider(
+              _options.eventSlug,
+              room.participants
+                  .where((p) => !p.isMuted || !p.isMicrophoneEnabled())
+                  .map((p) => p.identity)
+                  .toList(),
+            ).future,
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error muting everyone',
+      );
+      rethrow;
+    }
+  }
+}
