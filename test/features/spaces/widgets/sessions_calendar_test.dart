@@ -270,25 +270,25 @@ void main() {
         wrapCalendar(events: events),
       );
 
-        // Find the day cell for June 15
-        final day15 = find.text('15');
-        expect(day15, findsOneWidget);
+      // Find the day cell for June 15
+      final day15 = find.text('15');
+      expect(day15, findsOneWidget);
 
-        // Check that the DecoratedBox has mauve border
-        final decoratedBox = tester.widget<DecoratedBox>(
-          find
-              .ancestor(
-                of: day15,
-                matching: find.byType(DecoratedBox),
-              )
-              .first,
-        );
+      // Check that the DecoratedBox has mauve border
+      final decoratedBox = tester.widget<DecoratedBox>(
+        find
+            .ancestor(
+              of: day15,
+              matching: find.byType(DecoratedBox),
+            )
+            .first,
+      );
 
-        final decoration = decoratedBox.decoration as BoxDecoration;
-        expect(decoration, isNotNull);
-        expect(decoration.border, isNotNull);
-        expect(decoration.border?.top.color, equals(AppTheme.mauve));
-        expect(decoration.shape, equals(BoxShape.circle));
+      final decoration = decoratedBox.decoration as BoxDecoration;
+      expect(decoration, isNotNull);
+      expect(decoration.border, isNotNull);
+      expect(decoration.border?.top.color, equals(AppTheme.mauve));
+      expect(decoration.shape, equals(BoxShape.circle));
     });
 
     testWidgets(
@@ -346,11 +346,10 @@ void main() {
 
       // Check that there is no DecoratedBox (regular days don't have decoration)
       // Regular days use Center widget, not DecoratedBox
-      final decoratedBoxes = find
-          .ancestor(
-            of: day20,
-            matching: find.byType(DecoratedBox),
-          );
+      final decoratedBoxes = find.ancestor(
+        of: day20,
+        matching: find.byType(DecoratedBox),
+      );
       expect(decoratedBoxes, findsNothing);
     });
 
@@ -395,20 +394,20 @@ void main() {
         wrapCalendar(events: events),
       );
 
-        // Should show mauve filled (attending), not mauve border (open)
-        final day15 = find.text('15');
-        final decoratedBox = tester.widget<DecoratedBox>(
-          find
-              .ancestor(
-                of: day15,
-                matching: find.byType(DecoratedBox),
-              )
-              .first,
-        );
+      // Should show mauve filled (attending), not mauve border (open)
+      final day15 = find.text('15');
+      final decoratedBox = tester.widget<DecoratedBox>(
+        find
+            .ancestor(
+              of: day15,
+              matching: find.byType(DecoratedBox),
+            )
+            .first,
+      );
 
-        final decoration = decoratedBox.decoration as BoxDecoration;
-        expect(decoration.color, equals(AppTheme.mauve));
-        expect(decoration.border, isNull); // No border when attending
+      final decoration = decoratedBox.decoration as BoxDecoration;
+      expect(decoration.color, equals(AppTheme.mauve));
+      expect(decoration.border, isNull); // No border when attending
     });
   });
 
