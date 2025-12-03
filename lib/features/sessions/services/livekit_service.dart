@@ -264,20 +264,22 @@ class LiveKitService extends _$LiveKitService {
     }
   }
 
+  static const keeperDisconnectionTimeout = Duration(minutes: 3);
   bool _hasKeeperDisconnected = false;
   bool get hasKeeperDisconnected => _hasKeeperDisconnected;
+  Timer? _keeperDisconnectedTimer;
 
   Future<void> _onParticipantDisconnected(
     ParticipantDisconnectedEvent event,
   ) async {
     if (isKeeper(event.participant.identity)) {
-      await _onKeeperLeave();
+      await _onKeeperDisconnected();
     }
   }
 
   void _onParticipantConnected(ParticipantConnectedEvent event) {
     if (isKeeper(event.participant.identity)) {
-      _onKeeperJoin();
+      _onKeeperConnected();
     }
   }
 

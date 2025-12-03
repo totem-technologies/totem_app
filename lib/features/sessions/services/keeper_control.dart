@@ -23,14 +23,30 @@ extension KeeperControl on LiveKitService {
     );
   }
 
-  Future<void> _onKeeperLeave() async {
+  Future<void> _onKeeperDisconnected() async {
     _hasKeeperDisconnected = true;
     ref.notifyListeners();
     await disableMicrophone();
+
+    _keeperDisconnectedTimer?.cancel();
+    _keeperDisconnectedTimer = Timer(
+      LiveKitService.keeperDisconnectionTimeout,
+      _onKeeperDisconnectedTimeout,
+    );
   }
 
-  void _onKeeperJoin() {
+  void _onKeeperConnected() {
     _hasKeeperDisconnected = false;
+
+    _keeperDisconnectedTimer?.cancel();
+    _keeperDisconnectedTimer = null;
+  }
+
+  Future<void> _onKeeperDisconnectedTimeout() async {
+    await room.disconnect();
+
+    _keeperDisconnectedTimer?.cancel();
+    _keeperDisconnectedTimer = null;
   }
 
   Future<void> startSession() async {
