@@ -237,20 +237,20 @@ void main() {
         final day15 = find.text('15');
         expect(day15, findsOneWidget);
 
-        // Check that the container has grey background
-        final container = tester.widget<Container>(
+        // Check that the DecoratedBox has grey background
+        final decoratedBox = tester.widget<DecoratedBox>(
           find
               .ancestor(
                 of: day15,
-                matching: find.byType(Container),
+                matching: find.byType(DecoratedBox),
               )
               .first,
         );
 
-        final decoration = container.decoration as BoxDecoration?;
+        final decoration = decoratedBox.decoration as BoxDecoration;
         expect(decoration, isNotNull);
-        expect(decoration?.color, equals(AppTheme.grey));
-        expect(decoration?.shape, equals(BoxShape.circle));
+        expect(decoration.color, equals(AppTheme.grey));
+        expect(decoration.shape, equals(BoxShape.circle));
       },
     );
 
@@ -270,25 +270,25 @@ void main() {
         wrapCalendar(events: events),
       );
 
-      // Find the day cell for June 15
-      final day15 = find.text('15');
-      expect(day15, findsOneWidget);
+        // Find the day cell for June 15
+        final day15 = find.text('15');
+        expect(day15, findsOneWidget);
 
-      // Check that the container has mauve border
-      final container = tester.widget<Container>(
-        find
-            .ancestor(
-              of: day15,
-              matching: find.byType(Container),
-            )
-            .first,
-      );
+        // Check that the DecoratedBox has mauve border
+        final decoratedBox = tester.widget<DecoratedBox>(
+          find
+              .ancestor(
+                of: day15,
+                matching: find.byType(DecoratedBox),
+              )
+              .first,
+        );
 
-      final decoration = container.decoration as BoxDecoration?;
-      expect(decoration, isNotNull);
-      expect(decoration?.border, isNotNull);
-      expect(decoration?.border?.top.color, equals(AppTheme.mauve));
-      expect(decoration?.shape, equals(BoxShape.circle));
+        final decoration = decoratedBox.decoration as BoxDecoration;
+        expect(decoration, isNotNull);
+        expect(decoration.border, isNotNull);
+        expect(decoration.border?.top.color, equals(AppTheme.mauve));
+        expect(decoration.shape, equals(BoxShape.circle));
     });
 
     testWidgets(
@@ -312,20 +312,20 @@ void main() {
         final day15 = find.text('15');
         expect(day15, findsOneWidget);
 
-        // Check that the container has mauve background
-        final container = tester.widget<Container>(
+        // Check that the DecoratedBox has mauve background
+        final decoratedBox = tester.widget<DecoratedBox>(
           find
               .ancestor(
                 of: day15,
-                matching: find.byType(Container),
+                matching: find.byType(DecoratedBox),
               )
               .first,
         );
 
-        final decoration = container.decoration as BoxDecoration?;
+        final decoration = decoratedBox.decoration as BoxDecoration;
         expect(decoration, isNotNull);
-        expect(decoration?.color, equals(AppTheme.mauve));
-        expect(decoration?.shape, equals(BoxShape.circle));
+        expect(decoration.color, equals(AppTheme.mauve));
+        expect(decoration.shape, equals(BoxShape.circle));
       },
     );
 
@@ -344,20 +344,14 @@ void main() {
       final day20 = find.text('20');
       expect(day20, findsOneWidget);
 
-      // Check that the container does NOT have a colored background
-      // (should be a regular day with no decoration or just text)
-      final container = tester.widget<Container>(
-        find
-            .ancestor(
-              of: day20,
-              matching: find.byType(Container),
-            )
-            .first,
-      );
-
-      final decoration = container.decoration as BoxDecoration?;
-      // Regular days should not have a colored background decoration
-      expect(decoration?.color, isNull);
+      // Check that there is no DecoratedBox (regular days don't have decoration)
+      // Regular days use Center widget, not DecoratedBox
+      final decoratedBoxes = find
+          .ancestor(
+            of: day20,
+            matching: find.byType(DecoratedBox),
+          );
+      expect(decoratedBoxes, findsNothing);
     });
 
     testWidgets('should handle multiple events on the same day', (
@@ -401,20 +395,20 @@ void main() {
         wrapCalendar(events: events),
       );
 
-      // Should show mauve filled (attending), not mauve border (open)
-      final day15 = find.text('15');
-      final container = tester.widget<Container>(
-        find
-            .ancestor(
-              of: day15,
-              matching: find.byType(Container),
-            )
-            .first,
-      );
+        // Should show mauve filled (attending), not mauve border (open)
+        final day15 = find.text('15');
+        final decoratedBox = tester.widget<DecoratedBox>(
+          find
+              .ancestor(
+                of: day15,
+                matching: find.byType(DecoratedBox),
+              )
+              .first,
+        );
 
-      final decoration = container.decoration as BoxDecoration?;
-      expect(decoration?.color, equals(AppTheme.mauve));
-      expect(decoration?.border, isNull); // No border when attending
+        final decoration = decoratedBox.decoration as BoxDecoration;
+        expect(decoration.color, equals(AppTheme.mauve));
+        expect(decoration.border, isNull); // No border when attending
     });
   });
 
@@ -647,15 +641,15 @@ void main() {
       expect(day15, findsOneWidget);
 
       // The day should be highlighted
-      final container = tester.widget<Container>(
+      final decoratedBox = tester.widget<DecoratedBox>(
         find
             .ancestor(
               of: day15,
-              matching: find.byType(Container),
+              matching: find.byType(DecoratedBox),
             )
             .first,
       );
-      expect(container.decoration, isNotNull);
+      expect(decoratedBox.decoration, isNotNull);
     });
 
     testWidgets('should handle empty events list', (WidgetTester tester) async {
