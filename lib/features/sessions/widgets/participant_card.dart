@@ -107,7 +107,6 @@ class ParticipantCard extends ConsumerWidget {
                             shape: BoxShape.circle,
                             color: Colors.white,
                           ),
-                          // padding: const EdgeInsetsDirectional.all(0),
                           alignment: Alignment.center,
                           child: Text(
                             emojis.first,

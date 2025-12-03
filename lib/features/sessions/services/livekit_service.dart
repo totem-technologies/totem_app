@@ -147,7 +147,7 @@ class LiveKitService extends _$LiveKitService {
         defaultAudioCaptureOptions: _options.audioOptions,
         defaultAudioOutputOptions: _options.audioOutputOptions,
 
-        // TODO(bdlukaa): Bandwidth optmizations
+        // TODO(bdlukaa): Bandwidth optimizations
         // dynacast: false,
         // defaultVideoPublishOptions: const VideoPublishOptions(
         //    simulcast: true
@@ -287,7 +287,7 @@ class LiveKitService extends _$LiveKitService {
   /// This fails silently if it's not the user's turn.
   /// Throws an exception if the operation fails.
   Future<void> passTotem() async {
-    if (!state.isMyTurn(room) && !isKeeper()) return;
+    if (!isKeeper() && !state.isMyTurn(room)) return;
     try {
       await ref
           .read(passTotemProvider(options.eventSlug).future)
@@ -397,8 +397,6 @@ class LiveKitService extends _$LiveKitService {
             },
           );
     } catch (error, stackTrace) {
-      debugPrint('Error ending session: $error');
-      debugPrintStack(stackTrace: stackTrace);
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
@@ -427,12 +425,10 @@ class LiveKitService extends _$LiveKitService {
             },
           );
     } catch (error, stackTrace) {
-      debugPrint('Error ending session: $error');
-      debugPrintStack(stackTrace: stackTrace);
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        message: 'Error ending session',
+        message: 'Error muting everyone',
       );
       rethrow;
     }

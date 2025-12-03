@@ -108,13 +108,12 @@ class _SlideToActionButtonState extends State<_SlideToActionButton> {
 
     if (_isLoading) {
       final success = await widget.onActionCompleted();
+      _isCompleted = success;
+      _dragPosition = success ? maxSlideDistance : 0.0;
+      _isLoading = false;
 
       if (mounted) {
-        setState(() {
-          _isCompleted = success;
-          _dragPosition = success ? maxSlideDistance : 0.0;
-          _isLoading = false;
-        });
+        setState(() {});
       }
     }
   }
@@ -165,7 +164,7 @@ class _SlideToActionButtonState extends State<_SlideToActionButton> {
         final maxSlideDistance = trackWidth - thumbSize - (padding * 2);
         final progress = math
             .min(_dragPosition / maxSlideDistance, 1)
-            .clamp(0, maxSlideDistance);
+            .clamp(0, 1);
 
         final backgroundColor = theme.colorScheme.primary;
         final foregroundColor = theme.colorScheme.onPrimary;
