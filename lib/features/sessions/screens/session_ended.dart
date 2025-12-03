@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/export.dart';
+import 'package:totem_app/features/sessions/screens/session_feedback_widget.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
-import 'package:totem_app/shared/totem_icons.dart';
 
 class SessionEndedScreen extends ConsumerWidget {
   const SessionEndedScreen({required this.event, super.key});
@@ -28,38 +28,28 @@ class SessionEndedScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: 10,
               children: [
-                Expanded(
-                  flex: 4,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    spacing: 20,
-                    children: [
-                      TotemIcon(
-                        TotemIcons.checkboxOutlined,
-                        size: 100,
-                        color: theme.textTheme.headlineMedium?.color,
-                      ),
-                      Text(
-                        'Session Ended',
-                        style: theme.textTheme.headlineMedium,
-                      ),
-                      const Text(
-                        'Thanks for joining. Hope you enjoyed the session!',
-                        textAlign: TextAlign.center,
-                      ),
-                      ElevatedButton(
-                        onPressed: () => toHome(HomeRoutes.initialRoute),
-                        child: const Text('Go Back to Home'),
-                      ),
-                    ],
-                  ),
+                Text(
+                  'Session Ended',
+                  style: theme.textTheme.headlineMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const Text(
+                  'Thank you for joining! We hope you found '
+                  'the session enjoyable.',
+                  textAlign: TextAlign.center,
+                ),
+                // Session Feedback Widget
+                SessionFeedbackWidget(
+                  onThumbUpPressed: () {},
+                  onThumbDownPressed: () {},
                 ),
 
+                // Next Session
                 ...recommended.when(
                   data: (data) sync* {
                     if (data.isNotEmpty) {
                       yield Text(
-                        'You may enjoy these spaces',
+                        'Next Session',
                         style: theme.textTheme.titleMedium,
                         textAlign: TextAlign.start,
                       );
@@ -74,6 +64,11 @@ class SessionEndedScreen extends ConsumerWidget {
                   },
                   error: (error, _) => [],
                   loading: () => [],
+                ),
+                // Explore More
+                ElevatedButton(
+                  onPressed: () => toHome(HomeRoutes.initialRoute),
+                  child: const Text('Explore More'),
                 ),
               ],
             ),

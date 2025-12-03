@@ -34,14 +34,14 @@ class SessionFeedbackWidget extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             spacing: 10,
             children: [
-              SessionFeedbackButton(
+              _SessionFeedbackButton(
                 icon: const TotemIcon(
                   TotemIcons.thumbUp,
                   color: Colors.white,
                 ),
                 onPressed: onThumbDownPressed,
               ),
-              SessionFeedbackButton(
+              _SessionFeedbackButton(
                 icon: const TotemIcon(
                   TotemIcons.thumbDown,
                   color: Colors.white,
@@ -56,11 +56,10 @@ class SessionFeedbackWidget extends StatelessWidget {
   }
 }
 
-class SessionFeedbackButton extends StatelessWidget {
-  const SessionFeedbackButton({
+class _SessionFeedbackButton extends StatelessWidget {
+  const _SessionFeedbackButton({
     required this.icon,
     required this.onPressed,
-    super.key,
   });
 
   final Widget icon;
