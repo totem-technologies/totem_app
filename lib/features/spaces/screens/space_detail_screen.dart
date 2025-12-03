@@ -14,6 +14,7 @@ import 'package:totem_app/core/services/analytics_service.dart';
 import 'package:totem_app/features/keeper/screens/meet_user_card.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/info_text.dart';
+import 'package:totem_app/features/spaces/widgets/sessions_calendar.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/features/spaces/widgets/space_detail_app_bar.dart';
 import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
@@ -53,6 +54,8 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
     horizontal: 22,
   );
 
+  String? _selectedEventSlug;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -60,6 +63,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
 
     // Determine if we have a valid event slug to watch
     final String? effectiveEventSlug =
+        _selectedEventSlug ??
         widget.eventSlug ??
         spaceAsync.maybeWhen(
           data: (space) => space.nextEvents.firstOrNull?.slug,
@@ -87,6 +91,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
         return Scaffold(
           body: Stack(
             children: [
+              const SizedBox.expand(),
               Positioned.fill(
                 child: NestedScrollView(
                   headerSliverBuilder: (context, _) {
@@ -325,24 +330,42 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                             ),
                           const SizedBox(height: 16),
 
-                          // TODO(bdlukaa): Sessions Calendar
-                          if (eventAsync != null)
-                            eventAsync.when(
-                              data: (event) => Container(
+                          SessionsCalendar(
+                            nextEvents: space.nextEvents,
+                            onEventDayTap: (day, events) {
+                              // Navigate to the first event's detail page when
+                              // a day is tapped. This allows keyboard/screen
+                              // reader users to access event details
+                              if (events.isNotEmpty) {
+                                final event = events.first;
+                                setState(() => _selectedEventSlug = event.slug);
+                              }
+                            },
+                          ),
+                          ?eventAsync?.when(
+                            data: (event) => Container(
+                              padding: horizontalPadding,
+                              constraints: const BoxConstraints(
+                                maxHeight: 160,
+                              ),
+                              child: SpaceCard.fromEventDetailSchema(
+                                event,
+                                onTap: () =>
+                                    _showSessionSheet(context, space, event),
+                                compact: true,
+                              ),
+                            ),
+                            loading: () {
+                              return Container(
                                 padding: horizontalPadding,
                                 constraints: const BoxConstraints(
                                   maxHeight: 160,
                                 ),
-                                child: SpaceCard.fromEventDetailSchema(
-                                  event,
-                                  onTap: () =>
-                                      _showSessionSheet(context, space, event),
-                                  compact: true,
-                                ),
-                              ),
-                              loading: () => const SizedBox.shrink(),
-                              error: (err, stack) => const SizedBox.shrink(),
-                            ),
+                                child: SpaceCard.shimmer(compact: true),
+                              );
+                            },
+                            error: (err, stack) => const SizedBox.shrink(),
+                          ),
 
                           const SizedBox(height: 16),
 
@@ -364,21 +387,20 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                 ),
               ),
               // TODO(bdlukaa): handle case no next event
-              if (eventAsync != null)
-                eventAsync.when(
-                  loading: () => const SizedBox.shrink(),
-                  error: (err, stack) => const SizedBox.shrink(),
-                  data: (event) => PositionedDirectional(
-                    start: 0,
-                    end: 0,
-                    bottom: 0,
-                    child: SpaceJoinCard(
-                      key: ValueKey('${space.hashCode}${event.hashCode}'),
-                      space: space,
-                      event: event,
-                    ),
+              ?eventAsync?.when(
+                loading: () => const SizedBox.shrink(),
+                error: (err, stack) => const SizedBox.shrink(),
+                data: (event) => PositionedDirectional(
+                  start: 0,
+                  end: 0,
+                  bottom: 0,
+                  child: SpaceJoinCard(
+                    key: ValueKey('${space.hashCode}${event.hashCode}'),
+                    space: space,
+                    event: event,
                   ),
                 ),
+              ),
             ],
           ),
         );
