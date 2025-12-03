@@ -14,7 +14,10 @@ class SessionFeedbackWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsetsDirectional.fromSTEB(20, 10, 10, 10),
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 20,
+        vertical: 10,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
