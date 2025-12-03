@@ -90,7 +90,10 @@ class EmojiBar extends StatelessWidget {
                   onTap: () => onEmojiSelected(emoji),
                   child: Text(
                     emoji,
-                    style: const TextStyle(fontSize: 24),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      textBaseline: TextBaseline.ideographic,
+                    ),
                   ),
                 );
               }).toList(),
@@ -104,33 +107,39 @@ class EmojiBar extends StatelessWidget {
 
 Future<void> displayReaction(
   BuildContext context,
-  BuildContext target,
   String emoji,
 ) async {
-  final box = target.findRenderObject() as RenderBox?;
-  if (box == null) return;
   final overlayBox =
       Overlay.of(context).context.findRenderObject() as RenderBox?;
   if (overlayBox == null) return;
+
+  final box = context.findRenderObject() as RenderBox?;
+  if (box == null) return;
+
   final position = box.localToGlobal(Offset.zero, ancestor: overlayBox);
 
   final overlay = Overlay.of(context);
 
+  final completer = Completer<void>();
   late final OverlayEntry entry;
   entry = OverlayEntry(
     builder: (context) {
       return RisingEmoji(
         emoji: emoji,
-        startX: position.dx + box.size.width / 2,
-        startY: position.dy - box.size.height / 2,
+        startX: position.dx + box.size.width * 0.15,
+        startY: box.size.height / 2,
         onCompleted: () {
-          entry.remove();
+          if (entry.mounted) {
+            entry.remove();
+          }
+          completer.complete();
         },
       );
     },
   );
 
   overlay.insert(entry);
+  return completer.future;
 }
 
 class RisingEmoji extends StatefulWidget {
@@ -139,6 +148,7 @@ class RisingEmoji extends StatefulWidget {
     required this.startX,
     required this.startY,
     required this.onCompleted,
+    this.duration = const Duration(milliseconds: 2000),
     super.key,
   });
 
@@ -146,6 +156,7 @@ class RisingEmoji extends StatefulWidget {
   final double startX;
   final double startY;
   final VoidCallback onCompleted;
+  final Duration duration;
 
   @override
   State<RisingEmoji> createState() => _RisingEmojiState();
@@ -171,10 +182,7 @@ class _RisingEmojiState extends State<RisingEmoji>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    );
+    _controller = AnimationController(vsync: this, duration: widget.duration);
 
     _animation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
@@ -205,7 +213,7 @@ class _RisingEmojiState extends State<RisingEmoji>
         final screenHeight = MediaQuery.heightOf(context);
 
         // Vertical position (bottom to top)
-        final bottom = screenHeight * _animation.value;
+        final bottom = (screenHeight / 2) * _animation.value;
 
         // Horizontal position (sine wave for curvy effect)
         final initialLeft = widget.startX;
@@ -223,7 +231,10 @@ class _RisingEmojiState extends State<RisingEmoji>
                 opacity: _opacityAnimation,
                 child: Text(
                   widget.emoji,
-                  style: const TextStyle(fontSize: 22),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    textBaseline: TextBaseline.ideographic,
+                  ),
                 ),
               ),
             ),

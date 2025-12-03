@@ -16,8 +16,8 @@ import 'package:totem_app/features/home/widgets/ongoing_session_join_card.dart';
 import 'package:totem_app/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_details_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_screen.dart';
+import 'package:totem_app/features/sessions/screens/prejoin.dart';
 import 'package:totem_app/features/sessions/screens/room_screen.dart';
-import 'package:totem_app/features/sessions/screens/welcome.dart';
 import 'package:totem_app/features/spaces/screens/session_history.dart';
 import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
 import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
@@ -394,6 +394,9 @@ GoRouter createRouter(WidgetRef ref) {
             micEnabled: args.micEnabled,
             eventSlug: args.eventSlug,
             token: args.token,
+            cameraOptions: args.cameraOptions,
+            audioOptions: args.audioOptions,
+            audioOutputOptions: args.audioOutputOptions,
           );
         },
       ),

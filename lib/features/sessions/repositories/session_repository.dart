@@ -96,6 +96,9 @@ Future<void> removeParticipant(
   );
 }
 
+/// Mutes a participant.
+///
+/// An error can be thrown if the participant is already muted.
 @riverpod
 Future<void> muteParticipant(
   Ref ref,
@@ -111,6 +114,22 @@ Future<void> muteParticipant(
         ),
     operationName: 'mute participant',
     retryOnNetworkError: true,
+  );
+}
+
+@riverpod
+Future<void> muteEveryone(
+  Ref ref,
+  String eventSlug,
+  List<String> participantIdentities,
+) async {
+  // TODO(bdlukaa): Mute everyone endpoint
+  await Future.wait(
+    participantIdentities.map(
+      (participantIdentity) => ref.read(
+        muteParticipantProvider(eventSlug, participantIdentity).future,
+      ),
+    ),
   );
 }
 

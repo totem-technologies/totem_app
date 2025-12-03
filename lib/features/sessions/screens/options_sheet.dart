@@ -9,7 +9,6 @@ import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
-import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/participant_reorder_widget.dart';
 import 'package:totem_app/navigation/app_router.dart';
@@ -126,8 +125,9 @@ class OptionsSheet extends ConsumerWidget {
         ),
         MediaDeviceSelectButton(
           builder: (context, roomCtx, deviceCtx) {
-            // TODO(bdlukaa): Hide "Earpice" from the list of audio outputs
-            final audioOutputs = deviceCtx.audioOutputs;
+            final audioOutputs = deviceCtx.audioOutputs?.where((device) {
+              return device.label.isNotEmpty && device.label != 'Earpiece';
+            });
             final selected =
                 deviceCtx.audioOutputs?.firstWhereOrNull(
                   (e) {
@@ -165,7 +165,7 @@ class OptionsSheet extends ConsumerWidget {
 
         if (session.isKeeper()) ...[
           Text(
-            'Keeper Settings',
+            'Keeper Options',
             style: theme.textTheme.titleMedium?.copyWith(
               color: theme.colorScheme.onSurface,
             ),
@@ -224,24 +224,35 @@ class OptionsSheet extends ConsumerWidget {
             },
           ),
           OptionsSheetTile<void>(
-            title: 'Pass to Next',
-            icon: TotemIcons.passToNext,
+            title: 'Mute everyone',
+            icon: TotemIcons.microphoneOff,
             type: OptionsSheetTileType.destructive,
-            onTap: state.sessionState.status == SessionStatus.started
-                ? () async {
-                    Navigator.of(context).pop();
-                    return _onPassToNext(context);
-                  }
-                : null,
+            onTap: () async {
+              Navigator.of(context).pop();
+              return _onMuteEveryone(context);
+            },
           ),
-          OptionsSheetTile<void>(
-            title: 'End Session',
-            icon: TotemIcons.cameraOff,
-            type: OptionsSheetTileType.destructive,
-            onTap: state.sessionState.status == SessionStatus.started
-                ? () => _onEndSession(context)
-                : null,
-          ),
+          if (state.sessionState.status == SessionStatus.started)
+            OptionsSheetTile<void>(
+              title: 'Pass to Next',
+              icon: TotemIcons.passToNext,
+              type: OptionsSheetTileType.destructive,
+              onTap: state.sessionState.status == SessionStatus.started
+                  ? () async {
+                      Navigator.of(context).pop();
+                      return _onPassToNext(context);
+                    }
+                  : null,
+            ),
+          if (state.sessionState.status != SessionStatus.ended)
+            OptionsSheetTile<void>(
+              title: 'End Session',
+              icon: TotemIcons.cameraOff,
+              type: OptionsSheetTileType.destructive,
+              onTap: state.sessionState.status == SessionStatus.started
+                  ? () => _onEndSession(context)
+                  : null,
+            ),
           Text(
             'Session State',
             style: theme.textTheme.titleMedium?.copyWith(
@@ -253,6 +264,12 @@ class OptionsSheet extends ConsumerWidget {
                 'Session Status: '
                 '${state.sessionState.status.name.uppercaseFirst()}',
             icon: TotemIcons.checkboxOutlined,
+          ),
+          OptionsSheetTile<void>(
+            title:
+                'Totem Status: '
+                '${state.sessionState.totemStatus.name.uppercaseFirst()}',
+            icon: TotemIcons.feedback,
           ),
           Builder(
             builder: (context) {
@@ -275,6 +292,10 @@ class OptionsSheet extends ConsumerWidget {
         ],
       ].expand((x) => [x, const SizedBox(height: 10)]).toList(),
     );
+  }
+
+  Future<void> _onMuteEveryone(BuildContext context) async {
+    await session.muteEveryone();
   }
 
   Future<void> _onPassToNext(BuildContext context) async {
@@ -367,6 +388,151 @@ class OptionsSheet extends ConsumerWidget {
           },
         );
       },
+    );
+  }
+}
+
+Future<void> showPrejoinOptionsSheet(
+  BuildContext context, {
+  required CameraCaptureOptions cameraOptions,
+  required AudioCaptureOptions audioOptions,
+  required AudioOutputOptions audioOutputOptions,
+  required ValueChanged<CameraCaptureOptions> onCameraChanged,
+  required ValueChanged<AudioCaptureOptions> onAudioChanged,
+  required ValueChanged<AudioOutputOptions> onAudioOutputChanged,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (context) {
+      return PrejoinOptionsSheet(
+        onCameraChanged: onCameraChanged,
+        onAudioChanged: onAudioChanged,
+        onAudioOutputChanged: onAudioOutputChanged,
+        cameraOptions: cameraOptions,
+        audioOptions: audioOptions,
+        audioOutputOptions: audioOutputOptions,
+      );
+    },
+  );
+}
+
+class PrejoinOptionsSheet extends StatelessWidget {
+  const PrejoinOptionsSheet({
+    required this.cameraOptions,
+    required this.audioOptions,
+    required this.audioOutputOptions,
+    required this.onCameraChanged,
+    required this.onAudioChanged,
+    required this.onAudioOutputChanged,
+    super.key,
+  });
+
+  final CameraCaptureOptions cameraOptions;
+  final AudioCaptureOptions audioOptions;
+  final AudioOutputOptions audioOutputOptions;
+
+  final ValueChanged<CameraCaptureOptions> onCameraChanged;
+  final ValueChanged<AudioCaptureOptions> onAudioChanged;
+  final ValueChanged<AudioOutputOptions> onAudioOutputChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      shrinkWrap: true,
+      padding: const EdgeInsetsDirectional.only(
+        start: 20,
+        end: 20,
+        top: 10,
+        bottom: 36,
+      ),
+      children: [
+        FutureBuilder(
+          future: Hardware.instance.videoInputs(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const SizedBox.shrink();
+            final videoInputs = snapshot.data;
+            final selected =
+                videoInputs?.firstWhereOrNull(
+                  (e) => e.deviceId == cameraOptions.deviceId,
+                ) ??
+                videoInputs?.firstOrNull;
+            return OptionsSheetTile<MediaDevice>(
+              title: selected?.humanReadableLabel ?? 'Default Camera',
+              icon: TotemIcons.cameraOn,
+              options: videoInputs?.toList(),
+              optionToString: (option) => option.humanReadableLabel,
+              selectedOption: selected,
+              onOptionChanged: (value) async {
+                if (value != null) {
+                  onCameraChanged(
+                    CameraCaptureOptions(deviceId: value.deviceId),
+                  );
+                  Navigator.of(context).pop();
+                }
+              },
+            );
+          },
+        ),
+        const SizedBox(height: 10),
+        FutureBuilder(
+          future: Hardware.instance.audioInputs(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const SizedBox.shrink();
+            final audioInputs = snapshot.data;
+            final selected =
+                audioInputs?.firstWhereOrNull(
+                  (e) => e.deviceId == audioOptions.deviceId,
+                ) ??
+                audioInputs?.firstOrNull;
+            return OptionsSheetTile<MediaDevice>(
+              title: selected?.label ?? 'Default Microphone',
+              options: audioInputs?.toList(),
+              optionToString: (option) => option.humanReadableLabel,
+              selectedOption: selected,
+              onOptionChanged: (value) async {
+                if (value != null) {
+                  onAudioChanged(
+                    AudioCaptureOptions(deviceId: value.deviceId),
+                  );
+                  Navigator.of(context).pop();
+                }
+              },
+              icon: TotemIcons.microphoneOn,
+            );
+          },
+        ),
+        const SizedBox(height: 10),
+        FutureBuilder(
+          future: Hardware.instance.audioOutputs(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const SizedBox.shrink();
+            final audioOutputs = snapshot.data?.where((device) {
+              return device.label.isNotEmpty && device.label != 'Earpiece';
+            });
+            final selected =
+                audioOutputs?.firstWhereOrNull(
+                  (e) => e.deviceId == audioOptions.deviceId,
+                ) ??
+                audioOutputs?.firstOrNull;
+            return OptionsSheetTile<MediaDevice>(
+              title: selected?.label ?? 'Default Speaker',
+              options: audioOutputs?.toList(),
+              optionToString: (option) => option.humanReadableLabel,
+              selectedOption: selected,
+              onOptionChanged: (value) async {
+                if (value != null) {
+                  onAudioOutputChanged(
+                    AudioOutputOptions(deviceId: value.deviceId),
+                  );
+                  Navigator.of(context).pop();
+                }
+              },
+              icon: TotemIcons.speaker,
+            );
+          },
+        ),
+      ],
     );
   }
 }

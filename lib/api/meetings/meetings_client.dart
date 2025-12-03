@@ -7,6 +7,7 @@ import 'package:retrofit/retrofit.dart';
 
 import '../models/livekit_mute_participant_schema.dart';
 import '../models/livekit_token_response_schema.dart';
+import '../models/session_state.dart';
 
 part 'meetings_client.g.dart';
 
@@ -68,5 +69,16 @@ abstract class MeetingsClient {
   totemMeetingsMobileApiReorderParticipantsEndpoint({
     @Path('event_slug') required String eventSlug,
     @Body() required LivekitMuteParticipantSchema body,
+  });
+
+  /// Get Room State Endpoint.
+  ///
+  /// Retrieves the current session state for a room.
+  ///
+  /// This endpoint exposes the SessionState schema and its enums (SessionStatus, TotemStatus).
+  /// in the OpenAPI documentation for client-side usage.
+  @GET('/api/mobile/protected/meetings/event/{event_slug}/room-state')
+  Future<SessionState> totemMeetingsMobileApiGetRoomStateEndpoint({
+    @Path('event_slug') required String eventSlug,
   });
 }

@@ -7,14 +7,19 @@ import 'package:livekit_client/livekit_client.dart' hide ChatMessage;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
+import 'package:totem_app/api/models/session_state.dart';
+import 'package:totem_app/api/models/totem_status.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
-import 'package:totem_app/features/sessions/models/session_state.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+
+export 'package:totem_app/api/models/session_state.dart';
+export 'package:totem_app/api/models/session_status.dart';
+export 'package:totem_app/features/sessions/services/utils.dart';
 
 part 'devices_control.dart';
 part 'livekit_service.g.dart';
@@ -42,7 +47,9 @@ class SessionOptions {
     required this.onEmojiReceived,
     required this.onMessageReceived,
     required this.onLivekitError,
-    required this.onReceiveTotem,
+    required this.cameraOptions,
+    required this.audioOptions,
+    required this.audioOutputOptions,
   });
 
   final String eventSlug;
@@ -50,10 +57,14 @@ class SessionOptions {
   final String token;
   final bool cameraEnabled;
   final bool microphoneEnabled;
+
   final OnEmojiReceived onEmojiReceived;
   final OnMessageReceived onMessageReceived;
   final OnLivekitError onLivekitError;
-  final VoidCallback onReceiveTotem;
+
+  final CameraCaptureOptions cameraOptions;
+  final AudioCaptureOptions audioOptions;
+  final AudioOutputOptions audioOutputOptions;
 
   @override
   bool operator ==(Object other) {
@@ -81,7 +92,7 @@ enum RoomConnectionState { connecting, connected, disconnected, error }
 class LiveKitState {
   const LiveKitState({
     this.connectionState = RoomConnectionState.connecting,
-    this.sessionState = const SessionState.waiting(),
+    this.sessionState = const SessionState(speakingOrder: []),
   });
 
   final RoomConnectionState connectionState;
@@ -100,6 +111,14 @@ class LiveKitState {
       connectionState: connectionState ?? this.connectionState,
       sessionState: sessionState ?? this.sessionState,
     );
+  }
+
+  @override
+  String toString() {
+    return 'LiveKitState('
+        'connectionState: $connectionState, '
+        'sessionState: $sessionState'
+        ')';
   }
 }
 
@@ -123,6 +142,21 @@ class LiveKitService extends _$LiveKitService {
       onConnected: _onConnected,
       onDisconnected: _onDisconnected,
       onError: _onError,
+      roomOptions: RoomOptions(
+        defaultCameraCaptureOptions: _options.cameraOptions,
+        defaultAudioCaptureOptions: _options.audioOptions,
+        defaultAudioOutputOptions: _options.audioOutputOptions,
+
+        // TODO(bdlukaa): Bandwidth optimizations
+        // dynacast: false,
+        // defaultVideoPublishOptions: const VideoPublishOptions(
+        //    simulcast: true
+        // ),
+        // defaultAudioPublishOptions: AudioPublishOptions(),
+
+        /// https://docs.livekit.io/home/client/tracks/subscribe/#adaptive-stream
+        adaptiveStream: true,
+      ),
     );
 
     _listener = room.room.createListener();
@@ -146,7 +180,9 @@ class LiveKitService extends _$LiveKitService {
 
     unawaited(room.localParticipant!.setCameraEnabled(_options.cameraEnabled));
     unawaited(
-      room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled),
+      // TODO(bdlukaa): Revisit this in the future - Microphone Starts Disabled
+      // room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
+      room.localParticipant!.setMicrophoneEnabled(false),
     );
     state = state.copyWith(connectionState: RoomConnectionState.connected);
   }
@@ -165,15 +201,30 @@ class LiveKitService extends _$LiveKitService {
 
   void _onRoomChanges() {
     final metadata = room.room.metadata;
-    if (metadata != _lastMetadata) {
-      final previousState = SessionState.fromMetadata(_lastMetadata);
-      final newState = SessionState.fromMetadata(metadata);
+    if (metadata == null) return;
+    if (_lastMetadata == null) {
+      _lastMetadata = metadata;
+      state = state.copyWith(
+        sessionState: SessionState.fromJson(
+          jsonDecode(metadata) as Map<String, dynamic>,
+        ),
+      );
+      return;
+    }
+    if (_lastMetadata != null && metadata != _lastMetadata) {
+      // final previousState = SessionState.fromJson(
+      //   jsonDecode(_lastMetadata!) as Map<String, dynamic>,
+      // );
+      final newState = SessionState.fromJson(
+        jsonDecode(metadata) as Map<String, dynamic>,
+      );
 
-      if (previousState.speakingNow != newState.speakingNow &&
-          newState.speakingNow == room.localParticipant?.identity) {
-        debugPrint('You are now speaking');
-        _options.onReceiveTotem();
-      }
+      // if (previousState.speakingNow != newState.speakingNow) {
+      //    if (newState.speakingNow == room.localParticipant?.identity) {
+      //      debugPrint('You are now speaking');
+      //      _options.onReceiveTotem();
+      //    }
+      // }
 
       state = state.copyWith(sessionState: newState);
       _lastMetadata = metadata;
@@ -213,12 +264,30 @@ class LiveKitService extends _$LiveKitService {
     return _options.keeperSlug == (userSlug ?? auth.user?.slug);
   }
 
+  /// Get the participant who is currently speaking.
+  Participant speakingNow() {
+    return room.participants.firstWhere(
+      (participant) {
+        if (state.sessionState.speakingNow != null) {
+          if (state.sessionState.totemStatus == TotemStatus.passing) {
+            return participant.identity == options.keeperSlug;
+          }
+          return participant.identity == state.sessionState.speakingNow;
+        } else {
+          // If no one is speaking right now, show the keeper's video
+          return participant.identity == options.keeperSlug;
+        }
+      },
+      orElse: () => room.localParticipant!,
+    );
+  }
+
   /// Pass the totem to the next participant in the speaking order.
   ///
   /// This fails silently if it's not the user's turn.
   /// Throws an exception if the operation fails.
   Future<void> passTotem() async {
-    if (!state.isMyTurn(room)) return;
+    if (!isKeeper() && !state.isMyTurn(room)) return;
     try {
       await ref
           .read(passTotemProvider(options.eventSlug).future)
@@ -328,12 +397,38 @@ class LiveKitService extends _$LiveKitService {
             },
           );
     } catch (error, stackTrace) {
-      debugPrint('Error ending session: $error');
-      debugPrintStack(stackTrace: stackTrace);
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Error ending session',
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> muteEveryone() async {
+    try {
+      await ref
+          .read(
+            muteEveryoneProvider(
+              _options.eventSlug,
+              room.participants
+                  .where((p) => !p.isMuted || !p.isMicrophoneEnabled())
+                  .map((p) => p.identity)
+                  .toList(),
+            ).future,
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error muting everyone',
       );
       rethrow;
     }
