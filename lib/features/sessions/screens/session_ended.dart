@@ -40,8 +40,12 @@ class SessionEndedScreen extends ConsumerWidget {
                 ),
                 // Session Feedback Widget
                 SessionFeedbackWidget(
-                  onThumbUpPressed: () {},
-                  onThumbDownPressed: () {},
+                  onThumbUpPressed: () {
+                    // TODO(bdlukaa): Implement thumb up logic
+                  },
+                  onThumbDownPressed: () {
+                    // TODO(bdlukaa): Implement thumb down logic
+                  },
                 ),
 
                 // Next Session
