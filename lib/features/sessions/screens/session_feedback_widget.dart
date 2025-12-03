@@ -39,7 +39,7 @@ class SessionFeedbackWidget extends StatelessWidget {
                   TotemIcons.thumbUp,
                   color: Colors.white,
                 ),
-                onPressed: onThumbDownPressed,
+                onPressed: onThumbUpPressed,
               ),
               _SessionFeedbackButton(
                 icon: const TotemIcon(
