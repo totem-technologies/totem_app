@@ -123,11 +123,14 @@ Future<void> muteEveryone(
   String eventSlug,
   List<String> participantIdentities,
 ) async {
-  for (final participantIdentity in participantIdentities) {
-    await ref.read(
-      muteParticipantProvider(eventSlug, participantIdentity).future,
-    );
-  }
+  // TODO(bdlukaa): Mute everyone endpoint
+  await Future.wait(
+    participantIdentities.map(
+      (participantIdentity) => ref.read(
+        muteParticipantProvider(eventSlug, participantIdentity).future,
+      ),
+    ),
+  );
 }
 
 @riverpod
