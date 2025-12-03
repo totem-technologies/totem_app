@@ -147,12 +147,11 @@ class LiveKitService extends _$LiveKitService {
         defaultAudioCaptureOptions: _options.audioOptions,
         defaultAudioOutputOptions: _options.audioOutputOptions,
 
-        // TODO(bdlukaa): Bandwidth optimizations
-        // dynacast: false,
+        dynacast: true,
         // defaultVideoPublishOptions: const VideoPublishOptions(
-        //    simulcast: true
+        //   simulcast: true
         // ),
-        // defaultAudioPublishOptions: AudioPublishOptions(),
+        // defaultAudioPublishOptions: const AudioPublishOptions(),
 
         /// https://docs.livekit.io/home/client/tracks/subscribe/#adaptive-stream
         adaptiveStream: true,

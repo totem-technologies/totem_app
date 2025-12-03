@@ -186,9 +186,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                         horizontal: 40,
                         vertical: 10,
                       ),
-                      child: LocalParticipantVideoCard(
-                        isCameraOn: _isCameraOn,
-                        videoTrack: _videoTrack,
+                      child: RepaintBoundary(
+                        child: LocalParticipantVideoCard(
+                          isCameraOn: _isCameraOn,
+                          videoTrack: _videoTrack,
+                        ),
                       ),
                     ),
                   ),
