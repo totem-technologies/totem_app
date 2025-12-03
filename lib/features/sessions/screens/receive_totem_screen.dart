@@ -53,9 +53,16 @@ class ReceiveTotemScreen extends StatelessWidget {
                       as VideoTrack?,
             );
 
-            final passReceiveCard = PassReceiveCard(
+            final passReceiveCard = TransitionCard(
               type: TotemCardTransitionType.receive,
-              onActionPressed: onAcceptTotem,
+              onActionPressed: () async {
+                try {
+                  await onAcceptTotem();
+                  return true;
+                } catch (error) {
+                  return false;
+                }
+              },
             );
 
             if (isLandscape) {

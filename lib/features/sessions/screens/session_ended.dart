@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
 class SessionEndedScreen extends ConsumerWidget {
@@ -15,6 +18,12 @@ class SessionEndedScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final recommended = ref.watch(getRecommendedSessionsProvider());
+
+    final nextEvents = event.space.nextEvents
+        .where((e) => e.slug != event.slug)
+        .take(2)
+        .toList();
+
     return PopScope(
       canPop: false,
       child: Scaffold(
@@ -55,26 +64,46 @@ class SessionEndedScreen extends ConsumerWidget {
                   ),
                 ),
 
-                ...recommended.when(
-                  data: (data) sync* {
-                    if (data.isNotEmpty) {
-                      yield Text(
-                        'You may enjoy these spaces',
-                        style: theme.textTheme.titleMedium,
-                        textAlign: TextAlign.start,
-                      );
-                      for (final event in data.take(2)) {
-                        yield Flexible(
-                          child: SmallSpaceCard.fromEventDetailSchema(
-                            event,
+                if (nextEvents.isNotEmpty) ...[
+                  Text(
+                    'Upcoming sessions ',
+                    style: theme.textTheme.titleMedium,
+                    textAlign: TextAlign.start,
+                  ),
+                  for (final nextEvent in nextEvents)
+                    Flexible(
+                      child: SmallSpaceCard(
+                        space: MobileSpaceDetailSchemaExtension.copyWith(
+                          event.space,
+                          nextEvents: [nextEvent],
+                        ),
+                        onTap: () => context.pushReplacement(
+                          RouteNames.spaceEvent(
+                            event.space.slug,
+                            nextEvent.slug,
                           ),
+                        ),
+                      ),
+                    ),
+                ] else
+                  ...recommended.when(
+                    data: (data) sync* {
+                      if (data.isNotEmpty) {
+                        yield Text(
+                          'You may enjoy these spaces',
+                          style: theme.textTheme.titleMedium,
+                          textAlign: TextAlign.start,
                         );
+                        for (final event in data.take(2)) {
+                          yield Flexible(
+                            child: SmallSpaceCard.fromEventDetailSchema(event),
+                          );
+                        }
                       }
-                    }
-                  },
-                  error: (error, _) => [],
-                  loading: () => [],
-                ),
+                    },
+                    error: (error, _) => [],
+                    loading: () => [],
+                  ),
               ],
             ),
           ),
