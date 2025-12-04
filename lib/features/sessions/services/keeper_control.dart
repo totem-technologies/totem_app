@@ -25,7 +25,6 @@ extension KeeperControl on LiveKitService {
 
   Future<void> _onKeeperDisconnected() async {
     _hasKeeperDisconnected = true;
-    ref.notifyListeners();
     await disableMicrophone();
 
     _keeperDisconnectedTimer?.cancel();
@@ -61,8 +60,6 @@ extension KeeperControl on LiveKitService {
             },
           );
     } catch (error, stackTrace) {
-      debugPrint('Error starting session: $error');
-      debugPrintStack(stackTrace: stackTrace);
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,

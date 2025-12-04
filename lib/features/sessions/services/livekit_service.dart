@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart' hide ChatMessage;
+import 'package:livekit_client/livekit_client.dart' hide ChatMessage, logger;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
@@ -16,6 +16,7 @@ import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
+import 'package:totem_app/shared/logger.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 export 'package:totem_app/api/models/session_state.dart';
@@ -171,7 +172,7 @@ class LiveKitService extends _$LiveKitService {
     unawaited(WakelockPlus.enable());
 
     ref.onDispose(() {
-      debugPrint('Disposing LiveKitService and closing connections.');
+      logger.d('Disposing LiveKitService and closing connections.');
       unawaited(_listener.dispose());
       room.removeListener(_onRoomChanges);
       unawaited(WakelockPlus.disable());
@@ -198,7 +199,6 @@ class LiveKitService extends _$LiveKitService {
 
   void _onError(LiveKitException? error) {
     if (error == null) return;
-    debugPrint('LiveKit error: $error');
     ErrorHandler.handleLivekitError(error);
     state = state.copyWith(connectionState: RoomConnectionState.error);
     _options.onLivekitError(error);
@@ -253,8 +253,6 @@ class LiveKitService extends _$LiveKitService {
           message.message,
         );
       } catch (error, stackTrace) {
-        debugPrint('Error decoding chat message: $error');
-        debugPrintStack(stackTrace: stackTrace);
         ErrorHandler.logError(
           error,
           stackTrace: stackTrace,
@@ -266,6 +264,8 @@ class LiveKitService extends _$LiveKitService {
 
   static const keeperDisconnectionTimeout = Duration(minutes: 3);
   bool _hasKeeperDisconnected = false;
+  // TODO(bdlukaa): Consider moving this to state.
+  // ignore: avoid_public_notifier_properties
   bool get hasKeeperDisconnected => _hasKeeperDisconnected;
   Timer? _keeperDisconnectedTimer;
 

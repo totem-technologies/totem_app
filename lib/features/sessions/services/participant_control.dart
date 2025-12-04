@@ -21,8 +21,6 @@ extension ParticipantControl on LiveKitService {
             },
           );
     } catch (error, stackTrace) {
-      debugPrint('Error passing totem: $error');
-      debugPrintStack(stackTrace: stackTrace);
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
@@ -51,8 +49,6 @@ extension ParticipantControl on LiveKitService {
           );
       await enableMicrophone();
     } catch (error, stackTrace) {
-      debugPrint('Error accepting totem: $error');
-      debugPrintStack(stackTrace: stackTrace);
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
@@ -74,11 +70,13 @@ extension ParticipantControl on LiveKitService {
           .timeout(
             const Duration(seconds: 5),
             onTimeout: () {
-              debugPrint('Warning: Sending emoji timed out');
+              ErrorHandler.logError(
+                TimeoutException('Sending emoji timed out'),
+                message: 'Warning: Sending emoji timed out',
+              );
             },
           );
     } catch (error, stackTrace) {
-      debugPrint('Error sending emoji: $error');
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
