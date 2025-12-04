@@ -62,6 +62,8 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
   // Refresh every second to update timeago and button states
   Timer? _timer;
+  Timer? _confettiTimer;
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +77,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   @override
   void dispose() {
     _timer?.cancel();
+    _confettiTimer?.cancel();
     super.dispose();
   }
 
@@ -412,15 +415,18 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     const total = 10;
     var progress = 0;
 
-    Timer.periodic(const Duration(milliseconds: 250), (timer) {
+    _confettiTimer?.cancel();
+    _confettiTimer = Timer.periodic(const Duration(milliseconds: 250), (timer) {
       if (!mounted) {
         timer.cancel();
+        _confettiTimer = null;
         return;
       }
       progress++;
 
       if (progress >= total) {
         timer.cancel();
+        _confettiTimer = null;
         return;
       }
 

@@ -31,6 +31,10 @@ class AuthController extends Notifier<AuthState> {
   late final AnalyticsService _analyticsService;
   late final NotificationsService _notificationsService;
 
+  final _authStateController = StreamController<AuthState>.broadcast();
+  Stream<AuthState> get authStateChanges => _authStateController.stream;
+  StreamSubscription<String>? _fcmTokenSubscription;
+
   @override
   AuthState build() {
     _authRepository = ref.watch(authRepositoryProvider);
@@ -38,12 +42,15 @@ class AuthController extends Notifier<AuthState> {
     _analyticsService = ref.watch(analyticsProvider);
     _notificationsService = ref.watch(notificationsProvider);
 
+    ref.onDispose(() async {
+      await _fcmTokenSubscription?.cancel();
+      _fcmTokenSubscription = null;
+      await _authStateController.close();
+    });
+
     _initialize();
     return AuthState.unauthenticated();
   }
-
-  final _authStateController = StreamController<AuthState>.broadcast();
-  Stream<AuthState> get authStateChanges => _authStateController.stream;
 
   bool get isAuthenticated => state.status == AuthStatus.authenticated;
   bool get isOnboardingCompleted =>
@@ -69,15 +76,16 @@ class AuthController extends Notifier<AuthState> {
 
   void _initialize() {
     unawaited(checkExistingAuth());
-    FirebaseMessaging.instance.onTokenRefresh
-        .listen((_) => _updateFCMToken())
-        .onError((dynamic error, StackTrace stackTrace) {
-          ErrorHandler.logError(
-            error,
-            stackTrace: stackTrace,
-            reason: 'FCM token refresh failed',
-          );
-        });
+    _fcmTokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen(
+      (_) => _updateFCMToken(),
+      onError: (dynamic error, StackTrace stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          reason: 'FCM token refresh failed',
+        );
+      },
+    );
   }
 
   Future<void> requestPin(String email, bool newsletterConsent) async {

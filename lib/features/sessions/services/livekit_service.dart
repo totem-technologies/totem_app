@@ -173,6 +173,8 @@ class LiveKitService extends _$LiveKitService {
 
     ref.onDispose(() {
       logger.d('Disposing LiveKitService and closing connections.');
+      _keeperDisconnectedTimer?.cancel();
+      _keeperDisconnectedTimer = null;
       unawaited(_listener.dispose());
       room.removeListener(_onRoomChanges);
       unawaited(WakelockPlus.disable());
