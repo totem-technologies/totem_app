@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
@@ -8,6 +7,7 @@ import 'package:totem_app/api/models/space_schema.dart';
 import 'package:totem_app/api/models/summary_spaces_schema.dart';
 import 'package:totem_app/core/config/consts.dart';
 import 'package:totem_app/core/services/secure_storage.dart';
+import 'package:totem_app/shared/logger.dart';
 
 final cacheServiceProvider = Provider<CacheService>((ref) {
   final secureStorage = ref.watch(secureStorageProvider);
@@ -40,7 +40,7 @@ class CacheService {
   }
 
   Future<Map<String, dynamic>?> read(String key) async {
-    debugPrint('Reading cache for key: $key');
+    logger.d('Reading cache for key: $key');
     final dataJson = await _secureStorage.read(key: key);
     if (dataJson != null) {
       final data = jsonDecode(dataJson) as Map<String, dynamic>;

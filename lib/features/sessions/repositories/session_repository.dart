@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/models/livekit_mute_participant_schema.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
+import 'package:totem_app/shared/logger.dart';
 
 part 'session_repository.g.dart';
 
@@ -52,9 +52,7 @@ Future<T> _handleApiCall<T>({
               error is DioException ||
               error is TimeoutException)) {
         attempt++;
-        debugPrint(
-          'Retrying $operationName (attempt $attempt/$maxRetries)...',
-        );
+        logger.d('Retrying $operationName (attempt $attempt/$maxRetries)...');
         await Future<void>.delayed(_getRetryDelay(attempt - 1));
         continue;
       }

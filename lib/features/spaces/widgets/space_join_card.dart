@@ -16,6 +16,7 @@ import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/core/services/calendar_service.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
@@ -23,6 +24,7 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/extensions.dart';
+import 'package:totem_app/shared/logger.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
@@ -375,7 +377,12 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
           );
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      ErrorHandler.logError(
+        e,
+        stackTrace: stackTrace,
+        message: 'Failed to attend to circle',
+      );
       if (mounted) {
         showErrorPopup(
           context,
@@ -469,7 +476,12 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
           );
         }
       }
-    } catch (error, _) {
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to add event to calendar',
+      );
       if (mounted) {
         showErrorPopup(
           context,
@@ -529,7 +541,12 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
           );
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      ErrorHandler.logError(
+        e,
+        stackTrace: stackTrace,
+        message: 'Failed to give up spot',
+      );
       if (mounted) {
         showErrorPopup(
           context,
@@ -551,7 +568,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   }
 
   Future<void> joinLivekit() async {
-    debugPrint('Joining livekit');
+    logger.d('Joining livekit session for event: ${event.slug}');
     await context.pushNamed(RouteNames.videoSessionPrejoin, extra: event.slug);
   }
 }

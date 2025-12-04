@@ -63,9 +63,7 @@ Dio _initDio(Ref ref) {
                   );
               accessToken = response.accessToken;
 
-              logger.d(
-                ' Token refreshed successfully! New token: $accessToken',
-              );
+              logger.d('Token refreshed successfully');
 
               await secureStorage.write(
                 key: AppConsts.accessToken,
