@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,21 +18,8 @@ import 'package:totem_app/navigation/app_router.dart';
 Future<void> main() async {
   await Sentry.runZonedGuarded(
     () async {
-      WidgetsFlutterBinding.ensureInitialized();
-
-      unawaited(
-        SystemChrome.setPreferredOrientations([
-          DeviceOrientation.portraitUp,
-          DeviceOrientation.portraitDown,
-          DeviceOrientation.landscapeLeft,
-          DeviceOrientation.landscapeRight,
-        ]),
-      );
-
       await dotenv.load();
-
       await ErrorHandler.initialize();
-
       await _initializeServices();
 
       final container = ProviderContainer(observers: [ObserverService()]);
@@ -57,6 +43,7 @@ Future<void> main() async {
 ///
 /// Awaited services are required by the app to function correctly.
 Future<void> _initializeServices() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   try {

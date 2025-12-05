@@ -17,6 +17,8 @@ class ErrorHandler {
 
   static Future<void> initialize() async {
     if (AppConfig.sentryDsn.isNotEmpty) {
+      // https://docs.sentry.io/platforms/dart/guides/flutter/integrations/slow-and-frozen-frames-instrumentation/
+      SentryWidgetsFlutterBinding.ensureInitialized();
       await SentryFlutter.init(
         (options) {
           options
