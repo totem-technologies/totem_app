@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/auth/repositories/auth_repository.dart';
@@ -120,9 +121,8 @@ class AuthController extends Notifier<AuthState> {
       final user = await _authRepository.currentUser;
       _setState(AuthState.authenticated(user: user));
 
-      _analyticsService
-        ..setUserId(user)
-        ..logLogin(method: 'pin');
+      await _analyticsService.setUserId(user);
+      _analyticsService.logLogin(method: 'pin');
       await _updateFCMToken();
     } catch (error, stackTrace) {
       _handlePinVerificationError(
@@ -325,7 +325,7 @@ class AuthController extends Notifier<AuthState> {
       if (refreshToken != null) {
         unawaited(_authRepository.logout(refreshToken));
       }
-      _analyticsService.logLogout();
+      unawaited(_analyticsService.logLogout());
       _setState(AuthState.unauthenticated());
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -345,6 +345,7 @@ class AuthController extends Notifier<AuthState> {
     try {
       await _authRepository.deleteAccount();
       _setState(AuthState.unauthenticated());
+      Sentry.configureScope((scope) => scope.setUser(null));
       _analyticsService.logEvent('account_deleted');
     } catch (error, stackTrace) {
       ErrorHandler.logError(

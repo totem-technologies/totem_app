@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
@@ -64,25 +65,38 @@ class AnalyticsService {
     );
   }
 
-  void setUserId(UserSchema user) {
+  Future<void> setUserId(UserSchema user) async {
     if (!_shouldLog()) return;
     logger.i('📊 Setting user ID: ${user.email}');
 
-    unawaited(
-      posthog.identify(
-        userId: user.email,
-        userProperties: {
-          'email': user.email,
-          if (user.name != null && user.name!.isNotEmpty) 'name': user.name!,
-        },
-      ),
+    await posthog.identify(
+      userId: user.email,
+      userProperties: {
+        'email': user.email,
+        if (user.name != null && user.name!.isNotEmpty) 'name': user.name!,
+      },
     );
+
+    await Sentry.configureScope((scope) async {
+      await scope.setUser(
+        SentryUser(
+          id: user.slug,
+          // email: user.email,
+          name: user.name,
+          username: user.slug,
+          data: {
+            'is_staff': user.isStaff,
+          },
+        ),
+      );
+    });
   }
 
-  void logLogout() {
+  Future<void> logLogout() async {
     if (!_shouldLog()) return;
     logEvent('user_logged_out');
-    unawaited(posthog.reset());
+    await posthog.reset();
+    await Sentry.configureScope((scope) => scope.setUser(null));
   }
 
   void logLogin({String? method}) {

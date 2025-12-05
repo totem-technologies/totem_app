@@ -26,7 +26,11 @@ class ErrorHandler {
           ..navigatorKey = navigatorKey
           // Adds request headers and IP for users, for more info visit:
           // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
-          ..sendDefaultPii = true;
+          ..sendDefaultPii = true
+          // Set tracesSampleRate to 1.0 to capture 100% of transactions for tracing.
+          ..tracesSampleRate = 1.0
+          ..profilesSampleRate = 1.0
+          ..enableLogs = true;
         //
       });
     }
