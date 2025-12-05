@@ -81,11 +81,23 @@ class AnalyticsService {
       await scope.setUser(
         SentryUser(
           id: user.slug,
-          // email: user.email,
           name: user.name,
           username: user.slug,
           data: {
             'is_staff': user.isStaff,
+          },
+        ),
+      );
+
+      await scope.setTag('user_type', user.isStaff ? 'staff' : 'user');
+      await scope.addBreadcrumb(
+        Breadcrumb(
+          message: 'User identified: ${user.email}',
+          level: SentryLevel.info,
+          category: 'user',
+          data: {
+            'user_id': user.slug,
+            'is_staff': user.isStaff.toString(),
           },
         ),
       );
@@ -104,7 +116,7 @@ class AnalyticsService {
 
     logEvent(
       'user_logged_in',
-      parameters: {'method': ?method},
+      parameters: method != null ? {'method': method} : null,
     );
   }
 

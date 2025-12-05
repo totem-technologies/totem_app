@@ -31,9 +31,10 @@ Future<void> main() async {
       );
 
       await dotenv.load();
-      await _initializeServices();
 
       await ErrorHandler.initialize();
+
+      await _initializeServices();
 
       final container = ProviderContainer(observers: [ObserverService()]);
       await container.read(authControllerProvider.notifier).checkExistingAuth();

@@ -411,7 +411,7 @@ class AuthController extends Notifier<AuthState> {
           final user = await _authRepository.currentUser;
           await ref.read(localStorageServiceProvider).saveUser(user);
           _setState(AuthState.authenticated(user: user));
-          _analyticsService.setUserId(user);
+          unawaited(_analyticsService.setUserId(user));
           await _updateFCMToken();
         })().timeout(
           const Duration(seconds: 4),

@@ -12,27 +12,33 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/logger.dart';
 
 /// Centralized error handling for the Totem App.
-///
-/// This class provides methods for handling, logging, and displaying errors
-/// throughout the application in a consistent manner.
 class ErrorHandler {
   const ErrorHandler._();
 
   static Future<void> initialize() async {
     if (AppConfig.sentryDsn.isNotEmpty) {
-      await SentryFlutter.init((options) {
-        options
-          ..dsn = AppConfig.sentryDsn
-          ..navigatorKey = navigatorKey
-          // Adds request headers and IP for users, for more info visit:
-          // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
-          ..sendDefaultPii = true
-          // Set tracesSampleRate to 1.0 to capture 100% of transactions for tracing.
-          ..tracesSampleRate = 1.0
-          ..profilesSampleRate = 1.0
-          ..enableLogs = true;
-        //
-      });
+      await SentryFlutter.init(
+        (options) {
+          options
+            ..dsn = AppConfig.sentryDsn
+            ..navigatorKey = navigatorKey
+            // Adds request headers and IP for users, for more info visit:
+            // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
+            ..sendDefaultPii = true
+            ..tracesSampleRate = AppConfig.isDevelopment ? 1.0 : 0.1
+            ..profilesSampleRate = AppConfig.isDevelopment ? 1.0 : 0.1
+            ..enableLogs = true
+            ..attachScreenshot = true
+            ..attachViewHierarchy = true
+            ..enableAutoPerformanceTracing = true;
+        },
+        appRunner: () async {
+          FlutterError.onError = (FlutterErrorDetails details) {
+            FlutterError.presentError(details);
+            logFlutterError(details);
+          };
+        },
+      );
     }
   }
 
@@ -44,9 +50,18 @@ class ErrorHandler {
   }) {
     if (kDebugMode) {
       logger.e(message ?? reason, error: error, stackTrace: stackTrace);
-    } else if (AppConfig.sentryDsn.isNotEmpty) {
+    }
+
+    if (AppConfig.sentryDsn.isNotEmpty) {
       unawaited(
-        Sentry.captureException(error, stackTrace: stackTrace, hint: Hint()),
+        Sentry.captureException(
+          error,
+          stackTrace: stackTrace,
+          hint: Hint.withMap({
+            'reason': reason,
+            'message': message,
+          }),
+        ),
       );
     }
   }
@@ -56,6 +71,7 @@ class ErrorHandler {
       details.exception,
       stackTrace: details.stack,
       reason: details.exceptionAsString(),
+      message: 'Flutter Error in ${details.library ?? "unknown"}',
     );
   }
 
