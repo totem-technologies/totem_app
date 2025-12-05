@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_components/livekit_components.dart';
@@ -60,7 +62,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
             Future<void> send() async {
               final message = _messageController.text.trim();
               if (message.isNotEmpty) {
-                chatCtx.sendMessage(message);
+                unawaited(chatCtx.sendMessage(message));
                 _messageController.clear();
               }
               await scrollController.animateTo(
