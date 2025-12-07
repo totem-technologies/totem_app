@@ -9,8 +9,8 @@ import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
-class OnjoingSessionJoinCard extends ConsumerWidget {
-  const OnjoingSessionJoinCard({super.key});
+class OngoingSessionJoinCard extends ConsumerWidget {
+  const OngoingSessionJoinCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

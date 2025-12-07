@@ -66,7 +66,7 @@ class BottomNavScaffold extends StatelessWidget {
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const OnjoingSessionJoinCard(),
+          const OngoingSessionJoinCard(),
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
             child: NavigationBar(

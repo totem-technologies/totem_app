@@ -32,6 +32,8 @@ extension KeeperControl on LiveKitService {
       LiveKitService.keeperDisconnectionTimeout,
       _onKeeperDisconnectedTimeout,
     );
+
+    // TODO(bdlukaa): Show message to the user that the keeper has disconnected.
   }
 
   void _onKeeperConnected() {

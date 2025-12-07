@@ -1,71 +1,14 @@
-import 'dart:async';
-
-import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/models/livekit_mute_participant_schema.dart';
-import 'package:totem_app/core/errors/app_exceptions.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
-import 'package:totem_app/shared/logger.dart';
+import 'package:totem_app/core/services/repository_utils.dart';
 
 part 'session_repository.g.dart';
-
-const int _maxRetries = 2;
-Duration _getRetryDelay(int attempt) {
-  return Duration(milliseconds: 500 * (1 << attempt)); // 500ms, 1s, 2s
-}
-
-Future<T> _handleApiCall<T>({
-  required Future<T> Function() apiCall,
-  required String operationName,
-  bool retryOnNetworkError = false,
-  int maxRetries = _maxRetries,
-}) async {
-  int attempt = 0;
-  while (true) {
-    try {
-      return await apiCall();
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error in $operationName',
-      );
-
-      // Don't retry on auth errors or client errors (4xx)
-      if (error is AppAuthException) {
-        rethrow;
-      }
-
-      if (error is DioException) {
-        final statusCode = error.response?.statusCode;
-        // Don't retry on client errors (4xx)
-        if (statusCode != null && statusCode >= 400 && statusCode < 500) {
-          rethrow;
-        }
-      }
-
-      // Retry logic for network errors
-      if (retryOnNetworkError &&
-          attempt < maxRetries &&
-          (error is AppNetworkException ||
-              error is DioException ||
-              error is TimeoutException)) {
-        attempt++;
-        logger.d('Retrying $operationName (attempt $attempt/$maxRetries)...');
-        await Future<void>.delayed(_getRetryDelay(attempt - 1));
-        continue;
-      }
-
-      rethrow;
-    }
-  }
-}
 
 @riverpod
 Future<String> sessionToken(Ref ref, String eventSlug) async {
   final apiService = ref.read(mobileApiServiceProvider);
-  return _handleApiCall<String>(
+  return RepositoryUtils.handleApiCall<String>(
     apiCall: () async {
       final response = await apiService.meetings
           .totemMeetingsMobileApiGetLivekitToken(eventSlug: eventSlug);
@@ -83,7 +26,7 @@ Future<void> removeParticipant(
   String participantIdentity,
 ) async {
   final apiService = ref.read(mobileApiServiceProvider);
-  await _handleApiCall<void>(
+  await RepositoryUtils.handleApiCall<void>(
     apiCall: () =>
         apiService.meetings.totemMeetingsMobileApiRemoveParticipantEndpoint(
           eventSlug: eventSlug,
@@ -104,7 +47,7 @@ Future<void> muteParticipant(
   String participantIdentity,
 ) async {
   final apiService = ref.read(mobileApiServiceProvider);
-  await _handleApiCall<void>(
+  await RepositoryUtils.handleApiCall<void>(
     apiCall: () =>
         apiService.meetings.totemMeetingsMobileApiMuteParticipantEndpoint(
           eventSlug: eventSlug,
@@ -134,7 +77,7 @@ Future<void> muteEveryone(
 @riverpod
 Future<void> passTotem(Ref ref, String eventSlug) async {
   final apiService = ref.read(mobileApiServiceProvider);
-  await _handleApiCall<void>(
+  await RepositoryUtils.handleApiCall<void>(
     apiCall: () => apiService.meetings.totemMeetingsMobileApiPassTotemEndpoint(
       eventSlug: eventSlug,
     ),
@@ -150,7 +93,7 @@ Future<void> reorderParticipants(
   List<String> order,
 ) async {
   final apiService = ref.read(mobileApiServiceProvider);
-  await _handleApiCall<void>(
+  await RepositoryUtils.handleApiCall<void>(
     apiCall: () =>
         apiService.meetings.totemMeetingsMobileApiReorderParticipantsEndpoint(
           eventSlug: eventSlug,
@@ -164,7 +107,7 @@ Future<void> reorderParticipants(
 @riverpod
 Future<void> startSession(Ref ref, String eventSlug) async {
   final apiService = ref.read(mobileApiServiceProvider);
-  await _handleApiCall<void>(
+  await RepositoryUtils.handleApiCall<void>(
     apiCall: () => apiService.meetings.totemMeetingsMobileApiStartRoomEndpoint(
       eventSlug: eventSlug,
     ),
@@ -176,7 +119,7 @@ Future<void> startSession(Ref ref, String eventSlug) async {
 @riverpod
 Future<void> endSession(Ref ref, String eventSlug) async {
   final apiService = ref.read(mobileApiServiceProvider);
-  await _handleApiCall<void>(
+  await RepositoryUtils.handleApiCall<void>(
     apiCall: () => apiService.meetings.totemMeetingsMobileApiEndRoomEndpoint(
       eventSlug: eventSlug,
     ),
