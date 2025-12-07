@@ -972,10 +972,10 @@ packages:
     description:
       path: "."
       ref: HEAD
-      resolved-ref: e6cbbba90ade98568864f6253b087e7737736d6b
+      resolved-ref: "458ab99c56c0c281976cb3cd8c5f8547445b4813"
       url: "https://github.com/livekit/components-flutter.git"
     source: git
-    version: "1.2.2+hotfix.1"
+    version: "1.2.3"
   logger:
     dependency: "direct main"
     description:

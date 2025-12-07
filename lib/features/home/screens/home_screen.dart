@@ -21,7 +21,6 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const TotemLogo(size: 24)),
       body: SafeArea(
-        bottom: false,
         child: summary.when(
           data: (summary) {
             final upcomingEvents = summary.upcoming
