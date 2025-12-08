@@ -344,7 +344,8 @@ void main() {
       final day20 = find.text('20');
       expect(day20, findsOneWidget);
 
-      // Check that there is no DecoratedBox (regular days have no decoration)
+      // Check that there is no DecoratedBox
+      // (regular days don't have decoration)
       // Regular days use Center widget, not DecoratedBox
       final decoratedBoxes = find.ancestor(
         of: day20,
