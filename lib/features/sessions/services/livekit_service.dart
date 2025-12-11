@@ -3,7 +3,8 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
-import 'package:livekit_client/livekit_client.dart' hide ChatMessage;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:livekit_client/livekit_client.dart' hide ChatMessage, logger;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
@@ -15,6 +16,7 @@ import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
+import 'package:totem_app/shared/logger.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 export 'package:totem_app/api/models/session_state.dart';
@@ -22,7 +24,9 @@ export 'package:totem_app/api/models/session_status.dart';
 export 'package:totem_app/features/sessions/services/utils.dart';
 
 part 'devices_control.dart';
+part 'keeper_control.dart';
 part 'livekit_service.g.dart';
+part 'participant_control.dart';
 
 enum SessionCommunicationTopics {
   emoji('lk-emoji-topic'),
@@ -147,12 +151,11 @@ class LiveKitService extends _$LiveKitService {
         defaultAudioCaptureOptions: _options.audioOptions,
         defaultAudioOutputOptions: _options.audioOutputOptions,
 
-        // TODO(bdlukaa): Bandwidth optimizations
-        // dynacast: false,
+        dynacast: true,
         // defaultVideoPublishOptions: const VideoPublishOptions(
-        //    simulcast: true
+        //   simulcast: true
         // ),
-        // defaultAudioPublishOptions: AudioPublishOptions(),
+        // defaultAudioPublishOptions: const AudioPublishOptions(),
 
         /// https://docs.livekit.io/home/client/tracks/subscribe/#adaptive-stream
         adaptiveStream: true,
@@ -160,13 +163,18 @@ class LiveKitService extends _$LiveKitService {
     );
 
     _listener = room.room.createListener();
-    _listener.on<DataReceivedEvent>(_onDataReceived);
+    _listener
+      ..on<DataReceivedEvent>(_onDataReceived)
+      ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
+      ..on<ParticipantConnectedEvent>(_onParticipantConnected);
     room.addListener(_onRoomChanges);
 
     unawaited(WakelockPlus.enable());
 
     ref.onDispose(() {
-      debugPrint('Disposing LiveKitService and closing connections.');
+      logger.d('Disposing LiveKitService and closing connections.');
+      _keeperDisconnectedTimer?.cancel();
+      _keeperDisconnectedTimer = null;
       unawaited(_listener.dispose());
       room.removeListener(_onRoomChanges);
       unawaited(WakelockPlus.disable());
@@ -193,7 +201,6 @@ class LiveKitService extends _$LiveKitService {
 
   void _onError(LiveKitException? error) {
     if (error == null) return;
-    debugPrint('LiveKit error: $error');
     ErrorHandler.handleLivekitError(error);
     state = state.copyWith(connectionState: RoomConnectionState.error);
     _options.onLivekitError(error);
@@ -248,8 +255,6 @@ class LiveKitService extends _$LiveKitService {
           message.message,
         );
       } catch (error, stackTrace) {
-        debugPrint('Error decoding chat message: $error');
-        debugPrintStack(stackTrace: stackTrace);
         ErrorHandler.logError(
           error,
           stackTrace: stackTrace,
@@ -259,178 +264,34 @@ class LiveKitService extends _$LiveKitService {
     }
   }
 
+  static const keeperDisconnectionTimeout = Duration(minutes: 3);
+  bool _hasKeeperDisconnected = false;
+  // TODO(bdlukaa): Consider moving this to state.
+  // ignore: avoid_public_notifier_properties
+  bool get hasKeeperDisconnected => _hasKeeperDisconnected;
+  Timer? _keeperDisconnectedTimer;
+
+  Future<void> _onParticipantDisconnected(
+    ParticipantDisconnectedEvent event,
+  ) async {
+    if (isKeeper(event.participant.identity)) {
+      await _onKeeperDisconnected();
+    }
+  }
+
+  void _onParticipantConnected(ParticipantConnectedEvent event) {
+    if (isKeeper(event.participant.identity)) {
+      _onKeeperConnected();
+    }
+  }
+
   bool isKeeper([String? userSlug]) {
-    final auth = ref.read(authControllerProvider);
-    return _options.keeperSlug == (userSlug ?? auth.user?.slug);
-  }
-
-  /// Get the participant who is currently speaking.
-  Participant speakingNow() {
-    return room.participants.firstWhere(
-      (participant) {
-        if (state.sessionState.speakingNow != null) {
-          if (state.sessionState.totemStatus == TotemStatus.passing) {
-            return participant.identity == options.keeperSlug;
-          }
-          return participant.identity == state.sessionState.speakingNow;
-        } else {
-          // If no one is speaking right now, show the keeper's video
-          return participant.identity == options.keeperSlug;
-        }
-      },
-      orElse: () => room.localParticipant!,
-    );
-  }
-
-  /// Pass the totem to the next participant in the speaking order.
-  ///
-  /// This fails silently if it's not the user's turn.
-  /// Throws an exception if the operation fails.
-  Future<void> passTotem() async {
-    if (!isKeeper() && !state.isMyTurn(room)) return;
-    try {
-      await ref
-          .read(passTotemProvider(options.eventSlug).future)
-          .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              throw AppNetworkException.timeout();
-            },
-          );
-    } catch (error, stackTrace) {
-      debugPrint('Error passing totem: $error');
-      debugPrintStack(stackTrace: stackTrace);
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error passing totem',
+    if (userSlug == null) {
+      final currentUserSlug = ref.read(
+        authControllerProvider.select((auth) => auth.user?.slug),
       );
-      rethrow;
+      userSlug = currentUserSlug;
     }
-  }
-
-  /// Accept the totem when it's passed to the user.
-  ///
-  /// This fails silently if it's not the user's turn.
-  /// Throws an exception if the operation fails.
-  Future<void> acceptTotem() async {
-    if (!state.isMyTurn(room)) return;
-    try {
-      await _apiService.meetings
-          .totemMeetingsMobileApiAcceptTotemEndpoint(
-            eventSlug: _options.eventSlug,
-          )
-          .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              throw AppNetworkException.timeout();
-            },
-          );
-      await enableMicrophone();
-    } catch (error, stackTrace) {
-      debugPrint('Error accepting totem: $error');
-      debugPrintStack(stackTrace: stackTrace);
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error accepting totem',
-      );
-      rethrow;
-    }
-  }
-
-  /// Send an emoji to other participants.
-  /// This operation is fire-and-forget and doesn't throw errors.
-  Future<void> sendEmoji(String emoji) async {
-    try {
-      await room.localParticipant
-          ?.publishData(
-            const Utf8Encoder().convert(emoji),
-            topic: SessionCommunicationTopics.emoji.topic,
-          )
-          .timeout(
-            const Duration(seconds: 5),
-            onTimeout: () {
-              debugPrint('Warning: Sending emoji timed out');
-            },
-          );
-    } catch (error, stackTrace) {
-      debugPrint('Error sending emoji: $error');
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error sending emoji',
-      );
-    }
-  }
-
-  Future<void> startSession() async {
-    try {
-      await ref
-          .read(startSessionProvider(_options.eventSlug).future)
-          .timeout(
-            const Duration(seconds: 20),
-            onTimeout: () {
-              throw AppNetworkException.timeout();
-            },
-          );
-    } catch (error, stackTrace) {
-      debugPrint('Error starting session: $error');
-      debugPrintStack(stackTrace: stackTrace);
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error starting session',
-      );
-      rethrow;
-    }
-  }
-
-  Future<void> endSession() async {
-    try {
-      await ref
-          .read(endSessionProvider(_options.eventSlug).future)
-          .timeout(
-            const Duration(seconds: 20),
-            onTimeout: () {
-              throw AppNetworkException.timeout();
-            },
-          );
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error ending session',
-      );
-      rethrow;
-    }
-  }
-
-  Future<void> muteEveryone() async {
-    try {
-      await ref
-          .read(
-            muteEveryoneProvider(
-              _options.eventSlug,
-              room.participants
-                  .where((p) => !p.isMuted || !p.isMicrophoneEnabled())
-                  .map((p) => p.identity)
-                  .toList(),
-            ).future,
-          )
-          .timeout(
-            const Duration(seconds: 20),
-            onTimeout: () {
-              throw AppNetworkException.timeout();
-            },
-          );
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error muting everyone',
-      );
-      rethrow;
-    }
+    return _options.keeperSlug == userSlug;
   }
 }

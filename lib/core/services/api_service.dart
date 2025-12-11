@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sentry_dio/sentry_dio.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
 import 'package:totem_app/api/models/refresh_token_schema.dart';
 import 'package:totem_app/auth/repositories/auth_repository.dart';
@@ -63,9 +64,7 @@ Dio _initDio(Ref ref) {
                   );
               accessToken = response.accessToken;
 
-              logger.d(
-                ' Token refreshed successfully! New token: $accessToken',
-              );
+              logger.d('Token refreshed successfully');
 
               await secureStorage.write(
                 key: AppConsts.accessToken,
@@ -136,6 +135,8 @@ Dio _initDio(Ref ref) {
       LogInterceptor(requestBody: true, responseBody: true),
     );
   }
+
+  _dio.addSentry();
 
   return _dio;
 }

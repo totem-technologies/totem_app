@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' hide SessionOptions;
 import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
 import 'package:totem_app/api/models/event_detail_schema.dart';
@@ -92,7 +92,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     super.dispose();
   }
 
-  // TODO(bdlukaa): Investigate if this is still needed.
   Map<String, GlobalKey> participantKeys = {};
   GlobalKey getParticipantKey(String identity) {
     return participantKeys.putIfAbsent(identity, GlobalKey.new);

@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/auth/repositories/auth_repository.dart';
@@ -31,6 +32,10 @@ class AuthController extends Notifier<AuthState> {
   late final AnalyticsService _analyticsService;
   late final NotificationsService _notificationsService;
 
+  final _authStateController = StreamController<AuthState>.broadcast();
+  Stream<AuthState> get authStateChanges => _authStateController.stream;
+  StreamSubscription<String>? _fcmTokenSubscription;
+
   @override
   AuthState build() {
     _authRepository = ref.watch(authRepositoryProvider);
@@ -38,12 +43,15 @@ class AuthController extends Notifier<AuthState> {
     _analyticsService = ref.watch(analyticsProvider);
     _notificationsService = ref.watch(notificationsProvider);
 
+    ref.onDispose(() async {
+      await _fcmTokenSubscription?.cancel();
+      _fcmTokenSubscription = null;
+      await _authStateController.close();
+    });
+
     _initialize();
     return AuthState.unauthenticated();
   }
-
-  final _authStateController = StreamController<AuthState>.broadcast();
-  Stream<AuthState> get authStateChanges => _authStateController.stream;
 
   bool get isAuthenticated => state.status == AuthStatus.authenticated;
   bool get isOnboardingCompleted =>
@@ -69,15 +77,16 @@ class AuthController extends Notifier<AuthState> {
 
   void _initialize() {
     unawaited(checkExistingAuth());
-    FirebaseMessaging.instance.onTokenRefresh
-        .listen((_) => _updateFCMToken())
-        .onError((dynamic error, StackTrace stackTrace) {
-          ErrorHandler.logError(
-            error,
-            stackTrace: stackTrace,
-            reason: 'FCM token refresh failed',
-          );
-        });
+    _fcmTokenSubscription ??= FirebaseMessaging.instance.onTokenRefresh.listen(
+      (_) => _updateFCMToken(),
+      onError: (dynamic error, StackTrace stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          reason: 'FCM token refresh failed',
+        );
+      },
+    );
   }
 
   Future<void> requestPin(String email, bool newsletterConsent) async {
@@ -112,9 +121,8 @@ class AuthController extends Notifier<AuthState> {
       final user = await _authRepository.currentUser;
       _setState(AuthState.authenticated(user: user));
 
-      _analyticsService
-        ..setUserId(user)
-        ..logLogin(method: 'pin');
+      await _analyticsService.setUserId(user);
+      _analyticsService.logLogin(method: 'pin');
       await _updateFCMToken();
     } catch (error, stackTrace) {
       _handlePinVerificationError(
@@ -317,7 +325,7 @@ class AuthController extends Notifier<AuthState> {
       if (refreshToken != null) {
         unawaited(_authRepository.logout(refreshToken));
       }
-      _analyticsService.logLogout();
+      unawaited(_analyticsService.logLogout());
       _setState(AuthState.unauthenticated());
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -337,6 +345,7 @@ class AuthController extends Notifier<AuthState> {
     try {
       await _authRepository.deleteAccount();
       _setState(AuthState.unauthenticated());
+      Sentry.configureScope((scope) => scope.setUser(null));
       _analyticsService.logEvent('account_deleted');
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -402,7 +411,7 @@ class AuthController extends Notifier<AuthState> {
           final user = await _authRepository.currentUser;
           await ref.read(localStorageServiceProvider).saveUser(user);
           _setState(AuthState.authenticated(user: user));
-          _analyticsService.setUserId(user);
+          unawaited(_analyticsService.setUserId(user));
           await _updateFCMToken();
         })().timeout(
           const Duration(seconds: 4),

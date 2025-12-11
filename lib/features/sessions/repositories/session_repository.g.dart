@@ -292,7 +292,7 @@ final class MuteEveryoneProvider
   }
 }
 
-String _$muteEveryoneHash() => r'1bf35924f370b2554deeaea506a276be00208bd8';
+String _$muteEveryoneHash() => r'e729fc45cfe11059045a56a5993059bedb85a4ff';
 
 final class MuteEveryoneFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, (String, List<String>)> {

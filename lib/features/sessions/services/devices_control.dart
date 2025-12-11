@@ -72,7 +72,7 @@ extension DevicesControl on LiveKitService {
   }
 
   Future<void> enableMicrophone() async {
-    if (room.microphoneOpened) {
+    if (room.microphoneOpened || hasKeeperDisconnected) {
       return;
     }
     if (room.localParticipant != null) {

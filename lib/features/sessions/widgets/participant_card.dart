@@ -1,4 +1,5 @@
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart';
@@ -43,126 +44,128 @@ class ParticipantCard extends ConsumerWidget {
 
     const overlayPadding = 6.0;
 
-    return AspectRatio(
-      aspectRatio: 16 / 21,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: participantContext.isSpeaking
-                ? const Color(0xFFFFD000)
-                : Colors.white,
-            width: 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              offset: const Offset(0, 3),
-              blurRadius: 1,
-              spreadRadius: -2,
+    return RepaintBoundary(
+      child: AspectRatio(
+        aspectRatio: 16 / 21,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
               color: participantContext.isSpeaking
-                  ? const Color(0x80FFD000)
-                  : Colors.black,
+                  ? const Color(0xFFFFD000)
+                  : Colors.white,
+              width: 2,
             ),
-            BoxShadow(
-              offset: const Offset(0, 2),
-              blurRadius: 2,
-              color: participantContext.isSpeaking
-                  ? const Color(0x80FFD000)
-                  : Colors.black,
-            ),
-            BoxShadow(
-              offset: const Offset(0, 1),
-              blurRadius: 5,
-              color: participantContext.isSpeaking
-                  ? const Color(0x80FFD000)
-                  : Colors.black,
-            ),
-          ],
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: ClipRRect(
-          // radius - border width
-          borderRadius: BorderRadius.circular(20 - 2),
-          clipBehavior: Clip.hardEdge,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned.fill(
-                child: ParticipantVideo(participant: participant),
+            boxShadow: [
+              BoxShadow(
+                offset: const Offset(0, 3),
+                blurRadius: 1,
+                spreadRadius: -2,
+                color: participantContext.isSpeaking
+                    ? const Color(0x80FFD000)
+                    : Colors.black,
               ),
-              PositionedDirectional(
-                top: overlayPadding,
-                start: overlayPadding,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  switchInCurve: Curves.easeInOut,
-                  switchOutCurve: Curves.easeInOut,
-                  child: emojis.isNotEmpty
-                      ? Container(
-                          key: Key(emojis.first),
-                          width: 20,
-                          height: 20,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            emojis.first,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              textBaseline: TextBaseline.ideographic,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        )
-                      : Container(
-                          width: 20,
-                          height: 20,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.black54,
-                          ),
-                          padding: const EdgeInsetsDirectional.all(2),
-                          alignment: Alignment.center,
-                          child: SpeakingIndicator(participant: participant),
-                        ),
-                ),
+              BoxShadow(
+                offset: const Offset(0, 2),
+                blurRadius: 2,
+                color: participantContext.isSpeaking
+                    ? const Color(0x80FFD000)
+                    : Colors.black,
               ),
-              if (amKeeper && currentUserSlug != participant.identity)
-                PositionedDirectional(
-                  end: overlayPadding,
-                  top: overlayPadding,
-                  child: _ParticipantMenuButton(
-                    participant: participant,
-                    overlayPadding: overlayPadding,
-                    onMute: () => _onMuteParticipant(context, ref),
-                    onRemove: () => _onRemoveParticipant(context, ref),
-                  ),
-                ),
-              PositionedDirectional(
-                bottom: 6,
-                start: 6,
-                end: 6,
-                child: AutoSizeText(
-                  participant.name,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    shadows: [
-                      Shadow(
-                        offset: Offset(0, 1),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                ),
+              BoxShadow(
+                offset: const Offset(0, 1),
+                blurRadius: 5,
+                color: participantContext.isSpeaking
+                    ? const Color(0x80FFD000)
+                    : Colors.black,
               ),
             ],
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: ClipRRect(
+            // radius - border width
+            borderRadius: BorderRadius.circular(20 - 2),
+            clipBehavior: Clip.hardEdge,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned.fill(
+                  child: ParticipantVideo(participant: participant),
+                ),
+                PositionedDirectional(
+                  top: overlayPadding,
+                  start: overlayPadding,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    switchInCurve: Curves.easeInOut,
+                    switchOutCurve: Curves.easeInOut,
+                    child: emojis.isNotEmpty
+                        ? Container(
+                            key: Key(emojis.first),
+                            width: 20,
+                            height: 20,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              emojis.first,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                textBaseline: TextBaseline.ideographic,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        : Container(
+                            width: 20,
+                            height: 20,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.black54,
+                            ),
+                            padding: const EdgeInsetsDirectional.all(2),
+                            alignment: Alignment.center,
+                            child: SpeakingIndicator(participant: participant),
+                          ),
+                  ),
+                ),
+                if (amKeeper && currentUserSlug != participant.identity)
+                  PositionedDirectional(
+                    end: overlayPadding,
+                    top: overlayPadding,
+                    child: _ParticipantMenuButton(
+                      participant: participant,
+                      overlayPadding: overlayPadding,
+                      onMute: () => _onMuteParticipant(context, ref),
+                      onRemove: () => _onRemoveParticipant(context, ref),
+                    ),
+                  ),
+                PositionedDirectional(
+                  bottom: 6,
+                  start: 6,
+                  end: 6,
+                  child: AutoSizeText(
+                    participant.name,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      shadows: [
+                        Shadow(
+                          offset: Offset(0, 1),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -432,7 +435,7 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                     decoration: BoxDecoration(
                       image: user?.profileImage != null
                           ? DecorationImage(
-                              image: NetworkImage(
+                              image: CachedNetworkImageProvider(
                                 getFullUrl(user!.profileImage!),
                               ),
                               fit: BoxFit.cover,

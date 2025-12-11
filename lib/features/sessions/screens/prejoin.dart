@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/core/config/app_config.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
@@ -53,8 +54,12 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       _videoTrack = await LocalVideoTrack.createCameraTrack(_cameraOptions);
       await _videoTrack!.start();
       setState(() {});
-    } catch (e) {
-      debugPrint('Failed to create video track: $e');
+    } catch (e, stackTrace) {
+      ErrorHandler.logError(
+        e,
+        stackTrace: stackTrace,
+        message: 'Failed to create local video track',
+      );
     }
   }
 
@@ -186,9 +191,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                         horizontal: 40,
                         vertical: 10,
                       ),
-                      child: LocalParticipantVideoCard(
-                        isCameraOn: _isCameraOn,
-                        videoTrack: _videoTrack,
+                      child: RepaintBoundary(
+                        child: LocalParticipantVideoCard(
+                          isCameraOn: _isCameraOn,
+                          videoTrack: _videoTrack,
+                        ),
                       ),
                     ),
                   ),
