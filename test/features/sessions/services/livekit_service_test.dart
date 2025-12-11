@@ -5,7 +5,8 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:livekit_client/livekit_client.dart' hide ChatMessage;
+import 'package:livekit_client/livekit_client.dart'
+    hide ChatMessage, SessionOptions;
 import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
 import 'package:mocktail/mocktail.dart';
