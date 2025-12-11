@@ -11,6 +11,8 @@ import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/repositories/auth_repository.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 
+import '../../../setup.dart';
+
 class MockMobileTotemApi extends Mock implements MobileTotemApi {}
 
 class MockUsersClient extends Mock implements UsersClient {}
@@ -58,6 +60,8 @@ void main() {
     active: true,
     createdAt: DateTime.now(),
   );
+
+  setUpAll(setupDotenv);
 
   setUp(() {
     mockMobileTotemApi = MockMobileTotemApi();

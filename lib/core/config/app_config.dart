@@ -5,8 +5,8 @@ class AppConfig {
   const AppConfig._();
 
   /// Get the current environment (development, staging, production)
-  static String? get environment {
-    return dotenv.env['ENVIRONMENT'];
+  static String get environment {
+    return dotenv.env['ENVIRONMENT'] ?? 'production';
   }
 
   /// Check if the app is running in development mode

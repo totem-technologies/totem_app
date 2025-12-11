@@ -77,7 +77,7 @@ class AuthController extends Notifier<AuthState> {
 
   void _initialize() {
     unawaited(checkExistingAuth());
-    _fcmTokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen(
+    _fcmTokenSubscription ??= FirebaseMessaging.instance.onTokenRefresh.listen(
       (_) => _updateFCMToken(),
       onError: (dynamic error, StackTrace stackTrace) {
         ErrorHandler.logError(

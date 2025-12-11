@@ -29,7 +29,7 @@ class RepositoryUtils {
     int maxRetries = 2,
   }) async {
     int attempt = 0;
-    while (true) {
+    while (attempt < maxRetries) {
       try {
         return await apiCall();
       } catch (error, stackTrace) {
@@ -72,6 +72,7 @@ class RepositoryUtils {
         rethrow;
       }
     }
+    throw AppNetworkException.noConnection();
   }
 
   /// Converts DioException to app-specific exceptions.
