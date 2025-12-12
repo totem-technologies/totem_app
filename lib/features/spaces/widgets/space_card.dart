@@ -155,19 +155,25 @@ class SpaceCard extends StatelessWidget {
             children: [
               Positioned.fill(
                 child: SpaceGradientMask(
-                  child: CachedNetworkImage(
-                    imageUrl: getFullUrl(space.imageLink ?? ''),
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => ColoredBox(
-                      color: Colors.black.withValues(alpha: 0.75),
-                    ),
-                    errorWidget: (context, url, error) {
-                      return Image.asset(
-                        TotemAssets.genericBackground,
-                        fit: BoxFit.cover,
-                      );
-                    },
-                  ),
+                  child:
+                      (space.imageLink != null && space.imageLink!.isNotEmpty)
+                      ? CachedNetworkImage(
+                          imageUrl: getFullUrl(space.imageLink!),
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => ColoredBox(
+                            color: Colors.black.withValues(alpha: 0.75),
+                          ),
+                          errorWidget: (context, url, error) {
+                            return Image.asset(
+                              TotemAssets.genericBackground,
+                              fit: BoxFit.cover,
+                            );
+                          },
+                        )
+                      : Image.asset(
+                          TotemAssets.genericBackground,
+                          fit: BoxFit.cover,
+                        ),
                 ),
               ),
               PositionedDirectional(
@@ -351,17 +357,22 @@ class SmallSpaceCard extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: SpaceGradientMask(
-                child: CachedNetworkImage(
-                  imageUrl: getFullUrl(space.imageLink ?? ''),
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    color: Colors.black.withValues(alpha: 0.6),
-                  ),
-                  errorWidget: (context, url, error) => Image.asset(
-                    TotemAssets.genericBackground,
-                    fit: BoxFit.cover,
-                  ),
-                ),
+                child: (space.imageLink != null && space.imageLink!.isNotEmpty)
+                    ? CachedNetworkImage(
+                        imageUrl: getFullUrl(space.imageLink!),
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          color: Colors.black.withValues(alpha: 0.6),
+                        ),
+                        errorWidget: (context, url, error) => Image.asset(
+                          TotemAssets.genericBackground,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : Image.asset(
+                        TotemAssets.genericBackground,
+                        fit: BoxFit.cover,
+                      ),
               ),
             ),
           ),
