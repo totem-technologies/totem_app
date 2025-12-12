@@ -1,5 +1,4 @@
 // We need to access LivekitService.ref to notify listeners
-// ignore: lines_longer_than_80_chars
 // ignore_for_file: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
 
 part of 'livekit_service.dart';
