@@ -19,6 +19,14 @@ import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/space_gradient_mask.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
+const _textShadows = [
+  Shadow(
+    offset: Offset(0, 1),
+    blurRadius: 2,
+    color: Color.fromRGBO(0, 0, 0, 0.5),
+  ),
+];
+
 MobileSpaceDetailSchema _spaceDetailFromEventDetailSchema(
   EventDetailSchema event,
 ) {
@@ -190,11 +198,11 @@ class SpaceCard extends StatelessWidget {
                     }
                     final seatsLeft = nextEvent != null
                         ? DefaultTextStyle.merge(
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              shadows: kElevationToShadow[4],
+                              shadows: _textShadows,
                             ),
                             child: buildSeatsLeftText(
                               nextEvent.seatsLeft,
@@ -223,11 +231,11 @@ class SpaceCard extends StatelessWidget {
                                 Flexible(
                                   child: Text(
                                     buildTimeLabel(nextEvent.start),
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 8,
                                       fontWeight: FontWeight.bold,
-                                      shadows: kElevationToShadow[4],
+                                      shadows: _textShadows,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.fade,
@@ -251,10 +259,10 @@ class SpaceCard extends StatelessWidget {
                         if (nextEvent?.title != null)
                           AutoSizeText(
                             'Next: ${nextEvent!.title}',
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 9,
-                              shadows: kElevationToShadow[4],
+                              shadows: _textShadows,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -408,21 +416,21 @@ class SmallSpaceCard extends StatelessWidget {
                     ),
                     child: Text(
                       buildTimeLabel(nextEvent.start),
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 8,
                         fontWeight: FontWeight.bold,
-                        shadows: kElevationToShadow[4],
+                        shadows: _textShadows,
                       ),
                     ),
                   ),
                 const Spacer(),
                 if (nextEvent != null) ...[
                   DefaultTextStyle.merge(
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
-                      shadows: kElevationToShadow[4],
+                      shadows: _textShadows,
                     ),
                     child: buildSeatsLeftText(nextEvent.seatsLeft),
                   ),
@@ -430,11 +438,11 @@ class SmallSpaceCard extends StatelessWidget {
                 ],
                 AutoSizeText(
                   space.title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    shadows: kElevationToShadow[4],
+                    shadows: _textShadows,
                   ),
                   maxLines: 2,
                 ),
