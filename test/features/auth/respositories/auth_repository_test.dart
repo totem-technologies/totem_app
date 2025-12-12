@@ -1,6 +1,3 @@
-// We need a few lines to be longer than 80 chars.
-// ignore_for_file: lines_longer_than_80_chars
-
 import 'dart:convert';
 import 'dart:io';
 

@@ -168,8 +168,6 @@ class _GuidelinesTab extends StatelessWidget {
             children: [
               const TextSpan(
                 text:
-                    // ignore for now, will fix later
-                    // ignore: lines_longer_than_80_chars
                     'In order to keep Totem safe, we require everyone adhere to ',
               ),
               TextSpan(
@@ -180,8 +178,6 @@ class _GuidelinesTab extends StatelessWidget {
               ),
               const TextSpan(
                 text:
-                    // ignore for now, will fix later
-                    // ignore: lines_longer_than_80_chars
                     '. Breaking confidentiality can be grounds for account removal.',
               ),
             ],

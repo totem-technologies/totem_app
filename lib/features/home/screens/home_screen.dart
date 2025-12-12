@@ -17,6 +17,12 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final summary = ref.watch(spacesSummaryProvider);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final crossAxisCount = screenWidth < 600
+        ? 2
+        : screenWidth < 900
+        ? 3
+        : 4;
 
     return Scaffold(
       appBar: AppBar(title: const TotemLogo(size: 24)),
@@ -160,17 +166,7 @@ class HomeScreen extends ConsumerWidget {
                       ),
                       sliver: SliverGrid.builder(
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: () {
-                            final screenWidth = MediaQuery.sizeOf(
-                              context,
-                            ).width;
-                            if (screenWidth < 600) {
-                              return 2; // Small screens
-                            } else if (screenWidth < 900) {
-                              return 3; // Medium screens
-                            }
-                            return 4; // Large screens
-                          }(),
+                          crossAxisCount: crossAxisCount,
                           childAspectRatio: 16 / 21,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
