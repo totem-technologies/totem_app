@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
@@ -37,7 +38,30 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
     final isLargeScreen = MediaQuery.sizeOf(context).width > 600;
 
     return Scaffold(
-      appBar: AppBar(title: const TotemLogo(size: 24)),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        toolbarHeight: 72,
+        titleSpacing: 0,
+        centerTitle: true,
+        title: spaces.maybeWhen(
+          data: (spacesList) {
+            if (spacesList.isEmpty) return const TotemLogo(size: 24);
+            return SpacesFilterBar(
+              categories: _extractCategories(spacesList),
+              selectedCategory: selectedCategory,
+              onCategorySelected: (category) {
+                ref
+                    .read(selectedCategoryProvider.notifier)
+                    .toggleCategory(category);
+              },
+            );
+          },
+          orElse: () => const TotemLogo(size: 24),
+        ),
+      ),
       body: spaces.when(
         data: (spacesList) {
           if (spacesList.isEmpty) {
@@ -48,8 +72,6 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
             );
           }
 
-          final allCategories = _extractCategories(spacesList);
-
           final filteredSpaces = selectedCategory == null
               ? spacesList
               : spacesList
@@ -57,6 +79,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                     .toList();
 
           return RefreshIndicator.adaptive(
+            edgeOffset: 80,
             onRefresh: () => ref.refresh(listSpacesProvider.future),
             child: CustomScrollView(
               slivers: [
@@ -64,19 +87,9 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                   top: false,
                   sliver: MultiSliver(
                     children: <Widget>[
-                      SliverFloatingHeader(
-                        animationStyle: const AnimationStyle(
-                          curve: Curves.easeInOut,
-                          duration: Duration(milliseconds: 300),
-                        ),
-                        child: SpacesFilterBar(
-                          categories: allCategories,
-                          selectedCategory: selectedCategory,
-                          onCategorySelected: (category) {
-                            ref
-                                .read(selectedCategoryProvider.notifier)
-                                .toggleCategory(category);
-                          },
+                      SliverPadding(
+                        padding: EdgeInsets.only(
+                          top: MediaQuery.paddingOf(context).top + 80,
                         ),
                       ),
                       if (filteredSpaces.isEmpty)
@@ -107,14 +120,17 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                             padding: const EdgeInsetsDirectional.symmetric(
                               horizontal: 100,
                             ),
-                            sliver: SliverGrid.count(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 16,
-                              crossAxisSpacing: 16,
-                              childAspectRatio: 16 / 14,
-                              children: filteredSpaces
-                                  .map((space) => SpaceCard(space: space))
-                                  .toList(),
+                            sliver: SliverGrid.builder(
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    mainAxisSpacing: 16,
+                                    crossAxisSpacing: 16,
+                                    childAspectRatio: 16 / 14,
+                                  ),
+                              itemCount: filteredSpaces.length,
+                              itemBuilder: (_, index) =>
+                                  SpaceCard(space: filteredSpaces[index]),
                             ),
                           ),
                       ],
@@ -125,15 +141,23 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
             ),
           );
         },
-        error: (err, stack) => ErrorScreen(
-          error: err,
-          showHomeButton: false,
-          onRetry: () => ref.refresh(listSpacesProvider.future),
+        error: (err, stack) => Padding(
+          padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top + 72),
+          child: ErrorScreen(
+            error: err,
+            showHomeButton: false,
+            onRetry: () => ref.refresh(listSpacesProvider.future),
+          ),
         ),
         loading: () {
           return ListView.separated(
             physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsetsDirectional.all(16),
+            padding: EdgeInsetsDirectional.only(
+              start: 16,
+              end: 16,
+              bottom: 16,
+              top: MediaQuery.paddingOf(context).top + 80,
+            ),
             itemBuilder: (_, _) => SpaceCard.shimmer(),
             separatorBuilder: (_, _) => const SizedBox(height: 16),
             itemCount: (MediaQuery.heightOf(context) / 100).round(),
