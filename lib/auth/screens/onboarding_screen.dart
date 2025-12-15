@@ -129,6 +129,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isLastPage = currentPage >= onboardingData.length - 1;
+
     return AnnotatedRegion(
       value: SystemUiOverlayStyle.light,
       child: Material(
@@ -308,18 +310,69 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               ),
                             ),
                             const SizedBox(width: 10),
-                            Semantics(
-                              label: 'Next page',
-                              child: GestureDetector(
-                                onTap: _onNext,
-                                child: const CircleAvatar(
-                                  radius: 27,
-                                  backgroundColor: AppTheme.mauve,
-                                  child: Icon(
-                                    Icons.arrow_forward_ios,
-                                    color: AppTheme.white,
-                                  ),
-                                ),
+                            AnimatedSize(
+                              duration: const Duration(milliseconds: 450),
+                              curve: Curves.easeInOutCubic,
+                              alignment: Alignment.centerRight,
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 500),
+                                switchInCurve: Curves.easeOutCubic,
+                                switchOutCurve: Curves.easeInCubic,
+                                transitionBuilder: (child, animation) {
+                                  final scale =
+                                      Tween<double>(
+                                        begin: 0.98,
+                                        end: 1,
+                                      ).animate(
+                                        CurvedAnimation(
+                                          parent: animation,
+                                          curve: Curves.easeOutCubic,
+                                        ),
+                                      );
+
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: ScaleTransition(
+                                      scale: scale,
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: isLastPage
+                                    ? Semantics(
+                                        key: const ValueKey(
+                                          'create_account_cta',
+                                        ),
+                                        label: 'Create account',
+                                        button: true,
+                                        child: ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                            minHeight: 54,
+                                          ),
+                                          child: ElevatedButton(
+                                            onPressed: _onSkip,
+                                            child: const Text('Create account'),
+                                          ),
+                                        ),
+                                      )
+                                    : Semantics(
+                                        key: const ValueKey(
+                                          'next_page_chevron',
+                                        ),
+                                        label: 'Next page',
+                                        button: true,
+                                        child: GestureDetector(
+                                          onTap: _onNext,
+                                          child: const CircleAvatar(
+                                            radius: 27,
+                                            backgroundColor: AppTheme.mauve,
+                                            child: Icon(
+                                              Icons.arrow_forward_ios,
+                                              color: AppTheme.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                               ),
                             ),
                           ],
