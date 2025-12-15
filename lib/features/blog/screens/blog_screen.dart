@@ -110,124 +110,126 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                 child: RefreshIndicator.adaptive(
                   onRefresh: () =>
                       ref.refresh(blogPostProvider(widget.slug).future),
-                  child: ListView(
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: 20,
-                    ),
-                    children: [
-                      const SizedBox(height: 20),
-                      Text(
-                        blog.title,
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
+                  child: SelectionArea(
+                    child: ListView(
+                      padding: const EdgeInsetsDirectional.symmetric(
+                        horizontal: 20,
                       ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 17,
-                            backgroundColor: Colors.white,
-                            child: UserAvatar.fromUserSchema(
-                              blog.author,
-                              radius: 15,
-                            ),
+                      children: [
+                        const SizedBox(height: 20),
+                        Text(
+                          blog.title,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  blog.author?.name ?? 'Unknown Author',
-                                  style: theme.textTheme.bodyLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                if (blog.datePublished != null)
-                                  Text(
-                                    DateFormat(
-                                      'MMM d, yyyy',
-                                    ).format(blog.datePublished!),
-                                    style: theme.textTheme.bodyMedium,
-                                  ),
-                              ],
-                            ),
-                          ),
-                          Chip(
-                            label: Text('${blog.readTime} min read'),
-                            backgroundColor: Colors.grey.shade200,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      if (blog.headerImageUrl != null)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: CachedNetworkImage(
-                            imageUrl: blog.headerImageUrl!,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      Html(
-                        data: blog.contentHtml,
-                        onLinkTap: (url, _, _) async {
-                          if (url != null) {
-                            final appRoute = RoutingUtils.parseTotemDeepLink(
-                              url,
-                            );
-                            if (appRoute != null && mounted) {
-                              // Navigate to app route instead of browser
-                              await context.push(appRoute);
-                            } else {
-                              // Open external URL for non-Totem links
-                              await launchUrl(Uri.parse(url));
-                            }
-                          }
-                        },
-                        onAnchorTap: (url, _, _) async {
-                          if (url != null) {
-                            final appRoute = RoutingUtils.parseTotemDeepLink(
-                              url,
-                            );
-                            if (appRoute != null && mounted) {
-                              // Navigate to app route instead of browser
-                              await context.push(appRoute);
-                            } else {
-                              // Open external URL for non-Totem links
-                              await launchUrl(Uri.parse(url));
-                            }
-                          }
-                        },
-                        style: AppTheme.htmlStyle,
-                        extensions: [TotemImageHtmlExtension()],
-                      ),
-                      if (blog.author?.slug != null) ...[
-                        Padding(
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            vertical: 20,
-                          ),
-                          child: Text(
-                            'Meet the author',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        MeetUserCard(
-                          user: blog.author!,
-                          margin: EdgeInsetsDirectional.zero,
                         ),
                         const SizedBox(height: 20),
-                        KeeperSpaces(
-                          title: authorSpacesText,
-                          keeperSlug: blog.author!.slug!,
-                          horizontalPadding: EdgeInsetsDirectional.zero,
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 17,
+                              backgroundColor: Colors.white,
+                              child: UserAvatar.fromUserSchema(
+                                blog.author,
+                                radius: 15,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    blog.author?.name ?? 'Unknown Author',
+                                    style: theme.textTheme.bodyLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (blog.datePublished != null)
+                                    Text(
+                                      DateFormat(
+                                        'MMM d, yyyy',
+                                      ).format(blog.datePublished!),
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
+                                ],
+                              ),
+                            ),
+                            Chip(
+                              label: Text('${blog.readTime} min read'),
+                              backgroundColor: Colors.grey.shade200,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 20),
+                        if (blog.headerImageUrl != null)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: CachedNetworkImage(
+                              imageUrl: blog.headerImageUrl!,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        Html(
+                          data: blog.contentHtml,
+                          onLinkTap: (url, _, _) async {
+                            if (url != null) {
+                              final appRoute = RoutingUtils.parseTotemDeepLink(
+                                url,
+                              );
+                              if (appRoute != null && mounted) {
+                                // Navigate to app route instead of browser
+                                await context.push(appRoute);
+                              } else {
+                                // Open external URL for non-Totem links
+                                await launchUrl(Uri.parse(url));
+                              }
+                            }
+                          },
+                          onAnchorTap: (url, _, _) async {
+                            if (url != null) {
+                              final appRoute = RoutingUtils.parseTotemDeepLink(
+                                url,
+                              );
+                              if (appRoute != null && mounted) {
+                                // Navigate to app route instead of browser
+                                await context.push(appRoute);
+                              } else {
+                                // Open external URL for non-Totem links
+                                await launchUrl(Uri.parse(url));
+                              }
+                            }
+                          },
+                          style: AppTheme.htmlStyle,
+                          extensions: [TotemImageHtmlExtension()],
+                        ),
+                        if (blog.author?.slug != null) ...[
+                          Padding(
+                            padding: const EdgeInsetsDirectional.symmetric(
+                              vertical: 20,
+                            ),
+                            child: Text(
+                              'Meet the author',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          MeetUserCard(
+                            user: blog.author!,
+                            margin: EdgeInsetsDirectional.zero,
+                          ),
+                          const SizedBox(height: 20),
+                          KeeperSpaces(
+                            title: authorSpacesText,
+                            keeperSlug: blog.author!.slug!,
+                            horizontalPadding: EdgeInsetsDirectional.zero,
+                          ),
+                          const SizedBox(height: 14),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ),
