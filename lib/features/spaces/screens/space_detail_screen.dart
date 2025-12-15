@@ -110,16 +110,19 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                         leading: Container(
                           margin: const EdgeInsetsDirectional.only(start: 20),
                           alignment: AlignmentDirectional.center,
-                          child: DecoratedBox(
+                          child: Container(
+                            height: 30,
+                            width: 30,
                             decoration: BoxDecoration(
                               color: theme.scaffoldBackgroundColor,
                               shape: BoxShape.circle,
                             ),
-                            child: IconButton(
-                              icon: Icon(Icons.adaptive.arrow_back),
-                              iconSize: 24,
-                              visualDensity: VisualDensity.compact,
-                              onPressed: () => popOrHome(context),
+                            child: Center(
+                              child: IconButton(
+                                icon: Icon(Icons.adaptive.arrow_back, size: 20),
+                                visualDensity: VisualDensity.compact,
+                                onPressed: () => popOrHome(context),
+                              ),
                             ),
                           ),
                         ),
@@ -138,7 +141,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                               child: Builder(
                                 builder: (context) {
                                   return IconButton(
-                                    icon: Icon(Icons.adaptive.share),
+                                    icon: Icon(Icons.adaptive.share, size: 20),
                                     visualDensity: VisualDensity.compact,
                                     onPressed: () async {
                                       final box =
