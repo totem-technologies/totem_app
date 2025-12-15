@@ -156,7 +156,7 @@ class HomeScreen extends ConsumerWidget {
                       padding: const EdgeInsetsDirectional.only(
                         start: 16,
                         end: 16,
-                        bottom: 16,
+                        bottom: 116,
                       ),
                       sliver: SliverGrid.builder(
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
