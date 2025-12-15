@@ -198,7 +198,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             Align(
               alignment: Alignment.bottomCenter,
               child: Container(
-                height: 300,
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
@@ -211,7 +210,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                 ),
                 child: Container(
-                  height: 300,
+                  height: 400,
                   width: double.infinity,
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
@@ -239,6 +238,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               final onboarding = onboardingData[index];
                               final textTheme = Theme.of(context).textTheme;
                               return Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
                                   Semantics(
                                     label: 'Onboarding title',
@@ -261,6 +261,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                       ),
                                     ),
                                   ),
+                                  const SizedBox(height: 20),
                                 ],
                               );
                             },
