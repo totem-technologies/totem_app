@@ -34,7 +34,7 @@ Future<List<MobileSpaceDetailSchema>> listSpaces(Ref ref) async {
 @riverpod
 Future<EventDetailSchema> event(Ref ref, String eventSlug) async {
   final mobileApiService = ref.watch(mobileApiServiceProvider);
-  return mobileApiService.spaces.totemCirclesMobileApiMobileApiGetEventDetail(
+  return mobileApiService.spaces.totemCirclesMobileApiMobileApiGetSessionDetail(
     eventSlug: eventSlug,
   );
 }

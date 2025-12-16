@@ -107,7 +107,7 @@ final class EventProvider
   }
 }
 
-String _$eventHash() => r'3c4c759c27936e919694060476095ddaa444deab';
+String _$eventHash() => r'615390d7fd612a7d263dc84760a4e27c01f1eba2';
 
 final class EventFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<EventDetailSchema>, String> {
