@@ -40,19 +40,24 @@ class SpaceDetailAppBar extends StatelessWidget {
               ),
               child: SpaceGradientMask(
                 gradientHeight: 200,
-                child: CachedNetworkImage(
-                  imageUrl: getFullUrl(space.imageLink ?? ''),
-                  fit: BoxFit.cover,
-                  errorWidget: (context, url, error) {
-                    return Image.asset(
-                      TotemAssets.genericBackground,
-                      fit: BoxFit.cover,
-                    );
-                  },
-                  placeholder: (context, url) => ColoredBox(
-                    color: Colors.black.withValues(alpha: 0.75),
-                  ),
-                ),
+                child: (space.imageLink != null && space.imageLink!.isNotEmpty)
+                    ? CachedNetworkImage(
+                        imageUrl: getFullUrl(space.imageLink ?? ''),
+                        fit: BoxFit.cover,
+                        errorWidget: (context, url, error) {
+                          return Image.asset(
+                            TotemAssets.genericBackground,
+                            fit: BoxFit.cover,
+                          );
+                        },
+                        placeholder: (context, url) => ColoredBox(
+                          color: Colors.black.withValues(alpha: 0.75),
+                        ),
+                      )
+                    : Image.asset(
+                        TotemAssets.genericBackground,
+                        fit: BoxFit.cover,
+                      ),
               ),
             ),
           ),
