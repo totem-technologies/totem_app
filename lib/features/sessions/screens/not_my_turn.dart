@@ -30,6 +30,7 @@ class NotMyTurn extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final activeSpeaker = session.speakingNow();
 
     return RoomBackground(
       child: OrientationBuilder(
@@ -48,9 +49,11 @@ class NotMyTurn extends ConsumerWidget {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: ParticipantVideo(
-                      key: getParticipantKey(session.speakingNow().identity),
-                      participant: session.speakingNow(),
+                    child: RepaintBoundary(
+                      child: ParticipantVideo(
+                        key: getParticipantKey(activeSpeaker.identity),
+                        participant: activeSpeaker,
+                      ),
                     ),
                   ),
                   PositionedDirectional(
@@ -77,12 +80,12 @@ class NotMyTurn extends ConsumerWidget {
                             ),
                             padding: const EdgeInsetsDirectional.all(4),
                             child: SpeakingIndicator(
-                              participant: session.speakingNow(),
+                              participant: activeSpeaker,
                             ),
                           ),
                           Flexible(
                             child: Text(
-                              session.speakingNow().name,
+                              activeSpeaker.name,
                               style: theme.textTheme.titleLarge?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -104,7 +107,7 @@ class NotMyTurn extends ConsumerWidget {
             layoutBuilder: NoMyTurnLayoutBuilder(isLandscape: isLandscape),
             sorting: (originalTracks) {
               return tracksSorting(
-                speakingNow: session.speakingNow().identity,
+                speakingNow: activeSpeaker.identity,
                 originalTracks: originalTracks,
                 sessionState: sessionState,
                 event: event,

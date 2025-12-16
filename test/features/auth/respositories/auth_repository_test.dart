@@ -1,6 +1,3 @@
-// We need a few lines to be longer than 80 chars.
-// ignore_for_file: lines_longer_than_80_chars
-
 import 'dart:convert';
 import 'dart:io';
 
@@ -10,6 +7,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/repositories/auth_repository.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
+
+import '../../../setup.dart';
 
 class MockMobileTotemApi extends Mock implements MobileTotemApi {}
 
@@ -58,6 +57,8 @@ void main() {
     active: true,
     createdAt: DateTime.now(),
   );
+
+  setUpAll(setupDotenv);
 
   setUp(() {
     mockMobileTotemApi = MockMobileTotemApi();

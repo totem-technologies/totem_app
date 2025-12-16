@@ -25,9 +25,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final user = ref.watch(
-      authControllerProvider.select((auth) => auth.user),
-    );
+    final user = ref.watch(authControllerProvider.select((auth) => auth.user));
 
     if (user == null) return const ErrorScreen();
 

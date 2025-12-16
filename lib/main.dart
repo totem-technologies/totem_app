@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
@@ -16,23 +16,11 @@ import 'package:totem_app/firebase_options.dart';
 import 'package:totem_app/navigation/app_router.dart';
 
 Future<void> main() async {
-  await runZonedGuarded(
+  await Sentry.runZonedGuarded(
     () async {
-      WidgetsFlutterBinding.ensureInitialized();
-
-      unawaited(
-        SystemChrome.setPreferredOrientations([
-          DeviceOrientation.portraitUp,
-          DeviceOrientation.portraitDown,
-          DeviceOrientation.landscapeLeft,
-          DeviceOrientation.landscapeRight,
-        ]),
-      );
-
       await dotenv.load();
-      await _initializeServices();
-
       await ErrorHandler.initialize();
+      await _initializeServices();
 
       final container = ProviderContainer(observers: [ObserverService()]);
       await container.read(authControllerProvider.notifier).checkExistingAuth();
@@ -45,7 +33,8 @@ Future<void> main() async {
       );
     },
     (exception, stackTrace) async {
-      ErrorHandler.logError(exception, stackTrace: stackTrace);
+      // nothing to do here
+      // https://docs.sentry.io/platforms/dart/guides/flutter/usage/#platformdispatcheronerror--runzonedguarded
     },
   );
 }
@@ -54,6 +43,7 @@ Future<void> main() async {
 ///
 /// Awaited services are required by the app to function correctly.
 Future<void> _initializeServices() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   try {

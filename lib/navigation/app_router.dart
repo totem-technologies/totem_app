@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/screens/login_screen.dart';
 import 'package:totem_app/auth/screens/onboarding_screen.dart';
@@ -65,7 +66,7 @@ class BottomNavScaffold extends StatelessWidget {
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const OnjoingSessionJoinCard(),
+          const OngoingSessionJoinCard(),
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
             child: NavigationBar(
@@ -161,7 +162,10 @@ GoRouter createRouter(WidgetRef ref) {
     initialLocation: '/',
     debugLogDiagnostics: true,
     refreshListenable: GoRouterRefreshStream(authController.authStateChanges),
-    observers: [PosthogObserver()],
+    observers: [
+      PosthogObserver(),
+      SentryNavigatorObserver(),
+    ],
     redirect: (context, state) async {
       logger.i('🛻 Router State Change: ${state.fullPath}');
 

@@ -1,14 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-/// Application-wide configuration settings
 class AppConfig {
-  // Private constructor to prevent instantiation
   const AppConfig._();
 
   /// Get the current environment (development, staging, production)
   static String get environment {
-    return dotenv.env['ENVIRONMENT'] ?? 'development';
+    return dotenv.env['ENVIRONMENT'] ?? 'production';
   }
 
   /// Check if the app is running in development mode
@@ -23,7 +21,7 @@ class AppConfig {
 
   /// Check if the app is running in production mode
   static bool get isProduction {
-    return environment == 'production';
+    return environment == 'production' || kReleaseMode;
   }
 
   /// API configuration
