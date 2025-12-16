@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:in_app_review/in_app_review.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/features/profile/screens/user_feedback.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
@@ -49,15 +51,15 @@ class SessionEndedScreen extends ConsumerWidget {
                   'the session enjoyable.',
                   textAlign: TextAlign.center,
                 ),
-                // Session Feedback Widget
                 SessionFeedbackWidget(
-                  onThumbUpPressed: () {
-                    ref.read(
+                  onThumbUpPressed: () async {
+                    await ref.read(
                       sessionFeedbackProvider(
                         event.slug,
                         SessionFeedbackOptions.up,
-                      ),
+                      ).future,
                     );
+                    await _incrementSessionLikedCount();
                   },
                   onThumbDownPressed: () async {
                     await showUserFeedbackDialog(
@@ -68,7 +70,7 @@ class SessionEndedScreen extends ConsumerWidget {
                             event.slug,
                             SessionFeedbackOptions.down,
                             message,
-                          ),
+                          ).future,
                         );
                       },
                     );
@@ -126,5 +128,27 @@ class SessionEndedScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  static const _reviewRequestedKey = 'session_review_requested';
+  static const _sessionLikedCountKey = 'session_liked_count';
+  Future<void> _incrementSessionLikedCount() async {
+    final prefs = await SharedPreferences.getInstance();
+    final alreadyRequested = prefs.getBool(_reviewRequestedKey) ?? false;
+    if (alreadyRequested) return;
+
+    final count = (prefs.getInt(_sessionLikedCountKey) ?? 0) + 1;
+    await prefs.setInt(_sessionLikedCountKey, count);
+    if (count >= 5) {
+      final inAppReview = InAppReview.instance;
+      try {
+        if (await inAppReview.isAvailable()) {
+          await inAppReview.requestReview();
+          await prefs.setBool(_reviewRequestedKey, true);
+        }
+      } catch (_) {
+        // Fine if fail
+      }
+    }
   }
 }
