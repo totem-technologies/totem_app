@@ -88,7 +88,7 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
 
     return PopScope(
       canPop: !_loading,

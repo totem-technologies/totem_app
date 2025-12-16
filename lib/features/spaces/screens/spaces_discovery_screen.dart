@@ -35,7 +35,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
     final spaces = ref.watch(listSpacesProvider);
     final selectedCategory = ref.watch(selectedCategoryProvider);
 
-    final isLargeScreen = MediaQuery.sizeOf(context).width > 600;
+    final isLargeScreen = MediaQuery.widthOf(context) > 600;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
