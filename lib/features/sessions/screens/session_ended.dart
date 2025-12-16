@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/export.dart';
+import 'package:totem_app/features/profile/screens/user_feedback.dart';
+import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/session_feedback_widget.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
@@ -50,10 +52,26 @@ class SessionEndedScreen extends ConsumerWidget {
                 // Session Feedback Widget
                 SessionFeedbackWidget(
                   onThumbUpPressed: () {
-                    // TODO(bdlukaa): Implement thumb up logic
+                    ref.read(
+                      sessionFeedbackProvider(
+                        event.slug,
+                        SessionFeedbackOptions.up,
+                      ),
+                    );
                   },
-                  onThumbDownPressed: () {
-                    // TODO(bdlukaa): Implement thumb down logic
+                  onThumbDownPressed: () async {
+                    await showUserFeedbackDialog(
+                      context,
+                      onFeedbackSubmitted: (message) async {
+                        return ref.read(
+                          sessionFeedbackProvider(
+                            event.slug,
+                            SessionFeedbackOptions.down,
+                            message,
+                          ),
+                        );
+                      },
+                    );
                   },
                 ),
 

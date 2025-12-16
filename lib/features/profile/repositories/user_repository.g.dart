@@ -64,7 +64,7 @@ final class UserProfileProvider
   }
 }
 
-String _$userProfileHash() => r'4a5010b40e22c98352d50d8df2057455f4112ce6';
+String _$userProfileHash() => r'4f6bc67ac93735a53c057c6af11d91cd3b15d4f3';
 
 final class UserProfileFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<PublicUserSchema>, String> {
@@ -133,7 +133,7 @@ final class SubmitFeedbackProvider
   }
 }
 
-String _$submitFeedbackHash() => r'2723e0b372ac26a6eb233408b389c2ba1a89c5fe';
+String _$submitFeedbackHash() => r'c9a91a1e420a2c70df2bc60c545fb6a7d83ec9df';
 
 final class SubmitFeedbackFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {

@@ -66,7 +66,7 @@ final class KeeperProfileProvider
   }
 }
 
-String _$keeperProfileHash() => r'a5d935e4d297af37e1b4c4839da183a91ef4ca2e';
+String _$keeperProfileHash() => r'a1a88bb63b4c2cae18890063c300542fd106f29c';
 
 final class KeeperProfileFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<KeeperProfileSchema>, String> {
