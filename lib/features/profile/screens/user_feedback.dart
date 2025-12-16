@@ -1,6 +1,3 @@
-// Long descriptive text and input decoration properties exceed 80 chars
-// ignore_for_file: lines_longer_than_80_chars
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
@@ -91,7 +88,7 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
 
     return PopScope(
       canPop: !_loading,

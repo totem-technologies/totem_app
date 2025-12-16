@@ -32,7 +32,7 @@ class SpacesFilterBar extends StatelessWidget {
               offset: const Offset(0, 3),
             ),
           ],
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(50),
         ),
         child: Material(
           type: MaterialType.transparency,

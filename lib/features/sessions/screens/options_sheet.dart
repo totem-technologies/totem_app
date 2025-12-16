@@ -319,9 +319,6 @@ class OptionsSheet extends ConsumerWidget {
               confirmButtonText: 'Pass',
               content:
                   'Pass totem to '
-                  // Need to ignore because text is too long. Will be fixed
-                  // when we add localizations.
-                  // ignore: lines_longer_than_80_chars
                   '${user.whenData((user) => user.name).value ?? 'the next participant'}?',
               contentStyle: theme.textTheme.titleMedium?.copyWith(
                 color: theme.colorScheme.onSurface,

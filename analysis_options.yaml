@@ -4,7 +4,7 @@ analyzer:
   plugins:
     - custom_lint
   exclude:
-    - '**/*.g.dart'
+    - "**/*.g.dart"
 
 custom_lint:
   rules:
@@ -43,3 +43,4 @@ linter:
     always_specify_types: false # (optional — depends if you want verbose code)
     no_default_cases: false
     avoid_void_async: true
+    lines_longer_than_80_chars: false
