@@ -89,6 +89,7 @@ dev_dependencies:
 
   # App Icon and Splash Screens
   flutter_launcher_icons: ^0.14.3
+  flutter_flavorizr: ^2.4.1
 
 # dependency_overrides:
 #   flutter_webrtc: ^1.2.1
@@ -102,6 +103,35 @@ flutter:
     - assets/images/
     - assets/logo/
 
+flavorizr:
+  flavors:
+    staging:
+      app:
+        name: "Totem Development"
+
+      android:
+        applicationId: "org.totem.app.staging"
+        icon: "assets/logo/Icon_colored_square.png"
+        adaptive_icon:
+          foreground: "assets/logo/Icon_black_square.png"
+          background: "assets/logo/Icon_colored_square.png"
+      ios:
+        bundleId: "org.totem.ios.staging"
+        icon: "assets/logo/Icon_colored_square.png"
+    production:
+      app:
+        name: "Totem"
+    
+      android:
+        applicationId: "org.totem.app"
+        icon: "assets/logo/Icon_colored_square.png"
+        adaptive_icon:
+          foreground: "assets/logo/Icon_black_square.png"
+          background: "assets/logo/Icon_colored_square.png"
+      ios:
+        bundleId: "org.totem.ios"
+        icon: "assets/logo/Icon_colored_square.png"
+
 flutter_launcher_icons:
   android: true
   ios: true
@@ -112,7 +142,7 @@ flutter_launcher_icons:
   adaptive_icon_foreground: "assets/logo/Icon_black_square.png"
   adaptive_icon_monochrome: "assets/logo/Icon_colored_square.png"
 
-  image_path_ios: "assets/logo/Icon_colored_square.png"
+  image_path_ios: "assets/logo/Icon_colored_square.png" 
   # image_path_ios_dark_transparent: "assets/logo/Icon_white_square.png"
   remove_alpha_ios: true
   # background_color_ios: "#F4DC92" # yellow

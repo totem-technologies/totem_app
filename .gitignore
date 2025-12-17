@@ -10,6 +10,7 @@
 .history
 .svn/
 .swiftpm/
+.tmp/
 migrate_working_dir/
 .env
 GoogleService-Info.plist
