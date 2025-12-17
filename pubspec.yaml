@@ -82,15 +82,16 @@ dev_dependencies:
   # Generators
   riverpod_generator: ^3.0.3
   swagger_parser: ^1.36.0
-  retrofit_generator: ^10.0.0
+  retrofit_generator: ^10.2.0
   json_serializable: ^6.9.5
   build_runner: ^2.10.4
 
   # App Icon and Splash Screens
   flutter_launcher_icons: ^0.14.3
 
-# dependency_overrides:
-#   flutter_webrtc: ^1.2.1
+dependency_overrides:
+  # TODO: Remove this override when livekit supports latest protobuf
+  protobuf: ^4.2.0
 
 flutter:
   uses-material-design: true
