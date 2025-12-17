@@ -7,7 +7,7 @@ on:
 
 jobs:
   build_android_apk:
-    name: Android APK (${{ matrix.flavor }})
+    name: Android ABI (${{ matrix.flavor }})
     runs-on: ubuntu-latest
     
     strategy:
@@ -47,8 +47,8 @@ jobs:
       - name: Run Tests
         run: flutter test
 
-      - name: Build APK
-        run: flutter build apk --verbose --split-per-abi --flavor ${{ matrix.flavor }}
+      - name: Build ABI
+        run: flutter build appbundle --verbose --flavor ${{ matrix.flavor }}
 
 
   build_ios_ipa:
