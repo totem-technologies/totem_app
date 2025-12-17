@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,9 +9,9 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
+import 'package:totem_app/core/services/firebase_service.dart';
 import 'package:totem_app/core/services/notifications_service.dart';
 import 'package:totem_app/core/services/observer_service.dart';
-import 'package:totem_app/firebase_options.dart';
 import 'package:totem_app/navigation/app_router.dart';
 
 Future<void> main() async {
@@ -44,7 +43,7 @@ Future<void> main() async {
 /// Awaited services are required by the app to function correctly.
 Future<void> _initializeServices() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await FirebaseService.instance.initialize();
 
   try {
     unawaited(AnalyticsService.instance.initialize());

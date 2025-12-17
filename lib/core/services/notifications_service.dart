@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/core/services/firebase_service.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/logger.dart';
@@ -66,8 +67,8 @@ class NotificationsService {
       logger.i('⏰ Initializing NotificationsService...');
       _initialized = true;
 
-      // Set up Firebase
-      {
+      // Set up Firebase, if initialized
+      if (FirebaseService.instance.isInitialized) {
         final initialMessage = await FirebaseMessaging.instance
             .getInitialMessage();
         if (initialMessage != null) {
@@ -224,6 +225,9 @@ class NotificationsService {
   }
 
   Future<String?> get fcmToken {
+    if (!FirebaseService.instance.isInitialized) {
+      return Future.value();
+    }
     return FirebaseMessaging.instance.getToken(vapidKey: AppConfig.vapidKey);
   }
 
