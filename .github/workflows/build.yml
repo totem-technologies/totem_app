@@ -71,7 +71,6 @@ jobs:
         uses: subosito/flutter-action@v2.8.0
         with:
           channel: "stable"
-          architecture: x64
           cache: true
 
       - name: Setup Environment
