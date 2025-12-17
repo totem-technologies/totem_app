@@ -1,0 +1,39 @@
+name: "Setup Environment & Secrets"
+description: "Creates .env and decodes Firebase/Google secrets"
+
+inputs:
+  firebase_options:
+    description: "Base64 encoded firebase_options.dart"
+    required: true
+  google_services_json:
+    description: "Base64 encoded google-services.json (Android)"
+    required: false
+  google_service_plist:
+    description: "Base64 encoded GoogleService-Info.plist (iOS)"
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Create .env & Common Files
+      shell: bash
+      run: |
+        {
+          echo 'ENVIRONMENT="production"'
+          echo 'API_URL="https://totem.kbl.io"'
+        } > .env
+        mkdir -p lib
+        echo "${{ inputs.firebase_options }}" | base64 -d > lib/firebase_options.dart
+
+    - name: Decode Android Config
+      if: ${{ inputs.google_services_json != '' }}
+      shell: bash
+      run: |
+        echo "${{ inputs.google_services_json }}" | base64 -d > android/app/google-services.json
+
+    - name: Decode iOS Config
+      if: ${{ inputs.google_service_plist != '' }}
+      shell: bash
+      run: |
+        mkdir -p ios/Runner
+        echo "${{ inputs.google_service_plist }}" | base64 -d > ios/Runner/GoogleService-Info.plist

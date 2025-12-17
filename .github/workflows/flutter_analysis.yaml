@@ -22,12 +22,9 @@ jobs:
         run: flutter --version
 
       - name: Create .env file
-        run: echo 'API_URL="https://totem.kbl.io"' > .env
-
-      # - name: Install Firebase CLI
-      #   run: |
-      #     curl -sL https://firebase.tools | bash
-      #     dart pub global activate flutterfire_cli
+        run: |
+          echo 'ENVIRONMENT="production"' > .env
+          echo 'API_URL="https://totem.kbl.io"' >> .env
 
       - name: Decode firebase_options.dart
         run: |

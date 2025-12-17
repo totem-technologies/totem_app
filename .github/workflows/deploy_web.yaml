@@ -28,11 +28,6 @@ jobs:
       - name: Download Dependencies
         run: flutter pub get
 
-      # - name: Install Firebase CLI
-      #   run: |
-      #     curl -sL https://firebase.tools | bash
-      #     dart pub global activate flutterfire_cli
-
       - name: Decode firebase_options.dart
         run: |
           mkdir -p lib
