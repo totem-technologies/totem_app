@@ -94,6 +94,7 @@ dev_dependencies:
 #   flutter_webrtc: ^1.2.1
 
 flutter:
+  default-flavor: staging
   uses-material-design: true
 
   assets:

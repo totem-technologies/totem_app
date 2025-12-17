@@ -21,26 +21,19 @@ class AppConfig {
 
   /// Check if the app is running in production mode
   static bool get isProduction {
-    return environment == 'production' || kReleaseMode;
+    return environment == 'production';
   }
 
   /// API configuration
   static String get mobileApiUrl {
-    return dotenv.get(
-      'MOBILE_API_URL',
-      // fallback: 'https://www.totem.org/',
-      fallback: kDebugMode ? 'https://totem.kbl.io/' : 'https://www.totem.org/',
-    );
-    // return dotenv.get('MOBILE_API_URL', fallback: 'http://localhost:8000/');
+    return dotenv.env['MOBILE_API_URL'] ??
+        dotenv.env['API_URL'] ??
+        _defaultMobileApiUrl;
   }
 
-  /// Auth configuration
-  static Duration get magicLinkExpiration {
-    // Default 30 minutes
-    final minutes =
-        int.tryParse(dotenv.env['MAGIC_LINK_EXPIRATION_MINUTES'] ?? '30') ?? 30;
-    return Duration(minutes: minutes);
-  }
+  static const String _defaultMobileApiUrl = kDebugMode
+      ? 'https://totem.kbl.io/'
+      : 'https://www.totem.org/';
 
   /// LiveKit configuration
   static String get liveKitUrl {
