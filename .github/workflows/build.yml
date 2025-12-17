@@ -2,11 +2,8 @@ name: Build Flutter Client
 on:
   push:
     branches: [ main ]
+  pull_request:
   workflow_dispatch:
-  workflow_run:
-    workflows: ["Flutter Analysis"]
-    types:
-      - completed
 
 jobs:
   build_android_apk:
