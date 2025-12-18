@@ -4,19 +4,28 @@ import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
-Future<void> showUserFeedbackDialog(BuildContext context) async {
+typedef OnFeedbackSubmitted = Future<void> Function(String feedback);
+
+Future<void> showUserFeedbackDialog(
+  BuildContext context, {
+  OnFeedbackSubmitted? onFeedbackSubmitted,
+}) async {
   return showModalBottomSheet(
     context: context,
     showDragHandle: true,
     useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (context) => const UserFeedback(),
+    builder: (context) => UserFeedback(
+      onFeedbackSubmitted: onFeedbackSubmitted,
+    ),
   );
 }
 
 class UserFeedback extends ConsumerStatefulWidget {
-  const UserFeedback({super.key});
+  const UserFeedback({required this.onFeedbackSubmitted, super.key});
+
+  final OnFeedbackSubmitted? onFeedbackSubmitted;
 
   @override
   ConsumerState<UserFeedback> createState() => _UserFeedbackState();
@@ -38,13 +47,27 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-
+    final message = _feedbackController.text.trim();
     setState(() => _loading = true);
 
+    if (widget.onFeedbackSubmitted != null) {
+      await widget.onFeedbackSubmitted!(message);
+    } else {
+      await _submit(message);
+    }
+
+    if (mounted) {
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _submit(String message) async {
     try {
       // Submit feedback using the repository
       final success = await ref.read(
-        submitFeedbackProvider(_feedbackController.text.trim()).future,
+        submitFeedbackProvider(message).future,
       );
 
       if (!mounted) return;
@@ -75,12 +98,6 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
           stackTrace: stackTrace,
           onRetry: _onSubmitFeedback,
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-        });
       }
     }
   }

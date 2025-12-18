@@ -94,15 +94,7 @@ extension KeeperControl on LiveKitService {
   Future<void> muteEveryone() async {
     try {
       await ref
-          .read(
-            muteEveryoneProvider(
-              _options.eventSlug,
-              room.participants
-                  .where((p) => !p.isMuted || !p.isMicrophoneEnabled())
-                  .map((p) => p.identity)
-                  .toList(),
-            ).future,
-          )
+          .read(muteEveryoneProvider(_options.eventSlug).future)
           .timeout(
             const Duration(seconds: 20),
             onTimeout: () {

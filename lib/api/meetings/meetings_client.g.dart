@@ -155,6 +155,27 @@ class _MeetingsClient implements MeetingsClient {
   }
 
   @override
+  Future<void> totemMeetingsMobileApiMuteAllParticipantsEndpoint({
+    required String eventSlug,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<void>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/api/mobile/protected/meetings/event/${eventSlug}/mute-all',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    await _dio.fetch<void>(_options);
+  }
+
+  @override
   Future<void> totemMeetingsMobileApiRemoveParticipantEndpoint({
     required String eventSlug,
     required String participantIdentity,

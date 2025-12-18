@@ -8,6 +8,7 @@ import 'package:retrofit/retrofit.dart';
 import '../models/event_detail_schema.dart';
 import '../models/mobile_space_detail_schema.dart';
 import '../models/paged_mobile_space_detail_schema.dart';
+import '../models/session_feedback_schema.dart';
 import '../models/space_schema.dart';
 import '../models/summary_spaces_schema.dart';
 
@@ -41,12 +42,6 @@ abstract class SpacesClient {
     @Query('offset') int? offset = 0,
   });
 
-  /// Get Event Detail
-  @GET('/api/mobile/protected/spaces/event/{event_slug}')
-  Future<EventDetailSchema> totemCirclesMobileApiMobileApiGetEventDetail({
-    @Path('event_slug') required String eventSlug,
-  });
-
   /// Get Space Detail
   @GET('/api/mobile/protected/spaces/space/{space_slug}')
   Future<MobileSpaceDetailSchema> totemCirclesMobileApiMobileApiGetSpaceDetail({
@@ -60,13 +55,26 @@ abstract class SpacesClient {
     @Path('slug') required String slug,
   });
 
+  /// Get Session Detail
+  @GET('/api/mobile/protected/spaces/session/{event_slug}')
+  Future<EventDetailSchema> totemCirclesMobileApiMobileApiGetSessionDetail({
+    @Path('event_slug') required String eventSlug,
+  });
+
+  /// Post Session Feedback
+  @POST('/api/mobile/protected/spaces/session/{event_slug}/feedback')
+  Future<void> totemCirclesMobileApiMobileApiPostSessionFeedback({
+    @Path('event_slug') required String eventSlug,
+    @Body() required SessionFeedbackSchema body,
+  });
+
   /// Get Sessions History
   @GET('/api/mobile/protected/spaces/sessions/history')
   Future<List<EventDetailSchema>>
   totemCirclesMobileApiMobileApiGetSessionsHistory();
 
   /// Get Recommended Spaces
-  @GET('/api/mobile/protected/spaces/recommended')
+  @GET('/api/mobile/protected/spaces/sessions/recommended')
   Future<List<EventDetailSchema>>
   totemCirclesMobileApiMobileApiGetRecommendedSpaces({
     @Body() List<String>? body,

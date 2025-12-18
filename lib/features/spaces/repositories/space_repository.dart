@@ -40,7 +40,7 @@ Future<EventDetailSchema> event(Ref ref, String eventSlug) async {
   final mobileApiService = ref.watch(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<EventDetailSchema>(
     apiCall: () =>
-        mobileApiService.spaces.totemCirclesMobileApiMobileApiGetEventDetail(
+        mobileApiService.spaces.totemCirclesMobileApiMobileApiGetSessionDetail(
           eventSlug: eventSlug,
         ),
     operationName: 'get event detail',
