@@ -1,5 +1,4 @@
 // We need to access LivekitService.ref to notify listeners
-// ignore: lines_longer_than_80_chars
 // ignore_for_file: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
 
 part of 'livekit_service.dart';
@@ -95,15 +94,7 @@ extension KeeperControl on LiveKitService {
   Future<void> muteEveryone() async {
     try {
       await ref
-          .read(
-            muteEveryoneProvider(
-              _options.eventSlug,
-              room.participants
-                  .where((p) => !p.isMuted || !p.isMicrophoneEnabled())
-                  .map((p) => p.identity)
-                  .toList(),
-            ).future,
-          )
+          .read(muteEveryoneProvider(_options.eventSlug).future)
           .timeout(
             const Duration(seconds: 20),
             onTimeout: () {

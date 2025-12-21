@@ -26,6 +26,8 @@ export 'models/mobile_space_detail_schema.dart';
 export 'models/next_event_schema.dart';
 export 'models/paged_mobile_space_detail_schema.dart';
 export 'models/event_detail_schema.dart';
+export 'models/session_feedback_options.dart';
+export 'models/session_feedback_schema.dart';
 export 'models/summary_spaces_schema.dart';
 export 'models/blog_post_list_schema.dart';
 export 'models/paged_blog_post_list_schema.dart';

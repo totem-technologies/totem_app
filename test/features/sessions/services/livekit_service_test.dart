@@ -1,6 +1,5 @@
 //
-// ignore_for_file: cascade_invocations, lines_longer_than_80_chars
-
+// ignore_for_file: cascade_invocations
 import 'dart:convert';
 
 import 'package:dio/dio.dart';

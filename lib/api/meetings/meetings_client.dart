@@ -54,6 +54,12 @@ abstract class MeetingsClient {
     @Path('participant_identity') required String participantIdentity,
   });
 
+  /// Mute All Participants Endpoint
+  @POST('/api/mobile/protected/meetings/event/{event_slug}/mute-all')
+  Future<void> totemMeetingsMobileApiMuteAllParticipantsEndpoint({
+    @Path('event_slug') required String eventSlug,
+  });
+
   /// Remove Participant Endpoint
   @POST(
     '/api/mobile/protected/meetings/event/{event_slug}/remove/{participant_identity}',

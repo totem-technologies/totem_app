@@ -79,7 +79,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
         ? ref.watch(eventProvider(effectiveEventSlug))
         : null;
 
-    final width = MediaQuery.sizeOf(context).width;
+    final width = MediaQuery.widthOf(context);
     final isPhone = width < 600;
 
     final currencyFormatter = NumberFormat.currency(
@@ -99,7 +99,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                     return [
                       SliverAppBar.large(
                         centerTitle: true,
-                        expandedHeight: MediaQuery.sizeOf(context).height * 0.4,
+                        expandedHeight: MediaQuery.heightOf(context) * 0.4,
                         automaticallyImplyLeading: false,
                         backgroundColor: theme.scaffoldBackgroundColor,
                         flexibleSpace: FlexibleSpaceBar(

@@ -1,7 +1,9 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/api/models/livekit_mute_participant_schema.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/core/services/repository_utils.dart';
+
+export 'package:totem_app/api/models/session_feedback_schema.dart';
 
 part 'session_repository.g.dart';
 
@@ -62,15 +64,15 @@ Future<void> muteParticipant(
 Future<void> muteEveryone(
   Ref ref,
   String eventSlug,
-  List<String> participantIdentities,
 ) async {
-  // TODO(bdlukaa): Mute everyone endpoint
-  await Future.wait(
-    participantIdentities.map(
-      (participantIdentity) => ref.read(
-        muteParticipantProvider(eventSlug, participantIdentity).future,
-      ),
-    ),
+  final apiService = ref.read(mobileApiServiceProvider);
+  await RepositoryUtils.handleApiCall<void>(
+    apiCall: () =>
+        apiService.meetings.totemMeetingsMobileApiMuteAllParticipantsEndpoint(
+          eventSlug: eventSlug,
+        ),
+    operationName: 'mute participant',
+    retryOnNetworkError: true,
   );
 }
 
@@ -123,6 +125,28 @@ Future<void> endSession(Ref ref, String eventSlug) async {
     apiCall: () => apiService.meetings.totemMeetingsMobileApiEndRoomEndpoint(
       eventSlug: eventSlug,
     ),
+    operationName: 'end session',
+    retryOnNetworkError: true,
+  );
+}
+
+@riverpod
+Future<void> sessionFeedback(
+  Ref ref,
+  String eventSlug,
+  SessionFeedbackOptions feedback, [
+  String? message,
+]) async {
+  final apiService = ref.read(mobileApiServiceProvider);
+  await RepositoryUtils.handleApiCall<void>(
+    apiCall: () =>
+        apiService.spaces.totemCirclesMobileApiMobileApiPostSessionFeedback(
+          eventSlug: eventSlug,
+          body: SessionFeedbackSchema(
+            feedback: feedback,
+            message: message,
+          ),
+        ),
     operationName: 'end session',
     retryOnNetworkError: true,
   );

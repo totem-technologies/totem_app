@@ -48,7 +48,7 @@ final class ListSpacesProvider
   }
 }
 
-String _$listSpacesHash() => r'60d98d341561665b3c08711308e213e83245c886';
+String _$listSpacesHash() => r'b6d40fb02fc49a7c4eb4dbd1db339adb625a3748';
 
 @ProviderFor(event)
 const eventProvider = EventFamily._();
@@ -107,7 +107,7 @@ final class EventProvider
   }
 }
 
-String _$eventHash() => r'3c4c759c27936e919694060476095ddaa444deab';
+String _$eventHash() => r'9c2bf307be4c714c50b2ab1d3580fb2e62ca6c42';
 
 final class EventFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<EventDetailSchema>, String> {
@@ -184,7 +184,7 @@ final class SpaceProvider
   }
 }
 
-String _$spaceHash() => r'1d9fd0f3e7ee9e80f9dbe94d06e430369ecc195b';
+String _$spaceHash() => r'395702434b1511e5a8ec608809a0e82c1c73ab56';
 
 final class SpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<MobileSpaceDetailSchema>, String> {
@@ -244,7 +244,7 @@ final class ListSubscribedSpacesProvider
 }
 
 String _$listSubscribedSpacesHash() =>
-    r'3c62c796fd9a8586582b40e4e9c4e99d37887143';
+    r'3ad40a98d1e98404b71629815fc44a62cd69720e';
 
 @ProviderFor(subscribeToSpace)
 const subscribeToSpaceProvider = SubscribeToSpaceFamily._();
@@ -295,7 +295,7 @@ final class SubscribeToSpaceProvider
   }
 }
 
-String _$subscribeToSpaceHash() => r'cfcfc238f3f86b237cd44ba56fb614cdf40f1f98';
+String _$subscribeToSpaceHash() => r'59cfbb580462231106d12a219b41854a4a2f5e7a';
 
 final class SubscribeToSpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
@@ -365,7 +365,7 @@ final class UnsubscribeFromSpaceProvider
 }
 
 String _$unsubscribeFromSpaceHash() =>
-    r'190b23674b824dccc43c68327e307bf3c4f18845';
+    r'312c6c43feb0d74f0a36b64536cc4f6c9be1e249';
 
 final class UnsubscribeFromSpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
@@ -443,7 +443,7 @@ final class ListSpacesByKeeperProvider
 }
 
 String _$listSpacesByKeeperHash() =>
-    r'ea460cb115a2e57632046f3a645eb5644acecd8f';
+    r'6be019f1cd5e28641cbc5c91a29ca4241c484092';
 
 final class ListSpacesByKeeperFamily extends $Family
     with
@@ -507,7 +507,7 @@ final class ListSessionsHistoryProvider
 }
 
 String _$listSessionsHistoryHash() =>
-    r'db5edd6a2e1b7b120ce62925d0d8de583ab38799';
+    r'5b2dfd04e2290484ba638e2e2d6f67eb86fd14cf';
 
 @ProviderFor(getRecommendedSessions)
 const getRecommendedSessionsProvider = GetRecommendedSessionsFamily._();
@@ -568,7 +568,7 @@ final class GetRecommendedSessionsProvider
 }
 
 String _$getRecommendedSessionsHash() =>
-    r'981d0bfbb48b9101cec184b97c0a2c6777b82ad5';
+    r'29b91acc9a54d4ccfb043bfa54ad2af4a03cd77c';
 
 final class GetRecommendedSessionsFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<EventDetailSchema>>, String?> {
