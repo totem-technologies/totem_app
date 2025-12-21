@@ -152,9 +152,10 @@ class LiveKitService extends _$LiveKitService {
         defaultAudioOutputOptions: _options.audioOutputOptions,
 
         dynacast: true,
-        // defaultVideoPublishOptions: const VideoPublishOptions(
-        //   simulcast: true
-        // ),
+        defaultVideoPublishOptions: VideoPublishOptions(
+          simulcast: true,
+          videoSimulcastLayers: VideoParametersPresets.all169,
+        ),
         // defaultAudioPublishOptions: const AudioPublishOptions(),
 
         /// https://docs.livekit.io/home/client/tracks/subscribe/#adaptive-stream
