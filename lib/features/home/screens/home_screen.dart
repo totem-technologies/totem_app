@@ -1,10 +1,13 @@
 import 'dart:ui';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/home/screens/home_loading_screen.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
+import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -17,6 +20,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final summary = ref.watch(spacesSummaryProvider);
+    final user = ref.watch(authControllerProvider.select((auth) => auth.user));
     final screenWidth = MediaQuery.widthOf(context);
     final crossAxisCount = screenWidth < 600
         ? 2
@@ -32,6 +36,15 @@ class HomeScreen extends ConsumerWidget {
             final upcomingEvents = summary.upcoming
                 .where((event) => !event.ended)
                 .toList();
+
+            final ongoingEvent = upcomingEvents.firstWhereOrNull(
+              (event) => event.canJoinNow(user),
+            );
+
+            // If there's an ongoing event, we need extra bottom padding because
+            // the OngoingSessionJoinCard will be visible in the
+            // BottomNavScaffold
+            final bottomPadding = ongoingEvent != null ? 116.0 : 16.0;
 
             if (summary.forYou.isEmpty &&
                 summary.explore.isEmpty &&
@@ -159,10 +172,10 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ),
                     SliverPadding(
-                      padding: const EdgeInsetsDirectional.only(
+                      padding: EdgeInsetsDirectional.only(
                         start: 16,
                         end: 16,
-                        bottom: 16,
+                        bottom: bottomPadding,
                       ),
                       sliver: SliverGrid.builder(
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

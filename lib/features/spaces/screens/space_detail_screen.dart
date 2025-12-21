@@ -25,6 +25,7 @@ import 'package:totem_app/shared/html.dart';
 import 'package:totem_app/shared/routing.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/utils.dart';
+import 'package:totem_app/shared/widgets/circle_icon_button.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
@@ -107,66 +108,43 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                             event: eventAsync,
                           ),
                         ),
-                        leading: Container(
+                        leading: CircleIconButton(
                           margin: const EdgeInsetsDirectional.only(start: 20),
-                          alignment: AlignmentDirectional.center,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: theme.scaffoldBackgroundColor,
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              icon: Icon(Icons.adaptive.arrow_back),
-                              iconSize: 24,
-                              visualDensity: VisualDensity.compact,
-                              onPressed: () => popOrHome(context),
-                            ),
-                          ),
+                          icon: Icon(Icons.adaptive.arrow_back),
+                          onPressed: () => popOrHome(context),
                         ),
                         actionsPadding: const EdgeInsetsDirectional.only(
                           end: 20,
                         ),
                         actions: [
-                          Container(
-                            height: 36,
-                            alignment: AlignmentDirectional.center,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: theme.scaffoldBackgroundColor,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Builder(
-                                builder: (context) {
-                                  return IconButton(
-                                    icon: Icon(Icons.adaptive.share),
-                                    visualDensity: VisualDensity.compact,
-                                    onPressed: () async {
-                                      final box =
-                                          context.findRenderObject()
-                                              as RenderBox?;
-                                      await SharePlus.instance.share(
-                                        ShareParams(
-                                          uri: Uri.parse(AppConfig.mobileApiUrl)
-                                              .resolve(
-                                                '/spaces/event/${space.slug}',
-                                              )
-                                              .resolve(
-                                                '?utm_source=app'
-                                                '&utm_medium=share',
-                                              ),
-                                          sharePositionOrigin: box != null
-                                              ? box.localToGlobal(
-                                                      Offset.zero,
-                                                    ) &
-                                                    box.size
-                                              : null,
-                                        ),
-                                      );
-                                    },
+                          Builder(
+                            builder: (context) {
+                              return CircleIconButton(
+                                icon: Icon(Icons.adaptive.share),
+                                onPressed: () async {
+                                  final box =
+                                      context.findRenderObject() as RenderBox?;
+                                  await SharePlus.instance.share(
+                                    ShareParams(
+                                      uri: Uri.parse(AppConfig.mobileApiUrl)
+                                          .resolve(
+                                            '/spaces/event/${space.slug}',
+                                          )
+                                          .resolve(
+                                            '?utm_source=app'
+                                            '&utm_medium=share',
+                                          ),
+                                      sharePositionOrigin: box != null
+                                          ? box.localToGlobal(
+                                                  Offset.zero,
+                                                ) &
+                                                box.size
+                                          : null,
+                                    ),
                                   );
                                 },
-                              ),
-                            ),
+                              );
+                            },
                           ),
                         ],
                         title: Text(space.title),
