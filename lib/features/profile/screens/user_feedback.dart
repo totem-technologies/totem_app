@@ -58,7 +58,7 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Thank you for your feedback! We appreciate your input.',
+              'Thank you for your feedback!\nWe appreciate your input.',
             ),
             duration: Duration(seconds: 3),
           ),
