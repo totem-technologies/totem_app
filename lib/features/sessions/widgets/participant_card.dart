@@ -365,9 +365,16 @@ class _ParticipantMenuButton extends StatelessWidget {
 }
 
 class SpeakingIndicator extends StatelessWidget {
-  const SpeakingIndicator({required this.participant, super.key});
+  const SpeakingIndicator({
+    required this.participant,
+    this.foregroundColor = Colors.white,
+    this.barCount = 3,
+    super.key,
+  });
 
   final Participant participant;
+  final Color foregroundColor;
+  final int barCount;
 
   @override
   Widget build(BuildContext context) {
@@ -376,18 +383,18 @@ class SpeakingIndicator extends StatelessWidget {
         .where((t) => t.kind == TrackType.AUDIO && t.track is AudioTrack)
         .toList();
     if (participant.isMuted || !participant.hasAudio || audioTracks.isEmpty) {
-      return const TotemIcon(
+      return TotemIcon(
         TotemIcons.microphoneOff,
         size: 20,
-        color: Colors.white,
+        color: foregroundColor,
       );
     } else {
       return SoundWaveformWidget(
         audioTrack: audioTracks.firstOrNull?.track as AudioTrack?,
         participant: participant,
-        options: const AudioVisualizerWidgetOptions(
-          color: Colors.white,
-          barCount: 3,
+        options: AudioVisualizerWidgetOptions(
+          color: foregroundColor,
+          barCount: barCount,
           barMinOpacity: 0.8,
           spacing: 3,
           minHeight: 4,

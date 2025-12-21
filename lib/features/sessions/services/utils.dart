@@ -10,7 +10,7 @@ List<TrackWidget> tracksSorting({
   required List<TrackWidget> originalTracks,
   required SessionState sessionState,
   required EventDetailSchema event,
-  required String speakingNow,
+  required String? speakingNow,
 
   /// Whether to show the track of the participant who is currently speaking.
   bool showSpeakingNow = false,

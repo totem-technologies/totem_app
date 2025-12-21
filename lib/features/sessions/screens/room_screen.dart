@@ -21,6 +21,7 @@ import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -298,6 +299,11 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       builder: (context) {
         final room = notifier.room;
         final user = room.localParticipant;
+        if (user == null) return const SizedBox.shrink();
+
+        final isUserTileVisible =
+            getParticipantKey(user.identity).currentContext != null;
+
         return ActionBar(
           children: [
             ActionBarButton(
@@ -309,11 +315,19 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                   await notifier.enableMicrophone();
                 }
               },
-              child: TotemIcon(
-                room.microphoneOpened
-                    ? TotemIcons.microphoneOn
-                    : TotemIcons.microphoneOff,
-              ),
+              // if the user tile is not visible, display the speaking indicator
+              // when the microphone is opened
+              child: !isUserTileVisible && room.microphoneOpened
+                  ? SpeakingIndicator(
+                      participant: user,
+                      foregroundColor: Colors.black,
+                      barCount: 5,
+                    )
+                  : TotemIcon(
+                      room.microphoneOpened
+                          ? TotemIcons.microphoneOn
+                          : TotemIcons.microphoneOff,
+                    ),
             ),
             ActionBarButton(
               active: room.cameraOpened,
@@ -340,9 +354,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                         context,
                         onEmojiSelected: (emoji) {
                           unawaited(notifier.sendEmoji(emoji));
-                          if (user?.identity != null) {
-                            unawaited(_onEmojiReceived(user!.identity, emoji));
-                          }
+                          unawaited(_onEmojiReceived(user.identity, emoji));
                         },
                       );
                       if (mounted) setState(() => _showEmojiPicker = false);
