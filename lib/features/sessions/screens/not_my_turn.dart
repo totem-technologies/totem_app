@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/services/livekit_service.dart';
@@ -30,6 +31,12 @@ class NotMyTurn extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+
+    final currentUserSlug = ref.watch(
+      authControllerProvider.select((auth) => auth.user?.slug),
+    );
+    final amKeeper = currentUserSlug == event.space.author.slug!;
+
     final activeSpeaker = session.speakingNow();
 
     return RoomBackground(
@@ -83,6 +90,28 @@ class NotMyTurn extends ConsumerWidget {
                               participant: activeSpeaker,
                             ),
                           ),
+                          if (amKeeper &&
+                              currentUserSlug != activeSpeaker.identity)
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.black54,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 0.5,
+                                ),
+                                boxShadow: kElevationToShadow[6],
+                              ),
+                              padding: const EdgeInsetsDirectional.all(3),
+                              child: ParticipantControlButton(
+                                overlayPadding: -28,
+                                event: event,
+                                participant: activeSpeaker,
+                                backgroundColor: Colors.transparent,
+                              ),
+                            ),
                           Flexible(
                             child: Text(
                               activeSpeaker.name,
