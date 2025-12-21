@@ -43,37 +43,18 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
   }
 
   Future<void> _onSubmitFeedback() async {
-    // Validate the form first
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
+
     final message = _feedbackController.text.trim();
     setState(() => _loading = true);
 
-    if (widget.onFeedbackSubmitted != null) {
-      await widget.onFeedbackSubmitted!(message);
-    } else {
-      await _submit(message);
-    }
-
-    if (mounted) {
-      setState(() {
-        _loading = false;
-      });
-    }
-  }
-
-  Future<void> _submit(String message) async {
     try {
-      // Submit feedback using the repository
-      final success = await ref.read(
-        submitFeedbackProvider(message).future,
-      );
-
-      if (!mounted) return;
-
-      if (success) {
-        // Show success message and close dialog
+      if (widget.onFeedbackSubmitted != null) {
+        await widget.onFeedbackSubmitted!(message);
+      } else {
+        await _submit(message);
+      }
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -83,12 +64,6 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
           ),
         );
         Navigator.of(context).pop();
-      } else {
-        // Handle case where API returns false but no exception
-        ErrorHandler.showErrorSnackBar(
-          context,
-          'Failed to submit feedback. Please try again.',
-        );
       }
     } catch (error, stackTrace) {
       if (mounted) {
@@ -99,6 +74,17 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
           onRetry: _onSubmitFeedback,
         );
       }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _submit(String message) async {
+    final success = await ref.read(
+      submitFeedbackProvider(message).future,
+    );
+    if (!success) {
+      throw Exception('Failed to submit feedback. Please try again.');
     }
   }
 
@@ -127,7 +113,6 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Centered title
                   Text(
                     'Feedback',
                     style: theme.textTheme.headlineSmall?.copyWith(
@@ -138,7 +123,6 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Description text
                   Text(
                     'We love hearing about how we can improve Totem. If you have any feedback, please let us know!',
                     style: theme.textTheme.bodyMedium?.copyWith(
@@ -149,7 +133,6 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Multi-line text field for feedback
                   TextFormField(
                     controller: _feedbackController,
                     maxLines: 6,
@@ -158,6 +141,9 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
                     decoration: const InputDecoration(
                       hintText:
                           'Share your thoughts, suggestions, or report issues...',
+                    ),
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
@@ -173,7 +159,6 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Submit button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(

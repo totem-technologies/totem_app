@@ -1,3 +1,4 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,12 +7,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/features/profile/screens/user_feedback.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
-import 'package:totem_app/features/sessions/screens/session_feedback_widget.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
+import 'package:totem_app/shared/totem_icons.dart';
 
 class SessionEndedScreen extends ConsumerWidget {
   const SessionEndedScreen({required this.event, super.key});
@@ -51,7 +52,8 @@ class SessionEndedScreen extends ConsumerWidget {
                   'the session enjoyable.',
                   textAlign: TextAlign.center,
                 ),
-                SessionFeedbackWidget(
+                // TODO(bdlukaa): Tell user their feedback was recorded
+                _SessionFeedbackWidget(
                   onThumbUpPressed: () async {
                     await ref.read(
                       sessionFeedbackProvider(
@@ -64,7 +66,7 @@ class SessionEndedScreen extends ConsumerWidget {
                   onThumbDownPressed: () async {
                     await showUserFeedbackDialog(
                       context,
-                      onFeedbackSubmitted: (message) async {
+                      onFeedbackSubmitted: (message) {
                         return ref.read(
                           sessionFeedbackProvider(
                             event.slug,
@@ -150,5 +152,95 @@ class SessionEndedScreen extends ConsumerWidget {
         // Fine if fail
       }
     }
+  }
+}
+
+class _SessionFeedbackWidget extends StatelessWidget {
+  const _SessionFeedbackWidget({
+    required this.onThumbUpPressed,
+    required this.onThumbDownPressed,
+  });
+
+  final VoidCallback onThumbUpPressed;
+  final VoidCallback onThumbDownPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 20,
+        vertical: 10,
+      ),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        children: [
+          Flexible(
+            child: AutoSizeText(
+              'How was your experience?',
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              spacing: 10,
+              children: [
+                _SessionFeedbackButton(
+                  icon: const TotemIcon(
+                    TotemIcons.thumbUp,
+                    color: Colors.white,
+                  ),
+                  onPressed: onThumbUpPressed,
+                ),
+                _SessionFeedbackButton(
+                  icon: const TotemIcon(
+                    TotemIcons.thumbDown,
+                    color: Colors.white,
+                  ),
+                  onPressed: onThumbDownPressed,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SessionFeedbackButton extends StatelessWidget {
+  const _SessionFeedbackButton({
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final Widget icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: 50,
+        height: 50,
+        padding: const EdgeInsetsDirectional.all(10),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primary,
+          shape: BoxShape.circle,
+        ),
+        child: icon,
+      ),
+    );
   }
 }
