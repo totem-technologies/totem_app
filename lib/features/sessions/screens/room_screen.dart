@@ -335,16 +335,17 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                     active: _showEmojiPicker,
                     onPressed: () async {
                       setState(() => _showEmojiPicker = true);
-                      final emoji = await showEmojiBar(button, context);
-                      if (emoji != null && emoji.isNotEmpty) {
-                        unawaited(notifier.sendEmoji(emoji));
-                        if (user?.identity != null) {
-                          unawaited(_onEmojiReceived(user!.identity, emoji));
-                        }
-                      }
-                      if (mounted) {
-                        setState(() => _showEmojiPicker = false);
-                      }
+                      await showEmojiBar(
+                        button,
+                        context,
+                        onEmojiSelected: (emoji) {
+                          unawaited(notifier.sendEmoji(emoji));
+                          if (user?.identity != null) {
+                            unawaited(_onEmojiReceived(user!.identity, emoji));
+                          }
+                        },
+                      );
+                      if (mounted) setState(() => _showEmojiPicker = false);
                     },
                     child: const TotemIcon(TotemIcons.reaction),
                   );

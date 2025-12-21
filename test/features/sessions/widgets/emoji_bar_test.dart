@@ -349,7 +349,11 @@ void main() {
               builder: (context) {
                 return ElevatedButton(
                   onPressed: () async {
-                    await showEmojiBar(context, context);
+                    await showEmojiBar(
+                      context,
+                      context,
+                      onEmojiSelected: (_) {},
+                    );
                   },
                   child: const Text('Show Emoji'),
                 );
@@ -376,7 +380,11 @@ void main() {
               builder: (context) {
                 return ElevatedButton(
                   onPressed: () async {
-                    await showEmojiBar(context, context);
+                    await showEmojiBar(
+                      context,
+                      context,
+                      onEmojiSelected: (_) {},
+                    );
                   },
                   child: const Text('Show Emoji'),
                 );
