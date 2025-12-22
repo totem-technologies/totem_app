@@ -30,7 +30,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (user == null) return const ErrorScreen();
 
     return Scaffold(
-      appBar: AppBar(title: const TotemLogo(size: 24)),
       body: Builder(
         builder: (context) {
           return ListView(
