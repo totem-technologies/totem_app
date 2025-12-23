@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -83,6 +84,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     unawaited(
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
     );
+    _listenToBatteryChanges();
   }
 
   @override
@@ -90,7 +92,26 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     unawaited(
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge),
     );
+    unawaited(_batterySubscription?.cancel());
     super.dispose();
+  }
+
+  // TODO(bdlukaa): Show low battery warning UI
+  final battery = Battery();
+  bool _shouldShowLowBatteryWarning = false;
+  StreamSubscription<BatteryState>? _batterySubscription;
+  void _listenToBatteryChanges() {
+    _batterySubscription = battery.onBatteryStateChanged.listen((state) async {
+      if (!mounted) return;
+      if (state == BatteryState.charging && _shouldShowLowBatteryWarning) {
+        setState(() => _shouldShowLowBatteryWarning = false);
+      } else if (state == BatteryState.discharging) {
+        final level = await battery.batteryLevel;
+        if (level <= 20 && !_shouldShowLowBatteryWarning) {
+          setState(() => _shouldShowLowBatteryWarning = true);
+        }
+      }
+    });
   }
 
   Map<String, GlobalKey> participantKeys = {};
