@@ -238,6 +238,8 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
 
 enum ThumbState { up, down, none }
 
+// TODO(bdlukaa): When submitted, ensure user cannot vote again in the same
+// session.
 class _SessionFeedbackWidget extends StatelessWidget {
   const _SessionFeedbackWidget({
     required this.state,

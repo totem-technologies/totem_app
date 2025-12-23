@@ -3,11 +3,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart';
-import 'package:livekit_components/livekit_components.dart'
-    hide AudioVisualizerWidgetOptions, SoundWaveformWidget;
-// livekit_components exports provider
-// ignore: depend_on_referenced_packages
-import 'package:provider/provider.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -35,14 +30,14 @@ class ParticipantCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final participantContext = Provider.of<ParticipantContext>(context);
-
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );
-    final amKeeper = currentUserSlug == event.space.author.slug!;
+    final currentUserIsKeeper = currentUserSlug == event.space.author.slug!;
 
     const overlayPadding = 6.0;
+    final isKeeper = event.space.author.slug == participant.identity;
+    final shadowColor = isKeeper ? const Color(0x80FFD000) : Colors.black;
 
     return RepaintBoundary(
       child: AspectRatio(
@@ -52,9 +47,7 @@ class ParticipantCard extends ConsumerWidget {
             color: Colors.black,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: participantContext.isSpeaking
-                  ? const Color(0xFFFFD000)
-                  : Colors.white,
+              color: isKeeper ? const Color(0xFFFFD000) : Colors.white,
               width: 2,
             ),
             boxShadow: [
@@ -62,23 +55,17 @@ class ParticipantCard extends ConsumerWidget {
                 offset: const Offset(0, 3),
                 blurRadius: 1,
                 spreadRadius: -2,
-                color: participantContext.isSpeaking
-                    ? const Color(0x80FFD000)
-                    : Colors.black,
+                color: shadowColor,
               ),
               BoxShadow(
                 offset: const Offset(0, 2),
                 blurRadius: 2,
-                color: participantContext.isSpeaking
-                    ? const Color(0x80FFD000)
-                    : Colors.black,
+                color: shadowColor,
               ),
               BoxShadow(
                 offset: const Offset(0, 1),
                 blurRadius: 5,
-                color: participantContext.isSpeaking
-                    ? const Color(0x80FFD000)
-                    : Colors.black,
+                color: shadowColor,
               ),
             ],
           ),
@@ -132,7 +119,8 @@ class ParticipantCard extends ConsumerWidget {
                           ),
                   ),
                 ),
-                if (amKeeper && currentUserSlug != participant.identity)
+                if (currentUserIsKeeper &&
+                    currentUserSlug != participant.identity)
                   PositionedDirectional(
                     end: overlayPadding,
                     top: overlayPadding,
