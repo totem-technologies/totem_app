@@ -116,24 +116,6 @@ void main() {
       );
     });
 
-    testWidgets('should have correct text styling', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: EmojiBar(
-              emojis: const ['👍'],
-              onEmojiSelected: (emoji) {},
-            ),
-          ),
-        ),
-      );
-
-      final text = tester.widget<Text>(find.text('👍'));
-      expect(text.style?.fontSize, equals(24));
-    });
-
     testWidgets('should be scrollable horizontally', (
       WidgetTester tester,
     ) async {

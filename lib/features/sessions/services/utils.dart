@@ -3,8 +3,7 @@ import 'package:livekit_components/livekit_components.dart';
 // ignore: implementation_imports
 import 'package:livekit_components/src/ui/layout/sorting.dart'
     show defaultSorting;
-import 'package:totem_app/api/models/event_detail_schema.dart';
-import 'package:totem_app/api/models/session_state.dart';
+import 'package:totem_app/api/export.dart';
 
 List<TrackWidget> tracksSorting({
   required List<TrackWidget> originalTracks,
