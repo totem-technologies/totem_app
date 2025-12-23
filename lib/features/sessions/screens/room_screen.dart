@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +22,7 @@ import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -82,6 +84,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     unawaited(
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
     );
+    _listenToBatteryChanges();
   }
 
   @override
@@ -89,7 +92,36 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     unawaited(
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge),
     );
+    unawaited(_batterySubscription?.cancel());
     super.dispose();
+  }
+
+  // TODO(bdlukaa): Show low battery warning UI
+  final battery = Battery();
+  bool _shouldShowLowBatteryWarning = false;
+  StreamSubscription<BatteryState>? _batterySubscription;
+  void _listenToBatteryChanges() {
+    try {
+      _batterySubscription = battery.onBatteryStateChanged.listen((
+        state,
+      ) async {
+        if (!mounted) return;
+        if (state == BatteryState.charging && _shouldShowLowBatteryWarning) {
+          setState(() => _shouldShowLowBatteryWarning = false);
+        } else if (state == BatteryState.discharging) {
+          try {
+            final level = await battery.batteryLevel;
+            if (level <= 20 && !_shouldShowLowBatteryWarning) {
+              setState(() => _shouldShowLowBatteryWarning = true);
+            }
+          } catch (_) {
+            // Unable to get battery level
+          }
+        }
+      });
+    } catch (_) {
+      // Battery monitoring not available
+    }
   }
 
   Map<String, GlobalKey> participantKeys = {};
@@ -298,6 +330,11 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       builder: (context) {
         final room = notifier.room;
         final user = room.localParticipant;
+        if (user == null) return const SizedBox.shrink();
+
+        final isUserTileVisible =
+            getParticipantKey(user.identity).currentContext != null;
+
         return ActionBar(
           children: [
             ActionBarButton(
@@ -309,11 +346,19 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                   await notifier.enableMicrophone();
                 }
               },
-              child: TotemIcon(
-                room.microphoneOpened
-                    ? TotemIcons.microphoneOn
-                    : TotemIcons.microphoneOff,
-              ),
+              // if the user tile is not visible, display the speaking indicator
+              // when the microphone is opened
+              child: !isUserTileVisible && room.microphoneOpened
+                  ? SpeakingIndicator(
+                      participant: user,
+                      foregroundColor: Colors.black,
+                      barCount: 5,
+                    )
+                  : TotemIcon(
+                      room.microphoneOpened
+                          ? TotemIcons.microphoneOn
+                          : TotemIcons.microphoneOff,
+                    ),
             ),
             ActionBarButton(
               active: room.cameraOpened,
@@ -335,16 +380,15 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                     active: _showEmojiPicker,
                     onPressed: () async {
                       setState(() => _showEmojiPicker = true);
-                      final emoji = await showEmojiBar(button, context);
-                      if (emoji != null && emoji.isNotEmpty) {
-                        unawaited(notifier.sendEmoji(emoji));
-                        if (user?.identity != null) {
-                          unawaited(_onEmojiReceived(user!.identity, emoji));
-                        }
-                      }
-                      if (mounted) {
-                        setState(() => _showEmojiPicker = false);
-                      }
+                      await showEmojiBar(
+                        button,
+                        context,
+                        onEmojiSelected: (emoji) {
+                          unawaited(notifier.sendEmoji(emoji));
+                          unawaited(_onEmojiReceived(user.identity, emoji));
+                        },
+                      );
+                      if (mounted) setState(() => _showEmojiPicker = false);
                     },
                     child: const TotemIcon(TotemIcons.reaction),
                   );

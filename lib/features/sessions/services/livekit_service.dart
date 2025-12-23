@@ -152,9 +152,10 @@ class LiveKitService extends _$LiveKitService {
         defaultAudioOutputOptions: _options.audioOutputOptions,
 
         dynacast: true,
-        // defaultVideoPublishOptions: const VideoPublishOptions(
-        //   simulcast: true
-        // ),
+        defaultVideoPublishOptions: VideoPublishOptions(
+          simulcast: true,
+          videoSimulcastLayers: VideoParametersPresets.all169,
+        ),
         // defaultAudioPublishOptions: const AudioPublishOptions(),
 
         /// https://docs.livekit.io/home/client/tracks/subscribe/#adaptive-stream
@@ -188,9 +189,11 @@ class LiveKitService extends _$LiveKitService {
 
     unawaited(room.localParticipant!.setCameraEnabled(_options.cameraEnabled));
     unawaited(
-      // TODO(bdlukaa): Revisit this in the future - Microphone Starts Disabled
+      // TODO(bdlukaa): Revisit this in the future
+      // The current behavior is to enable microphone only for keepers at the
+      // beginning of the session.
       // room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
-      room.localParticipant!.setMicrophoneEnabled(false),
+      room.localParticipant!.setMicrophoneEnabled(isKeeper()),
     );
     state = state.copyWith(connectionState: RoomConnectionState.connected);
   }

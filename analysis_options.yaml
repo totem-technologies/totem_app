@@ -17,6 +17,8 @@ linter:
     sort_child_properties_last: true
     unnecessary_this: true
     sort_pub_dependencies: false
+    document_ignores: false
+    avoid_redundant_argument_values: false
 
     # Safety and Best Practices
     avoid_print: true

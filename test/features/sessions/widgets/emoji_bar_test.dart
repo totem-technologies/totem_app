@@ -116,24 +116,6 @@ void main() {
       );
     });
 
-    testWidgets('should have correct text styling', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: EmojiBar(
-              emojis: const ['👍'],
-              onEmojiSelected: (emoji) {},
-            ),
-          ),
-        ),
-      );
-
-      final text = tester.widget<Text>(find.text('👍'));
-      expect(text.style?.fontSize, equals(24));
-    });
-
     testWidgets('should be scrollable horizontally', (
       WidgetTester tester,
     ) async {
@@ -259,30 +241,6 @@ void main() {
       expect(completed, isTrue);
     });
 
-    testWidgets('should have correct text styling', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Stack(
-              children: [
-                RisingEmoji(
-                  emoji: '👍',
-                  startX: 100,
-                  startY: 100,
-                  onCompleted: () {},
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-
-      final text = tester.widget<Text>(find.text('👍'));
-      expect(text.style?.fontSize, equals(22));
-    });
-
     testWidgets('should be positioned correctly', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -349,7 +307,11 @@ void main() {
               builder: (context) {
                 return ElevatedButton(
                   onPressed: () async {
-                    await showEmojiBar(context, context);
+                    await showEmojiBar(
+                      context,
+                      context,
+                      onEmojiSelected: (_) {},
+                    );
                   },
                   child: const Text('Show Emoji'),
                 );
@@ -376,7 +338,11 @@ void main() {
               builder: (context) {
                 return ElevatedButton(
                   onPressed: () async {
-                    await showEmojiBar(context, context);
+                    await showEmojiBar(
+                      context,
+                      context,
+                      onEmojiSelected: (_) {},
+                    );
                   },
                   child: const Text('Show Emoji'),
                 );

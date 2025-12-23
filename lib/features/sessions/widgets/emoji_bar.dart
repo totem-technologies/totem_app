@@ -3,59 +3,114 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// Displays an emoji bar above the given button context and returns the
-/// selected emoji.
-Future<String?> showEmojiBar(BuildContext button, BuildContext context) async {
+/// Displays an emoji bar above the given button context and calls
+/// [onEmojiSelected] with the selected emoji.
+Future<void> showEmojiBar(
+  BuildContext button,
+  BuildContext context, {
+  required ValueChanged<String> onEmojiSelected,
+}) async {
   final box = button.findRenderObject() as RenderBox?;
-  if (box == null) return null;
+  if (box == null) return;
   final overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
-  if (overlay == null) return null;
+  if (overlay == null) return;
   final position = box.localToGlobal(Offset.zero, ancestor: overlay);
 
-  final response = await Navigator.of(context).push<String>(
+  await Navigator.of(context).push(
     PageRouteBuilder<String>(
       opaque: false,
       pageBuilder: (context, animation, secondaryAnimation) {
-        return Stack(
-          children: [
-            GestureDetector(
-              onTap: () {
-                Navigator.of(context).pop();
-              },
-              child: Container(
-                color: Colors.transparent,
-              ),
-            ),
-            PositionedDirectional(
-              start: 20,
-              end: 20,
-              top: position.dy - 60,
-              child: FadeTransition(
-                opacity: animation,
-                child: EmojiBar(
-                  onEmojiSelected: (emoji) {
-                    Navigator.of(context).pop(emoji);
-                  },
-                  emojis: const [
-                    '👍',
-                    '👏',
-                    '😂',
-                    '😍',
-                    '😮',
-                    '😢',
-                    '🔥',
-                    '💯',
-                  ],
-                ),
-              ),
-            ),
-          ],
+        return _EmojiBarOverlay(
+          position: position,
+          animation: animation,
+          onEmojiSelected: onEmojiSelected,
         );
       },
     ),
   );
+}
 
-  return response;
+class _EmojiBarOverlay extends StatefulWidget {
+  const _EmojiBarOverlay({
+    required this.position,
+    required this.animation,
+    required this.onEmojiSelected,
+    // ignore: unused_element_parameter
+    this.displayDuration = const Duration(seconds: 4),
+  });
+
+  final Offset position;
+  final Animation<double> animation;
+  final ValueChanged<String> onEmojiSelected;
+  final Duration displayDuration;
+
+  @override
+  State<_EmojiBarOverlay> createState() => _EmojiBarOverlayState();
+}
+
+class _EmojiBarOverlayState extends State<_EmojiBarOverlay> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer(widget.displayDuration, () {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        GestureDetector(
+          onTap: () {
+            Navigator.of(context).pop();
+          },
+          child: Container(
+            color: Colors.transparent,
+          ),
+        ),
+        PositionedDirectional(
+          start: 20,
+          end: 20,
+          top: widget.position.dy - 60,
+          child: FadeTransition(
+            opacity: widget.animation,
+            child: EmojiBar(
+              onEmojiSelected: (emoji) {
+                widget.onEmojiSelected(emoji);
+                _startTimer();
+              },
+              emojis: const [
+                '👍',
+                '👏',
+                '😂',
+                '😍',
+                '😮',
+                '😢',
+                '🔥',
+                '💯',
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class EmojiBar extends StatelessWidget {
@@ -142,6 +197,7 @@ Future<void> displayReaction(
   return completer.future;
 }
 
+@visibleForTesting
 class RisingEmoji extends StatefulWidget {
   const RisingEmoji({
     required this.emoji,
@@ -149,6 +205,7 @@ class RisingEmoji extends StatefulWidget {
     required this.startY,
     required this.onCompleted,
     this.duration = const Duration(milliseconds: 2000),
+    this.sizeFactor = 1.0,
     super.key,
   });
 
@@ -157,6 +214,7 @@ class RisingEmoji extends StatefulWidget {
   final double startY;
   final VoidCallback onCompleted;
   final Duration duration;
+  final double sizeFactor;
 
   @override
   State<RisingEmoji> createState() => _RisingEmojiState();
@@ -231,8 +289,8 @@ class _RisingEmojiState extends State<RisingEmoji>
                 opacity: _opacityAnimation,
                 child: Text(
                   widget.emoji,
-                  style: const TextStyle(
-                    fontSize: 22,
+                  style: TextStyle(
+                    fontSize: 44 * widget.sizeFactor,
                     textBaseline: TextBaseline.ideographic,
                   ),
                 ),
