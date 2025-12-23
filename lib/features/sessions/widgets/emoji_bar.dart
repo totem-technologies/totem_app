@@ -3,8 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// Displays an emoji bar above the given button context and returns the
-/// selected emoji.
+/// Displays an emoji bar above the given button context and calls
+/// [onEmojiSelected] with the selected emoji.
 Future<void> showEmojiBar(
   BuildContext button,
   BuildContext context, {

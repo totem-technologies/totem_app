@@ -140,6 +140,7 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
                       context,
                       onFeedbackSubmitted: (message) {
                         _thumbState = ThumbState.down;
+                        if (mounted) setState(() {});
                         return ref.read(
                           sessionFeedbackProvider(
                             widget.event.slug,
@@ -149,7 +150,6 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
                         );
                       },
                     );
-                    if (mounted) setState(() {});
                   },
                 ),
 
