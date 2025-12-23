@@ -101,17 +101,27 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   bool _shouldShowLowBatteryWarning = false;
   StreamSubscription<BatteryState>? _batterySubscription;
   void _listenToBatteryChanges() {
-    _batterySubscription = battery.onBatteryStateChanged.listen((state) async {
-      if (!mounted) return;
-      if (state == BatteryState.charging && _shouldShowLowBatteryWarning) {
-        setState(() => _shouldShowLowBatteryWarning = false);
-      } else if (state == BatteryState.discharging) {
-        final level = await battery.batteryLevel;
-        if (level <= 20 && !_shouldShowLowBatteryWarning) {
-          setState(() => _shouldShowLowBatteryWarning = true);
+    try {
+      _batterySubscription = battery.onBatteryStateChanged.listen((
+        state,
+      ) async {
+        if (!mounted) return;
+        if (state == BatteryState.charging && _shouldShowLowBatteryWarning) {
+          setState(() => _shouldShowLowBatteryWarning = false);
+        } else if (state == BatteryState.discharging) {
+          try {
+            final level = await battery.batteryLevel;
+            if (level <= 20 && !_shouldShowLowBatteryWarning) {
+              setState(() => _shouldShowLowBatteryWarning = true);
+            }
+          } catch (_) {
+            // Unable to get battery level
+          }
         }
-      }
-    });
+      });
+    } catch (_) {
+      // Battery monitoring not available
+    }
   }
 
   Map<String, GlobalKey> participantKeys = {};
