@@ -28,10 +28,11 @@ final authControllerProvider = NotifierProvider<AuthController, AuthState>(
 class AuthController extends Notifier<AuthState> {
   AuthController();
 
-  late final AuthRepository _authRepository;
-  late final SecureStorage _secureStorage;
-  late final AnalyticsService _analyticsService;
-  late final NotificationsService _notificationsService;
+  AuthRepository get _authRepository => ref.read(authRepositoryProvider);
+  SecureStorage get _secureStorage => ref.read(secureStorageProvider);
+  AnalyticsService get _analyticsService => ref.read(analyticsProvider);
+  NotificationsService get _notificationsService =>
+      ref.read(notificationsProvider);
 
   final _authStateController = StreamController<AuthState>.broadcast();
   Stream<AuthState> get authStateChanges => _authStateController.stream;
@@ -39,11 +40,6 @@ class AuthController extends Notifier<AuthState> {
 
   @override
   AuthState build() {
-    _authRepository = ref.watch(authRepositoryProvider);
-    _secureStorage = ref.watch(secureStorageProvider);
-    _analyticsService = ref.watch(analyticsProvider);
-    _notificationsService = ref.watch(notificationsProvider);
-
     ref.onDispose(() async {
       await _fcmTokenSubscription?.cancel();
       _fcmTokenSubscription = null;
@@ -451,7 +447,7 @@ class AuthController extends Notifier<AuthState> {
         // If we timed out while waiting for this, DO NOT update state to avoid
         // overwriting with potentially stale data.
         //
-        // This is necessary because time [timout] helper doesn't cancel the
+        // This is necessary because time [timeout] helper doesn't cancel the
         // operation.
         if (timedOut) return;
 
@@ -461,7 +457,7 @@ class AuthController extends Notifier<AuthState> {
         unawaited(_analyticsService.setUserId(user));
         await _updateFCMToken();
       })().timeout(
-        const Duration(seconds: 10),
+        AppConsts.tokenValidationTimeout,
         onTimeout: () {
           timedOut = true;
           logger.w('🔑 Validation timed out. Staying in current state.');

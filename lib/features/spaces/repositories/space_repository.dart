@@ -62,7 +62,7 @@ Future<MobileSpaceDetailSchema> space(Ref ref, String spaceSlug) async {
 @riverpod
 Future<List<SpaceSchema>> listSubscribedSpaces(Ref ref) async {
   final mobileApiService = ref.read(mobileApiServiceProvider);
-  final cache = ref.watch(cacheServiceProvider);
+  final cache = ref.read(cacheServiceProvider);
   try {
     final spaces = await RepositoryUtils.handleApiCall<List<SpaceSchema>>(
       apiCall: () => mobileApiService.spaces
@@ -72,13 +72,12 @@ Future<List<SpaceSchema>> listSubscribedSpaces(Ref ref) async {
     unawaited(cache.saveSubscribedSpaces(spaces));
     return spaces;
   } on DioException catch (_) {
-    // final cachedSpaces = await cache.getSubscribedSpaces();
-    // if (cachedSpaces != null) {
-    //   return cachedSpaces;
-    // } else {
-    //   rethrow;
-    // }
-    rethrow;
+    final cachedSpaces = await cache.getSubscribedSpaces();
+    if (cachedSpaces != null) {
+      return cachedSpaces;
+    } else {
+      rethrow;
+    }
   }
 }
 
