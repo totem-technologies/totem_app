@@ -8,7 +8,7 @@ part 'blog_repository.g.dart';
 
 @riverpod
 Future<PagedBlogPostListSchema> listBlogPosts(Ref ref) async {
-  final apiService = ref.watch(mobileApiServiceProvider);
+  final apiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<PagedBlogPostListSchema>(
     apiCall: () => apiService.blog.totemBlogMobileApiListPosts(),
     operationName: 'list blog posts',
@@ -17,7 +17,7 @@ Future<PagedBlogPostListSchema> listBlogPosts(Ref ref) async {
 
 @riverpod
 Future<BlogPostSchema> blogPost(Ref ref, String slug) async {
-  final apiService = ref.watch(mobileApiServiceProvider);
+  final apiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<BlogPostSchema>(
     apiCall: () => apiService.blog.totemBlogMobileApiPost(slug: slug),
     operationName: 'get blog post',

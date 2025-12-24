@@ -8,7 +8,7 @@ part 'user_repository.g.dart';
 
 @riverpod
 Future<PublicUserSchema> userProfile(Ref ref, String slug) {
-  final apiService = ref.watch(mobileApiServiceProvider);
+  final apiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<PublicUserSchema>(
     apiCall: () => apiService.users.totemUsersMobileApiGetUserProfile(
       userSlug: slug,
@@ -19,7 +19,7 @@ Future<PublicUserSchema> userProfile(Ref ref, String slug) {
 
 @riverpod
 Future<bool> submitFeedback(Ref ref, String feedback) {
-  final apiService = ref.watch(mobileApiServiceProvider);
+  final apiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<bool>(
     apiCall: () => apiService.users.totemUsersMobileApiSubmitFeedback(
       body: FeedbackSchema(message: feedback),

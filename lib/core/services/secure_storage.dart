@@ -3,7 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 final secureStorageProvider = Provider<SecureStorage>((ref) {
   return SecureStorage();
-});
+}, name: 'Secure Storage Provider');
 
 /// A wrapper service for flutter_secure_storage to handle secure credential
 /// storage

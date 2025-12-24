@@ -48,4 +48,4 @@ final class SpacesSummaryProvider
   }
 }
 
-String _$spacesSummaryHash() => r'cb1d902c374f49601794266eb243b36294979371';
+String _$spacesSummaryHash() => r'6cbc4129b1b109847969ac7e9720e8538a6f597e';

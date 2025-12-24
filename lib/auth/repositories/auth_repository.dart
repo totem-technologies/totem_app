@@ -10,9 +10,9 @@ import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  final apiService = ref.watch(mobileApiServiceProvider);
+  final apiService = ref.read(mobileApiServiceProvider);
   return AuthRepository(apiService: apiService);
-});
+}, name: 'Auth Repository Provider');
 
 class AuthRepository {
   const AuthRepository({required this.apiService});
@@ -159,6 +159,17 @@ class AuthRepository {
     );
   }
 
+  /// Refresh access token using a refresh token
+  Future<TokenResponse> refreshAccessToken(String refreshToken) async {
+    return _handleApiCall<TokenResponse>(
+      () => apiService.fallback.totemApiAuthRefreshToken(
+        body: RefreshTokenSchema(refreshToken: refreshToken),
+      ),
+      operationName: 'refresh access token',
+      genericErrorCode: 'ACCESS_TOKEN_REFRESH_FAILED',
+    );
+  }
+
   /// Logout by invalidating a refresh token
   Future<MessageResponse> logout(String refreshToken) async {
     return _handleApiCall<MessageResponse>(
@@ -178,13 +189,7 @@ class AuthRepository {
     );
   }
 
-  /// Check if the user is authenticated
-  static bool isAuthenticated(String? jwtToken) {
-    if (jwtToken == null) return false;
-    return !isAccessTokenExpired(jwtToken);
-  }
-
-  static bool isAccessTokenExpired(String? jwtToken) {
+  bool isAccessTokenExpired(String? jwtToken) {
     if (jwtToken == null) return true;
 
     try {

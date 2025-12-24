@@ -77,6 +77,12 @@ class AppAuthException extends AppException {
       code: 'PIN_ATTEMPTS_EXCEEDED',
     );
   }
+  factory AppAuthException.timeout() {
+    return const AppAuthException(
+      'Timeout during authentication process',
+      code: 'AUTH_TIMEOUT',
+    );
+  }
 }
 
 /// Data-related exceptions (parsing, validation, etc.)

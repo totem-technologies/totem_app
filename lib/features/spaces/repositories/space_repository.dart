@@ -11,8 +11,8 @@ part 'space_repository.g.dart';
 
 @Riverpod(keepAlive: true)
 Future<List<MobileSpaceDetailSchema>> listSpaces(Ref ref) async {
-  final mobileApiService = ref.watch(mobileApiServiceProvider);
-  final cache = ref.watch(cacheServiceProvider);
+  final mobileApiService = ref.read(mobileApiServiceProvider);
+  final cache = ref.read(cacheServiceProvider);
 
   try {
     final response = await RepositoryUtils.handleApiCall(
@@ -37,7 +37,7 @@ Future<List<MobileSpaceDetailSchema>> listSpaces(Ref ref) async {
 
 @riverpod
 Future<EventDetailSchema> event(Ref ref, String eventSlug) async {
-  final mobileApiService = ref.watch(mobileApiServiceProvider);
+  final mobileApiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<EventDetailSchema>(
     apiCall: () =>
         mobileApiService.spaces.totemCirclesMobileApiMobileApiGetSessionDetail(
@@ -49,7 +49,7 @@ Future<EventDetailSchema> event(Ref ref, String eventSlug) async {
 
 @riverpod
 Future<MobileSpaceDetailSchema> space(Ref ref, String spaceSlug) async {
-  final mobileApiService = ref.watch(mobileApiServiceProvider);
+  final mobileApiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<MobileSpaceDetailSchema>(
     apiCall: () =>
         mobileApiService.spaces.totemCirclesMobileApiMobileApiGetSpaceDetail(
@@ -61,8 +61,8 @@ Future<MobileSpaceDetailSchema> space(Ref ref, String spaceSlug) async {
 
 @riverpod
 Future<List<SpaceSchema>> listSubscribedSpaces(Ref ref) async {
-  final mobileApiService = ref.watch(mobileApiServiceProvider);
-  final cache = ref.watch(cacheServiceProvider);
+  final mobileApiService = ref.read(mobileApiServiceProvider);
+  final cache = ref.read(cacheServiceProvider);
   try {
     final spaces = await RepositoryUtils.handleApiCall<List<SpaceSchema>>(
       apiCall: () => mobileApiService.spaces
@@ -72,22 +72,18 @@ Future<List<SpaceSchema>> listSubscribedSpaces(Ref ref) async {
     unawaited(cache.saveSubscribedSpaces(spaces));
     return spaces;
   } on DioException catch (_) {
-    // final cachedSpaces = await cache.getSubscribedSpaces();
-    // if (cachedSpaces != null) {
-    //   return cachedSpaces;
-    // } else {
-    //   rethrow;
-    // }
-    rethrow;
+    final cachedSpaces = await cache.getSubscribedSpaces();
+    if (cachedSpaces != null) {
+      return cachedSpaces;
+    } else {
+      rethrow;
+    }
   }
 }
 
 @riverpod
-Future<bool> subscribeToSpace(
-  Ref ref,
-  String spaceSlug,
-) async {
-  final mobileApiService = ref.watch(mobileApiServiceProvider);
+Future<bool> subscribeToSpace(Ref ref, String spaceSlug) async {
+  final mobileApiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<bool>(
     apiCall: () =>
         mobileApiService.spaces.totemCirclesMobileApiMobileApiSubscribeToSpace(
@@ -98,11 +94,8 @@ Future<bool> subscribeToSpace(
 }
 
 @riverpod
-Future<bool> unsubscribeFromSpace(
-  Ref ref,
-  String spaceSlug,
-) async {
-  final mobileApiService = ref.watch(mobileApiServiceProvider);
+Future<bool> unsubscribeFromSpace(Ref ref, String spaceSlug) async {
+  final mobileApiService = ref.read(mobileApiServiceProvider);
   final success = await RepositoryUtils.handleApiCall<bool>(
     apiCall: () => mobileApiService.spaces
         .totemCirclesMobileApiMobileApiUnsubscribeToSpace(
@@ -122,7 +115,7 @@ Future<List<MobileSpaceDetailSchema>> listSpacesByKeeper(
   Ref ref,
   String keeperSlug,
 ) async {
-  final mobileApiService = ref.watch(mobileApiServiceProvider);
+  final mobileApiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<List<MobileSpaceDetailSchema>>(
     apiCall: () =>
         mobileApiService.spaces.totemCirclesMobileApiMobileApiGetKeeperSpaces(
@@ -134,8 +127,8 @@ Future<List<MobileSpaceDetailSchema>> listSpacesByKeeper(
 
 @riverpod
 Future<List<EventDetailSchema>> listSessionsHistory(Ref ref) async {
-  final mobileApiService = ref.watch(mobileApiServiceProvider);
-  final cache = ref.watch(cacheServiceProvider);
+  final mobileApiService = ref.read(mobileApiServiceProvider);
+  final cache = ref.read(cacheServiceProvider);
 
   try {
     final sessions =
@@ -161,7 +154,7 @@ Future<List<EventDetailSchema>> getRecommendedSessions(
   Ref ref, [
   String? topicsKey,
 ]) {
-  final mobileApiService = ref.watch(mobileApiServiceProvider);
+  final mobileApiService = ref.read(mobileApiServiceProvider);
   final List<String>? body = topicsKey == null || topicsKey.isEmpty
       ? null
       : topicsKey.split('|').toList();

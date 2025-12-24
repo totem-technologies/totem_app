@@ -10,13 +10,13 @@ Connectivity connectivity(Ref ref) {
 
 @riverpod
 Stream<List<ConnectivityResult>> connectivityStream(Ref ref) {
-  return ref.watch(connectivityProvider).onConnectivityChanged;
+  return ref.read(connectivityProvider).onConnectivityChanged;
 }
 
 @riverpod
 Future<bool> isOffline(Ref ref) async {
   final connectivityResult = await ref
-      .watch(connectivityProvider)
+      .read(connectivityProvider)
       .checkConnectivity();
   return connectivityResult.contains(ConnectivityResult.none);
 }

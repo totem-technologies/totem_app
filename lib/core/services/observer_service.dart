@@ -4,12 +4,12 @@ import 'package:totem_app/shared/logger.dart';
 final class ObserverService extends ProviderObserver {
   @override
   void didAddProvider(ProviderObserverContext context, Object? value) {
-    logger.d('Provider ${context.provider.name} was initialized with $value');
+    logger.d('${context.provider.name} was initialized with $value');
   }
 
   @override
   void didDisposeProvider(ProviderObserverContext context) {
-    logger.d('Provider ${context.provider.name} was disposed');
+    logger.d('${context.provider.name} was disposed');
   }
 
   @override

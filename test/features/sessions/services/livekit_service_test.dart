@@ -85,7 +85,7 @@ class TestLiveKitService {
       } catch (e) {
         // Handle invalid metadata gracefully
         testState = testState.copyWith(
-          sessionState: const SessionState(speakingOrder: []),
+          sessionState: const SessionState(keeperSlug: '', speakingOrder: []),
         );
       }
     }
@@ -287,6 +287,7 @@ void main() {
       test('should return true when it is my turn', () {
         const sessionState = SessionState(
           status: SessionStatus.started,
+          keeperSlug: testUserIdentity,
           speakingNow: testUserIdentity,
           speakingOrder: [testUserIdentity, 'other-user'],
         );
@@ -302,6 +303,7 @@ void main() {
 
       test('should return false when it is not my turn', () {
         const sessionState = SessionState(
+          keeperSlug: testUserIdentity,
           status: SessionStatus.started,
           speakingNow: 'other-user',
           speakingOrder: [testUserIdentity, 'other-user'],
@@ -319,6 +321,7 @@ void main() {
       test('should return false when no one is speaking', () {
         const sessionState = SessionState(
           status: SessionStatus.started,
+          keeperSlug: testUserIdentity,
           speakingOrder: [testUserIdentity, 'other-user'],
         );
         liveKitService.testState = const LiveKitState(
@@ -336,6 +339,7 @@ void main() {
 
         const sessionState = SessionState(
           status: SessionStatus.started,
+          keeperSlug: testUserIdentity,
           speakingNow: testUserIdentity,
           speakingOrder: [testUserIdentity],
         );
@@ -354,6 +358,7 @@ void main() {
       test('should update session state from room metadata', () {
         const metadata = '''
         {
+          "keeper_slug": "user123",
           "status": "started",
           "speaking_now": "user123",
           "speaking_order": ["user123", "user456"]
@@ -571,6 +576,7 @@ void main() {
           connectionState: RoomConnectionState.connected,
           sessionState: SessionState(
             status: SessionStatus.started,
+            keeperSlug: testUserIdentity,
             speakingNow: testUserIdentity,
             speakingOrder: [testUserIdentity, 'other-user'],
           ),
@@ -598,6 +604,7 @@ void main() {
           sessionState: SessionState(
             status: SessionStatus.started,
             speakingNow: 'other-user',
+            keeperSlug: testUserIdentity,
             speakingOrder: [testUserIdentity, 'other-user'],
           ),
         );
@@ -617,6 +624,7 @@ void main() {
           connectionState: RoomConnectionState.connected,
           sessionState: SessionState(
             status: SessionStatus.started,
+            keeperSlug: testUserIdentity,
             speakingNow: testUserIdentity,
             speakingOrder: [testUserIdentity],
           ),
@@ -652,6 +660,7 @@ void main() {
           connectionState: RoomConnectionState.connected,
           sessionState: SessionState(
             status: SessionStatus.started,
+            keeperSlug: testUserIdentity,
             speakingNow: testUserIdentity,
             speakingOrder: [testUserIdentity, 'other-user'],
           ),
@@ -679,6 +688,7 @@ void main() {
           sessionState: SessionState(
             status: SessionStatus.started,
             speakingNow: 'other-user',
+            keeperSlug: testUserIdentity,
             speakingOrder: [testUserIdentity, 'other-user'],
           ),
         );
@@ -698,6 +708,7 @@ void main() {
           connectionState: RoomConnectionState.connected,
           sessionState: SessionState(
             status: SessionStatus.started,
+            keeperSlug: testUserIdentity,
             speakingNow: testUserIdentity,
             speakingOrder: [testUserIdentity],
           ),
@@ -816,6 +827,7 @@ void main() {
           connectionState: RoomConnectionState.connected,
           sessionState: SessionState(
             status: SessionStatus.started,
+            keeperSlug: testUserIdentity,
             speakingNow: testUserIdentity,
             speakingOrder: [testUserIdentity],
           ),
@@ -839,6 +851,7 @@ void main() {
 
         const newSessionState = SessionState(
           status: SessionStatus.started,
+          keeperSlug: testUserIdentity,
           speakingNow: testUserIdentity,
           speakingOrder: [testUserIdentity],
         );

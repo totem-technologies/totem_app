@@ -22,15 +22,17 @@ import 'package:totem_app/shared/logger.dart';
 
 final authControllerProvider = NotifierProvider<AuthController, AuthState>(
   AuthController.new,
+  name: 'Auth Controller Provider',
 );
 
 class AuthController extends Notifier<AuthState> {
   AuthController();
 
-  late final AuthRepository _authRepository;
-  late final SecureStorage _secureStorage;
-  late final AnalyticsService _analyticsService;
-  late final NotificationsService _notificationsService;
+  AuthRepository get _authRepository => ref.read(authRepositoryProvider);
+  SecureStorage get _secureStorage => ref.read(secureStorageProvider);
+  AnalyticsService get _analyticsService => ref.read(analyticsProvider);
+  NotificationsService get _notificationsService =>
+      ref.read(notificationsProvider);
 
   final _authStateController = StreamController<AuthState>.broadcast();
   Stream<AuthState> get authStateChanges => _authStateController.stream;
@@ -38,11 +40,6 @@ class AuthController extends Notifier<AuthState> {
 
   @override
   AuthState build() {
-    _authRepository = ref.watch(authRepositoryProvider);
-    _secureStorage = ref.watch(secureStorageProvider);
-    _analyticsService = ref.watch(analyticsProvider);
-    _notificationsService = ref.watch(notificationsProvider);
-
     ref.onDispose(() async {
       await _fcmTokenSubscription?.cancel();
       _fcmTokenSubscription = null;
@@ -187,7 +184,11 @@ class AuthController extends Notifier<AuthState> {
           error: 'Failed to update profile: $error',
         ),
       );
-      ErrorHandler.logError(error, stackTrace: stackTrace);
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: '🔑 Failed to complete onboarding',
+      );
       rethrow;
     }
   }
@@ -319,7 +320,7 @@ class AuthController extends Notifier<AuthState> {
     // _setState(AuthState.loading());
     try {
       final refreshToken = await _secureStorage.read(
-        key: AppConsts.refreshToken,
+        key: AppConsts.refreshTokenKey,
       );
       await _clearTokens();
       if (refreshToken != null) {
@@ -378,56 +379,54 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  /// Checks for existing authentication tokens and validates them.
+  ///
+  /// If valid, updates the auth state to authenticated.
+  ///
+  /// If the user is offline, relies on cached user data if available.
+  /// If no valid tokens or cached data, sets state to unauthenticated.
+  ///
+  /// If the user is online, attempts to validate or refresh the token with the
+  /// backend. Token refresh happens automatically in a middleware in the
+  /// repository layer if needed.
+  ///
+  /// Prevents concurrent executions using [_isCheckingExistingAuth] flag.
   var _isCheckingExistingAuth = false;
   Future<void> _checkExistingAuth() async {
     if (_isCheckingExistingAuth) return;
     _isCheckingExistingAuth = true;
     _setState(AuthState.loading());
+
     try {
       final connectivityResult = await Connectivity().checkConnectivity();
       final isOffline = connectivityResult.contains(ConnectivityResult.none);
 
-      final accessToken = await _secureStorage.read(key: AppConsts.accessToken);
+      final accessToken = await _secureStorage.read(
+        key: AppConsts.accessTokenKey,
+      );
+
       if (accessToken == null) {
-        logger.i('🔑 No access token found, setting state to unauthenticated');
+        logger.i('🔑 No token. Setting unauthenticated.');
         _setState(AuthState.unauthenticated());
         return;
       }
 
       final cachedUser = await ref.read(localStorageServiceProvider).getUser();
       if (cachedUser != null) {
-        logger.i('🔑 Offline mode: Using cached user data');
+        logger.i('🔑 Using cached user (Optimistic).');
         _setState(AuthState.authenticated(user: cachedUser));
       }
+
       if (isOffline) {
-        if (cachedUser == null) {
-          // If offline and no cached user, we have to assume unauthenticated
-          _setState(AuthState.unauthenticated());
-        }
+        if (cachedUser == null) _setState(AuthState.unauthenticated());
       } else {
-        await (() async {
-          logger.i('🔑 Online mode: Validating token with backend');
-          // If online, proceed with the network call
-          final user = await _authRepository.currentUser;
-          await ref.read(localStorageServiceProvider).saveUser(user);
-          _setState(AuthState.authenticated(user: user));
-          unawaited(_analyticsService.setUserId(user));
-          await _updateFCMToken();
-        })().timeout(
-          const Duration(seconds: 4),
-          onTimeout: () async {
-            // TODO(bdlukaa): Revisit this to see if we can handle this better.
-            logger.i(
-              '🔑 Token validation timed out, skipping token validation',
-            );
-          },
-        );
+        await _validateTokenOnline(cachedUser);
       }
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        reason: 'Error checking existing auth',
+        reason: 'Auth Check Failed',
       );
       await _clearTokens();
       _setState(AuthState.unauthenticated());
@@ -436,44 +435,83 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  Future<void> _validateTokenOnline(UserSchema? cachedUser) async {
+    bool timedOut = false;
+
+    try {
+      logger.i('🔑 Validating token with backend...');
+
+      await (() async {
+        final user = await _authRepository.currentUser;
+
+        // If we timed out while waiting for this, DO NOT update state to avoid
+        // overwriting with potentially stale data.
+        //
+        // This is necessary because time [timeout] helper doesn't cancel the
+        // operation.
+        if (timedOut) return;
+
+        await ref.read(localStorageServiceProvider).saveUser(user);
+        _setState(AuthState.authenticated(user: user));
+
+        unawaited(_analyticsService.setUserId(user));
+        await _updateFCMToken();
+      })().timeout(
+        AppConsts.tokenValidationTimeout,
+        onTimeout: () {
+          timedOut = true;
+          logger.w('🔑 Validation timed out. Staying in current state.');
+          // If we have a cached user, we just stay authenticated (Soft Fail).
+          // If we don't, we might want to force unauthenticated here.
+          if (cachedUser == null) {
+            throw AppAuthException.timeout();
+          }
+        },
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> _storeTokens(String accessToken, String refreshToken) async {
     try {
       await _secureStorage.write(
-        key: AppConsts.accessToken,
+        key: AppConsts.accessTokenKey,
         value: accessToken,
       );
       await _secureStorage.write(
-        key: AppConsts.refreshToken,
+        key: AppConsts.refreshTokenKey,
         value: refreshToken,
       );
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        reason: 'Failed to store tokens',
+        reason: '🔑 Failed to store tokens',
       );
       // Optionally rethrow or handle the error as needed
       throw const AppAuthException('Failed to store tokens');
     }
   }
 
-  /// Deletes the user tokens.
+  /// Deletes the user tokens and related user data from local storage.
   Future<void> _clearTokens() async {
     try {
       logger.i('🔑 Clearing stored tokens and user data');
-      await _secureStorage.delete(key: AppConsts.accessToken);
-      await _secureStorage.delete(key: AppConsts.refreshToken);
+      await _secureStorage.delete(key: AppConsts.accessTokenKey);
+      await _secureStorage.delete(key: AppConsts.refreshTokenKey);
       await ref.read(localStorageServiceProvider).clearUser();
+      await ref.read(cacheServiceProvider).clearCache();
       // Note: We intentionally don't clear welcome onboarding flag here
       // so returning users don't see welcome screens again unless they
       // reinstall the app.
-    } catch (e) {
-      logger.e('🔑 Error clearing tokens: $e');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: '🔑 Error clearing tokens',
+      );
       await _secureStorage.deleteAll();
-    }
-
-    {
-      await ref.read(cacheServiceProvider).clearCache();
     }
 
     try {
@@ -483,7 +521,7 @@ class AuthController extends Notifier<AuthState> {
         await FirebaseMessaging.instance.deleteToken();
       }
     } catch (_) {
-      // Ignore errors during FCM token deletion/unregistration
+      // can ignore
     }
   }
 

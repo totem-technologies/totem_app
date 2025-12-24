@@ -7,6 +7,7 @@ part of 'session_state.dart';
 // **************************************************************************
 
 SessionState _$SessionStateFromJson(Map<String, dynamic> json) => SessionState(
+  keeperSlug: json['keeper_slug'] as String,
   speakingOrder: (json['speaking_order'] as List<dynamic>)
       .map((e) => e as String)
       .toList(),
@@ -21,6 +22,7 @@ SessionState _$SessionStateFromJson(Map<String, dynamic> json) => SessionState(
 
 Map<String, dynamic> _$SessionStateToJson(SessionState instance) =>
     <String, dynamic>{
+      'keeper_slug': instance.keeperSlug,
       'status': _$SessionStatusEnumMap[instance.status]!,
       'speaking_order': instance.speakingOrder,
       'speaking_now': instance.speakingNow,

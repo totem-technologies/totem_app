@@ -7,6 +7,7 @@ class HomeLoadingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      primary: false,
       physics: const NeverScrollableScrollPhysics(),
       children: [
         Padding(

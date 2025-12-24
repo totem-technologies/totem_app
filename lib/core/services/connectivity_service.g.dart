@@ -90,7 +90,7 @@ final class ConnectivityStreamProvider
 }
 
 String _$connectivityStreamHash() =>
-    r'67159f6e1fedd7ed3da5924800bdf232db68da4c';
+    r'0e9f1eb3ef49bdff1bcabae32097030194c7a5ae';
 
 @ProviderFor(isOffline)
 const isOfflineProvider = IsOfflineProvider._();
@@ -123,4 +123,4 @@ final class IsOfflineProvider
   }
 }
 
-String _$isOfflineHash() => r'226ea739d3f33712af77c459ed952164200c7f64';
+String _$isOfflineHash() => r'533ac83bc24df0c6c5f976bd13c82adb8320bf84';

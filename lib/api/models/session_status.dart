@@ -26,7 +26,7 @@ enum SessionStatus {
   final String? json;
 
   @override
-  String toString() => json ?? super.toString();
+  String toString() => json?.toString() ?? super.toString();
 
   /// Returns all defined enum values excluding the $unknown value.
   static List<SessionStatus> get $valuesDefined =>
