@@ -29,6 +29,7 @@ void main() {
 
       test('should handle null speakingOrder in JSON', () {
         const json = {
+          'keeper_slug': '',
           'status': 'waiting',
           'speaking_now': null,
           'speaking_order': <String>[],

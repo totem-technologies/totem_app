@@ -358,6 +358,7 @@ void main() {
       test('should update session state from room metadata', () {
         const metadata = '''
         {
+          "keeper_slug": "user123",
           "status": "started",
           "speaking_now": "user123",
           "speaking_order": ["user123", "user456"]

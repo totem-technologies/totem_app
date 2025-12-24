@@ -307,6 +307,19 @@ class SmallSpaceCard extends StatelessWidget {
   final MobileSpaceDetailSchema space;
   final VoidCallback? onTap;
 
+  static Widget shimmer() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
