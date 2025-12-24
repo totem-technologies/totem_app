@@ -10,9 +10,9 @@ import 'package:totem_app/core/services/secure_storage.dart';
 import 'package:totem_app/shared/logger.dart';
 
 final cacheServiceProvider = Provider<CacheService>((ref) {
-  final secureStorage = ref.watch(secureStorageProvider);
+  final secureStorage = ref.read(secureStorageProvider);
   return CacheService(secureStorage);
-});
+}, name: 'Cache Service Provider');
 
 class CacheService {
   const CacheService(this._secureStorage);

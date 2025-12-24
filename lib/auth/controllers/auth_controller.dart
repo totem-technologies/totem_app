@@ -22,6 +22,7 @@ import 'package:totem_app/shared/logger.dart';
 
 final authControllerProvider = NotifierProvider<AuthController, AuthState>(
   AuthController.new,
+  name: 'Auth Controller Provider',
 );
 
 class AuthController extends Notifier<AuthState> {

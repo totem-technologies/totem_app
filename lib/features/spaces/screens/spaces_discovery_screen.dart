@@ -25,6 +25,7 @@ class SelectedCategoryNotifier extends Notifier<String?> {
 final selectedCategoryProvider =
     NotifierProvider<SelectedCategoryNotifier, String?>(
       SelectedCategoryNotifier.new,
+      name: 'Selected Category Provider',
     );
 
 class SpacesDiscoveryScreen extends ConsumerWidget {

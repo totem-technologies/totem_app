@@ -11,7 +11,7 @@ import 'package:totem_app/shared/logger.dart';
 
 final analyticsProvider = Provider<AnalyticsService>((ref) {
   return AnalyticsService.instance;
-});
+}, name: 'Analytics Service Provider');
 
 /// Service for tracking app analytics and user behavior.
 ///

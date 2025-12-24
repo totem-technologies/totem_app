@@ -6,9 +6,9 @@ import 'package:totem_app/core/config/consts.dart';
 import 'package:totem_app/core/services/secure_storage.dart';
 
 final localStorageServiceProvider = Provider<LocalStorageService>((ref) {
-  final secureStorage = ref.watch(secureStorageProvider);
+  final secureStorage = ref.read(secureStorageProvider);
   return LocalStorageService(secureStorage);
-});
+}, name: 'Local Storage Service Provider');
 
 class LocalStorageService {
   const LocalStorageService(this._secureStorage);

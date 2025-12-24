@@ -13,13 +13,13 @@ import 'package:totem_app/shared/logger.dart';
 /// Provider for secure storage
 final secureStorageProvider = Provider<SecureStorage>((ref) {
   return SecureStorage();
-});
+}, name: 'Secure Storage Provider');
 
 /// Provider for the API service
 final mobileApiServiceProvider = Provider<MobileTotemApi>((ref) {
   final dio = _initDio(ref);
   return MobileTotemApi(dio, baseUrl: AppConfig.mobileApiUrl);
-});
+}, name: 'Mobile Totem API Service Provider');
 
 final _dio = Dio();
 

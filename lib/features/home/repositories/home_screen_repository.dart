@@ -13,8 +13,8 @@ part 'home_screen_repository.g.dart';
 
 @Riverpod(keepAlive: true)
 Future<SummarySpacesSchema> spacesSummary(Ref ref) async {
-  final mobileApiService = ref.watch(mobileApiServiceProvider);
-  final cache = ref.watch(cacheServiceProvider);
+  final mobileApiService = ref.read(mobileApiServiceProvider);
+  final cache = ref.read(cacheServiceProvider);
 
   try {
     final summary = await RepositoryUtils.handleApiCall<SummarySpacesSchema>(
