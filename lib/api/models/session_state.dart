@@ -12,6 +12,7 @@ part 'session_state.g.dart';
 @JsonSerializable()
 class SessionState {
   const SessionState({
+    required this.keeperSlug,
     required this.speakingOrder,
     this.speakingNow,
     this.status = SessionStatus.waiting,
@@ -21,6 +22,8 @@ class SessionState {
   factory SessionState.fromJson(Map<String, Object?> json) =>
       _$SessionStateFromJson(json);
 
+  @JsonKey(name: 'keeper_slug')
+  final String keeperSlug;
   final SessionStatus status;
   @JsonKey(name: 'speaking_order')
   final List<String> speakingOrder;

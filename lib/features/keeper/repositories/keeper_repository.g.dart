@@ -26,7 +26,7 @@ final class KeeperProfileProvider
     required KeeperProfileFamily super.from,
     required String super.argument,
   }) : super(
-         retry: null,
+         retry: _noRetry,
          name: r'keeperProfileProvider',
          isAutoDispose: true,
          dependencies: null,
@@ -66,13 +66,13 @@ final class KeeperProfileProvider
   }
 }
 
-String _$keeperProfileHash() => r'a1a88bb63b4c2cae18890063c300542fd106f29c';
+String _$keeperProfileHash() => r'6f1ec6d314cd6846d7e86cd53968663096c5bc0a';
 
 final class KeeperProfileFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<KeeperProfileSchema>, String> {
   const KeeperProfileFamily._()
     : super(
-        retry: null,
+        retry: _noRetry,
         name: r'keeperProfileProvider',
         dependencies: null,
         $allTransitiveDependencies: null,

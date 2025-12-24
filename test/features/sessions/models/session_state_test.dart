@@ -7,6 +7,7 @@ void main() {
     group('fromJson and toJson', () {
       test('should serialize and deserialize correctly', () {
         const originalState = SessionState(
+          keeperSlug: 'user123',
           status: SessionStatus.started,
           speakingNow: 'user123',
           speakingOrder: ['user123', 'user456'],
@@ -43,6 +44,7 @@ void main() {
       test('should handle all session statuses', () {
         for (final status in SessionStatus.values) {
           final state = SessionState(
+            keeperSlug: 'test_user',
             status: status,
             speakingNow: 'test_user',
             speakingOrder: const ['test_user'],
@@ -59,12 +61,14 @@ void main() {
     group('equality and hashCode', () {
       test('should be equal for identical states', () {
         const state1 = SessionState(
+          keeperSlug: 'user123',
           status: SessionStatus.started,
           speakingNow: 'user123',
           speakingOrder: ['user123', 'user456'],
         );
 
         const state2 = SessionState(
+          keeperSlug: 'user123',
           status: SessionStatus.started,
           speakingNow: 'user123',
           speakingOrder: ['user123', 'user456'],
@@ -76,12 +80,14 @@ void main() {
 
       test('should not be equal for different statuses', () {
         const state1 = SessionState(
+          keeperSlug: 'user123',
           status: SessionStatus.started,
           speakingNow: 'user123',
           speakingOrder: ['user123'],
         );
 
         const state2 = SessionState(
+          keeperSlug: 'user123',
           status: SessionStatus.ended,
           speakingNow: 'user123',
           speakingOrder: ['user123'],
@@ -92,12 +98,14 @@ void main() {
 
       test('should not be equal for different speakingNow', () {
         const state1 = SessionState(
+          keeperSlug: 'user123',
           status: SessionStatus.started,
           speakingNow: 'user123',
           speakingOrder: ['user123'],
         );
 
         const state2 = SessionState(
+          keeperSlug: 'user123',
           status: SessionStatus.started,
           speakingNow: 'user456',
           speakingOrder: ['user123'],
@@ -108,12 +116,14 @@ void main() {
 
       test('should not be equal for different speakingOrder', () {
         const state1 = SessionState(
+          keeperSlug: 'user123',
           status: SessionStatus.started,
           speakingNow: 'user123',
           speakingOrder: ['user123', 'user456'],
         );
 
         const state2 = SessionState(
+          keeperSlug: 'user123',
           status: SessionStatus.started,
           speakingNow: 'user123',
           speakingOrder: ['user456', 'user123'],
@@ -124,10 +134,12 @@ void main() {
 
       test('should handle null values correctly', () {
         const state1 = SessionState(
+          keeperSlug: '',
           speakingOrder: [],
         );
 
         const state2 = SessionState(
+          keeperSlug: '',
           speakingOrder: [],
         );
 
