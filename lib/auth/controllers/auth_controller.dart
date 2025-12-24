@@ -187,7 +187,11 @@ class AuthController extends Notifier<AuthState> {
           error: 'Failed to update profile: $error',
         ),
       );
-      ErrorHandler.logError(error, stackTrace: stackTrace);
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: '🔑 Failed to complete onboarding',
+      );
       rethrow;
     }
   }
@@ -319,7 +323,7 @@ class AuthController extends Notifier<AuthState> {
     // _setState(AuthState.loading());
     try {
       final refreshToken = await _secureStorage.read(
-        key: AppConsts.refreshToken,
+        key: AppConsts.refreshTokenKey,
       );
       await _clearTokens();
       if (refreshToken != null) {
@@ -387,7 +391,9 @@ class AuthController extends Notifier<AuthState> {
       final connectivityResult = await Connectivity().checkConnectivity();
       final isOffline = connectivityResult.contains(ConnectivityResult.none);
 
-      final accessToken = await _secureStorage.read(key: AppConsts.accessToken);
+      final accessToken = await _secureStorage.read(
+        key: AppConsts.accessTokenKey,
+      );
       if (accessToken == null) {
         logger.i('🔑 No access token found, setting state to unauthenticated');
         _setState(AuthState.unauthenticated());
@@ -414,7 +420,7 @@ class AuthController extends Notifier<AuthState> {
           unawaited(_analyticsService.setUserId(user));
           await _updateFCMToken();
         })().timeout(
-          const Duration(seconds: 4),
+          const Duration(seconds: 20),
           onTimeout: () async {
             // TODO(bdlukaa): Revisit this to see if we can handle this better.
             logger.i(
@@ -439,41 +445,42 @@ class AuthController extends Notifier<AuthState> {
   Future<void> _storeTokens(String accessToken, String refreshToken) async {
     try {
       await _secureStorage.write(
-        key: AppConsts.accessToken,
+        key: AppConsts.accessTokenKey,
         value: accessToken,
       );
       await _secureStorage.write(
-        key: AppConsts.refreshToken,
+        key: AppConsts.refreshTokenKey,
         value: refreshToken,
       );
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        reason: 'Failed to store tokens',
+        reason: '🔑 Failed to store tokens',
       );
       // Optionally rethrow or handle the error as needed
       throw const AppAuthException('Failed to store tokens');
     }
   }
 
-  /// Deletes the user tokens.
+  /// Deletes the user tokens and related user data from local storage.
   Future<void> _clearTokens() async {
     try {
       logger.i('🔑 Clearing stored tokens and user data');
-      await _secureStorage.delete(key: AppConsts.accessToken);
-      await _secureStorage.delete(key: AppConsts.refreshToken);
+      await _secureStorage.delete(key: AppConsts.accessTokenKey);
+      await _secureStorage.delete(key: AppConsts.refreshTokenKey);
       await ref.read(localStorageServiceProvider).clearUser();
+      await ref.read(cacheServiceProvider).clearCache();
       // Note: We intentionally don't clear welcome onboarding flag here
       // so returning users don't see welcome screens again unless they
       // reinstall the app.
-    } catch (e) {
-      logger.e('🔑 Error clearing tokens: $e');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: '🔑 Error clearing tokens',
+      );
       await _secureStorage.deleteAll();
-    }
-
-    {
-      await ref.read(cacheServiceProvider).clearCache();
     }
 
     try {
@@ -483,7 +490,7 @@ class AuthController extends Notifier<AuthState> {
         await FirebaseMessaging.instance.deleteToken();
       }
     } catch (_) {
-      // Ignore errors during FCM token deletion/unregistration
+      // can ignore
     }
   }
 

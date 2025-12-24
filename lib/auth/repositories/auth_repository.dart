@@ -10,7 +10,7 @@ import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  final apiService = ref.watch(mobileApiServiceProvider);
+  final apiService = ref.read(mobileApiServiceProvider);
   return AuthRepository(apiService: apiService);
 });
 

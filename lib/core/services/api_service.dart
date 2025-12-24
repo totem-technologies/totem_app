@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_dio/sentry_dio.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
-import 'package:totem_app/api/models/refresh_token_schema.dart';
 import 'package:totem_app/auth/repositories/auth_repository.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/consts.dart';
@@ -37,41 +36,40 @@ Dio _initDio(Ref ref) {
       onRequest: (options, handler) async {
         final secureStorage = ref.read(secureStorageProvider);
         String? accessToken = await secureStorage.read(
-          key: AppConsts.accessToken,
+          key: AppConsts.accessTokenKey,
         );
 
         // Don't try to refresh the token for the refresh token endpoint itself
         if (options.path.endsWith('/auth/refresh') ||
             options.path.endsWith('/auth/request-pin')) {
+          logger.d('🔑 Skipping token refresh for ${options.path}');
           return handler.next(options);
         }
 
+        final authRepository = ref.read(authRepositoryProvider);
+
         // Refresh if expired
-        if (AuthRepository.isAccessTokenExpired(accessToken)) {
-          logger.d(' Access token expired, refreshing...');
+        if (authRepository.isAccessTokenExpired(accessToken)) {
+          logger.d('🔑 Access token expired, refreshing...');
           final refreshToken = await secureStorage.read(
-            key: AppConsts.refreshToken,
+            key: AppConsts.refreshTokenKey,
           );
 
           if (refreshToken != null) {
             try {
-              final response =
-                  await MobileTotemApi(
-                    Dio(),
-                    baseUrl: AppConfig.mobileApiUrl,
-                  ).fallback.totemApiAuthRefreshToken(
-                    body: RefreshTokenSchema(refreshToken: refreshToken),
-                  );
+              final response = await authRepository.refreshAccessToken(
+                refreshToken,
+              );
               accessToken = response.accessToken;
 
-              logger.d('Token refreshed successfully');
+              logger.d('🔑 Access Token refreshed successfully');
 
               await secureStorage.write(
-                key: AppConsts.accessToken,
+                key: AppConsts.accessTokenKey,
                 value: response.accessToken,
               );
               await secureStorage.write(
-                key: AppConsts.refreshToken,
+                key: AppConsts.refreshTokenKey,
                 value: response.refreshToken,
               );
             } on DioException catch (error, stackTrace) {
@@ -84,8 +82,8 @@ Dio _initDio(Ref ref) {
               }
 
               // If it's a bad response (like 401), then it's a real auth issue.
-              await secureStorage.delete(key: AppConsts.accessToken);
-              await secureStorage.delete(key: AppConsts.refreshToken);
+              await secureStorage.delete(key: AppConsts.accessTokenKey);
+              await secureStorage.delete(key: AppConsts.refreshTokenKey);
 
               ErrorHandler.logError(
                 error,
