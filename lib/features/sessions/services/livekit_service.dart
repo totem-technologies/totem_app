@@ -96,7 +96,7 @@ enum RoomConnectionState { connecting, connected, disconnected, error }
 class LiveKitState {
   const LiveKitState({
     this.connectionState = RoomConnectionState.connecting,
-    this.sessionState = const SessionState(speakingOrder: []),
+    this.sessionState = const SessionState(keeperSlug: '', speakingOrder: []),
   });
 
   final RoomConnectionState connectionState;

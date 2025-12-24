@@ -618,61 +618,32 @@ void main() {
       });
     });
 
-    group('Static Methods', () {
-      group('isAuthenticated', () {
-        test('should return false for null token', () {
-          expect(AuthRepository.isAuthenticated(null), isFalse);
-        });
-
-        test('should return false for expired token', () {
-          // Create an expired JWT token
-          const expiredToken =
-              'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-          expect(AuthRepository.isAuthenticated(expiredToken), isFalse);
-        });
-
-        test('should return true for valid token', () {
-          // Create a valid JWT token (expires in 1 hour)
-          final futureTime = DateTime.now().add(const Duration(hours: 1));
-          final exp = (futureTime.millisecondsSinceEpoch / 1000).round();
-          // Create proper base64 encoded payload
-          final payloadJson =
-              '{"sub":"1234567890","name":"John Doe","iat":1516239022,"exp":$exp}';
-          final payload = base64Url.encode(utf8.encode(payloadJson));
-          const header = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9';
-          const signature = 'SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-          final validToken = '$header.$payload.$signature';
-          expect(AuthRepository.isAuthenticated(validToken), isTrue);
-        });
+    group('isAccessTokenExpired', () {
+      test('should return true for null token', () {
+        expect(authRepository.isAccessTokenExpired(null), isTrue);
       });
 
-      group('isAccessTokenExpired', () {
-        test('should return true for null token', () {
-          expect(AuthRepository.isAccessTokenExpired(null), isTrue);
-        });
+      test('should return true for invalid token format', () {
+        expect(authRepository.isAccessTokenExpired('invalid.token'), isTrue);
+      });
 
-        test('should return true for invalid token format', () {
-          expect(AuthRepository.isAccessTokenExpired('invalid.token'), isTrue);
-        });
+      test('should return true for expired token', () {
+        const expiredToken =
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+        expect(authRepository.isAccessTokenExpired(expiredToken), isTrue);
+      });
 
-        test('should return true for expired token', () {
-          const expiredToken =
-              'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-          expect(AuthRepository.isAccessTokenExpired(expiredToken), isTrue);
-        });
-
-        test('should return false for valid token', () {
-          final futureTime = DateTime.now().add(const Duration(hours: 1));
-          final exp = (futureTime.millisecondsSinceEpoch / 1000).round();
-          // Create proper base64 encoded payload
-          final payloadJson =
-              '{"sub":"1234567890","name":"John Doe","iat":1516239022,"exp":$exp}';
-          final payload = base64Url.encode(utf8.encode(payloadJson));
-          const header = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9';
-          const signature = 'SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-          final validToken = '$header.$payload.$signature';
-          expect(AuthRepository.isAccessTokenExpired(validToken), isFalse);
-        });
+      test('should return false for valid token', () {
+        final futureTime = DateTime.now().add(const Duration(hours: 1));
+        final exp = (futureTime.millisecondsSinceEpoch / 1000).round();
+        // Create proper base64 encoded payload
+        final payloadJson =
+            '{"sub":"1234567890","name":"John Doe","iat":1516239022,"exp":$exp}';
+        final payload = base64Url.encode(utf8.encode(payloadJson));
+        const header = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9';
+        const signature = 'SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+        final validToken = '$header.$payload.$signature';
+        expect(authRepository.isAccessTokenExpired(validToken), isFalse);
       });
     });
   });

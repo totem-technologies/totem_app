@@ -18,7 +18,7 @@ import 'package:totem_app/shared/logger.dart';
 
 final notificationsProvider = Provider<NotificationsService>((ref) {
   return NotificationsService.instance;
-});
+}, name: 'Notifications Provider');
 
 final class NotificationType {
   static const String circleStarting = 'circle_starting';

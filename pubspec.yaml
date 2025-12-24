@@ -27,7 +27,7 @@ dependencies:
 
   # Networking & Serialization
   dio: ^5.8.0+1
-  retrofit: ^4.4.2
+  retrofit: ^4.9.1
   json_annotation: ^4.9.0
   cached_network_image: ^3.4.1
   connectivity_plus: ^7.0.0
@@ -83,7 +83,7 @@ dev_dependencies:
   # Generators
   riverpod_generator: ^3.0.3
   swagger_parser: ^1.36.0
-  retrofit_generator: ^10.2.0
+  retrofit_generator: 10.2.0
   json_serializable: ^6.9.5
   build_runner: ^2.10.4
 
