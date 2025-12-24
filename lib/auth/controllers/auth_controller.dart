@@ -383,11 +383,24 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  /// Checks for existing authentication tokens and validates them.
+  ///
+  /// If valid, updates the auth state to authenticated.
+  ///
+  /// If the user is offline, relies on cached user data if available.
+  /// If no valid tokens or cached data, sets state to unauthenticated.
+  ///
+  /// If the user is online, attempts to validate or refresh the token with the
+  /// backend. Token refresh happens automatically in a middleware in the
+  /// repository layer if needed.
+  ///
+  /// Prevents concurrent executions using [_isCheckingExistingAuth] flag.
   var _isCheckingExistingAuth = false;
   Future<void> _checkExistingAuth() async {
     if (_isCheckingExistingAuth) return;
     _isCheckingExistingAuth = true;
     _setState(AuthState.loading());
+
     try {
       final connectivityResult = await Connectivity().checkConnectivity();
       final isOffline = connectivityResult.contains(ConnectivityResult.none);
@@ -395,51 +408,72 @@ class AuthController extends Notifier<AuthState> {
       final accessToken = await _secureStorage.read(
         key: AppConsts.accessTokenKey,
       );
+
       if (accessToken == null) {
-        logger.i('🔑 No access token found, setting state to unauthenticated');
+        logger.i('🔑 No token. Setting unauthenticated.');
         _setState(AuthState.unauthenticated());
         return;
       }
 
       final cachedUser = await ref.read(localStorageServiceProvider).getUser();
       if (cachedUser != null) {
-        logger.i('🔑 Offline mode: Using cached user data');
+        logger.i('🔑 Using cached user (Optimistic).');
         _setState(AuthState.authenticated(user: cachedUser));
       }
+
       if (isOffline) {
-        if (cachedUser == null) {
-          // If offline and no cached user, we have to assume unauthenticated
-          _setState(AuthState.unauthenticated());
-        }
+        if (cachedUser == null) _setState(AuthState.unauthenticated());
       } else {
-        await (() async {
-          logger.i('🔑 Online mode: Validating token with backend');
-          // If online, proceed with the network call
-          final user = await _authRepository.currentUser;
-          await ref.read(localStorageServiceProvider).saveUser(user);
-          _setState(AuthState.authenticated(user: user));
-          unawaited(_analyticsService.setUserId(user));
-          await _updateFCMToken();
-        })().timeout(
-          const Duration(seconds: 20),
-          onTimeout: () async {
-            // TODO(bdlukaa): Revisit this to see if we can handle this better.
-            logger.i(
-              '🔑 Token validation timed out, skipping token validation',
-            );
-          },
-        );
+        await _validateTokenOnline(cachedUser);
       }
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        reason: 'Error checking existing auth',
+        reason: 'Auth Check Failed',
       );
       await _clearTokens();
       _setState(AuthState.unauthenticated());
     } finally {
       _isCheckingExistingAuth = false;
+    }
+  }
+
+  Future<void> _validateTokenOnline(UserSchema? cachedUser) async {
+    bool timedOut = false;
+
+    try {
+      logger.i('🔑 Validating token with backend...');
+
+      await (() async {
+        final user = await _authRepository.currentUser;
+
+        // If we timed out while waiting for this, DO NOT update state to avoid
+        // overwriting with potentially stale data.
+        //
+        // This is necessary because time [timout] helper doesn't cancel the
+        // operation.
+        if (timedOut) return;
+
+        await ref.read(localStorageServiceProvider).saveUser(user);
+        _setState(AuthState.authenticated(user: user));
+
+        unawaited(_analyticsService.setUserId(user));
+        await _updateFCMToken();
+      })().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          timedOut = true;
+          logger.w('🔑 Validation timed out. Staying in current state.');
+          // If we have a cached user, we just stay authenticated (Soft Fail).
+          // If we don't, we might want to force unauthenticated here.
+          if (cachedUser == null) {
+            throw AppAuthException.timeout();
+          }
+        },
+      );
+    } catch (e) {
+      rethrow;
     }
   }
 
