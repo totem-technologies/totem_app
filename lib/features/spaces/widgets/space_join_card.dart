@@ -180,6 +180,9 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                   ],
                 ),
               ),
+              const SizedBox(
+                width: 10,
+              ),
               ConstrainedBox(
                 constraints: const BoxConstraints(minWidth: 115),
                 child: Link(
@@ -205,7 +208,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                       return SizedBox(
                         height: 46,
                         child: Row(
-                          spacing: 14,
+                          spacing: 8,
                           children: [
                             Tooltip(
                               message: 'Add to calendar',
@@ -222,7 +225,16 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                               message: 'Give up your spot',
                               child: OutlinedButton(
                                 onPressed: _loading ? null : giveUpSpot,
-                                style: secondaryButtonStyle,
+                                style: secondaryButtonStyle.copyWith(
+                                  maximumSize: const WidgetStatePropertyAll(
+                                    Size.infinite,
+                                  ),
+                                  padding: const WidgetStatePropertyAll(
+                                    EdgeInsetsDirectional.symmetric(
+                                      horizontal: 10,
+                                    ),
+                                  ),
+                                ),
                                 child: _loading
                                     ? const LoadingIndicator(size: 24)
                                     : const Row(
@@ -232,6 +244,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                                             TotemIcons.giveUpSpot,
                                             size: 24,
                                           ),
+                                          SizedBox(width: 8),
                                           Text('Give up spot'),
                                         ],
                                       ),
