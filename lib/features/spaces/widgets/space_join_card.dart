@@ -225,9 +225,15 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                                 style: secondaryButtonStyle,
                                 child: _loading
                                     ? const LoadingIndicator(size: 24)
-                                    : const TotemIcon(
-                                        TotemIcons.giveUpSpot,
-                                        size: 24,
+                                    : const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          TotemIcon(
+                                            TotemIcons.giveUpSpot,
+                                            size: 24,
+                                          ),
+                                          Text('Give up spot'),
+                                        ],
                                       ),
                               ),
                             ),
