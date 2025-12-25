@@ -18,6 +18,8 @@ Future<void> showProfileImagePicker(BuildContext context) async {
   return showModalBottomSheet(
     context: context,
     showDragHandle: true,
+    useSafeArea: true,
+    useRootNavigator: true,
     builder: (context) => const ProfileImagePicker(),
   );
 }
