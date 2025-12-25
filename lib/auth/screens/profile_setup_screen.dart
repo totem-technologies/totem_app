@@ -35,6 +35,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final Set<String> _selectedTopics = <String>{};
   ReferralChoices? _referralSource;
   bool _isLoading = false;
+  bool _newsletterConsent = false;
 
   @override
   void dispose() {
@@ -73,6 +74,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             referralSource: _referralSource,
             interestTopics: _selectedTopics,
             age: int.tryParse(_ageController.text.trim()),
+            newsletterConsent: _newsletterConsent,
           );
       await _nextPage();
     } catch (error, stackTrace) {
@@ -117,6 +119,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             onReferralSourceSelected: (source) =>
                 setState(() => _referralSource = source),
             referralSource: _referralSource,
+            newsletterConsent: _newsletterConsent,
+            onNewsletterConsentChanged: (consent) =>
+                setState(() => _newsletterConsent = consent),
             onContinue: () async {
               FocusScope.of(context).unfocus();
               if (_formKeyTab1.currentState!.validate()) {
@@ -261,7 +266,10 @@ class _ProfileTab extends StatefulWidget {
     required this.onContinue,
     required this.onReferralSourceSelected,
     required this.referralSource,
+    required this.newsletterConsent,
+    required this.onNewsletterConsentChanged,
   });
+
   final GlobalKey<FormState> formKey;
   final TextEditingController firstNameController;
   final TextEditingController ageController;
@@ -269,6 +277,9 @@ class _ProfileTab extends StatefulWidget {
   final VoidCallback onContinue;
   final ValueChanged<ReferralChoices> onReferralSourceSelected;
   final ReferralChoices? referralSource;
+  final bool newsletterConsent;
+  final ValueChanged<bool> onNewsletterConsentChanged;
+
   @override
   State<_ProfileTab> createState() => _ProfileTabState();
 }
@@ -433,6 +444,29 @@ class _ProfileTabState extends State<_ProfileTab>
         const InfoText(
           'This helps us understand how to reach more people like you.',
         ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Checkbox(
+              value: widget.newsletterConsent,
+              onChanged: (_) {
+                widget.onNewsletterConsentChanged(!widget.newsletterConsent);
+              },
+            ),
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  widget.onNewsletterConsentChanged(!widget.newsletterConsent);
+                },
+                child: Text(
+                  'Receive Totem Updates and Spaces announcements.',
+                  style: theme.textTheme.bodySmall,
+                  textAlign: TextAlign.start,
+                ),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 20),
         ElevatedButton(
           onPressed: widget.isLoading ? null : widget.onContinue,
@@ -579,11 +613,12 @@ class _SuggestionsTab extends ConsumerWidget {
               children: [
                 const InfoText('Couldn’t load suggestions.'),
                 const SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: () => ref.refresh(
-                    getRecommendedSessionsProvider(topicsKey).future,
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: onSeeAllSpaces,
+                    child: const Text('See all'),
                   ),
-                  child: const Text('Retry'),
                 ),
               ],
             );
