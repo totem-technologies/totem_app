@@ -70,7 +70,7 @@ class BlogPostCard extends StatelessWidget {
           image: DecorationImage(
             image: image == null || image!.isEmpty
                 ? const AssetImage(TotemAssets.genericBackground)
-                : CachedNetworkImageProvider(image!),
+                : CachedNetworkImageProvider(getFullUrl(image!)),
             fit: BoxFit.cover,
           ),
           borderRadius: BorderRadius.circular(20),

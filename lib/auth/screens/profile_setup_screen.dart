@@ -319,7 +319,7 @@ class _ProfileTabState extends State<_ProfileTab>
         ),
         const SizedBox(height: 8),
         Text(
-          'We just to know more about you. some final question and you’ll be '
+          'We just to know more about you. Some final question and you’ll be '
           'good to go.',
           style: theme.textTheme.bodyMedium,
           textAlign: TextAlign.center,
@@ -459,7 +459,7 @@ class _ProfileTabState extends State<_ProfileTab>
                   widget.onNewsletterConsentChanged(!widget.newsletterConsent);
                 },
                 child: Text(
-                  'Receive Totem Updates and Spaces announcements.',
+                  'I want to receive Totem Updates and Spaces Announcements.',
                   style: theme.textTheme.bodySmall,
                   textAlign: TextAlign.start,
                 ),
