@@ -67,7 +67,7 @@
             android:name="de.julianassmann.flutter_background.IsolateHolderService"
             android:exported="false"
             android:enabled="true"
-            android:foregroundServiceType="microphone|mediaPlayback."
+            android:foregroundServiceType="microphone|mediaPlayback"
         />
         <!-- android:foregroundServiceType="microphone|mediaPlayback|camera." -->
 

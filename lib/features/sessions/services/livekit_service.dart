@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_background/flutter_background.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage, logger;
 import 'package:livekit_components/livekit_components.dart';
@@ -16,6 +18,7 @@ import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/logger.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -171,14 +174,16 @@ class LiveKitService extends _$LiveKitService {
     room.addListener(_onRoomChanges);
 
     unawaited(WakelockPlus.enable());
+    unawaited(setupBackgroundMode());
 
     ref.onDispose(() {
       logger.d('Disposing LiveKitService and closing connections.');
+      unawaited(endBackgroundMode());
+      unawaited(WakelockPlus.disable());
       _keeperDisconnectedTimer?.cancel();
       _keeperDisconnectedTimer = null;
       unawaited(_listener.dispose());
       room.removeListener(_onRoomChanges);
-      unawaited(WakelockPlus.disable());
     });
 
     return const LiveKitState();
@@ -296,5 +301,52 @@ class LiveKitService extends _$LiveKitService {
       userSlug = currentUserSlug;
     }
     return _options.keeperSlug == userSlug;
+  }
+
+  bool canEnableBackgroundMode() => !kIsWeb && Platform.isAndroid;
+
+  Future<void> setupBackgroundMode([bool isRetry = false]) async {
+    if (canEnableBackgroundMode()) {
+      try {
+        bool hasPermissions = await FlutterBackground.hasPermissions;
+        final event = await ref.read(
+          eventProvider(_options.eventSlug).future,
+        );
+        final androidConfig = FlutterBackgroundAndroidConfig(
+          notificationTitle: 'Totem Session',
+          notificationText: event.title,
+          notificationImportance: AndroidNotificationImportance.high,
+          notificationIcon: const AndroidResource(
+            name: 'ic_launcher',
+            defType: 'mipmap',
+          ),
+        );
+        hasPermissions = await FlutterBackground.initialize(
+          androidConfig: androidConfig,
+        );
+        if (hasPermissions && !FlutterBackground.isBackgroundExecutionEnabled) {
+          await FlutterBackground.enableBackgroundExecution();
+        }
+      } catch (error, stackTrace) {
+        if (!isRetry) {
+          return Future<void>.delayed(
+            const Duration(seconds: 3),
+            () => setupBackgroundMode(true),
+          );
+        }
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Could not setup background mode for LiveKit session',
+        );
+      }
+    }
+  }
+
+  Future<void> endBackgroundMode() async {
+    if (canEnableBackgroundMode()) {
+      await FlutterBackground.disableBackgroundExecution();
+      logger.i('Android Platform endBackgroundMode');
+    }
   }
 }
