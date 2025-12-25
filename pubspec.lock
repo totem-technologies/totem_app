@@ -535,7 +535,7 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_background:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_background
       sha256: "8dad66e3102da2b4046cc3adcf70625578809827170bd78e36e5890c074287d2"
