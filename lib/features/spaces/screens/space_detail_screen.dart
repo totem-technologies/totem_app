@@ -110,9 +110,10 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                         ),
                         leading: CircleIconButton(
                           margin: const EdgeInsetsDirectional.only(start: 20),
-                          icon: Icon(Icons.adaptive.arrow_back),
+                          icon: TotemIcons.arrowBack,
                           onPressed: () => popOrHome(context),
                         ),
+                        leadingWidth: 50,
                         actionsPadding: const EdgeInsetsDirectional.only(
                           end: 20,
                         ),
@@ -120,7 +121,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                           Builder(
                             builder: (context) {
                               return CircleIconButton(
-                                icon: Icon(Icons.adaptive.share),
+                                icon: TotemIcons.share,
                                 onPressed: () async {
                                   final box =
                                       context.findRenderObject() as RenderBox?;

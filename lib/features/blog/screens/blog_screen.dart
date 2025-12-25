@@ -13,6 +13,8 @@ import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/html.dart';
 import 'package:totem_app/shared/routing.dart';
+import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/circle_icon_button.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
@@ -49,57 +51,31 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                     elevation: 0,
                     automaticallyImplyLeading: false,
                     backgroundColor: const Color(0xffFCEFE4),
-                    leading: Container(
-                      height: 36,
-                      width: 36,
-                      margin: const EdgeInsetsDirectional.only(start: 20),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: AlignmentDirectional.center,
-                      child: IconButton(
-                        padding: const EdgeInsetsDirectional.only(start: 5),
-                        alignment: AlignmentDirectional.center,
-                        icon: Icon(Icons.adaptive.arrow_back, size: 20),
-                        iconSize: 20,
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () => popOrHome(context),
-                      ),
+                    leading: CircleIconButton(
+                      margin: const EdgeInsets.only(left: 20),
+                      icon: TotemIcons.arrowBack,
+                      onPressed: () => popOrHome(context),
                     ),
+                    leadingWidth: 50,
                     actionsPadding: const EdgeInsetsDirectional.only(end: 20),
                     actions: [
-                      Container(
-                        height: 36,
-                        width: 36,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: AlignmentDirectional.center,
-                        child: IconButton(
-                          alignment: AlignmentDirectional.center,
-                          padding: EdgeInsetsDirectional.zero,
-                          icon: Icon(Icons.adaptive.share),
-                          iconSize: 20,
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () async {
-                            final box =
-                                context.findRenderObject() as RenderBox?;
-                            await SharePlus.instance.share(
-                              ShareParams(
-                                uri: Uri.parse(AppConfig.mobileApiUrl)
-                                    .resolve('/blog/${blog.slug}')
-                                    .resolve(
-                                      '?utm_source=app&utm_medium=share',
-                                    ),
-                                sharePositionOrigin: box != null
-                                    ? box.localToGlobal(Offset.zero) & box.size
-                                    : null,
-                              ),
-                            );
-                          },
-                        ),
+                      CircleIconButton(
+                        icon: TotemIcons.share,
+                        onPressed: () async {
+                          final box = context.findRenderObject() as RenderBox?;
+                          await SharePlus.instance.share(
+                            ShareParams(
+                              uri: Uri.parse(AppConfig.mobileApiUrl)
+                                  .resolve('/blog/${blog.slug}')
+                                  .resolve(
+                                    '?utm_source=app&utm_medium=share',
+                                  ),
+                              sharePositionOrigin: box != null
+                                  ? box.localToGlobal(Offset.zero) & box.size
+                                  : null,
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
