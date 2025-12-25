@@ -6,6 +6,7 @@ import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/date.dart';
+import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/utils.dart';
 
 /// Card used in Suggestions tab, built from EventDetailSchema.
@@ -154,7 +155,7 @@ class SuggestedSpaceCard extends StatelessWidget {
                               if (profileImage != null &&
                                   profileImage.isNotEmpty) {
                                 return CachedNetworkImage(
-                                  imageUrl: profileImage,
+                                  imageUrl: getFullUrl(profileImage),
                                   fit: BoxFit.cover,
                                   width: 25,
                                   height: 25,

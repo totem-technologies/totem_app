@@ -6,6 +6,7 @@ import 'package:totem_app/api/models/blog_post_list_schema.dart';
 import 'package:totem_app/features/blog/widgets/badge.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
+import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class BlogPostCard extends StatelessWidget {
@@ -160,8 +161,7 @@ class BlogPostCard extends StatelessWidget {
                         child: UserAvatar(
                           image: authorImageUrl != null
                               ? CachedNetworkImageProvider(
-                                  authorImageUrl!,
-                                  cacheKey: slug,
+                                  getFullUrl(authorImageUrl!),
                                 )
                               : null,
                           seed: authorImageSeed,

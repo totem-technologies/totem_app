@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:totem_app/api/models/profile_avatar_type_enum.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
@@ -142,7 +143,9 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                                                   )
                                                 : user?.profileImage != null
                                                 ? CachedNetworkImageProvider(
-                                                    user!.profileImage!,
+                                                    getFullUrl(
+                                                      user!.profileImage!,
+                                                    ),
                                                   )
                                                 : null;
                                           }
