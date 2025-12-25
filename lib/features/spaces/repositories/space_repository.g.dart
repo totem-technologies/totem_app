@@ -244,7 +244,7 @@ final class ListSubscribedSpacesProvider
 }
 
 String _$listSubscribedSpacesHash() =>
-    r'cf92315616e0fa0d0305f49c6f6e5a5393317519';
+    r'baae7be4fea49ea1fbd6af85674d2853102c11ac';
 
 @ProviderFor(subscribeToSpace)
 const subscribeToSpaceProvider = SubscribeToSpaceFamily._();
