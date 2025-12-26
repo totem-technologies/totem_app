@@ -23,6 +23,7 @@ import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
+import 'package:totem_app/features/sessions/widgets/protection_overlay.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -253,7 +254,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                   onDidRemovePage: (page) => {},
                   pages: [
                     MaterialPage(
-                      child: _buildBody(event, sessionNotifier, sessionState),
+                      child: RepaintBoundary(
+                        child: _buildBody(event, sessionNotifier, sessionState),
+                      ),
                     ),
                   ],
                 );
@@ -300,22 +303,26 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             );
           }
 
-          return MyTurn(
-            actionBar: buildActionBar(notifier, state, event),
-            getParticipantKey: getParticipantKey,
-            onPassTotem: notifier.passTotem,
-            sessionState: state.sessionState,
-            event: event,
-            emojis: _reactions,
+          return ProtectionOverlay(
+            child: MyTurn(
+              actionBar: buildActionBar(notifier, state, event),
+              getParticipantKey: getParticipantKey,
+              onPassTotem: notifier.passTotem,
+              sessionState: state.sessionState,
+              event: event,
+              emojis: _reactions,
+            ),
           );
         } else {
-          return NotMyTurn(
-            actionBar: buildActionBar(notifier, state, event),
-            getParticipantKey: getParticipantKey,
-            sessionState: state.sessionState,
-            session: notifier,
-            event: event,
-            emojis: _reactions,
+          return ProtectionOverlay(
+            child: NotMyTurn(
+              actionBar: buildActionBar(notifier, state, event),
+              getParticipantKey: getParticipantKey,
+              sessionState: state.sessionState,
+              session: notifier,
+              event: event,
+              emojis: _reactions,
+            ),
           );
         }
     }

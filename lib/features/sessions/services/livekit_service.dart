@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage, logger;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/session_state.dart';
 import 'package:totem_app/api/models/totem_status.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
@@ -16,6 +20,7 @@ import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/logger.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -23,6 +28,7 @@ export 'package:totem_app/api/models/session_state.dart';
 export 'package:totem_app/api/models/session_status.dart';
 export 'package:totem_app/features/sessions/services/utils.dart';
 
+part 'background_control.dart';
 part 'devices_control.dart';
 part 'keeper_control.dart';
 part 'livekit_service.g.dart';
@@ -134,6 +140,8 @@ class LiveKitService extends _$LiveKitService {
   late final SessionOptions _options;
   String? _lastMetadata;
 
+  Timer? _timer;
+
   @override
   LiveKitState build(SessionOptions options) {
     _options = options;
@@ -171,14 +179,18 @@ class LiveKitService extends _$LiveKitService {
     room.addListener(_onRoomChanges);
 
     unawaited(WakelockPlus.enable());
+    unawaited(setupBackgroundMode());
 
     ref.onDispose(() {
       logger.d('Disposing LiveKitService and closing connections.');
+      unawaited(endBackgroundMode());
+      unawaited(WakelockPlus.disable());
       _keeperDisconnectedTimer?.cancel();
       _keeperDisconnectedTimer = null;
+      _timer?.cancel();
+      _timer = null;
       unawaited(_listener.dispose());
       room.removeListener(_onRoomChanges);
-      unawaited(WakelockPlus.disable());
     });
 
     return const LiveKitState();
@@ -297,4 +309,8 @@ class LiveKitService extends _$LiveKitService {
     }
     return _options.keeperSlug == userSlug;
   }
+
+  // ignore: avoid_public_notifier_properties
+  Future<EventDetailSchema> get event =>
+      ref.read(eventProvider(_options.eventSlug).future);
 }
