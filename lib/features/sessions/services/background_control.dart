@@ -1,9 +1,9 @@
 part of 'livekit_service.dart';
 
-extension on LiveKitService {
+extension BackgroundControl on LiveKitService {
   Future<void> setupBackgroundMode() async {
     try {
-      await _requestPermissions();
+      await requestPermissions();
       FlutterForegroundTask.init(
         androidNotificationOptions: AndroidNotificationOptions(
           channelId: 'totem_session',
@@ -41,15 +41,15 @@ extension on LiveKitService {
       ],
     );
 
+    final event = await this.event;
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      unawaited(_updateNotification());
+      unawaited(_updateNotification(event));
     });
   }
 
-  Future<void> _updateNotification() async {
+  Future<void> _updateNotification(EventDetailSchema event) async {
     try {
-      final event = await this.event;
       final startTime = event.start;
       final duration = DateTime.now().difference(startTime);
       final formattedTime = DateFormat(
@@ -68,32 +68,43 @@ extension on LiveKitService {
   Future<void> endBackgroundMode() async {
     try {
       _timer?.cancel();
+      _timer = null;
       await FlutterForegroundTask.stopService();
     } catch (_) {
       // fine if fail
     }
   }
 
-  Future<void> _requestPermissions() async {
+  static Future<bool> requestPermissions() async {
     // Android 13+, it's needed to allow notification permission to display
     // foreground service notification.
     //
     // iOS: If you need notification, ask for permission.
-    final notificationPermission =
+    var notificationPermission =
         await FlutterForegroundTask.checkNotificationPermission();
     if (notificationPermission != NotificationPermission.granted) {
-      await FlutterForegroundTask.requestNotificationPermission();
+      notificationPermission =
+          await FlutterForegroundTask.requestNotificationPermission();
     }
 
+    if (notificationPermission != NotificationPermission.granted) {
+      return false;
+    }
+
+    // TODO(bdlukaa): Make a beautiful UI asking for permission
     if (Platform.isAndroid) {
       // Android 12+, there are restrictions on starting a foreground service.
       //
       // To restart the service on device reboot or unexpected problem, you need
       // to allow below permission.
       if (!await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
+        // https://developer.android.com/reference/android/provider/Settings#ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
         // This function requires `android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` permission.
-        await FlutterForegroundTask.requestIgnoreBatteryOptimization();
+        final granted =
+            await FlutterForegroundTask.requestIgnoreBatteryOptimization();
+        return granted;
       }
     }
+    return true;
   }
 }
