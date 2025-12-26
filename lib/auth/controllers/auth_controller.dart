@@ -86,14 +86,14 @@ class AuthController extends Notifier<AuthState> {
     );
   }
 
-  Future<void> requestPin(String email, bool newsletterConsent) async {
+  Future<void> requestPin(String email) async {
     _setState(AuthState.loading());
     try {
-      await _authRepository.requestPin(email, newsletterConsent);
+      await _authRepository.requestPin(email, false);
       _setState(AuthState.awaitingVerification(email: email));
       _analyticsService.logEvent(
         'pin_requested',
-        parameters: {'email': email, 'newsletterConsent': newsletterConsent},
+        parameters: {'email': email},
       );
     } catch (error, stackTrace) {
       _handleAuthError(error, stackTrace);
@@ -137,6 +137,7 @@ class AuthController extends Notifier<AuthState> {
     required int? age,
     required ReferralChoices? referralSource,
     required Set<String> interestTopics,
+    required bool newsletterConsent,
   }) async {
     if (!isAuthenticated || state.user == null) {
       _setState(AuthState.error('User not authenticated for onboarding.'));
@@ -149,6 +150,7 @@ class AuthController extends Notifier<AuthState> {
     try {
       final updatedUser = await _authRepository.updateCurrentUserProfile(
         name: firstName,
+        newsletterConsent: newsletterConsent,
       );
 
       unawaited(

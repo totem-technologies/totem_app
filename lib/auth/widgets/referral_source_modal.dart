@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:totem_app/api/models/referral_choices.dart';
 import 'package:totem_app/shared/widgets/card_screen.dart';
 
-extension on ReferralChoices {
+extension ReferralChoicesNames on ReferralChoices {
   String get name {
     return switch (this) {
       ReferralChoices.blog => 'Blog or Article',

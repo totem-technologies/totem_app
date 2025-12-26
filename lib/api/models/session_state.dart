@@ -15,6 +15,7 @@ class SessionState {
     required this.keeperSlug,
     required this.speakingOrder,
     this.speakingNow,
+    this.nextSpeaker,
     this.status = SessionStatus.waiting,
     this.totemStatus = TotemStatus.none,
   });
@@ -29,6 +30,8 @@ class SessionState {
   final List<String> speakingOrder;
   @JsonKey(name: 'speaking_now')
   final String? speakingNow;
+  @JsonKey(name: 'next_speaker')
+  final String? nextSpeaker;
   @JsonKey(name: 'totem_status')
   final TotemStatus totemStatus;
 
