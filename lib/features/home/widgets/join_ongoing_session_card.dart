@@ -38,7 +38,7 @@ class JoinOngoingSessionCard extends ConsumerWidget {
       (previous, next) async {
         if (previous != next && next != null) {
           final navigator = Navigator.of(context);
-          if (!navigator.canPop()) {
+          if (navigator.mounted && !navigator.canPop()) {
             return showOngoingSessionSheet(context, next);
           }
         }

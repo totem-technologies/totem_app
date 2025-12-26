@@ -4,12 +4,14 @@ import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_background/flutter_background.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage, logger;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/session_state.dart';
 import 'package:totem_app/api/models/totem_status.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
@@ -26,6 +28,7 @@ export 'package:totem_app/api/models/session_state.dart';
 export 'package:totem_app/api/models/session_status.dart';
 export 'package:totem_app/features/sessions/services/utils.dart';
 
+part 'background_control.dart';
 part 'devices_control.dart';
 part 'keeper_control.dart';
 part 'livekit_service.g.dart';
@@ -137,6 +140,8 @@ class LiveKitService extends _$LiveKitService {
   late final SessionOptions _options;
   String? _lastMetadata;
 
+  Timer? _timer;
+
   @override
   LiveKitState build(SessionOptions options) {
     _options = options;
@@ -182,6 +187,8 @@ class LiveKitService extends _$LiveKitService {
       unawaited(WakelockPlus.disable());
       _keeperDisconnectedTimer?.cancel();
       _keeperDisconnectedTimer = null;
+      _timer?.cancel();
+      _timer = null;
       unawaited(_listener.dispose());
       room.removeListener(_onRoomChanges);
     });
@@ -303,50 +310,7 @@ class LiveKitService extends _$LiveKitService {
     return _options.keeperSlug == userSlug;
   }
 
-  bool canEnableBackgroundMode() => !kIsWeb && Platform.isAndroid;
-
-  Future<void> setupBackgroundMode([bool isRetry = false]) async {
-    if (canEnableBackgroundMode()) {
-      try {
-        bool hasPermissions = await FlutterBackground.hasPermissions;
-        final event = await ref.read(
-          eventProvider(_options.eventSlug).future,
-        );
-        final androidConfig = FlutterBackgroundAndroidConfig(
-          notificationTitle: 'Totem Session',
-          notificationText: event.title,
-          notificationImportance: AndroidNotificationImportance.high,
-          notificationIcon: const AndroidResource(
-            name: 'ic_launcher',
-            defType: 'mipmap',
-          ),
-        );
-        hasPermissions = await FlutterBackground.initialize(
-          androidConfig: androidConfig,
-        );
-        if (hasPermissions && !FlutterBackground.isBackgroundExecutionEnabled) {
-          await FlutterBackground.enableBackgroundExecution();
-        }
-      } catch (error, stackTrace) {
-        if (!isRetry) {
-          return Future<void>.delayed(
-            const Duration(seconds: 3),
-            () => setupBackgroundMode(true),
-          );
-        }
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Could not setup background mode for LiveKit session',
-        );
-      }
-    }
-  }
-
-  Future<void> endBackgroundMode() async {
-    if (canEnableBackgroundMode()) {
-      await FlutterBackground.disableBackgroundExecution();
-      logger.i('Android Platform endBackgroundMode');
-    }
-  }
+  // ignore: avoid_public_notifier_properties
+  Future<EventDetailSchema> get event =>
+      ref.read(eventProvider(_options.eventSlug).future);
 }
