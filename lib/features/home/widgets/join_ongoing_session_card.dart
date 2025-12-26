@@ -11,6 +11,8 @@ import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
+final _shownSheetFor = <String>[];
+
 class JoinOngoingSessionCard extends ConsumerWidget {
   const JoinOngoingSessionCard({super.key});
 
@@ -37,8 +39,10 @@ class JoinOngoingSessionCard extends ConsumerWidget {
       ongoingEventProvider,
       (previous, next) async {
         if (previous != next && next != null) {
+          if (_shownSheetFor.contains(next.slug)) return;
           final navigator = Navigator.of(context);
           if (navigator.mounted && !navigator.canPop()) {
+            _shownSheetFor.add(next.slug);
             return showOngoingSessionSheet(context, next);
           }
         }
