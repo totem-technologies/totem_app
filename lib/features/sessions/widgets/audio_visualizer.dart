@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart' as sdk;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:provider/provider.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 
 enum VisualizerState { thinking, listening, active }
 
@@ -148,62 +149,78 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   }
 
   Future<void> _attachListeners() async {
-    if (widget.participant != null) {
-      _participantListener = widget.participant!.createListener();
-      _participantListener?.on<sdk.TrackMutedEvent>((e) {
-        if (!mounted) return;
-        setState(() {
-          samples = List.filled(widget.options.barCount, 0);
-        });
-      });
-
-      // If participant is agent, listen to agent state changes
-      if (widget.participant?.kind == sdk.ParticipantKind.AGENT) {
-        _participantListener?.on<sdk.ParticipantAttributesChanged>((e) {
+    try {
+      if (widget.participant != null) {
+        _participantListener = widget.participant!.createListener();
+        _participantListener?.on<sdk.TrackMutedEvent>((e) {
           if (!mounted) return;
-          final agentAttributes = sdk.AgentAttributes.fromJson(e.attributes);
           setState(() {
-            _agentState =
-                agentAttributes.lkAgentState ?? sdk.AgentState.initializing;
+            samples = List.filled(widget.options.barCount, 0);
           });
         });
+
+        // If participant is agent, listen to agent state changes
+        if (widget.participant?.kind == sdk.ParticipantKind.AGENT) {
+          _participantListener?.on<sdk.ParticipantAttributesChanged>((e) {
+            if (!mounted) return;
+            final agentAttributes = sdk.AgentAttributes.fromJson(e.attributes);
+            setState(() {
+              _agentState =
+                  agentAttributes.lkAgentState ?? sdk.AgentState.initializing;
+            });
+          });
+        }
       }
-    }
 
-    if (widget.audioTrack != null) {
-      _visualizer = sdk.createVisualizer(
-        widget.audioTrack!,
-        options: sdk.AudioVisualizerOptions(
-          barCount: widget.options.barCount,
-          centeredBands: widget.options.centeredBands,
-        ),
-      );
-      _visualizerListener = _visualizer?.createListener();
-      _visualizerListener?.on<sdk.AudioVisualizerEvent>((element) {
-        if (!mounted) return;
-        setState(() {
-          samples = element.event
-              .where((event) => event != null && event is num)
-              .map((event) => (event! as num).toDouble())
-              .toList();
+      if (widget.audioTrack != null) {
+        _visualizer = sdk.createVisualizer(
+          widget.audioTrack!,
+          options: sdk.AudioVisualizerOptions(
+            barCount: widget.options.barCount,
+            centeredBands: widget.options.centeredBands,
+          ),
+        );
+        _visualizerListener = _visualizer?.createListener();
+        _visualizerListener?.on<sdk.AudioVisualizerEvent>((element) {
+          if (!mounted) return;
+          setState(() {
+            samples = element.event
+                .where((event) => event != null && event is num)
+                .map((event) => (event! as num).toDouble())
+                .toList();
+          });
         });
-      });
 
-      await _visualizer!.start();
+        await _visualizer!.start();
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to attach audio visualizer listeners',
+      );
     }
   }
 
   Future<void> _detachListeners() async {
-    if (_visualizer != null) {
-      await _visualizer?.stop();
-      await _visualizer?.dispose();
-      _visualizer = null;
-    }
+    try {
+      if (_visualizer != null) {
+        await _visualizer?.stop();
+        await _visualizer?.dispose();
+        _visualizer = null;
+      }
 
-    await _visualizerListener?.dispose();
-    _visualizerListener = null;
-    await _participantListener?.dispose();
-    _participantListener = null;
+      await _visualizerListener?.dispose();
+      _visualizerListener = null;
+      await _participantListener?.dispose();
+      _participantListener = null;
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to dettach audio visualizer listeners',
+      );
+    }
   }
 
   @override
