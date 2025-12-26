@@ -11,7 +11,8 @@ import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
-final _shownSheetFor = <String>[];
+/// Keeps track of shown sheets to avoid showing multiple times in a row.
+final _shownSheetFor = <String>{};
 
 class JoinOngoingSessionCard extends ConsumerWidget {
   const JoinOngoingSessionCard({super.key});
@@ -43,6 +44,9 @@ class JoinOngoingSessionCard extends ConsumerWidget {
           final navigator = Navigator.of(context);
           if (navigator.mounted && !navigator.canPop()) {
             _shownSheetFor.add(next.slug);
+            if (_shownSheetFor.length > 10) {
+              _shownSheetFor.remove(_shownSheetFor.first);
+            }
             return showOngoingSessionSheet(context, next);
           }
         }
