@@ -21,7 +21,7 @@ dependencies:
   # Environment and Storage
   flutter_dotenv: ^6.0.0
   # flutter_secure_storage: ^10.0.0-beta.4
-  flutter_secure_storage: ^9.2.4
+  flutter_secure_storage: ^10.0.0
   logger: ^2.6.0
   shared_preferences: ^2.5.3
 
@@ -84,7 +84,7 @@ dev_dependencies:
   # Generators
   riverpod_generator: ^3.0.3
   swagger_parser: ^1.36.0
-  retrofit_generator: 10.2.0
+  retrofit_generator: ^10.2.1
   json_serializable: ^6.9.5
   build_runner: ^2.10.4
 
