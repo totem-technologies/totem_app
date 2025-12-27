@@ -90,6 +90,7 @@ dev_dependencies:
 
   # App Icon and Splash Screens
   flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.7
 
 dependency_overrides:
   # TODO: Remove this override when livekit supports latest protobuf
@@ -106,7 +107,7 @@ flutter:
 
 flutter_launcher_icons:
   android: true
-  ios: true
+  ios: false
   image_path: "assets/logo/ig_logo.jpg"
   min_sdk_android: 21 # android min sdk min:16, default 21
 
@@ -120,61 +121,17 @@ flutter_launcher_icons:
   # background_color_ios: "#F4DC92" # yellow
 
   web:
-    generate: true
+    generate: false
     image_path: "assets/logo/logo-square-black-512.png"
     background_color: "#FFF4DC92" # yellow
     theme_color: "#FF987AA5" # purple
 
 flutter_native_splash:
-  # This package generates native code to customize Flutter's default white native splash screen
-  # with background color and splash image.
-  # Customize the parameters below, and run the following command in the terminal:
   # dart run flutter_native_splash:create
-  # To restore Flutter's default white splash screen, run the following command in the terminal:
-  # dart run flutter_native_splash:remove
+  background_image: "assets/images/splash_bg.png"
 
-  # IMPORTANT NOTE: These parameter do not affect the configuration of Android 12 and later, which
-  # handle splash screens differently that prior versions of Android.  Android 12 and later must be
-  # configured specifically in the android_12 section below.
-
-  # color or background_image is the only required parameter.  Use color to set the background
-  # of your splash screen to a solid color.  Use background_image to set the background of your
-  # splash screen to a png image.  This is useful for gradients. The image will be stretch to the
-  # size of the app. Only one parameter can be used, color and background_image cannot both be set.
-  color: "#F4DC92" # yellow
-  #background_image: "assets/background.png"
-
-  # Optional parameters are listed below.  To enable a parameter, uncomment the line by removing
-  # the leading # character.
-
-  # The image parameter allows you to specify an image used in the splash screen.  It must be a
-  # png file and should be sized for 4x pixel density.
   image: "assets/logo/Icon_black_square.png"
 
-  # The branding property allows you to specify an image used as branding in the splash screen.
-  # It must be a png file. It is supported for Android, iOS and the Web.  For Android 12,
-  # see the Android 12 section below.
-  branding: "assets/logo/logo-black.png"
-
-  # To position the branding image at the bottom of the screen you can use bottom, bottomRight,
-  # and bottomLeft. The default values is bottom if not specified or specified something else.
-  #branding_mode: bottom
-
-  # Set the branding padding from the bottom of the screen.  The default value is 0
-  # (Not supported on web yet)
-  # branding_bottom_padding: 24
-
-  # The color_dark, background_image_dark, image_dark, branding_dark are parameters that set the background
-  # and image when the device is in dark mode. If they are not specified, the app will use the
-  # parameters from above.  If there is no parameter above, the app will use the light mode values.
-  # If the image_dark parameter is specified, color_dark or background_image_dark must be specified.
-  # color_dark and background_image_dark cannot both be set.
-  #color_dark: "#262F37" # slate
-  #background_image_dark: "assets/dark-background.png"
-  #image_dark: assets/logo/logoB&W.png
-  #branding_dark: assets/dart_dark.png
-
-  # From Android 12 onwards, the splash screen is handled differently than in previous versions.
   # Please visit https://developer.android.com/guide/topics/ui/splash-screen
   # Following are specific parameters for Android 12+.
   android_12:
@@ -196,7 +153,7 @@ flutter_native_splash:
     #icon_background_color: "#111111"
 
     # The branding property allows you to specify an image used as branding in the splash screen.
-    branding: "assets/logo/logo-black.png"
+    # branding: "assets/logo/logo-black.png"
 
     # The image_dark, color_dark, icon_background_color_dark, and branding_dark set values that
     # apply when the device is in dark mode. If they are not specified, the app will use the
