@@ -45,6 +45,7 @@ Make sure you have [Flutter installed](https://docs.flutter.dev/get-started/inst
 
 ```bash
 git clone https://github.com/totem-technologies/totem_app.git
+flutter config --enable-swift-package-manager
 cd totem_app
 flutter pub get
 make githooks  # Install git hooks for code formatting

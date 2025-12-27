@@ -96,6 +96,7 @@ dependency_overrides:
   protobuf: ^4.2.0
 
 flutter:
+  default-flavor: production
   uses-material-design: true
 
   assets:
