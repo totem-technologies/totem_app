@@ -25,6 +25,9 @@ Future<void> main() async {
       final container = ProviderContainer(observers: [ObserverService()]);
       await container.read(authControllerProvider.notifier).checkExistingAuth();
 
+      // TODO(adil): Precache onboarding images if authentication doesn't exist.
+      // Currently, the image loading time is noticeable
+
       runApp(
         UncontrolledProviderScope(
           container: container,
