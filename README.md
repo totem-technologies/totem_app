@@ -45,6 +45,7 @@ Make sure you have [Flutter installed](https://docs.flutter.dev/get-started/inst
 
 ```bash
 git clone https://github.com/totem-technologies/totem_app.git
+flutter config --enable-swift-package-manager
 cd totem_app
 flutter pub get
 make githooks  # Install git hooks for code formatting
@@ -66,6 +67,8 @@ flutter run -d chrome --web-browser-flag "--disable-web-security"     # Web (tem
 ```
 
 If testing on an iOS device, ensure you're using macOS and have Xcode installed.
+
+You can use the `--flavor` option to build for `staging` or `production` (default).
 
 On android, When reattaching, use:
 

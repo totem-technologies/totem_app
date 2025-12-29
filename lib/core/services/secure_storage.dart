@@ -10,11 +10,7 @@ final secureStorageProvider = Provider<SecureStorage>((ref) {
 class SecureStorage {
   /// Constructor with optional storage instance for testing
   SecureStorage([FlutterSecureStorage? storage])
-    : _storage =
-          storage ??
-          const FlutterSecureStorage(
-            aOptions: AndroidOptions(resetOnError: true),
-          );
+    : _storage = storage ?? const FlutterSecureStorage();
   final FlutterSecureStorage _storage;
 
   /// Write a value securely
