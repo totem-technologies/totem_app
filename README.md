@@ -68,6 +68,8 @@ flutter run -d chrome --web-browser-flag "--disable-web-security"     # Web (tem
 
 If testing on an iOS device, ensure you're using macOS and have Xcode installed.
 
+You can use the `--flavor` option to build for `staging` or `production` (default).
+
 On android, When reattaching, use:
 
 ```bash

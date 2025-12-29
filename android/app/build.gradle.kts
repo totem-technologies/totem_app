@@ -60,8 +60,9 @@ android {
         release {
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
             }
-            //signingConfig = signingConfigs.getByName("debug")
         }
     }
 
@@ -72,15 +73,17 @@ android {
             resValue(
                 type = "string",
                 name = "app_name",
-                value = "Totem Staging")
-            applicationIdSuffix = ".staging"
+                value = "Totem Staging"
+            )
+            applicationIdSuffix = ".dev"
         }
         create("production") {
             dimension = "default"
             resValue(
                 type = "string",
                 name = "app_name",
-                value = "Totem")
+                value = "Totem"
+            )
         }
     }
 }
