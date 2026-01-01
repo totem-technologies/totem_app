@@ -517,7 +517,9 @@ class AboutSpaceSheet extends StatelessWidget {
                           shrinkWrap: true,
                           onLinkTap: (url, _, _) async {
                             if (url != null) {
-                              final appRoute = RoutingUtils.parseTotemDeepLink(url);
+                              final appRoute = RoutingUtils.parseTotemDeepLink(
+                                url,
+                              );
                               if (appRoute != null && context.mounted) {
                                 // Navigate to app route instead of browser
                                 await context.push(appRoute);
@@ -529,7 +531,9 @@ class AboutSpaceSheet extends StatelessWidget {
                           },
                           onAnchorTap: (url, _, _) async {
                             if (url != null) {
-                              final appRoute = RoutingUtils.parseTotemDeepLink(url);
+                              final appRoute = RoutingUtils.parseTotemDeepLink(
+                                url,
+                              );
                               if (appRoute != null && context.mounted) {
                                 // Navigate to app route instead of browser
                                 await context.push(appRoute);

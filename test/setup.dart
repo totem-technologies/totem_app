@@ -6,6 +6,7 @@ import 'package:firebase_core_platform_interface/src/pigeon/mocks.dart'
     show setupFirebaseCoreMocks;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logger/logger.dart';
 
 void setupDotenv() {
   dotenv
@@ -13,6 +14,10 @@ void setupDotenv() {
     ..loadFromString(
       envString: '{}',
     );
+}
+
+void silenceLogger() {
+  Logger.level = Level.off;
 }
 
 Future<void> setupFirebase() async {
