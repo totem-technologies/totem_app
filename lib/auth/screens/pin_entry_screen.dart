@@ -119,7 +119,6 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
       isLoading: _isLoading,
       formKey: _formKey,
       children: [
-        // Instructions
         Text(
           'Enter verification code',
           style: Theme.of(context).textTheme.headlineSmall,

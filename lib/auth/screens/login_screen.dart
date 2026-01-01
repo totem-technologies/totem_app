@@ -22,7 +22,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   var _isLoading = false;
-  var _newsletterConsent = false;
 
   @override
   void dispose() {
@@ -56,7 +55,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await ref
           .read(authControllerProvider.notifier)
-          .requestPin(_emailController.text.trim(), _newsletterConsent);
+          .requestPin(_emailController.text.trim());
 
       if (mounted) {
         // Navigate to PIN entry screen
@@ -128,35 +127,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           onFieldSubmitted: (_) => _requestPin(),
           autofocus: true,
         ),
-        Row(
-          children: [
-            Checkbox(
-              value: _newsletterConsent,
-              onChanged: (_) {
-                setState(() {
-                  _newsletterConsent = !_newsletterConsent;
-                });
-              },
-            ),
-            Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _newsletterConsent = !_newsletterConsent;
-                  });
-                },
-                child: Text(
-                  'Yes, receive email updates',
-                  style: theme.textTheme.bodySmall,
-                  textAlign: TextAlign.start,
-                ),
-              ),
-            ),
-          ],
-        ),
-
         const SizedBox(height: 16),
-
         RichText(
           text: TextSpan(
             text: 'By continuing, you agree to our ',

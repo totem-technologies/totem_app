@@ -12,6 +12,7 @@ SessionState _$SessionStateFromJson(Map<String, dynamic> json) => SessionState(
       .map((e) => e as String)
       .toList(),
   speakingNow: json['speaking_now'] as String?,
+  nextSpeaker: json['next_speaker'] as String?,
   status: json['status'] == null
       ? SessionStatus.waiting
       : SessionStatus.fromJson(json['status'] as String),
@@ -26,6 +27,7 @@ Map<String, dynamic> _$SessionStateToJson(SessionState instance) =>
       'status': _$SessionStatusEnumMap[instance.status]!,
       'speaking_order': instance.speakingOrder,
       'speaking_now': instance.speakingNow,
+      'next_speaker': instance.nextSpeaker,
       'totem_status': _$TotemStatusEnumMap[instance.totemStatus]!,
     };
 
