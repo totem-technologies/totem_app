@@ -465,21 +465,10 @@ class AboutSpaceSheet extends StatelessWidget {
                   );
                 },
               ),
-              leading: Container(
+              leading: CircleIconButton(
                 margin: const EdgeInsetsDirectional.only(start: 20),
-                alignment: Alignment.center,
-                child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: Icon(Icons.adaptive.arrow_back),
-                    iconSize: 24,
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ),
+                icon: TotemIcons.arrowBack,
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ),
             SliverPadding(
@@ -491,62 +480,68 @@ class AboutSpaceSheet extends StatelessWidget {
               ),
               sliver: SliverList.list(
                 children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      CompactInfoText(
-                        const TotemIcon(TotemIcons.subscribers),
-                        Text('${space.subscribers} subscribers'),
-                      ),
-                      CompactInfoText(
-                        const TotemIcon(TotemIcons.priceTag),
-                        Text(
-                          space.price == 0
-                              ? 'No cost'
-                              : NumberFormat.currency(
-                                  locale: 'en_US',
-                                  symbol: r'USD $',
-                                ).format(space.price),
+                  SelectionArea(
+                    child: Column(
+                      children: [
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            CompactInfoText(
+                              const TotemIcon(TotemIcons.subscribers),
+                              Text('${space.subscribers} subscribers'),
+                            ),
+                            CompactInfoText(
+                              const TotemIcon(TotemIcons.priceTag),
+                              Text(
+                                space.price == 0
+                                    ? 'No cost'
+                                    : NumberFormat.currency(
+                                        locale: 'en_US',
+                                        symbol: r'USD $',
+                                      ).format(space.price),
+                              ),
+                            ),
+                            if (space.recurring != null &&
+                                space.recurring!.isNotEmpty)
+                              CompactInfoText(
+                                const TotemIcon(TotemIcons.recurring),
+                                Text(space.recurring!.uppercaseFirst()),
+                              ),
+                          ],
                         ),
-                      ),
-                      if (space.recurring != null &&
-                          space.recurring!.isNotEmpty)
-                        CompactInfoText(
-                          const TotemIcon(TotemIcons.recurring),
-                          Text(space.recurring!.uppercaseFirst()),
+                        Html(
+                          data: space.content,
+                          style: {...AppTheme.compactHtmlStyle},
+                          extensions: [TotemImageHtmlExtension()],
+                          shrinkWrap: true,
+                          onLinkTap: (url, _, _) async {
+                            if (url != null) {
+                              final appRoute = RoutingUtils.parseTotemDeepLink(url);
+                              if (appRoute != null && context.mounted) {
+                                // Navigate to app route instead of browser
+                                await context.push(appRoute);
+                              } else {
+                                // Open external URL for non-Totem links
+                                unawaited(launchUrl(Uri.parse(url)));
+                              }
+                            }
+                          },
+                          onAnchorTap: (url, _, _) async {
+                            if (url != null) {
+                              final appRoute = RoutingUtils.parseTotemDeepLink(url);
+                              if (appRoute != null && context.mounted) {
+                                // Navigate to app route instead of browser
+                                await context.push(appRoute);
+                              } else {
+                                // Open external URL for non-Totem links
+                                unawaited(launchUrl(Uri.parse(url)));
+                              }
+                            }
+                          },
                         ),
-                    ],
-                  ),
-                  Html(
-                    data: space.content,
-                    style: {...AppTheme.compactHtmlStyle},
-                    extensions: [TotemImageHtmlExtension()],
-                    shrinkWrap: true,
-                    onLinkTap: (url, _, _) async {
-                      if (url != null) {
-                        final appRoute = RoutingUtils.parseTotemDeepLink(url);
-                        if (appRoute != null && context.mounted) {
-                          // Navigate to app route instead of browser
-                          await context.push(appRoute);
-                        } else {
-                          // Open external URL for non-Totem links
-                          unawaited(launchUrl(Uri.parse(url)));
-                        }
-                      }
-                    },
-                    onAnchorTap: (url, _, _) async {
-                      if (url != null) {
-                        final appRoute = RoutingUtils.parseTotemDeepLink(url);
-                        if (appRoute != null && context.mounted) {
-                          // Navigate to app route instead of browser
-                          await context.push(appRoute);
-                        } else {
-                          // Open external URL for non-Totem links
-                          unawaited(launchUrl(Uri.parse(url)));
-                        }
-                      }
-                    },
+                      ],
+                    ),
                   ),
                 ],
               ),

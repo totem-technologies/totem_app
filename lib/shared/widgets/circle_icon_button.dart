@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:totem_app/shared/totem_icons.dart';
 
 class CircleIconButton extends StatelessWidget {
   const CircleIconButton({
@@ -10,7 +11,7 @@ class CircleIconButton extends StatelessWidget {
     super.key,
   });
 
-  final String icon;
+  final TotemIconData icon;
   final VoidCallback onPressed;
   final EdgeInsetsGeometry? margin;
   final Color? color;
@@ -30,6 +31,10 @@ class CircleIconButton extends StatelessWidget {
         ),
         child: SvgPicture.string(
           icon,
+          colorFilter: const ColorFilter.mode(
+            Colors.black,
+            BlendMode.srcIn,
+          ),
         ),
       ),
     );
