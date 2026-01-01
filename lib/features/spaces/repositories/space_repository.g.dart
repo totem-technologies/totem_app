@@ -10,7 +10,7 @@ part of 'space_repository.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(listSpaces)
-const listSpacesProvider = ListSpacesProvider._();
+final listSpacesProvider = ListSpacesProvider._();
 
 final class ListSpacesProvider
     extends
@@ -22,7 +22,7 @@ final class ListSpacesProvider
     with
         $FutureModifier<List<MobileSpaceDetailSchema>>,
         $FutureProvider<List<MobileSpaceDetailSchema>> {
-  const ListSpacesProvider._()
+  ListSpacesProvider._()
     : super(
         from: null,
         argument: null,
@@ -51,7 +51,7 @@ final class ListSpacesProvider
 String _$listSpacesHash() => r'a26942a21b78182cff5c963afd2e913186b3b25e';
 
 @ProviderFor(event)
-const eventProvider = EventFamily._();
+final eventProvider = EventFamily._();
 
 final class EventProvider
     extends
@@ -63,7 +63,7 @@ final class EventProvider
     with
         $FutureModifier<EventDetailSchema>,
         $FutureProvider<EventDetailSchema> {
-  const EventProvider._({
+  EventProvider._({
     required EventFamily super.from,
     required String super.argument,
   }) : super(
@@ -111,7 +111,7 @@ String _$eventHash() => r'41915faecccdd05abac94bf2404494cc53ad320c';
 
 final class EventFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<EventDetailSchema>, String> {
-  const EventFamily._()
+  EventFamily._()
     : super(
         retry: null,
         name: r'eventProvider',
@@ -128,7 +128,7 @@ final class EventFamily extends $Family
 }
 
 @ProviderFor(space)
-const spaceProvider = SpaceFamily._();
+final spaceProvider = SpaceFamily._();
 
 final class SpaceProvider
     extends
@@ -140,7 +140,7 @@ final class SpaceProvider
     with
         $FutureModifier<MobileSpaceDetailSchema>,
         $FutureProvider<MobileSpaceDetailSchema> {
-  const SpaceProvider._({
+  SpaceProvider._({
     required SpaceFamily super.from,
     required String super.argument,
   }) : super(
@@ -188,7 +188,7 @@ String _$spaceHash() => r'0a7c201b4bb48c32db6e02a58cf0c8c421ce241f';
 
 final class SpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<MobileSpaceDetailSchema>, String> {
-  const SpaceFamily._()
+  SpaceFamily._()
     : super(
         retry: null,
         name: r'spaceProvider',
@@ -205,7 +205,7 @@ final class SpaceFamily extends $Family
 }
 
 @ProviderFor(listSubscribedSpaces)
-const listSubscribedSpacesProvider = ListSubscribedSpacesProvider._();
+final listSubscribedSpacesProvider = ListSubscribedSpacesProvider._();
 
 final class ListSubscribedSpacesProvider
     extends
@@ -217,7 +217,7 @@ final class ListSubscribedSpacesProvider
     with
         $FutureModifier<List<SpaceSchema>>,
         $FutureProvider<List<SpaceSchema>> {
-  const ListSubscribedSpacesProvider._()
+  ListSubscribedSpacesProvider._()
     : super(
         from: null,
         argument: null,
@@ -247,12 +247,12 @@ String _$listSubscribedSpacesHash() =>
     r'baae7be4fea49ea1fbd6af85674d2853102c11ac';
 
 @ProviderFor(subscribeToSpace)
-const subscribeToSpaceProvider = SubscribeToSpaceFamily._();
+final subscribeToSpaceProvider = SubscribeToSpaceFamily._();
 
 final class SubscribeToSpaceProvider
     extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
     with $FutureModifier<bool>, $FutureProvider<bool> {
-  const SubscribeToSpaceProvider._({
+  SubscribeToSpaceProvider._({
     required SubscribeToSpaceFamily super.from,
     required String super.argument,
   }) : super(
@@ -299,7 +299,7 @@ String _$subscribeToSpaceHash() => r'a4ad0210d97c06f9d1d30e59ea8e41fb444de736';
 
 final class SubscribeToSpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
-  const SubscribeToSpaceFamily._()
+  SubscribeToSpaceFamily._()
     : super(
         retry: null,
         name: r'subscribeToSpaceProvider',
@@ -316,12 +316,12 @@ final class SubscribeToSpaceFamily extends $Family
 }
 
 @ProviderFor(unsubscribeFromSpace)
-const unsubscribeFromSpaceProvider = UnsubscribeFromSpaceFamily._();
+final unsubscribeFromSpaceProvider = UnsubscribeFromSpaceFamily._();
 
 final class UnsubscribeFromSpaceProvider
     extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
     with $FutureModifier<bool>, $FutureProvider<bool> {
-  const UnsubscribeFromSpaceProvider._({
+  UnsubscribeFromSpaceProvider._({
     required UnsubscribeFromSpaceFamily super.from,
     required String super.argument,
   }) : super(
@@ -369,7 +369,7 @@ String _$unsubscribeFromSpaceHash() =>
 
 final class UnsubscribeFromSpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
-  const UnsubscribeFromSpaceFamily._()
+  UnsubscribeFromSpaceFamily._()
     : super(
         retry: null,
         name: r'unsubscribeFromSpaceProvider',
@@ -386,7 +386,7 @@ final class UnsubscribeFromSpaceFamily extends $Family
 }
 
 @ProviderFor(listSpacesByKeeper)
-const listSpacesByKeeperProvider = ListSpacesByKeeperFamily._();
+final listSpacesByKeeperProvider = ListSpacesByKeeperFamily._();
 
 final class ListSpacesByKeeperProvider
     extends
@@ -398,7 +398,7 @@ final class ListSpacesByKeeperProvider
     with
         $FutureModifier<List<MobileSpaceDetailSchema>>,
         $FutureProvider<List<MobileSpaceDetailSchema>> {
-  const ListSpacesByKeeperProvider._({
+  ListSpacesByKeeperProvider._({
     required ListSpacesByKeeperFamily super.from,
     required String super.argument,
   }) : super(
@@ -451,7 +451,7 @@ final class ListSpacesByKeeperFamily extends $Family
           FutureOr<List<MobileSpaceDetailSchema>>,
           String
         > {
-  const ListSpacesByKeeperFamily._()
+  ListSpacesByKeeperFamily._()
     : super(
         retry: null,
         name: r'listSpacesByKeeperProvider',
@@ -468,7 +468,7 @@ final class ListSpacesByKeeperFamily extends $Family
 }
 
 @ProviderFor(listSessionsHistory)
-const listSessionsHistoryProvider = ListSessionsHistoryProvider._();
+final listSessionsHistoryProvider = ListSessionsHistoryProvider._();
 
 final class ListSessionsHistoryProvider
     extends
@@ -480,7 +480,7 @@ final class ListSessionsHistoryProvider
     with
         $FutureModifier<List<EventDetailSchema>>,
         $FutureProvider<List<EventDetailSchema>> {
-  const ListSessionsHistoryProvider._()
+  ListSessionsHistoryProvider._()
     : super(
         from: null,
         argument: null,
@@ -510,7 +510,7 @@ String _$listSessionsHistoryHash() =>
     r'6a94825f6f715adfac31701ce6cb38709828d85d';
 
 @ProviderFor(getRecommendedSessions)
-const getRecommendedSessionsProvider = GetRecommendedSessionsFamily._();
+final getRecommendedSessionsProvider = GetRecommendedSessionsFamily._();
 
 final class GetRecommendedSessionsProvider
     extends
@@ -522,7 +522,7 @@ final class GetRecommendedSessionsProvider
     with
         $FutureModifier<List<EventDetailSchema>>,
         $FutureProvider<List<EventDetailSchema>> {
-  const GetRecommendedSessionsProvider._({
+  GetRecommendedSessionsProvider._({
     required GetRecommendedSessionsFamily super.from,
     required String? super.argument,
   }) : super(
@@ -572,7 +572,7 @@ String _$getRecommendedSessionsHash() =>
 
 final class GetRecommendedSessionsFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<EventDetailSchema>>, String?> {
-  const GetRecommendedSessionsFamily._()
+  GetRecommendedSessionsFamily._()
     : super(
         retry: null,
         name: r'getRecommendedSessionsProvider',

@@ -10,12 +10,12 @@ part of 'session_repository.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(sessionToken)
-const sessionTokenProvider = SessionTokenFamily._();
+final sessionTokenProvider = SessionTokenFamily._();
 
 final class SessionTokenProvider
     extends $FunctionalProvider<AsyncValue<String>, String, FutureOr<String>>
     with $FutureModifier<String>, $FutureProvider<String> {
-  const SessionTokenProvider._({
+  SessionTokenProvider._({
     required SessionTokenFamily super.from,
     required String super.argument,
   }) : super(
@@ -62,7 +62,7 @@ String _$sessionTokenHash() => r'b599d7329d4615cba92d18375fb508ea8dc5da19';
 
 final class SessionTokenFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<String>, String> {
-  const SessionTokenFamily._()
+  SessionTokenFamily._()
     : super(
         retry: null,
         name: r'sessionTokenProvider',
@@ -79,12 +79,12 @@ final class SessionTokenFamily extends $Family
 }
 
 @ProviderFor(removeParticipant)
-const removeParticipantProvider = RemoveParticipantFamily._();
+final removeParticipantProvider = RemoveParticipantFamily._();
 
 final class RemoveParticipantProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
     with $FutureModifier<void>, $FutureProvider<void> {
-  const RemoveParticipantProvider._({
+  RemoveParticipantProvider._({
     required RemoveParticipantFamily super.from,
     required (String, String) super.argument,
   }) : super(
@@ -131,7 +131,7 @@ String _$removeParticipantHash() => r'04281cd7314c75590f956267eb74b78d566f4114';
 
 final class RemoveParticipantFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, (String, String)> {
-  const RemoveParticipantFamily._()
+  RemoveParticipantFamily._()
     : super(
         retry: null,
         name: r'removeParticipantProvider',
@@ -157,7 +157,7 @@ final class RemoveParticipantFamily extends $Family
 /// An error can be thrown if the participant is already muted.
 
 @ProviderFor(muteParticipant)
-const muteParticipantProvider = MuteParticipantFamily._();
+final muteParticipantProvider = MuteParticipantFamily._();
 
 /// Mutes a participant.
 ///
@@ -169,7 +169,7 @@ final class MuteParticipantProvider
   /// Mutes a participant.
   ///
   /// An error can be thrown if the participant is already muted.
-  const MuteParticipantProvider._({
+  MuteParticipantProvider._({
     required MuteParticipantFamily super.from,
     required (String, String) super.argument,
   }) : super(
@@ -220,7 +220,7 @@ String _$muteParticipantHash() => r'16cc9d401dd4ce042df99f415da9db59210d9cf5';
 
 final class MuteParticipantFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, (String, String)> {
-  const MuteParticipantFamily._()
+  MuteParticipantFamily._()
     : super(
         retry: null,
         name: r'muteParticipantProvider',
@@ -244,12 +244,12 @@ final class MuteParticipantFamily extends $Family
 }
 
 @ProviderFor(muteEveryone)
-const muteEveryoneProvider = MuteEveryoneFamily._();
+final muteEveryoneProvider = MuteEveryoneFamily._();
 
 final class MuteEveryoneProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
     with $FutureModifier<void>, $FutureProvider<void> {
-  const MuteEveryoneProvider._({
+  MuteEveryoneProvider._({
     required MuteEveryoneFamily super.from,
     required String super.argument,
   }) : super(
@@ -296,7 +296,7 @@ String _$muteEveryoneHash() => r'eb83b27ea8c9e9b82d1602b5b19f370c86c31dea';
 
 final class MuteEveryoneFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, String> {
-  const MuteEveryoneFamily._()
+  MuteEveryoneFamily._()
     : super(
         retry: null,
         name: r'muteEveryoneProvider',
@@ -313,12 +313,12 @@ final class MuteEveryoneFamily extends $Family
 }
 
 @ProviderFor(passTotem)
-const passTotemProvider = PassTotemFamily._();
+final passTotemProvider = PassTotemFamily._();
 
 final class PassTotemProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
     with $FutureModifier<void>, $FutureProvider<void> {
-  const PassTotemProvider._({
+  PassTotemProvider._({
     required PassTotemFamily super.from,
     required String super.argument,
   }) : super(
@@ -365,7 +365,7 @@ String _$passTotemHash() => r'0c7fb482155b1f3d45a792d1b58580b713686c3e';
 
 final class PassTotemFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, String> {
-  const PassTotemFamily._()
+  PassTotemFamily._()
     : super(
         retry: null,
         name: r'passTotemProvider',
@@ -382,12 +382,12 @@ final class PassTotemFamily extends $Family
 }
 
 @ProviderFor(reorderParticipants)
-const reorderParticipantsProvider = ReorderParticipantsFamily._();
+final reorderParticipantsProvider = ReorderParticipantsFamily._();
 
 final class ReorderParticipantsProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
     with $FutureModifier<void>, $FutureProvider<void> {
-  const ReorderParticipantsProvider._({
+  ReorderParticipantsProvider._({
     required ReorderParticipantsFamily super.from,
     required (String, List<String>) super.argument,
   }) : super(
@@ -435,7 +435,7 @@ String _$reorderParticipantsHash() =>
 
 final class ReorderParticipantsFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, (String, List<String>)> {
-  const ReorderParticipantsFamily._()
+  ReorderParticipantsFamily._()
     : super(
         retry: null,
         name: r'reorderParticipantsProvider',
@@ -452,12 +452,12 @@ final class ReorderParticipantsFamily extends $Family
 }
 
 @ProviderFor(startSession)
-const startSessionProvider = StartSessionFamily._();
+final startSessionProvider = StartSessionFamily._();
 
 final class StartSessionProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
     with $FutureModifier<void>, $FutureProvider<void> {
-  const StartSessionProvider._({
+  StartSessionProvider._({
     required StartSessionFamily super.from,
     required String super.argument,
   }) : super(
@@ -504,7 +504,7 @@ String _$startSessionHash() => r'617d570d06f8422fde4ee265a73bdfef6496662a';
 
 final class StartSessionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, String> {
-  const StartSessionFamily._()
+  StartSessionFamily._()
     : super(
         retry: null,
         name: r'startSessionProvider',
@@ -521,12 +521,12 @@ final class StartSessionFamily extends $Family
 }
 
 @ProviderFor(endSession)
-const endSessionProvider = EndSessionFamily._();
+final endSessionProvider = EndSessionFamily._();
 
 final class EndSessionProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
     with $FutureModifier<void>, $FutureProvider<void> {
-  const EndSessionProvider._({
+  EndSessionProvider._({
     required EndSessionFamily super.from,
     required String super.argument,
   }) : super(
@@ -573,7 +573,7 @@ String _$endSessionHash() => r'f4a9896ded183609b5e8a277b4d96e4cdd8da9af';
 
 final class EndSessionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, String> {
-  const EndSessionFamily._()
+  EndSessionFamily._()
     : super(
         retry: null,
         name: r'endSessionProvider',
@@ -590,12 +590,12 @@ final class EndSessionFamily extends $Family
 }
 
 @ProviderFor(sessionFeedback)
-const sessionFeedbackProvider = SessionFeedbackFamily._();
+final sessionFeedbackProvider = SessionFeedbackFamily._();
 
 final class SessionFeedbackProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
     with $FutureModifier<void>, $FutureProvider<void> {
-  const SessionFeedbackProvider._({
+  SessionFeedbackProvider._({
     required SessionFeedbackFamily super.from,
     required (String, SessionFeedbackOptions, String?) super.argument,
   }) : super(
@@ -646,7 +646,7 @@ final class SessionFeedbackFamily extends $Family
           FutureOr<void>,
           (String, SessionFeedbackOptions, String?)
         > {
-  const SessionFeedbackFamily._()
+  SessionFeedbackFamily._()
     : super(
         retry: null,
         name: r'sessionFeedbackProvider',

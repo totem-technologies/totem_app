@@ -58,7 +58,10 @@ void main() {
     createdAt: DateTime.now(),
   );
 
-  setUpAll(setupDotenv);
+  setUpAll(() {
+    setupDotenv();
+    silenceLogger();
+  });
 
   setUp(() {
     mockMobileTotemApi = MockMobileTotemApi();

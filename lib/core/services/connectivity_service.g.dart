@@ -10,12 +10,12 @@ part of 'connectivity_service.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(connectivity)
-const connectivityProvider = ConnectivityProvider._();
+final connectivityProvider = ConnectivityProvider._();
 
 final class ConnectivityProvider
     extends $FunctionalProvider<Connectivity, Connectivity, Connectivity>
     with $Provider<Connectivity> {
-  const ConnectivityProvider._()
+  ConnectivityProvider._()
     : super(
         from: null,
         argument: null,
@@ -51,7 +51,7 @@ final class ConnectivityProvider
 String _$connectivityHash() => r'6d67af0ea4110f6ee0246dd332f90f8901380eda';
 
 @ProviderFor(connectivityStream)
-const connectivityStreamProvider = ConnectivityStreamProvider._();
+final connectivityStreamProvider = ConnectivityStreamProvider._();
 
 final class ConnectivityStreamProvider
     extends
@@ -63,7 +63,7 @@ final class ConnectivityStreamProvider
     with
         $FutureModifier<List<ConnectivityResult>>,
         $StreamProvider<List<ConnectivityResult>> {
-  const ConnectivityStreamProvider._()
+  ConnectivityStreamProvider._()
     : super(
         from: null,
         argument: null,
@@ -93,12 +93,12 @@ String _$connectivityStreamHash() =>
     r'0e9f1eb3ef49bdff1bcabae32097030194c7a5ae';
 
 @ProviderFor(isOffline)
-const isOfflineProvider = IsOfflineProvider._();
+final isOfflineProvider = IsOfflineProvider._();
 
 final class IsOfflineProvider
     extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
     with $FutureModifier<bool>, $FutureProvider<bool> {
-  const IsOfflineProvider._()
+  IsOfflineProvider._()
     : super(
         from: null,
         argument: null,

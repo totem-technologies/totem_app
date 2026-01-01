@@ -7,8 +7,8 @@ Widget buildSeatsLeftText(int seatsLeft) {
         TextSpan(
           text: seatsLeft == 0 ? 'No' : '$seatsLeft',
         ),
-        const TextSpan(
-          text: ' seats left',
+        TextSpan(
+          text: seatsLeft == 1 ? ' seat left' : ' seats left',
         ),
       ],
     ),

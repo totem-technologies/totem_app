@@ -10,7 +10,6 @@ import 'package:totem_app/features/profile/screens/user_feedback.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
-import 'package:totem_app/shared/widgets/totem_icon.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/link.dart';
 
@@ -30,7 +29,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (user == null) return const ErrorScreen();
 
     return Scaffold(
-      appBar: AppBar(title: const TotemLogo(size: 24)),
       body: Builder(
         builder: (context) {
           return ListView(
