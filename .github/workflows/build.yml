@@ -79,7 +79,7 @@ jobs:
 
       - name: Flutter version
         run: flutter --version
-      
+
       - name: Create .env file
         run: echo 'API_URL="https://totem.kbl.io"' > .env
 
@@ -92,8 +92,5 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build iOS (no codesign)
-        run: flutter build ios --verbose --no-codesign
-
       - name: Build IPA (no codesign)
-        run: flutter build ipa --verbose --no-codesign
+        run: flutter build ipa --no-codesign
