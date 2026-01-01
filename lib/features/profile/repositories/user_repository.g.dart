@@ -10,7 +10,7 @@ part of 'user_repository.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(userProfile)
-const userProfileProvider = UserProfileFamily._();
+final userProfileProvider = UserProfileFamily._();
 
 final class UserProfileProvider
     extends
@@ -20,7 +20,7 @@ final class UserProfileProvider
           FutureOr<PublicUserSchema>
         >
     with $FutureModifier<PublicUserSchema>, $FutureProvider<PublicUserSchema> {
-  const UserProfileProvider._({
+  UserProfileProvider._({
     required UserProfileFamily super.from,
     required String super.argument,
   }) : super(
@@ -68,7 +68,7 @@ String _$userProfileHash() => r'625776c39a0cf713e4a12726b9c352b003769975';
 
 final class UserProfileFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<PublicUserSchema>, String> {
-  const UserProfileFamily._()
+  UserProfileFamily._()
     : super(
         retry: null,
         name: r'userProfileProvider',
@@ -85,12 +85,12 @@ final class UserProfileFamily extends $Family
 }
 
 @ProviderFor(submitFeedback)
-const submitFeedbackProvider = SubmitFeedbackFamily._();
+final submitFeedbackProvider = SubmitFeedbackFamily._();
 
 final class SubmitFeedbackProvider
     extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
     with $FutureModifier<bool>, $FutureProvider<bool> {
-  const SubmitFeedbackProvider._({
+  SubmitFeedbackProvider._({
     required SubmitFeedbackFamily super.from,
     required String super.argument,
   }) : super(
@@ -137,7 +137,7 @@ String _$submitFeedbackHash() => r'af2b3b2e059ed00050e90c75c5e3cb92e8ff15d3';
 
 final class SubmitFeedbackFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
-  const SubmitFeedbackFamily._()
+  SubmitFeedbackFamily._()
     : super(
         retry: null,
         name: r'submitFeedbackProvider',

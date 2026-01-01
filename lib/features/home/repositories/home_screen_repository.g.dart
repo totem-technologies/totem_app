@@ -10,7 +10,7 @@ part of 'home_screen_repository.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(spacesSummary)
-const spacesSummaryProvider = SpacesSummaryProvider._();
+final spacesSummaryProvider = SpacesSummaryProvider._();
 
 final class SpacesSummaryProvider
     extends
@@ -22,7 +22,7 @@ final class SpacesSummaryProvider
     with
         $FutureModifier<SummarySpacesSchema>,
         $FutureProvider<SummarySpacesSchema> {
-  const SpacesSummaryProvider._()
+  SpacesSummaryProvider._()
     : super(
         from: null,
         argument: null,

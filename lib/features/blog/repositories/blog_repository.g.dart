@@ -10,7 +10,7 @@ part of 'blog_repository.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(listBlogPosts)
-const listBlogPostsProvider = ListBlogPostsProvider._();
+final listBlogPostsProvider = ListBlogPostsProvider._();
 
 final class ListBlogPostsProvider
     extends
@@ -22,7 +22,7 @@ final class ListBlogPostsProvider
     with
         $FutureModifier<PagedBlogPostListSchema>,
         $FutureProvider<PagedBlogPostListSchema> {
-  const ListBlogPostsProvider._()
+  ListBlogPostsProvider._()
     : super(
         from: null,
         argument: null,
@@ -51,7 +51,7 @@ final class ListBlogPostsProvider
 String _$listBlogPostsHash() => r'de52e2909f6ae4b747002bfb1b4af9c345124ca5';
 
 @ProviderFor(blogPost)
-const blogPostProvider = BlogPostFamily._();
+final blogPostProvider = BlogPostFamily._();
 
 final class BlogPostProvider
     extends
@@ -61,7 +61,7 @@ final class BlogPostProvider
           FutureOr<BlogPostSchema>
         >
     with $FutureModifier<BlogPostSchema>, $FutureProvider<BlogPostSchema> {
-  const BlogPostProvider._({
+  BlogPostProvider._({
     required BlogPostFamily super.from,
     required String super.argument,
   }) : super(
@@ -109,7 +109,7 @@ String _$blogPostHash() => r'13d6afaca22d70c976bf110103f9004627af4a6e';
 
 final class BlogPostFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<BlogPostSchema>, String> {
-  const BlogPostFamily._()
+  BlogPostFamily._()
     : super(
         retry: null,
         name: r'blogPostProvider',
