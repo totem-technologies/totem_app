@@ -255,8 +255,6 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
 
 enum ThumbState { up, down, none }
 
-// TODO(bdlukaa): When submitted, ensure user cannot vote again in the same
-// session.
 class _SessionFeedbackWidget extends StatelessWidget {
   const _SessionFeedbackWidget({
     required this.state,
@@ -283,8 +281,16 @@ class _SessionFeedbackWidget extends StatelessWidget {
       child: Row(
         children: [
           Flexible(
+            fit: switch (state) {
+              ThumbState.up => FlexFit.tight,
+              ThumbState.down => FlexFit.tight,
+              ThumbState.none => FlexFit.loose,
+            },
             child: AutoSizeText(
-              'How was your experience?',
+              switch (state) {
+                ThumbState.none => 'How was your experience?',
+                _ => 'Thank you for your feedback!',
+              },
               textAlign: TextAlign.center,
               maxLines: 2,
               style: theme.textTheme.bodyLarge?.copyWith(
@@ -293,40 +299,43 @@ class _SessionFeedbackWidget extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              spacing: 10,
-              children: [
-                _SessionFeedbackButton(
-                  icon: TotemIcon(
-                    switch (state) {
-                      ThumbState.up => TotemIcons.thumbUpFilled,
-                      _ => TotemIcons.thumbUp,
+          if (state == ThumbState.none)
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                spacing: 10,
+                children: [
+                  _SessionFeedbackButton(
+                    icon: const TotemIcon(TotemIcons.thumbUp),
+                    onPressed: switch (state) {
+                      ThumbState.up => () {},
+                      _ => onThumbUpPressed,
                     },
-                    color: Colors.white,
                   ),
-                  onPressed: switch (state) {
-                    ThumbState.up => () {},
-                    _ => onThumbUpPressed,
+                  _SessionFeedbackButton(
+                    icon: const TotemIcon(TotemIcons.thumbDown),
+                    onPressed: switch (state) {
+                      ThumbState.down => () {},
+                      _ => onThumbDownPressed,
+                    },
+                  ),
+                ],
+              ),
+            )
+          else
+            IgnorePointer(
+              child: _SessionFeedbackButton(
+                outlined: true,
+                icon: TotemIcon(
+                  switch (state) {
+                    ThumbState.up => TotemIcons.thumbUpFilled,
+                    ThumbState.down => TotemIcons.thumbDownFilled,
+                    _ => TotemIcons.thumbUp,
                   },
                 ),
-                _SessionFeedbackButton(
-                  icon: TotemIcon(
-                    switch (state) {
-                      ThumbState.down => TotemIcons.thumbDownFilled,
-                      _ => TotemIcons.thumbDown,
-                    },
-                    color: Colors.white,
-                  ),
-                  onPressed: switch (state) {
-                    ThumbState.down => () {},
-                    _ => onThumbDownPressed,
-                  },
-                ),
-              ],
+                onPressed: () {},
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -337,10 +346,13 @@ class _SessionFeedbackButton extends StatelessWidget {
   const _SessionFeedbackButton({
     required this.icon,
     required this.onPressed,
+    this.outlined = false,
   });
 
   final Widget icon;
   final VoidCallback onPressed;
+
+  final bool outlined;
 
   @override
   Widget build(BuildContext context) {
@@ -352,10 +364,20 @@ class _SessionFeedbackButton extends StatelessWidget {
         height: 50,
         padding: const EdgeInsetsDirectional.all(10),
         decoration: BoxDecoration(
-          color: theme.colorScheme.primary,
+          color: outlined ? null : theme.colorScheme.primary,
+          border: outlined
+              ? Border.all(color: theme.colorScheme.primary)
+              : null,
           shape: BoxShape.circle,
         ),
-        child: icon,
+        child: IconTheme.merge(
+          data: IconThemeData(
+            color: outlined
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onPrimary,
+          ),
+          child: icon,
+        ),
       ),
     );
   }
