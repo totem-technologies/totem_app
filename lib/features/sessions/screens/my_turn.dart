@@ -33,6 +33,7 @@ class MyTurn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RoomBackground(
+      status: sessionState.status,
       child: SafeArea(
         child: OrientationBuilder(
           builder: (context, orientation) {

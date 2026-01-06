@@ -318,6 +318,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         if (state.isMyTurn(notifier.room)) {
           if (state.sessionState.totemStatus == TotemStatus.passing) {
             return ReceiveTotemScreen(
+              sessionState: state,
               actionBar: buildActionBar(notifier, state, event),
               onAcceptTotem: () => _onAcceptTotem(notifier),
             );

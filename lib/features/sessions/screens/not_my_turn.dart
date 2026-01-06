@@ -40,6 +40,7 @@ class NotMyTurn extends ConsumerWidget {
     final activeSpeaker = session.speakingNow();
 
     return RoomBackground(
+      status: sessionState.status,
       child: OrientationBuilder(
         builder: (context, orientation) {
           final isLandscape = orientation == Orientation.landscape;
