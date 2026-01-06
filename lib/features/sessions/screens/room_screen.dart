@@ -264,6 +264,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             }
           },
           child: RoomBackground(
+            status: sessionState.sessionState.status,
             child: LivekitRoom(
               roomContext: sessionNotifier.room,
               builder: (context, roomCtx) {

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
@@ -44,6 +45,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   void initState() {
     super.initState();
     unawaited(_initializeLocalVideo());
+  }
+
+  void askPermissions() {
+    Permission.camera.request();
+    Permission.microphone.request();
     unawaited(BackgroundControl.requestPermissions());
   }
 
@@ -55,10 +61,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     try {
       _videoTrack = await LocalVideoTrack.createCameraTrack(_cameraOptions);
       await _videoTrack!.start();
-      setState(() {});
-    } catch (e, stackTrace) {
+      if (mounted) setState(() {});
+    } catch (error, stackTrace) {
       ErrorHandler.logError(
-        e,
+        error,
         stackTrace: stackTrace,
         message: 'Failed to create local video track',
       );
@@ -148,7 +154,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: 28,
-                      color: Colors.white,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -161,7 +166,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                       text: TextSpan(
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.8),
+                          color: theme.textTheme.bodyMedium?.color?.withValues(
+                            alpha: 0.8,
+                          ),
                         ),
                         children: [
                           const TextSpan(
