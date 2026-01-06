@@ -63,3 +63,5 @@ openapi.json
 # Xcode
 ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
 ios/Runner.xcworkspace/xcshareddata/swiftpm/
+
+*.secrets

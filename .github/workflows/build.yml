@@ -1,18 +1,20 @@
 name: Build Flutter Client
 on:
   push:
-    branches:
-      - main
-  release:
-    types:
-      - created
+    branches: [ main ]
   pull_request:
   workflow_dispatch:
 
 jobs:
-  build_android:
-    name: Bluecherry Client Android
+  build_android_apk:
+    name: Android ABI (${{ matrix.flavor }})
     runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [staging, production]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,15 +22,12 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           submodules: recursive
 
-      # We need to enforce java 17 because newer Flutter packages are
-      # requiring this Java Version.
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: "zulu"
           java-version: "17.x"
           cache: "gradle"
-          check-latest: true
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2.8.0
@@ -36,30 +35,32 @@ jobs:
           channel: "stable"
           cache: true
 
-      - name: Flutter version
-        run: flutter --version
-
-      - name: Create .env file
-        run: echo 'API_URL="https://totem.kbl.io"' > .env
-
-      - name: Decode google-services.json and firebase_options.dart
-        run: |
-          mkdir -p lib
-          echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
-          echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 -d > android/app/google-services.json
+      - name: Setup Environment
+        uses: ./.github/actions/setup-environment
+        with:
+          firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
+          google_services_json: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+          flavor: ${{ matrix.flavor }}
 
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build APK
-        run: flutter build apk --verbose --split-per-abi
+      - name: Run Tests
+        run: flutter test
 
-      - name: Build App Bundle
-        run: flutter build appbundle --verbose
+      - name: Build ABI
+        run: flutter build appbundle --verbose --flavor ${{ matrix.flavor }}
 
-  build_iOS:
-    name: Bluecherry Client iOS
+
+  build_ios_ipa:
+    name: iOS IPA (${{ matrix.flavor }})
     runs-on: macos-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [staging, production]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -67,30 +68,21 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           submodules: recursive
 
-      - name: Xcode version
-        run: /usr/bin/xcodebuild -version
-
       - name: Setup Flutter
         uses: subosito/flutter-action@v2.8.0
         with:
           channel: "stable"
-          architecture: x64
           cache: true
 
-      - name: Flutter version
-        run: flutter --version
-
-      - name: Create .env file
-        run: echo 'API_URL="https://totem.kbl.io"' > .env
-
-      - name: Decode GoogleService-Info.plist and firebase_options.dart
-        run: |
-          mkdir -p lib
-          echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
-          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}" | base64 -d > ios/Runner/GoogleService-Info.plist
+      - name: Setup Environment
+        uses: ./.github/actions/setup-environment
+        with:
+          firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
+          google_service_plist: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
+          flavor: ${{ matrix.flavor }}
 
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build IPA (no codesign)
-        run: flutter build ipa --no-codesign
+      - name: Build IPA
+        run: flutter build ipa --verbose --no-codesign --flavor ${{ matrix.flavor }}
