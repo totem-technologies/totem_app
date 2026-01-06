@@ -430,7 +430,6 @@ class AboutSpaceSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    const titleCurve = Curves.easeOut;
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 1,
@@ -441,35 +440,18 @@ class AboutSpaceSheet extends StatelessWidget {
             SliverAppBar(
               pinned: true,
               backgroundColor: theme.scaffoldBackgroundColor,
-              expandedHeight: 112,
-              flexibleSpace: ListenableBuilder(
-                listenable: Listenable.merge([controller]),
-                builder: (context, child) {
-                  const scrollRange = 56.0;
-                  final progress = (controller.offset / scrollRange).clamp(
-                    0.0,
-                    1.0,
-                  );
-                  final curvedProgress = titleCurve.transform(progress);
-                  const maxAdditionalPadding = 48.0;
-                  final additionalPadding =
-                      maxAdditionalPadding * curvedProgress;
-                  return FlexibleSpaceBar(
-                    titlePadding: EdgeInsetsDirectional.only(
-                      start: 20 + additionalPadding,
-                      bottom: 12,
-                    ),
-                    collapseMode: CollapseMode.pin,
-                    expandedTitleScale: 1,
-                    title: Text('About', style: theme.textTheme.titleLarge),
-                  );
-                },
-              ),
-              leading: CircleIconButton(
-                margin: const EdgeInsetsDirectional.only(start: 20),
-                icon: TotemIcons.arrowBack,
-                onPressed: () => Navigator.of(context).pop(),
-              ),
+              automaticallyImplyLeading: false,
+              centerTitle: false,
+              toolbarHeight: 72,
+              titleSpacing: 20,
+              title: Text('About', style: theme.textTheme.titleLarge),
+              actions: [
+                CircleIconButton(
+                  margin: const EdgeInsetsDirectional.only(end: 20),
+                  icon: TotemIcons.closeRounded,
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
             ),
             SliverPadding(
               padding: const EdgeInsetsDirectional.only(
@@ -482,6 +464,7 @@ class AboutSpaceSheet extends StatelessWidget {
                 children: [
                   SelectionArea(
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Wrap(
                           spacing: 8,

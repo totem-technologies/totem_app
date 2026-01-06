@@ -31,6 +31,8 @@ class CircleIconButton extends StatelessWidget {
         ),
         child: SvgPicture.string(
           icon,
+          width: 16,
+          height: 16,
           colorFilter: const ColorFilter.mode(
             Colors.black,
             BlendMode.srcIn,
