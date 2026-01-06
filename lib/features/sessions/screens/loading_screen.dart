@@ -1,9 +1,13 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
+import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/circle_icon_button.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -14,11 +18,15 @@ class LoadingRoomScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        leading: CircleIconButton(
+          margin: const EdgeInsetsDirectional.only(start: 20),
+          icon: TotemIcons.arrowBack,
+          onPressed: () => popOrHome(context),
+        ),
       ),
       extendBodyBehindAppBar: true,
       body: RoomBackground(
@@ -32,7 +40,6 @@ class LoadingRoomScreen extends StatelessWidget {
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 28,
-                  color: Colors.white,
                 ),
               ),
               const SizedBox(height: 12),
@@ -45,7 +52,9 @@ class LoadingRoomScreen extends StatelessWidget {
                   text: TextSpan(
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.8),
+                      color: theme.textTheme.bodyMedium?.color?.withValues(
+                        alpha: 0.8,
+                      ),
                     ),
                     children: [
                       const TextSpan(

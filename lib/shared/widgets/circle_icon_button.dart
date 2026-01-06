@@ -18,24 +18,26 @@ class CircleIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onPressed,
-      child: Container(
-        margin: margin,
-        alignment: AlignmentDirectional.center,
-        height: 30,
-        width: 30,
-        decoration: BoxDecoration(
-          color: color ?? Colors.white,
-          shape: BoxShape.circle,
-        ),
-        child: SvgPicture.string(
-          icon,
-          width: 16,
-          height: 16,
-          colorFilter: const ColorFilter.mode(
-            Colors.black,
-            BlendMode.srcIn,
+    return Center(
+      child: InkWell(
+        onTap: onPressed,
+        child: Container(
+          margin: margin,
+          alignment: AlignmentDirectional.center,
+          height: 30,
+          width: 30,
+          decoration: BoxDecoration(
+            color: color ?? Colors.white,
+            shape: BoxShape.circle,
+          ),
+          child: SvgPicture.string(
+            icon,
+            width: 16,
+            height: 16,
+            colorFilter: const ColorFilter.mode(
+              Colors.black,
+              BlendMode.srcIn,
+            ),
           ),
         ),
       ),
