@@ -11,7 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/features/profile/screens/user_feedback.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
-import 'package:totem_app/features/sessions/services/livekit_service.dart';
+import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
@@ -27,7 +27,7 @@ class SessionEndedScreen extends ConsumerStatefulWidget {
   });
 
   final EventDetailSchema event;
-  final LiveKitService session;
+  final Session session;
 
   @override
   ConsumerState<SessionEndedScreen> createState() => _SessionEndedScreenState();

@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'livekit_service.dart';
+part of 'session_service.dart';
 
 // **************************************************************************
 // RiverpodGenerator
@@ -9,47 +9,47 @@ part of 'livekit_service.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(LiveKitService)
-final liveKitServiceProvider = LiveKitServiceFamily._();
+@ProviderFor(Session)
+final sessionProvider = SessionFamily._();
 
-final class LiveKitServiceProvider
-    extends $NotifierProvider<LiveKitService, LiveKitState> {
-  LiveKitServiceProvider._({
-    required LiveKitServiceFamily super.from,
+final class SessionProvider
+    extends $NotifierProvider<Session, SessionRoomState> {
+  SessionProvider._({
+    required SessionFamily super.from,
     required SessionOptions super.argument,
   }) : super(
          retry: null,
-         name: r'liveKitServiceProvider',
+         name: r'sessionProvider',
          isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
 
   @override
-  String debugGetCreateSourceHash() => _$liveKitServiceHash();
+  String debugGetCreateSourceHash() => _$sessionHash();
 
   @override
   String toString() {
-    return r'liveKitServiceProvider'
+    return r'sessionProvider'
         ''
         '($argument)';
   }
 
   @$internal
   @override
-  LiveKitService create() => LiveKitService();
+  Session create() => Session();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(LiveKitState value) {
+  Override overrideWithValue(SessionRoomState value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<LiveKitState>(value),
+      providerOverride: $SyncValueProvider<SessionRoomState>(value),
     );
   }
 
   @override
   bool operator ==(Object other) {
-    return other is LiveKitServiceProvider && other.argument == argument;
+    return other is SessionProvider && other.argument == argument;
   }
 
   @override
@@ -58,47 +58,47 @@ final class LiveKitServiceProvider
   }
 }
 
-String _$liveKitServiceHash() => r'628a831db15bb9c72b7d5b6b42403019db734ae3';
+String _$sessionHash() => r'9cd1c070eda6e0e5ded215a5658a4ca4ba64877f';
 
-final class LiveKitServiceFamily extends $Family
+final class SessionFamily extends $Family
     with
         $ClassFamilyOverride<
-          LiveKitService,
-          LiveKitState,
-          LiveKitState,
-          LiveKitState,
+          Session,
+          SessionRoomState,
+          SessionRoomState,
+          SessionRoomState,
           SessionOptions
         > {
-  LiveKitServiceFamily._()
+  SessionFamily._()
     : super(
         retry: null,
-        name: r'liveKitServiceProvider',
+        name: r'sessionProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
         isAutoDispose: true,
       );
 
-  LiveKitServiceProvider call(SessionOptions options) =>
-      LiveKitServiceProvider._(argument: options, from: this);
+  SessionProvider call(SessionOptions options) =>
+      SessionProvider._(argument: options, from: this);
 
   @override
-  String toString() => r'liveKitServiceProvider';
+  String toString() => r'sessionProvider';
 }
 
-abstract class _$LiveKitService extends $Notifier<LiveKitState> {
+abstract class _$Session extends $Notifier<SessionRoomState> {
   late final _$args = ref.$arg as SessionOptions;
   SessionOptions get options => _$args;
 
-  LiveKitState build(SessionOptions options);
+  SessionRoomState build(SessionOptions options);
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<LiveKitState, LiveKitState>;
+    final ref = this.ref as $Ref<SessionRoomState, SessionRoomState>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<LiveKitState, LiveKitState>,
-              LiveKitState,
+              AnyNotifier<SessionRoomState, SessionRoomState>,
+              SessionRoomState,
               Object?,
               Object?
             >;

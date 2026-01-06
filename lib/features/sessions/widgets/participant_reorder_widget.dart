@@ -3,15 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
-import 'package:totem_app/features/sessions/services/livekit_service.dart';
+import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 Future<void> showParticipantReorderWidget(
   BuildContext context,
-  LiveKitService session,
-  LiveKitState state,
+  Session session,
+  SessionRoomState state,
   EventDetailSchema event,
 ) {
   return showModalBottomSheet(
@@ -35,8 +35,8 @@ class ParticipantReorderWidget extends ConsumerStatefulWidget {
     super.key,
   });
 
-  final LiveKitService session;
-  final LiveKitState state;
+  final Session session;
+  final SessionRoomState state;
   final EventDetailSchema event;
 
   @override

@@ -1,9 +1,9 @@
-// We need to access LivekitService.ref to notify listeners
+// We need to access SessionService.ref to notify listeners
 // ignore_for_file: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
 
-part of 'livekit_service.dart';
+part of 'session_service.dart';
 
-extension ParticipantControl on LiveKitService {
+extension ParticipantControl on Session {
   /// Pass the totem to the next participant in the speaking order.
   ///
   /// This fails silently if it's not the user's turn.

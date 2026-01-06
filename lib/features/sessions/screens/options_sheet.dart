@@ -4,12 +4,12 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' hide Session;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
-import 'package:totem_app/features/sessions/services/livekit_service.dart';
+import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/participant_reorder_widget.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/extensions.dart';
@@ -33,8 +33,8 @@ Future<bool?> showLeaveDialog(BuildContext context) {
 
 Future<void> showOptionsSheet(
   BuildContext context,
-  LiveKitState state,
-  LiveKitService session,
+  SessionRoomState state,
+  Session session,
   EventDetailSchema event,
 ) {
   return showModalBottomSheet(
@@ -57,8 +57,8 @@ class OptionsSheet extends ConsumerWidget {
     super.key,
   });
 
-  final LiveKitState state;
-  final LiveKitService session;
+  final SessionRoomState state;
+  final Session session;
   final EventDetailSchema event;
 
   @override

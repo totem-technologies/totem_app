@@ -1,9 +1,9 @@
 // We need to access LivekitService.ref to notify listeners
 // ignore_for_file: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
 
-part of 'livekit_service.dart';
+part of 'session_service.dart';
 
-extension KeeperControl on LiveKitService {
+extension KeeperControl on Session {
   /// Get the participant who is currently speaking.
   Participant speakingNow() {
     return room.participants.firstWhere(
@@ -28,7 +28,7 @@ extension KeeperControl on LiveKitService {
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = Timer(
-      LiveKitService.keeperDisconnectionTimeout,
+      Session.keeperDisconnectionTimeout,
       _onKeeperDisconnectedTimeout,
     );
 
