@@ -296,10 +296,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       case RoomConnectionState.connecting:
         return const LoadingRoomScreen();
       case RoomConnectionState.disconnected:
-        return SessionEndedScreen(event: event);
+        return SessionEndedScreen(event: event, session: notifier);
       case RoomConnectionState.connected:
         if (state.sessionState.status == SessionStatus.ended) {
-          return SessionEndedScreen(event: event);
+          return SessionEndedScreen(event: event, session: notifier);
         }
         if (roomCtx.localParticipant == null) {
           return const LoadingRoomScreen();

@@ -34,6 +34,8 @@ part 'keeper_control.dart';
 part 'livekit_service.g.dart';
 part 'participant_control.dart';
 
+enum SessionEndedReason { finished, keeperLeft }
+
 enum SessionCommunicationTopics {
   emoji('lk-emoji-topic'),
   chat('lk-chat-topic');
@@ -145,6 +147,7 @@ class LiveKitService extends _$LiveKitService {
 
   Timer? _timer;
   VoidCallback? closeKeeperLeftNotification;
+  SessionEndedReason reason = SessionEndedReason.finished;
 
   @override
   LiveKitState build(SessionOptions options) {

@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/features/profile/screens/user_feedback.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
+import 'package:totem_app/features/sessions/services/livekit_service.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
@@ -19,9 +20,14 @@ import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
 class SessionEndedScreen extends ConsumerStatefulWidget {
-  const SessionEndedScreen({required this.event, super.key});
+  const SessionEndedScreen({
+    required this.event,
+    required this.session,
+    super.key,
+  });
 
   final EventDetailSchema event;
+  final LiveKitService session;
 
   @override
   ConsumerState<SessionEndedScreen> createState() => _SessionEndedScreenState();
@@ -113,45 +119,56 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
               spacing: 10,
               children: [
                 Text(
-                  'Session Ended',
+                  switch (widget.session.reason) {
+                    SessionEndedReason.finished => 'Session Ended',
+                    SessionEndedReason.keeperLeft =>
+                      'Session will be rescheduled',
+                  },
                   style: theme.textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
-                const Text(
-                  'Thank you for joining! We hope you found '
-                  'the session enjoyable.',
+                Text(
+                  switch (widget.session.reason) {
+                    SessionEndedReason.finished =>
+                      'Thank you for joining! We hope you found '
+                          'the session enjoyable.',
+                    SessionEndedReason.keeperLeft =>
+                      'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
+                  },
                   textAlign: TextAlign.center,
                 ),
-                _SessionFeedbackWidget(
-                  state: _thumbState,
-                  onThumbUpPressed: () async {
-                    setState(() => _thumbState = ThumbState.up);
-                    _showConfetti();
-                    await ref.read(
-                      sessionFeedbackProvider(
-                        widget.event.slug,
-                        SessionFeedbackOptions.up,
-                      ).future,
-                    );
-                    await _incrementSessionLikedCount();
-                  },
-                  onThumbDownPressed: () async {
-                    await showUserFeedbackDialog(
-                      context,
-                      onFeedbackSubmitted: (message) {
-                        _thumbState = ThumbState.down;
-                        if (mounted) setState(() {});
-                        return ref.read(
-                          sessionFeedbackProvider(
-                            widget.event.slug,
-                            SessionFeedbackOptions.down,
-                            message,
-                          ).future,
-                        );
-                      },
-                    );
-                  },
-                ),
+                if (widget.session.reason == SessionEndedReason.finished) ...[
+                  _SessionFeedbackWidget(
+                    state: _thumbState,
+                    onThumbUpPressed: () async {
+                      setState(() => _thumbState = ThumbState.up);
+                      _showConfetti();
+                      await ref.read(
+                        sessionFeedbackProvider(
+                          widget.event.slug,
+                          SessionFeedbackOptions.up,
+                        ).future,
+                      );
+                      await _incrementSessionLikedCount();
+                    },
+                    onThumbDownPressed: () async {
+                      await showUserFeedbackDialog(
+                        context,
+                        onFeedbackSubmitted: (message) {
+                          _thumbState = ThumbState.down;
+                          if (mounted) setState(() {});
+                          return ref.read(
+                            sessionFeedbackProvider(
+                              widget.event.slug,
+                              SessionFeedbackOptions.down,
+                              message,
+                            ).future,
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ],
 
                 if (nextEvents.isNotEmpty) ...[
                   Text(

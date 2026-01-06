@@ -46,10 +46,11 @@ extension KeeperControl on LiveKitService {
   }
 
   Future<void> _onKeeperDisconnectedTimeout() async {
-    await room.disconnect();
-
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
+    reason = SessionEndedReason.keeperLeft;
+
+    await room.disconnect();
   }
 
   Future<void> startSession() async {
