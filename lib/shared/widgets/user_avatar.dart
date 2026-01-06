@@ -38,7 +38,6 @@ class UserAvatar extends ConsumerWidget {
               author?.profileAvatarType == ProfileAvatarTypeEnum.im
           ? CachedNetworkImageProvider(
               getFullUrl(author!.profileImage!),
-              cacheKey: author.slug,
             )
           : null,
       seed: author?.profileAvatarSeed,
@@ -71,7 +70,6 @@ class UserAvatar extends ConsumerWidget {
                   user?.profileAvatarType == ProfileAvatarTypeEnum.im
               ? CachedNetworkImageProvider(
                   getFullUrl(user!.profileImage!),
-                  cacheKey: user.slug,
                 )
               : null,
           seed: user?.profileAvatarSeed,

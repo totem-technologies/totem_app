@@ -10,11 +10,11 @@ part of 'livekit_service.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(LiveKitService)
-const liveKitServiceProvider = LiveKitServiceFamily._();
+final liveKitServiceProvider = LiveKitServiceFamily._();
 
 final class LiveKitServiceProvider
     extends $NotifierProvider<LiveKitService, LiveKitState> {
-  const LiveKitServiceProvider._({
+  LiveKitServiceProvider._({
     required LiveKitServiceFamily super.from,
     required SessionOptions super.argument,
   }) : super(
@@ -69,7 +69,7 @@ final class LiveKitServiceFamily extends $Family
           LiveKitState,
           SessionOptions
         > {
-  const LiveKitServiceFamily._()
+  LiveKitServiceFamily._()
     : super(
         retry: null,
         name: r'liveKitServiceProvider',
@@ -93,7 +93,6 @@ abstract class _$LiveKitService extends $Notifier<LiveKitState> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build(_$args);
     final ref = this.ref as $Ref<LiveKitState, LiveKitState>;
     final element =
         ref.element
@@ -103,6 +102,6 @@ abstract class _$LiveKitService extends $Notifier<LiveKitState> {
               Object?,
               Object?
             >;
-    element.handleValue(ref, created);
+    element.handleCreate(ref, () => build(_$args));
   }
 }

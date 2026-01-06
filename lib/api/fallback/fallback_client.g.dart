@@ -43,7 +43,7 @@ class _FallbackClient implements FallbackClient {
     try {
       _value = FcmTokenResponseSchema.fromJson(_result.data!);
     } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, _result);
+      errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
     return _value;
@@ -94,7 +94,7 @@ class _FallbackClient implements FallbackClient {
     try {
       _value = OnboardSchema.fromJson(_result.data!);
     } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, _result);
+      errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
     return _value;
@@ -121,7 +121,7 @@ class _FallbackClient implements FallbackClient {
     try {
       _value = OnboardSchema.fromJson(_result.data!);
     } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, _result);
+      errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
     return _value;
@@ -151,7 +151,7 @@ class _FallbackClient implements FallbackClient {
     try {
       _value = MessageResponse.fromJson(_result.data!);
     } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, _result);
+      errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
     return _value;
@@ -181,7 +181,7 @@ class _FallbackClient implements FallbackClient {
     try {
       _value = TokenResponse.fromJson(_result.data!);
     } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, _result);
+      errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
     return _value;
@@ -211,7 +211,7 @@ class _FallbackClient implements FallbackClient {
     try {
       _value = TokenResponse.fromJson(_result.data!);
     } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, _result);
+      errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
     return _value;
@@ -241,7 +241,7 @@ class _FallbackClient implements FallbackClient {
     try {
       _value = MessageResponse.fromJson(_result.data!);
     } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, _result);
+      errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
     return _value;

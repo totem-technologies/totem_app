@@ -47,7 +47,7 @@ class _BlogClient implements BlogClient {
     try {
       _value = PagedBlogPostListSchema.fromJson(_result.data!);
     } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, _result);
+      errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
     return _value;
@@ -74,7 +74,7 @@ class _BlogClient implements BlogClient {
     try {
       _value = BlogPostSchema.fromJson(_result.data!);
     } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, _result);
+      errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
     }
     return _value;

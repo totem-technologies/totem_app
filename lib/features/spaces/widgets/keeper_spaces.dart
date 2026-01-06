@@ -61,7 +61,39 @@ class KeeperSpaces extends ConsumerWidget {
         );
       },
       error: (error, _) => const SizedBox.shrink(),
-      loading: () => const SizedBox.shrink(),
+      loading: () {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 8,
+          children: [
+            Padding(
+              padding: horizontalPadding,
+              child: Text(
+                title ?? 'Upcoming Spaces',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 210,
+              child: ListView.separated(
+                padding: horizontalPadding,
+                scrollDirection: Axis.horizontal,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 3,
+                itemBuilder: (context, index) {
+                  return SizedBox(
+                    width: 160,
+                    child: SmallSpaceCard.shimmer(),
+                  );
+                },
+                separatorBuilder: (context, index) => const SizedBox(width: 8),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

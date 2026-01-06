@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
+import 'package:totem_app/shared/totem_icons.dart';
 
 class CircleIconButton extends StatelessWidget {
   const CircleIconButton({
@@ -9,28 +11,32 @@ class CircleIconButton extends StatelessWidget {
     super.key,
   });
 
-  final Widget icon;
+  final TotemIconData icon;
   final VoidCallback onPressed;
   final EdgeInsetsGeometry? margin;
   final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: margin,
-      alignment: AlignmentDirectional.center,
-      height: 36,
-      width: 36,
-      decoration: BoxDecoration(
-        color: color ?? Colors.white,
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: IconButton(
-          icon: icon,
-          iconSize: 20,
-          visualDensity: VisualDensity.compact,
-          onPressed: onPressed,
+    return InkWell(
+      onTap: onPressed,
+      child: Container(
+        margin: margin,
+        alignment: AlignmentDirectional.center,
+        height: 30,
+        width: 30,
+        decoration: BoxDecoration(
+          color: color ?? Colors.white,
+          shape: BoxShape.circle,
+        ),
+        child: SvgPicture.string(
+          icon,
+          width: 16,
+          height: 16,
+          colorFilter: const ColorFilter.mode(
+            Colors.black,
+            BlendMode.srcIn,
+          ),
         ),
       ),
     );

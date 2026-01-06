@@ -48,6 +48,7 @@ class RepositoryUtils {
           final statusCode = error.response?.statusCode;
           // Don't retry on client errors (4xx)
           if (statusCode != null && statusCode >= 400 && statusCode < 500) {
+            attempt = maxRetries;
             rethrow;
           }
         }

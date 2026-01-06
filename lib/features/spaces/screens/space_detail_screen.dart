@@ -110,9 +110,10 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                         ),
                         leading: CircleIconButton(
                           margin: const EdgeInsetsDirectional.only(start: 20),
-                          icon: Icon(Icons.adaptive.arrow_back),
+                          icon: TotemIcons.arrowBack,
                           onPressed: () => popOrHome(context),
                         ),
+                        leadingWidth: 50,
                         actionsPadding: const EdgeInsetsDirectional.only(
                           end: 20,
                         ),
@@ -120,7 +121,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                           Builder(
                             builder: (context) {
                               return CircleIconButton(
-                                icon: Icon(Icons.adaptive.share),
+                                icon: TotemIcons.share,
                                 onPressed: () async {
                                   final box =
                                       context.findRenderObject() as RenderBox?;
@@ -429,7 +430,6 @@ class AboutSpaceSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    const titleCurve = Curves.easeOut;
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 1,
@@ -440,46 +440,18 @@ class AboutSpaceSheet extends StatelessWidget {
             SliverAppBar(
               pinned: true,
               backgroundColor: theme.scaffoldBackgroundColor,
-              expandedHeight: 112,
-              flexibleSpace: ListenableBuilder(
-                listenable: Listenable.merge([controller]),
-                builder: (context, child) {
-                  const scrollRange = 56.0;
-                  final progress = (controller.offset / scrollRange).clamp(
-                    0.0,
-                    1.0,
-                  );
-                  final curvedProgress = titleCurve.transform(progress);
-                  const maxAdditionalPadding = 48.0;
-                  final additionalPadding =
-                      maxAdditionalPadding * curvedProgress;
-                  return FlexibleSpaceBar(
-                    titlePadding: EdgeInsetsDirectional.only(
-                      start: 20 + additionalPadding,
-                      bottom: 12,
-                    ),
-                    collapseMode: CollapseMode.pin,
-                    expandedTitleScale: 1,
-                    title: Text('About', style: theme.textTheme.titleLarge),
-                  );
-                },
-              ),
-              leading: Container(
-                margin: const EdgeInsetsDirectional.only(start: 20),
-                alignment: Alignment.center,
-                child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: Icon(Icons.adaptive.arrow_back),
-                    iconSize: 24,
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
+              automaticallyImplyLeading: false,
+              centerTitle: false,
+              toolbarHeight: 72,
+              titleSpacing: 20,
+              title: Text('About', style: theme.textTheme.titleLarge),
+              actions: [
+                CircleIconButton(
+                  margin: const EdgeInsetsDirectional.only(end: 20),
+                  icon: TotemIcons.closeRounded,
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
-              ),
+              ],
             ),
             SliverPadding(
               padding: const EdgeInsetsDirectional.only(
@@ -490,62 +462,73 @@ class AboutSpaceSheet extends StatelessWidget {
               ),
               sliver: SliverList.list(
                 children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      CompactInfoText(
-                        const TotemIcon(TotemIcons.subscribers),
-                        Text('${space.subscribers} subscribers'),
-                      ),
-                      CompactInfoText(
-                        const TotemIcon(TotemIcons.priceTag),
-                        Text(
-                          space.price == 0
-                              ? 'No cost'
-                              : NumberFormat.currency(
-                                  locale: 'en_US',
-                                  symbol: r'USD $',
-                                ).format(space.price),
+                  SelectionArea(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            CompactInfoText(
+                              const TotemIcon(TotemIcons.subscribers),
+                              Text('${space.subscribers} subscribers'),
+                            ),
+                            CompactInfoText(
+                              const TotemIcon(TotemIcons.priceTag),
+                              Text(
+                                space.price == 0
+                                    ? 'No cost'
+                                    : NumberFormat.currency(
+                                        locale: 'en_US',
+                                        symbol: r'USD $',
+                                      ).format(space.price),
+                              ),
+                            ),
+                            if (space.recurring != null &&
+                                space.recurring!.isNotEmpty)
+                              CompactInfoText(
+                                const TotemIcon(TotemIcons.recurring),
+                                Text(space.recurring!.uppercaseFirst()),
+                              ),
+                          ],
                         ),
-                      ),
-                      if (space.recurring != null &&
-                          space.recurring!.isNotEmpty)
-                        CompactInfoText(
-                          const TotemIcon(TotemIcons.recurring),
-                          Text(space.recurring!.uppercaseFirst()),
+                        Html(
+                          data: space.content,
+                          style: {...AppTheme.compactHtmlStyle},
+                          extensions: [TotemImageHtmlExtension()],
+                          shrinkWrap: true,
+                          onLinkTap: (url, _, _) async {
+                            if (url != null) {
+                              final appRoute = RoutingUtils.parseTotemDeepLink(
+                                url,
+                              );
+                              if (appRoute != null && context.mounted) {
+                                // Navigate to app route instead of browser
+                                await context.push(appRoute);
+                              } else {
+                                // Open external URL for non-Totem links
+                                unawaited(launchUrl(Uri.parse(url)));
+                              }
+                            }
+                          },
+                          onAnchorTap: (url, _, _) async {
+                            if (url != null) {
+                              final appRoute = RoutingUtils.parseTotemDeepLink(
+                                url,
+                              );
+                              if (appRoute != null && context.mounted) {
+                                // Navigate to app route instead of browser
+                                await context.push(appRoute);
+                              } else {
+                                // Open external URL for non-Totem links
+                                unawaited(launchUrl(Uri.parse(url)));
+                              }
+                            }
+                          },
                         ),
-                    ],
-                  ),
-                  Html(
-                    data: space.content,
-                    style: {...AppTheme.compactHtmlStyle},
-                    extensions: [TotemImageHtmlExtension()],
-                    shrinkWrap: true,
-                    onLinkTap: (url, _, _) async {
-                      if (url != null) {
-                        final appRoute = RoutingUtils.parseTotemDeepLink(url);
-                        if (appRoute != null && context.mounted) {
-                          // Navigate to app route instead of browser
-                          await context.push(appRoute);
-                        } else {
-                          // Open external URL for non-Totem links
-                          unawaited(launchUrl(Uri.parse(url)));
-                        }
-                      }
-                    },
-                    onAnchorTap: (url, _, _) async {
-                      if (url != null) {
-                        final appRoute = RoutingUtils.parseTotemDeepLink(url);
-                        if (appRoute != null && context.mounted) {
-                          // Navigate to app route instead of browser
-                          await context.push(appRoute);
-                        } else {
-                          // Open external URL for non-Totem links
-                          unawaited(launchUrl(Uri.parse(url)));
-                        }
-                      }
-                    },
+                      ],
+                    ),
                   ),
                 ],
               ),

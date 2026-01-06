@@ -10,7 +10,7 @@ part of 'keeper_repository.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(keeperProfile)
-const keeperProfileProvider = KeeperProfileFamily._();
+final keeperProfileProvider = KeeperProfileFamily._();
 
 final class KeeperProfileProvider
     extends
@@ -22,7 +22,7 @@ final class KeeperProfileProvider
     with
         $FutureModifier<KeeperProfileSchema>,
         $FutureProvider<KeeperProfileSchema> {
-  const KeeperProfileProvider._({
+  KeeperProfileProvider._({
     required KeeperProfileFamily super.from,
     required String super.argument,
   }) : super(
@@ -70,7 +70,7 @@ String _$keeperProfileHash() => r'6f1ec6d314cd6846d7e86cd53968663096c5bc0a';
 
 final class KeeperProfileFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<KeeperProfileSchema>, String> {
-  const KeeperProfileFamily._()
+  KeeperProfileFamily._()
     : super(
         retry: _noRetry,
         name: r'keeperProfileProvider',

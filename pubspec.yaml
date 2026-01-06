@@ -1,7 +1,7 @@
 name: totem_app
 description: "Guided introspection groups."
 publish_to: "none"
-version: 0.0.31+30
+version: 0.0.32+31
 environment:
   sdk: ^3.9.0
 
@@ -10,8 +10,8 @@ dependencies:
     sdk: flutter
 
   # State Management
-  flutter_riverpod: ^3.0.3
-  riverpod_annotation: ^3.0.3
+  flutter_riverpod: ^3.1.0
+  riverpod_annotation: ^4.0.0
 
   # Routing
   go_router: ^17.0.0
@@ -82,7 +82,7 @@ dev_dependencies:
   riverpod_lint: 3.0.3
 
   # Generators
-  riverpod_generator: ^3.0.3
+  riverpod_generator: ^4.0.0
   swagger_parser: ^1.36.0
   retrofit_generator: ^10.2.1
   json_serializable: ^6.9.5
