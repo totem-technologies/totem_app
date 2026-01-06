@@ -1,6 +1,6 @@
-part of 'livekit_service.dart';
+part of 'session_service.dart';
 
-extension BackgroundControl on LiveKitService {
+extension BackgroundControl on Session {
   Future<void> setupBackgroundMode() async {
     try {
       await requestPermissions();

@@ -1,9 +1,9 @@
 // We need to access LivekitService.ref to notify listeners
 // ignore_for_file: invalid_use_of_protected_member
 
-part of 'livekit_service.dart';
+part of 'session_service.dart';
 
-extension DevicesControl on LiveKitService {
+extension DevicesControl on Session {
   String? get selectedCameraDeviceId {
     final userTrack = room.localParticipant
         ?.getTrackPublications()

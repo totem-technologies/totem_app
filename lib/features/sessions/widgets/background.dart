@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/config/theme.dart';
 
 class RoomBackground extends StatelessWidget {
@@ -7,6 +8,7 @@ class RoomBackground extends StatelessWidget {
     required this.child,
     this.padding = EdgeInsetsDirectional.zero,
     this.overlayStyle = SystemUiOverlayStyle.light,
+    this.status = SessionStatus.waiting,
     super.key,
   });
 
@@ -16,6 +18,8 @@ class RoomBackground extends StatelessWidget {
 
   final SystemUiOverlayStyle overlayStyle;
 
+  final SessionStatus status;
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion(
@@ -23,31 +27,45 @@ class RoomBackground extends StatelessWidget {
       child: OrientationBuilder(
         builder: (context, orientation) {
           final isLandscape = orientation == Orientation.landscape;
-          return Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: const [
-                  Colors.black,
-                  AppTheme.mauve,
-                ],
-                begin: isLandscape
-                    ? AlignmentDirectional.centerStart
-                    : AlignmentDirectional.topCenter,
-                end: isLandscape
-                    ? AlignmentDirectional.centerEnd
-                    : AlignmentDirectional.bottomCenter,
-                stops: const [0.5, 1],
-              ),
+
+          final waitingDecoration = BoxDecoration(
+            gradient: LinearGradient(
+              colors: const [
+                AppTheme.cream,
+                AppTheme.mauve,
+              ],
+              begin: isLandscape
+                  ? AlignmentDirectional.centerStart
+                  : AlignmentDirectional.topCenter,
+              end: isLandscape
+                  ? AlignmentDirectional.centerEnd
+                  : AlignmentDirectional.bottomCenter,
+              stops: const [0.5, 1],
             ),
+          );
+          const roomDecoration = BoxDecoration(
+            color: AppTheme.slate,
+          );
+
+          final foregroudColor = switch (status) {
+            SessionStatus.waiting => Colors.black,
+            _ => Colors.white,
+          };
+          return Container(
+            decoration: switch (status) {
+              SessionStatus.waiting => waitingDecoration,
+              _ => roomDecoration,
+            },
             padding: padding,
             child: DefaultTextStyle(
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: foregroudColor),
               child: Theme(
                 data: Theme.of(context).copyWith(
                   scaffoldBackgroundColor: Colors.transparent,
                   textTheme: Theme.of(context).textTheme.apply(
-                    bodyColor: Colors.white,
-                    displayColor: Colors.white,
+                    bodyColor: foregroudColor,
+                    displayColor: foregroudColor,
+                    decorationColor: foregroudColor,
                   ),
                 ),
                 child: Material(

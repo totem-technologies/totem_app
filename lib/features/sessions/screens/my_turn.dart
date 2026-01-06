@@ -33,6 +33,7 @@ class MyTurn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RoomBackground(
+      status: sessionState.status,
       child: SafeArea(
         child: OrientationBuilder(
           builder: (context, orientation) {
@@ -153,7 +154,7 @@ class MyTurn extends StatelessWidget {
 class MyTurnLayoutBuilder implements ParticipantLayoutBuilder {
   const MyTurnLayoutBuilder({
     this.maxPerLineCount,
-    this.gap = 16,
+    this.gap = 6,
     this.isLandscape = false,
   });
 

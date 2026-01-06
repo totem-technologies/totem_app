@@ -39,7 +39,7 @@ class TransitionCard extends StatelessWidget {
                 TotemCardTransitionType.pass =>
                   'When done, press Pass to pass the Totem to the next person.',
                 TotemCardTransitionType.receive =>
-                  'Check camera & mic then tap Receive',
+                  'The Totem is being passed to you.',
                 TotemCardTransitionType.start =>
                   'Bring participants out of the waiting room and begin '
                       'the conversation.',

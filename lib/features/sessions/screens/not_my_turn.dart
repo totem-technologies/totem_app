@@ -5,7 +5,7 @@ import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/features/sessions/services/livekit_service.dart';
+import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
@@ -24,7 +24,7 @@ class NotMyTurn extends ConsumerWidget {
   final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
   final SessionState sessionState;
-  final LiveKitService session;
+  final Session session;
   final EventDetailSchema event;
   final List<MapEntry<String, String>> emojis;
 
@@ -40,6 +40,7 @@ class NotMyTurn extends ConsumerWidget {
     final activeSpeaker = session.speakingNow();
 
     return RoomBackground(
+      status: sessionState.status,
       child: OrientationBuilder(
         builder: (context, orientation) {
           final isLandscape = orientation == Orientation.landscape;

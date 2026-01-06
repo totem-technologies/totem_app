@@ -31,8 +31,10 @@ export 'package:totem_app/features/sessions/services/utils.dart';
 part 'background_control.dart';
 part 'devices_control.dart';
 part 'keeper_control.dart';
-part 'livekit_service.g.dart';
+part 'session_service.g.dart';
 part 'participant_control.dart';
+
+enum SessionEndedReason { finished, keeperLeft }
 
 enum SessionCommunicationTopics {
   emoji('lk-emoji-topic'),
@@ -45,6 +47,7 @@ enum SessionCommunicationTopics {
 typedef OnEmojiReceived = void Function(String userIdentity, String emoji);
 typedef OnMessageReceived = void Function(String userIdentity, String message);
 typedef OnLivekitError = void Function(LiveKitException error);
+typedef OnKeeperLeaveRoom = VoidCallback Function(Session room);
 
 @immutable
 class SessionOptions {
@@ -57,6 +60,7 @@ class SessionOptions {
     required this.onEmojiReceived,
     required this.onMessageReceived,
     required this.onLivekitError,
+    required this.onKeeperLeaveRoom,
     required this.cameraOptions,
     required this.audioOptions,
     required this.audioOutputOptions,
@@ -71,6 +75,7 @@ class SessionOptions {
   final OnEmojiReceived onEmojiReceived;
   final OnMessageReceived onMessageReceived;
   final OnLivekitError onLivekitError;
+  final OnKeeperLeaveRoom onKeeperLeaveRoom;
 
   final CameraCaptureOptions cameraOptions;
   final AudioCaptureOptions audioOptions;
@@ -99,8 +104,8 @@ class SessionOptions {
 enum RoomConnectionState { connecting, connected, disconnected, error }
 
 @immutable
-class LiveKitState {
-  const LiveKitState({
+class SessionRoomState {
+  const SessionRoomState({
     this.connectionState = RoomConnectionState.connecting,
     this.sessionState = const SessionState(keeperSlug: '', speakingOrder: []),
   });
@@ -113,11 +118,11 @@ class LiveKitState {
         sessionState.speakingNow == room.localParticipant?.identity;
   }
 
-  LiveKitState copyWith({
+  SessionRoomState copyWith({
     RoomConnectionState? connectionState,
     SessionState? sessionState,
   }) {
-    return LiveKitState(
+    return SessionRoomState(
       connectionState: connectionState ?? this.connectionState,
       sessionState: sessionState ?? this.sessionState,
     );
@@ -133,7 +138,7 @@ class LiveKitState {
 }
 
 @riverpod
-class LiveKitService extends _$LiveKitService {
+class Session extends _$Session {
   late final RoomContext room;
   late final EventsListener<RoomEvent> _listener;
   late final MobileTotemApi _apiService;
@@ -141,9 +146,11 @@ class LiveKitService extends _$LiveKitService {
   String? _lastMetadata;
 
   Timer? _timer;
+  VoidCallback? closeKeeperLeftNotification;
+  SessionEndedReason reason = SessionEndedReason.finished;
 
   @override
-  LiveKitState build(SessionOptions options) {
+  SessionRoomState build(SessionOptions options) {
     _options = options;
     _apiService = ref.read(mobileApiServiceProvider);
 
@@ -187,13 +194,15 @@ class LiveKitService extends _$LiveKitService {
       unawaited(WakelockPlus.disable());
       _keeperDisconnectedTimer?.cancel();
       _keeperDisconnectedTimer = null;
+      closeKeeperLeftNotification?.call();
+      closeKeeperLeftNotification = null;
       _timer?.cancel();
       _timer = null;
       unawaited(_listener.dispose());
       room.removeListener(_onRoomChanges);
     });
 
-    return const LiveKitState();
+    return const SessionRoomState();
   }
 
   void _onConnected() {

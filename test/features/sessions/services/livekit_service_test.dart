@@ -11,7 +11,7 @@ import 'package:livekit_components/livekit_components.dart'
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/api/meetings/meetings_client.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
-import 'package:totem_app/features/sessions/services/livekit_service.dart';
+import 'package:totem_app/features/sessions/services/session_service.dart';
 
 // Mock classes
 class MockMobileTotemApi extends Mock implements MobileTotemApi {}
@@ -40,7 +40,7 @@ class TestLiveKitService {
     _options = options;
     _apiService = mockApiService;
     room = mockRoomContext;
-    testState = const LiveKitState();
+    testState = const SessionRoomState();
     testUserIdentity =
         room.localParticipant?.identity ?? 'test-user@example.com';
   }
@@ -50,7 +50,7 @@ class TestLiveKitService {
   late SessionOptions _options;
   late MobileTotemApi _apiService;
   late RoomContext room;
-  late LiveKitState testState;
+  late SessionRoomState testState;
   late String testUserIdentity;
 
   // Test methods that simulate the private methods
@@ -176,6 +176,7 @@ void main() {
       onEmojiReceived: (userIdentity, emoji) {},
       onMessageReceived: (userIdentity, message) {},
       onLivekitError: (error) {},
+      onKeeperLeaveRoom: (_) => () {},
       cameraOptions: const CameraCaptureOptions(),
       audioOptions: const AudioCaptureOptions(),
       audioOutputOptions: const AudioOutputOptions(),
@@ -192,6 +193,7 @@ void main() {
           onEmojiReceived: (userIdentity, emoji) {},
           onMessageReceived: (userIdentity, message) {},
           onLivekitError: (error) {},
+          onKeeperLeaveRoom: (_) => () {},
           cameraOptions: const CameraCaptureOptions(),
           audioOptions: const AudioCaptureOptions(),
           audioOutputOptions: const AudioOutputOptions(),
@@ -291,7 +293,7 @@ void main() {
           speakingNow: testUserIdentity,
           speakingOrder: [testUserIdentity, 'other-user'],
         );
-        liveKitService.testState = const LiveKitState(
+        liveKitService.testState = const SessionRoomState(
           connectionState: RoomConnectionState.connected,
           sessionState: sessionState,
         );
@@ -308,7 +310,7 @@ void main() {
           speakingNow: 'other-user',
           speakingOrder: [testUserIdentity, 'other-user'],
         );
-        liveKitService.testState = const LiveKitState(
+        liveKitService.testState = const SessionRoomState(
           connectionState: RoomConnectionState.connected,
           sessionState: sessionState,
         );
@@ -324,7 +326,7 @@ void main() {
           keeperSlug: testUserIdentity,
           speakingOrder: [testUserIdentity, 'other-user'],
         );
-        liveKitService.testState = const LiveKitState(
+        liveKitService.testState = const SessionRoomState(
           connectionState: RoomConnectionState.connected,
           sessionState: sessionState,
         );
@@ -343,7 +345,7 @@ void main() {
           speakingNow: testUserIdentity,
           speakingOrder: [testUserIdentity],
         );
-        liveKitService.testState = const LiveKitState(
+        liveKitService.testState = const SessionRoomState(
           connectionState: RoomConnectionState.connected,
           sessionState: sessionState,
         );
@@ -426,6 +428,7 @@ void main() {
           },
           onMessageReceived: (userIdentity, message) {},
           onLivekitError: (error) {},
+          onKeeperLeaveRoom: (_) => () {},
           cameraOptions: const CameraCaptureOptions(),
           audioOptions: const AudioCaptureOptions(),
           audioOutputOptions: const AudioOutputOptions(),
@@ -468,6 +471,7 @@ void main() {
             receivedMessage = msg;
           },
           onLivekitError: (error) {},
+          onKeeperLeaveRoom: (_) => () {},
           cameraOptions: const CameraCaptureOptions(),
           audioOptions: const AudioCaptureOptions(),
           audioOutputOptions: const AudioOutputOptions(),
@@ -515,6 +519,7 @@ void main() {
             messageReceived = true;
           },
           onLivekitError: (error) {},
+          onKeeperLeaveRoom: (_) => () {},
           cameraOptions: const CameraCaptureOptions(),
           audioOptions: const AudioCaptureOptions(),
           audioOutputOptions: const AudioOutputOptions(),
@@ -552,6 +557,7 @@ void main() {
             callbackCalled = true;
           },
           onLivekitError: (error) {},
+          onKeeperLeaveRoom: (_) => () {},
           cameraOptions: const CameraCaptureOptions(),
           audioOptions: const AudioCaptureOptions(),
           audioOutputOptions: const AudioOutputOptions(),
@@ -572,7 +578,7 @@ void main() {
     group('Totem Operations', () {
       test('should pass totem successfully when it is my turn', () async {
         // Set up state where it's my turn
-        liveKitService.testState = const LiveKitState(
+        liveKitService.testState = const SessionRoomState(
           connectionState: RoomConnectionState.connected,
           sessionState: SessionState(
             status: SessionStatus.started,
@@ -599,7 +605,7 @@ void main() {
 
       test('should not pass totem when it is not my turn', () async {
         // Set up state where it's not my turn
-        liveKitService.testState = const LiveKitState(
+        liveKitService.testState = const SessionRoomState(
           connectionState: RoomConnectionState.connected,
           sessionState: SessionState(
             status: SessionStatus.started,
@@ -620,7 +626,7 @@ void main() {
 
       test('should handle pass totem API error', () async {
         // Set up state where it's my turn
-        liveKitService.testState = const LiveKitState(
+        liveKitService.testState = const SessionRoomState(
           connectionState: RoomConnectionState.connected,
           sessionState: SessionState(
             status: SessionStatus.started,
@@ -656,7 +662,7 @@ void main() {
 
       test('should accept totem successfully when it is my turn', () async {
         // Set up state where it's my turn
-        liveKitService.testState = const LiveKitState(
+        liveKitService.testState = const SessionRoomState(
           connectionState: RoomConnectionState.connected,
           sessionState: SessionState(
             status: SessionStatus.started,
@@ -683,7 +689,7 @@ void main() {
 
       test('should not accept totem when it is not my turn', () async {
         // Set up state where it's not my turn
-        liveKitService.testState = const LiveKitState(
+        liveKitService.testState = const SessionRoomState(
           connectionState: RoomConnectionState.connected,
           sessionState: SessionState(
             status: SessionStatus.started,
@@ -704,7 +710,7 @@ void main() {
 
       test('should handle accept totem API error', () async {
         // Set up state where it's my turn
-        liveKitService.testState = const LiveKitState(
+        liveKitService.testState = const SessionRoomState(
           connectionState: RoomConnectionState.connected,
           sessionState: SessionState(
             status: SessionStatus.started,
@@ -823,7 +829,7 @@ void main() {
 
     group('State Management', () {
       test('should copy state correctly', () {
-        const originalState = LiveKitState(
+        const originalState = SessionRoomState(
           connectionState: RoomConnectionState.connected,
           sessionState: SessionState(
             status: SessionStatus.started,
@@ -845,7 +851,7 @@ void main() {
       });
 
       test('should copy state with session state change', () {
-        const originalState = LiveKitState(
+        const originalState = SessionRoomState(
           connectionState: RoomConnectionState.connected,
         );
 

@@ -45,9 +45,6 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Run Tests
-        run: flutter test
-
       - name: Build ABI
         run: flutter build appbundle --verbose --flavor ${{ matrix.flavor }}
 

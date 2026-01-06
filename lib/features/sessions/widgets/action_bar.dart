@@ -17,6 +17,7 @@ class ActionBarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final foregroundColor = active ? AppTheme.mauve : AppTheme.white;
     return GestureDetector(
       onTap: onPressed,
       child: AnimatedContainer(
@@ -26,14 +27,22 @@ class ActionBarButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: active ? AppTheme.white : AppTheme.mauve,
           borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: active ? AppTheme.mauve : Colors.white),
+          border: Border.all(color: foregroundColor),
         ),
         child: Center(
           child: IconTheme.merge(
             data: IconThemeData(
-              color: active ? AppTheme.mauve : AppTheme.white,
+              color: foregroundColor,
             ),
-            child: SizedBox.square(dimension: square ? 24 : null, child: child),
+            child: DefaultTextStyle.merge(
+              style: TextStyle(
+                color: foregroundColor,
+              ),
+              child: SizedBox.square(
+                dimension: square ? 24 : null,
+                child: child,
+              ),
+            ),
           ),
         ),
       ),

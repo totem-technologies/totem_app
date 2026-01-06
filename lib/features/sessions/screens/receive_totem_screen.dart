@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
+import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
@@ -9,48 +10,44 @@ class ReceiveTotemScreen extends StatelessWidget {
   const ReceiveTotemScreen({
     required this.actionBar,
     required this.onAcceptTotem,
+    required this.sessionState,
     super.key,
   });
 
   final Widget actionBar;
   final Future<void> Function() onAcceptTotem;
+  final SessionRoomState sessionState;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final room = RoomContext.of(context)!;
 
     return RoomBackground(
+      status: sessionState.sessionState.status,
       padding: const EdgeInsetsDirectional.all(20),
       child: SafeArea(
         child: OrientationBuilder(
           builder: (context, orientation) {
             final isLandscape = orientation == Orientation.landscape;
 
-            final titleWidget = Padding(
-              padding: const EdgeInsetsDirectional.symmetric(horizontal: 10),
-              child: Text(
-                'The Totem is being passed to you',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            );
+            const titleWidget = SizedBox(height: 0);
 
-            final videoCard = LocalParticipantVideoCard(
-              isCameraOn: room.localParticipant!.isCameraEnabled(),
-              videoTrack:
-                  room.localParticipant?.trackPublications.values
-                          .where(
-                            (t) =>
-                                t.track != null &&
-                                t.kind == TrackType.VIDEO &&
-                                t.track!.isActive,
-                          )
-                          .firstOrNull
-                          ?.track
-                      as VideoTrack?,
+            final videoCard = Padding(
+              padding: const EdgeInsetsDirectional.all(20),
+              child: LocalParticipantVideoCard(
+                isCameraOn: room.localParticipant!.isCameraEnabled(),
+                videoTrack:
+                    room.localParticipant?.trackPublications.values
+                            .where(
+                              (t) =>
+                                  t.track != null &&
+                                  t.kind == TrackType.VIDEO &&
+                                  t.track!.isActive,
+                            )
+                            .firstOrNull
+                            ?.track
+                        as VideoTrack?,
+              ),
             );
 
             final passReceiveCard = TransitionCard(
@@ -86,7 +83,7 @@ class ReceiveTotemScreen extends StatelessWidget {
               );
             } else {
               return Column(
-                spacing: 20,
+                spacing: 40,
                 children: [
                   titleWidget,
                   Expanded(

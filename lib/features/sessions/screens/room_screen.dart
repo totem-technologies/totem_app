@@ -4,7 +4,8 @@ import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart' hide SessionOptions;
+import 'package:livekit_client/livekit_client.dart'
+    hide Session, SessionOptions;
 import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
 import 'package:totem_app/api/models/event_detail_schema.dart';
@@ -18,7 +19,7 @@ import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
 import 'package:totem_app/features/sessions/screens/options_sheet.dart';
 import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_ended.dart';
-import 'package:totem_app/features/sessions/services/livekit_service.dart';
+import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
@@ -97,7 +98,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     super.dispose();
   }
 
-  // TODO(bdlukaa): Show low battery warning UI
   final battery = Battery();
   bool _shouldShowLowBatteryWarning = false;
   StreamSubscription<BatteryState>? _batterySubscription;
@@ -113,7 +113,16 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           try {
             final level = await battery.batteryLevel;
             if (level <= 20 && !_shouldShowLowBatteryWarning) {
-              setState(() => _shouldShowLowBatteryWarning = true);
+              _shouldShowLowBatteryWarning = true;
+              if (mounted) {
+                setState(() {});
+                showNotificationPopup(
+                  context,
+                  icon: TotemIcons.person,
+                  title: 'Your battery is running low',
+                  message: 'You might want to plug in.',
+                );
+              }
             }
           } catch (_) {
             // Unable to get battery level
@@ -174,7 +183,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     }
   }
 
-  Future<void> _onAcceptTotem(LiveKitService sessionNotifier) async {
+  Future<void> _onAcceptTotem(Session sessionNotifier) async {
     try {
       await sessionNotifier.acceptTotem();
     } catch (error) {
@@ -187,6 +196,15 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         );
       }
     }
+  }
+
+  VoidCallback _onKeeperLeft(Session room) {
+    return showPermanentNotificationPopup(
+      context,
+      icon: TotemIcons.community,
+      title: 'The session has been paused.',
+      message: 'The keeper will be right back.',
+    );
   }
 
   @override
@@ -207,11 +225,12 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           onEmojiReceived: _onEmojiReceived,
           onMessageReceived: _onChatMessageReceived,
           onLivekitError: _onLivekitError,
+          onKeeperLeaveRoom: _onKeeperLeft,
         );
 
-        final sessionState = ref.watch(liveKitServiceProvider(sessionOptions));
+        final sessionState = ref.watch(sessionProvider(sessionOptions));
         final sessionNotifier = ref.read(
-          liveKitServiceProvider(sessionOptions).notifier,
+          sessionProvider(sessionOptions).notifier,
         );
 
         return PopScope(
@@ -245,6 +264,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             }
           },
           child: RoomBackground(
+            status: sessionState.sessionState.status,
             child: LivekitRoom(
               roomContext: sessionNotifier.room,
               builder: (context, roomCtx) {
@@ -276,8 +296,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   Widget _buildBody(
     EventDetailSchema event,
-    LiveKitService notifier,
-    LiveKitState state,
+    Session notifier,
+    SessionRoomState state,
   ) {
     final roomCtx = notifier.room;
     switch (state.connectionState) {
@@ -286,10 +306,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       case RoomConnectionState.connecting:
         return const LoadingRoomScreen();
       case RoomConnectionState.disconnected:
-        return SessionEndedScreen(event: event);
+        return SessionEndedScreen(event: event, session: notifier);
       case RoomConnectionState.connected:
         if (state.sessionState.status == SessionStatus.ended) {
-          return SessionEndedScreen(event: event);
+          return SessionEndedScreen(event: event, session: notifier);
         }
         if (roomCtx.localParticipant == null) {
           return const LoadingRoomScreen();
@@ -298,6 +318,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         if (state.isMyTurn(notifier.room)) {
           if (state.sessionState.totemStatus == TotemStatus.passing) {
             return ReceiveTotemScreen(
+              sessionState: state,
               actionBar: buildActionBar(notifier, state, event),
               onAcceptTotem: () => _onAcceptTotem(notifier),
             );
@@ -329,8 +350,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   }
 
   Widget buildActionBar(
-    LiveKitService notifier,
-    LiveKitState state,
+    Session notifier,
+    SessionRoomState state,
     EventDetailSchema event,
   ) {
     return Builder(
