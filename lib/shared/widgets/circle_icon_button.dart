@@ -29,18 +29,13 @@ class CircleIconButton extends StatelessWidget {
           color: color ?? Colors.white,
           shape: BoxShape.circle,
         ),
-        child: Padding(
-          padding: EdgeInsetsDirectional.only(
-            end: icon == TotemIcons.arrowBack ? 2 : 0,
-          ),
-          child: SvgPicture.string(
-            icon,
-            width: 16,
-            height: 16,
-            colorFilter: const ColorFilter.mode(
-              Colors.black,
-              BlendMode.srcIn,
-            ),
+        child: SvgPicture.string(
+          icon,
+          width: 16,
+          height: 16,
+          colorFilter: const ColorFilter.mode(
+            Colors.black,
+            BlendMode.srcIn,
           ),
         ),
       ),
