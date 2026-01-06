@@ -189,6 +189,15 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     }
   }
 
+  VoidCallback _onKeeperLeft(LiveKitService room) {
+    return showPermanentNotificationPopup(
+      context,
+      icon: TotemIcons.community,
+      title: 'The session has been paused.',
+      message: 'The keeper will be right back.',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final eventAsync = ref.watch(eventProvider(widget.eventSlug));
@@ -207,6 +216,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           onEmojiReceived: _onEmojiReceived,
           onMessageReceived: _onChatMessageReceived,
           onLivekitError: _onLivekitError,
+          onKeeperLeaveRoom: _onKeeperLeft,
         );
 
         final sessionState = ref.watch(liveKitServiceProvider(sessionOptions));

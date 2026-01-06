@@ -9,16 +9,21 @@ class AnimatedPopup extends StatefulWidget {
   const AnimatedPopup({
     required this.onDismissed,
     required this.popup,
+    this.animationDuration = const Duration(milliseconds: 400),
+    this.duration = const Duration(seconds: 4),
     super.key,
   });
   final VoidCallback onDismissed;
   final Widget popup;
 
+  final Duration animationDuration;
+  final Duration duration;
+
   @override
-  State<AnimatedPopup> createState() => _AnimatedPopupState();
+  State<AnimatedPopup> createState() => AnimatedPopupState();
 }
 
-class _AnimatedPopupState extends State<AnimatedPopup>
+class AnimatedPopupState extends State<AnimatedPopup>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _offsetAnimation;
@@ -27,7 +32,7 @@ class _AnimatedPopupState extends State<AnimatedPopup>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: widget.animationDuration,
       vsync: this,
     );
 
@@ -44,12 +49,16 @@ class _AnimatedPopupState extends State<AnimatedPopup>
 
     unawaited(_controller.forward());
 
-    Future.delayed(const Duration(seconds: 4), () async {
-      if (mounted) {
-        await _controller.reverse();
-        widget.onDismissed();
-      }
-    });
+    if (widget.duration > Duration.zero) {
+      Future.delayed(widget.duration, dismiss);
+    }
+  }
+
+  Future<void> dismiss() async {
+    if (mounted) {
+      await _controller.reverse();
+      widget.onDismissed();
+    }
   }
 
   @override
@@ -71,6 +80,7 @@ void showPopup(
   BuildContext context, {
   required WidgetBuilder builder,
 }) {
+  final key = GlobalKey<AnimatedPopupState>();
   final overlay = Overlay.of(context);
 
   late OverlayEntry popup;
@@ -81,6 +91,7 @@ void showPopup(
       child: Material(
         color: Colors.transparent,
         child: AnimatedPopup(
+          key: key,
           onDismissed: () {
             if (popup.mounted) {
               popup.remove();
@@ -102,6 +113,59 @@ void showNotificationPopup(
   required String message,
 }) {
   return showPopup(
+    context,
+    builder: (context) {
+      return NotificationPopup(
+        icon: icon,
+        title: title,
+        message: message,
+      );
+    },
+  );
+}
+
+VoidCallback showDismissiblePopup(
+  BuildContext context, {
+  required WidgetBuilder builder,
+}) {
+  final key = GlobalKey<AnimatedPopupState>();
+  final overlay = Overlay.of(context);
+
+  late OverlayEntry popup;
+  popup = OverlayEntry(
+    builder: (context) => Positioned(
+      left: 0,
+      right: 0,
+      child: Material(
+        color: Colors.transparent,
+        child: AnimatedPopup(
+          key: key,
+          duration: Duration.zero,
+          onDismissed: () {
+            if (popup.mounted) {
+              popup.remove();
+            }
+          },
+          popup: Builder(builder: builder),
+        ),
+      ),
+    ),
+  );
+
+  overlay.insert(popup);
+
+  return () {
+    unawaited(key.currentState?.dismiss());
+  };
+}
+
+VoidCallback showPermanentNotificationPopup(
+  BuildContext context, {
+  required TotemIconData icon,
+  required String title,
+  required String message,
+}) {
+  return showDismissiblePopup(
     context,
     builder: (context) {
       return NotificationPopup(

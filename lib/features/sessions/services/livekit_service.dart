@@ -45,6 +45,7 @@ enum SessionCommunicationTopics {
 typedef OnEmojiReceived = void Function(String userIdentity, String emoji);
 typedef OnMessageReceived = void Function(String userIdentity, String message);
 typedef OnLivekitError = void Function(LiveKitException error);
+typedef OnKeeperLeaveRoom = VoidCallback Function(LiveKitService room);
 
 @immutable
 class SessionOptions {
@@ -57,6 +58,7 @@ class SessionOptions {
     required this.onEmojiReceived,
     required this.onMessageReceived,
     required this.onLivekitError,
+    required this.onKeeperLeaveRoom,
     required this.cameraOptions,
     required this.audioOptions,
     required this.audioOutputOptions,
@@ -71,6 +73,7 @@ class SessionOptions {
   final OnEmojiReceived onEmojiReceived;
   final OnMessageReceived onMessageReceived;
   final OnLivekitError onLivekitError;
+  final OnKeeperLeaveRoom onKeeperLeaveRoom;
 
   final CameraCaptureOptions cameraOptions;
   final AudioCaptureOptions audioOptions;
@@ -141,6 +144,7 @@ class LiveKitService extends _$LiveKitService {
   String? _lastMetadata;
 
   Timer? _timer;
+  VoidCallback? closeKeeperLeftNotification;
 
   @override
   LiveKitState build(SessionOptions options) {
@@ -187,6 +191,8 @@ class LiveKitService extends _$LiveKitService {
       unawaited(WakelockPlus.disable());
       _keeperDisconnectedTimer?.cancel();
       _keeperDisconnectedTimer = null;
+      closeKeeperLeftNotification?.call();
+      closeKeeperLeftNotification = null;
       _timer?.cancel();
       _timer = null;
       unawaited(_listener.dispose());

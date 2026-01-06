@@ -176,6 +176,7 @@ void main() {
       onEmojiReceived: (userIdentity, emoji) {},
       onMessageReceived: (userIdentity, message) {},
       onLivekitError: (error) {},
+      onKeeperLeaveRoom: (_) => () {},
       cameraOptions: const CameraCaptureOptions(),
       audioOptions: const AudioCaptureOptions(),
       audioOutputOptions: const AudioOutputOptions(),
@@ -192,6 +193,7 @@ void main() {
           onEmojiReceived: (userIdentity, emoji) {},
           onMessageReceived: (userIdentity, message) {},
           onLivekitError: (error) {},
+          onKeeperLeaveRoom: (_) => () {},
           cameraOptions: const CameraCaptureOptions(),
           audioOptions: const AudioCaptureOptions(),
           audioOutputOptions: const AudioOutputOptions(),
@@ -426,6 +428,7 @@ void main() {
           },
           onMessageReceived: (userIdentity, message) {},
           onLivekitError: (error) {},
+          onKeeperLeaveRoom: (_) => () {},
           cameraOptions: const CameraCaptureOptions(),
           audioOptions: const AudioCaptureOptions(),
           audioOutputOptions: const AudioOutputOptions(),
@@ -468,6 +471,7 @@ void main() {
             receivedMessage = msg;
           },
           onLivekitError: (error) {},
+          onKeeperLeaveRoom: (_) => () {},
           cameraOptions: const CameraCaptureOptions(),
           audioOptions: const AudioCaptureOptions(),
           audioOutputOptions: const AudioOutputOptions(),
@@ -515,6 +519,7 @@ void main() {
             messageReceived = true;
           },
           onLivekitError: (error) {},
+          onKeeperLeaveRoom: (_) => () {},
           cameraOptions: const CameraCaptureOptions(),
           audioOptions: const AudioCaptureOptions(),
           audioOutputOptions: const AudioOutputOptions(),
@@ -552,6 +557,7 @@ void main() {
             callbackCalled = true;
           },
           onLivekitError: (error) {},
+          onKeeperLeaveRoom: (_) => () {},
           cameraOptions: const CameraCaptureOptions(),
           audioOptions: const AudioCaptureOptions(),
           audioOutputOptions: const AudioOutputOptions(),

@@ -32,7 +32,7 @@ extension KeeperControl on LiveKitService {
       _onKeeperDisconnectedTimeout,
     );
 
-    // TODO(bdlukaa): Show message to the user that the keeper has disconnected.
+    closeKeeperLeftNotification ??= options.onKeeperLeaveRoom(this);
   }
 
   void _onKeeperConnected() {
@@ -40,6 +40,9 @@ extension KeeperControl on LiveKitService {
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
+
+    closeKeeperLeftNotification?.call();
+    closeKeeperLeftNotification = null;
   }
 
   Future<void> _onKeeperDisconnectedTimeout() async {
