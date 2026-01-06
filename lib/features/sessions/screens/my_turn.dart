@@ -154,7 +154,7 @@ class MyTurn extends StatelessWidget {
 class MyTurnLayoutBuilder implements ParticipantLayoutBuilder {
   const MyTurnLayoutBuilder({
     this.maxPerLineCount,
-    this.gap = 16,
+    this.gap = 6,
     this.isLandscape = false,
   });
 
