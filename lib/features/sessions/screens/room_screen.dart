@@ -98,7 +98,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     super.dispose();
   }
 
-  // TODO(bdlukaa): Show low battery warning UI
   final battery = Battery();
   bool _shouldShowLowBatteryWarning = false;
   StreamSubscription<BatteryState>? _batterySubscription;
@@ -114,7 +113,16 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           try {
             final level = await battery.batteryLevel;
             if (level <= 20 && !_shouldShowLowBatteryWarning) {
-              setState(() => _shouldShowLowBatteryWarning = true);
+              _shouldShowLowBatteryWarning = true;
+              if (mounted) {
+                setState(() {});
+                showNotificationPopup(
+                  context,
+                  icon: TotemIcons.person,
+                  title: 'Your battery is running low',
+                  message: 'You might want to plug in.',
+                );
+              }
             }
           } catch (_) {
             // Unable to get battery level
