@@ -25,10 +25,17 @@ runs:
   steps:
     - name: Create .env & Common Files
       shell: bash
+      env:
+        FLAVOR: ${{ inputs.flavor }}
+        FIREBASE_OPTS: ${{ inputs.firebase_options }}
       run: |
         {
-          echo 'ENVIRONMENT="${{ inputs.flavor }}"'
-          echo 'API_URL="https://totem.kbl.io"'
+          echo "ENVIRONMENT=\"$FLAVOR\""
+          if [ "$FLAVOR" = "staging" ]; then
+            echo 'API_URL="https://totem.kbl.io"'
+          else
+            echo 'API_URL="https://www.totem.org"'
+          fi
         } > .env
         mkdir -p lib
         echo "${{ inputs.firebase_options }}" | base64 -d > lib/firebase_options.dart
