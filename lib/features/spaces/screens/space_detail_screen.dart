@@ -61,6 +61,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final spaceAsync = ref.watch(spaceProvider(widget.slug));
+    ref.sentryReportFullyDisplayed(spaceProvider(widget.slug));
 
     // Determine if we have a valid event slug to watch
     final String? effectiveEventSlug =

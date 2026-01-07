@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
@@ -66,6 +67,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       if (await Permission.camera.isGranted &&
           await Permission.microphone.isGranted) {
         _initializeLocalVideo();
+      }
+      if (mounted) {
+        SentryDisplayWidget.of(context).reportFullyDisplayed();
       }
     });
   }

@@ -8,6 +8,7 @@ import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/totem_status.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -203,6 +204,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     );
   }
 
+  void _onConnected() {
+    SentryDisplayWidget.of(context).reportFullyDisplayed();
+  }
+
   @override
   Widget build(BuildContext context) {
     final eventAsync = ref.watch(eventProvider(widget.eventSlug));
@@ -222,6 +227,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           onMessageReceived: _onChatMessageReceived,
           onLivekitError: _onLivekitError,
           onKeeperLeaveRoom: _onKeeperLeft,
+          onConnected: _onConnected,
         );
 
         final sessionState = ref.watch(sessionProvider(sessionOptions));

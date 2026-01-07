@@ -14,6 +14,7 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/html.dart';
 import 'package:totem_app/shared/routing.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/circle_icon_button.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -32,8 +33,10 @@ class BlogScreen extends ConsumerStatefulWidget {
 class _BlogScreenState extends ConsumerState<BlogScreen> {
   @override
   Widget build(BuildContext context) {
-    final blogRef = ref.watch(blogPostProvider(widget.slug));
     final theme = Theme.of(context);
+
+    final blogRef = ref.watch(blogPostProvider(widget.slug));
+    ref.sentryReportFullyDisplayed(blogPostProvider(widget.slug));
 
     return Scaffold(
       backgroundColor: const Color(0xffFCEFE4),

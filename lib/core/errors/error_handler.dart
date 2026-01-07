@@ -32,7 +32,8 @@ class ErrorHandler {
             ..enableLogs = true
             ..attachScreenshot = true
             ..attachViewHierarchy = true
-            ..enableAutoPerformanceTracing = true;
+            ..enableAutoPerformanceTracing = true
+            ..enableTimeToFullDisplayTracing = true;
         },
         appRunner: () async {
           FlutterError.onError = (FlutterErrorDetails details) {

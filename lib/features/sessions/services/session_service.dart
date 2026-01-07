@@ -61,6 +61,7 @@ class SessionOptions {
     required this.onMessageReceived,
     required this.onLivekitError,
     required this.onKeeperLeaveRoom,
+    required this.onConnected,
     required this.cameraOptions,
     required this.audioOptions,
     required this.audioOutputOptions,
@@ -76,6 +77,7 @@ class SessionOptions {
   final OnMessageReceived onMessageReceived;
   final OnLivekitError onLivekitError;
   final OnKeeperLeaveRoom onKeeperLeaveRoom;
+  final VoidCallback onConnected;
 
   final CameraCaptureOptions cameraOptions;
   final AudioCaptureOptions audioOptions;
@@ -216,6 +218,8 @@ class Session extends _$Session {
     // room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
     room.localParticipant!.setMicrophoneEnabled(isKeeper());
     state = state.copyWith(connectionState: RoomConnectionState.connected);
+
+    options.onConnected();
   }
 
   void _onDisconnected() {

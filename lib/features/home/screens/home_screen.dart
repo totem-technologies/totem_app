@@ -6,6 +6,7 @@ import 'package:totem_app/features/home/repositories/home_screen_repository.dart
 import 'package:totem_app/features/home/screens/home_loading_screen.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
@@ -17,6 +18,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final summary = ref.watch(spacesSummaryProvider);
+    ref.sentryReportFullyDisplayed(spacesSummaryProvider);
     final screenWidth = MediaQuery.widthOf(context);
     final crossAxisCount = screenWidth < 600
         ? 2

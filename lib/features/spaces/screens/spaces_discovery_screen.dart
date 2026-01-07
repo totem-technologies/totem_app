@@ -7,6 +7,7 @@ import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/filter.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
@@ -34,6 +35,8 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final spaces = ref.watch(listSpacesProvider);
+    ref.sentryReportFullyDisplayed(listSpacesProvider);
+
     final selectedCategory = ref.watch(selectedCategoryProvider);
 
     final isLargeScreen = MediaQuery.widthOf(context) > 600;
