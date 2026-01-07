@@ -48,7 +48,7 @@ class AnimatedPopupState extends State<AnimatedPopup>
           ),
         );
 
-    unawaited(_controller.forward());
+    _controller.forward();
 
     if (widget.duration > Duration.zero) {
       Future.delayed(widget.duration, dismiss);
@@ -161,7 +161,7 @@ VoidCallback showDismissiblePopup(
   overlay.insert(popup);
 
   return () {
-    unawaited(key.currentState?.dismiss());
+    key.currentState?.dismiss();
   };
 }
 

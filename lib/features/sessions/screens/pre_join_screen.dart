@@ -51,8 +51,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   @override
   void dispose() {
     if (_videoTrack != null) {
-      unawaited(_videoTrack!.stop());
-      unawaited(_videoTrack!.dispose());
+      _videoTrack!.stop();
+      _videoTrack!.dispose();
     }
     super.dispose();
   }
@@ -65,7 +65,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       await _requestPermissions();
       if (await Permission.camera.isGranted &&
           await Permission.microphone.isGranted) {
-        unawaited(_initializeLocalVideo());
+        _initializeLocalVideo();
       }
     });
   }
@@ -109,7 +109,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                 ),
                 onPressed: () {
                   Navigator.of(context).pop();
-                  unawaited(openAppSettings());
+                  openAppSettings();
                 },
               ),
             ],

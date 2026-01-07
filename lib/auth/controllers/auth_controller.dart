@@ -73,7 +73,7 @@ class AuthController extends Notifier<AuthState> {
   }
 
   void _initialize() {
-    unawaited(checkExistingAuth());
+    checkExistingAuth();
     _fcmTokenSubscription ??= FirebaseMessaging.instance.onTokenRefresh.listen(
       (_) => _updateFCMToken(),
       onError: (dynamic error, StackTrace stackTrace) {
@@ -153,17 +153,15 @@ class AuthController extends Notifier<AuthState> {
         newsletterConsent: newsletterConsent,
       );
 
-      unawaited(
-        _authRepository
-            .completeOnboarding(
-              interestTopics: interestTopics,
-              referralSource: referralSource,
-              yearBorn: age == null ? null : (DateTime.now().year - age),
-            )
-            .then((_) {
-              logger.i('🔑 Onboard completed!');
-            }),
-      );
+      _authRepository
+          .completeOnboarding(
+            interestTopics: interestTopics,
+            referralSource: referralSource,
+            yearBorn: age == null ? null : (DateTime.now().year - age),
+          )
+          .then((_) {
+            logger.i('🔑 Onboard completed!');
+          });
 
       _setState(AuthState.authenticated(user: updatedUser));
 
@@ -326,9 +324,9 @@ class AuthController extends Notifier<AuthState> {
       );
       await _clearTokens();
       if (refreshToken != null) {
-        unawaited(_authRepository.logout(refreshToken));
+        _authRepository.logout(refreshToken);
       }
-      unawaited(_analyticsService.logLogout());
+      _analyticsService.logLogout();
       _setState(AuthState.unauthenticated());
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -456,7 +454,7 @@ class AuthController extends Notifier<AuthState> {
         await ref.read(localStorageServiceProvider).saveUser(user);
         _setState(AuthState.authenticated(user: user));
 
-        unawaited(_analyticsService.setUserId(user));
+        _analyticsService.setUserId(user);
         await _updateFCMToken();
       })().timeout(
         AppConsts.tokenValidationTimeout,

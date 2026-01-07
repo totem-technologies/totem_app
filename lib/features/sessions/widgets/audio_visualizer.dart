@@ -143,8 +143,8 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
 
     if (didUpdateParams) {
       // Re-attach listeners
-      unawaited(_detachListeners());
-      unawaited(_attachListeners());
+      _detachListeners();
+      _attachListeners();
     }
   }
 
@@ -240,13 +240,13 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
       curve: Curves.easeInOut,
     );
 
-    unawaited(_attachListeners());
+    _attachListeners();
   }
 
   @override
   void dispose() {
     _controller.dispose();
-    unawaited(_detachListeners());
+    _detachListeners();
     super.dispose();
   }
 

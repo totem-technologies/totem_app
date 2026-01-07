@@ -254,7 +254,7 @@ class _RisingEmojiState extends State<RisingEmoji>
     _frequency = _random.nextDouble() * 2 + 2;
     _movesRight = _random.nextBool();
 
-    unawaited(_controller.forward().whenComplete(widget.onCompleted));
+    _controller.forward().whenComplete(widget.onCompleted);
   }
 
   @override

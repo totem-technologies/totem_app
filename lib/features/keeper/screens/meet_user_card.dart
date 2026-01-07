@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/public_user_schema.dart';
@@ -48,7 +46,7 @@ class MeetUserCard extends StatelessWidget {
           OutlinedButton(
             onPressed: () {
               if (user.slug != null) {
-                unawaited(context.push(RouteNames.keeperProfile(user.slug!)));
+                context.push(RouteNames.keeperProfile(user.slug!));
               }
             },
             child: const Text(

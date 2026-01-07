@@ -50,8 +50,8 @@ Future<void> _initializeServices() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   try {
-    unawaited(AnalyticsService.instance.initialize());
-    unawaited(NotificationsService.instance.initialize());
+    AnalyticsService.instance.initialize();
+    NotificationsService.instance.initialize();
   } catch (e, stackTrace) {
     ErrorHandler.logError(
       e,
@@ -76,7 +76,7 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _router = createRouter(ref);
-    unawaited(ref.read(notificationsProvider).requestPermissions());
+    ref.read(notificationsProvider).requestPermissions();
   }
 
   @override

@@ -75,11 +75,9 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                   const Duration(seconds: 10),
                   onTimeout: () {
                     if (context.mounted) {
-                      unawaited(
-                        ErrorHandler.showErrorDialog(
-                          context,
-                          message: 'Something went wrong. Please try again.',
-                        ),
+                      ErrorHandler.showErrorDialog(
+                        context,
+                        message: 'Something went wrong. Please try again.',
                       );
                     }
                   },

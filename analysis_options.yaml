@@ -46,4 +46,5 @@ linter:
     no_default_cases: false
     avoid_void_async: false
     lines_longer_than_80_chars: false
+    unawaited_futures: false
     discarded_futures: false

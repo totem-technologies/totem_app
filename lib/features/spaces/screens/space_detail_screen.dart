@@ -278,7 +278,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                   await context.push(appRoute);
                                 } else {
                                   // Open external URL for non-Totem links
-                                  unawaited(launchUrl(Uri.parse(url)));
+                                  launchUrl(Uri.parse(url));
                                 }
                               }
                             },
@@ -291,7 +291,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                   await context.push(appRoute);
                                 } else {
                                   // Open external URL for non-Totem links
-                                  unawaited(launchUrl(Uri.parse(url)));
+                                  launchUrl(Uri.parse(url));
                                 }
                               }
                             },
@@ -517,7 +517,7 @@ class AboutSpaceSheet extends StatelessWidget {
                                 await context.push(appRoute);
                               } else {
                                 // Open external URL for non-Totem links
-                                unawaited(launchUrl(Uri.parse(url)));
+                                launchUrl(Uri.parse(url));
                               }
                             }
                           },
@@ -531,7 +531,7 @@ class AboutSpaceSheet extends StatelessWidget {
                                 await context.push(appRoute);
                               } else {
                                 // Open external URL for non-Totem links
-                                unawaited(launchUrl(Uri.parse(url)));
+                                launchUrl(Uri.parse(url));
                               }
                             }
                           },
@@ -643,7 +643,7 @@ class SessionSheet extends StatelessWidget {
                         await context.push(appRoute);
                       } else {
                         // Open external URL for non-Totem links
-                        unawaited(launchUrl(Uri.parse(url)));
+                        launchUrl(Uri.parse(url));
                       }
                     }
                   },
@@ -655,7 +655,7 @@ class SessionSheet extends StatelessWidget {
                         await context.push(appRoute);
                       } else {
                         // Open external URL for non-Totem links
-                        unawaited(launchUrl(Uri.parse(url)));
+                        launchUrl(Uri.parse(url));
                       }
                     }
                   },

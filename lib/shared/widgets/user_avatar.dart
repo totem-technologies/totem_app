@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -207,7 +206,7 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
                   setState(() {
                     _dragPosition = Offset.zero;
                   });
-                  unawaited(_controller.reverse());
+                  _controller.reverse();
                 }
               },
               child: Center(

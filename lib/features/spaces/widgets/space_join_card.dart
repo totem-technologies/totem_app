@@ -263,17 +263,17 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                         case SpaceJoinCardState.joinable:
                           if (event.meetingProvider ==
                               MeetingProviderEnum.livekit) {
-                            unawaited(joinLivekit());
+                            joinLivekit();
                           } else {
-                            unawaited(followLink?.call());
+                            followLink?.call();
                           }
                           _joined = true;
                         case SpaceJoinCardState.attending:
-                          unawaited(addToCalendar());
+                          addToCalendar();
                         case SpaceJoinCardState.full:
                           toHome(HomeRoutes.spaces);
                         case SpaceJoinCardState.notJoined:
-                          unawaited(attend(ref));
+                          attend(ref);
                       }
                     }
 
@@ -386,7 +386,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
       if (response.attending) {
         if (mounted) {
           setState(() => _attending = true);
-          unawaited(attendingPopup());
+          attendingPopup();
         }
         await refresh();
       } else {

@@ -83,18 +83,14 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   @override
   void initState() {
     super.initState();
-    unawaited(
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
-    );
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _listenToBatteryChanges();
   }
 
   @override
   void dispose() {
-    unawaited(
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge),
-    );
-    unawaited(_batterySubscription?.cancel());
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    _batterySubscription?.cancel();
     super.dispose();
   }
 
@@ -417,8 +413,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                         button,
                         context,
                         onEmojiSelected: (emoji) {
-                          unawaited(notifier.sendEmoji(emoji));
-                          unawaited(_onEmojiReceived(user.identity, emoji));
+                          notifier.sendEmoji(emoji);
+                          _onEmojiReceived(user.identity, emoji);
                         },
                       );
                       if (mounted) setState(() => _showEmojiPicker = false);

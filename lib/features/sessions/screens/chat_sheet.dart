@@ -62,7 +62,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
             Future<void> send() async {
               final message = _messageController.text.trim();
               if (message.isNotEmpty) {
-                unawaited(chatCtx.sendMessage(message));
+                chatCtx.sendMessage(message);
                 _messageController.clear();
               }
               await scrollController.animateTo(

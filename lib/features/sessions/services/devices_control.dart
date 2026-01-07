@@ -25,7 +25,7 @@ extension DevicesControl on Session {
         .firstWhereOrNull((track) => track.kind == TrackType.VIDEO)
         ?.track;
     if (userTrack != null) {
-      unawaited(userTrack.restartTrack(options));
+      userTrack.restartTrack(options);
     } else {
       await room.localParticipant?.publishVideoTrack(
         await LocalVideoTrack.createCameraTrack(options),
@@ -51,7 +51,7 @@ extension DevicesControl on Session {
         .firstWhereOrNull((track) => track.kind == TrackType.AUDIO)
         ?.track;
     if (userTrack != null) {
-      unawaited(userTrack.restartTrack(options));
+      userTrack.restartTrack(options);
     } else {
       await room.localParticipant?.publishAudioTrack(
         await LocalAudioTrack.create(options),
