@@ -53,6 +53,9 @@ class FeaturedBlogPost extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.widthOf(context);
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+
     return SizedBox(
       height: 460,
       child: Column(
@@ -85,12 +88,8 @@ class FeaturedBlogPost extends StatelessWidget {
                   child: CachedNetworkImage(
                     imageUrl: image ?? '',
                     fit: BoxFit.cover,
-                    memCacheWidth:
-                        (MediaQuery.widthOf(context) *
-                                MediaQuery.devicePixelRatioOf(context))
-                            .round(),
-                    memCacheHeight:
-                        (345 * MediaQuery.devicePixelRatioOf(context)).round(),
+                    memCacheWidth: (screenWidth * pixelRatio).round(),
+                    memCacheHeight: (345 * pixelRatio).round(),
                     placeholder: (context, url) => Container(
                       color: Colors.grey[300],
                       child: const Center(child: CircularProgressIndicator()),

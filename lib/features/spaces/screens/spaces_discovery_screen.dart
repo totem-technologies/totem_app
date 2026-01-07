@@ -172,14 +172,10 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
   }
 
   List<String> _extractCategories(List<MobileSpaceDetailSchema> spaces) {
-    final categories =
-        spaces
-            .map((space) => space.category)
-            .where((category) => category != null)
-            .cast<String>()
-            .toSet()
-            .toList()
-          ..sort();
+    final categories = <String>{
+      for (final space in spaces)
+        if (space.category != null) space.category!,
+    }.toList()..sort();
 
     return categories;
   }

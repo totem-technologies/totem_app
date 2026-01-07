@@ -45,6 +45,8 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
           data: (blog) {
             final authorSpacesText =
                 'Spaces by ${blog.author?.name ?? 'this Author'}';
+            final screenWidth = MediaQuery.widthOf(context);
+            final pixelRatio = MediaQuery.devicePixelRatioOf(context);
 
             return NestedScrollView(
               headerSliverBuilder: (context, scrolled) {
@@ -154,12 +156,8 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                             child: CachedNetworkImage(
                               imageUrl: blog.headerImageUrl!,
                               fit: BoxFit.cover,
-                              memCacheWidth:
-                                  ((MediaQuery.widthOf(context) - 40) *
-                                          MediaQuery.devicePixelRatioOf(
-                                            context,
-                                          ))
-                                      .round(),
+                              memCacheWidth: ((screenWidth - 40) * pixelRatio)
+                                  .round(),
                             ),
                           ),
                         Html(
