@@ -233,7 +233,6 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
       duration: Duration(milliseconds: widget.options.durationInMilliseconds),
       vsync: this,
       // Do not await this future
-      // ignore: discarded_futures
     )..repeat(reverse: true);
 
     _pulseAnimation = CurvedAnimation(
