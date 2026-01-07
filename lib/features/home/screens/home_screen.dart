@@ -19,7 +19,9 @@ class HomeScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final summary = ref.watch(spacesSummaryProvider);
     ref.sentryReportFullyDisplayed(spacesSummaryProvider);
-    final screenWidth = MediaQuery.widthOf(context);
+    final mediaSize = MediaQuery.sizeOf(context);
+    final screenWidth = mediaSize.width;
+    final screenHeight = mediaSize.height;
     final crossAxisCount = screenWidth < 600
         ? 2
         : screenWidth < 900
@@ -32,9 +34,10 @@ class HomeScreen extends ConsumerWidget {
         bottom: false,
         child: summary.when(
           data: (summary) {
-            final upcomingEvents = summary.upcoming
-                .where((event) => !event.ended)
-                .toList();
+            final upcomingEvents = [
+              for (final event in summary.upcoming)
+                if (!event.ended) event,
+            ];
 
             if (summary.forYou.isEmpty &&
                 summary.explore.isEmpty &&
@@ -74,7 +77,7 @@ class HomeScreen extends ConsumerWidget {
                         child: Container(
                           constraints: BoxConstraints(
                             maxHeight: clampDouble(
-                              MediaQuery.heightOf(context) * 0.3,
+                              screenHeight * 0.3,
                               200,
                               300,
                             ),
@@ -91,7 +94,7 @@ class HomeScreen extends ConsumerWidget {
                       SliverToBoxAdapter(
                         child: SizedBox(
                           height: clampDouble(
-                            MediaQuery.heightOf(context) * 0.3,
+                            screenHeight * 0.3,
                             200,
                             300,
                           ),
@@ -106,7 +109,7 @@ class HomeScreen extends ConsumerWidget {
                               return ConstrainedBox(
                                 constraints: BoxConstraints(
                                   maxWidth: clampDouble(
-                                    MediaQuery.widthOf(context) * 0.8,
+                                    screenWidth * 0.8,
                                     200,
                                     400,
                                   ),

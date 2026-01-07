@@ -148,12 +148,10 @@ class NotMyTurn extends ConsumerWidget {
                 key: getParticipantKey(identifier.participant.identity),
                 participant: identifier.participant,
                 event: event,
-                emojis: emojis
-                    .where(
-                      (entry) => entry.key == identifier.participant.identity,
-                    )
-                    .map((entry) => entry.value)
-                    .toList(),
+                emojis: [
+                  for (final entry in emojis)
+                    if (entry.key == identifier.participant.identity) entry.value,
+                ],
               );
             },
           );

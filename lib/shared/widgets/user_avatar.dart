@@ -93,13 +93,13 @@ class UserAvatar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final heroTag = 'avatar-${seed ?? image.hashCode}';
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final avatarSize = (radius * 2 * pixelRatio).round();
     final optimizedImage = image != null && image is CachedNetworkImageProvider
         ? ResizeImage(
             image!,
-            width: (radius * 2 * MediaQuery.devicePixelRatioOf(context))
-                .round(),
-            height: (radius * 2 * MediaQuery.devicePixelRatioOf(context))
-                .round(),
+            width: avatarSize,
+            height: avatarSize,
           )
         : image;
 
@@ -186,13 +186,13 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return GestureDetector(
-          behavior: HitTestBehavior.deferToChild,
-          onTap: () => Navigator.of(context).pop(),
-          child: ColoredBox(
+    return GestureDetector(
+      behavior: HitTestBehavior.deferToChild,
+      onTap: () => Navigator.of(context).pop(),
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return ColoredBox(
             color: Colors.black.withValues(
               alpha: clampDouble(0.0 - _controller.value, 0, 1),
             ),
@@ -232,15 +232,15 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
                 ),
               ),
             ),
-          ),
-        );
-      },
-      child: Hero(
-        tag: widget.heroTag,
-        child: ClipOval(
-          child: Image(
-            image: widget.image,
-            fit: BoxFit.contain,
+          );
+        },
+        child: Hero(
+          tag: widget.heroTag,
+          child: ClipOval(
+            child: Image(
+              image: widget.image,
+              fit: BoxFit.contain,
+            ),
           ),
         ),
       ),
