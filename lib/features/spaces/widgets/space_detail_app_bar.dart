@@ -44,6 +44,10 @@ class SpaceDetailAppBar extends StatelessWidget {
                     ? CachedNetworkImage(
                         imageUrl: getFullUrl(space.imageLink ?? ''),
                         fit: BoxFit.cover,
+                        memCacheWidth:
+                            (MediaQuery.widthOf(context) *
+                                    MediaQuery.devicePixelRatioOf(context))
+                                .round(),
                         errorWidget: (context, url, error) {
                           return Image.asset(
                             TotemAssets.genericBackground,

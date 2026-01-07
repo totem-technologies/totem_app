@@ -85,6 +85,12 @@ class FeaturedBlogPost extends StatelessWidget {
                   child: CachedNetworkImage(
                     imageUrl: image ?? '',
                     fit: BoxFit.cover,
+                    memCacheWidth:
+                        (MediaQuery.widthOf(context) *
+                                MediaQuery.devicePixelRatioOf(context))
+                            .round(),
+                    memCacheHeight:
+                        (345 * MediaQuery.devicePixelRatioOf(context)).round(),
                     placeholder: (context, url) => Container(
                       color: Colors.grey[300],
                       child: const Center(child: CircularProgressIndicator()),

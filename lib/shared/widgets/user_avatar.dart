@@ -93,6 +93,16 @@ class UserAvatar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final heroTag = 'avatar-${seed ?? image.hashCode}';
+    final optimizedImage = image != null && image is CachedNetworkImageProvider
+        ? ResizeImage(
+            image!,
+            width: (radius * 2 * MediaQuery.devicePixelRatioOf(context))
+                .round(),
+            height: (radius * 2 * MediaQuery.devicePixelRatioOf(context))
+                .round(),
+          )
+        : image;
+
     return GestureDetector(
       onTap:
           onTap ??
@@ -118,9 +128,9 @@ class UserAvatar extends ConsumerWidget {
         decoration: BoxDecoration(
           border: Border.all(color: Colors.white, width: borderWidth),
           borderRadius: borderRadius,
-          image: showImage && image != null
+          image: showImage && optimizedImage != null
               ? DecorationImage(
-                  image: image!,
+                  image: optimizedImage,
                   fit: BoxFit.cover,
                 )
               : null,

@@ -154,6 +154,12 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                             child: CachedNetworkImage(
                               imageUrl: blog.headerImageUrl!,
                               fit: BoxFit.cover,
+                              memCacheWidth:
+                                  ((MediaQuery.widthOf(context) - 40) *
+                                          MediaQuery.devicePixelRatioOf(
+                                            context,
+                                          ))
+                                      .round(),
                             ),
                           ),
                         Html(
