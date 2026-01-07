@@ -118,14 +118,17 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: 10,
               children: [
-                Text(
-                  switch (widget.session.reason) {
-                    SessionEndedReason.finished => 'Session Ended',
-                    SessionEndedReason.keeperLeft =>
-                      'Session will be rescheduled',
-                  },
-                  style: theme.textTheme.headlineMedium,
-                  textAlign: TextAlign.center,
+                Semantics(
+                  header: true,
+                  child: Text(
+                    switch (widget.session.reason) {
+                      SessionEndedReason.finished => 'Session Ended',
+                      SessionEndedReason.keeperLeft =>
+                        'Session will be rescheduled',
+                    },
+                    style: theme.textTheme.headlineMedium,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
                 Text(
                   switch (widget.session.reason) {

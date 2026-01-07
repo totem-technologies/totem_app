@@ -158,18 +158,22 @@ class _GuidelinesTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return CardScreen(
       children: [
-        Text(
-          'Community Guidelines',
-          style: Theme.of(context).textTheme.headlineSmall,
-          textAlign: TextAlign.center,
+        Semantics(
+          header: true,
+          child: Text(
+            'Community Guidelines',
+            style: theme.textTheme.headlineSmall,
+            textAlign: TextAlign.center,
+          ),
         ),
         const SizedBox(height: 24),
         RichText(
           textAlign: TextAlign.center,
           text: TextSpan(
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: theme.textTheme.bodyMedium,
             children: [
               const TextSpan(
                 text:
@@ -177,7 +181,7 @@ class _GuidelinesTab extends StatelessWidget {
               ),
               TextSpan(
                 text: 'confidentiality',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -192,14 +196,14 @@ class _GuidelinesTab extends StatelessWidget {
         RichText(
           textAlign: TextAlign.center,
           text: TextSpan(
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: theme.textTheme.bodyMedium,
             children: [
               const TextSpan(
                 text: 'We also encourage you to only speak about ',
               ),
               TextSpan(
                 text: 'your own experience',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -214,7 +218,7 @@ class _GuidelinesTab extends StatelessWidget {
         RichText(
           textAlign: TextAlign.center,
           text: TextSpan(
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: theme.textTheme.bodyMedium,
             children: [
               const TextSpan(text: 'For more details, see the full '),
               WidgetSpan(
@@ -231,7 +235,7 @@ class _GuidelinesTab extends StatelessWidget {
                   },
                   child: Text(
                     'Community Guidelines',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppTheme.purple,
                       decoration: TextDecoration.underline,
@@ -312,10 +316,13 @@ class _ProfileTabState extends State<_ProfileTab>
       formKey: widget.formKey,
       isLoading: widget.isLoading,
       children: [
-        Text(
-          'Let’s get to know you',
-          style: theme.textTheme.headlineSmall,
-          textAlign: TextAlign.center,
+        Semantics(
+          header: true,
+          child: Text(
+            'Let’s get to know you',
+            style: theme.textTheme.headlineSmall,
+            textAlign: TextAlign.center,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
@@ -507,10 +514,13 @@ class _TopicsTab extends StatelessWidget {
     return CardScreen(
       isLoading: isLoading,
       children: [
-        Text(
-          'Which community feels like home to you?',
-          style: theme.textTheme.headlineSmall,
-          textAlign: TextAlign.center,
+        Semantics(
+          header: true,
+          child: Text(
+            'Which community feels like home to you?',
+            style: theme.textTheme.headlineSmall,
+            textAlign: TextAlign.center,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
@@ -573,10 +583,13 @@ class _SuggestionsTab extends ConsumerWidget {
     return CardScreen(
       isLoading: isLoading,
       children: [
-        Text(
-          'Suggested Spaces',
-          style: theme.textTheme.headlineSmall,
-          textAlign: TextAlign.center,
+        Semantics(
+          header: true,
+          child: Text(
+            'Suggested Spaces',
+            style: theme.textTheme.headlineSmall,
+            textAlign: TextAlign.center,
+          ),
         ),
         Text(
           'We’ve found some spaces that might be a good fit for you.',

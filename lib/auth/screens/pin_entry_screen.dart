@@ -119,10 +119,13 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
       isLoading: _isLoading,
       formKey: _formKey,
       children: [
-        Text(
-          'Enter verification code',
-          style: Theme.of(context).textTheme.headlineSmall,
-          textAlign: TextAlign.center,
+        Semantics(
+          header: true,
+          child: Text(
+            'Enter verification code',
+            style: theme.textTheme.headlineSmall,
+            textAlign: TextAlign.center,
+          ),
         ),
         const SizedBox(height: 8),
         RichText(

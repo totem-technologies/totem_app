@@ -55,11 +55,14 @@ class HomeScreen extends ConsumerWidget {
                           end: 16,
                           bottom: 16,
                         ),
-                        child: Text(
-                          'Your upcoming sessions',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
+                        child: Semantics(
+                          header: true,
+                          child: Text(
+                            'Your upcoming sessions',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                       ),
@@ -119,11 +122,14 @@ class HomeScreen extends ConsumerWidget {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsetsDirectional.all(16),
-                        child: Text(
-                          'Spaces for you',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
+                        child: Semantics(
+                          header: true,
+                          child: Text(
+                            'Spaces for you',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                       ),
@@ -148,13 +154,16 @@ class HomeScreen extends ConsumerWidget {
                   ],
                   if (summary.explore.isNotEmpty) ...[
                     SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.all(16),
-                        child: Text(
-                          'Explore spaces',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
+                      child: Semantics(
+                        header: true,
+                        child: Padding(
+                          padding: const EdgeInsetsDirectional.all(16),
+                          child: Text(
+                            'Explore spaces',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                       ),

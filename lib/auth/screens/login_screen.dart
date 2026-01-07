@@ -101,10 +101,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       isLoading: _isLoading,
       formKey: _formKey,
       children: [
-        Text(
-          'Get Started',
-          style: theme.textTheme.headlineMedium,
-          textAlign: TextAlign.center,
+        Semantics(
+          header: true,
+          child: Text(
+            'Get Started',
+            style: theme.textTheme.headlineMedium,
+            textAlign: TextAlign.center,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
