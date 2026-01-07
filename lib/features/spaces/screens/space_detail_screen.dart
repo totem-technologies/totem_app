@@ -111,6 +111,9 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                         leading: CircleIconButton(
                           margin: const EdgeInsetsDirectional.only(start: 20),
                           icon: TotemIcons.arrowBack,
+                          tooltip: MaterialLocalizations.of(
+                            context,
+                          ).backButtonTooltip,
                           onPressed: () => popOrHome(context),
                         ),
                         leadingWidth: 50,
@@ -122,6 +125,9 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                             builder: (context) {
                               return CircleIconButton(
                                 icon: TotemIcons.share,
+                                tooltip: MaterialLocalizations.of(
+                                  context,
+                                ).shareButtonLabel,
                                 onPressed: () async {
                                   final box =
                                       context.findRenderObject() as RenderBox?;
@@ -449,6 +455,9 @@ class AboutSpaceSheet extends StatelessWidget {
                 CircleIconButton(
                   margin: const EdgeInsetsDirectional.only(end: 20),
                   icon: TotemIcons.closeRounded,
+                  tooltip: MaterialLocalizations.of(
+                    context,
+                  ).closeButtonTooltip,
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],

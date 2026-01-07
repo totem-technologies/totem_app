@@ -54,6 +54,9 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                     leading: CircleIconButton(
                       margin: const EdgeInsets.only(left: 20),
                       icon: TotemIcons.arrowBack,
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).backButtonTooltip,
                       onPressed: () => popOrHome(context),
                     ),
                     leadingWidth: 50,
@@ -61,6 +64,9 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                     actions: [
                       CircleIconButton(
                         icon: TotemIcons.share,
+                        tooltip: MaterialLocalizations.of(
+                          context,
+                        ).shareButtonLabel,
                         onPressed: () async {
                           final box = context.findRenderObject() as RenderBox?;
                           await SharePlus.instance.share(

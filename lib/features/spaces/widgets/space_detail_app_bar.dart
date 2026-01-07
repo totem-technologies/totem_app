@@ -38,7 +38,7 @@ class SpaceDetailAppBar extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(
                 bottom: Radius.circular(25),
               ),
-              child: SpaceGradientMask(
+              child: ImageGradientMask(
                 gradientHeight: 200,
                 child: (space.imageLink != null && space.imageLink!.isNotEmpty)
                     ? CachedNetworkImage(

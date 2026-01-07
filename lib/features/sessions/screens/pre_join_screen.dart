@@ -178,6 +178,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: CircleIconButton(
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
             margin: const EdgeInsetsDirectional.only(start: 20),
             icon: TotemIcons.arrowBack,
             onPressed: () => popOrHome(context),
@@ -241,10 +242,15 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                       horizontal: 40,
                       vertical: 10,
                     ),
-                    child: RepaintBoundary(
-                      child: LocalParticipantVideoCard(
-                        isCameraOn: _isCameraOn,
-                        videoTrack: _videoTrack,
+                    child: Semantics(
+                      label:
+                          'Your video preview, camera ${_isCameraOn ? 'on' : 'off'}',
+                      image: true,
+                      child: RepaintBoundary(
+                        child: LocalParticipantVideoCard(
+                          isCameraOn: _isCameraOn,
+                          videoTrack: _videoTrack,
+                        ),
                       ),
                     ),
                   ),
@@ -252,6 +258,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                 ActionBar(
                   children: [
                     ActionBarButton(
+                      semanticsLabel: 'Microphone ${_isMicOn ? 'on' : 'off'}',
                       onPressed: _toggleMic,
                       active: _isMicOn,
                       child: TotemIcon(
@@ -261,6 +268,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                       ),
                     ),
                     ActionBarButton(
+                      semanticsLabel: 'Camera ${_isCameraOn ? 'on' : 'off'}',
                       onPressed: _toggleCamera,
                       active: _isCameraOn,
                       child: TotemIcon(
@@ -270,6 +278,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                       ),
                     ),
                     ActionBarButton(
+                      semanticsLabel: MaterialLocalizations.of(
+                        context,
+                      ).moreButtonTooltip,
                       onPressed: () async {
                         await showPrejoinOptionsSheet(
                           context,
@@ -301,6 +312,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                     SizedBox(
                       width: 96,
                       child: ActionBarButton(
+                        semanticsLabel: 'Join session',
                         onPressed: () => _joinRoom(token),
                         square: false,
                         child: const Text('Join'),

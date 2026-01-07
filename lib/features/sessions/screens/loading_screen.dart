@@ -25,6 +25,9 @@ class LoadingRoomScreen extends StatelessWidget {
         leading: CircleIconButton(
           margin: const EdgeInsetsDirectional.only(start: 20),
           icon: TotemIcons.arrowBack,
+          tooltip: MaterialLocalizations.of(
+            context,
+          ).backButtonTooltip,
           onPressed: () => popOrHome(context),
         ),
       ),

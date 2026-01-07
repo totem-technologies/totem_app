@@ -8,6 +8,7 @@ class CircleIconButton extends StatelessWidget {
     required this.onPressed,
     this.margin,
     this.color,
+    this.tooltip,
     super.key,
   });
 
@@ -15,31 +16,43 @@ class CircleIconButton extends StatelessWidget {
   final VoidCallback onPressed;
   final EdgeInsetsGeometry? margin;
   final Color? color;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: InkWell(
-        onTap: onPressed,
-        child: Container(
-          margin: margin,
-          alignment: AlignmentDirectional.center,
-          height: 30,
-          width: 30,
-          decoration: BoxDecoration(
-            color: color ?? Colors.white,
-            shape: BoxShape.circle,
-          ),
-          child: SvgPicture.string(
-            icon,
-            width: 16,
-            height: 16,
-            colorFilter: const ColorFilter.mode(
-              Colors.black,
-              BlendMode.srcIn,
-            ),
+    final button = InkWell(
+      onTap: onPressed,
+      child: Container(
+        margin: margin,
+        alignment: AlignmentDirectional.center,
+        height: 30,
+        width: 30,
+        decoration: BoxDecoration(
+          color: color ?? Colors.white,
+          shape: BoxShape.circle,
+        ),
+        child: SvgPicture.string(
+          icon,
+          width: 16,
+          height: 16,
+          colorFilter: const ColorFilter.mode(
+            Colors.black,
+            BlendMode.srcIn,
           ),
         ),
+      ),
+    );
+
+    return Center(
+      child: Semantics(
+        button: true,
+        enabled: true,
+        child: tooltip != null
+            ? Tooltip(
+                message: tooltip,
+                child: button,
+              )
+            : button,
       ),
     );
   }

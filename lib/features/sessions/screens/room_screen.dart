@@ -366,6 +366,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         return ActionBar(
           children: [
             ActionBarButton(
+              semanticsLabel:
+                  'Microphone ${room.microphoneOpened ? 'on' : 'off'}',
               active: room.microphoneOpened,
               onPressed: () async {
                 if (room.microphoneOpened) {
@@ -389,6 +391,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                     ),
             ),
             ActionBarButton(
+              semanticsLabel: 'Camera ${room.cameraOpened ? 'on' : 'off'}',
               active: room.cameraOpened,
               onPressed: () async {
                 if (room.cameraOpened) {
@@ -405,6 +408,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               Builder(
                 builder: (button) {
                   return ActionBarButton(
+                    semanticsLabel: 'Send reaction',
+                    semanticsHint: 'Open emoji selection overlay',
                     active: _showEmojiPicker,
                     onPressed: () async {
                       setState(() => _showEmojiPicker = true);
@@ -423,6 +428,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 },
               ),
             ActionBarButton(
+              semanticsLabel: 'Chat',
               active: _chatSheetOpen,
               onPressed: () async {
                 setState(() {
@@ -463,6 +469,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                   TotemIcons.more,
                   color: Colors.white,
                 ),
+                tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
               ),
             ),
           ],

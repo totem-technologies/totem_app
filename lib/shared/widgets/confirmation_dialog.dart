@@ -44,7 +44,11 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
       canPop: !_loading,
       child: AlertDialog(
         title: widget.title != null
-            ? Text(widget.title!, textAlign: TextAlign.center)
+            ? Semantics(
+                header: true,
+                namesRoute: true,
+                child: Text(widget.title!, textAlign: TextAlign.center),
+              )
             : null,
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -98,7 +102,11 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                 },
               ),
               child: _loading
-                  ? const LoadingIndicator(color: Colors.white, size: 24)
+                  ? const LoadingIndicator(
+                      color: Colors.white,
+                      size: 24,
+                      semanticsLabel: 'Processing',
+                    )
                   : Text(widget.confirmButtonText),
             ),
             OutlinedButton(
