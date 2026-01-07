@@ -59,6 +59,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   late bool _attending = event.attending;
   var _loading = false;
   var _joined = false;
+  late String _currentTimeago;
 
   // Refresh every second to update timeago and button states
   Timer? _timer;
@@ -67,9 +68,18 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   @override
   void initState() {
     super.initState();
+    _currentTimeago = timeago.format(event.start, allowFromNow: true);
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
-        setState(() {});
+        final newTimeago = timeago.format(
+          event.start,
+          allowFromNow: true,
+        );
+        if (_currentTimeago != newTimeago) {
+          setState(() {
+            _currentTimeago = newTimeago;
+          });
+        }
       }
     });
   }
@@ -162,10 +172,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                           case SpaceJoinCardState.notJoined:
                             return formatEventTime(event.start);
                           case SpaceJoinCardState.joinable:
-                            return timeago.format(
-                              event.start,
-                              allowFromNow: true,
-                            );
+                            return _currentTimeago;
                           case SpaceJoinCardState.ended:
                           case SpaceJoinCardState.cancelled:
                           case SpaceJoinCardState.closed:
