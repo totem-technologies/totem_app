@@ -17,11 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Download AAB from Release
+      - name: Download Production AAB from Release
         uses: robinraju/release-downloader@v1
         with:
           tag: ${{ github.event.release.tag_name }}
-          fileName: "*.aab"
+          fileName: "*-production-*.aab"
           out-file-path: artifacts
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -30,7 +30,7 @@ jobs:
         with:
           serviceAccountJsonPlainText: ${{ secrets.ANDROID_SERVICE_ACCOUNT_JSON }}
           packageName: ${{ secrets.ANDROID_PACKAGE_NAME }}
-          releaseFiles: artifacts/*.aab
+          releaseFiles: artifacts/*-production-*.aab
           track: qa
           status: completed
 
@@ -39,18 +39,18 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
-      - name: Download IPA from Release
+      - name: Download Production IPA from Release
         uses: robinraju/release-downloader@v1
         with:
           tag: ${{ github.event.release.tag_name }}
-          fileName: "*.ipa"
+          fileName: "*-production-*.ipa"
           out-file-path: artifacts
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v3
         with:
-          app-path: artifacts/*.ipa
+          app-path: artifacts/*-production-*.ipa
           issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           api-key-id: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           api-private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}

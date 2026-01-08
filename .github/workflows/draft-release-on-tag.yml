@@ -25,62 +25,89 @@ jobs:
           generate_release_notes: true
 
   android:
-    name: Android - Build and Upload Artifacts
+    name: Android (${{ matrix.flavor }})
     runs-on: ubuntu-latest
     needs: create_draft_release
+
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [staging, production]
+
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Create .env file
-        run: echo 'API_URL="https://www.totem.org"' > .env
+        run: echo 'ENVIRONMENT="${{ matrix.flavor }}"' > .env
 
-      - name: Build Android AppBundle (Release)
+      - name: Build Android AppBundle
         uses: ./.github/actions/build-android
         with:
+          build-cmd: flutter build appbundle --release --flavor ${{ matrix.flavor }}
           keystore-base64: ${{ secrets.ANDROID_KEYSTORE_FILE_BASE64 }}
           keystore-password: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
           firebase-options-b64: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           google-services-json-b64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+
+      - name: Rename AAB for clarity
+        run: |
+          mkdir -p artifacts
+          cp build/app/outputs/bundle/${{ matrix.flavor }}Release/app-${{ matrix.flavor }}-release.aab \
+             artifacts/totem-${{ matrix.flavor }}-${{ github.ref_name }}.aab
 
       - name: Upload AAB to Draft Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           draft: true
-          files: build/app/outputs/bundle/release/app-release.aab
+          files: artifacts/*.aab
 
   ios:
-    name: iOS - Build and Upload Artifacts
+    name: iOS (${{ matrix.flavor }})
     runs-on: macos-latest
     needs: create_draft_release
-    env:
-      IOS_CERTIFICATE_P12: ${{ secrets.IOS_CERTIFICATE_P12 }} # base64 of .p12
-      IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-      IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }} # base64 of .mobileprovision
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavor: production
+            export_plist: ios/GithubActionsExportOptions.plist
+            provisioning_profile_secret: IOS_MOBILE_PROVISIONING_PROFILE_BASE64
+          - flavor: staging
+            export_plist: ios/GithubActionsExportOptions-staging.plist
+            provisioning_profile_secret: IOS_STAGING_PROVISIONING_PROFILE_BASE64
+
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Create .env file
-        run: echo 'API_URL="https://www.totem.org"' > .env
+        run: echo 'ENVIRONMENT="${{ matrix.flavor }}"' > .env
 
       - uses: ./.github/actions/build-ios
         with:
-          # always use --export-options-plist=ios/GithubActionsExportOptions.plist
-          build-cmd: flutter build ipa --release --export-options-plist=ios/GithubActionsExportOptions.plist
+          build-cmd: flutter build ipa --release --flavor ${{ matrix.flavor }} --export-options-plist=${{ matrix.export_plist }}
           certificate-base64: ${{ secrets.IOS_BUILD_CERTIFICATE_BASE64 }}
           certificate-password: ${{ secrets.IOS_BUILD_CERTIFICATE_PASSWORD }}
-          provisioning-profile-base64: ${{ secrets.IOS_MOBILE_PROVISIONING_PROFILE_BASE64 }}
+          provisioning-profile-base64: ${{ secrets[matrix.provisioning_profile_secret] }}
           keychain-password: ${{ secrets.IOS_GITHUB_KEYCHAIN_PASSWORD }}
           firebase-options-b64: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           google-service-info-plist-b64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
+
+      - name: Rename IPA for clarity
+        run: |
+          mkdir -p artifacts
+          for ipa in build/ios/ipa/*.ipa; do
+            cp "$ipa" "artifacts/totem-${{ matrix.flavor }}-${{ github.ref_name }}.ipa"
+          done
 
       - name: Upload IPA to Draft Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           draft: true
-          files: build/ios/ipa/*.ipa
+          files: artifacts/*.ipa
