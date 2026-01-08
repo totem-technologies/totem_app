@@ -55,7 +55,8 @@ class MyTurn extends StatelessWidget {
                   event: event,
                   emojis: [
                     for (final entry in emojis)
-                      if (entry.key == identifier.participant.identity) entry.value,
+                      if (entry.key == identifier.participant.identity)
+                        entry.value,
                   ],
                 );
               },
