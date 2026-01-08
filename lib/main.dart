@@ -98,12 +98,9 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
       debugShowCheckedModeBanner: false,
       routerConfig: _router,
       builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: MediaQuery.textScalerOf(
-              context,
-            ).clamp(minScaleFactor: 0.8, maxScaleFactor: 1.5),
-          ),
+        return MediaQuery.withClampedTextScaling(
+          minScaleFactor: 0.8,
+          maxScaleFactor: 1.5,
           child: child!,
         );
       },

@@ -445,6 +445,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     _confettiTimer = Timer.periodic(const Duration(milliseconds: 250), (timer) {
       if (!mounted) {
         timer.cancel();
+        _confettiTimer?.cancel();
         _confettiTimer = null;
         return;
       }

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 enum TotemCardTransitionType { pass, receive, start }
@@ -162,9 +163,11 @@ class _SlideToActionButtonState extends State<_SlideToActionButton> {
         const thumbSize = 48.0;
         const padding = 6.0;
         final maxSlideDistance = trackWidth - thumbSize - (padding * 2);
-        final progress = math
-            .min(_dragPosition / maxSlideDistance, 1)
-            .clamp(0, 1);
+        final progress = clampDouble(
+          math.min(_dragPosition / maxSlideDistance, 1),
+          0,
+          1,
+        );
 
         final backgroundColor = theme.colorScheme.primary;
         final foregroundColor = theme.colorScheme.onPrimary;

@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -70,11 +71,11 @@ class FeaturedBlogPost extends StatelessWidget {
                   shaderCallback: (rect) {
                     final cardHeight = rect.height;
                     const gradientHeight = 135.0;
-                    final startStop =
-                        ((cardHeight - gradientHeight) / cardHeight).clamp(
-                          0.0,
-                          1.0,
-                        );
+                    final startStop = clampDouble(
+                      (cardHeight - gradientHeight) / cardHeight,
+                      0,
+                      1,
+                    );
                     return LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,

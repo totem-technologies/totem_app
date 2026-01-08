@@ -1,6 +1,5 @@
-import 'dart:ui';
-
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_boring_avatars/flutter_boring_avatars.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -205,7 +204,7 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
                 setState(() {
                   _dragPosition += details.focalPointDelta;
                   final dragDistance = _dragPosition.dy.abs();
-                  _controller.value = (dragDistance / 200).clamp(0.0, 1.0);
+                  _controller.value = clampDouble(dragDistance / 200, 0, 1);
                 });
               },
               onInteractionEnd: (details) {
