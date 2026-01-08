@@ -192,17 +192,13 @@ class _SlideToActionButtonState extends State<_SlideToActionButton> {
               clipBehavior: Clip.none,
               children: [
                 Center(
-                  child: Opacity(
-                    opacity: 1.0 - progress,
-                    child: Text(
-                      widget.text,
-                      style: textStyle?.copyWith(
-                        color: foregroundColor,
-                      ),
+                  child: Text(
+                    widget.text,
+                    style: textStyle?.copyWith(
+                      color: foregroundColor.withValues(alpha: 1.0 - progress),
                     ),
                   ),
                 ),
-                // Sliding thumb
                 AnimatedPositioned(
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeOut,
