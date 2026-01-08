@@ -190,8 +190,8 @@ class SpaceCard extends StatelessWidget {
                                   fontWeight: FontWeight.bold,
                                   shadows: _textShadows,
                                 ),
-                                child: buildSeatsLeftText(
-                                  nextEvent.seatsLeft,
+                                child: SeatsLeftText(
+                                  seatsLeft: nextEvent.seatsLeft,
                                 ),
                               )
                             : const SizedBox.shrink();
@@ -425,7 +425,7 @@ class SmallSpaceCard extends StatelessWidget {
                       fontSize: 12,
                       shadows: _textShadows,
                     ),
-                    child: buildSeatsLeftText(nextEvent.seatsLeft),
+                    child: SeatsLeftText(seatsLeft: nextEvent.seatsLeft),
                   ),
                   const SizedBox(height: 5),
                 ],

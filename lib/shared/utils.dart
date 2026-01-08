@@ -3,21 +3,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
-Widget buildSeatsLeftText(int seatsLeft) {
-  return Text.rich(
-    TextSpan(
-      children: [
-        TextSpan(
-          text: seatsLeft == 0 ? 'No' : '$seatsLeft',
-        ),
-        TextSpan(
-          text: seatsLeft == 1 ? ' seat left' : ' seats left',
-        ),
-      ],
-    ),
-    maxLines: 1,
-    overflow: TextOverflow.fade,
-  );
+class SeatsLeftText extends StatelessWidget {
+  const SeatsLeftText({
+    required this.seatsLeft,
+    super.key,
+  });
+
+  final int seatsLeft;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: seatsLeft == 0 ? 'No' : '$seatsLeft',
+          ),
+          TextSpan(
+            text: seatsLeft == 1 ? ' seat left' : ' seats left',
+          ),
+        ],
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.fade,
+    );
+  }
 }
 
 extension WidgetRefExtension on WidgetRef {

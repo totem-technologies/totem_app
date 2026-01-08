@@ -627,7 +627,7 @@ class SessionSheet extends StatelessWidget {
                     ),
                     CompactInfoText(
                       const TotemIcon(TotemIcons.seats),
-                      buildSeatsLeftText(event.seatsLeft),
+                      SeatsLeftText(seatsLeft: event.seatsLeft),
                     ),
                   ],
                 ),

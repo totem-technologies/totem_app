@@ -4,7 +4,6 @@
 import 'dart:async';
 import 'dart:math' show max;
 
-import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart' as sdk;
@@ -228,12 +227,11 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   void initState() {
     super.initState();
 
-    samples = List.filled(widget.options.barCount, 0);
+    samples = List.filled(widget.options.barCount, 0, growable: false);
 
     _controller = AnimationController(
       duration: Duration(milliseconds: widget.options.durationInMilliseconds),
       vsync: this,
-      // Do not await this future
     )..repeat(reverse: true);
 
     _pulseAnimation = CurvedAnimation(
@@ -380,31 +378,31 @@ class BarsView extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         spacing: options.spacing,
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: elements
-            .mapIndexed(
-              (index, element) => Center(
-                child: AnimatedContainer(
-                  width: 1,
-                  duration: Duration(
-                    milliseconds:
-                        options.durationInMilliseconds ~/ options.barCount,
+        children: [
+          for (int i = 0; i < elements.length; i++)
+            Center(
+              child: AnimatedContainer(
+                width: 1,
+                duration: Duration(
+                  milliseconds:
+                      options.durationInMilliseconds ~/ options.barCount,
+                ),
+                decoration: BoxDecoration(
+                  color: elements[i].color,
+                  borderRadius: BorderRadius.circular(options.cornerRadius),
+                ),
+                height: clampDouble(
+                  max(
+                    delta,
+                    (elements[i].value * (constraints.maxHeight - delta)) +
+                        delta,
                   ),
-                  decoration: BoxDecoration(
-                    color: element.color,
-                    borderRadius: BorderRadius.circular(options.cornerRadius),
-                  ),
-                  height: clampDouble(
-                    max(
-                      delta,
-                      (element.value * (constraints.maxHeight - delta)) + delta,
-                    ),
-                    0,
-                    options.maxHeight,
-                  ),
+                  0,
+                  options.maxHeight,
                 ),
               ),
-            )
-            .toList(),
+            ),
+        ],
       );
     },
   );
