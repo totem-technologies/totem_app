@@ -6,6 +6,34 @@ on:
   workflow_dispatch:
 
 jobs:
+  validate_ios_signing:
+    name: Validate iOS Signing Config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for automatic signing in release configs
+        run: |
+          # This check prevents CI failures from automatic signing being enabled
+          # Automatic signing requires an Apple Developer account which CI doesn't have
+          # See: https://github.com/totem-technologies/totem_app/pull/45
+
+          PBXPROJ="ios/Runner.xcodeproj/project.pbxproj"
+
+          # Extract Runner target release configurations and check for Automatic signing
+          # We look for Release/Profile configs that have CODE_SIGN_STYLE = Automatic
+          if grep -A 20 'baseConfigurationReference.*Release.xcconfig' "$PBXPROJ" | grep -q 'CODE_SIGN_STYLE = Automatic'; then
+            echo "::error::Found CODE_SIGN_STYLE = Automatic in release configurations!"
+            echo "::error::This will break CI builds. Use Manual signing for release configs."
+            echo ""
+            echo "Problematic configurations found:"
+            grep -B 5 -A 20 'baseConfigurationReference.*Release.xcconfig' "$PBXPROJ" | grep -B 10 'CODE_SIGN_STYLE = Automatic'
+            exit 1
+          fi
+
+          echo "✓ iOS signing configuration is valid for CI"
+
   build_android_apk:
     name: Android ABI (${{ matrix.flavor }})
     runs-on: ubuntu-latest
@@ -52,7 +80,8 @@ jobs:
   build_ios_ipa:
     name: iOS IPA (${{ matrix.flavor }})
     runs-on: macos-latest
-    
+    needs: validate_ios_signing
+
     strategy:
       fail-fast: false
       matrix:
