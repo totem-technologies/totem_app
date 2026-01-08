@@ -8,6 +8,7 @@ import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/totem_status.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -83,18 +84,14 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   @override
   void initState() {
     super.initState();
-    unawaited(
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
-    );
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _listenToBatteryChanges();
   }
 
   @override
   void dispose() {
-    unawaited(
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge),
-    );
-    unawaited(_batterySubscription?.cancel());
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    _batterySubscription?.cancel();
     super.dispose();
   }
 
@@ -207,6 +204,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     );
   }
 
+  void _onConnected() {
+    SentryDisplayWidget.of(context).reportFullyDisplayed();
+  }
+
   @override
   Widget build(BuildContext context) {
     final eventAsync = ref.watch(eventProvider(widget.eventSlug));
@@ -226,6 +227,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           onMessageReceived: _onChatMessageReceived,
           onLivekitError: _onLivekitError,
           onKeeperLeaveRoom: _onKeeperLeft,
+          onConnected: _onConnected,
         );
 
         final sessionState = ref.watch(sessionProvider(sessionOptions));
@@ -366,6 +368,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         return ActionBar(
           children: [
             ActionBarButton(
+              semanticsLabel:
+                  'Microphone ${room.microphoneOpened ? 'on' : 'off'}',
               active: room.microphoneOpened,
               onPressed: () async {
                 if (room.microphoneOpened) {
@@ -389,6 +393,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                     ),
             ),
             ActionBarButton(
+              semanticsLabel: 'Camera ${room.cameraOpened ? 'on' : 'off'}',
               active: room.cameraOpened,
               onPressed: () async {
                 if (room.cameraOpened) {
@@ -405,6 +410,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               Builder(
                 builder: (button) {
                   return ActionBarButton(
+                    semanticsLabel: 'Send reaction',
+                    semanticsHint: 'Open emoji selection overlay',
                     active: _showEmojiPicker,
                     onPressed: () async {
                       setState(() => _showEmojiPicker = true);
@@ -412,8 +419,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                         button,
                         context,
                         onEmojiSelected: (emoji) {
-                          unawaited(notifier.sendEmoji(emoji));
-                          unawaited(_onEmojiReceived(user.identity, emoji));
+                          notifier.sendEmoji(emoji);
+                          _onEmojiReceived(user.identity, emoji);
                         },
                       );
                       if (mounted) setState(() => _showEmojiPicker = false);
@@ -423,6 +430,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 },
               ),
             ActionBarButton(
+              semanticsLabel: 'Chat',
               active: _chatSheetOpen,
               onPressed: () async {
                 setState(() {
@@ -463,6 +471,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                   TotemIcons.more,
                   color: Colors.white,
                 ),
+                tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
               ),
             ),
           ],

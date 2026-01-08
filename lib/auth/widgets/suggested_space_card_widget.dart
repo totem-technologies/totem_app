@@ -222,7 +222,7 @@ class SuggestedSpaceCard extends StatelessWidget {
                             height: 1,
                             fontSize: 8,
                           ),
-                          child: buildSeatsLeftText(event.seatsLeft),
+                          child: SeatsLeftText(seatsLeft: event.seatsLeft),
                         ),
                       ],
                     ),

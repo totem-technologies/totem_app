@@ -61,6 +61,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final spaceAsync = ref.watch(spaceProvider(widget.slug));
+    ref.sentryReportFullyDisplayed(spaceProvider(widget.slug));
 
     // Determine if we have a valid event slug to watch
     final String? effectiveEventSlug =
@@ -111,6 +112,9 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                         leading: CircleIconButton(
                           margin: const EdgeInsetsDirectional.only(start: 20),
                           icon: TotemIcons.arrowBack,
+                          tooltip: MaterialLocalizations.of(
+                            context,
+                          ).backButtonTooltip,
                           onPressed: () => popOrHome(context),
                         ),
                         leadingWidth: 50,
@@ -122,6 +126,9 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                             builder: (context) {
                               return CircleIconButton(
                                 icon: TotemIcons.share,
+                                tooltip: MaterialLocalizations.of(
+                                  context,
+                                ).shareButtonLabel,
                                 onPressed: () async {
                                   final box =
                                       context.findRenderObject() as RenderBox?;
@@ -272,7 +279,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                   await context.push(appRoute);
                                 } else {
                                   // Open external URL for non-Totem links
-                                  unawaited(launchUrl(Uri.parse(url)));
+                                  launchUrl(Uri.parse(url));
                                 }
                               }
                             },
@@ -285,7 +292,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                   await context.push(appRoute);
                                 } else {
                                   // Open external URL for non-Totem links
-                                  unawaited(launchUrl(Uri.parse(url)));
+                                  launchUrl(Uri.parse(url));
                                 }
                               }
                             },
@@ -449,6 +456,9 @@ class AboutSpaceSheet extends StatelessWidget {
                 CircleIconButton(
                   margin: const EdgeInsetsDirectional.only(end: 20),
                   icon: TotemIcons.closeRounded,
+                  tooltip: MaterialLocalizations.of(
+                    context,
+                  ).closeButtonTooltip,
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -508,7 +518,7 @@ class AboutSpaceSheet extends StatelessWidget {
                                 await context.push(appRoute);
                               } else {
                                 // Open external URL for non-Totem links
-                                unawaited(launchUrl(Uri.parse(url)));
+                                launchUrl(Uri.parse(url));
                               }
                             }
                           },
@@ -522,7 +532,7 @@ class AboutSpaceSheet extends StatelessWidget {
                                 await context.push(appRoute);
                               } else {
                                 // Open external URL for non-Totem links
-                                unawaited(launchUrl(Uri.parse(url)));
+                                launchUrl(Uri.parse(url));
                               }
                             }
                           },
@@ -617,7 +627,7 @@ class SessionSheet extends StatelessWidget {
                     ),
                     CompactInfoText(
                       const TotemIcon(TotemIcons.seats),
-                      buildSeatsLeftText(event.seatsLeft),
+                      SeatsLeftText(seatsLeft: event.seatsLeft),
                     ),
                   ],
                 ),
@@ -634,7 +644,7 @@ class SessionSheet extends StatelessWidget {
                         await context.push(appRoute);
                       } else {
                         // Open external URL for non-Totem links
-                        unawaited(launchUrl(Uri.parse(url)));
+                        launchUrl(Uri.parse(url));
                       }
                     }
                   },
@@ -646,7 +656,7 @@ class SessionSheet extends StatelessWidget {
                         await context.push(appRoute);
                       } else {
                         // Open external URL for non-Totem links
-                        unawaited(launchUrl(Uri.parse(url)));
+                        launchUrl(Uri.parse(url));
                       }
                     }
                   },

@@ -73,7 +73,7 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
   @override
   void initState() {
     super.initState();
-    unawaited(_checkInitialConnectivity());
+    _checkInitialConnectivity();
   }
 
   Future<void> _checkInitialConnectivity() async {

@@ -57,179 +57,196 @@ class BlogPostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push(RouteNames.blogPost(slug)),
-      child: Container(
-        margin: const EdgeInsetsDirectional.only(
-          start: 20,
-          end: 20,
-          bottom: 20,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          image: DecorationImage(
-            image: image == null || image!.isEmpty
-                ? const AssetImage(TotemAssets.genericBackground)
-                : CachedNetworkImageProvider(getFullUrl(image!)),
-            fit: BoxFit.cover,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: .1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+    final semanticParts = <String>[
+      title,
+      if (subtitle.isNotEmpty) subtitle,
+      '$readTime minute read',
+      if (!isPublished) 'Draft',
+    ];
+    final semanticLabel = semanticParts.join(', ');
+
+    return MergeSemantics(
+      child: Semantics(
+        button: true,
+        label: semanticLabel,
+        hint: 'read',
+        excludeSemantics: true,
+        child: GestureDetector(
+          onTap: () => context.push(RouteNames.blogPost(slug)),
+          child: Container(
+            margin: const EdgeInsetsDirectional.only(
+              start: 20,
+              end: 20,
+              bottom: 20,
             ),
-          ],
-        ),
-        height: cardHeight,
-        width: cardWidth,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsetsDirectional.only(
-                start: 20,
-                end: 20,
-                top: 20,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              image: DecorationImage(
+                image: image == null || image!.isEmpty
+                    ? const AssetImage(TotemAssets.genericBackground)
+                    : CachedNetworkImageProvider(getFullUrl(image!)),
+                fit: BoxFit.cover,
               ),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  BlogPostCardBadge(text: '$readTime min read'),
-                  if (!isPublished) const BlogPostCardBadge(text: 'Draft'),
-                ],
-              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: .1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            const Spacer(),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsetsDirectional.all(20),
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
-                ),
-                gradient: const LinearGradient(
-                  begin: AlignmentDirectional.topCenter,
-                  end: AlignmentDirectional.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Color(0xff262F37),
-                  ],
-                ),
-                border: Border(
-                  top: BorderSide(
-                    color: Colors.white.withValues(alpha: .1),
-                    width: 0.5,
+            height: cardHeight,
+            width: cardWidth,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(
+                    start: 20,
+                    end: 20,
+                    top: 20,
+                  ),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      BlogPostCardBadge(text: '$readTime min read'),
+                      if (!isPublished) const BlogPostCardBadge(text: 'Draft'),
+                    ],
                   ),
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                spacing: 10,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                const Spacer(),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsetsDirectional.all(20),
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
                     ),
-                  ),
-                  if (subtitle.isNotEmpty)
-                    Text(
-                      subtitle,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white,
-                        fontSize: 12,
+                    gradient: const LinearGradient(
+                      begin: AlignmentDirectional.topCenter,
+                      end: AlignmentDirectional.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Color(0xff262F37),
+                      ],
+                    ),
+                    border: Border(
+                      top: BorderSide(
+                        color: Colors.white.withValues(alpha: .1),
+                        width: 0.5,
                       ),
                     ),
-                  Row(
-                    spacing: 6,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: 10,
                     children: [
-                      CircleAvatar(
-                        radius: 18.5,
-                        backgroundColor: Colors.white,
-                        child: UserAvatar(
-                          image: authorImageUrl != null
-                              ? CachedNetworkImageProvider(
-                                  getFullUrl(authorImageUrl!),
-                                )
-                              : null,
-                          seed: authorImageSeed,
-                          radius: 17.5,
+                      Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              authorName,
-                              style: const TextStyle(
+                      if (subtitle.isNotEmpty)
+                        Text(
+                          subtitle,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
                                 color: Colors.white,
                                 fontSize: 12,
-                                fontWeight: FontWeight.w500,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.fade,
+                        ),
+                      Row(
+                        spacing: 6,
+                        children: [
+                          CircleAvatar(
+                            radius: 18.5,
+                            backgroundColor: Colors.white,
+                            child: UserAvatar(
+                              image: authorImageUrl != null
+                                  ? CachedNetworkImageProvider(
+                                      getFullUrl(authorImageUrl!),
+                                    )
+                                  : null,
+                              seed: authorImageSeed,
+                              radius: 17.5,
                             ),
-                            if (publishedDate != null)
-                              Text(
-                                DateFormat.yMMMd(
-                                  'en_US',
-                                ).format(publishedDate!),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
+                          ),
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  authorName,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.fade,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.fade,
+                                if (publishedDate != null)
+                                  Text(
+                                    DateFormat.yMMMd(
+                                      'en_US',
+                                    ).format(publishedDate!),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.fade,
+                                  ),
+                              ],
+                            ),
+                          ),
+                          IgnorePointer(
+                            child: ElevatedButton.icon(
+                              onPressed: () {},
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsetsDirectional.only(
+                                  start: 12,
+                                  end: 4,
+                                  top: 4,
+                                  bottom: 4,
+                                ),
+                                minimumSize: const Size(100, 42),
                               ),
-                          ],
-                        ),
-                      ),
-                      IgnorePointer(
-                        child: ElevatedButton.icon(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsetsDirectional.only(
-                              start: 12,
-                              end: 4,
-                              top: 4,
-                              bottom: 4,
-                            ),
-                            minimumSize: const Size(100, 42),
-                          ),
-                          label: const Text(
-                            'Read more',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                              label: const Text(
+                                'Read more',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.arrow_forward_ios,
+                                size: 16,
+                              ),
+                              iconAlignment: IconAlignment.end,
                             ),
                           ),
-                          icon: const Icon(
-                            Icons.arrow_forward_ios,
-                            size: 16,
-                          ),
-                          iconAlignment: IconAlignment.end,
-                        ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

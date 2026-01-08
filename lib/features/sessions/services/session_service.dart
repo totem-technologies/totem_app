@@ -61,6 +61,7 @@ class SessionOptions {
     required this.onMessageReceived,
     required this.onLivekitError,
     required this.onKeeperLeaveRoom,
+    required this.onConnected,
     required this.cameraOptions,
     required this.audioOptions,
     required this.audioOutputOptions,
@@ -76,6 +77,7 @@ class SessionOptions {
   final OnMessageReceived onMessageReceived;
   final OnLivekitError onLivekitError;
   final OnKeeperLeaveRoom onKeeperLeaveRoom;
+  final VoidCallback onConnected;
 
   final CameraCaptureOptions cameraOptions;
   final AudioCaptureOptions audioOptions;
@@ -185,20 +187,20 @@ class Session extends _$Session {
       ..on<ParticipantConnectedEvent>(_onParticipantConnected);
     room.addListener(_onRoomChanges);
 
-    unawaited(WakelockPlus.enable());
-    unawaited(setupBackgroundMode());
+    WakelockPlus.enable();
+    setupBackgroundMode();
 
     ref.onDispose(() {
       logger.d('Disposing LiveKitService and closing connections.');
-      unawaited(endBackgroundMode());
-      unawaited(WakelockPlus.disable());
+      endBackgroundMode();
+      WakelockPlus.disable();
       _keeperDisconnectedTimer?.cancel();
       _keeperDisconnectedTimer = null;
       closeKeeperLeftNotification?.call();
       closeKeeperLeftNotification = null;
       _timer?.cancel();
       _timer = null;
-      unawaited(_listener.dispose());
+      _listener.dispose();
       room.removeListener(_onRoomChanges);
     });
 
@@ -208,15 +210,16 @@ class Session extends _$Session {
   void _onConnected() {
     if (room.localParticipant == null) return;
 
-    unawaited(room.localParticipant!.setCameraEnabled(_options.cameraEnabled));
-    unawaited(
-      // TODO(bdlukaa): Revisit this in the future
-      // The current behavior is to enable microphone only for keepers at the
-      // beginning of the session.
-      // room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
-      room.localParticipant!.setMicrophoneEnabled(isKeeper()),
-    );
+    room.localParticipant!.setCameraEnabled(_options.cameraEnabled);
+
+    // TODO(bdlukaa): Revisit this in the future
+    // The current behavior is to enable microphone only for keepers at the
+    // beginning of the session.
+    // room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
+    room.localParticipant!.setMicrophoneEnabled(isKeeper());
     state = state.copyWith(connectionState: RoomConnectionState.connected);
+
+    options.onConnected();
   }
 
   void _onDisconnected() {

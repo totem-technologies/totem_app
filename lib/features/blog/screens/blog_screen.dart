@@ -14,6 +14,7 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/html.dart';
 import 'package:totem_app/shared/routing.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/circle_icon_button.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -32,8 +33,10 @@ class BlogScreen extends ConsumerStatefulWidget {
 class _BlogScreenState extends ConsumerState<BlogScreen> {
   @override
   Widget build(BuildContext context) {
-    final blogRef = ref.watch(blogPostProvider(widget.slug));
     final theme = Theme.of(context);
+
+    final blogRef = ref.watch(blogPostProvider(widget.slug));
+    ref.sentryReportFullyDisplayed(blogPostProvider(widget.slug));
 
     return Scaffold(
       backgroundColor: const Color(0xffFCEFE4),
@@ -42,6 +45,8 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
           data: (blog) {
             final authorSpacesText =
                 'Spaces by ${blog.author?.name ?? 'this Author'}';
+            final screenWidth = MediaQuery.widthOf(context);
+            final pixelRatio = MediaQuery.devicePixelRatioOf(context);
 
             return NestedScrollView(
               headerSliverBuilder: (context, scrolled) {
@@ -54,6 +59,9 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                     leading: CircleIconButton(
                       margin: const EdgeInsets.only(left: 20),
                       icon: TotemIcons.arrowBack,
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).backButtonTooltip,
                       onPressed: () => popOrHome(context),
                     ),
                     leadingWidth: 50,
@@ -61,6 +69,9 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                     actions: [
                       CircleIconButton(
                         icon: TotemIcons.share,
+                        tooltip: MaterialLocalizations.of(
+                          context,
+                        ).shareButtonLabel,
                         onPressed: () async {
                           final box = context.findRenderObject() as RenderBox?;
                           await SharePlus.instance.share(
@@ -145,6 +156,8 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                             child: CachedNetworkImage(
                               imageUrl: blog.headerImageUrl!,
                               fit: BoxFit.cover,
+                              memCacheWidth: ((screenWidth - 40) * pixelRatio)
+                                  .round(),
                             ),
                           ),
                         Html(

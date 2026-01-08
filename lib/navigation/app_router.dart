@@ -130,14 +130,12 @@ void popOrHome([BuildContext? context]) {
     if (router.canPop()) {
       router.pop();
     } else {
-      unawaited(router.pushReplacementNamed(RouteNames.welcome));
+      router.pushReplacementNamed(RouteNames.welcome);
     }
   } else if (navigatorKey.currentState?.canPop() ?? false) {
     navigatorKey.currentState?.pop();
   } else {
-    unawaited(
-      navigatorKey.currentState?.pushReplacementNamed(RouteNames.welcome),
-    );
+    navigatorKey.currentState?.pushReplacementNamed(RouteNames.welcome);
   }
 }
 
@@ -146,9 +144,7 @@ void toHome(HomeRoutes route) {
   if (shellNavigatorKey.currentState != null) {
     shellNavigatorKey.currentState?.goBranch(route.index);
   } else if (navigatorKey.currentState != null) {
-    unawaited(
-      navigatorKey.currentState!.pushReplacementNamed(RouteNames.welcome),
-    );
+    navigatorKey.currentState!.pushReplacementNamed(RouteNames.welcome);
   }
 }
 
@@ -256,7 +252,7 @@ GoRouter createRouter(WidgetRef ref) {
                 name: RouteNames.home,
                 pageBuilder: (context, state) => CustomTransitionPage(
                   key: state.pageKey,
-                  child: const HomeScreen(),
+                  child: const SentryDisplayWidget(child: HomeScreen()),
                   transitionsBuilder:
                       (
                         context,
@@ -278,7 +274,9 @@ GoRouter createRouter(WidgetRef ref) {
                 name: RouteNames.spaces,
                 pageBuilder: (context, state) => CustomTransitionPage(
                   key: state.pageKey,
-                  child: const SpacesDiscoveryScreen(),
+                  child: const SentryDisplayWidget(
+                    child: SpacesDiscoveryScreen(),
+                  ),
                   transitionsBuilder:
                       (
                         context,
@@ -298,7 +296,8 @@ GoRouter createRouter(WidgetRef ref) {
               GoRoute(
                 path: RouteNames.blog,
                 name: RouteNames.blog,
-                builder: (context, state) => const BlogListScreen(),
+                builder: (context, state) =>
+                    const SentryDisplayWidget(child: BlogListScreen()),
               ),
             ],
           ),
@@ -349,7 +348,7 @@ GoRouter createRouter(WidgetRef ref) {
         name: RouteNames.space(':slug'),
         builder: (context, state) {
           final slug = state.pathParameters['slug'] ?? '';
-          return SpaceDetailScreen(slug: slug);
+          return SentryDisplayWidget(child: SpaceDetailScreen(slug: slug));
         },
       ),
 
@@ -359,7 +358,9 @@ GoRouter createRouter(WidgetRef ref) {
         builder: (context, state) {
           final spaceSlug = state.pathParameters['spaceSlug'] ?? '';
           final eventSlug = state.pathParameters['eventSlug'];
-          return SpaceDetailScreen(slug: spaceSlug, eventSlug: eventSlug);
+          return SentryDisplayWidget(
+            child: SpaceDetailScreen(slug: spaceSlug, eventSlug: eventSlug),
+          );
         },
       ),
 
@@ -368,7 +369,7 @@ GoRouter createRouter(WidgetRef ref) {
         name: RouteNames.keeperProfile(':slug'),
         builder: (context, state) {
           final slug = state.pathParameters['slug'] ?? '';
-          return KeeperProfileScreen(slug: slug);
+          return SentryDisplayWidget(child: KeeperProfileScreen(slug: slug));
         },
       ),
 
@@ -377,7 +378,7 @@ GoRouter createRouter(WidgetRef ref) {
         name: RouteNames.blogPost(':slug'),
         builder: (context, state) {
           final slug = state.pathParameters['slug'] ?? '';
-          return BlogScreen(slug: slug);
+          return SentryDisplayWidget(child: BlogScreen(slug: slug));
         },
       ),
 
@@ -385,7 +386,9 @@ GoRouter createRouter(WidgetRef ref) {
         path: RouteNames.videoSessionPrejoin,
         name: RouteNames.videoSessionPrejoin,
         builder: (context, state) {
-          return PreJoinScreen(eventSlug: state.extra! as String);
+          return SentryDisplayWidget(
+            child: PreJoinScreen(eventSlug: state.extra! as String),
+          );
         },
       ),
       GoRoute(
@@ -393,14 +396,16 @@ GoRouter createRouter(WidgetRef ref) {
         name: RouteNames.videoSession(':id'),
         builder: (context, state) {
           final args = state.extra! as VideoRoomScreenRouteArgs;
-          return VideoRoomScreen(
-            cameraEnabled: args.cameraEnabled,
-            micEnabled: args.micEnabled,
-            eventSlug: args.eventSlug,
-            token: args.token,
-            cameraOptions: args.cameraOptions,
-            audioOptions: args.audioOptions,
-            audioOutputOptions: args.audioOutputOptions,
+          return SentryDisplayWidget(
+            child: VideoRoomScreen(
+              cameraEnabled: args.cameraEnabled,
+              micEnabled: args.micEnabled,
+              eventSlug: args.eventSlug,
+              token: args.token,
+              cameraOptions: args.cameraOptions,
+              audioOptions: args.audioOptions,
+              audioOutputOptions: args.audioOutputOptions,
+            ),
           );
         },
       ),

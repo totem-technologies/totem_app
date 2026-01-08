@@ -7,6 +7,7 @@ import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/filter.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
@@ -34,6 +35,8 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final spaces = ref.watch(listSpacesProvider);
+    ref.sentryReportFullyDisplayed(listSpacesProvider);
+
     final selectedCategory = ref.watch(selectedCategoryProvider);
 
     final isLargeScreen = MediaQuery.widthOf(context) > 600;
@@ -169,14 +172,10 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
   }
 
   List<String> _extractCategories(List<MobileSpaceDetailSchema> spaces) {
-    final categories =
-        spaces
-            .map((space) => space.category)
-            .where((category) => category != null)
-            .cast<String>()
-            .toSet()
-            .toList()
-          ..sort();
+    final categories = <String>{
+      for (final space in spaces)
+        if (space.category != null) space.category!,
+    }.toList()..sort();
 
     return categories;
   }

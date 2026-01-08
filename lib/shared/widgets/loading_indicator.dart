@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 
 class LoadingIndicator extends StatelessWidget {
-  const LoadingIndicator({super.key, this.size = 36.0, this.color});
+  const LoadingIndicator({
+    super.key,
+    this.size = 36.0,
+    this.color,
+    this.semanticsLabel = 'Loading',
+  });
 
   final Color? color;
   final double size;
+
+  final String semanticsLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -18,6 +25,7 @@ class LoadingIndicator extends StatelessWidget {
           valueColor: AlwaysStoppedAnimation<Color>(
             color ?? theme.colorScheme.primary,
           ),
+          semanticsLabel: semanticsLabel,
         ),
       ),
     );

@@ -23,6 +23,9 @@ class SpaceDetailAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.widthOf(context);
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+
     return GestureDetector(
       onTap: () async {
         await Scrollable.ensureVisible(
@@ -38,12 +41,13 @@ class SpaceDetailAppBar extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(
                 bottom: Radius.circular(25),
               ),
-              child: SpaceGradientMask(
+              child: ImageGradientMask(
                 gradientHeight: 200,
                 child: (space.imageLink != null && space.imageLink!.isNotEmpty)
                     ? CachedNetworkImage(
                         imageUrl: getFullUrl(space.imageLink ?? ''),
                         fit: BoxFit.cover,
+                        memCacheWidth: (screenWidth * pixelRatio).round(),
                         errorWidget: (context, url, error) {
                           return Image.asset(
                             TotemAssets.genericBackground,

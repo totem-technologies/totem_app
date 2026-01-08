@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
@@ -47,7 +48,7 @@ class AnimatedPopupState extends State<AnimatedPopup>
           ),
         );
 
-    unawaited(_controller.forward());
+    _controller.forward();
 
     if (widget.duration > Duration.zero) {
       Future.delayed(widget.duration, dismiss);
@@ -112,6 +113,11 @@ void showNotificationPopup(
   required String title,
   required String message,
 }) {
+  SemanticsService.sendAnnouncement(
+    View.of(context),
+    'New message: $message',
+    TextDirection.ltr,
+  );
   return showPopup(
     context,
     builder: (context) {
@@ -155,7 +161,7 @@ VoidCallback showDismissiblePopup(
   overlay.insert(popup);
 
   return () {
-    unawaited(key.currentState?.dismiss());
+    key.currentState?.dismiss();
   };
 }
 
@@ -165,6 +171,11 @@ VoidCallback showPermanentNotificationPopup(
   required String title,
   required String message,
 }) {
+  SemanticsService.sendAnnouncement(
+    View.of(context),
+    'New message: $message',
+    TextDirection.ltr,
+  );
   return showDismissiblePopup(
     context,
     builder: (context) {

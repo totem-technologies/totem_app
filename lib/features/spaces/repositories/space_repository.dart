@@ -22,7 +22,7 @@ Future<List<MobileSpaceDetailSchema>> listSpaces(Ref ref) async {
     );
     final spaces = response.items;
 
-    unawaited(cache.saveSpaces(spaces));
+    cache.saveSpaces(spaces);
 
     return spaces;
   } on DioException catch (_) {
@@ -69,7 +69,7 @@ Future<List<SpaceSchema>> listSubscribedSpaces(Ref ref) async {
           .totemCirclesMobileApiMobileApiListSubscriptions(),
       operationName: 'list subscribed spaces',
     );
-    unawaited(cache.saveSubscribedSpaces(spaces));
+    cache.saveSubscribedSpaces(spaces);
     return spaces;
   } on DioException catch (_) {
     final cachedSpaces = await cache.getSubscribedSpaces();
@@ -137,7 +137,7 @@ Future<List<EventDetailSchema>> listSessionsHistory(Ref ref) async {
               .totemCirclesMobileApiMobileApiGetSessionsHistory(),
           operationName: 'list sessions history',
         );
-    unawaited(cache.saveSessionsHistory(sessions));
+    cache.saveSessionsHistory(sessions);
     return sessions;
   } on DioException catch (_) {
     final cachedSessions = await cache.getSessionsHistory();

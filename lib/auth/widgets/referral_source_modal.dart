@@ -42,10 +42,13 @@ class _ReferralSourceModalState extends State<ReferralSourceModal> {
 
     return CardScreen(
       children: [
-        Text(
-          'How did you hear about us?',
-          style: theme.textTheme.headlineSmall,
-          textAlign: TextAlign.center,
+        Semantics(
+          header: true,
+          child: Text(
+            'How did you hear about us?',
+            style: theme.textTheme.headlineSmall,
+            textAlign: TextAlign.center,
+          ),
         ),
         const SizedBox(height: 8),
         Text(

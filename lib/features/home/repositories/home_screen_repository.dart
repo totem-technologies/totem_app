@@ -23,7 +23,7 @@ Future<SummarySpacesSchema> spacesSummary(Ref ref) async {
       operationName: 'get spaces summary',
     );
 
-    unawaited(cache.saveSpacesSummary(summary));
+    cache.saveSpacesSummary(summary);
 
     return summary;
   } on DioException catch (e, stackTrace) {

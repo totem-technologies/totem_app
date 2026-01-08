@@ -60,9 +60,7 @@ class AnalyticsService {
       '${parameters != null ? '| Params: $parameters' : ''}',
     );
 
-    unawaited(
-      posthog.capture(eventName: eventName, properties: parameters ?? {}),
-    );
+    posthog.capture(eventName: eventName, properties: parameters ?? {});
   }
 
   Future<void> setUserId(UserSchema user) async {

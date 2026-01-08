@@ -86,12 +86,10 @@ class NotificationsService {
               '${message.notification}',
             );
 
-            unawaited(
-              showNotification(
-                title: message.notification?.title ?? '',
-                body: message.notification?.body ?? '',
-                data: message.data,
-              ),
+            showNotification(
+              title: message.notification?.title ?? '',
+              body: message.notification?.body ?? '',
+              data: message.data,
             );
           }
         });

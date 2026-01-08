@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
@@ -51,8 +52,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   @override
   void dispose() {
     if (_videoTrack != null) {
-      unawaited(_videoTrack!.stop());
-      unawaited(_videoTrack!.dispose());
+      _videoTrack!.stop();
+      _videoTrack!.dispose();
     }
     super.dispose();
   }
@@ -65,7 +66,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       await _requestPermissions();
       if (await Permission.camera.isGranted &&
           await Permission.microphone.isGranted) {
-        unawaited(_initializeLocalVideo());
+        _initializeLocalVideo();
+      }
+      if (mounted) {
+        SentryDisplayWidget.of(context).reportFullyDisplayed();
       }
     });
   }
@@ -109,7 +113,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                 ),
                 onPressed: () {
                   Navigator.of(context).pop();
-                  unawaited(openAppSettings());
+                  openAppSettings();
                 },
               ),
             ],
@@ -178,6 +182,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: CircleIconButton(
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
             margin: const EdgeInsetsDirectional.only(start: 20),
             icon: TotemIcons.arrowBack,
             onPressed: () => popOrHome(context),
@@ -241,10 +246,15 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                       horizontal: 40,
                       vertical: 10,
                     ),
-                    child: RepaintBoundary(
-                      child: LocalParticipantVideoCard(
-                        isCameraOn: _isCameraOn,
-                        videoTrack: _videoTrack,
+                    child: Semantics(
+                      label:
+                          'Your video preview, camera ${_isCameraOn ? 'on' : 'off'}',
+                      image: true,
+                      child: RepaintBoundary(
+                        child: LocalParticipantVideoCard(
+                          isCameraOn: _isCameraOn,
+                          videoTrack: _videoTrack,
+                        ),
                       ),
                     ),
                   ),
@@ -252,6 +262,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                 ActionBar(
                   children: [
                     ActionBarButton(
+                      semanticsLabel: 'Microphone ${_isMicOn ? 'on' : 'off'}',
                       onPressed: _toggleMic,
                       active: _isMicOn,
                       child: TotemIcon(
@@ -261,6 +272,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                       ),
                     ),
                     ActionBarButton(
+                      semanticsLabel: 'Camera ${_isCameraOn ? 'on' : 'off'}',
                       onPressed: _toggleCamera,
                       active: _isCameraOn,
                       child: TotemIcon(
@@ -270,6 +282,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                       ),
                     ),
                     ActionBarButton(
+                      semanticsLabel: MaterialLocalizations.of(
+                        context,
+                      ).moreButtonTooltip,
                       onPressed: () async {
                         await showPrejoinOptionsSheet(
                           context,
@@ -301,6 +316,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                     SizedBox(
                       width: 96,
                       child: ActionBarButton(
+                        semanticsLabel: 'Join session',
                         onPressed: () => _joinRoom(token),
                         square: false,
                         child: const Text('Join'),

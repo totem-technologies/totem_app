@@ -44,7 +44,11 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
       canPop: !_loading,
       child: AlertDialog(
         title: widget.title != null
-            ? Text(widget.title!, textAlign: TextAlign.center)
+            ? Semantics(
+                header: true,
+                namesRoute: true,
+                child: Text(widget.title!, textAlign: TextAlign.center),
+              )
             : null,
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -71,11 +75,9 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                   const Duration(seconds: 10),
                   onTimeout: () {
                     if (context.mounted) {
-                      unawaited(
-                        ErrorHandler.showErrorDialog(
-                          context,
-                          message: 'Something went wrong. Please try again.',
-                        ),
+                      ErrorHandler.showErrorDialog(
+                        context,
+                        message: 'Something went wrong. Please try again.',
                       );
                     }
                   },
@@ -98,7 +100,11 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                 },
               ),
               child: _loading
-                  ? const LoadingIndicator(color: Colors.white, size: 24)
+                  ? const LoadingIndicator(
+                      color: Colors.white,
+                      size: 24,
+                      semanticsLabel: 'Processing',
+                    )
                   : Text(widget.confirmButtonText),
             ),
             OutlinedButton(

@@ -140,18 +140,19 @@ class EmojiBar extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               spacing: 10,
-              children: emojis.map((emoji) {
-                return GestureDetector(
-                  onTap: () => onEmojiSelected(emoji),
-                  child: Text(
-                    emoji,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      textBaseline: TextBaseline.ideographic,
+              children: [
+                for (final emoji in emojis)
+                  GestureDetector(
+                    onTap: () => onEmojiSelected(emoji),
+                    child: Text(
+                      emoji,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        textBaseline: TextBaseline.ideographic,
+                      ),
                     ),
                   ),
-                );
-              }).toList(),
+              ],
             ),
           ),
         ),
@@ -254,7 +255,7 @@ class _RisingEmojiState extends State<RisingEmoji>
     _frequency = _random.nextDouble() * 2 + 2;
     _movesRight = _random.nextBool();
 
-    unawaited(_controller.forward().whenComplete(widget.onCompleted));
+    _controller.forward().whenComplete(widget.onCompleted);
   }
 
   @override
@@ -266,7 +267,7 @@ class _RisingEmojiState extends State<RisingEmoji>
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _animation,
+      animation: Listenable.merge([_animation, _opacityAnimation]),
       builder: (context, child) {
         final screenHeight = MediaQuery.heightOf(context);
 
@@ -287,18 +288,19 @@ class _RisingEmojiState extends State<RisingEmoji>
             child: IgnorePointer(
               child: FadeTransition(
                 opacity: _opacityAnimation,
-                child: Text(
-                  widget.emoji,
-                  style: TextStyle(
-                    fontSize: 44 * widget.sizeFactor,
-                    textBaseline: TextBaseline.ideographic,
-                  ),
-                ),
+                child: child,
               ),
             ),
           ),
         );
       },
+      child: Text(
+        widget.emoji,
+        style: TextStyle(
+          fontSize: 44 * widget.sizeFactor,
+          textBaseline: TextBaseline.ideographic,
+        ),
+      ),
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class SpaceGradientMask extends StatelessWidget {
-  const SpaceGradientMask({
+class ImageGradientMask extends StatelessWidget {
+  const ImageGradientMask({
     required this.child,
     super.key,
     this.gradientHeight = 135.0,
@@ -13,28 +13,30 @@ class SpaceGradientMask extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.passthrough,
-      children: [
-        child,
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: gradientHeight,
-          child: const IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black],
+    return ExcludeSemantics(
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          child,
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: gradientHeight,
+            child: const IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -4,7 +4,7 @@
 import 'dart:async';
 import 'dart:math' show max;
 
-import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart' as sdk;
 import 'package:livekit_components/livekit_components.dart';
@@ -143,8 +143,8 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
 
     if (didUpdateParams) {
       // Re-attach listeners
-      unawaited(_detachListeners());
-      unawaited(_attachListeners());
+      _detachListeners();
+      _attachListeners();
     }
   }
 
@@ -227,13 +227,11 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   void initState() {
     super.initState();
 
-    samples = List.filled(widget.options.barCount, 0);
+    samples = List.filled(widget.options.barCount, 0, growable: false);
 
     _controller = AnimationController(
       duration: Duration(milliseconds: widget.options.durationInMilliseconds),
       vsync: this,
-      // Do not await this future
-      // ignore: discarded_futures
     )..repeat(reverse: true);
 
     _pulseAnimation = CurvedAnimation(
@@ -241,13 +239,13 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
       curve: Curves.easeInOut,
     );
 
-    unawaited(_attachListeners());
+    _attachListeners();
   }
 
   @override
   void dispose() {
     _controller.dispose();
-    unawaited(_detachListeners());
+    _detachListeners();
     super.dispose();
   }
 
@@ -258,10 +256,10 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   ) {
     final distance = (index - activeIndex).abs();
     final maxDistance = samples.length / 4;
-    final gradientStrength = (1.0 - (distance / maxDistance)).clamp(0.0, 1.0);
+    final gradientStrength = clampDouble(1 - (distance / maxDistance), 0, 1);
     final alpha =
         widget.options.barMinOpacity +
-        (gradientStrength * (1.0 - widget.options.barMinOpacity));
+        (gradientStrength * (1 - widget.options.barMinOpacity));
 
     return widget.options.computeColor(context).withValues(alpha: alpha);
   }
@@ -380,27 +378,31 @@ class BarsView extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         spacing: options.spacing,
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: elements
-            .mapIndexed(
-              (index, element) => Center(
-                child: AnimatedContainer(
-                  width: 1,
-                  duration: Duration(
-                    milliseconds:
-                        options.durationInMilliseconds ~/ options.barCount,
-                  ),
-                  decoration: BoxDecoration(
-                    color: element.color,
-                    borderRadius: BorderRadius.circular(options.cornerRadius),
-                  ),
-                  height: max(
+        children: [
+          for (int i = 0; i < elements.length; i++)
+            Center(
+              child: AnimatedContainer(
+                width: 1,
+                duration: Duration(
+                  milliseconds:
+                      options.durationInMilliseconds ~/ options.barCount,
+                ),
+                decoration: BoxDecoration(
+                  color: elements[i].color,
+                  borderRadius: BorderRadius.circular(options.cornerRadius),
+                ),
+                height: clampDouble(
+                  max(
                     delta,
-                    (element.value * (constraints.maxHeight - delta)) + delta,
-                  ).clamp(0, options.maxHeight),
+                    (elements[i].value * (constraints.maxHeight - delta)) +
+                        delta,
+                  ),
+                  0,
+                  options.maxHeight,
                 ),
               ),
-            )
-            .toList(),
+            ),
+        ],
       );
     },
   );

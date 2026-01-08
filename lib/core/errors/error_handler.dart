@@ -32,7 +32,8 @@ class ErrorHandler {
             ..enableLogs = true
             ..attachScreenshot = true
             ..attachViewHierarchy = true
-            ..enableAutoPerformanceTracing = true;
+            ..enableAutoPerformanceTracing = true
+            ..enableTimeToFullDisplayTracing = true;
         },
         appRunner: () async {
           FlutterError.onError = (FlutterErrorDetails details) {
@@ -55,15 +56,13 @@ class ErrorHandler {
     }
 
     if (AppConfig.sentryDsn.isNotEmpty) {
-      unawaited(
-        Sentry.captureException(
-          error,
-          stackTrace: stackTrace,
-          hint: Hint.withMap({
-            'reason': reason,
-            'message': message,
-          }),
-        ),
+      Sentry.captureException(
+        error,
+        stackTrace: stackTrace,
+        hint: Hint.withMap({
+          'reason': reason,
+          'message': message,
+        }),
       );
     }
   }

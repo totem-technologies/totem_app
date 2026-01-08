@@ -44,5 +44,7 @@ linter:
     no_leading_underscores_for_local_identifiers: true
     always_specify_types: false # (optional — depends if you want verbose code)
     no_default_cases: false
-    avoid_void_async: true
+    avoid_void_async: false
     lines_longer_than_80_chars: false
+    unawaited_futures: false
+    discarded_futures: false

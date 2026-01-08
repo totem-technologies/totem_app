@@ -1,7 +1,5 @@
-import 'dart:async';
-import 'dart:ui';
-
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_boring_avatars/flutter_boring_avatars.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -94,6 +92,16 @@ class UserAvatar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final heroTag = 'avatar-${seed ?? image.hashCode}';
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final avatarSize = (radius * 2 * pixelRatio).round();
+    final optimizedImage = image != null && image is CachedNetworkImageProvider
+        ? ResizeImage(
+            image!,
+            width: avatarSize,
+            height: avatarSize,
+          )
+        : image;
+
     return GestureDetector(
       onTap:
           onTap ??
@@ -119,9 +127,9 @@ class UserAvatar extends ConsumerWidget {
         decoration: BoxDecoration(
           border: Border.all(color: Colors.white, width: borderWidth),
           borderRadius: borderRadius,
-          image: showImage && image != null
+          image: showImage && optimizedImage != null
               ? DecorationImage(
-                  image: image!,
+                  image: optimizedImage,
                   fit: BoxFit.cover,
                 )
               : null,
@@ -177,13 +185,13 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return GestureDetector(
-          behavior: HitTestBehavior.deferToChild,
-          onTap: () => Navigator.of(context).pop(),
-          child: ColoredBox(
+    return GestureDetector(
+      behavior: HitTestBehavior.deferToChild,
+      onTap: () => Navigator.of(context).pop(),
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return ColoredBox(
             color: Colors.black.withValues(
               alpha: clampDouble(0.0 - _controller.value, 0, 1),
             ),
@@ -196,7 +204,7 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
                 setState(() {
                   _dragPosition += details.focalPointDelta;
                   final dragDistance = _dragPosition.dy.abs();
-                  _controller.value = (dragDistance / 200).clamp(0.0, 1.0);
+                  _controller.value = clampDouble(dragDistance / 200, 0, 1);
                 });
               },
               onInteractionEnd: (details) {
@@ -207,7 +215,7 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
                   setState(() {
                     _dragPosition = Offset.zero;
                   });
-                  unawaited(_controller.reverse());
+                  _controller.reverse();
                 }
               },
               child: Center(
@@ -223,15 +231,15 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
                 ),
               ),
             ),
-          ),
-        );
-      },
-      child: Hero(
-        tag: widget.heroTag,
-        child: ClipOval(
-          child: Image(
-            image: widget.image,
-            fit: BoxFit.contain,
+          );
+        },
+        child: Hero(
+          tag: widget.heroTag,
+          child: ClipOval(
+            child: Image(
+              image: widget.image,
+              fit: BoxFit.contain,
+            ),
           ),
         ),
       ),
