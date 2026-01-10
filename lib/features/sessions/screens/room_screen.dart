@@ -78,21 +78,52 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
   ConsumerState<VideoRoomScreen> createState() => _VideoRoomScreenState();
 }
 
-class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
+class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen>
+    with WidgetsBindingObserver {
   final _navigatorKey = GlobalKey<NavigatorState>();
+  bool _wasCameraEnabledBeforeBackground = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _listenToBatteryChanges();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _batterySubscription?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    _handleAppLifecycleChange(state);
+  }
+
+  void _handleAppLifecycleChange(AppLifecycleState state) {
+    if (_cachedSessionOptions == null) return;
+
+    final sessionNotifier = ref.read(
+      sessionProvider(_cachedSessionOptions!).notifier,
+    );
+    final room = sessionNotifier.room;
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _wasCameraEnabledBeforeBackground = room.cameraOpened;
+      if (_wasCameraEnabledBeforeBackground) {
+        sessionNotifier.disableCamera();
+      }
+    } else if (state == AppLifecycleState.resumed) {
+      if (_wasCameraEnabledBeforeBackground) {
+        sessionNotifier.enableCamera();
+      }
+    }
   }
 
   final battery = Battery();
@@ -208,13 +239,15 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     SentryDisplayWidget.of(context).reportFullyDisplayed();
   }
 
+  SessionOptions? _cachedSessionOptions;
+
   @override
   Widget build(BuildContext context) {
     final eventAsync = ref.watch(eventProvider(widget.eventSlug));
 
     return eventAsync.when(
       data: (event) {
-        final sessionOptions = SessionOptions(
+        _cachedSessionOptions = SessionOptions(
           eventSlug: widget.eventSlug,
           keeperSlug: event.space.author.slug!,
           token: widget.token,
@@ -230,9 +263,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           onConnected: _onConnected,
         );
 
-        final sessionState = ref.watch(sessionProvider(sessionOptions));
+        final sessionState = ref.watch(sessionProvider(_cachedSessionOptions!));
         final sessionNotifier = ref.read(
-          sessionProvider(sessionOptions).notifier,
+          sessionProvider(_cachedSessionOptions!).notifier,
         );
 
         return PopScope(

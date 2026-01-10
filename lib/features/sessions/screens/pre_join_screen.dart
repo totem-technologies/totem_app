@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
@@ -23,7 +21,6 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/circle_icon_button.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class PreJoinScreen extends ConsumerStatefulWidget {
   const PreJoinScreen({required this.eventSlug, super.key});
@@ -212,36 +209,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                   padding: const EdgeInsetsDirectional.symmetric(
                     horizontal: 20,
                   ),
-                  child: RichText(
-                    textAlign: TextAlign.center,
-                    text: TextSpan(
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.textTheme.bodyMedium?.color?.withValues(
-                          alpha: 0.8,
-                        ),
+                  child: Text(
+                    'Your session will start soon. Please check your audio and video settings before joining.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 12,
+                      color: theme.textTheme.bodyMedium?.color?.withValues(
+                        alpha: 0.8,
                       ),
-                      children: [
-                        const TextSpan(
-                          text:
-                              'It will start soon. '
-                              'Verify your audio and video settings before '
-                              'joining.\n'
-                              '\n'
-                              'Please take a moment to go over the',
-                        ),
-                        TextSpan(
-                          text: '\ncommunity guidelines',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.underline,
-                          ),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () =>
-                                launchUrl(AppConfig.communityGuidelinesUrl),
-                        ),
-                        const TextSpan(text: '.'),
-                      ],
                     ),
                   ),
                 ),
