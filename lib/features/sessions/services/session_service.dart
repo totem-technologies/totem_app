@@ -169,9 +169,20 @@ class Session extends _$Session {
         defaultAudioOutputOptions: _options.audioOutputOptions,
 
         dynacast: true,
-        defaultVideoPublishOptions: VideoPublishOptions(
+        defaultVideoPublishOptions: const VideoPublishOptions(
           simulcast: true,
-          videoSimulcastLayers: VideoParametersPresets.all169,
+          // videoSimulcastLayers: VideoParametersPresets.all169,
+          videoSimulcastLayers: [
+            // VideoParametersPresets.h90_169,
+            // VideoParametersPresets.h180_169,
+            // VideoParametersPresets.h216_169,
+            // VideoParametersPresets.h360_169,
+            VideoParametersPresets.h540_169,
+            VideoParametersPresets.h720_169,
+            VideoParametersPresets.h1080_169,
+            VideoParametersPresets.h1440_169,
+            VideoParametersPresets.h2160_169,
+          ],
         ),
         // defaultAudioPublishOptions: const AudioPublishOptions(),
 
