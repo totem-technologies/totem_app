@@ -77,55 +77,55 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   Future<void> _requestPermissions() async {
     if (_requestLock) return;
     _requestLock = true;
-    final cameraGranted = await Permission.camera.request();
-    final micGranted = await Permission.microphone.request();
-    await BackgroundControl.requestPermissions();
 
-    if (!cameraGranted.isGranted || !micGranted.isGranted) {
-      if (!mounted) return;
+    try {
+      final statuses = await [
+        Permission.camera,
+        Permission.microphone,
+      ].request();
 
-      // Build permission text based on what's missing
-      final missingPermissions = <String>[];
-      if (!cameraGranted.isGranted) missingPermissions.add('Camera');
-      if (!micGranted.isGranted) missingPermissions.add('Microphone');
-      final permissionText = missingPermissions.join(' and ');
+      final cameraStatus = statuses[Permission.camera]!;
+      final micStatus = statuses[Permission.microphone]!;
 
-      await showAdaptiveDialog<void>(
-        context: context,
-        barrierDismissible: true,
-        builder: (BuildContext context) {
-          return AlertDialog.adaptive(
+      if (!cameraStatus.isGranted || !micStatus.isGranted) {
+        if (!mounted) return;
+
+        final missing = <String>[];
+        if (!cameraStatus.isGranted) missing.add('Camera');
+        if (!micStatus.isGranted) missing.add('Microphone');
+
+        final isPermanent =
+            cameraStatus.isPermanentlyDenied || micStatus.isPermanentlyDenied;
+
+        await showAdaptiveDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) => AlertDialog.adaptive(
             title: const Text('Permissions Required'),
             content: Text(
-              '$permissionText access ${missingPermissions.length == 1 ? 'is' : 'are'} required to join the session. Please grant ${missingPermissions.length == 1 ? 'this permission' : 'these permissions'} in your device settings.',
+              '${missing.join(' and ')} access is required. ${isPermanent ? 'Please enable them in System Settings.' : 'Please grant these permissions to continue.'}',
             ),
-            actions: <Widget>[
+            actions: [
               TextButton(
-                child: const Text(
-                  'Exit',
-                  style: TextStyle(decoration: TextDecoration.none),
-                ),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  if (mounted) Navigator.of(context).pop();
-                },
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
               ),
               TextButton(
-                child: const Text(
-                  'Open Settings',
-                  style: TextStyle(decoration: TextDecoration.none),
-                ),
                 onPressed: () {
                   Navigator.of(context).pop();
-                  openAppSettings();
+                  isPermanent ? openAppSettings() : _requestPermissions();
                 },
+                child: Text(isPermanent ? 'Open Settings' : 'Try Again'),
               ),
             ],
-          );
-        },
-      );
+          ),
+        );
+      }
+
+      await BackgroundControl.requestPermissions();
+    } finally {
+      _requestLock = false;
     }
-    _requestLock = false;
   }
 
   Future<void> _initializeLocalVideo() async {
