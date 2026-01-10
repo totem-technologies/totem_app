@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage, logger;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/api/mobile_totem_api.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/session_state.dart';
@@ -255,8 +256,7 @@ class Session extends _$Session {
         ),
       );
       return;
-    }
-    if (_lastMetadata != null && metadata != _lastMetadata) {
+    } else if (metadata != _lastMetadata) {
       // final previousState = SessionState.fromJson(
       //   jsonDecode(_lastMetadata!) as Map<String, dynamic>,
       // );
@@ -273,6 +273,11 @@ class Session extends _$Session {
 
       state = state.copyWith(sessionState: newState);
       _lastMetadata = metadata;
+    }
+
+    if (state.sessionState.status == SessionStatus.ended) {
+      reason = SessionEndedReason.finished;
+      room.disconnect();
     }
   }
 
