@@ -77,23 +77,27 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   Future<void> _requestPermissions() async {
     if (_requestLock) return;
     _requestLock = true;
-    await Permission.camera.request();
-    await Permission.microphone.request();
+    final cameraGranted = await Permission.camera.request();
+    final micGranted = await Permission.microphone.request();
     await BackgroundControl.requestPermissions();
 
-    final cameraGranted = await Permission.camera.isGranted;
-    final micGranted = await Permission.microphone.isGranted;
-
-    if (!cameraGranted || !micGranted) {
+    if (!cameraGranted.isGranted || !micGranted.isGranted) {
       if (!mounted) return;
+
+      // Build permission text based on what's missing
+      final missingPermissions = <String>[];
+      if (!cameraGranted.isGranted) missingPermissions.add('Camera');
+      if (!micGranted.isGranted) missingPermissions.add('Microphone');
+      final permissionText = missingPermissions.join(' and ');
+
       await showAdaptiveDialog<void>(
         context: context,
-        barrierDismissible: false,
+        barrierDismissible: true,
         builder: (BuildContext context) {
           return AlertDialog.adaptive(
             title: const Text('Permissions Required'),
-            content: const Text(
-              'Camera and microphone access are required to join the session. Please grant these permissions in your device settings.',
+            content: Text(
+              '$permissionText access ${missingPermissions.length == 1 ? 'is' : 'are'} required to join the session. Please grant ${missingPermissions.length == 1 ? 'this permission' : 'these permissions'} in your device settings.',
             ),
             actions: <Widget>[
               TextButton(
@@ -201,6 +205,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                     fontWeight: FontWeight.bold,
                     fontSize: 28,
                   ),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
                 Padding(

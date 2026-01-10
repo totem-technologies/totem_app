@@ -44,6 +44,7 @@ class LoadingRoomScreen extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   fontSize: 28,
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               Padding(

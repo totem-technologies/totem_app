@@ -12,7 +12,7 @@ extension BackgroundControl on Session {
           priority: NotificationPriority.LOW,
         ),
         iosNotificationOptions: const IOSNotificationOptions(
-          showNotification: true,
+          showNotification: false,
           playSound: false,
         ),
         foregroundTaskOptions: ForegroundTaskOptions(
@@ -52,9 +52,19 @@ extension BackgroundControl on Session {
     try {
       final startTime = event.start;
       final duration = DateTime.now().difference(startTime);
-      final formattedTime = DateFormat(
-        'HH:mm:ss',
-      ).format(DateTime(0).add(duration).toUtc());
+      final formattedTime =
+          DateFormat(
+            'HH:mm:ss',
+          ).format(
+            DateTime(
+              0,
+              1,
+              1,
+              duration.inHours,
+              duration.inMinutes % 60,
+              duration.inSeconds % 60,
+            ),
+          );
 
       await FlutterForegroundTask.updateService(
         notificationTitle: event.title,
