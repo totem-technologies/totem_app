@@ -137,7 +137,7 @@ class ParticipantCard extends ConsumerWidget {
                   child: AutoSizeText(
                     participant.name,
                     textAlign: TextAlign.center,
-                    maxLines: 1,
+                    maxLines: 2,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
