@@ -350,15 +350,16 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen>
           return const LoadingRoomScreen();
         }
 
-        if (state.isMyTurn(notifier.room)) {
-          if (state.sessionState.totemStatus == TotemStatus.passing) {
-            return ReceiveTotemScreen(
-              sessionState: state,
-              actionBar: buildActionBar(notifier, state, event),
-              onAcceptTotem: () => _onAcceptTotem(notifier),
-            );
-          }
+        if (state.sessionState.totemStatus == TotemStatus.passing &&
+            state.amNext(notifier.room)) {
+          return ReceiveTotemScreen(
+            sessionState: state,
+            actionBar: buildActionBar(notifier, state, event),
+            onAcceptTotem: () => _onAcceptTotem(notifier),
+          );
+        }
 
+        if (state.isMyTurn(notifier.room)) {
           return ProtectionOverlay(
             child: MyTurn(
               actionBar: buildActionBar(notifier, state, event),

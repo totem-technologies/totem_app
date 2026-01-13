@@ -36,8 +36,7 @@ class NotMyTurn extends ConsumerWidget {
       authControllerProvider.select((auth) => auth.user?.slug),
     );
     final amKeeper = currentUserSlug == event.space.author.slug!;
-
-    final activeSpeaker = session.speakingNow();
+    final activeSpeaker = session.speakingNowParticipant();
 
     return RoomBackground(
       status: sessionState.status,

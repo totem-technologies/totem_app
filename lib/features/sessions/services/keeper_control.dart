@@ -5,13 +5,10 @@ part of 'session_service.dart';
 
 extension KeeperControl on Session {
   /// Get the participant who is currently speaking.
-  Participant speakingNow() {
+  Participant speakingNowParticipant() {
     return room.participants.firstWhere(
       (participant) {
         if (state.sessionState.speakingNow != null) {
-          if (state.sessionState.totemStatus == TotemStatus.passing) {
-            return participant.identity == options.keeperSlug;
-          }
           return participant.identity == state.sessionState.speakingNow;
         } else {
           // If no one is speaking right now, show the keeper's video
