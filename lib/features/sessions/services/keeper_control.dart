@@ -19,6 +19,13 @@ extension KeeperControl on Session {
     );
   }
 
+  Participant? speakingNextParticipant() {
+    if (state.sessionState.nextSpeaker == null) return null;
+    return room.participants.firstWhereOrNull((participant) {
+      return participant.identity == state.sessionState.nextSpeaker;
+    });
+  }
+
   Future<void> _onKeeperDisconnected() async {
     _hasKeeperDisconnected = true;
     await disableMicrophone();
@@ -50,8 +57,8 @@ extension KeeperControl on Session {
     await room.disconnect();
   }
 
-  Future<void> startSession() async {
-    if (!isKeeper()) return;
+  Future<bool> startSession() async {
+    if (!isKeeper()) return false;
     try {
       await ref
           .read(startSessionProvider(_options.eventSlug).future)
@@ -61,18 +68,19 @@ extension KeeperControl on Session {
               throw AppNetworkException.timeout();
             },
           );
+      return true;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Error starting session',
       );
-      rethrow;
+      return false;
     }
   }
 
-  Future<void> endSession() async {
-    if (!isKeeper()) return;
+  Future<bool> endSession() async {
+    if (!isKeeper()) return false;
     try {
       await ref
           .read(endSessionProvider(_options.eventSlug).future)
@@ -82,13 +90,14 @@ extension KeeperControl on Session {
               throw AppNetworkException.timeout();
             },
           );
+      return true;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Error ending session',
       );
-      rethrow;
+      return false;
     }
   }
 
