@@ -141,7 +141,7 @@ class Session extends _$Session {
   late final RoomContext room;
   late final EventsListener<RoomEvent> _listener;
   late final MobileTotemApi _apiService;
-  late final SessionOptions _options;
+  late SessionOptions _options;
   String? _lastMetadata;
 
   Timer? _timer;
@@ -216,11 +216,19 @@ class Session extends _$Session {
   }
 
   void _onConnected() {
-    if (room.localParticipant == null) return;
+    if (room.localParticipant == null) {
+      logger.i('Local participant is null on connected.');
+      return;
+    }
+
+    logger.i(
+      'Connected to LiveKit room as '
+      '"${room.localParticipant!.identity}".',
+    );
 
     room.localParticipant!.setCameraEnabled(_options.cameraEnabled);
 
-    // TODO(bdlukaa): Revisit this in the future
+    // TODO(bdlukaa): This doesn't seem to work. Use room.connect to provide custom FastConnectOptions and disable microphone on start there.
     // The current behavior is to enable microphone only for keepers at the
     // beginning of the session.
     // room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
@@ -243,32 +251,40 @@ class Session extends _$Session {
 
   void _onRoomChanges() {
     final metadata = room.room.metadata;
-    if (metadata == null) return;
-    if (_lastMetadata == null) {
-      _lastMetadata = metadata;
-      state = state.copyWith(
-        sessionState: SessionState.fromJson(
+    if (metadata == null || metadata.isEmpty) return;
+
+    try {
+      if (_lastMetadata == null) {
+        _lastMetadata = metadata;
+        state = state.copyWith(
+          sessionState: SessionState.fromJson(
+            jsonDecode(metadata) as Map<String, dynamic>,
+          ),
+        );
+      } else if (metadata != _lastMetadata) {
+        // final previousState = SessionState.fromJson(
+        //   jsonDecode(_lastMetadata!) as Map<String, dynamic>,
+        // );
+        final newState = SessionState.fromJson(
           jsonDecode(metadata) as Map<String, dynamic>,
-        ),
-      );
-      return;
-    } else if (metadata != _lastMetadata) {
-      // final previousState = SessionState.fromJson(
-      //   jsonDecode(_lastMetadata!) as Map<String, dynamic>,
-      // );
-      final newState = SessionState.fromJson(
-        jsonDecode(metadata) as Map<String, dynamic>,
-      );
+        );
 
-      // if (previousState.speakingNow != newState.speakingNow) {
-      //    if (newState.speakingNow == room.localParticipant?.identity) {
-      //      debugPrint('You are now speaking');
-      //      _options.onReceiveTotem();
-      //    }
-      // }
+        // if (previousState.speakingNow != newState.speakingNow) {
+        //    if (newState.speakingNow == room.localParticipant?.identity) {
+        //      debugPrint('You are now speaking');
+        //      _options.onReceiveTotem();
+        //    }
+        // }
 
-      state = state.copyWith(sessionState: newState);
-      _lastMetadata = metadata;
+        state = state.copyWith(sessionState: newState);
+        _lastMetadata = metadata;
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error decoding session metadata',
+      );
     }
 
     if (state.sessionState.status == SessionStatus.ended) {

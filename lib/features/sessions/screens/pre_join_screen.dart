@@ -51,6 +51,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     if (_videoTrack != null) {
       _videoTrack!.stop();
       _videoTrack!.dispose();
+      _videoTrack = null;
     }
     super.dispose();
   }
@@ -127,8 +128,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   Future<void> _initializeLocalVideo() async {
     if (_videoTrack != null) {
-      await _videoTrack!.stop();
-      await _videoTrack!.dispose();
+      try {
+        await _videoTrack!.stop();
+        await _videoTrack!.dispose();
+        _videoTrack = null;
+      } catch (_) {}
     }
     try {
       _cameraOptions ??= const CameraCaptureOptions();
