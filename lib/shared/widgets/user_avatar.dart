@@ -36,6 +36,8 @@ class UserAvatar extends ConsumerWidget {
               author?.profileAvatarType == ProfileAvatarTypeEnum.im
           ? CachedNetworkImageProvider(
               getFullUrl(author!.profileImage!),
+              maxHeight: 100,
+              maxWidth: 100,
             )
           : null,
       seed: author?.profileAvatarSeed,
@@ -68,6 +70,8 @@ class UserAvatar extends ConsumerWidget {
                   user?.profileAvatarType == ProfileAvatarTypeEnum.im
               ? CachedNetworkImageProvider(
                   getFullUrl(user!.profileImage!),
+                  maxHeight: 100,
+                  maxWidth: 100,
                 )
               : null,
           seed: user?.profileAvatarSeed,

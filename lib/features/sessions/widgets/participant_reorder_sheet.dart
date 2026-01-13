@@ -1,5 +1,7 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:livekit_client/livekit_client.dart' show Participant;
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
@@ -114,9 +116,15 @@ class _ParticipantReorderWidgetState
               itemBuilder: (context, index) {
                 final participantIdentity = participants[index];
 
+                final participant = widget.session.room.participants
+                    .firstWhereOrNull(
+                      (p) => p.identity == participantIdentity,
+                    );
+
                 return _ParticipantReorderItem(
                   key: ValueKey(participantIdentity),
                   participantIdentity: participantIdentity,
+                  participant: participant,
                   index: index,
                   isSpeakingNow:
                       participantIdentity ==
@@ -219,12 +227,14 @@ class _ParticipantReorderWidgetState
 class _ParticipantReorderItem extends ConsumerWidget {
   const _ParticipantReorderItem({
     required this.participantIdentity,
+    required this.participant,
     required this.index,
     required this.isSpeakingNow,
     super.key,
   });
 
   final String participantIdentity;
+  final Participant? participant;
   final int index;
   final bool isSpeakingNow;
 
@@ -285,7 +295,7 @@ class _ParticipantReorderItem extends ConsumerWidget {
             ),
           ),
           loading: () => Text(
-            'Loading',
+            participant?.name ?? participantIdentity,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: foregroundColor,

@@ -10,7 +10,7 @@ import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
-import 'package:totem_app/features/sessions/widgets/participant_reorder_widget.dart';
+import 'package:totem_app/features/sessions/widgets/participant_reorder_sheet.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
