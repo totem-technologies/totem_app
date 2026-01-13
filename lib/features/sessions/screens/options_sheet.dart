@@ -75,26 +75,12 @@ class OptionsSheet extends ConsumerWidget {
       children: [
         MediaDeviceSelectButton(
           builder: (context, roomCtx, deviceCtx) {
-            final videoInputs = deviceCtx.videoInputs;
-            final selected =
-                deviceCtx.videoInputs?.firstWhereOrNull(
-                  (e) {
-                    return e.deviceId == session.selectedCameraDeviceId &&
-                        e.label.isNotEmpty;
-                  },
-                ) ??
-                deviceCtx.videoInputs?.firstOrNull;
-            return OptionsSheetTile<MediaDevice>(
-              title: selected?.humanReadableLabel ?? 'Default Camera',
-              icon: TotemIcons.cameraOn,
-              options: videoInputs?.toList(),
-              optionToString: (option) => option.humanReadableLabel,
-              selectedOption: selected,
-              onOptionChanged: (value) async {
-                if (value != null) {
-                  await session.selectCameraDevice(value);
-                }
-              },
+            final options =
+                roomCtx.localVideoTrack?.currentOptions
+                    as CameraCaptureOptions?;
+            return OptionsSheetTile.camera(
+              options,
+              session.switchCameraPosition,
             );
           },
         ),
@@ -104,20 +90,18 @@ class OptionsSheet extends ConsumerWidget {
             final selected =
                 deviceCtx.audioInputs?.firstWhereOrNull(
                   (e) {
-                    return e.deviceId == session.selectedAudioDeviceId &&
+                    return e.deviceId ==
+                            (roomCtx.localAudioTrack?.currentOptions.deviceId ??
+                                session.selectedAudioDeviceId) &&
                         e.label.isNotEmpty;
                   },
                 ) ??
                 deviceCtx.audioInputs?.firstOrNull;
-            return OptionsSheetTile<MediaDevice>(
-              title: selected?.label ?? 'Default Microphone',
-              options: audioInputs?.toList(),
-              optionToString: (option) => option.humanReadableLabel,
-              selectedOption: selected,
-              onOptionChanged: (value) async {
-                if (value != null) {
-                  await session.selectAudioDevice(value);
-                }
+            return OptionsSheetTile.fromMediaDevice(
+              device: selected,
+              options: audioInputs ?? [],
+              onOptionChanged: (value) {
+                if (value != null) session.selectAudioDevice(value);
               },
               icon: TotemIcons.microphoneOn,
             );
@@ -126,6 +110,7 @@ class OptionsSheet extends ConsumerWidget {
         MediaDeviceSelectButton(
           builder: (context, roomCtx, deviceCtx) {
             final audioOutputs = deviceCtx.audioOutputs?.where((device) {
+              // earpice should be handled on proximity
               return device.label.isNotEmpty && device.label != 'Earpiece';
             });
             final selected =
@@ -136,15 +121,11 @@ class OptionsSheet extends ConsumerWidget {
                   },
                 ) ??
                 deviceCtx.audioOutputs?.firstOrNull;
-            return OptionsSheetTile<MediaDevice>(
-              title: selected?.label ?? 'Default Speaker',
-              options: audioOutputs?.toList(),
-              optionToString: (option) => option.humanReadableLabel,
-              selectedOption: selected,
-              onOptionChanged: (value) async {
-                if (value != null) {
-                  await session.selectAudioOutputDevice(value);
-                }
+            return OptionsSheetTile.fromMediaDevice(
+              device: selected,
+              options: audioOutputs ?? [],
+              onOptionChanged: (value) {
+                if (value != null) session.selectAudioOutputDevice(value);
               },
               icon: TotemIcons.speaker,
             );
@@ -157,9 +138,7 @@ class OptionsSheet extends ConsumerWidget {
           onTap: () async {
             final navigator = Navigator.of(context)..pop();
             final shouldLeave = await showLeaveDialog(context) ?? false;
-            if (shouldLeave && navigator.mounted) {
-              popOrHome(navigator.context);
-            }
+            if (shouldLeave && navigator.mounted) popOrHome(navigator.context);
           },
         ),
 
@@ -174,48 +153,17 @@ class OptionsSheet extends ConsumerWidget {
             OptionsSheetTile<void>(
               title: 'Start session',
               icon: TotemIcons.arrowForward,
-              onTap: () async {
+              onTap: () {
                 Navigator.of(context).pop();
-                return showDialog(
-                  context: context,
-                  builder: (context) {
-                    return ConfirmationDialog(
-                      title: 'Start Session',
-                      content: 'Are you sure you want to start the session?',
-                      confirmButtonText: 'Start Session',
-                      type: ConfirmationDialogType.standard,
-                      onConfirm: () async {
-                        try {
-                          await session.startSession();
-                          if (!context.mounted) return;
-                          Navigator.of(context).pop();
-                        } catch (error) {
-                          if (!context.mounted) return;
-                          Navigator.of(context).pop();
-                          await ErrorHandler.handleApiError(
-                            context,
-                            error,
-                            onRetry: () async {
-                              try {
-                                await session.startSession();
-                              } catch (e) {
-                                // Error already handled by handleApiError
-                              }
-                            },
-                          );
-                        }
-                      },
-                    );
-                  },
-                );
+                _onStartSession(context);
               },
             ),
           OptionsSheetTile<void>(
             title: 'Reorder Participants',
             icon: TotemIcons.reorderParticipants,
-            onTap: () async {
+            onTap: () {
               Navigator.of(context).pop();
-              await showParticipantReorderWidget(
+              showParticipantReorderWidget(
                 context,
                 session,
                 state,
@@ -227,9 +175,9 @@ class OptionsSheet extends ConsumerWidget {
             title: 'Mute everyone',
             icon: TotemIcons.microphoneOff,
             type: OptionsSheetTileType.destructive,
-            onTap: () async {
+            onTap: () {
               Navigator.of(context).pop();
-              return _onMuteEveryone(context);
+              _onMuteEveryone();
             },
           ),
           if (state.sessionState.status == SessionStatus.started)
@@ -238,9 +186,9 @@ class OptionsSheet extends ConsumerWidget {
               icon: TotemIcons.passToNext,
               type: OptionsSheetTileType.destructive,
               onTap: state.sessionState.status == SessionStatus.started
-                  ? () async {
+                  ? () {
                       Navigator.of(context).pop();
-                      return _onPassToNext(context);
+                      _onPassToNext(context);
                     }
                   : null,
             ),
@@ -250,7 +198,10 @@ class OptionsSheet extends ConsumerWidget {
               icon: TotemIcons.cameraOff,
               type: OptionsSheetTileType.destructive,
               onTap: state.sessionState.status == SessionStatus.started
-                  ? () => _onEndSession(context)
+                  ? () {
+                      Navigator.of(context).pop();
+                      _onEndSession(context);
+                    }
                   : null,
             ),
           Text(
@@ -290,11 +241,11 @@ class OptionsSheet extends ConsumerWidget {
             },
           ),
         ],
-      ].expand((x) => [x, const SizedBox(height: 10)]).toList(),
+      ].expand((child) => [child, const SizedBox(height: 10)]).toList(),
     );
   }
 
-  Future<void> _onMuteEveryone(BuildContext context) async {
+  Future<void> _onMuteEveryone() async {
     await session.muteEveryone();
   }
 
@@ -354,8 +305,43 @@ class OptionsSheet extends ConsumerWidget {
     );
   }
 
+  Future<void> _onStartSession(BuildContext context) async {
+    return showDialog<void>(
+      context: context,
+      builder: (context) {
+        return ConfirmationDialog(
+          title: 'Start Session',
+          content: 'Are you sure you want to start the session?',
+          confirmButtonText: 'Start Session',
+          type: ConfirmationDialogType.standard,
+          onConfirm: () async {
+            try {
+              await session.startSession();
+              if (!context.mounted) return;
+              Navigator.of(context).pop();
+            } catch (error) {
+              if (!context.mounted) return;
+              Navigator.of(context).pop();
+              await ErrorHandler.handleApiError(
+                context,
+                error,
+                onRetry: () async {
+                  try {
+                    await session.startSession();
+                  } catch (e) {
+                    // Error already handled by handleApiError
+                  }
+                },
+              );
+            }
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _onEndSession(BuildContext context) async {
-    await showDialog<void>(
+    return showDialog<void>(
       context: context,
       builder: (context) {
         return ConfirmationDialog(
@@ -391,7 +377,7 @@ class OptionsSheet extends ConsumerWidget {
 
 Future<void> showPrejoinOptionsSheet(
   BuildContext context, {
-  required CameraCaptureOptions cameraOptions,
+  required CameraCaptureOptions? cameraOptions,
   required AudioCaptureOptions audioOptions,
   required AudioOutputOptions audioOutputOptions,
   required ValueChanged<CameraCaptureOptions> onCameraChanged,
@@ -425,7 +411,7 @@ class PrejoinOptionsSheet extends StatelessWidget {
     super.key,
   });
 
-  final CameraCaptureOptions cameraOptions;
+  final CameraCaptureOptions? cameraOptions;
   final AudioCaptureOptions audioOptions;
   final AudioOutputOptions audioOutputOptions;
 
@@ -444,49 +430,29 @@ class PrejoinOptionsSheet extends StatelessWidget {
         bottom: 36,
       ),
       children: [
-        FutureBuilder(
-          future: Hardware.instance.videoInputs(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) return const SizedBox.shrink();
-            final videoInputs = snapshot.data;
-            final selected =
-                videoInputs?.firstWhereOrNull(
-                  (e) => e.deviceId == cameraOptions.deviceId,
+        OptionsSheetTile.camera(
+          cameraOptions,
+          () => onCameraChanged(
+            cameraOptions?.copyWith(
+                  cameraPosition: cameraOptions?.cameraPosition.switched(),
                 ) ??
-                videoInputs?.firstOrNull;
-            return OptionsSheetTile<MediaDevice>(
-              title: selected?.humanReadableLabel ?? 'Default Camera',
-              icon: TotemIcons.cameraOn,
-              options: videoInputs?.toList(),
-              optionToString: (option) => option.humanReadableLabel,
-              selectedOption: selected,
-              onOptionChanged: (value) async {
-                if (value != null) {
-                  onCameraChanged(
-                    CameraCaptureOptions(deviceId: value.deviceId),
-                  );
-                  Navigator.of(context).pop();
-                }
-              },
-            );
-          },
+                const CameraCaptureOptions(),
+          ),
         ),
         const SizedBox(height: 10),
         FutureBuilder(
           future: Hardware.instance.audioInputs(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) return const SizedBox.shrink();
-            final audioInputs = snapshot.data;
+            final audioInputs = snapshot.data!;
             final selected =
-                audioInputs?.firstWhereOrNull(
+                audioInputs.firstWhereOrNull(
                   (e) => e.deviceId == audioOptions.deviceId,
                 ) ??
-                audioInputs?.firstOrNull;
-            return OptionsSheetTile<MediaDevice>(
-              title: selected?.label ?? 'Default Microphone',
-              options: audioInputs?.toList(),
-              optionToString: (option) => option.humanReadableLabel,
-              selectedOption: selected,
+                audioInputs.firstOrNull;
+            return OptionsSheetTile.fromMediaDevice(
+              device: selected,
+              options: audioInputs,
               onOptionChanged: (value) async {
                 if (value != null) {
                   onAudioChanged(
@@ -504,19 +470,17 @@ class PrejoinOptionsSheet extends StatelessWidget {
           future: Hardware.instance.audioOutputs(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) return const SizedBox.shrink();
-            final audioOutputs = snapshot.data?.where((device) {
+            final audioOutputs = snapshot.data!.where((device) {
               return device.label.isNotEmpty && device.label != 'Earpiece';
             });
             final selected =
-                audioOutputs?.firstWhereOrNull(
+                audioOutputs.firstWhereOrNull(
                   (e) => e.deviceId == audioOptions.deviceId,
                 ) ??
-                audioOutputs?.firstOrNull;
-            return OptionsSheetTile<MediaDevice>(
-              title: selected?.label ?? 'Default Speaker',
-              options: audioOutputs?.toList(),
-              optionToString: (option) => option.humanReadableLabel,
-              selectedOption: selected,
+                audioOutputs.firstOrNull;
+            return OptionsSheetTile.fromMediaDevice(
+              device: selected,
+              options: audioOutputs,
               onOptionChanged: (value) async {
                 if (value != null) {
                   onAudioOutputChanged(
@@ -534,13 +498,10 @@ class PrejoinOptionsSheet extends StatelessWidget {
   }
 }
 
-enum OptionsSheetTileType {
-  destructive,
-  normal,
-}
+enum OptionsSheetTileType { destructive, normal }
 
 class OptionsSheetTile<T> extends StatelessWidget {
-  const OptionsSheetTile({
+  OptionsSheetTile({
     required this.title,
     required this.icon,
     this.onTap,
@@ -549,8 +510,28 @@ class OptionsSheetTile<T> extends StatelessWidget {
     this.options,
     this.onOptionChanged,
     this.optionToString,
+    this.trailing,
     super.key,
-  });
+  }) : assert(
+         (options != null &&
+                 onOptionChanged != null &&
+                 optionToString != null) ||
+             (options == null &&
+                 onOptionChanged == null &&
+                 optionToString == null),
+         'If options are provided, onOptionChanged and optionToString must also be provided, and vice versa.',
+       ),
+       assert(
+         (options == null && selectedOption == null) || (options != null),
+         'If selectedOption is provided, options must also be provided.',
+       ),
+       assert(
+         (options != null &&
+                 selectedOption != null &&
+                 options.contains(selectedOption)) ||
+             (options == null),
+         'selectedOption must be one of the options provided.',
+       );
 
   final String title;
   final TotemIconData icon;
@@ -558,9 +539,46 @@ class OptionsSheetTile<T> extends StatelessWidget {
   final OptionsSheetTileType type;
 
   final T? selectedOption;
-  final List<T>? options;
+  final Iterable<T>? options;
   final ValueChanged<T?>? onOptionChanged;
   final String Function(T)? optionToString;
+
+  final Widget? trailing;
+
+  static Widget camera(CameraCaptureOptions? options, VoidCallback onSwitch) {
+    return OptionsSheetTile<MediaDevice>(
+      title: switch (options?.cameraPosition) {
+        CameraPosition.front => 'Front',
+        CameraPosition.back => 'Back',
+        null => 'No camera connected',
+      },
+      icon: options == null ? TotemIcons.cameraOff : TotemIcons.cameraOn,
+      trailing: options != null
+          ? IconButton(
+              icon: const Icon(Icons.switch_camera_outlined),
+              onPressed: onSwitch,
+            )
+          : null,
+    );
+  }
+
+  static Widget fromMediaDevice({
+    required MediaDevice? device,
+    required Iterable<MediaDevice> options,
+    required ValueChanged<MediaDevice?> onOptionChanged,
+    required TotemIconData icon,
+  }) {
+    return OptionsSheetTile<MediaDevice>(
+      title:
+          device?.humanReadableLabel ??
+          (options.isEmpty ? 'No Connected Device' : 'Default Device'),
+      icon: icon,
+      options: options,
+      optionToString: (option) => option.humanReadableLabel,
+      selectedOption: device,
+      onOptionChanged: onOptionChanged,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -617,7 +635,9 @@ class OptionsSheetTile<T> extends StatelessWidget {
     return ListTile(
       leading: SizedBox.square(dimension: 24, child: TotemIcon(icon, size: 24)),
       title: AutoSizeText(
-        options?.length == 1 ? options!.first.toString() : title,
+        options?.length == 1
+            ? optionToString?.call(options!.first) ?? options!.first.toString()
+            : title,
         style: const TextStyle(fontSize: 16),
         maxLines: 1,
       ),
@@ -634,7 +654,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
       iconColor: type == OptionsSheetTileType.destructive
           ? theme.colorScheme.onErrorContainer
           : null,
-      trailing: onTap != null ? const Icon(Icons.arrow_forward_ios) : null,
+      trailing: onTap != null ? const Icon(Icons.arrow_forward_ios) : trailing,
     );
   }
 }

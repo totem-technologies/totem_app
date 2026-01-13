@@ -36,7 +36,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   var _isCameraOn = true;
   var _isMicOn = true;
 
-  var _cameraOptions = const CameraCaptureOptions();
+  CameraCaptureOptions? _cameraOptions;
   var _audioOptions = const AudioCaptureOptions();
   var _audioOutputOptions = const AudioOutputOptions();
 
@@ -131,6 +131,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       await _videoTrack!.dispose();
     }
     try {
+      _cameraOptions ??= const CameraCaptureOptions();
       _videoTrack = await LocalVideoTrack.createCameraTrack(_cameraOptions);
       await _videoTrack!.start();
       if (mounted) setState(() {});
@@ -152,14 +153,16 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   Future<void> _joinRoom(String token) async {
-    await _videoTrack?.stop();
-    await _videoTrack?.dispose();
+    try {
+      await _videoTrack?.stop();
+      await _videoTrack?.dispose();
+    } catch (_) {}
 
     if (mounted) {
       context.pushReplacement(
         RouteNames.videoSession(widget.eventSlug),
         extra: VideoRoomScreenRouteArgs(
-          cameraOptions: _cameraOptions,
+          cameraOptions: _cameraOptions ?? const CameraCaptureOptions(),
           audioOptions: _audioOptions,
           audioOutputOptions: _audioOutputOptions,
           cameraEnabled: _isCameraOn,

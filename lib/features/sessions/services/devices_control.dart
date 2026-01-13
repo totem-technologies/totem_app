@@ -17,22 +17,36 @@ extension DevicesControl on Session {
 
   // TODO(bdlukaa): Revisit this in the future
   // https://github.com/livekit/client-sdk-flutter/issues/863
-  Future<void> selectCameraDevice(MediaDevice device) async {
-    final options = CameraCaptureOptions(deviceId: device.deviceId);
+  // Future<void> selectCameraDevice(MediaDevice device) async {
+  //   final options = CameraCaptureOptions(deviceId: device.deviceId);
 
-    final userTrack = room.localParticipant
-        ?.getTrackPublications()
-        .firstWhereOrNull((track) => track.kind == TrackType.VIDEO)
-        ?.track;
-    if (userTrack != null) {
-      userTrack.restartTrack(options);
+  //   final userTrack = room.localParticipant
+  //       ?.getTrackPublications()
+  //       .firstWhereOrNull((track) => track.kind == TrackType.VIDEO)
+  //       ?.track;
+  //   if (userTrack != null) {
+  //     userTrack.restartTrack(options);
+  //   } else {
+  //     await room.localParticipant?.publishVideoTrack(
+  //       await LocalVideoTrack.createCameraTrack(options),
+  //     );
+  //   }
+  //   await room.room.setVideoInputDevice(device);
+  //   ref.notifyListeners();
+  // }
+
+  Future<void> switchCameraPosition() async {
+    if (room.localVideoTrack != null) {
+      final currentOptions =
+          room.localVideoTrack!.currentOptions as CameraCaptureOptions;
+      final newPosition = currentOptions.cameraPosition.switched();
+      room.localVideoTrack?.setCameraPosition(newPosition);
+      ref.notifyListeners();
     } else {
-      await room.localParticipant?.publishVideoTrack(
-        await LocalVideoTrack.createCameraTrack(options),
+      room.localParticipant?.publishVideoTrack(
+        await LocalVideoTrack.createCameraTrack(const CameraCaptureOptions()),
       );
     }
-    await room.room.setVideoInputDevice(device);
-    ref.notifyListeners();
   }
 
   String? get selectedAudioDeviceId {
