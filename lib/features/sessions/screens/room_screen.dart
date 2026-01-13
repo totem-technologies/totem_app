@@ -331,40 +331,40 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen>
 
   Widget _buildBody(
     EventDetailSchema event,
-    Session notifier,
+    Session session,
     SessionRoomState state,
   ) {
-    final roomCtx = notifier.room;
+    final roomCtx = session.room;
     switch (state.connectionState) {
       case RoomConnectionState.error:
         return RoomErrorScreen(onRetry: roomCtx.connect);
       case RoomConnectionState.connecting:
         return const LoadingRoomScreen();
       case RoomConnectionState.disconnected:
-        return SessionEndedScreen(event: event, session: notifier);
+        return SessionEndedScreen(event: event, session: session);
       case RoomConnectionState.connected:
         if (state.sessionState.status == SessionStatus.ended) {
-          return SessionEndedScreen(event: event, session: notifier);
+          return SessionEndedScreen(event: event, session: session);
         }
         if (roomCtx.localParticipant == null) {
           return const LoadingRoomScreen();
         }
 
         if (state.sessionState.totemStatus == TotemStatus.passing &&
-            state.amNext(notifier.room)) {
+            state.amNext(session.room)) {
           return ReceiveTotemScreen(
             sessionState: state,
-            actionBar: buildActionBar(notifier, state, event),
-            onAcceptTotem: () => _onAcceptTotem(notifier),
+            actionBar: buildActionBar(session, state, event),
+            onAcceptTotem: () => _onAcceptTotem(session),
           );
         }
 
-        if (state.isMyTurn(notifier.room)) {
+        if (state.isMyTurn(session.room)) {
           return ProtectionOverlay(
             child: MyTurn(
-              actionBar: buildActionBar(notifier, state, event),
+              actionBar: buildActionBar(session, state, event),
               getParticipantKey: getParticipantKey,
-              onPassTotem: notifier.passTotem,
+              onPassTotem: session.passTotem,
               sessionState: state.sessionState,
               event: event,
               emojis: _reactions,
@@ -373,10 +373,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen>
         } else {
           return ProtectionOverlay(
             child: NotMyTurn(
-              actionBar: buildActionBar(notifier, state, event),
+              actionBar: buildActionBar(session, state, event),
               getParticipantKey: getParticipantKey,
-              sessionState: state.sessionState,
-              session: notifier,
+              sessionState: state,
+              session: session,
               event: event,
               emojis: _reactions,
             ),
@@ -451,7 +451,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen>
                       setState(() => _showEmojiPicker = true);
                       await showEmojiBar(
                         button,
-                        context,
                         onEmojiSelected: (emoji) {
                           notifier.sendEmoji(emoji);
                           _onEmojiReceived(user.identity, emoji);

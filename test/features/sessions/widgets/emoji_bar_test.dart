@@ -309,7 +309,6 @@ void main() {
                   onPressed: () async {
                     await showEmojiBar(
                       context,
-                      context,
                       onEmojiSelected: (_) {},
                     );
                   },
@@ -339,7 +338,6 @@ void main() {
                 return ElevatedButton(
                   onPressed: () async {
                     await showEmojiBar(
-                      context,
                       context,
                       onEmojiSelected: (_) {},
                     );

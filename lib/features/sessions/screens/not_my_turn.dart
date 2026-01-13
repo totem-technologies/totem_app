@@ -200,7 +200,6 @@ class NotMyTurn extends ConsumerWidget {
               left: !isLTR,
               right: isLTR,
               child: Row(
-                spacing: 16,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Expanded(flex: 2, child: speakerVideo),
@@ -208,14 +207,14 @@ class NotMyTurn extends ConsumerWidget {
                     flex: 3,
                     child: SafeArea(
                       left: false,
-                      right: false,
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.only(
-                          start: 16,
-                          end: 16,
-                          top: 16,
-                        ),
-                        child: Overlay.wrap(
+                      right: true,
+                      child: Overlay.wrap(
+                        child: Padding(
+                          padding: const EdgeInsetsDirectional.only(
+                            start: 16,
+                            end: 16,
+                            top: 16,
+                          ),
                           child: Column(
                             spacing: 16,
                             crossAxisAlignment: CrossAxisAlignment.stretch,
