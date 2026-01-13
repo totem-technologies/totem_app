@@ -35,17 +35,26 @@ extension DevicesControl on Session {
   //   ref.notifyListeners();
   // }
 
+  LocalVideoTrack? get localVideoTrack {
+    final track =
+        room.localParticipant?.videoTrackPublications.firstOrNull?.track;
+    return track;
+  }
+
   Future<void> switchCameraPosition() async {
-    if (room.localVideoTrack != null) {
-      final currentOptions =
-          room.localVideoTrack!.currentOptions as CameraCaptureOptions;
-      final newPosition = currentOptions.cameraPosition.switched();
-      room.localVideoTrack?.setCameraPosition(newPosition);
+    final track = localVideoTrack;
+    if (track != null) {
+      final newPosition = (track.currentOptions as CameraCaptureOptions)
+          .cameraPosition
+          .switched();
+      track.setCameraPosition(newPosition);
       ref.notifyListeners();
+      logger.i('Switched camera to $newPosition');
     } else {
       room.localParticipant?.publishVideoTrack(
         await LocalVideoTrack.createCameraTrack(const CameraCaptureOptions()),
       );
+      ref.notifyListeners();
     }
   }
 

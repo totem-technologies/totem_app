@@ -76,11 +76,14 @@ class OptionsSheet extends ConsumerWidget {
         MediaDeviceSelectButton(
           builder: (context, roomCtx, deviceCtx) {
             final options =
-                roomCtx.localVideoTrack?.currentOptions
+                session.localVideoTrack?.currentOptions
                     as CameraCaptureOptions?;
             return OptionsSheetTile.camera(
               options,
-              session.switchCameraPosition,
+              () {
+                session.switchCameraPosition();
+                Navigator.of(context).pop();
+              },
             );
           },
         ),
@@ -432,12 +435,15 @@ class PrejoinOptionsSheet extends StatelessWidget {
       children: [
         OptionsSheetTile.camera(
           cameraOptions,
-          () => onCameraChanged(
-            cameraOptions?.copyWith(
-                  cameraPosition: cameraOptions?.cameraPosition.switched(),
-                ) ??
-                const CameraCaptureOptions(),
-          ),
+          () {
+            onCameraChanged(
+              cameraOptions?.copyWith(
+                    cameraPosition: cameraOptions?.cameraPosition.switched(),
+                  ) ??
+                  const CameraCaptureOptions(),
+            );
+            Navigator.of(context).pop();
+          },
         ),
         const SizedBox(height: 10),
         FutureBuilder(

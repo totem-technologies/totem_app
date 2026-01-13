@@ -51,7 +51,8 @@ class RoomBackground extends StatelessWidget {
             SessionStatus.waiting => Colors.black,
             _ => Colors.white,
           };
-          return Container(
+          return AnimatedContainer(
+            duration: kThemeAnimationDuration,
             decoration: switch (status) {
               SessionStatus.waiting => waitingDecoration,
               _ => roomDecoration,
