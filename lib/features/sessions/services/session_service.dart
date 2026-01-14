@@ -153,6 +153,10 @@ class Session extends _$Session {
   VoidCallback? closeKeeperLeftNotification;
   SessionEndedReason reason = SessionEndedReason.finished;
 
+  static const defaultCameraOptions = CameraCaptureOptions(
+    params: VideoParametersPresets.h540_169,
+  );
+
   @override
   SessionRoomState build(SessionOptions options) {
     _options = options;
@@ -172,18 +176,11 @@ class Session extends _$Session {
 
         dynacast: true,
         defaultVideoPublishOptions: const VideoPublishOptions(
-          simulcast: true,
-          // videoSimulcastLayers: VideoParametersPresets.all169,
+          simulcast: false,
           videoSimulcastLayers: [
-            // VideoParametersPresets.h90_169,
-            // VideoParametersPresets.h180_169,
-            // VideoParametersPresets.h216_169,
-            // VideoParametersPresets.h360_169,
+            VideoParametersPresets.h360_169,
             VideoParametersPresets.h540_169,
             VideoParametersPresets.h720_169,
-            VideoParametersPresets.h1080_169,
-            VideoParametersPresets.h1440_169,
-            VideoParametersPresets.h2160_169,
           ],
         ),
         // defaultAudioPublishOptions: const AudioPublishOptions(),

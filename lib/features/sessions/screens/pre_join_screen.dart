@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' hide Session;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
@@ -36,9 +36,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   var _isCameraOn = true;
   var _isMicOn = true;
 
-  static const _defaultCameraOptions = CameraCaptureOptions(
-    params: VideoParametersPresets.h540_169,
-  );
   CameraCaptureOptions? _cameraOptions;
   var _audioOptions = const AudioCaptureOptions();
   var _audioOutputOptions = const AudioOutputOptions();
@@ -138,7 +135,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       } catch (_) {}
     }
     try {
-      _cameraOptions ??= _defaultCameraOptions;
+      _cameraOptions ??= Session.defaultCameraOptions;
       _videoTrack = await LocalVideoTrack.createCameraTrack(_cameraOptions);
       await _videoTrack!.start();
       if (mounted) setState(() {});
@@ -169,7 +166,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       context.pushReplacement(
         RouteNames.videoSession(widget.eventSlug),
         extra: VideoRoomScreenRouteArgs(
-          cameraOptions: _cameraOptions ?? _defaultCameraOptions,
+          cameraOptions: _cameraOptions ?? Session.defaultCameraOptions,
           audioOptions: _audioOptions,
           audioOutputOptions: _audioOutputOptions,
           cameraEnabled: _isCameraOn,

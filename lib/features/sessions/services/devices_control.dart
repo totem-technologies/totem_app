@@ -18,7 +18,7 @@ extension DevicesControl on Session {
   // TODO(bdlukaa): Revisit this in the future
   // https://github.com/livekit/client-sdk-flutter/issues/863
   // Future<void> selectCameraDevice(MediaDevice device) async {
-  //   final options = CameraCaptureOptions(deviceId: device.deviceId);
+  //   final options = Session.defaultCameraOptions.copyWith(deviceId: device.deviceId);
 
   //   final userTrack = room.localParticipant
   //       ?.getTrackPublications()
@@ -52,7 +52,7 @@ extension DevicesControl on Session {
       logger.i('Switched camera to $newPosition');
     } else {
       room.localParticipant?.publishVideoTrack(
-        await LocalVideoTrack.createCameraTrack(const CameraCaptureOptions()),
+        await LocalVideoTrack.createCameraTrack(Session.defaultCameraOptions),
       );
       ref.notifyListeners();
     }
@@ -128,13 +128,13 @@ extension DevicesControl on Session {
     if (room.connected) {
       await room.localParticipant?.setCameraEnabled(
         true,
-        cameraCaptureOptions: CameraCaptureOptions(
+        cameraCaptureOptions: Session.defaultCameraOptions.copyWith(
           deviceId: room.room.selectedVideoInputDeviceId,
         ),
       );
     } else {
       room.localVideoTrack ??= await LocalVideoTrack.createCameraTrack(
-        CameraCaptureOptions(
+        Session.defaultCameraOptions.copyWith(
           deviceId: room.room.selectedVideoInputDeviceId,
         ),
       );

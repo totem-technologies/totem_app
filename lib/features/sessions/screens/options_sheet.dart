@@ -440,7 +440,7 @@ class PrejoinOptionsSheet extends StatelessWidget {
               cameraOptions?.copyWith(
                     cameraPosition: cameraOptions?.cameraPosition.switched(),
                   ) ??
-                  const CameraCaptureOptions(),
+                  Session.defaultCameraOptions,
             );
             Navigator.of(context).pop();
           },
