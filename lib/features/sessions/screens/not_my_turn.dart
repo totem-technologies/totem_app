@@ -56,11 +56,9 @@ class NotMyTurn extends ConsumerWidget {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: RepaintBoundary(
-                      child: ParticipantVideo(
-                        key: getParticipantKey(activeSpeaker.identity),
-                        participant: activeSpeaker,
-                      ),
+                    child: ParticipantVideo(
+                      key: getParticipantKey(activeSpeaker.identity),
+                      participant: activeSpeaker,
                     ),
                   ),
                   PositionedDirectional(

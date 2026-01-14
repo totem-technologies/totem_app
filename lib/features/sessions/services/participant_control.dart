@@ -19,6 +19,7 @@ extension ParticipantControl on Session {
               throw AppNetworkException.timeout();
             },
           );
+      logger.i('Passed totem successfully');
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -46,7 +47,8 @@ extension ParticipantControl on Session {
               throw AppNetworkException.timeout();
             },
           );
-      await enableMicrophone();
+      enableMicrophone();
+      logger.i('Accepted totem successfully');
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,

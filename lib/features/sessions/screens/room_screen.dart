@@ -359,7 +359,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen>
           );
         }
 
-        if (state.isMyTurn(session.room)) {
+        if (state.sessionState.totemStatus != TotemStatus.passing &&
+            state.isMyTurn(session.room)) {
           return ProtectionOverlay(
             child: MyTurn(
               actionBar: buildActionBar(session, state, event),
