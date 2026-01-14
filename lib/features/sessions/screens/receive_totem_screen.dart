@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_components/livekit_components.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
+import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/error_screen.dart';
 
 class ReceiveTotemScreen extends StatelessWidget {
   const ReceiveTotemScreen({
@@ -56,7 +59,22 @@ class ReceiveTotemScreen extends StatelessWidget {
                 try {
                   await onAcceptTotem();
                   return true;
-                } catch (error) {
+                } catch (error, stackTrace) {
+                  ErrorHandler.logError(
+                    error,
+                    stackTrace: stackTrace,
+                    message: 'Accept Totem failed',
+                  );
+                  if (context.mounted) {
+                    showErrorPopup(
+                      context,
+                      icon: TotemIcons.errorOutlined,
+                      title: 'Something went wrong',
+                      message:
+                          'We were unable to accept the totem. Please try again.',
+                    );
+                  }
+
                   return false;
                 }
               },

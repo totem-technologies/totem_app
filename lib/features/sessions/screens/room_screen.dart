@@ -211,21 +211,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen>
     }
   }
 
-  Future<void> _onAcceptTotem(Session sessionNotifier) async {
-    try {
-      await sessionNotifier.acceptTotem();
-    } catch (error) {
-      if (mounted) {
-        showErrorPopup(
-          context,
-          icon: TotemIcons.errorOutlined,
-          title: 'Something went wrong',
-          message: 'We were unable to accept the totem. Please try again.',
-        );
-      }
-    }
-  }
-
   VoidCallback _onKeeperLeft(Session room) {
     return showPermanentNotificationPopup(
       context,
@@ -355,12 +340,11 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen>
           return ReceiveTotemScreen(
             sessionState: state,
             actionBar: buildActionBar(session, state, event),
-            onAcceptTotem: () => _onAcceptTotem(session),
+            onAcceptTotem: session.acceptTotem,
           );
         }
 
-        if (state.sessionState.totemStatus != TotemStatus.passing &&
-            state.isMyTurn(session.room)) {
+        if (state.isMyTurn(session.room)) {
           return ProtectionOverlay(
             child: MyTurn(
               actionBar: buildActionBar(session, state, event),

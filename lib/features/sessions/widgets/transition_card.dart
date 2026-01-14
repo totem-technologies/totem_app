@@ -4,7 +4,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-enum TotemCardTransitionType { pass, receive, start }
+enum TotemCardTransitionType { pass, receive, start, waitingReceive }
 
 class TransitionCard extends StatelessWidget {
   const TransitionCard({
@@ -44,6 +44,9 @@ class TransitionCard extends StatelessWidget {
                 TotemCardTransitionType.start =>
                   'Bring participants out of the waiting room and begin '
                       'the conversation.',
+                TotemCardTransitionType.waitingReceive =>
+                  'Waiting the receiver to accept...\n'
+                      'It is still your turn',
               },
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: Colors.black,
@@ -51,19 +54,21 @@ class TransitionCard extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 2,
             ),
-            ConstrainedBox(
-              constraints: const BoxConstraints(
-                minWidth: 160,
+            if (type != TotemCardTransitionType.waitingReceive)
+              ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minWidth: 160,
+                ),
+                child: _SlideToActionButton(
+                  text: switch (type) {
+                    TotemCardTransitionType.pass => 'Pass',
+                    TotemCardTransitionType.receive => 'Receive',
+                    TotemCardTransitionType.start => 'Start Session',
+                    _ => '',
+                  },
+                  onActionCompleted: onActionPressed,
+                ),
               ),
-              child: _SlideToActionButton(
-                text: switch (type) {
-                  TotemCardTransitionType.pass => 'Pass',
-                  TotemCardTransitionType.receive => 'Receive',
-                  TotemCardTransitionType.start => 'Start Session',
-                },
-                onActionCompleted: onActionPressed,
-              ),
-            ),
           ],
         ),
       ),
@@ -108,21 +113,14 @@ class _SlideToActionButtonState extends State<_SlideToActionButton> {
     });
 
     if (_isLoading) {
-      final success = await widget.onActionCompleted();
-      _isCompleted = success;
-      _dragPosition = success ? maxSlideDistance : 0.0;
-      _isLoading = false;
-
-      if (mounted) {
-        setState(() {});
-      }
+      _completeAction(maxSlideDistance);
     }
   }
 
-  Future<void> _onPanEnd(
+  void _onPanEnd(
     DragEndDetails details,
     double maxSlideDistance,
-  ) async {
+  ) {
     if (_isCompleted || _isLoading) return;
 
     final progress = _dragPosition / maxSlideDistance;
@@ -136,14 +134,7 @@ class _SlideToActionButtonState extends State<_SlideToActionButton> {
         _isCompleted = true;
         _isLoading = true;
       });
-      final success = await widget.onActionCompleted();
-      if (mounted) {
-        setState(() {
-          _isCompleted = success;
-          _dragPosition = success ? maxSlideDistance : 0.0;
-          _isLoading = false;
-        });
-      }
+      _completeAction(maxSlideDistance);
     } else {
       if (mounted) {
         setState(() {
@@ -151,6 +142,14 @@ class _SlideToActionButtonState extends State<_SlideToActionButton> {
         });
       }
     }
+  }
+
+  void _completeAction(double maxSlideDistance) async {
+    final success = await widget.onActionCompleted();
+    _isCompleted = success;
+    _dragPosition = success ? maxSlideDistance : 0.0;
+    _isLoading = false;
+    if (mounted) setState(() {});
   }
 
   @override
