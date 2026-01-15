@@ -215,6 +215,7 @@ class MyTurnLayoutBuilder implements ParticipantLayoutBuilder {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         spacing: gap,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: List.generate(
           rowCount,
           (rowIndex) {
@@ -223,6 +224,7 @@ class MyTurnLayoutBuilder implements ParticipantLayoutBuilder {
             return Flexible(
               child: Row(
                 spacing: gap,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: List.generate(
                   crossAxisCount,
                   (colIndex) {

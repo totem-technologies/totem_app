@@ -15,26 +15,6 @@ extension DevicesControl on Session {
     return room.room.engine.roomOptions.defaultCameraCaptureOptions.deviceId;
   }
 
-  // TODO(bdlukaa): Revisit this in the future
-  // https://github.com/livekit/client-sdk-flutter/issues/863
-  // Future<void> selectCameraDevice(MediaDevice device) async {
-  //   final options = Session.defaultCameraOptions.copyWith(deviceId: device.deviceId);
-
-  //   final userTrack = room.localParticipant
-  //       ?.getTrackPublications()
-  //       .firstWhereOrNull((track) => track.kind == TrackType.VIDEO)
-  //       ?.track;
-  //   if (userTrack != null) {
-  //     userTrack.restartTrack(options);
-  //   } else {
-  //     await room.localParticipant?.publishVideoTrack(
-  //       await LocalVideoTrack.createCameraTrack(options),
-  //     );
-  //   }
-  //   await room.room.setVideoInputDevice(device);
-  //   ref.notifyListeners();
-  // }
-
   LocalVideoTrack? get localVideoTrack {
     final track =
         room.localParticipant?.videoTrackPublications.firstOrNull?.track;
@@ -95,7 +75,9 @@ extension DevicesControl on Session {
   }
 
   Future<void> enableMicrophone() async {
-    if (room.microphoneOpened || hasKeeperDisconnected) {
+    // workaround to use members on extension
+    // ignore: invalid_use_of_visible_for_testing_member
+    if (room.microphoneOpened || state.hasKeeperDisconnected) {
       return;
     }
     if (room.localParticipant != null) {

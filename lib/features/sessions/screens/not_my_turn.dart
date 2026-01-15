@@ -333,6 +333,7 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
 
           return Expanded(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               spacing: gap,
               children: List.generate(
                 crossAxisCount,

@@ -42,8 +42,8 @@ extension BackgroundControl on Session {
     );
 
     final event = await this.event;
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _notificationTimer?.cancel();
+    _notificationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       _updateNotification(event);
     });
   }
@@ -77,8 +77,8 @@ extension BackgroundControl on Session {
 
   Future<void> endBackgroundMode() async {
     try {
-      _timer?.cancel();
-      _timer = null;
+      _notificationTimer?.cancel();
+      _notificationTimer = null;
       await FlutterForegroundTask.stopService();
     } catch (_) {
       // fine if fail

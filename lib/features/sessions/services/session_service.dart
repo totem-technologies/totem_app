@@ -107,10 +107,12 @@ class SessionRoomState {
   const SessionRoomState({
     this.connectionState = RoomConnectionState.connecting,
     this.sessionState = const SessionState(keeperSlug: '', speakingOrder: []),
+    this.hasKeeperDisconnected = false,
   });
 
   final RoomConnectionState connectionState;
   final SessionState sessionState;
+  final bool hasKeeperDisconnected;
 
   bool isMyTurn(RoomContext room) {
     return sessionState.speakingNow != null &&
@@ -125,10 +127,13 @@ class SessionRoomState {
   SessionRoomState copyWith({
     RoomConnectionState? connectionState,
     SessionState? sessionState,
+    bool? hasKeeperDisconnected,
   }) {
     return SessionRoomState(
       connectionState: connectionState ?? this.connectionState,
       sessionState: sessionState ?? this.sessionState,
+      hasKeeperDisconnected:
+          hasKeeperDisconnected ?? this.hasKeeperDisconnected,
     );
   }
 
@@ -149,7 +154,7 @@ class Session extends _$Session {
   late SessionOptions _options;
   String? _lastMetadata;
 
-  Timer? _timer;
+  Timer? _notificationTimer;
   VoidCallback? closeKeeperLeftNotification;
   SessionEndedReason reason = SessionEndedReason.finished;
 
@@ -208,10 +213,12 @@ class Session extends _$Session {
       _keeperDisconnectedTimer = null;
       closeKeeperLeftNotification?.call();
       closeKeeperLeftNotification = null;
-      _timer?.cancel();
-      _timer = null;
+      _notificationTimer?.cancel();
+      _notificationTimer = null;
       _listener.dispose();
-      room.removeListener(_onRoomChanges);
+      room
+        ..removeListener(_onRoomChanges)
+        ..dispose();
     });
 
     return const SessionRoomState();
@@ -322,10 +329,6 @@ class Session extends _$Session {
   }
 
   static const keeperDisconnectionTimeout = Duration(minutes: 3);
-  bool _hasKeeperDisconnected = false;
-  // TODO(bdlukaa): Consider moving this to state.
-  // ignore: avoid_public_notifier_properties
-  bool get hasKeeperDisconnected => _hasKeeperDisconnected;
   Timer? _keeperDisconnectedTimer;
 
   Future<void> _onParticipantDisconnected(
