@@ -29,7 +29,9 @@ class AppConfig {
     return dotenv.get(
       'MOBILE_API_URL',
       // fallback: 'https://www.totem.org/',
-      fallback: isStaging ? 'https://totem.kbl.io/' : 'https://www.totem.org/',
+      fallback: isStaging || isDevelopment
+          ? 'https://totem.kbl.io/'
+          : 'https://www.totem.org/',
     );
     // return dotenv.get('MOBILE_API_URL', fallback: 'http://localhost:8000/');
   }

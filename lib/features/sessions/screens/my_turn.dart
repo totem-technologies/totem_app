@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/session_state.dart';
+import 'package:totem_app/api/models/totem_status.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/services/utils.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
@@ -63,7 +64,9 @@ class MyTurn extends StatelessWidget {
             );
 
             final passCard = TransitionCard(
-              type: TotemCardTransitionType.pass,
+              type: sessionState.totemStatus == TotemStatus.passing
+                  ? TotemCardTransitionType.waitingReceive
+                  : TotemCardTransitionType.pass,
               onActionPressed: () async {
                 try {
                   await onPassTotem();
@@ -212,6 +215,7 @@ class MyTurnLayoutBuilder implements ParticipantLayoutBuilder {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         spacing: gap,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: List.generate(
           rowCount,
           (rowIndex) {
@@ -220,6 +224,7 @@ class MyTurnLayoutBuilder implements ParticipantLayoutBuilder {
             return Flexible(
               child: Row(
                 spacing: gap,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: List.generate(
                   crossAxisCount,
                   (colIndex) {

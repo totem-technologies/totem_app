@@ -78,21 +78,52 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
   ConsumerState<VideoRoomScreen> createState() => _VideoRoomScreenState();
 }
 
-class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
+class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen>
+    with WidgetsBindingObserver {
   final _navigatorKey = GlobalKey<NavigatorState>();
+  bool _wasCameraEnabledBeforeBackground = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _listenToBatteryChanges();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _batterySubscription?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    _handleAppLifecycleChange(state);
+  }
+
+  void _handleAppLifecycleChange(AppLifecycleState state) {
+    if (_cachedSessionOptions == null) return;
+
+    final sessionNotifier = ref.read(
+      sessionProvider(_cachedSessionOptions!).notifier,
+    );
+    final room = sessionNotifier.room;
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _wasCameraEnabledBeforeBackground = room.cameraOpened;
+      if (_wasCameraEnabledBeforeBackground) {
+        sessionNotifier.disableCamera();
+      }
+    } else if (state == AppLifecycleState.resumed) {
+      if (_wasCameraEnabledBeforeBackground) {
+        sessionNotifier.enableCamera();
+      }
+    }
   }
 
   final battery = Battery();
@@ -180,21 +211,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     }
   }
 
-  Future<void> _onAcceptTotem(Session sessionNotifier) async {
-    try {
-      await sessionNotifier.acceptTotem();
-    } catch (error) {
-      if (mounted) {
-        showErrorPopup(
-          context,
-          icon: TotemIcons.errorOutlined,
-          title: 'Something went wrong',
-          message: 'We were unable to accept the totem. Please try again.',
-        );
-      }
-    }
-  }
-
   VoidCallback _onKeeperLeft(Session room) {
     return showPermanentNotificationPopup(
       context,
@@ -208,13 +224,15 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     SentryDisplayWidget.of(context).reportFullyDisplayed();
   }
 
+  SessionOptions? _cachedSessionOptions;
+
   @override
   Widget build(BuildContext context) {
     final eventAsync = ref.watch(eventProvider(widget.eventSlug));
 
     return eventAsync.when(
       data: (event) {
-        final sessionOptions = SessionOptions(
+        _cachedSessionOptions = SessionOptions(
           eventSlug: widget.eventSlug,
           keeperSlug: event.space.author.slug!,
           token: widget.token,
@@ -230,9 +248,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           onConnected: _onConnected,
         );
 
-        final sessionState = ref.watch(sessionProvider(sessionOptions));
+        final sessionState = ref.watch(sessionProvider(_cachedSessionOptions!));
         final sessionNotifier = ref.read(
-          sessionProvider(sessionOptions).notifier,
+          sessionProvider(_cachedSessionOptions!).notifier,
         );
 
         return PopScope(
@@ -298,39 +316,40 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   Widget _buildBody(
     EventDetailSchema event,
-    Session notifier,
+    Session session,
     SessionRoomState state,
   ) {
-    final roomCtx = notifier.room;
+    final roomCtx = session.room;
     switch (state.connectionState) {
       case RoomConnectionState.error:
         return RoomErrorScreen(onRetry: roomCtx.connect);
       case RoomConnectionState.connecting:
         return const LoadingRoomScreen();
       case RoomConnectionState.disconnected:
-        return SessionEndedScreen(event: event, session: notifier);
+        return SessionEndedScreen(event: event, session: session);
       case RoomConnectionState.connected:
         if (state.sessionState.status == SessionStatus.ended) {
-          return SessionEndedScreen(event: event, session: notifier);
+          return SessionEndedScreen(event: event, session: session);
         }
         if (roomCtx.localParticipant == null) {
           return const LoadingRoomScreen();
         }
 
-        if (state.isMyTurn(notifier.room)) {
-          if (state.sessionState.totemStatus == TotemStatus.passing) {
-            return ReceiveTotemScreen(
-              sessionState: state,
-              actionBar: buildActionBar(notifier, state, event),
-              onAcceptTotem: () => _onAcceptTotem(notifier),
-            );
-          }
+        if (state.sessionState.totemStatus == TotemStatus.passing &&
+            state.amNext(session.room)) {
+          return ReceiveTotemScreen(
+            sessionState: state,
+            actionBar: buildActionBar(session, state, event),
+            onAcceptTotem: session.acceptTotem,
+          );
+        }
 
+        if (state.isMyTurn(session.room)) {
           return ProtectionOverlay(
             child: MyTurn(
-              actionBar: buildActionBar(notifier, state, event),
+              actionBar: buildActionBar(session, state, event),
               getParticipantKey: getParticipantKey,
-              onPassTotem: notifier.passTotem,
+              onPassTotem: session.passTotem,
               sessionState: state.sessionState,
               event: event,
               emojis: _reactions,
@@ -339,10 +358,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         } else {
           return ProtectionOverlay(
             child: NotMyTurn(
-              actionBar: buildActionBar(notifier, state, event),
+              actionBar: buildActionBar(session, state, event),
               getParticipantKey: getParticipantKey,
-              sessionState: state.sessionState,
-              session: notifier,
+              sessionState: state,
+              session: session,
               event: event,
               emojis: _reactions,
             ),
@@ -417,7 +436,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                       setState(() => _showEmojiPicker = true);
                       await showEmojiBar(
                         button,
-                        context,
                         onEmojiSelected: (emoji) {
                           notifier.sendEmoji(emoji);
                           _onEmojiReceived(user.identity, emoji);

@@ -48,7 +48,7 @@ final class ListSpacesProvider
   }
 }
 
-String _$listSpacesHash() => r'a26942a21b78182cff5c963afd2e913186b3b25e';
+String _$listSpacesHash() => r'408c472973ef34bfdc606357b93856c2afd0f570';
 
 @ProviderFor(event)
 final eventProvider = EventFamily._();
@@ -244,7 +244,7 @@ final class ListSubscribedSpacesProvider
 }
 
 String _$listSubscribedSpacesHash() =>
-    r'baae7be4fea49ea1fbd6af85674d2853102c11ac';
+    r'3b69d91b62109c709802530db370f8056383d723';
 
 @ProviderFor(subscribeToSpace)
 final subscribeToSpaceProvider = SubscribeToSpaceFamily._();
@@ -507,7 +507,7 @@ final class ListSessionsHistoryProvider
 }
 
 String _$listSessionsHistoryHash() =>
-    r'6a94825f6f715adfac31701ce6cb38709828d85d';
+    r'1e2adbdf2646b92ac43a3fcf0084f45dbd22bb23';
 
 @ProviderFor(getRecommendedSessions)
 final getRecommendedSessionsProvider = GetRecommendedSessionsFamily._();

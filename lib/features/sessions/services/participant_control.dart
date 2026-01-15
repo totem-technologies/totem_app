@@ -19,6 +19,7 @@ extension ParticipantControl on Session {
               throw AppNetworkException.timeout();
             },
           );
+      logger.i('Passed totem successfully');
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -34,7 +35,9 @@ extension ParticipantControl on Session {
   /// This fails silently if it's not the user's turn.
   /// Throws an exception if the operation fails.
   Future<void> acceptTotem() async {
-    if (!state.isMyTurn(room)) return;
+    if (!state.amNext(room)) {
+      throw StateError("Not the user's turn to accept the totem");
+    }
     try {
       await _apiService.meetings
           .totemMeetingsMobileApiAcceptTotemEndpoint(
@@ -46,7 +49,8 @@ extension ParticipantControl on Session {
               throw AppNetworkException.timeout();
             },
           );
-      await enableMicrophone();
+      enableMicrophone();
+      logger.i('Accepted totem successfully');
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,

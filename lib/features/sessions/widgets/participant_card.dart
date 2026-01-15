@@ -137,7 +137,7 @@ class ParticipantCard extends ConsumerWidget {
                   child: AutoSizeText(
                     participant.name,
                     textAlign: TextAlign.center,
-                    maxLines: 1,
+                    maxLines: 2,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -382,16 +382,18 @@ class SpeakingIndicator extends StatelessWidget {
         color: foregroundColor,
       );
     } else {
-      return SoundWaveformWidget(
-        audioTrack: audioTracks.firstOrNull?.track as AudioTrack?,
-        participant: participant,
-        options: AudioVisualizerWidgetOptions(
-          color: foregroundColor,
-          barCount: barCount,
-          barMinOpacity: 0.8,
-          spacing: 3,
-          minHeight: 4,
-          maxHeight: 12,
+      return RepaintBoundary(
+        child: SoundWaveformWidget(
+          audioTrack: audioTracks.firstOrNull?.track as AudioTrack?,
+          participant: participant,
+          options: AudioVisualizerWidgetOptions(
+            color: foregroundColor,
+            barCount: barCount,
+            barMinOpacity: 0.8,
+            spacing: 3,
+            minHeight: 4,
+            maxHeight: 12,
+          ),
         ),
       );
     }
@@ -487,9 +489,12 @@ class ParticipantVideo extends ConsumerWidget {
     );
     if (videoTrack.isNotEmpty) {
       return IgnorePointer(
-        child: VideoTrackRenderer(
-          videoTrack.last.track! as VideoTrack,
-          fit: VideoViewFit.cover,
+        child: RepaintBoundary(
+          child: VideoTrackRenderer(
+            key: ValueKey(videoTrack.last.track!.sid),
+            videoTrack.last.track! as VideoTrack,
+            fit: VideoViewFit.cover,
+          ),
         ),
       );
     } else {

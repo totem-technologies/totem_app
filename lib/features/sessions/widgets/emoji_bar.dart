@@ -6,50 +6,77 @@ import 'package:flutter/material.dart';
 /// Displays an emoji bar above the given button context and calls
 /// [onEmojiSelected] with the selected emoji.
 Future<void> showEmojiBar(
-  BuildContext button,
   BuildContext context, {
   required ValueChanged<String> onEmojiSelected,
 }) async {
-  final box = button.findRenderObject() as RenderBox?;
+  final navigator = Navigator.of(context).context;
+  final box = context.findRenderObject() as RenderBox?;
   if (box == null) return;
   final overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
   if (overlay == null) return;
-  final position = box.localToGlobal(Offset.zero, ancestor: overlay);
+  final overlayPositionX = overlay
+      .localToGlobal(
+        Offset.zero,
+        ancestor: navigator.findRenderObject(),
+      )
+      .dx;
+  final boxY = box
+      .localToGlobal(
+        Offset.zero,
+        ancestor: navigator.findRenderObject(),
+      )
+      .dy;
+  final position = Offset(overlayPositionX, boxY);
 
-  await Navigator.of(context).push(
-    PageRouteBuilder<String>(
-      opaque: false,
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return _EmojiBarOverlay(
+  OverlayEntry? entry;
+  entry = OverlayEntry(
+    builder: (context) {
+      return SafeArea(
+        left: false,
+        top: false,
+        bottom: true,
+        right: true,
+        child: _EmojiBarOverlay(
           position: position,
-          animation: animation,
           onEmojiSelected: onEmojiSelected,
-        );
-      },
-    ),
+          onDismissed: () {
+            if (entry?.mounted ?? false) {
+              entry?.remove();
+            }
+          },
+        ),
+      );
+    },
   );
+  Overlay.of(navigator).insert(entry);
 }
 
 class _EmojiBarOverlay extends StatefulWidget {
   const _EmojiBarOverlay({
     required this.position,
-    required this.animation,
     required this.onEmojiSelected,
+    required this.onDismissed,
     // ignore: unused_element_parameter
     this.displayDuration = const Duration(seconds: 4),
   });
 
   final Offset position;
-  final Animation<double> animation;
   final ValueChanged<String> onEmojiSelected;
   final Duration displayDuration;
+  final VoidCallback onDismissed;
 
   @override
   State<_EmojiBarOverlay> createState() => _EmojiBarOverlayState();
 }
 
-class _EmojiBarOverlayState extends State<_EmojiBarOverlay> {
+class _EmojiBarOverlayState extends State<_EmojiBarOverlay>
+    with SingleTickerProviderStateMixin {
   Timer? _timer;
+
+  late final AnimationController _animationController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 300),
+  )..forward();
 
   @override
   void initState() {
@@ -60,36 +87,43 @@ class _EmojiBarOverlayState extends State<_EmojiBarOverlay> {
   @override
   void dispose() {
     _timer?.cancel();
+    _animationController.dispose();
     super.dispose();
   }
 
   void _startTimer() {
     _timer?.cancel();
-    _timer = Timer(widget.displayDuration, () {
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    });
+    _timer = Timer(widget.displayDuration, _dismiss);
+  }
+
+  void _dismiss() async {
+    await _animationController.reverse();
+    if (mounted) {
+      widget.onDismissed();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final topPosition = widget.position.dy - 70;
+
     return Stack(
       children: [
-        GestureDetector(
-          onTap: () {
-            Navigator.of(context).pop();
-          },
-          child: Container(
-            color: Colors.transparent,
+        Positioned.fill(
+          child: GestureDetector(
+            onTap: _dismiss,
+            behavior: HitTestBehavior.translucent,
+            child: Container(
+              color: Colors.transparent,
+            ),
           ),
         ),
-        PositionedDirectional(
-          start: 20,
-          end: 20,
-          top: widget.position.dy - 60,
+        Positioned(
+          top: topPosition,
+          left: widget.position.dx,
+          right: 0,
           child: FadeTransition(
-            opacity: widget.animation,
+            opacity: _animationController,
             child: EmojiBar(
               onEmojiSelected: (emoji) {
                 widget.onEmojiSelected(emoji);
@@ -143,6 +177,7 @@ class EmojiBar extends StatelessWidget {
               children: [
                 for (final emoji in emojis)
                   GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () => onEmojiSelected(emoji),
                     child: Text(
                       emoji,

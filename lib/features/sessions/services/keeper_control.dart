@@ -5,13 +5,10 @@ part of 'session_service.dart';
 
 extension KeeperControl on Session {
   /// Get the participant who is currently speaking.
-  Participant speakingNow() {
+  Participant speakingNowParticipant() {
     return room.participants.firstWhere(
       (participant) {
         if (state.sessionState.speakingNow != null) {
-          if (state.sessionState.totemStatus == TotemStatus.passing) {
-            return participant.identity == options.keeperSlug;
-          }
           return participant.identity == state.sessionState.speakingNow;
         } else {
           // If no one is speaking right now, show the keeper's video
@@ -22,8 +19,15 @@ extension KeeperControl on Session {
     );
   }
 
+  Participant? speakingNextParticipant() {
+    if (state.sessionState.nextSpeaker == null) return null;
+    return room.participants.firstWhereOrNull((participant) {
+      return participant.identity == state.sessionState.nextSpeaker;
+    });
+  }
+
   Future<void> _onKeeperDisconnected() async {
-    _hasKeeperDisconnected = true;
+    state = state.copyWith(hasKeeperDisconnected: true);
     await disableMicrophone();
 
     _keeperDisconnectedTimer?.cancel();
@@ -36,7 +40,7 @@ extension KeeperControl on Session {
   }
 
   void _onKeeperConnected() {
-    _hasKeeperDisconnected = false;
+    state = state.copyWith(hasKeeperDisconnected: false);
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
@@ -53,8 +57,8 @@ extension KeeperControl on Session {
     await room.disconnect();
   }
 
-  Future<void> startSession() async {
-    if (!isKeeper()) return;
+  Future<bool> startSession() async {
+    if (!isKeeper()) return false;
     try {
       await ref
           .read(startSessionProvider(_options.eventSlug).future)
@@ -64,18 +68,19 @@ extension KeeperControl on Session {
               throw AppNetworkException.timeout();
             },
           );
+      return true;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Error starting session',
       );
-      rethrow;
+      return false;
     }
   }
 
-  Future<void> endSession() async {
-    if (!isKeeper()) return;
+  Future<bool> endSession() async {
+    if (!isKeeper()) return false;
     try {
       await ref
           .read(endSessionProvider(_options.eventSlug).future)
@@ -85,13 +90,14 @@ extension KeeperControl on Session {
               throw AppNetworkException.timeout();
             },
           );
+      return true;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Error ending session',
       );
-      rethrow;
+      return false;
     }
   }
 

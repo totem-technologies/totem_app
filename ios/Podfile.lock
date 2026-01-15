@@ -9,6 +9,8 @@ PODS:
     - Flutter
     - flutter_webrtc
     - WebRTC-SDK (= 137.7151.04)
+  - permission_handler_apple (9.3.0):
+    - Flutter
   - PostHog (3.36.2)
   - posthog_flutter (0.0.1):
     - Flutter
@@ -21,6 +23,7 @@ DEPENDENCIES:
   - flutter_foreground_task (from `.symlinks/plugins/flutter_foreground_task/ios`)
   - flutter_webrtc (from `.symlinks/plugins/flutter_webrtc/ios`)
   - livekit_client (from `.symlinks/plugins/livekit_client/ios`)
+  - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - posthog_flutter (from `.symlinks/plugins/posthog_flutter/ios`)
 
 SPEC REPOS:
@@ -37,6 +40,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_webrtc/ios"
   livekit_client:
     :path: ".symlinks/plugins/livekit_client/ios"
+  permission_handler_apple:
+    :path: ".symlinks/plugins/permission_handler_apple/ios"
   posthog_flutter:
     :path: ".symlinks/plugins/posthog_flutter/ios"
 
@@ -45,6 +50,7 @@ SPEC CHECKSUMS:
   flutter_foreground_task: a159d2c2173b33699ddb3e6c2a067045d7cebb89
   flutter_webrtc: c3e21fc0dcd9d8eb246ae4d5256fcbeb2f5ecd22
   livekit_client: ae9eadd3d02d37a485bfba8fe07e1cf627bf008c
+  permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   PostHog: 43ba4f42cc8dda909b33033e9ba0a1f64a2a8eb2
   posthog_flutter: 9535ac2d4ab65ccb9ace3886dcc0b3105198bad5
   WebRTC-SDK: 40d4f5ba05cadff14e4db5614aec402a633f007e

@@ -10,10 +10,7 @@ import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage, logger;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/api/mobile_totem_api.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
-import 'package:totem_app/api/models/session_state.dart';
-import 'package:totem_app/api/models/totem_status.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
@@ -110,23 +107,33 @@ class SessionRoomState {
   const SessionRoomState({
     this.connectionState = RoomConnectionState.connecting,
     this.sessionState = const SessionState(keeperSlug: '', speakingOrder: []),
+    this.hasKeeperDisconnected = false,
   });
 
   final RoomConnectionState connectionState;
   final SessionState sessionState;
+  final bool hasKeeperDisconnected;
 
   bool isMyTurn(RoomContext room) {
     return sessionState.speakingNow != null &&
         sessionState.speakingNow == room.localParticipant?.identity;
   }
 
+  bool amNext(RoomContext room) {
+    return sessionState.nextSpeaker != null &&
+        sessionState.nextSpeaker == room.localParticipant?.identity;
+  }
+
   SessionRoomState copyWith({
     RoomConnectionState? connectionState,
     SessionState? sessionState,
+    bool? hasKeeperDisconnected,
   }) {
     return SessionRoomState(
       connectionState: connectionState ?? this.connectionState,
       sessionState: sessionState ?? this.sessionState,
+      hasKeeperDisconnected:
+          hasKeeperDisconnected ?? this.hasKeeperDisconnected,
     );
   }
 
@@ -144,12 +151,16 @@ class Session extends _$Session {
   late final RoomContext room;
   late final EventsListener<RoomEvent> _listener;
   late final MobileTotemApi _apiService;
-  late final SessionOptions _options;
+  late SessionOptions _options;
   String? _lastMetadata;
 
-  Timer? _timer;
+  Timer? _notificationTimer;
   VoidCallback? closeKeeperLeftNotification;
   SessionEndedReason reason = SessionEndedReason.finished;
+
+  static const defaultCameraOptions = CameraCaptureOptions(
+    params: VideoParametersPresets.h540_169,
+  );
 
   @override
   SessionRoomState build(SessionOptions options) {
@@ -169,9 +180,13 @@ class Session extends _$Session {
         defaultAudioOutputOptions: _options.audioOutputOptions,
 
         dynacast: true,
-        defaultVideoPublishOptions: VideoPublishOptions(
-          simulcast: true,
-          videoSimulcastLayers: VideoParametersPresets.all169,
+        defaultVideoPublishOptions: const VideoPublishOptions(
+          simulcast: false,
+          videoSimulcastLayers: [
+            VideoParametersPresets.h360_169,
+            VideoParametersPresets.h540_169,
+            VideoParametersPresets.h720_169,
+          ],
         ),
         // defaultAudioPublishOptions: const AudioPublishOptions(),
 
@@ -198,21 +213,31 @@ class Session extends _$Session {
       _keeperDisconnectedTimer = null;
       closeKeeperLeftNotification?.call();
       closeKeeperLeftNotification = null;
-      _timer?.cancel();
-      _timer = null;
+      _notificationTimer?.cancel();
+      _notificationTimer = null;
       _listener.dispose();
-      room.removeListener(_onRoomChanges);
+      room
+        ..removeListener(_onRoomChanges)
+        ..dispose();
     });
 
     return const SessionRoomState();
   }
 
   void _onConnected() {
-    if (room.localParticipant == null) return;
+    if (room.localParticipant == null) {
+      logger.i('Local participant is null on connected.');
+      return;
+    }
+
+    logger.i(
+      'Connected to LiveKit room as '
+      '"${room.localParticipant!.identity}".',
+    );
 
     room.localParticipant!.setCameraEnabled(_options.cameraEnabled);
 
-    // TODO(bdlukaa): Revisit this in the future
+    // TODO(bdlukaa): This doesn't seem to work. Use room.connect to provide custom FastConnectOptions and disable microphone on start there.
     // The current behavior is to enable microphone only for keepers at the
     // beginning of the session.
     // room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
@@ -235,33 +260,45 @@ class Session extends _$Session {
 
   void _onRoomChanges() {
     final metadata = room.room.metadata;
-    if (metadata == null) return;
-    if (_lastMetadata == null) {
-      _lastMetadata = metadata;
-      state = state.copyWith(
-        sessionState: SessionState.fromJson(
+    if (metadata == null || metadata.isEmpty) return;
+
+    try {
+      if (_lastMetadata == null) {
+        _lastMetadata = metadata;
+        state = state.copyWith(
+          sessionState: SessionState.fromJson(
+            jsonDecode(metadata) as Map<String, dynamic>,
+          ),
+        );
+      } else if (metadata != _lastMetadata) {
+        // final previousState = SessionState.fromJson(
+        //   jsonDecode(_lastMetadata!) as Map<String, dynamic>,
+        // );
+        final newState = SessionState.fromJson(
           jsonDecode(metadata) as Map<String, dynamic>,
-        ),
+        );
+
+        // if (previousState.speakingNow != newState.speakingNow) {
+        //    if (newState.speakingNow == room.localParticipant?.identity) {
+        //      debugPrint('You are now speaking');
+        //      _options.onReceiveTotem();
+        //    }
+        // }
+
+        state = state.copyWith(sessionState: newState);
+        _lastMetadata = metadata;
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error decoding session metadata',
       );
-      return;
     }
-    if (_lastMetadata != null && metadata != _lastMetadata) {
-      // final previousState = SessionState.fromJson(
-      //   jsonDecode(_lastMetadata!) as Map<String, dynamic>,
-      // );
-      final newState = SessionState.fromJson(
-        jsonDecode(metadata) as Map<String, dynamic>,
-      );
 
-      // if (previousState.speakingNow != newState.speakingNow) {
-      //    if (newState.speakingNow == room.localParticipant?.identity) {
-      //      debugPrint('You are now speaking');
-      //      _options.onReceiveTotem();
-      //    }
-      // }
-
-      state = state.copyWith(sessionState: newState);
-      _lastMetadata = metadata;
+    if (state.sessionState.status == SessionStatus.ended) {
+      reason = SessionEndedReason.finished;
+      room.disconnect();
     }
   }
 
@@ -292,10 +329,6 @@ class Session extends _$Session {
   }
 
   static const keeperDisconnectionTimeout = Duration(minutes: 3);
-  bool _hasKeeperDisconnected = false;
-  // TODO(bdlukaa): Consider moving this to state.
-  // ignore: avoid_public_notifier_properties
-  bool get hasKeeperDisconnected => _hasKeeperDisconnected;
   Timer? _keeperDisconnectedTimer;
 
   Future<void> _onParticipantDisconnected(

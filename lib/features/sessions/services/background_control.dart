@@ -12,7 +12,7 @@ extension BackgroundControl on Session {
           priority: NotificationPriority.LOW,
         ),
         iosNotificationOptions: const IOSNotificationOptions(
-          showNotification: true,
+          showNotification: false,
           playSound: false,
         ),
         foregroundTaskOptions: ForegroundTaskOptions(
@@ -42,8 +42,8 @@ extension BackgroundControl on Session {
     );
 
     final event = await this.event;
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _notificationTimer?.cancel();
+    _notificationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       _updateNotification(event);
     });
   }
@@ -52,9 +52,19 @@ extension BackgroundControl on Session {
     try {
       final startTime = event.start;
       final duration = DateTime.now().difference(startTime);
-      final formattedTime = DateFormat(
-        'HH:mm:ss',
-      ).format(DateTime(0).add(duration).toUtc());
+      final formattedTime =
+          DateFormat(
+            'HH:mm:ss',
+          ).format(
+            DateTime(
+              0,
+              1,
+              1,
+              duration.inHours,
+              duration.inMinutes % 60,
+              duration.inSeconds % 60,
+            ),
+          );
 
       await FlutterForegroundTask.updateService(
         notificationTitle: event.title,
@@ -67,8 +77,8 @@ extension BackgroundControl on Session {
 
   Future<void> endBackgroundMode() async {
     try {
-      _timer?.cancel();
-      _timer = null;
+      _notificationTimer?.cancel();
+      _notificationTimer = null;
       await FlutterForegroundTask.stopService();
     } catch (_) {
       // fine if fail

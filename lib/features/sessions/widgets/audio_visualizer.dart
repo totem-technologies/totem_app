@@ -205,8 +205,10 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   Future<void> _detachListeners() async {
     try {
       if (_visualizer != null) {
-        await _visualizer?.stop();
-        await _visualizer?.dispose();
+        try {
+          await _visualizer?.stop();
+          await _visualizer?.dispose();
+        } catch (_) {}
         _visualizer = null;
       }
 

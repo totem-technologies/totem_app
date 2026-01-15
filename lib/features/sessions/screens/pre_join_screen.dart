@@ -1,14 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' hide Session;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
@@ -23,7 +21,6 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/circle_icon_button.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class PreJoinScreen extends ConsumerStatefulWidget {
   const PreJoinScreen({required this.eventSlug, super.key});
@@ -39,7 +36,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   var _isCameraOn = true;
   var _isMicOn = true;
 
-  var _cameraOptions = const CameraCaptureOptions();
+  CameraCaptureOptions? _cameraOptions;
   var _audioOptions = const AudioCaptureOptions();
   var _audioOutputOptions = const AudioOutputOptions();
 
@@ -54,6 +51,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     if (_videoTrack != null) {
       _videoTrack!.stop();
       _videoTrack!.dispose();
+      _videoTrack = null;
     }
     super.dispose();
   }
@@ -77,59 +75,67 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   Future<void> _requestPermissions() async {
     if (_requestLock) return;
     _requestLock = true;
-    await Permission.camera.request();
-    await Permission.microphone.request();
-    await BackgroundControl.requestPermissions();
 
-    final cameraGranted = await Permission.camera.isGranted;
-    final micGranted = await Permission.microphone.isGranted;
+    try {
+      final statuses = await [
+        Permission.camera,
+        Permission.microphone,
+      ].request();
 
-    if (!cameraGranted || !micGranted) {
-      if (!mounted) return;
-      await showAdaptiveDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog.adaptive(
+      final cameraStatus = statuses[Permission.camera]!;
+      final micStatus = statuses[Permission.microphone]!;
+
+      if (!cameraStatus.isGranted || !micStatus.isGranted) {
+        if (!mounted) return;
+
+        final missing = <String>[];
+        if (!cameraStatus.isGranted) missing.add('Camera');
+        if (!micStatus.isGranted) missing.add('Microphone');
+
+        final isPermanent =
+            cameraStatus.isPermanentlyDenied || micStatus.isPermanentlyDenied;
+
+        await showAdaptiveDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) => AlertDialog.adaptive(
             title: const Text('Permissions Required'),
-            content: const Text(
-              'Camera and microphone access are required to join the session. Please grant these permissions in your device settings.',
+            content: Text(
+              '${missing.join(' and ')} access is required. ${isPermanent ? 'Please enable them in System Settings.' : 'Please grant these permissions to continue.'}',
             ),
-            actions: <Widget>[
+            actions: [
               TextButton(
-                child: const Text(
-                  'Exit',
-                  style: TextStyle(decoration: TextDecoration.none),
-                ),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  if (mounted) Navigator.of(context).pop();
-                },
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
               ),
               TextButton(
-                child: const Text(
-                  'Open Settings',
-                  style: TextStyle(decoration: TextDecoration.none),
-                ),
                 onPressed: () {
                   Navigator.of(context).pop();
-                  openAppSettings();
+                  isPermanent ? openAppSettings() : _requestPermissions();
                 },
+                child: Text(isPermanent ? 'Open Settings' : 'Try Again'),
               ),
             ],
-          );
-        },
-      );
+          ),
+        );
+      }
+
+      await BackgroundControl.requestPermissions();
+    } finally {
+      _requestLock = false;
     }
-    _requestLock = false;
   }
 
   Future<void> _initializeLocalVideo() async {
     if (_videoTrack != null) {
-      await _videoTrack!.stop();
-      await _videoTrack!.dispose();
+      try {
+        await _videoTrack!.stop();
+        await _videoTrack!.dispose();
+        _videoTrack = null;
+      } catch (_) {}
     }
     try {
+      _cameraOptions ??= Session.defaultCameraOptions;
       _videoTrack = await LocalVideoTrack.createCameraTrack(_cameraOptions);
       await _videoTrack!.start();
       if (mounted) setState(() {});
@@ -151,14 +157,16 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   Future<void> _joinRoom(String token) async {
-    await _videoTrack?.stop();
-    await _videoTrack?.dispose();
+    try {
+      await _videoTrack?.stop();
+      await _videoTrack?.dispose();
+    } catch (_) {}
 
     if (mounted) {
       context.pushReplacement(
         RouteNames.videoSession(widget.eventSlug),
         extra: VideoRoomScreenRouteArgs(
-          cameraOptions: _cameraOptions,
+          cameraOptions: _cameraOptions ?? Session.defaultCameraOptions,
           audioOptions: _audioOptions,
           audioOutputOptions: _audioOutputOptions,
           cameraEnabled: _isCameraOn,
@@ -201,42 +209,20 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                     fontWeight: FontWeight.bold,
                     fontSize: 28,
                   ),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
                 Padding(
                   padding: const EdgeInsetsDirectional.symmetric(
                     horizontal: 20,
                   ),
-                  child: RichText(
-                    textAlign: TextAlign.center,
-                    text: TextSpan(
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.textTheme.bodyMedium?.color?.withValues(
-                          alpha: 0.8,
-                        ),
+                  child: Text(
+                    'Your session will start soon. Please check your audio and video settings before joining.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 12,
+                      color: theme.textTheme.bodyMedium?.color?.withValues(
+                        alpha: 0.8,
                       ),
-                      children: [
-                        const TextSpan(
-                          text:
-                              'It will start soon. '
-                              'Verify your audio and video settings before '
-                              'joining.\n'
-                              '\n'
-                              'Please take a moment to go over the',
-                        ),
-                        TextSpan(
-                          text: '\ncommunity guidelines',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.underline,
-                          ),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () =>
-                                launchUrl(AppConfig.communityGuidelinesUrl),
-                        ),
-                        const TextSpan(text: '.'),
-                      ],
                     ),
                   ),
                 ),

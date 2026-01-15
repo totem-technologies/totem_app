@@ -15,24 +15,27 @@ extension DevicesControl on Session {
     return room.room.engine.roomOptions.defaultCameraCaptureOptions.deviceId;
   }
 
-  // TODO(bdlukaa): Revisit this in the future
-  // https://github.com/livekit/client-sdk-flutter/issues/863
-  Future<void> selectCameraDevice(MediaDevice device) async {
-    final options = CameraCaptureOptions(deviceId: device.deviceId);
+  LocalVideoTrack? get localVideoTrack {
+    final track =
+        room.localParticipant?.videoTrackPublications.firstOrNull?.track;
+    return track;
+  }
 
-    final userTrack = room.localParticipant
-        ?.getTrackPublications()
-        .firstWhereOrNull((track) => track.kind == TrackType.VIDEO)
-        ?.track;
-    if (userTrack != null) {
-      userTrack.restartTrack(options);
+  Future<void> switchCameraPosition() async {
+    final track = localVideoTrack;
+    if (track != null) {
+      final newPosition = (track.currentOptions as CameraCaptureOptions)
+          .cameraPosition
+          .switched();
+      track.setCameraPosition(newPosition);
+      ref.notifyListeners();
+      logger.i('Switched camera to $newPosition');
     } else {
-      await room.localParticipant?.publishVideoTrack(
-        await LocalVideoTrack.createCameraTrack(options),
+      room.localParticipant?.publishVideoTrack(
+        await LocalVideoTrack.createCameraTrack(Session.defaultCameraOptions),
       );
+      ref.notifyListeners();
     }
-    await room.room.setVideoInputDevice(device);
-    ref.notifyListeners();
   }
 
   String? get selectedAudioDeviceId {
@@ -72,7 +75,9 @@ extension DevicesControl on Session {
   }
 
   Future<void> enableMicrophone() async {
-    if (room.microphoneOpened || hasKeeperDisconnected) {
+    // workaround to use members on extension
+    // ignore: invalid_use_of_visible_for_testing_member
+    if (room.microphoneOpened || state.hasKeeperDisconnected) {
       return;
     }
     if (room.localParticipant != null) {
@@ -105,13 +110,13 @@ extension DevicesControl on Session {
     if (room.connected) {
       await room.localParticipant?.setCameraEnabled(
         true,
-        cameraCaptureOptions: CameraCaptureOptions(
+        cameraCaptureOptions: Session.defaultCameraOptions.copyWith(
           deviceId: room.room.selectedVideoInputDeviceId,
         ),
       );
     } else {
       room.localVideoTrack ??= await LocalVideoTrack.createCameraTrack(
-        CameraCaptureOptions(
+        Session.defaultCameraOptions.copyWith(
           deviceId: room.room.selectedVideoInputDeviceId,
         ),
       );

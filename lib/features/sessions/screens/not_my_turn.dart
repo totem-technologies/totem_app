@@ -4,7 +4,6 @@ import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
@@ -23,7 +22,7 @@ class NotMyTurn extends ConsumerWidget {
 
   final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
-  final SessionState sessionState;
+  final SessionRoomState sessionState;
   final Session session;
   final EventDetailSchema event;
   final List<MapEntry<String, String>> emojis;
@@ -31,16 +30,16 @@ class NotMyTurn extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final room = RoomContext.of(context)!;
 
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );
     final amKeeper = currentUserSlug == event.space.author.slug!;
-
-    final activeSpeaker = session.speakingNow();
+    final activeSpeaker = session.speakingNowParticipant();
 
     return RoomBackground(
-      status: sessionState.status,
+      status: sessionState.sessionState.status,
       child: OrientationBuilder(
         builder: (context, orientation) {
           final isLandscape = orientation == Orientation.landscape;
@@ -57,11 +56,9 @@ class NotMyTurn extends ConsumerWidget {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: RepaintBoundary(
-                      child: ParticipantVideo(
-                        key: getParticipantKey(activeSpeaker.identity),
-                        participant: activeSpeaker,
-                      ),
+                    child: ParticipantVideo(
+                      key: getParticipantKey(activeSpeaker.identity),
+                      participant: activeSpeaker,
                     ),
                   ),
                   PositionedDirectional(
@@ -133,13 +130,40 @@ class NotMyTurn extends ConsumerWidget {
             ),
           );
 
+          final nextUp = session.speakingNextParticipant();
+          final nextUpText =
+              sessionState.sessionState.status == SessionStatus.started &&
+                  nextUp != null
+              ? RichText(
+                  text: TextSpan(
+                    children: [
+                      if (sessionState.amNext(room))
+                        const TextSpan(
+                          text: 'You are Next',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        )
+                      else ...[
+                        const TextSpan(text: 'Next up '),
+                        TextSpan(
+                          text: nextUp.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ],
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                )
+              : const SizedBox.shrink();
+
           final participantGrid = ParticipantLoop(
             layoutBuilder: NoMyTurnLayoutBuilder(isLandscape: isLandscape),
             sorting: (originalTracks) {
               return tracksSorting(
                 speakingNow: activeSpeaker.identity,
                 originalTracks: originalTracks,
-                sessionState: sessionState,
+                sessionState: sessionState.sessionState,
                 event: event,
               );
             },
@@ -157,65 +181,58 @@ class NotMyTurn extends ConsumerWidget {
             },
           );
 
-          final startCard = Builder(
-            builder: (context) {
-              if (sessionState.status != SessionStatus.waiting) {
-                return const SizedBox.shrink();
-              } else if (session.isKeeper()) {
-                return TransitionCard(
+          final Widget? startCard =
+              sessionState.sessionState.status == SessionStatus.waiting &&
+                  session.isKeeper()
+              ? TransitionCard(
                   type: TotemCardTransitionType.start,
-                  onActionPressed: () async {
-                    try {
-                      await session.startSession();
-                      return true;
-                    } catch (error) {
-                      if (context.mounted) {
-                        await ErrorHandler.handleApiError(
-                          context,
-                          error,
-                          onRetry: () async {
-                            try {
-                              await session.startSession();
-                            } catch (e) {
-                              // Error already handled by handleApiError
-                            }
-                          },
-                        );
-                      }
-                      return false;
-                    }
-                  },
-                );
-              }
-
-              return const SizedBox.shrink();
-            },
-          );
+                  onActionPressed: session.startSession,
+                )
+              : null;
 
           if (isLandscape) {
             final isLTR = Directionality.of(context) == TextDirection.ltr;
             return SafeArea(
               top: false,
+              bottom: false,
               left: !isLTR,
               right: isLTR,
               child: Row(
-                spacing: 16,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Expanded(flex: 2, child: speakerVideo),
                   Expanded(
                     flex: 3,
-                    child: Column(
-                      spacing: 16,
-                      children: [
-                        Expanded(child: participantGrid),
-                        startCard,
-                        Padding(
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: 16,
+                    child: SafeArea(
+                      left: false,
+                      right: true,
+                      child: Overlay.wrap(
+                        child: Padding(
+                          padding: const EdgeInsetsDirectional.only(
+                            start: 16,
+                            end: 16,
+                            top: 16,
                           ),
-                          child: actionBar,
+                          child: Column(
+                            spacing: 16,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              nextUpText,
+                              Expanded(
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsetsDirectional.symmetric(
+                                        vertical: 8,
+                                      ),
+                                  child: participantGrid,
+                                ),
+                              ),
+                              ?startCard,
+                              Center(child: actionBar),
+                            ],
+                          ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ],
@@ -225,15 +242,27 @@ class NotMyTurn extends ConsumerWidget {
             return SafeArea(
               top: false,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 spacing: 20,
                 children: [
-                  Expanded(
-                    flex: 3,
-                    child: speakerVideo,
+                  Expanded(flex: 3, child: speakerVideo),
+                  Padding(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 28,
+                    ),
+                    child: nextUpText,
                   ),
-                  Expanded(flex: 2, child: participantGrid),
-                  startCard,
-                  actionBar,
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.symmetric(
+                        horizontal: 28,
+                      ),
+                      child: participantGrid,
+                    ),
+                  ),
+                  ?startCard,
+                  Center(child: actionBar),
                 ],
               ),
             );
@@ -294,41 +323,36 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
     }
 
     final rowCount = (itemCount / crossAxisCount).ceil();
-    return Padding(
-      padding: EdgeInsetsDirectional.symmetric(
-        horizontal: isLandscape ? 16 : 28,
-        vertical: isLandscape ? 16 : 10,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        spacing: gap,
-        children: List.generate(
-          rowCount,
-          (rowIndex) {
-            final startIndex = rowIndex * crossAxisCount;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      spacing: gap,
+      children: List.generate(
+        rowCount,
+        (rowIndex) {
+          final startIndex = rowIndex * crossAxisCount;
 
-            return Expanded(
-              child: Row(
-                spacing: gap,
-                children: List.generate(
-                  crossAxisCount,
-                  (colIndex) {
-                    final itemIndex = startIndex + colIndex;
-                    if (itemIndex < itemCount) {
-                      return Expanded(
-                        child: children[itemIndex].widget,
-                      );
-                    } else {
-                      return const Expanded(
-                        child: SizedBox.shrink(),
-                      );
-                    }
-                  },
-                ),
+          return Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: gap,
+              children: List.generate(
+                crossAxisCount,
+                (colIndex) {
+                  final itemIndex = startIndex + colIndex;
+                  if (itemIndex < itemCount) {
+                    return Expanded(
+                      child: children[itemIndex].widget,
+                    );
+                  } else {
+                    return const Expanded(
+                      child: SizedBox.shrink(),
+                    );
+                  }
+                },
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
