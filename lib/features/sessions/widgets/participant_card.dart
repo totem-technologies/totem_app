@@ -473,21 +473,58 @@ class LocalParticipantVideoCard extends ConsumerWidget {
   }
 }
 
-class ParticipantVideo extends ConsumerWidget {
+class ParticipantVideo extends ConsumerStatefulWidget {
   const ParticipantVideo({required this.participant, super.key});
 
   final Participant<TrackPublication<Track>> participant;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final videoTrack = participant.videoTrackPublications.where(
+  ConsumerState<ParticipantVideo> createState() => _ParticipantVideoState();
+}
+
+class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
+  late final EventsListener<ParticipantEvent> _listener;
+
+  @override
+  void initState() {
+    super.initState();
+    _listener = widget.participant.createListener();
+    _listener.listen((event) => _checkVideoStats());
+  }
+
+  @override
+  void dispose() {
+    _listener.dispose();
+    super.dispose();
+  }
+
+  bool _active = true;
+  void _checkVideoStats() async {
+    final videoTrack =
+        widget.participant.videoTrackPublications.firstOrNull?.track
+            as RemoteVideoTrack?;
+    if (videoTrack == null) return;
+    final stats = await videoTrack.getReceiverStats();
+    final fps = stats?.framesPerSecond;
+    if (fps == null || fps == 0) {
+      _active = false;
+    } else {
+      _active = true;
+    }
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final videoTrack = widget.participant.videoTrackPublications.where(
       (t) =>
           t.track != null &&
           t.kind == TrackType.VIDEO &&
           t.track!.isActive &&
-          t.participant.isCameraEnabled(),
+          t.participant.isCameraEnabled() &&
+          !t.track!.muted,
     );
-    if (videoTrack.isNotEmpty) {
+    if (_active && videoTrack.isNotEmpty) {
       return IgnorePointer(
         child: RepaintBoundary(
           child: VideoTrackRenderer(
@@ -499,31 +536,31 @@ class ParticipantVideo extends ConsumerWidget {
       );
     } else {
       final user = ref.watch(
-        userProfileProvider(participant.identity),
+        userProfileProvider(widget.participant.identity),
       );
-      return user.when(
-        data: (user) {
-          return IgnorePointer(
-            child: UserAvatar.fromUserSchema(
+      return IgnorePointer(
+        child: user.when(
+          data: (user) {
+            return UserAvatar.fromUserSchema(
               user,
               borderRadius: BorderRadius.zero,
               borderWidth: 0,
-            ),
-          );
-        },
-        error: (error, stackTrace) {
-          return const ColoredBox(
-            color: AppTheme.mauve,
-            child: Center(
-              child: TotemIcon(
-                TotemIcons.person,
-                size: 24,
-                color: Colors.white,
+            );
+          },
+          error: (error, stackTrace) {
+            return const ColoredBox(
+              color: AppTheme.mauve,
+              child: Center(
+                child: TotemIcon(
+                  TotemIcons.person,
+                  size: 24,
+                  color: Colors.white,
+                ),
               ),
-            ),
-          );
-        },
-        loading: LoadingVideoPlaceholder.new,
+            );
+          },
+          loading: LoadingVideoPlaceholder.new,
+        ),
       );
     }
   }
