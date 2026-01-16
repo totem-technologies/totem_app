@@ -134,10 +134,11 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   }
 
   var _showEmojiPicker = false;
-  Future<void> _onEmojiReceived(String userIdentity, String emoji) async {
+  void _onEmojiReceived(String userIdentity, String emoji) {
     if (!mounted) return;
-    ref.read(emojiReactionsProvider.notifier).addReaction(userIdentity, emoji);
-    await displayReaction(context, emoji);
+    ref
+        .read(emojiReactionsProvider.notifier)
+        .addReaction(context, userIdentity, emoji);
   }
 
   bool _chatSheetOpen = false;

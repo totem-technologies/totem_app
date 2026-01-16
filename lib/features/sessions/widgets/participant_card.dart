@@ -31,8 +31,6 @@ class ParticipantCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final emojis = ref.watch(participantEmojisProvider(participantIdentity));
-
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );
@@ -74,8 +72,7 @@ class ParticipantCard extends ConsumerWidget {
           ),
           clipBehavior: Clip.hardEdge,
           child: ClipRRect(
-            // radius - border width
-            borderRadius: BorderRadius.circular(20 - 2),
+            borderRadius: BorderRadius.circular(18),
             clipBehavior: Clip.hardEdge,
             child: Stack(
               clipBehavior: Clip.none,
@@ -86,40 +83,50 @@ class ParticipantCard extends ConsumerWidget {
                 PositionedDirectional(
                   top: overlayPadding,
                   start: overlayPadding,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    switchInCurve: Curves.easeInOut,
-                    switchOutCurve: Curves.easeInOut,
-                    child: emojis.isNotEmpty
-                        ? Container(
-                            key: Key(emojis.first),
-                            width: 20,
-                            height: 20,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              emojis.first,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                textBaseline: TextBaseline.ideographic,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          )
-                        : Container(
-                            width: 20,
-                            height: 20,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.black54,
-                            ),
-                            padding: const EdgeInsetsDirectional.all(2),
-                            alignment: Alignment.center,
-                            child: SpeakingIndicator(participant: participant),
-                          ),
+                  child: Consumer(
+                    builder: (context, ref, child) {
+                      final emojis = ref.watch(
+                        participantEmojisProvider(participantIdentity),
+                      );
+                      return AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        switchInCurve: Curves.easeInOut,
+                        switchOutCurve: Curves.easeInOut,
+                        child: emojis.isNotEmpty
+                            ? Container(
+                                key: ValueKey(emojis.first),
+                                width: 20,
+                                height: 20,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  emojis.first,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    textBaseline: TextBaseline.ideographic,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              )
+                            : child,
+                      );
+                    },
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black54,
+                      ),
+                      padding: const EdgeInsetsDirectional.all(2),
+                      alignment: Alignment.center,
+                      child: SpeakingIndicator(
+                        participant: participant,
+                      ),
+                    ),
                   ),
                 ),
                 if (currentUserIsKeeper &&

@@ -8,24 +8,12 @@ part of 'emoji_reactions_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Manages emoji reactions state for all participants in a session.
-///
-/// Reactions are automatically removed after the animation duration (2 seconds).
-/// This prevents full VideoRoomScreen rebuilds by isolating emoji state.
 
 @ProviderFor(EmojiReactions)
 final emojiReactionsProvider = EmojiReactionsProvider._();
 
-/// Manages emoji reactions state for all participants in a session.
-///
-/// Reactions are automatically removed after the animation duration (2 seconds).
-/// This prevents full VideoRoomScreen rebuilds by isolating emoji state.
 final class EmojiReactionsProvider
     extends $NotifierProvider<EmojiReactions, List<MapEntry<String, String>>> {
-  /// Manages emoji reactions state for all participants in a session.
-  ///
-  /// Reactions are automatically removed after the animation duration (2 seconds).
-  /// This prevents full VideoRoomScreen rebuilds by isolating emoji state.
   EmojiReactionsProvider._()
     : super(
         from: null,
@@ -55,12 +43,7 @@ final class EmojiReactionsProvider
   }
 }
 
-String _$emojiReactionsHash() => r'08e118c2952e9c82e6f61f4e1b26b79decb9afae';
-
-/// Manages emoji reactions state for all participants in a session.
-///
-/// Reactions are automatically removed after the animation duration (2 seconds).
-/// This prevents full VideoRoomScreen rebuilds by isolating emoji state.
+String _$emojiReactionsHash() => r'0e9ed9fc785167988f6668a5b562c6b50596ed10';
 
 abstract class _$EmojiReactions
     extends $Notifier<List<MapEntry<String, String>>> {
@@ -89,26 +72,12 @@ abstract class _$EmojiReactions
   }
 }
 
-/// Provides filtered emojis for a specific participant.
-///
-/// This prevents unnecessary rebuilds - only the specific ParticipantCard
-/// watching this provider will rebuild when its emoji changes.
-
 @ProviderFor(participantEmojis)
 final participantEmojisProvider = ParticipantEmojisFamily._();
-
-/// Provides filtered emojis for a specific participant.
-///
-/// This prevents unnecessary rebuilds - only the specific ParticipantCard
-/// watching this provider will rebuild when its emoji changes.
 
 final class ParticipantEmojisProvider
     extends $FunctionalProvider<List<String>, List<String>, List<String>>
     with $Provider<List<String>> {
-  /// Provides filtered emojis for a specific participant.
-  ///
-  /// This prevents unnecessary rebuilds - only the specific ParticipantCard
-  /// watching this provider will rebuild when its emoji changes.
   ParticipantEmojisProvider._({
     required ParticipantEmojisFamily super.from,
     required String super.argument,
@@ -160,12 +129,7 @@ final class ParticipantEmojisProvider
   }
 }
 
-String _$participantEmojisHash() => r'f07aac6557279b4153040d8331100a3eee6c7c54';
-
-/// Provides filtered emojis for a specific participant.
-///
-/// This prevents unnecessary rebuilds - only the specific ParticipantCard
-/// watching this provider will rebuild when its emoji changes.
+String _$participantEmojisHash() => r'f67001409d251a100e6f7a0689111567b3f699d9';
 
 final class ParticipantEmojisFamily extends $Family
     with $FunctionalFamilyOverride<List<String>, String> {
@@ -177,11 +141,6 @@ final class ParticipantEmojisFamily extends $Family
         $allTransitiveDependencies: null,
         isAutoDispose: true,
       );
-
-  /// Provides filtered emojis for a specific participant.
-  ///
-  /// This prevents unnecessary rebuilds - only the specific ParticipantCard
-  /// watching this provider will rebuild when its emoji changes.
 
   ParticipantEmojisProvider call(String participantIdentity) =>
       ParticipantEmojisProvider._(argument: participantIdentity, from: this);
