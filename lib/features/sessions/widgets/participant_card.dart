@@ -8,6 +8,7 @@ import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
+import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/widgets/audio_visualizer.dart';
@@ -20,16 +21,18 @@ class ParticipantCard extends ConsumerWidget {
   const ParticipantCard({
     required this.participant,
     required this.event,
-    required this.emojis,
+    required this.participantIdentity,
     super.key,
   });
 
   final Participant participant;
   final EventDetailSchema event;
-  final List<String> emojis;
+  final String participantIdentity;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final emojis = ref.watch(participantEmojisProvider(participantIdentity));
+
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );

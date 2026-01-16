@@ -11,6 +11,7 @@ import 'package:livekit_components/livekit_components.dart'
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/totem_status.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
@@ -133,14 +134,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   }
 
   var _showEmojiPicker = false;
-  final _reactions = <MapEntry<String, String>>[];
   Future<void> _onEmojiReceived(String userIdentity, String emoji) async {
     if (!mounted) return;
-    final entry = MapEntry(userIdentity, emoji);
-    setState(() => _reactions.add(entry));
+    ref.read(emojiReactionsProvider.notifier).addReaction(userIdentity, emoji);
     await displayReaction(context, emoji);
-    _reactions.remove(entry);
-    if (mounted) setState(() {});
   }
 
   bool _chatSheetOpen = false;
@@ -283,7 +280,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               onPassTotem: session.passTotem,
               sessionState: state.sessionState,
               event: widget.event,
-              emojis: _reactions,
             ),
           );
         } else {
@@ -294,7 +290,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               sessionState: state,
               session: session,
               event: widget.event,
-              emojis: _reactions,
             ),
           );
         }

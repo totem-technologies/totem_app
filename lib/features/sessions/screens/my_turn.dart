@@ -20,7 +20,6 @@ class MyTurn extends StatelessWidget {
     required this.onPassTotem,
     required this.sessionState,
     required this.event,
-    required this.emojis,
     super.key,
   });
 
@@ -29,7 +28,6 @@ class MyTurn extends StatelessWidget {
   final Future<void> Function() onPassTotem;
   final SessionState sessionState;
   final EventDetailSchema event;
-  final List<MapEntry<String, String>> emojis;
 
   @override
   Widget build(BuildContext context) {
@@ -53,11 +51,7 @@ class MyTurn extends StatelessWidget {
                   key: getParticipantKey(identifier.participant.identity),
                   participant: identifier.participant,
                   event: event,
-                  emojis: [
-                    for (final entry in emojis)
-                      if (entry.key == identifier.participant.identity)
-                        entry.value,
-                  ],
+                  participantIdentity: identifier.participant.identity,
                 );
               },
             );
