@@ -41,10 +41,9 @@ extension BackgroundControl on Session {
       ],
     );
 
-    final event = await this.event;
     _notificationTimer?.cancel();
     _notificationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _updateNotification(event);
+      if (this.event != null) _updateNotification(this.event!);
     });
   }
 

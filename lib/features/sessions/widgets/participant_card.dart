@@ -1,5 +1,4 @@
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart';
@@ -10,7 +9,6 @@ import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/widgets/audio_visualizer.dart';
-import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -422,7 +420,7 @@ class LocalParticipantVideoCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: Colors.black,
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: Colors.white, width: 2),
+          border: Border.all(color: theme.colorScheme.primary, width: 2),
         ),
         clipBehavior: Clip.antiAliasWithSaveLayer,
         child: ClipRRect(
@@ -433,36 +431,40 @@ class LocalParticipantVideoCard extends ConsumerWidget {
             child: Builder(
               builder: (context) {
                 if (!isCameraOn) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      image: user?.profileImage != null
-                          ? DecorationImage(
-                              image: CachedNetworkImageProvider(
-                                getFullUrl(user!.profileImage!),
-                              ),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    alignment: AlignmentDirectional.bottomCenter,
-                    padding: const EdgeInsetsDirectional.all(20),
-                    child: AutoSizeText(
-                      user?.name ?? 'You',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        shadows: kElevationToShadow[6],
+                  return Stack(
+                    children: [
+                      const Positioned.fill(
+                        child: UserAvatar(
+                          radius: 0,
+                          borderRadius: BorderRadius.zero,
+                          borderWidth: 0,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                    ),
+                      PositionedDirectional(
+                        bottom: 20,
+                        start: 20,
+                        end: 20,
+                        child: AutoSizeText(
+                          user?.name ?? 'You',
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            shadows: kElevationToShadow[6],
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
                   );
                 } else if (videoTrack == null) {
                   return const LoadingIndicator();
                 }
-                return VideoTrackRenderer(
-                  videoTrack!,
-                  fit: VideoViewFit.cover,
+                return RepaintBoundary(
+                  child: VideoTrackRenderer(
+                    videoTrack!,
+                    fit: VideoViewFit.cover,
+                  ),
                 );
               },
             ),
@@ -535,9 +537,18 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         ),
       );
     } else {
-      final user = ref.watch(
-        userProfileProvider(widget.participant.identity),
+      final localUser = ref.watch(
+        authControllerProvider.select((auth) => auth.user),
       );
+      if (widget.participant.identity == localUser?.slug) {
+        return const UserAvatar(
+          radius: 0,
+          borderRadius: BorderRadius.zero,
+          borderWidth: 0,
+        );
+      }
+
+      final user = ref.watch(userProfileProvider(widget.participant.identity));
       return IgnorePointer(
         child: user.when(
           data: (user) {
@@ -559,7 +570,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
               ),
             );
           },
-          loading: LoadingVideoPlaceholder.new,
+          loading: () => const LoadingVideoPlaceholder(borderRadius: 0),
         ),
       );
     }

@@ -46,7 +46,6 @@ class MyTurn extends StatelessWidget {
                   speakingNow: sessionState.speakingNow,
                   originalTracks: originalTracks,
                   sessionState: sessionState,
-                  event: event,
                 );
               },
               participantTrackBuilder: (context, identifier) {

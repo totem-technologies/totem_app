@@ -201,7 +201,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       data: (event) {
         final cachedSessionOptions = SessionOptions(
           eventSlug: widget.eventSlug,
-          keeperSlug: event.space.author.slug!,
           token: widget.token,
           cameraEnabled: widget.cameraEnabled,
           microphoneEnabled: widget.micEnabled,

@@ -164,7 +164,6 @@ class NotMyTurn extends ConsumerWidget {
                 speakingNow: activeSpeaker.identity,
                 originalTracks: originalTracks,
                 sessionState: sessionState.sessionState,
-                event: event,
               );
             },
             participantTrackBuilder: (context, identifier) {

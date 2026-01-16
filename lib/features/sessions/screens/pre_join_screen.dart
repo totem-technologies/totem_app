@@ -17,10 +17,8 @@ import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
-import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/totem_icons.dart';
-import 'package:totem_app/shared/widgets/circle_icon_button.dart';
 
 class PreJoinScreen extends ConsumerStatefulWidget {
   const PreJoinScreen({required this.eventSlug, super.key});
@@ -43,7 +41,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   @override
   void initState() {
     super.initState();
+    _requestLock = false;
     _initializeAndCheckPermissions();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   @override
@@ -52,6 +52,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       _videoTrack!.stop();
       _videoTrack!.dispose();
       _videoTrack = null;
+    }
+    _requestLock = false;
+    if (!_joined) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
     super.dispose();
   }
@@ -156,6 +160,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     setState(() => _isMicOn = !_isMicOn);
   }
 
+  bool _joined = false;
   Future<void> _joinRoom(String token) async {
     try {
       await _videoTrack?.stop();
@@ -175,146 +180,91 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           token: token,
         ),
       );
+      _joined = true;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokenData = ref.watch(sessionTokenProvider(widget.eventSlug));
 
     return tokenData.when(
-      data: (token) => Scaffold(
-        appBar: AppBar(
-          systemOverlayStyle: SystemUiOverlayStyle.dark,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: CircleIconButton(
-            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-            margin: const EdgeInsetsDirectional.only(start: 20),
-            icon: TotemIcons.arrowBack,
-            onPressed: () => popOrHome(context),
-          ),
-        ),
-        extendBodyBehindAppBar: true,
-        body: RoomBackground(
-          padding: const EdgeInsetsDirectional.all(20),
-          child: SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Welcome to this Space',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 28,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: 20,
-                  ),
-                  child: Text(
-                    'Your session will start soon. Please check your audio and video settings before joining.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontSize: 12,
-                      color: theme.textTheme.bodyMedium?.color?.withValues(
-                        alpha: 0.8,
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: 40,
-                      vertical: 10,
-                    ),
-                    child: Semantics(
-                      label:
-                          'Your video preview, camera ${_isCameraOn ? 'on' : 'off'}',
-                      image: true,
-                      child: RepaintBoundary(
-                        child: LocalParticipantVideoCard(
-                          isCameraOn: _isCameraOn,
-                          videoTrack: _videoTrack,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                ActionBar(
-                  children: [
-                    ActionBarButton(
-                      semanticsLabel: 'Microphone ${_isMicOn ? 'on' : 'off'}',
-                      onPressed: _toggleMic,
-                      active: _isMicOn,
-                      child: TotemIcon(
-                        _isMicOn
-                            ? TotemIcons.microphoneOn
-                            : TotemIcons.microphoneOff,
-                      ),
-                    ),
-                    ActionBarButton(
-                      semanticsLabel: 'Camera ${_isCameraOn ? 'on' : 'off'}',
-                      onPressed: _toggleCamera,
-                      active: _isCameraOn,
-                      child: TotemIcon(
-                        _isCameraOn
-                            ? TotemIcons.cameraOn
-                            : TotemIcons.cameraOff,
-                      ),
-                    ),
-                    ActionBarButton(
-                      semanticsLabel: MaterialLocalizations.of(
-                        context,
-                      ).moreButtonTooltip,
-                      onPressed: () async {
-                        await showPrejoinOptionsSheet(
-                          context,
-                          cameraOptions: _cameraOptions,
-                          audioOptions: _audioOptions,
-                          audioOutputOptions: _audioOutputOptions,
-                          onCameraChanged: (options) async {
-                            setState(() {
-                              _cameraOptions = options;
-                            });
-                            await _initializeLocalVideo();
-                          },
-                          onAudioChanged: (options) {
-                            setState(() {
-                              _audioOptions = options;
-                            });
-                          },
-                          onAudioOutputChanged: (options) {
-                            setState(() {
-                              _audioOutputOptions = options;
-                            });
-                          },
-                        );
-                      },
-                      child: const Center(
-                        child: TotemIcon(TotemIcons.more, size: 18),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 96,
-                      child: ActionBarButton(
-                        semanticsLabel: 'Join session',
-                        onPressed: () => _joinRoom(token),
-                        square: false,
-                        child: const Text('Join'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+      data: (token) {
+        return PrejoinRoomBaseScreen(
+          title: 'Welcome',
+          subtitle:
+              'Your session will start soon. Please check your audio and video settings before joining.',
+          video: Semantics(
+            label: 'Your video preview, camera ${_isCameraOn ? 'on' : 'off'}',
+            image: true,
+            child: LocalParticipantVideoCard(
+              isCameraOn: _isCameraOn,
+              videoTrack: _videoTrack,
             ),
           ),
-        ),
-      ),
+          actionBar: ActionBar(
+            children: [
+              ActionBarButton(
+                semanticsLabel: 'Microphone ${_isMicOn ? 'on' : 'off'}',
+                onPressed: _toggleMic,
+                active: _isMicOn,
+                child: TotemIcon(
+                  _isMicOn ? TotemIcons.microphoneOn : TotemIcons.microphoneOff,
+                ),
+              ),
+              ActionBarButton(
+                semanticsLabel: 'Camera ${_isCameraOn ? 'on' : 'off'}',
+                onPressed: _toggleCamera,
+                active: _isCameraOn,
+                child: TotemIcon(
+                  _isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+                ),
+              ),
+              ActionBarButton(
+                semanticsLabel: MaterialLocalizations.of(
+                  context,
+                ).moreButtonTooltip,
+                onPressed: () async {
+                  await showPrejoinOptionsSheet(
+                    context,
+                    cameraOptions: _cameraOptions,
+                    audioOptions: _audioOptions,
+                    audioOutputOptions: _audioOutputOptions,
+                    onCameraChanged: (options) async {
+                      setState(() {
+                        _cameraOptions = options;
+                      });
+                      await _initializeLocalVideo();
+                    },
+                    onAudioChanged: (options) {
+                      setState(() {
+                        _audioOptions = options;
+                      });
+                    },
+                    onAudioOutputChanged: (options) {
+                      setState(() {
+                        _audioOutputOptions = options;
+                      });
+                    },
+                  );
+                },
+                child: const Center(
+                  child: TotemIcon(TotemIcons.more, size: 18),
+                ),
+              ),
+              SizedBox(
+                width: 96,
+                child: ActionBarButton(
+                  semanticsLabel: 'Join session',
+                  onPressed: () => _joinRoom(token),
+                  square: false,
+                  child: const Text('Join'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
       error: (error, stackTrace) {
         return RoomBackground(
           child: RoomErrorScreen(

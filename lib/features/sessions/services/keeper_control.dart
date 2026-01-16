@@ -12,7 +12,7 @@ extension KeeperControl on Session {
           return participant.identity == state.sessionState.speakingNow;
         } else {
           // If no one is speaking right now, show the keeper's video
-          return participant.identity == options.keeperSlug;
+          return participant.identity == state.sessionState.keeperSlug;
         }
       },
       orElse: () => room.localParticipant!,
