@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart' hide Session;
+import 'package:livekit_client/livekit_client.dart'
+    hide Session, SessionOptions;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
@@ -37,6 +39,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   var _audioOptions = const AudioCaptureOptions();
   var _audioOutputOptions = const AudioOutputOptions();
 
+  SessionOptions? _sessionOptions;
+  final GlobalKey actionBarKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -53,7 +58,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       _videoTrack = null;
     }
     _requestLock = false;
-    if (!_joined) {
+    if (_sessionOptions == null) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
     super.dispose();
@@ -159,17 +164,111 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     setState(() => _isMicOn = !_isMicOn);
   }
 
-  bool _joined = false;
-  Future<void> _joinRoom(String token) async {
-    try {
-      await _videoTrack?.stop();
-      await _videoTrack?.dispose();
-    } catch (_) {}
+  Widget _buildPrejoinUI(String token, EventDetailSchema event) {
+    return PrejoinRoomBaseScreen(
+      title: 'Welcome',
+      subtitle:
+          'Your session will start soon. Please check your audio and video settings before joining.',
+      video: Semantics(
+        label: 'Your video preview, camera ${_isCameraOn ? 'on' : 'off'}',
+        image: true,
+        child: LocalParticipantVideoCard(
+          isCameraOn: _isCameraOn,
+          videoTrack: _videoTrack,
+        ),
+      ),
+      actionBar: ActionBar(
+        key: actionBarKey,
+        children: [
+          ActionBarButton(
+            semanticsLabel: 'Microphone ${_isMicOn ? 'on' : 'off'}',
+            onPressed: _sessionOptions == null ? _toggleMic : null,
+            active: _isMicOn,
+            child: TotemIcon(
+              _isMicOn ? TotemIcons.microphoneOn : TotemIcons.microphoneOff,
+            ),
+          ),
+          ActionBarButton(
+            semanticsLabel: 'Camera ${_isCameraOn ? 'on' : 'off'}',
+            onPressed: _sessionOptions == null ? _toggleCamera : null,
+            active: _isCameraOn,
+            child: TotemIcon(
+              _isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+            ),
+          ),
+          ActionBarButton(
+            semanticsLabel: MaterialLocalizations.of(
+              context,
+            ).moreButtonTooltip,
+            onPressed: () async {
+              if (_sessionOptions != null) return;
+              await showPrejoinOptionsSheet(
+                context,
+                cameraOptions: _cameraOptions,
+                audioOptions: _audioOptions,
+                audioOutputOptions: _audioOutputOptions,
+                onCameraChanged: (options) async {
+                  setState(() {
+                    _cameraOptions = options;
+                  });
+                  await _initializeLocalVideo();
+                },
+                onAudioChanged: (options) {
+                  setState(() => _audioOptions = options);
+                },
+                onAudioOutputChanged: (options) {
+                  setState(() => _audioOutputOptions = options);
+                },
+              );
+            },
+            child: const Center(
+              child: TotemIcon(TotemIcons.more, size: 18),
+            ),
+          ),
+          SizedBox(
+            width: 96,
+            child: ActionBarButton(
+              semanticsLabel: 'Join session',
+              onPressed: () => _joinRoom(token, event),
+              square: false,
+              child: const Text('Join'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Future<void> _joinRoom(String token, EventDetailSchema event) async {
+    if (_sessionOptions != null) return;
     if (mounted) {
-      _joined = true;
-      setState(() => {});
+      setState(() {
+        _sessionOptions = SessionOptions(
+          eventSlug: widget.eventSlug,
+          token: token,
+          cameraEnabled: _isCameraOn,
+          microphoneEnabled: _isMicOn,
+          cameraOptions: _cameraOptions ?? Session.defaultCameraOptions,
+          audioOptions: _audioOptions,
+          audioOutputOptions: _audioOutputOptions,
+          onEmojiReceived: (_, _) async {},
+          onMessageReceived: (_, _) {},
+          onLivekitError: (_) {},
+          onKeeperLeaveRoom: (_) => () {},
+          onConnected: _onRoomConnected,
+        );
+      });
     }
+  }
+
+  void _onRoomConnected() {
+    if (_videoTrack != null) {
+      _videoTrack!.stop();
+      _videoTrack!.dispose();
+      _videoTrack = null;
+    }
+
+    SentryDisplayWidget.of(context).reportFullyDisplayed();
   }
 
   @override
@@ -201,91 +300,16 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     final token = tokenData.value!;
     final event = eventData.value!;
 
-    final prejoin = PrejoinRoomBaseScreen(
-      title: 'Welcome',
-      subtitle:
-          'Your session will start soon. Please check your audio and video settings before joining.',
-      video: Semantics(
-        label: 'Your video preview, camera ${_isCameraOn ? 'on' : 'off'}',
-        image: true,
-        child: LocalParticipantVideoCard(
-          isCameraOn: _isCameraOn,
-          videoTrack: _videoTrack,
-        ),
-      ),
-      actionBar: ActionBar(
-        key: actionBarKey,
-        children: [
-          ActionBarButton(
-            semanticsLabel: 'Microphone ${_isMicOn ? 'on' : 'off'}',
-            onPressed: _toggleMic,
-            active: _isMicOn,
-            child: TotemIcon(
-              _isMicOn ? TotemIcons.microphoneOn : TotemIcons.microphoneOff,
-            ),
-          ),
-          ActionBarButton(
-            semanticsLabel: 'Camera ${_isCameraOn ? 'on' : 'off'}',
-            onPressed: _toggleCamera,
-            active: _isCameraOn,
-            child: TotemIcon(
-              _isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
-            ),
-          ),
-          ActionBarButton(
-            semanticsLabel: MaterialLocalizations.of(
-              context,
-            ).moreButtonTooltip,
-            onPressed: () async {
-              await showPrejoinOptionsSheet(
-                context,
-                cameraOptions: _cameraOptions,
-                audioOptions: _audioOptions,
-                audioOutputOptions: _audioOutputOptions,
-                onCameraChanged: (options) async {
-                  setState(() {
-                    _cameraOptions = options;
-                  });
-                  await _initializeLocalVideo();
-                },
-                onAudioChanged: (options) {
-                  setState(() => _audioOptions = options);
-                },
-                onAudioOutputChanged: (options) {
-                  setState(() => _audioOutputOptions = options);
-                },
-              );
-            },
-            child: const Center(
-              child: TotemIcon(TotemIcons.more, size: 18),
-            ),
-          ),
-          SizedBox(
-            width: 96,
-            child: ActionBarButton(
-              semanticsLabel: 'Join session',
-              onPressed: () => _joinRoom(token),
-              square: false,
-              child: const Text('Join'),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (_joined) {
-      return VideoRoomScreen(
-        eventSlug: widget.eventSlug,
-        token: token,
-        cameraEnabled: _isCameraOn,
-        micEnabled: _isMicOn,
-        cameraOptions: _cameraOptions ?? Session.defaultCameraOptions,
-        audioOptions: _audioOptions,
-        audioOutputOptions: _audioOutputOptions,
-        event: event,
-        loadingScreen: prejoin,
-      );
+    if (_sessionOptions == null) {
+      return _buildPrejoinUI(token, event);
     }
-    return prejoin;
+
+    return VideoRoomScreen(
+      eventSlug: widget.eventSlug,
+      sessionOptions: _sessionOptions!,
+      event: event,
+      loadingScreen: _buildPrejoinUI(token, event),
+      actionBarKey: actionBarKey,
+    );
   }
 }

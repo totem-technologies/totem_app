@@ -8,7 +8,6 @@ import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/totem_status.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -30,33 +29,21 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
 
-final GlobalKey actionBarKey = GlobalKey();
-
 class VideoRoomScreen extends ConsumerStatefulWidget {
   const VideoRoomScreen({
-    required this.token,
-    required this.cameraEnabled,
-    required this.micEnabled,
     required this.eventSlug,
-    required this.cameraOptions,
-    required this.audioOptions,
-    required this.audioOutputOptions,
+    required this.sessionOptions,
     required this.event,
     required this.loadingScreen,
+    required this.actionBarKey,
     super.key,
   });
 
-  final String token;
-  final bool cameraEnabled;
-  final bool micEnabled;
   final String eventSlug;
-
-  final CameraCaptureOptions cameraOptions;
-  final AudioCaptureOptions audioOptions;
-  final AudioOutputOptions audioOutputOptions;
-
+  final SessionOptions sessionOptions;
   final EventDetailSchema event;
   final Widget loadingScreen;
+  final GlobalKey actionBarKey;
 
   @override
   ConsumerState<VideoRoomScreen> createState() => _VideoRoomScreenState();
@@ -173,25 +160,21 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     );
   }
 
-  void _onConnected() {
-    SentryDisplayWidget.of(context).reportFullyDisplayed();
-  }
-
   @override
   Widget build(BuildContext context) {
     final cachedSessionOptions = SessionOptions(
-      eventSlug: widget.eventSlug,
-      token: widget.token,
-      cameraEnabled: widget.cameraEnabled,
-      microphoneEnabled: widget.micEnabled,
-      cameraOptions: widget.cameraOptions,
-      audioOptions: widget.audioOptions,
-      audioOutputOptions: widget.audioOutputOptions,
+      eventSlug: widget.sessionOptions.eventSlug,
+      token: widget.sessionOptions.token,
+      cameraEnabled: widget.sessionOptions.cameraEnabled,
+      microphoneEnabled: widget.sessionOptions.microphoneEnabled,
+      cameraOptions: widget.sessionOptions.cameraOptions,
+      audioOptions: widget.sessionOptions.audioOptions,
+      audioOutputOptions: widget.sessionOptions.audioOutputOptions,
+      onConnected: widget.sessionOptions.onConnected,
       onEmojiReceived: _onEmojiReceived,
       onMessageReceived: _onChatMessageReceived,
       onLivekitError: _onLivekitError,
       onKeeperLeaveRoom: _onKeeperLeft,
-      onConnected: _onConnected,
     );
 
     final sessionState = ref.watch(sessionProvider(cachedSessionOptions));
@@ -314,14 +297,13 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     return Builder(
       builder: (context) {
         final room = notifier.room;
-        final user = room.localParticipant;
-        if (user == null) return const SizedBox.shrink();
+        final user = room.localParticipant!;
 
         final isUserTileVisible =
             getParticipantKey(user.identity).currentContext != null;
 
         return ActionBar(
-          key: actionBarKey,
+          key: widget.actionBarKey,
           children: [
             ActionBarButton(
               semanticsLabel:

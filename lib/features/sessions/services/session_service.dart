@@ -129,7 +129,7 @@ class SessionRoomState {
 
   @override
   String toString() {
-    return 'LiveKitState('
+    return 'SessionRoomState('
         'connectionState: $connectionState, '
         'sessionState: $sessionState'
         ')';
