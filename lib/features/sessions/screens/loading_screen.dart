@@ -9,7 +9,9 @@ import 'package:totem_app/shared/widgets/circle_icon_button.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
 class LoadingRoomScreen extends StatelessWidget {
-  const LoadingRoomScreen({super.key});
+  const LoadingRoomScreen({super.key, this.actionBarKey});
+
+  final Key? actionBarKey;
 
   @override
   Widget build(BuildContext context) {
@@ -28,8 +30,9 @@ class LoadingRoomScreen extends StatelessWidget {
           child: LoadingVideoPlaceholder(),
         ),
       ),
-      actionBar: const ActionBar(
-        children: [
+      actionBar: ActionBar(
+        key: actionBarKey,
+        children: const [
           ActionBarButton(
             onPressed: null,
             child: LoadingIndicator(color: Colors.white),

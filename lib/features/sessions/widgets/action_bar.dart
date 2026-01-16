@@ -69,7 +69,8 @@ class ActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
       decoration: BoxDecoration(
         color: const Color(0x40000000),
         borderRadius: BorderRadius.circular(30),
@@ -79,12 +80,37 @@ class ActionBar extends StatelessWidget {
         horizontal: 10,
         vertical: 10,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 20,
-        children: [
-          for (final child in children) child,
-        ],
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          switchInCurve: Curves.easeInOut,
+          switchOutCurve: Curves.easeInOut,
+          transitionBuilder: (child, animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+          layoutBuilder: (currentChild, previousChildren) {
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                ...previousChildren,
+                currentChild ?? const SizedBox.shrink(),
+              ],
+            );
+          },
+          child: Row(
+            key: ValueKey(children.length),
+            mainAxisSize: MainAxisSize.min,
+            spacing: 20,
+            children: [
+              for (final child in children) child,
+            ],
+          ),
+        ),
       ),
     );
   }

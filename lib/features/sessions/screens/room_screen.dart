@@ -14,7 +14,6 @@ import 'package:totem_app/api/models/totem_status.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
-import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
 import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
 import 'package:totem_app/features/sessions/screens/options_sheet.dart';
@@ -26,32 +25,12 @@ import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/protection_overlay.dart';
-import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
 
-class VideoRoomScreenRouteArgs {
-  const VideoRoomScreenRouteArgs({
-    required this.token,
-    required this.cameraEnabled,
-    required this.micEnabled,
-    required this.eventSlug,
-    required this.cameraOptions,
-    required this.audioOptions,
-    required this.audioOutputOptions,
-  });
-
-  final String token;
-  final bool cameraEnabled;
-  final bool micEnabled;
-  final String eventSlug;
-
-  final CameraCaptureOptions cameraOptions;
-  final AudioCaptureOptions audioOptions;
-  final AudioOutputOptions audioOutputOptions;
-}
+final GlobalKey actionBarKey = GlobalKey();
 
 class VideoRoomScreen extends ConsumerStatefulWidget {
   const VideoRoomScreen({
@@ -62,6 +41,8 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
     required this.cameraOptions,
     required this.audioOptions,
     required this.audioOutputOptions,
+    required this.event,
+    required this.loadingScreen,
     super.key,
   });
 
@@ -73,6 +54,9 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
   final CameraCaptureOptions cameraOptions;
   final AudioCaptureOptions audioOptions;
   final AudioOutputOptions audioOutputOptions;
+
+  final EventDetailSchema event;
+  final Widget loadingScreen;
 
   @override
   ConsumerState<VideoRoomScreen> createState() => _VideoRoomScreenState();
@@ -195,93 +179,79 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final eventAsync = ref.watch(eventProvider(widget.eventSlug));
+    final cachedSessionOptions = SessionOptions(
+      eventSlug: widget.eventSlug,
+      token: widget.token,
+      cameraEnabled: widget.cameraEnabled,
+      microphoneEnabled: widget.micEnabled,
+      cameraOptions: widget.cameraOptions,
+      audioOptions: widget.audioOptions,
+      audioOutputOptions: widget.audioOutputOptions,
+      onEmojiReceived: _onEmojiReceived,
+      onMessageReceived: _onChatMessageReceived,
+      onLivekitError: _onLivekitError,
+      onKeeperLeaveRoom: _onKeeperLeft,
+      onConnected: _onConnected,
+    );
 
-    return eventAsync.when(
-      data: (event) {
-        final cachedSessionOptions = SessionOptions(
-          eventSlug: widget.eventSlug,
-          token: widget.token,
-          cameraEnabled: widget.cameraEnabled,
-          microphoneEnabled: widget.micEnabled,
-          cameraOptions: widget.cameraOptions,
-          audioOptions: widget.audioOptions,
-          audioOutputOptions: widget.audioOutputOptions,
-          onEmojiReceived: _onEmojiReceived,
-          onMessageReceived: _onChatMessageReceived,
-          onLivekitError: _onLivekitError,
-          onKeeperLeaveRoom: _onKeeperLeft,
-          onConnected: _onConnected,
-        );
+    final sessionState = ref.watch(sessionProvider(cachedSessionOptions));
+    final sessionNotifier = ref.read(
+      sessionProvider(cachedSessionOptions).notifier,
+    );
 
-        final sessionState = ref.watch(sessionProvider(cachedSessionOptions));
-        final sessionNotifier = ref.read(
-          sessionProvider(cachedSessionOptions).notifier,
-        );
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
 
-        return PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (didPop, result) async {
-            if (didPop) return;
+        // Checks if there is any other route above the first route.
+        //   This route would be a modal sheet or a dialog.
+        final navigator = _navigatorKey.currentState;
+        if (navigator?.canPop() ?? false) {
+          navigator!.pop();
+          return;
+        }
 
-            // Checks if there is any other route above the first route.
-            //   This route would be a modal sheet or a dialog.
-            final navigator = _navigatorKey.currentState;
-            if (navigator?.canPop() ?? false) {
-              navigator!.pop();
-              return;
-            }
+        // If there is no other route above the first route, the user is
+        // trying to leave the session.
 
-            // If there is no other route above the first route, the user is
-            // trying to leave the session.
+        // If the session is not connected or connecting, leave the session.
+        if (sessionState.connectionState != RoomConnectionState.connecting &&
+            sessionState.connectionState != RoomConnectionState.connected) {
+          popOrHome(context);
+          return;
+        }
 
-            // If the session is not connected or connecting, leave the session.
-            if (sessionState.connectionState !=
-                    RoomConnectionState.connecting &&
-                sessionState.connectionState != RoomConnectionState.connected) {
-              popOrHome(context);
-              return;
-            }
-
-            // If the session is connected, show a dialog to confirm the action.
-            final shouldPop = await showLeaveDialog(context) ?? false;
-            if (context.mounted && shouldPop) {
-              popOrHome(context);
-            }
+        // If the session is connected, show a dialog to confirm the action.
+        final shouldPop = await showLeaveDialog(context) ?? false;
+        if (context.mounted && shouldPop) {
+          popOrHome(context);
+        }
+      },
+      child: RoomBackground(
+        status: sessionState.sessionState.status,
+        child: LivekitRoom(
+          roomContext: sessionNotifier.room,
+          builder: (context, roomCtx) {
+            return Navigator(
+              key: _navigatorKey,
+              clipBehavior: Clip.none,
+              onDidRemovePage: (page) => {},
+              pages: [
+                MaterialPage(
+                  child: RepaintBoundary(
+                    child: _buildBody(sessionNotifier, sessionState),
+                  ),
+                ),
+              ],
+            );
           },
-          child: RoomBackground(
-            status: sessionState.sessionState.status,
-            child: LivekitRoom(
-              roomContext: sessionNotifier.room,
-              builder: (context, roomCtx) {
-                return Navigator(
-                  key: _navigatorKey,
-                  clipBehavior: Clip.none,
-                  onDidRemovePage: (page) => {},
-                  pages: [
-                    MaterialPage(
-                      child: RepaintBoundary(
-                        child: _buildBody(event, sessionNotifier, sessionState),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        );
-      },
-      loading: () => const LoadingRoomScreen(),
-      error: (error, stackTrace) {
-        return RoomErrorScreen(
-          onRetry: () => ref.refresh(eventProvider(widget.eventSlug).future),
-        );
-      },
+        ),
+      ),
     );
   }
 
   Widget _buildBody(
-    EventDetailSchema event,
     Session session,
     SessionRoomState state,
   ) {
@@ -290,22 +260,22 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       case RoomConnectionState.error:
         return RoomErrorScreen(onRetry: roomCtx.connect);
       case RoomConnectionState.connecting:
-        return const LoadingRoomScreen();
+        return widget.loadingScreen;
       case RoomConnectionState.disconnected:
-        return SessionEndedScreen(event: event, session: session);
+        return SessionEndedScreen(event: widget.event, session: session);
       case RoomConnectionState.connected:
         if (state.sessionState.status == SessionStatus.ended) {
-          return SessionEndedScreen(event: event, session: session);
+          return SessionEndedScreen(event: widget.event, session: session);
         }
         if (roomCtx.localParticipant == null) {
-          return const LoadingRoomScreen();
+          return widget.loadingScreen;
         }
 
         if (state.sessionState.totemStatus == TotemStatus.passing &&
             state.amNext(session.room)) {
           return ReceiveTotemScreen(
             sessionState: state,
-            actionBar: buildActionBar(session, state, event),
+            actionBar: buildActionBar(session, state, widget.event),
             onAcceptTotem: session.acceptTotem,
           );
         }
@@ -313,22 +283,22 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         if (state.isMyTurn(session.room)) {
           return ProtectionOverlay(
             child: MyTurn(
-              actionBar: buildActionBar(session, state, event),
+              actionBar: buildActionBar(session, state, widget.event),
               getParticipantKey: getParticipantKey,
               onPassTotem: session.passTotem,
               sessionState: state.sessionState,
-              event: event,
+              event: widget.event,
               emojis: _reactions,
             ),
           );
         } else {
           return ProtectionOverlay(
             child: NotMyTurn(
-              actionBar: buildActionBar(session, state, event),
+              actionBar: buildActionBar(session, state, widget.event),
               getParticipantKey: getParticipantKey,
               sessionState: state,
               session: session,
-              event: event,
+              event: widget.event,
               emojis: _reactions,
             ),
           );
@@ -351,6 +321,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             getParticipantKey(user.identity).currentContext != null;
 
         return ActionBar(
+          key: actionBarKey,
           children: [
             ActionBarButton(
               semanticsLabel:
