@@ -51,12 +51,37 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
 
 class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   final _navigatorKey = GlobalKey<NavigatorState>();
+  SessionOptions? _cachedSessionOptions;
 
   @override
   void initState() {
     super.initState();
+    _buildSessionOptions();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _listenToBatteryChanges();
+  }
+
+  @override
+  void didUpdateWidget(covariant VideoRoomScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _buildSessionOptions();
+  }
+
+  SessionOptions _buildSessionOptions() {
+    return _cachedSessionOptions = SessionOptions(
+      eventSlug: widget.sessionOptions.eventSlug,
+      token: widget.sessionOptions.token,
+      cameraEnabled: widget.sessionOptions.cameraEnabled,
+      microphoneEnabled: widget.sessionOptions.microphoneEnabled,
+      cameraOptions: widget.sessionOptions.cameraOptions,
+      audioOptions: widget.sessionOptions.audioOptions,
+      audioOutputOptions: widget.sessionOptions.audioOutputOptions,
+      onConnected: widget.sessionOptions.onConnected,
+      onEmojiReceived: _onEmojiReceived,
+      onMessageReceived: _onChatMessageReceived,
+      onLivekitError: _onLivekitError,
+      onKeeperLeaveRoom: _onKeeperLeft,
+    );
   }
 
   @override
@@ -162,24 +187,11 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cachedSessionOptions = SessionOptions(
-      eventSlug: widget.sessionOptions.eventSlug,
-      token: widget.sessionOptions.token,
-      cameraEnabled: widget.sessionOptions.cameraEnabled,
-      microphoneEnabled: widget.sessionOptions.microphoneEnabled,
-      cameraOptions: widget.sessionOptions.cameraOptions,
-      audioOptions: widget.sessionOptions.audioOptions,
-      audioOutputOptions: widget.sessionOptions.audioOutputOptions,
-      onConnected: widget.sessionOptions.onConnected,
-      onEmojiReceived: _onEmojiReceived,
-      onMessageReceived: _onChatMessageReceived,
-      onLivekitError: _onLivekitError,
-      onKeeperLeaveRoom: _onKeeperLeft,
+    final sessionState = ref.watch(
+      sessionProvider(_cachedSessionOptions ?? _buildSessionOptions()),
     );
-
-    final sessionState = ref.watch(sessionProvider(cachedSessionOptions));
     final sessionNotifier = ref.read(
-      sessionProvider(cachedSessionOptions).notifier,
+      sessionProvider(_cachedSessionOptions ?? _buildSessionOptions()).notifier,
     );
 
     return PopScope(

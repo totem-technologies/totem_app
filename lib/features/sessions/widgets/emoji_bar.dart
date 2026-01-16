@@ -212,25 +212,34 @@ Future<void> displayReaction(
   final overlay = Overlay.of(context);
 
   final completer = Completer<void>();
-  late final OverlayEntry entry;
-  entry = OverlayEntry(
-    builder: (context) {
-      return RisingEmoji(
-        emoji: emoji,
-        startX: position.dx + box.size.width * 0.15,
-        startY: box.size.height / 2,
-        onCompleted: () {
-          if (entry.mounted) {
-            entry.remove();
-          }
-          completer.complete();
-        },
-      );
-    },
-  );
+  OverlayEntry? entry;
 
-  overlay.insert(entry);
-  return completer.future;
+  try {
+    entry = OverlayEntry(
+      builder: (context) {
+        return RisingEmoji(
+          emoji: emoji,
+          startX: position.dx + box.size.width * 0.15,
+          startY: box.size.height / 2,
+          onCompleted: () {
+            if (entry?.mounted ?? false) {
+              entry?.remove();
+            }
+            if (!completer.isCompleted) {
+              completer.complete();
+            }
+          },
+        );
+      },
+    );
+
+    overlay.insert(entry);
+    await completer.future;
+  } finally {
+    if (entry?.mounted ?? false) {
+      entry?.remove();
+    }
+  }
 }
 
 @visibleForTesting

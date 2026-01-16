@@ -31,7 +31,7 @@ class PreJoinScreen extends ConsumerStatefulWidget {
 }
 
 class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
-  LocalVideoTrack? _videoTrack;
+  LocalVideoTrack? _previewVideoTrack;
   var _isCameraOn = true;
   var _isMicOn = true;
 
@@ -52,10 +52,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   @override
   void dispose() {
-    if (_videoTrack != null) {
-      _videoTrack!.stop();
-      _videoTrack!.dispose();
-      _videoTrack = null;
+    if (_previewVideoTrack != null) {
+      _previewVideoTrack!.stop();
+      _previewVideoTrack!.dispose();
+      _previewVideoTrack = null;
     }
     _requestLock = false;
     if (_sessionOptions == null) {
@@ -135,17 +135,16 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   Future<void> _initializeLocalVideo() async {
-    if (_videoTrack != null) {
-      try {
-        await _videoTrack!.stop();
-        await _videoTrack!.dispose();
-        _videoTrack = null;
-      } catch (_) {}
+    if (_previewVideoTrack != null) {
+      await _disposePreviewTrack();
     }
+
     try {
       _cameraOptions ??= Session.defaultCameraOptions;
-      _videoTrack = await LocalVideoTrack.createCameraTrack(_cameraOptions);
-      await _videoTrack!.start();
+      _previewVideoTrack = await LocalVideoTrack.createCameraTrack(
+        _cameraOptions,
+      );
+      await _previewVideoTrack!.start();
       if (mounted) setState(() {});
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -174,7 +173,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         image: true,
         child: LocalParticipantVideoCard(
           isCameraOn: _isCameraOn,
-          videoTrack: _videoTrack,
+          videoTrack: _previewVideoTrack,
         ),
       ),
       actionBar: ActionBar(
@@ -262,13 +261,26 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   void _onRoomConnected() {
-    if (_videoTrack != null) {
-      _videoTrack!.stop();
-      _videoTrack!.dispose();
-      _videoTrack = null;
-    }
-
+    _disposePreviewTrack();
     SentryDisplayWidget.of(context).reportFullyDisplayed();
+  }
+
+  Future<void> _disposePreviewTrack() async {
+    if (_previewVideoTrack != null) {
+      try {
+        await _previewVideoTrack!.stop();
+      } catch (e) {
+        ErrorHandler.logError(e, message: 'Failed to stop preview track');
+      }
+
+      try {
+        await _previewVideoTrack!.dispose();
+      } catch (e) {
+        ErrorHandler.logError(e, message: 'Failed to dispose preview track');
+      } finally {
+        _previewVideoTrack = null;
+      }
+    }
   }
 
   @override

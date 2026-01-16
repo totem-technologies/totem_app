@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
@@ -486,18 +488,27 @@ class ParticipantVideo extends ConsumerStatefulWidget {
 
 class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   late final EventsListener<ParticipantEvent> _listener;
+  Timer? _statsTimer;
+  static const _statsPollInterval = Duration(seconds: 2);
 
   @override
   void initState() {
     super.initState();
     _listener = widget.participant.createListener();
-    _listener.listen((event) => _checkVideoStats());
+    _listener.listen((event) => _scheduleStatsCheck());
+    _checkVideoStats();
   }
 
   @override
   void dispose() {
+    _statsTimer?.cancel();
     _listener.dispose();
     super.dispose();
+  }
+
+  void _scheduleStatsCheck() {
+    if (_statsTimer?.isActive ?? false) return;
+    _statsTimer = Timer(_statsPollInterval, _checkVideoStats);
   }
 
   bool _active = true;
@@ -507,13 +518,16 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
             as RemoteVideoTrack?;
     if (videoTrack == null) return;
     final stats = await videoTrack.getReceiverStats();
+
+    if (!mounted) return;
     final fps = stats?.framesPerSecond;
     if (fps == null || fps == 0) {
-      _active = false;
+      if (_active) {
+        setState(() => _active = false);
+      }
     } else {
-      _active = true;
+      if (!_active) setState(() => _active = true);
     }
-    if (mounted) setState(() {});
   }
 
   @override
