@@ -1,5 +1,6 @@
+import 'dart:async';
+
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart';
@@ -7,10 +8,10 @@ import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
+import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/widgets/audio_visualizer.dart';
-import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -20,13 +21,13 @@ class ParticipantCard extends ConsumerWidget {
   const ParticipantCard({
     required this.participant,
     required this.event,
-    required this.emojis,
+    required this.participantIdentity,
     super.key,
   });
 
   final Participant participant;
   final EventDetailSchema event;
-  final List<String> emojis;
+  final String participantIdentity;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -71,8 +72,7 @@ class ParticipantCard extends ConsumerWidget {
           ),
           clipBehavior: Clip.hardEdge,
           child: ClipRRect(
-            // radius - border width
-            borderRadius: BorderRadius.circular(20 - 2),
+            borderRadius: BorderRadius.circular(18),
             clipBehavior: Clip.hardEdge,
             child: Stack(
               clipBehavior: Clip.none,
@@ -83,40 +83,50 @@ class ParticipantCard extends ConsumerWidget {
                 PositionedDirectional(
                   top: overlayPadding,
                   start: overlayPadding,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    switchInCurve: Curves.easeInOut,
-                    switchOutCurve: Curves.easeInOut,
-                    child: emojis.isNotEmpty
-                        ? Container(
-                            key: Key(emojis.first),
-                            width: 20,
-                            height: 20,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              emojis.first,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                textBaseline: TextBaseline.ideographic,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          )
-                        : Container(
-                            width: 20,
-                            height: 20,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.black54,
-                            ),
-                            padding: const EdgeInsetsDirectional.all(2),
-                            alignment: Alignment.center,
-                            child: SpeakingIndicator(participant: participant),
-                          ),
+                  child: Consumer(
+                    builder: (context, ref, child) {
+                      final emojis = ref.watch(
+                        participantEmojisProvider(participantIdentity),
+                      );
+                      return AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        switchInCurve: Curves.easeInOut,
+                        switchOutCurve: Curves.easeInOut,
+                        child: emojis.isNotEmpty
+                            ? Container(
+                                key: ValueKey(emojis.first),
+                                width: 20,
+                                height: 20,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  emojis.first,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    textBaseline: TextBaseline.ideographic,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              )
+                            : child,
+                      );
+                    },
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black54,
+                      ),
+                      padding: const EdgeInsetsDirectional.all(2),
+                      alignment: Alignment.center,
+                      child: SpeakingIndicator(
+                        participant: participant,
+                      ),
+                    ),
                   ),
                 ),
                 if (currentUserIsKeeper &&
@@ -422,7 +432,7 @@ class LocalParticipantVideoCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: Colors.black,
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: Colors.white, width: 2),
+          border: Border.all(color: theme.colorScheme.primary, width: 2),
         ),
         clipBehavior: Clip.antiAliasWithSaveLayer,
         child: ClipRRect(
@@ -433,36 +443,40 @@ class LocalParticipantVideoCard extends ConsumerWidget {
             child: Builder(
               builder: (context) {
                 if (!isCameraOn) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      image: user?.profileImage != null
-                          ? DecorationImage(
-                              image: CachedNetworkImageProvider(
-                                getFullUrl(user!.profileImage!),
-                              ),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    alignment: AlignmentDirectional.bottomCenter,
-                    padding: const EdgeInsetsDirectional.all(20),
-                    child: AutoSizeText(
-                      user?.name ?? 'You',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        shadows: kElevationToShadow[6],
+                  return Stack(
+                    children: [
+                      const Positioned.fill(
+                        child: UserAvatar(
+                          radius: 0,
+                          borderRadius: BorderRadius.zero,
+                          borderWidth: 0,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                    ),
+                      PositionedDirectional(
+                        bottom: 20,
+                        start: 20,
+                        end: 20,
+                        child: AutoSizeText(
+                          user?.name ?? 'You',
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            shadows: kElevationToShadow[6],
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
                   );
                 } else if (videoTrack == null) {
                   return const LoadingIndicator();
                 }
-                return VideoTrackRenderer(
-                  videoTrack!,
-                  fit: VideoViewFit.cover,
+                return RepaintBoundary(
+                  child: VideoTrackRenderer(
+                    videoTrack!,
+                    fit: VideoViewFit.cover,
+                  ),
                 );
               },
             ),
@@ -473,21 +487,70 @@ class LocalParticipantVideoCard extends ConsumerWidget {
   }
 }
 
-class ParticipantVideo extends ConsumerWidget {
+class ParticipantVideo extends ConsumerStatefulWidget {
   const ParticipantVideo({required this.participant, super.key});
 
   final Participant<TrackPublication<Track>> participant;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final videoTrack = participant.videoTrackPublications.where(
+  ConsumerState<ParticipantVideo> createState() => _ParticipantVideoState();
+}
+
+class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
+  late final EventsListener<ParticipantEvent> _listener;
+  Timer? _statsTimer;
+  static const _statsPollInterval = Duration(seconds: 2);
+
+  @override
+  void initState() {
+    super.initState();
+    _listener = widget.participant.createListener();
+    _listener.listen((event) => _scheduleStatsCheck());
+    _checkVideoStats();
+  }
+
+  @override
+  void dispose() {
+    _statsTimer?.cancel();
+    _listener.dispose();
+    super.dispose();
+  }
+
+  void _scheduleStatsCheck() {
+    if (_statsTimer?.isActive ?? false) return;
+    _statsTimer = Timer(_statsPollInterval, _checkVideoStats);
+  }
+
+  bool _active = true;
+  void _checkVideoStats() async {
+    final videoTrack =
+        widget.participant.videoTrackPublications.firstOrNull?.track
+            as RemoteVideoTrack?;
+    if (videoTrack == null) return;
+    final stats = await videoTrack.getReceiverStats();
+
+    if (!mounted) return;
+    final fps = stats?.framesPerSecond;
+    if (fps == null || fps == 0) {
+      if (_active) {
+        setState(() => _active = false);
+      }
+    } else {
+      if (!_active) setState(() => _active = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final videoTrack = widget.participant.videoTrackPublications.where(
       (t) =>
           t.track != null &&
           t.kind == TrackType.VIDEO &&
           t.track!.isActive &&
-          t.participant.isCameraEnabled(),
+          t.participant.isCameraEnabled() &&
+          !t.track!.muted,
     );
-    if (videoTrack.isNotEmpty) {
+    if (_active && videoTrack.isNotEmpty) {
       return IgnorePointer(
         child: RepaintBoundary(
           child: VideoTrackRenderer(
@@ -498,32 +561,41 @@ class ParticipantVideo extends ConsumerWidget {
         ),
       );
     } else {
-      final user = ref.watch(
-        userProfileProvider(participant.identity),
+      final localUser = ref.watch(
+        authControllerProvider.select((auth) => auth.user),
       );
-      return user.when(
-        data: (user) {
-          return IgnorePointer(
-            child: UserAvatar.fromUserSchema(
+      if (widget.participant.identity == localUser?.slug) {
+        return const UserAvatar(
+          radius: 0,
+          borderRadius: BorderRadius.zero,
+          borderWidth: 0,
+        );
+      }
+
+      final user = ref.watch(userProfileProvider(widget.participant.identity));
+      return IgnorePointer(
+        child: user.when(
+          data: (user) {
+            return UserAvatar.fromUserSchema(
               user,
               borderRadius: BorderRadius.zero,
               borderWidth: 0,
-            ),
-          );
-        },
-        error: (error, stackTrace) {
-          return const ColoredBox(
-            color: AppTheme.mauve,
-            child: Center(
-              child: TotemIcon(
-                TotemIcons.person,
-                size: 24,
-                color: Colors.white,
+            );
+          },
+          error: (error, stackTrace) {
+            return const ColoredBox(
+              color: AppTheme.mauve,
+              child: Center(
+                child: TotemIcon(
+                  TotemIcons.person,
+                  size: 24,
+                  color: Colors.white,
+                ),
               ),
-            ),
-          );
-        },
-        loading: LoadingVideoPlaceholder.new,
+            );
+          },
+          loading: () => const LoadingVideoPlaceholder(borderRadius: 0),
+        ),
       );
     }
   }

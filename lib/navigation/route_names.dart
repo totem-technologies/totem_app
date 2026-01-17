@@ -31,7 +31,6 @@ class RouteNames {
   static String blogPost(String slug) => '/blog/$slug';
 
   static const videoSessionPrejoin = '/video-session/join';
-  static String videoSession(String slug) => '/video-session/$slug';
 
   static const allRoutes = <String>[
     login,

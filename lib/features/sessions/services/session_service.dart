@@ -50,7 +50,6 @@ typedef OnKeeperLeaveRoom = VoidCallback Function(Session room);
 class SessionOptions {
   const SessionOptions({
     required this.eventSlug,
-    required this.keeperSlug,
     required this.token,
     required this.cameraEnabled,
     required this.microphoneEnabled,
@@ -65,7 +64,6 @@ class SessionOptions {
   });
 
   final String eventSlug;
-  final String keeperSlug;
   final String token;
   final bool cameraEnabled;
   final bool microphoneEnabled;
@@ -85,19 +83,11 @@ class SessionOptions {
     if (identical(this, other)) return true;
     return other is SessionOptions &&
         other.eventSlug == eventSlug &&
-        other.keeperSlug == keeperSlug &&
         other.token == token;
   }
 
   @override
-  int get hashCode => eventSlug.hashCode ^ keeperSlug.hashCode ^ token.hashCode;
-
-  @override
-  String toString() {
-    return 'SessionOptions(eventSlug: $eventSlug, keeperSlug: $keeperSlug, '
-        'token: $token, cameraEnabled: $cameraEnabled, '
-        'microphoneEnabled: $microphoneEnabled)';
-  }
+  int get hashCode => eventSlug.hashCode ^ token.hashCode;
 }
 
 enum RoomConnectionState { connecting, connected, disconnected, error }
@@ -139,7 +129,7 @@ class SessionRoomState {
 
   @override
   String toString() {
-    return 'LiveKitState('
+    return 'SessionRoomState('
         'connectionState: $connectionState, '
         'sessionState: $sessionState'
         ')';
@@ -153,6 +143,7 @@ class Session extends _$Session {
   late final MobileTotemApi _apiService;
   late SessionOptions _options;
   String? _lastMetadata;
+  EventDetailSchema? event;
 
   Timer? _notificationTimer;
   VoidCallback? closeKeeperLeftNotification;
@@ -166,6 +157,10 @@ class Session extends _$Session {
   SessionRoomState build(SessionOptions options) {
     _options = options;
     _apiService = ref.read(mobileApiServiceProvider);
+
+    ref.watch(eventProvider(_options.eventSlug)).whenData((event) {
+      this.event = event;
+    });
 
     room = RoomContext(
       url: AppConfig.liveKitUrl,
@@ -352,10 +347,7 @@ class Session extends _$Session {
       );
       userSlug = currentUserSlug;
     }
-    return _options.keeperSlug == userSlug;
-  }
 
-  // ignore: avoid_public_notifier_properties
-  Future<EventDetailSchema> get event =>
-      ref.read(eventProvider(_options.eventSlug).future);
+    return state.sessionState.keeperSlug == userSlug;
+  }
 }

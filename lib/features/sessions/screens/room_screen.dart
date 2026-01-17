@@ -8,13 +8,12 @@ import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/totem_status.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
-import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
 import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
 import 'package:totem_app/features/sessions/screens/options_sheet.dart';
@@ -26,104 +25,71 @@ import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/protection_overlay.dart';
-import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
 
-class VideoRoomScreenRouteArgs {
-  const VideoRoomScreenRouteArgs({
-    required this.token,
-    required this.cameraEnabled,
-    required this.micEnabled,
-    required this.eventSlug,
-    required this.cameraOptions,
-    required this.audioOptions,
-    required this.audioOutputOptions,
-  });
-
-  final String token;
-  final bool cameraEnabled;
-  final bool micEnabled;
-  final String eventSlug;
-
-  final CameraCaptureOptions cameraOptions;
-  final AudioCaptureOptions audioOptions;
-  final AudioOutputOptions audioOutputOptions;
-}
-
 class VideoRoomScreen extends ConsumerStatefulWidget {
   const VideoRoomScreen({
-    required this.token,
-    required this.cameraEnabled,
-    required this.micEnabled,
     required this.eventSlug,
-    required this.cameraOptions,
-    required this.audioOptions,
-    required this.audioOutputOptions,
+    required this.sessionOptions,
+    required this.event,
+    required this.loadingScreen,
+    required this.actionBarKey,
     super.key,
   });
 
-  final String token;
-  final bool cameraEnabled;
-  final bool micEnabled;
   final String eventSlug;
-
-  final CameraCaptureOptions cameraOptions;
-  final AudioCaptureOptions audioOptions;
-  final AudioOutputOptions audioOutputOptions;
+  final SessionOptions sessionOptions;
+  final EventDetailSchema event;
+  final Widget loadingScreen;
+  final GlobalKey actionBarKey;
 
   @override
   ConsumerState<VideoRoomScreen> createState() => _VideoRoomScreenState();
 }
 
-class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen>
-    with WidgetsBindingObserver {
+class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   final _navigatorKey = GlobalKey<NavigatorState>();
-  bool _wasCameraEnabledBeforeBackground = false;
+  SessionOptions? _cachedSessionOptions;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
+    _buildSessionOptions();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _listenToBatteryChanges();
   }
 
   @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    _batterySubscription?.cancel();
-    super.dispose();
+  void didUpdateWidget(covariant VideoRoomScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _buildSessionOptions();
+  }
+
+  SessionOptions _buildSessionOptions() {
+    return _cachedSessionOptions = SessionOptions(
+      eventSlug: widget.sessionOptions.eventSlug,
+      token: widget.sessionOptions.token,
+      cameraEnabled: widget.sessionOptions.cameraEnabled,
+      microphoneEnabled: widget.sessionOptions.microphoneEnabled,
+      cameraOptions: widget.sessionOptions.cameraOptions,
+      audioOptions: widget.sessionOptions.audioOptions,
+      audioOutputOptions: widget.sessionOptions.audioOutputOptions,
+      onConnected: widget.sessionOptions.onConnected,
+      onEmojiReceived: _onEmojiReceived,
+      onMessageReceived: _onChatMessageReceived,
+      onLivekitError: _onLivekitError,
+      onKeeperLeaveRoom: _onKeeperLeft,
+    );
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    _handleAppLifecycleChange(state);
-  }
-
-  void _handleAppLifecycleChange(AppLifecycleState state) {
-    if (_cachedSessionOptions == null) return;
-
-    final sessionNotifier = ref.read(
-      sessionProvider(_cachedSessionOptions!).notifier,
-    );
-    final room = sessionNotifier.room;
-
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      _wasCameraEnabledBeforeBackground = room.cameraOpened;
-      if (_wasCameraEnabledBeforeBackground) {
-        sessionNotifier.disableCamera();
-      }
-    } else if (state == AppLifecycleState.resumed) {
-      if (_wasCameraEnabledBeforeBackground) {
-        sessionNotifier.enableCamera();
-      }
-    }
+  void dispose() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    _batterySubscription?.cancel();
+    super.dispose();
   }
 
   final battery = Battery();
@@ -168,14 +134,11 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen>
   }
 
   var _showEmojiPicker = false;
-  final _reactions = <MapEntry<String, String>>[];
-  Future<void> _onEmojiReceived(String userIdentity, String emoji) async {
+  void _onEmojiReceived(String userIdentity, String emoji) {
     if (!mounted) return;
-    final entry = MapEntry(userIdentity, emoji);
-    setState(() => _reactions.add(entry));
-    await displayReaction(context, emoji);
-    _reactions.remove(entry);
-    if (mounted) setState(() {});
+    ref
+        .read(emojiReactionsProvider.notifier)
+        .addReaction(context, userIdentity, emoji);
   }
 
   bool _chatSheetOpen = false;
@@ -220,102 +183,68 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen>
     );
   }
 
-  void _onConnected() {
-    SentryDisplayWidget.of(context).reportFullyDisplayed();
-  }
-
-  SessionOptions? _cachedSessionOptions;
-
   @override
   Widget build(BuildContext context) {
-    final eventAsync = ref.watch(eventProvider(widget.eventSlug));
+    final sessionState = ref.watch(
+      sessionProvider(_cachedSessionOptions ?? _buildSessionOptions()),
+    );
+    final sessionNotifier = ref.read(
+      sessionProvider(_cachedSessionOptions ?? _buildSessionOptions()).notifier,
+    );
 
-    return eventAsync.when(
-      data: (event) {
-        _cachedSessionOptions = SessionOptions(
-          eventSlug: widget.eventSlug,
-          keeperSlug: event.space.author.slug!,
-          token: widget.token,
-          cameraEnabled: widget.cameraEnabled,
-          microphoneEnabled: widget.micEnabled,
-          cameraOptions: widget.cameraOptions,
-          audioOptions: widget.audioOptions,
-          audioOutputOptions: widget.audioOutputOptions,
-          onEmojiReceived: _onEmojiReceived,
-          onMessageReceived: _onChatMessageReceived,
-          onLivekitError: _onLivekitError,
-          onKeeperLeaveRoom: _onKeeperLeft,
-          onConnected: _onConnected,
-        );
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
 
-        final sessionState = ref.watch(sessionProvider(_cachedSessionOptions!));
-        final sessionNotifier = ref.read(
-          sessionProvider(_cachedSessionOptions!).notifier,
-        );
+        // Checks if there is any other route above the first route.
+        //   This route would be a modal sheet or a dialog.
+        final navigator = _navigatorKey.currentState;
+        if (navigator?.canPop() ?? false) {
+          navigator!.pop();
+          return;
+        }
 
-        return PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (didPop, result) async {
-            if (didPop) return;
+        // If there is no other route above the first route, the user is
+        // trying to leave the session.
 
-            // Checks if there is any other route above the first route.
-            //   This route would be a modal sheet or a dialog.
-            final navigator = _navigatorKey.currentState;
-            if (navigator?.canPop() ?? false) {
-              navigator!.pop();
-              return;
-            }
+        // If the session is not connected or connecting, leave the session.
+        if (sessionState.connectionState != RoomConnectionState.connecting &&
+            sessionState.connectionState != RoomConnectionState.connected) {
+          popOrHome(context);
+          return;
+        }
 
-            // If there is no other route above the first route, the user is
-            // trying to leave the session.
-
-            // If the session is not connected or connecting, leave the session.
-            if (sessionState.connectionState !=
-                    RoomConnectionState.connecting &&
-                sessionState.connectionState != RoomConnectionState.connected) {
-              popOrHome(context);
-              return;
-            }
-
-            // If the session is connected, show a dialog to confirm the action.
-            final shouldPop = await showLeaveDialog(context) ?? false;
-            if (context.mounted && shouldPop) {
-              popOrHome(context);
-            }
+        // If the session is connected, show a dialog to confirm the action.
+        final shouldPop = await showLeaveDialog(context) ?? false;
+        if (context.mounted && shouldPop) {
+          popOrHome(context);
+        }
+      },
+      child: RoomBackground(
+        status: sessionState.sessionState.status,
+        child: LivekitRoom(
+          roomContext: sessionNotifier.room,
+          builder: (context, roomCtx) {
+            return Navigator(
+              key: _navigatorKey,
+              clipBehavior: Clip.none,
+              onDidRemovePage: (page) => {},
+              pages: [
+                MaterialPage(
+                  child: RepaintBoundary(
+                    child: _buildBody(sessionNotifier, sessionState),
+                  ),
+                ),
+              ],
+            );
           },
-          child: RoomBackground(
-            status: sessionState.sessionState.status,
-            child: LivekitRoom(
-              roomContext: sessionNotifier.room,
-              builder: (context, roomCtx) {
-                return Navigator(
-                  key: _navigatorKey,
-                  clipBehavior: Clip.none,
-                  onDidRemovePage: (page) => {},
-                  pages: [
-                    MaterialPage(
-                      child: RepaintBoundary(
-                        child: _buildBody(event, sessionNotifier, sessionState),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        );
-      },
-      loading: () => const LoadingRoomScreen(),
-      error: (error, stackTrace) {
-        return RoomErrorScreen(
-          onRetry: () => ref.refresh(eventProvider(widget.eventSlug).future),
-        );
-      },
+        ),
+      ),
     );
   }
 
   Widget _buildBody(
-    EventDetailSchema event,
     Session session,
     SessionRoomState state,
   ) {
@@ -324,22 +253,22 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen>
       case RoomConnectionState.error:
         return RoomErrorScreen(onRetry: roomCtx.connect);
       case RoomConnectionState.connecting:
-        return const LoadingRoomScreen();
+        return widget.loadingScreen;
       case RoomConnectionState.disconnected:
-        return SessionEndedScreen(event: event, session: session);
+        return SessionEndedScreen(event: widget.event, session: session);
       case RoomConnectionState.connected:
         if (state.sessionState.status == SessionStatus.ended) {
-          return SessionEndedScreen(event: event, session: session);
+          return SessionEndedScreen(event: widget.event, session: session);
         }
         if (roomCtx.localParticipant == null) {
-          return const LoadingRoomScreen();
+          return widget.loadingScreen;
         }
 
         if (state.sessionState.totemStatus == TotemStatus.passing &&
             state.amNext(session.room)) {
           return ReceiveTotemScreen(
             sessionState: state,
-            actionBar: buildActionBar(session, state, event),
+            actionBar: buildActionBar(session, state, widget.event),
             onAcceptTotem: session.acceptTotem,
           );
         }
@@ -347,23 +276,21 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen>
         if (state.isMyTurn(session.room)) {
           return ProtectionOverlay(
             child: MyTurn(
-              actionBar: buildActionBar(session, state, event),
+              actionBar: buildActionBar(session, state, widget.event),
               getParticipantKey: getParticipantKey,
               onPassTotem: session.passTotem,
               sessionState: state.sessionState,
-              event: event,
-              emojis: _reactions,
+              event: widget.event,
             ),
           );
         } else {
           return ProtectionOverlay(
             child: NotMyTurn(
-              actionBar: buildActionBar(session, state, event),
+              actionBar: buildActionBar(session, state, widget.event),
               getParticipantKey: getParticipantKey,
               sessionState: state,
               session: session,
-              event: event,
-              emojis: _reactions,
+              event: widget.event,
             ),
           );
         }
@@ -378,13 +305,13 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen>
     return Builder(
       builder: (context) {
         final room = notifier.room;
-        final user = room.localParticipant;
-        if (user == null) return const SizedBox.shrink();
+        final user = room.localParticipant!;
 
         final isUserTileVisible =
             getParticipantKey(user.identity).currentContext != null;
 
         return ActionBar(
+          key: widget.actionBarKey,
           children: [
             ActionBarButton(
               semanticsLabel:

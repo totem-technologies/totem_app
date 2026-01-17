@@ -169,7 +169,6 @@ void main() {
 
     SessionOptions testSessionOptions() => SessionOptions(
       eventSlug: testEventSlug,
-      keeperSlug: testUserIdentity,
       token: testToken,
       cameraEnabled: true,
       microphoneEnabled: true,
@@ -187,7 +186,6 @@ void main() {
       registerFallbackValue(
         SessionOptions(
           eventSlug: testEventSlug,
-          keeperSlug: testUserIdentity,
           token: testToken,
           cameraEnabled: true,
           microphoneEnabled: true,
@@ -420,7 +418,6 @@ void main() {
         var receivedUser = '';
         final optionsWithEmojiCallback = SessionOptions(
           eventSlug: testEventSlug,
-          keeperSlug: testUserIdentity,
           token: testToken,
           cameraEnabled: true,
           microphoneEnabled: true,
@@ -464,7 +461,6 @@ void main() {
         var receivedUser = '';
         final optionsWithMessageCallback = SessionOptions(
           eventSlug: testEventSlug,
-          keeperSlug: testUserIdentity,
           token: testToken,
           cameraEnabled: true,
           microphoneEnabled: true,
@@ -514,7 +510,6 @@ void main() {
         var messageReceived = false;
         final optionsWithMessageCallback = SessionOptions(
           eventSlug: testEventSlug,
-          keeperSlug: testUserIdentity,
           token: testToken,
           cameraEnabled: true,
           microphoneEnabled: true,
@@ -551,7 +546,6 @@ void main() {
         var callbackCalled = false;
         final optionsWithCallback = SessionOptions(
           eventSlug: testEventSlug,
-          keeperSlug: testUserIdentity,
           token: testToken,
           cameraEnabled: true,
           microphoneEnabled: true,

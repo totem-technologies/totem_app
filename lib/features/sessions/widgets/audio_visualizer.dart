@@ -207,21 +207,48 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
       if (_visualizer != null) {
         try {
           await _visualizer?.stop();
-          await _visualizer?.dispose();
-        } catch (_) {}
-        _visualizer = null;
-      }
+        } catch (error, stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Failed to stop visualizer',
+          );
+        }
 
-      await _visualizerListener?.dispose();
+        try {
+          await _visualizer?.dispose();
+        } catch (error, stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Failed to dispose visualizer',
+          );
+        }
+      }
+    } finally {
+      _visualizer = null;
+
+      try {
+        await _visualizerListener?.dispose();
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to dispose visualizer listener',
+        );
+      }
       _visualizerListener = null;
-      await _participantListener?.dispose();
+
+      try {
+        await _participantListener?.dispose();
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to dispose participant listener',
+        );
+      }
       _participantListener = null;
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to dettach audio visualizer listeners',
-      );
     }
   }
 

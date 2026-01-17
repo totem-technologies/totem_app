@@ -18,7 +18,6 @@ import 'package:totem_app/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_details_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_screen.dart';
 import 'package:totem_app/features/sessions/screens/pre_join_screen.dart';
-import 'package:totem_app/features/sessions/screens/room_screen.dart';
 import 'package:totem_app/features/spaces/screens/session_history.dart';
 import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
 import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
@@ -388,24 +387,6 @@ GoRouter createRouter(WidgetRef ref) {
         builder: (context, state) {
           return SentryDisplayWidget(
             child: PreJoinScreen(eventSlug: state.extra! as String),
-          );
-        },
-      ),
-      GoRoute(
-        path: RouteNames.videoSession(':id'),
-        name: RouteNames.videoSession(':id'),
-        builder: (context, state) {
-          final args = state.extra! as VideoRoomScreenRouteArgs;
-          return SentryDisplayWidget(
-            child: VideoRoomScreen(
-              cameraEnabled: args.cameraEnabled,
-              micEnabled: args.micEnabled,
-              eventSlug: args.eventSlug,
-              token: args.token,
-              cameraOptions: args.cameraOptions,
-              audioOptions: args.audioOptions,
-              audioOutputOptions: args.audioOutputOptions,
-            ),
           );
         },
       ),

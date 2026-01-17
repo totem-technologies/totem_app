@@ -16,7 +16,6 @@ class NotMyTurn extends ConsumerWidget {
     required this.sessionState,
     required this.session,
     required this.event,
-    required this.emojis,
     super.key,
   });
 
@@ -25,7 +24,6 @@ class NotMyTurn extends ConsumerWidget {
   final SessionRoomState sessionState;
   final Session session;
   final EventDetailSchema event;
-  final List<MapEntry<String, String>> emojis;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -164,7 +162,6 @@ class NotMyTurn extends ConsumerWidget {
                 speakingNow: activeSpeaker.identity,
                 originalTracks: originalTracks,
                 sessionState: sessionState.sessionState,
-                event: event,
               );
             },
             participantTrackBuilder: (context, identifier) {
@@ -172,11 +169,7 @@ class NotMyTurn extends ConsumerWidget {
                 key: getParticipantKey(identifier.participant.identity),
                 participant: identifier.participant,
                 event: event,
-                emojis: [
-                  for (final entry in emojis)
-                    if (entry.key == identifier.participant.identity)
-                      entry.value,
-                ],
+                participantIdentity: identifier.participant.identity,
               );
             },
           );

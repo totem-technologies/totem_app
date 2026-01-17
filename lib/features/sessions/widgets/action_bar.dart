@@ -79,12 +79,16 @@ class ActionBar extends StatelessWidget {
         horizontal: 10,
         vertical: 10,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 20,
-        children: [
-          for (final child in children) child,
-        ],
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeInOut,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 20,
+          children: [
+            for (final child in children) child,
+          ],
+        ),
       ),
     );
   }

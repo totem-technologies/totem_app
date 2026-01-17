@@ -8,7 +8,6 @@ import 'package:totem_app/api/export.dart';
 List<TrackWidget> tracksSorting({
   required List<TrackWidget> originalTracks,
   required SessionState sessionState,
-  required EventDetailSchema event,
   required String? speakingNow,
 
   /// Whether to show the track of the participant who is currently speaking.
