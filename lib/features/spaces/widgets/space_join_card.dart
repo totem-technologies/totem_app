@@ -754,8 +754,10 @@ class _AttendingDialogState extends State<AttendingDialog> {
                       decoration: TextDecoration.underline,
                     ),
                     recognizer: TapGestureRecognizer()
-                      ..onTap = () =>
-                          launchUrl(AppConfig.communityGuidelinesUrl),
+                      ..onTap = () => launchUrl(
+                        AppConfig.communityGuidelinesUrl,
+                        mode: LaunchMode.externalApplication,
+                      ),
                   ),
                   const TextSpan(
                     text: ' to learn more about how to participate.',

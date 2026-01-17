@@ -128,6 +128,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 onTap: () => showUserFeedbackDialog(context),
               ),
               Link(
+                target: LinkTarget.blank,
                 uri: AppConfig.privacyPolicyUrl,
                 builder: (context, launch) => ProfileTile(
                   icon: const TotemIcon(TotemIcons.lock),
@@ -136,6 +137,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
               Link(
+                target: LinkTarget.blank,
                 uri: AppConfig.termsOfServiceUrl,
                 builder: (context, launch) => ProfileTile(
                   icon: const TotemIcon(TotemIcons.safe),
@@ -144,6 +146,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
               Link(
+                target: LinkTarget.blank,
                 uri: AppConfig.communityGuidelinesUrl,
                 builder: (context, launch) => ProfileTile(
                   icon: const TotemIcon(TotemIcons.community),
