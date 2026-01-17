@@ -512,7 +512,9 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   @override
   void dispose() {
     _statsTimer?.cancel();
-    _listener.dispose();
+    _listener
+      ..cancelAll()
+      ..dispose();
     super.dispose();
   }
 

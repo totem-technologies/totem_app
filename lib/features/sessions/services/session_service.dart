@@ -210,7 +210,9 @@ class Session extends _$Session {
       closeKeeperLeftNotification = null;
       _notificationTimer?.cancel();
       _notificationTimer = null;
-      _listener.dispose();
+      _listener
+        ..cancelAll()
+        ..dispose();
       room
         ..removeListener(_onRoomChanges)
         ..dispose();

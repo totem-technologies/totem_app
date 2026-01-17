@@ -229,6 +229,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
       _visualizer = null;
 
       try {
+        await _visualizerListener?.cancelAll();
         await _visualizerListener?.dispose();
       } catch (error, stackTrace) {
         ErrorHandler.logError(
@@ -240,6 +241,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
       _visualizerListener = null;
 
       try {
+        await _participantListener?.cancelAll();
         await _participantListener?.dispose();
       } catch (error, stackTrace) {
         ErrorHandler.logError(
