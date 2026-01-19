@@ -225,14 +225,28 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         child: LivekitRoom(
           roomContext: sessionNotifier.room,
           builder: (context, roomCtx) {
+            // Use a navigator for modal sheets and dialogs inside the room
             return Navigator(
               key: _navigatorKey,
               clipBehavior: Clip.none,
               onDidRemovePage: (page) => {},
               pages: [
                 MaterialPage(
-                  child: RepaintBoundary(
-                    child: _buildBody(sessionNotifier, sessionState),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: RepaintBoundary(
+                          child: _buildBody(sessionNotifier, sessionState),
+                        ),
+                      ),
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: Overlay(
+                            key: EmojiReactions.emojiOverlayKey,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

@@ -7,6 +7,8 @@ part 'emoji_reactions_provider.g.dart';
 
 @riverpod
 class EmojiReactions extends _$EmojiReactions {
+  static final emojiOverlayKey = GlobalKey<OverlayState>();
+
   final Map<String, DateTime> _lastReactionTimes = {};
 
   @override
@@ -36,7 +38,11 @@ class EmojiReactions extends _$EmojiReactions {
       state = newState;
     }
 
-    await displayReaction(context, emoji);
+    await displayReaction(
+      context,
+      emoji,
+      overlayKey: EmojiReactions.emojiOverlayKey,
+    );
     removeReaction(userIdentity, emoji);
   }
 

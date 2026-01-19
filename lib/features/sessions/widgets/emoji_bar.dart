@@ -198,10 +198,13 @@ class EmojiBar extends StatelessWidget {
 
 Future<void> displayReaction(
   BuildContext context,
-  String emoji,
-) async {
+  String emoji, {
+  GlobalKey<OverlayState>? overlayKey,
+}) async {
   final overlayBox =
-      Overlay.of(context).context.findRenderObject() as RenderBox?;
+      (overlayKey?.currentContext ?? Overlay.of(context).context)
+              .findRenderObject()
+          as RenderBox?;
   if (overlayBox == null) return;
 
   final box = context.findRenderObject() as RenderBox?;
@@ -209,7 +212,7 @@ Future<void> displayReaction(
 
   final position = box.localToGlobal(Offset.zero, ancestor: overlayBox);
 
-  final overlay = Overlay.of(context);
+  final overlay = overlayKey?.currentState ?? Overlay.of(context);
 
   final completer = Completer<void>();
   OverlayEntry? entry;
