@@ -54,7 +54,12 @@ class _ParticipantReorderWidgetState
   @override
   void initState() {
     super.initState();
-    _localOrder = List<String>.from(widget.state.sessionState.speakingOrder);
+    final roomParticipants = widget.session.room.participants
+        .map((p) => p.identity)
+        .toSet();
+    _localOrder = Set<String>.from(
+      widget.state.sessionState.speakingOrder.where(roomParticipants.contains),
+    ).toList();
   }
 
   @override
