@@ -164,5 +164,6 @@ Future<List<EventDetailSchema>> getRecommendedSessions(
           body: body,
         ),
     operationName: 'get recommended sessions',
+    maxRetries: 0,
   );
 }
