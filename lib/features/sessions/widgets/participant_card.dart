@@ -453,12 +453,12 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                         ),
                       ),
                       PositionedDirectional(
-                        bottom: 20,
-                        start: 20,
-                        end: 20,
+                        bottom: 14,
+                        start: 14,
+                        end: 14,
                         child: AutoSizeText(
                           user?.name ?? 'You',
-                          style: theme.textTheme.headlineMedium?.copyWith(
+                          style: theme.textTheme.titleLarge?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             shadows: kElevationToShadow[6],
