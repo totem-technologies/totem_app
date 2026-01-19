@@ -27,10 +27,15 @@ class AuthRepository {
     try {
       return await apiCall();
     } catch (error, stackTrace) {
-      ErrorHandler.logError(error, stackTrace: stackTrace);
       if (error is AppAuthException) {
         rethrow;
       }
+
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error during $operationName: $genericErrorCode',
+      );
       if (error is DioException) {
         final response = error.response;
         if (response != null) {

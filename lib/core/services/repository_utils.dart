@@ -33,16 +33,16 @@ class RepositoryUtils {
       try {
         return await apiCall();
       } catch (error, stackTrace) {
+        // Don't retry on auth errors or client errors (4xx)
+        if (error is AppAuthException) {
+          rethrow;
+        }
+
         ErrorHandler.logError(
           error,
           stackTrace: stackTrace,
           message: 'Error in $operationName',
         );
-
-        // Don't retry on auth errors or client errors (4xx)
-        if (error is AppAuthException) {
-          rethrow;
-        }
 
         if (error is DioException) {
           final statusCode = error.response?.statusCode;
