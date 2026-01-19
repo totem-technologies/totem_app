@@ -104,9 +104,11 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     final state = () {
       if (event.cancelled) return SpaceJoinCardState.cancelled;
 
-      final hasEnded = event.start
-          .add(Duration(minutes: event.duration))
-          .isBefore(DateTime.now());
+      final hasEnded =
+          event.ended ||
+          event.start
+              .add(Duration(minutes: event.duration))
+              .isBefore(DateTime.now());
 
       if (hasEnded) return SpaceJoinCardState.ended;
 

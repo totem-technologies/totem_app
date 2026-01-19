@@ -446,21 +446,14 @@ class AboutSpaceSheet extends StatelessWidget {
             SliverAppBar(
               pinned: true,
               backgroundColor: theme.scaffoldBackgroundColor,
-              automaticallyImplyLeading: false,
+              automaticallyImplyLeading: true,
+              leading: CloseButton(
+                onPressed: () => Navigator.of(context).pop(),
+              ),
               centerTitle: false,
               toolbarHeight: 72,
-              titleSpacing: 20,
+              titleSpacing: 0,
               title: Text('About', style: theme.textTheme.titleLarge),
-              actions: [
-                CircleIconButton(
-                  margin: const EdgeInsetsDirectional.only(end: 20),
-                  icon: TotemIcons.closeRounded,
-                  tooltip: MaterialLocalizations.of(
-                    context,
-                  ).closeButtonTooltip,
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
             ),
             SliverPadding(
               padding: const EdgeInsetsDirectional.only(

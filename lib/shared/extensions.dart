@@ -19,6 +19,7 @@ extension StringExtension on String {
 
 extension SessionDetailSchemaExtension on SessionDetailSchema {
   bool canJoinNow([UserSchema? user]) {
+    if (ended) return false;
     var joinBeforeTime = const Duration(minutes: 10);
     if (user != null && (user.isStaff || user.slug == space.author.slug)) {
       joinBeforeTime = const Duration(hours: 1);
