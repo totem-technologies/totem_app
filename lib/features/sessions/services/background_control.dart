@@ -78,7 +78,9 @@ extension BackgroundControl on Session {
     try {
       _notificationTimer?.cancel();
       _notificationTimer = null;
-      await FlutterForegroundTask.stopService();
+      if (await FlutterForegroundTask.isRunningService) {
+        await FlutterForegroundTask.stopService();
+      }
     } catch (_) {
       // fine if fail
     }

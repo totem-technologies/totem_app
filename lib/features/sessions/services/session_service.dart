@@ -16,6 +16,7 @@ import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
+import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/logger.dart';
@@ -200,23 +201,7 @@ class Session extends _$Session {
     WakelockPlus.enable();
     setupBackgroundMode();
 
-    ref.onDispose(() {
-      logger.d('Disposing LiveKitService and closing connections.');
-      endBackgroundMode();
-      WakelockPlus.disable();
-      _keeperDisconnectedTimer?.cancel();
-      _keeperDisconnectedTimer = null;
-      closeKeeperLeftNotification?.call();
-      closeKeeperLeftNotification = null;
-      _notificationTimer?.cancel();
-      _notificationTimer = null;
-      _listener
-        ..cancelAll()
-        ..dispose();
-      room
-        ..removeListener(_onRoomChanges)
-        ..dispose();
-    });
+    ref.onDispose(cleanUp);
 
     return const SessionRoomState();
   }
@@ -294,8 +279,7 @@ class Session extends _$Session {
     }
 
     if (state.sessionState.status == SessionStatus.ended) {
-      reason = SessionEndedReason.finished;
-      room.disconnect();
+      _onSessionEnd();
     }
   }
 
@@ -342,14 +326,42 @@ class Session extends _$Session {
     }
   }
 
-  bool isKeeper([String? userSlug]) {
-    if (userSlug == null) {
-      final currentUserSlug = ref.read(
-        authControllerProvider.select((auth) => auth.user?.slug),
-      );
-      userSlug = currentUserSlug;
-    }
+  Future<void> _onSessionEnd() async {
+    reason = SessionEndedReason.finished;
+    room.disconnect();
+    cleanUp();
+    try {
+      if (event != null) {
+        ref
+          ..invalidate(spaceProvider(event!.space.slug))
+          ..invalidate(eventProvider(event!.slug));
+      }
+      ref.invalidate(spacesSummaryProvider);
+    } catch (_) {}
+  }
 
-    return state.sessionState.keeperSlug == userSlug;
+  /// Method called when the session is being ended to clean up resources.
+  void cleanUp() {
+    logger.d('Disposing SessionService and closing connections.');
+
+    endBackgroundMode(); // This closes _notificationTimer
+    WakelockPlus.disable();
+
+    _keeperDisconnectedTimer?.cancel();
+    _keeperDisconnectedTimer = null;
+
+    closeKeeperLeftNotification?.call();
+    closeKeeperLeftNotification = null;
+
+    try {
+      _listener
+        ..cancelAll()
+        ..dispose();
+    } catch (_) {}
+    try {
+      room
+        ..removeListener(_onRoomChanges)
+        ..dispose();
+    } catch (_) {}
   }
 }

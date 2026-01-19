@@ -261,6 +261,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     Session session,
     SessionRoomState state,
   ) {
+    if (state.sessionState.status == SessionStatus.ended) {
+      return SessionEndedScreen(event: widget.event, session: session);
+    }
+
     final roomCtx = session.room;
     switch (state.connectionState) {
       case RoomConnectionState.error:
@@ -270,9 +274,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       case RoomConnectionState.disconnected:
         return SessionEndedScreen(event: widget.event, session: session);
       case RoomConnectionState.connected:
-        if (state.sessionState.status == SessionStatus.ended) {
-          return SessionEndedScreen(event: widget.event, session: session);
-        }
         if (roomCtx.localParticipant == null) {
           return widget.loadingScreen;
         }
