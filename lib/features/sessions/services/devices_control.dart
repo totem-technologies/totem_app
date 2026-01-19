@@ -72,11 +72,8 @@ extension DevicesControl on Session {
   }
 
   Future<void> enableMicrophone() async {
-    // workaround to use members on extension
-    // ignore: invalid_use_of_visible_for_testing_member
-    if (room.microphoneOpened || state.hasKeeperDisconnected) {
-      return;
-    }
+    if (room.microphoneOpened) return;
+
     if (room.localParticipant != null) {
       await room.localParticipant?.setMicrophoneEnabled(true);
     } else {

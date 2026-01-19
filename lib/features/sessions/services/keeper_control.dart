@@ -39,7 +39,6 @@ extension KeeperControl on Session {
 
   Future<void> _onKeeperDisconnected() async {
     state = state.copyWith(hasKeeperDisconnected: true);
-    await disableMicrophone();
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = Timer(
