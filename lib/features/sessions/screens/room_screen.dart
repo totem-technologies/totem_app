@@ -8,8 +8,7 @@ import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
-import 'package:totem_app/api/models/event_detail_schema.dart';
-import 'package:totem_app/api/models/totem_status.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
@@ -42,7 +41,7 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
 
   final String eventSlug;
   final SessionOptions sessionOptions;
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
   final Widget loadingScreen;
   final GlobalKey actionBarKey;
 
@@ -300,7 +299,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   Widget buildActionBar(
     Session notifier,
     SessionRoomState state,
-    EventDetailSchema event,
+    SessionDetailSchema event,
   ) {
     return Builder(
       builder: (context) {

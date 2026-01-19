@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_components/livekit_components.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/keeper/screens/keeper_profile_screen.dart';
@@ -12,7 +12,7 @@ import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 Future<void> showSessionChatSheet(
   BuildContext context,
-  EventDetailSchema event,
+  SessionDetailSchema event,
 ) {
   return showModalBottomSheet(
     context: context,
@@ -29,7 +29,7 @@ Future<void> showSessionChatSheet(
 class SessionChatSheet extends ConsumerStatefulWidget {
   const SessionChatSheet({required this.event, super.key});
 
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
 
   @override
   ConsumerState<SessionChatSheet> createState() => _SessionChatSheetState();
@@ -202,7 +202,7 @@ class OtherChatBubble extends StatelessWidget {
 
   final bool showAvatar;
   final ChatMessage message;
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
 
   @override
   Widget build(BuildContext context) {

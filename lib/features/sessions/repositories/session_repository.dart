@@ -140,7 +140,7 @@ Future<void> sessionFeedback(
   final apiService = ref.read(mobileApiServiceProvider);
   await RepositoryUtils.handleApiCall<void>(
     apiCall: () =>
-        apiService.spaces.totemCirclesMobileApiMobileApiPostSessionFeedback(
+        apiService.spaces.totemSpacesMobileApiMobileApiPostSessionFeedback(
           eventSlug: eventSlug,
           body: SessionFeedbackSchema(
             feedback: feedback,

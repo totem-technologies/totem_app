@@ -47,7 +47,7 @@ extension BackgroundControl on Session {
     });
   }
 
-  Future<void> _updateNotification(EventDetailSchema event) async {
+  Future<void> _updateNotification(SessionDetailSchema event) async {
     try {
       final startTime = event.start;
       final duration = DateTime.now().difference(startTime);

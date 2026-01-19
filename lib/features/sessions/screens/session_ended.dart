@@ -27,7 +27,7 @@ class SessionEndedScreen extends ConsumerStatefulWidget {
     super.key,
   });
 
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
   final Session session;
 
   @override

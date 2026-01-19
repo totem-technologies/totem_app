@@ -143,7 +143,7 @@ class Session extends _$Session {
   late final MobileTotemApi _apiService;
   late SessionOptions _options;
   String? _lastMetadata;
-  EventDetailSchema? event;
+  SessionDetailSchema? event;
 
   Timer? _notificationTimer;
   VoidCallback? closeKeeperLeftNotification;

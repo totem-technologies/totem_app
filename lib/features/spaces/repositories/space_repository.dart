@@ -17,7 +17,7 @@ Future<List<MobileSpaceDetailSchema>> listSpaces(Ref ref) async {
   try {
     final response = await RepositoryUtils.handleApiCall(
       apiCall: () =>
-          mobileApiService.spaces.totemCirclesMobileApiMobileApiListSpaces(),
+          mobileApiService.spaces.totemSpacesMobileApiMobileApiListSpaces(),
       operationName: 'list spaces',
     );
     final spaces = response.items;
@@ -36,11 +36,11 @@ Future<List<MobileSpaceDetailSchema>> listSpaces(Ref ref) async {
 }
 
 @riverpod
-Future<EventDetailSchema> event(Ref ref, String eventSlug) async {
+Future<SessionDetailSchema> event(Ref ref, String eventSlug) async {
   final mobileApiService = ref.read(mobileApiServiceProvider);
-  return RepositoryUtils.handleApiCall<EventDetailSchema>(
+  return RepositoryUtils.handleApiCall<SessionDetailSchema>(
     apiCall: () =>
-        mobileApiService.spaces.totemCirclesMobileApiMobileApiGetSessionDetail(
+        mobileApiService.spaces.totemSpacesMobileApiMobileApiGetSessionDetail(
           eventSlug: eventSlug,
         ),
     operationName: 'get event detail',
@@ -52,7 +52,7 @@ Future<MobileSpaceDetailSchema> space(Ref ref, String spaceSlug) async {
   final mobileApiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<MobileSpaceDetailSchema>(
     apiCall: () =>
-        mobileApiService.spaces.totemCirclesMobileApiMobileApiGetSpaceDetail(
+        mobileApiService.spaces.totemSpacesMobileApiMobileApiGetSpaceDetail(
           spaceSlug: spaceSlug,
         ),
     operationName: 'get space detail',
@@ -66,7 +66,7 @@ Future<List<SpaceSchema>> listSubscribedSpaces(Ref ref) async {
   try {
     final spaces = await RepositoryUtils.handleApiCall<List<SpaceSchema>>(
       apiCall: () => mobileApiService.spaces
-          .totemCirclesMobileApiMobileApiListSubscriptions(),
+          .totemSpacesMobileApiMobileApiListSubscriptions(),
       operationName: 'list subscribed spaces',
     );
     cache.saveSubscribedSpaces(spaces);
@@ -86,7 +86,7 @@ Future<bool> subscribeToSpace(Ref ref, String spaceSlug) async {
   final mobileApiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<bool>(
     apiCall: () =>
-        mobileApiService.spaces.totemCirclesMobileApiMobileApiSubscribeToSpace(
+        mobileApiService.spaces.totemSpacesMobileApiMobileApiSubscribeToSpace(
           spaceSlug: spaceSlug,
         ),
     operationName: 'subscribe to space',
@@ -97,8 +97,8 @@ Future<bool> subscribeToSpace(Ref ref, String spaceSlug) async {
 Future<bool> unsubscribeFromSpace(Ref ref, String spaceSlug) async {
   final mobileApiService = ref.read(mobileApiServiceProvider);
   final success = await RepositoryUtils.handleApiCall<bool>(
-    apiCall: () => mobileApiService.spaces
-        .totemCirclesMobileApiMobileApiUnsubscribeToSpace(
+    apiCall: () =>
+        mobileApiService.spaces.totemSpacesMobileApiMobileApiUnsubscribeToSpace(
           spaceSlug: spaceSlug,
         ),
     operationName: 'unsubscribe from space',
@@ -118,7 +118,7 @@ Future<List<MobileSpaceDetailSchema>> listSpacesByKeeper(
   final mobileApiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<List<MobileSpaceDetailSchema>>(
     apiCall: () =>
-        mobileApiService.spaces.totemCirclesMobileApiMobileApiGetKeeperSpaces(
+        mobileApiService.spaces.totemSpacesMobileApiMobileApiGetKeeperSpaces(
           slug: keeperSlug,
         ),
     operationName: 'list spaces by keeper',
@@ -126,15 +126,15 @@ Future<List<MobileSpaceDetailSchema>> listSpacesByKeeper(
 }
 
 @riverpod
-Future<List<EventDetailSchema>> listSessionsHistory(Ref ref) async {
+Future<List<SessionDetailSchema>> listSessionsHistory(Ref ref) async {
   final mobileApiService = ref.read(mobileApiServiceProvider);
   final cache = ref.read(cacheServiceProvider);
 
   try {
     final sessions =
-        await RepositoryUtils.handleApiCall<List<EventDetailSchema>>(
+        await RepositoryUtils.handleApiCall<List<SessionDetailSchema>>(
           apiCall: () => mobileApiService.spaces
-              .totemCirclesMobileApiMobileApiGetSessionsHistory(),
+              .totemSpacesMobileApiMobileApiGetSessionsHistory(),
           operationName: 'list sessions history',
         );
     cache.saveSessionsHistory(sessions);
@@ -150,7 +150,7 @@ Future<List<EventDetailSchema>> listSessionsHistory(Ref ref) async {
 }
 
 @riverpod
-Future<List<EventDetailSchema>> getRecommendedSessions(
+Future<List<SessionDetailSchema>> getRecommendedSessions(
   Ref ref, [
   String? topicsKey,
 ]) {
@@ -158,9 +158,9 @@ Future<List<EventDetailSchema>> getRecommendedSessions(
   final List<String>? body = topicsKey == null || topicsKey.isEmpty
       ? null
       : topicsKey.split('|').toList();
-  return RepositoryUtils.handleApiCall<List<EventDetailSchema>>(
+  return RepositoryUtils.handleApiCall<List<SessionDetailSchema>>(
     apiCall: () => mobileApiService.spaces
-        .totemCirclesMobileApiMobileApiGetRecommendedSpaces(
+        .totemSpacesMobileApiMobileApiGetRecommendedSpaces(
           body: body,
         ),
     operationName: 'get recommended sessions',

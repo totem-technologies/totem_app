@@ -6,8 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
-import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/services/analytics_service.dart';
@@ -76,7 +75,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
     final bool hasValidEventSlug =
         effectiveEventSlug != null && effectiveEventSlug.isNotEmpty;
 
-    final AsyncValue<EventDetailSchema>? eventAsync = hasValidEventSlug
+    final AsyncValue<SessionDetailSchema>? eventAsync = hasValidEventSlug
         ? ref.watch(eventProvider(effectiveEventSlug))
         : null;
 
@@ -414,7 +413,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
   Future<void> _showSessionSheet(
     BuildContext context,
     MobileSpaceDetailSchema space,
-    EventDetailSchema event,
+    SessionDetailSchema event,
   ) {
     return showModalBottomSheet(
       context: context,
@@ -554,7 +553,7 @@ class SessionSheet extends StatelessWidget {
   const SessionSheet({required this.space, required this.event, super.key});
 
   final MobileSpaceDetailSchema space;
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
 
   @override
   Widget build(BuildContext context) {

@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' hide Session;
 import 'package:livekit_components/livekit_components.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
@@ -35,7 +35,7 @@ Future<void> showOptionsSheet(
   BuildContext context,
   SessionRoomState state,
   Session session,
-  EventDetailSchema event,
+  SessionDetailSchema event,
 ) {
   return showModalBottomSheet(
     context: context,
@@ -59,7 +59,7 @@ class OptionsSheet extends ConsumerWidget {
 
   final SessionRoomState state;
   final Session session;
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

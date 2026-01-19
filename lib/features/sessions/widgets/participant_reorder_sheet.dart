@@ -2,7 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' show Participant;
-import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
@@ -14,7 +14,7 @@ Future<void> showParticipantReorderWidget(
   BuildContext context,
   Session session,
   SessionRoomState state,
-  EventDetailSchema event,
+  SessionDetailSchema event,
 ) {
   return showModalBottomSheet(
     context: context,
@@ -39,7 +39,7 @@ class ParticipantReorderWidget extends ConsumerStatefulWidget {
 
   final Session session;
   final SessionRoomState state;
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
 
   @override
   ConsumerState<ParticipantReorderWidget> createState() =>

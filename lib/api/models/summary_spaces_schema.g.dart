@@ -10,7 +10,7 @@ SummarySpacesSchema _$SummarySpacesSchemaFromJson(
   Map<String, dynamic> json,
 ) => SummarySpacesSchema(
   upcoming: (json['upcoming'] as List<dynamic>)
-      .map((e) => EventDetailSchema.fromJson(e as Map<String, dynamic>))
+      .map((e) => SessionDetailSchema.fromJson(e as Map<String, dynamic>))
       .toList(),
   forYou: (json['for_you'] as List<dynamic>)
       .map((e) => MobileSpaceDetailSchema.fromJson(e as Map<String, dynamic>))

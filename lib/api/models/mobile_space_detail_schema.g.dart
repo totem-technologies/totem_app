@@ -20,7 +20,7 @@ MobileSpaceDetailSchema _$MobileSpaceDetailSchemaFromJson(
   recurring: json['recurring'] as String?,
   price: (json['price'] as num).toInt(),
   nextEvents: (json['next_events'] as List<dynamic>)
-      .map((e) => NextEventSchema.fromJson(e as Map<String, dynamic>))
+      .map((e) => NextSessionSchema.fromJson(e as Map<String, dynamic>))
       .toList(),
 );
 

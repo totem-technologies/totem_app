@@ -19,7 +19,7 @@ Future<SummarySpacesSchema> spacesSummary(Ref ref) async {
   try {
     final summary = await RepositoryUtils.handleApiCall<SummarySpacesSchema>(
       apiCall: () => mobileApiService.spaces
-          .totemCirclesMobileApiMobileApiGetSpacesSummary(),
+          .totemSpacesMobileApiMobileApiGetSpacesSummary(),
       operationName: 'get spaces summary',
     );
 

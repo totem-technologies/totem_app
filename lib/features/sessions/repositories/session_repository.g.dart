@@ -638,7 +638,7 @@ final class SessionFeedbackProvider
   }
 }
 
-String _$sessionFeedbackHash() => r'a69c6bc5e33ee9a672ac74c1d7d56009ac6f32bd';
+String _$sessionFeedbackHash() => r'731099b2b58e3cfaffede959d6712f2d6ad07f4a';
 
 final class SessionFeedbackFamily extends $Family
     with

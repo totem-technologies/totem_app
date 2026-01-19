@@ -4,7 +4,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'next_event_schema.dart';
+import 'next_session_schema.dart';
 import 'public_user_schema.dart';
 
 part 'mobile_space_detail_schema.g.dart';
@@ -41,7 +41,7 @@ class MobileSpaceDetailSchema {
   final String? recurring;
   final int price;
   @JsonKey(name: 'next_events')
-  final List<NextEventSchema> nextEvents;
+  final List<NextSessionSchema> nextEvents;
 
   Map<String, Object?> toJson() => _$MobileSpaceDetailSchemaToJson(this);
 }

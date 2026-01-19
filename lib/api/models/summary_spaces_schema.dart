@@ -4,8 +4,8 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'event_detail_schema.dart';
 import 'mobile_space_detail_schema.dart';
+import 'session_detail_schema.dart';
 
 part 'summary_spaces_schema.g.dart';
 
@@ -20,7 +20,7 @@ class SummarySpacesSchema {
   factory SummarySpacesSchema.fromJson(Map<String, Object?> json) =>
       _$SummarySpacesSchemaFromJson(json);
 
-  final List<EventDetailSchema> upcoming;
+  final List<SessionDetailSchema> upcoming;
   @JsonKey(name: 'for_you')
   final List<MobileSpaceDetailSchema> forYou;
   final List<MobileSpaceDetailSchema> explore;

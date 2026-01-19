@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
+import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/api/models/space_schema.dart';
 import 'package:totem_app/api/models/summary_spaces_schema.dart';
 import 'package:totem_app/core/config/consts.dart';
@@ -131,18 +131,18 @@ class CacheService {
 
   // Sessions History
 
-  Future<void> saveSessionsHistory(List<EventDetailSchema> sessions) {
+  Future<void> saveSessionsHistory(List<SessionDetailSchema> sessions) {
     return write(
       key: AppConsts.storageSessionsHistoryKey,
       value: {'sessions': sessions.map((e) => e.toJson()).toList()},
     );
   }
 
-  Future<List<EventDetailSchema>?> getSessionsHistory() async {
+  Future<List<SessionDetailSchema>?> getSessionsHistory() async {
     final data = await read(AppConsts.storageSessionsHistoryKey);
     return (data?['sessions'] as List?)
-        ?.map<EventDetailSchema>(
-          (json) => EventDetailSchema.fromJson(json as Map<String, dynamic>),
+        ?.map<SessionDetailSchema>(
+          (json) => SessionDetailSchema.fromJson(json as Map<String, dynamic>),
         )
         .toList();
   }

@@ -1,7 +1,7 @@
-import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
-import 'package:totem_app/api/models/next_event_schema.dart';
+import 'package:totem_app/api/models/next_session_schema.dart';
 import 'package:totem_app/api/models/public_user_schema.dart';
+import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/api/models/user_schema.dart';
 
 extension ListExtension<T> on List<T> {
@@ -17,7 +17,7 @@ extension StringExtension on String {
   }
 }
 
-extension EventDetailSchemaExtension on EventDetailSchema {
+extension SessionDetailSchemaExtension on SessionDetailSchema {
   bool canJoinNow([UserSchema? user]) {
     var joinBeforeTime = const Duration(minutes: 10);
     if (user != null && (user.isStaff || user.slug == space.author.slug)) {
@@ -41,7 +41,7 @@ extension MobileSpaceDetailSchemaExtension on MobileSpaceDetailSchema {
     String? category,
     int? subscribers,
     int? price,
-    List<NextEventSchema>? nextEvents,
+    List<NextSessionSchema>? nextEvents,
     String? recurring,
   }) {
     return MobileSpaceDetailSchema(

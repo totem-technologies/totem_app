@@ -4,7 +4,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
@@ -26,7 +26,7 @@ class ParticipantCard extends ConsumerWidget {
   });
 
   final Participant participant;
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
   final String participantIdentity;
 
   @override
@@ -181,7 +181,7 @@ class ParticipantControlButton extends ConsumerWidget {
 
   final Participant participant;
   final double overlayPadding;
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
 
   final Color backgroundColor;
 
