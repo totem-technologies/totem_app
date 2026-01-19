@@ -38,7 +38,7 @@ class ParticipantCard extends ConsumerWidget {
 
     const overlayPadding = 6.0;
     final isKeeper = event.space.author.slug == participant.identity;
-    final shadowColor = isKeeper ? const Color(0x80FFD000) : Colors.black;
+    final shadowColor = isKeeper ? const Color(0x80FFD000) : Colors.black45;
 
     return RepaintBoundary(
       child: AspectRatio(
@@ -141,7 +141,7 @@ class ParticipantCard extends ConsumerWidget {
                     ),
                   ),
                 PositionedDirectional(
-                  bottom: 6,
+                  bottom: 8,
                   start: 6,
                   end: 6,
                   child: AutoSizeText(
@@ -150,7 +150,7 @@ class ParticipantCard extends ConsumerWidget {
                     maxLines: 2,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                       shadows: [
                         Shadow(

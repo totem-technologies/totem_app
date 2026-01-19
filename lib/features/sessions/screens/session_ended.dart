@@ -115,80 +115,86 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
 
     return PopScope(
       canPop: false,
-      child: Scaffold(
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 20,
-              vertical: 8,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 10,
-              children: [
-                Semantics(
-                  header: true,
-                  child: Text(
-                    switch (widget.session.reason) {
-                      SessionEndedReason.finished => 'Session Ended',
-                      SessionEndedReason.keeperLeft =>
-                        'Session will be rescheduled',
-                    },
-                    style: theme.textTheme.headlineMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Text(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: 20,
+            vertical: 8,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisAlignment: MainAxisAlignment.center,
+            spacing: 20,
+            children: [
+              Semantics(
+                header: true,
+                child: Text(
                   switch (widget.session.reason) {
-                    SessionEndedReason.finished =>
-                      'Thank you for joining! We hope you found '
-                          'the session enjoyable.',
+                    SessionEndedReason.finished => 'Session Ended',
                     SessionEndedReason.keeperLeft =>
-                      'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
+                      'Session will be rescheduled',
                   },
+                  style: theme.textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
-                if (widget.session.reason == SessionEndedReason.finished) ...[
-                  _SessionFeedbackWidget(
-                    state: _thumbState,
-                    onThumbUpPressed: () async {
-                      setState(() => _thumbState = ThumbState.up);
-                      _showConfetti();
-                      await ref.read(
-                        sessionFeedbackProvider(
-                          widget.event.slug,
-                          SessionFeedbackOptions.up,
-                        ).future,
-                      );
-                      await _incrementSessionLikedCount();
-                    },
-                    onThumbDownPressed: () async {
-                      await showUserFeedbackDialog(
-                        context,
-                        onFeedbackSubmitted: (message) {
-                          _thumbState = ThumbState.down;
-                          if (mounted) setState(() {});
-                          return ref.read(
-                            sessionFeedbackProvider(
-                              widget.event.slug,
-                              SessionFeedbackOptions.down,
-                              message,
-                            ).future,
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ],
+              ),
+              Text(
+                switch (widget.session.reason) {
+                  SessionEndedReason.finished =>
+                    'Thank you for joining! We hope you found '
+                        'the session enjoyable.',
+                  SessionEndedReason.keeperLeft =>
+                    'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
+                },
+                textAlign: TextAlign.center,
+              ),
+              if (widget.session.reason == SessionEndedReason.finished) ...[
+                _SessionFeedbackWidget(
+                  state: _thumbState,
+                  onThumbUpPressed: () async {
+                    setState(() => _thumbState = ThumbState.up);
+                    _showConfetti();
+                    await ref.read(
+                      sessionFeedbackProvider(
+                        widget.event.slug,
+                        SessionFeedbackOptions.up,
+                      ).future,
+                    );
+                    await _incrementSessionLikedCount();
+                  },
+                  onThumbDownPressed: () async {
+                    await showUserFeedbackDialog(
+                      context,
+                      onFeedbackSubmitted: (message) {
+                        _thumbState = ThumbState.down;
+                        if (mounted) setState(() {});
+                        return ref.read(
+                          sessionFeedbackProvider(
+                            widget.event.slug,
+                            SessionFeedbackOptions.down,
+                            message,
+                          ).future,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ],
 
-                if (nextEvents.isNotEmpty) ...[
-                  Text(
-                    'Next Session',
-                    style: theme.textTheme.titleMedium,
-                    textAlign: TextAlign.start,
-                  ),
-                  for (final nextEvent in nextEvents)
-                    Flexible(
+              if (nextEvents.isNotEmpty) ...[
+                Text(
+                  nextEvents.length == 1
+                      ? 'Join this upcoming session'
+                      : 'Join these upcoming sessions',
+                  style: theme.textTheme.titleMedium,
+                  textAlign: TextAlign.start,
+                ),
+                for (final nextEvent in nextEvents)
+                  Flexible(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxHeight: 140,
+                      ),
                       child: SmallSpaceCard(
                         space: MobileSpaceDetailSchemaExtension.copyWith(
                           widget.event.space,
@@ -202,17 +208,22 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
                         ),
                       ),
                     ),
-                ] else
-                  ...recommended.when(
-                    data: (data) sync* {
-                      if (data.isNotEmpty) {
-                        yield Text(
-                          'You may enjoy these spaces',
-                          style: theme.textTheme.titleMedium,
-                          textAlign: TextAlign.start,
-                        );
-                        for (final event in data.take(2)) {
-                          yield Flexible(
+                  ),
+              ] else
+                ...recommended.when(
+                  data: (data) sync* {
+                    if (data.isNotEmpty) {
+                      yield Text(
+                        'You may enjoy these spaces',
+                        style: theme.textTheme.titleMedium,
+                        textAlign: TextAlign.start,
+                      );
+                      for (final event in data.take(2)) {
+                        yield Flexible(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              maxHeight: 140,
+                            ),
                             child: SmallSpaceCard.fromEventDetailSchema(
                               event,
                               onTap: () {
@@ -221,20 +232,20 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
                                 );
                               },
                             ),
-                          );
-                        }
+                          ),
+                        );
                       }
-                    },
-                    error: (error, _) => [],
-                    loading: () => [],
-                  ),
-                // Explore More
-                ElevatedButton(
-                  onPressed: () => toHome(HomeRoutes.initialRoute),
-                  child: const Text('Explore More'),
+                    }
+                  },
+                  error: (error, _) => [],
+                  loading: () => [],
                 ),
-              ],
-            ),
+              // Explore More
+              ElevatedButton(
+                onPressed: () => toHome(HomeRoutes.initialRoute),
+                child: const Text('Explore More'),
+              ),
+            ],
           ),
         ),
       ),
