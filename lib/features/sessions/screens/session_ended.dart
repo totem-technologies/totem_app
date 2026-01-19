@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/api/export.dart';
+import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/profile/screens/user_feedback.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
@@ -91,7 +92,14 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
 
   @override
   void dispose() {
+    try {
+      ref
+        ..invalidate(spaceProvider(widget.event.space.slug))
+        ..invalidate(eventProvider(widget.event.slug))
+        ..invalidate(spacesSummaryProvider);
+    } catch (_) {}
     _confettiTimer?.cancel();
+    _confettiTimer = null;
     super.dispose();
   }
 
