@@ -130,8 +130,13 @@ class NotMyTurn extends ConsumerWidget {
 
           final nextUp = session.speakingNextParticipant();
           final nextUpText =
-              sessionState.sessionState.status == SessionStatus.started &&
-                  nextUp != null
+              sessionState.sessionState.status == SessionStatus.waiting
+              ? Text(
+                  'The session is about to start...',
+                  style: theme.textTheme.bodyLarge,
+                )
+              : sessionState.sessionState.status == SessionStatus.started &&
+                    nextUp != null
               ? RichText(
                   text: TextSpan(
                     children: [
