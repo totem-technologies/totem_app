@@ -15,6 +15,7 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
+import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 
 Future<bool?> showLeaveDialog(BuildContext context) {
   return showDialog<bool>(
@@ -71,15 +72,7 @@ class OptionsSheet extends ConsumerWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          margin: const EdgeInsets.only(top: 12, bottom: 8),
-          width: 40,
-          height: 4,
-          decoration: BoxDecoration(
-            color: Colors.grey[400],
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
+        const SheetDragHandle(),
         Flexible(
           child: ListView(
             padding: const EdgeInsetsDirectional.only(
