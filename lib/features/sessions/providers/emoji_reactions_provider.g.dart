@@ -20,7 +20,7 @@ final class EmojiReactionsProvider
         argument: null,
         retry: null,
         name: r'emojiReactionsProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -43,7 +43,7 @@ final class EmojiReactionsProvider
   }
 }
 
-String _$emojiReactionsHash() => r'9f6c0c473bd79773ef951241c63abe3bdecd8913';
+String _$emojiReactionsHash() => r'd4414132d57ef84d831ee2e01a290c1a04b4f4bf';
 
 abstract class _$EmojiReactions
     extends $Notifier<List<MapEntry<String, String>>> {
@@ -84,7 +84,7 @@ final class ParticipantEmojisProvider
   }) : super(
          retry: null,
          name: r'participantEmojisProvider',
-         isAutoDispose: true,
+         isAutoDispose: false,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
@@ -129,7 +129,7 @@ final class ParticipantEmojisProvider
   }
 }
 
-String _$participantEmojisHash() => r'f67001409d251a100e6f7a0689111567b3f699d9';
+String _$participantEmojisHash() => r'780e9fb2b3060cbb6f63f21edb4d81e9ae3f69f4';
 
 final class ParticipantEmojisFamily extends $Family
     with $FunctionalFamilyOverride<List<String>, String> {
@@ -139,7 +139,7 @@ final class ParticipantEmojisFamily extends $Family
         name: r'participantEmojisProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
-        isAutoDispose: true,
+        isAutoDispose: false,
       );
 
   ParticipantEmojisProvider call(String participantIdentity) =>

@@ -5,7 +5,7 @@ import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
 
 part 'emoji_reactions_provider.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 class EmojiReactions extends _$EmojiReactions {
   static final emojiOverlayKey = GlobalKey<OverlayState>();
 
@@ -30,29 +30,27 @@ class EmojiReactions extends _$EmojiReactions {
 
     _lastReactionTimes[userIdentity] = now;
 
-    final newState = [...state, MapEntry(userIdentity, emoji)];
+    final entry = MapEntry(userIdentity, emoji);
+    final newState = [...state, entry];
     if (newState.length > 10) {
       newState.removeAt(0);
     }
-    if (state != newState) {
-      state = newState;
-    }
+    state = newState;
 
-    await displayReaction(
-      context,
-      emoji,
-      overlayKey: EmojiReactions.emojiOverlayKey,
-    );
-    removeReaction(userIdentity, emoji);
+    try {
+      await displayReaction(
+        context,
+        emoji,
+        overlayKey: EmojiReactions.emojiOverlayKey,
+      );
+      removeReaction(entry);
+    } catch (_) {
+      removeReaction(entry);
+    }
   }
 
-  void removeReaction(String userIdentity, String emoji) {
-    final newState = state
-        .where((entry) => entry.key != userIdentity || entry.value != emoji)
-        .toList();
-    if (newState != state) {
-      state = newState;
-    }
+  void removeReaction(MapEntry<String, String> entry) {
+    state = state.where((e) => e != entry).toList();
   }
 
   void clear() {
@@ -61,7 +59,7 @@ class EmojiReactions extends _$EmojiReactions {
   }
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 List<String> participantEmojis(
   Ref ref,
   String participantIdentity,

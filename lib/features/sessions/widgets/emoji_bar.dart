@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 
 /// Displays an emoji bar above the given button context and calls
 /// [onEmojiSelected] with the selected emoji.
@@ -28,6 +29,7 @@ Future<void> showEmojiBar(
       .dy;
   final position = Offset(overlayPositionX, boxY);
 
+  final completer = Completer<void>();
   OverlayEntry? entry;
   entry = OverlayEntry(
     builder: (context) {
@@ -40,6 +42,7 @@ Future<void> showEmojiBar(
           position: position,
           onEmojiSelected: onEmojiSelected,
           onDismissed: () {
+            completer.complete();
             if (entry?.mounted ?? false) {
               entry?.remove();
             }
@@ -49,6 +52,7 @@ Future<void> showEmojiBar(
     },
   );
   Overlay.of(navigator).insert(entry);
+  return completer.future;
 }
 
 class _EmojiBarOverlay extends StatefulWidget {
@@ -237,11 +241,10 @@ Future<void> displayReaction(
                   startX: startX,
                   startY: startY,
                   onCompleted: () {
+                    completer.complete();
                     if (entry?.mounted ?? false) {
                       entry?.remove();
-                    }
-                    if (!completer.isCompleted) {
-                      completer.complete();
+                      entry = null;
                     }
                   },
                 ),
@@ -252,8 +255,17 @@ Future<void> displayReaction(
       },
     );
 
-    overlay.insert(entry);
-    await completer.future;
+    overlay.insert(entry!);
+    await completer.future.timeout(
+      const Duration(seconds: 3),
+      onTimeout: () => {},
+    );
+  } catch (error, stackTrace) {
+    ErrorHandler.logError(
+      error,
+      stackTrace: stackTrace,
+      message: 'Failed to show emoji reaction: $emoji',
+    );
   } finally {
     if (entry?.mounted ?? false) {
       entry?.remove();
@@ -268,7 +280,7 @@ class RisingEmoji extends StatefulWidget {
     required this.startX,
     required this.startY,
     required this.onCompleted,
-    this.duration = const Duration(milliseconds: 2000),
+    this.duration = const Duration(seconds: 2),
     this.sizeFactor = 1.0,
     super.key,
   });
@@ -318,7 +330,13 @@ class _RisingEmojiState extends State<RisingEmoji>
     _frequency = _random.nextDouble() * 2 + 2;
     _movesRight = _random.nextBool();
 
-    _controller.forward().whenComplete(widget.onCompleted);
+    _controller
+      ..forward()
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          widget.onCompleted();
+        }
+      });
   }
 
   @override
