@@ -516,8 +516,8 @@ class AuthController extends Notifier<AuthState> {
 
     try {
       final token = await ref.read(notificationsProvider).fcmToken;
-      if (token != null && user != null) {
-        await _authRepository.unregisterFcmToken(token);
+      if (token != null) {
+        if (user != null) await _authRepository.unregisterFcmToken(token);
         await FirebaseMessaging.instance.deleteToken();
       }
     } catch (_) {

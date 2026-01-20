@@ -339,7 +339,6 @@ class Session extends _$Session {
     } catch (_) {}
   }
 
-  /// Method called when the session is being ended to clean up resources.
   void cleanUp() {
     logger.d('Disposing SessionService and closing connections.');
 

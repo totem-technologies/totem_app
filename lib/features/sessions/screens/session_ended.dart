@@ -233,7 +233,6 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
                   error: (error, _) => [],
                   loading: () => [],
                 ),
-              // Explore More
               ElevatedButton(
                 onPressed: () => toHome(HomeRoutes.initialRoute),
                 child: const Text('Explore More'),

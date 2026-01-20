@@ -70,7 +70,6 @@ jobs:
 
           claude_args: |
             --model claude-opus-4-5
-            --max-turns 20
 
           # Optional: Trigger when specific user is assigned to an issue
           # assignee_trigger: "claude-bot"

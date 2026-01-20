@@ -146,7 +146,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 recognizer: TapGestureRecognizer()
                   ..onTap = () => launchUrl(
                     AppConfig.termsOfServiceUrl,
-                    // mode: LaunchMode.externalApplication,
+                    mode: LaunchMode.externalApplication,
                   ),
               ),
               const TextSpan(text: ' and '),

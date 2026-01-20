@@ -39,6 +39,7 @@ extension ParticipantControl on Session {
       throw StateError("Not the user's turn to accept the totem");
     }
     try {
+      // TODO(bdlukaa): Move this to repository
       await _apiService.meetings
           .totemMeetingsMobileApiAcceptTotemEndpoint(
             eventSlug: _options.eventSlug,
