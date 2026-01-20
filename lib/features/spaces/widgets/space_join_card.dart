@@ -127,246 +127,253 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
     return SafeArea(
       top: false,
-      child: Card(
-        elevation: 10,
-        child: Padding(
-          padding: const EdgeInsetsDirectional.only(
-            start: 20,
-            end: 10,
-            top: 10,
-            bottom: 10,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AutoSizeText(
-                      () {
-                        switch (state) {
-                          case SpaceJoinCardState.ended:
-                            return 'No more upcoming sessions';
-                          case SpaceJoinCardState.cancelled:
-                            return 'This session has been cancelled';
-                          case SpaceJoinCardState.joinable:
-                            return 'Session Started';
-                          case SpaceJoinCardState.closed:
-                            return 'This session is closed';
-                          case SpaceJoinCardState.full:
-                            return 'This session is full';
-                          case SpaceJoinCardState.attending:
-                          case SpaceJoinCardState.notJoined:
-                            return formatEventDate(event.start);
-                        }
-                      }(),
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                    ),
-                    Text(
-                      () {
-                        switch (state) {
-                          case SpaceJoinCardState.attending:
-                          case SpaceJoinCardState.notJoined:
-                            return formatEventTime(event.start);
-                          case SpaceJoinCardState.joinable:
-                            return _currentTimeago;
-                          case SpaceJoinCardState.ended:
-                          case SpaceJoinCardState.cancelled:
-                          case SpaceJoinCardState.closed:
-                          case SpaceJoinCardState.full:
-                            return 'Explore upcoming sessions';
-                        }
-                      }(),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ],
-                ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600, minWidth: 400),
+          child: Card(
+            elevation: 10,
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(
+                start: 20,
+                end: 10,
+                top: 10,
+                bottom: 10,
               ),
-              const SizedBox(
-                width: 10,
-              ),
-              ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 115),
-                child: Link(
-                  uri: hasEnded
-                      ? null
-                      : event.canJoinNow(user) &&
-                            event.meetingProvider ==
-                                MeetingProviderEnum.googleMeet
-                      ? Uri.parse(getFullUrl(event.calLink))
-                      : null,
-                  builder: (context, followLink) {
-                    const secondaryButtonStyle = ButtonStyle(
-                      padding: WidgetStatePropertyAll(
-                        EdgeInsetsDirectional.zero,
-                      ),
-                      maximumSize: WidgetStatePropertyAll(Size.square(46)),
-                      minimumSize: WidgetStatePropertyAll(Size.square(46)),
-                      foregroundColor: WidgetStatePropertyAll(
-                        AppTheme.mauve,
-                      ),
-                    );
-                    if (state == SpaceJoinCardState.attending) {
-                      return SizedBox(
-                        height: 46,
-                        child: Row(
-                          spacing: 8,
-                          children: [
-                            Tooltip(
-                              message: 'Add to calendar',
-                              child: OutlinedButton(
-                                onPressed: addToCalendar,
-                                style: secondaryButtonStyle,
-                                child: const TotemIcon(
-                                  TotemIcons.calendar,
-                                  size: 24,
-                                ),
-                              ),
-                            ),
-                            Tooltip(
-                              message: 'Give up your spot',
-                              child: OutlinedButton(
-                                onPressed: _loading ? null : giveUpSpot,
-                                style: secondaryButtonStyle.copyWith(
-                                  maximumSize: const WidgetStatePropertyAll(
-                                    Size.infinite,
-                                  ),
-                                  padding: const WidgetStatePropertyAll(
-                                    EdgeInsetsDirectional.symmetric(
-                                      horizontal: 10,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AutoSizeText(
+                          () {
+                            switch (state) {
+                              case SpaceJoinCardState.ended:
+                                return 'No more upcoming sessions';
+                              case SpaceJoinCardState.cancelled:
+                                return 'This session has been cancelled';
+                              case SpaceJoinCardState.joinable:
+                                return 'Session Started';
+                              case SpaceJoinCardState.closed:
+                                return 'This session is closed';
+                              case SpaceJoinCardState.full:
+                                return 'This session is full';
+                              case SpaceJoinCardState.attending:
+                              case SpaceJoinCardState.notJoined:
+                                return formatEventDate(event.start);
+                            }
+                          }(),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                        ),
+                        Text(
+                          () {
+                            switch (state) {
+                              case SpaceJoinCardState.attending:
+                              case SpaceJoinCardState.notJoined:
+                                return formatEventTime(event.start);
+                              case SpaceJoinCardState.joinable:
+                                return _currentTimeago;
+                              case SpaceJoinCardState.ended:
+                              case SpaceJoinCardState.cancelled:
+                              case SpaceJoinCardState.closed:
+                              case SpaceJoinCardState.full:
+                                return 'Explore upcoming sessions';
+                            }
+                          }(),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(
+                    width: 10,
+                  ),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 115),
+                    child: Link(
+                      uri: hasEnded
+                          ? null
+                          : event.canJoinNow(user) &&
+                                event.meetingProvider ==
+                                    MeetingProviderEnum.googleMeet
+                          ? Uri.parse(getFullUrl(event.calLink))
+                          : null,
+                      builder: (context, followLink) {
+                        const secondaryButtonStyle = ButtonStyle(
+                          padding: WidgetStatePropertyAll(
+                            EdgeInsetsDirectional.zero,
+                          ),
+                          maximumSize: WidgetStatePropertyAll(Size.square(46)),
+                          minimumSize: WidgetStatePropertyAll(Size.square(46)),
+                          foregroundColor: WidgetStatePropertyAll(
+                            AppTheme.mauve,
+                          ),
+                        );
+                        if (state == SpaceJoinCardState.attending) {
+                          return SizedBox(
+                            height: 46,
+                            child: Row(
+                              spacing: 8,
+                              children: [
+                                Tooltip(
+                                  message: 'Add to calendar',
+                                  child: OutlinedButton(
+                                    onPressed: addToCalendar,
+                                    style: secondaryButtonStyle,
+                                    child: const TotemIcon(
+                                      TotemIcons.calendar,
+                                      size: 24,
                                     ),
                                   ),
                                 ),
-                                child: _loading
-                                    ? const LoadingIndicator(size: 24)
-                                    : const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          TotemIcon(
-                                            TotemIcons.giveUpSpot,
-                                            size: 24,
-                                          ),
-                                          SizedBox(width: 8),
-                                          Text('Give up spot'),
-                                        ],
+                                Tooltip(
+                                  message: 'Give up your spot',
+                                  child: OutlinedButton(
+                                    onPressed: _loading ? null : giveUpSpot,
+                                    style: secondaryButtonStyle.copyWith(
+                                      maximumSize: const WidgetStatePropertyAll(
+                                        Size.infinite,
                                       ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                    void onPressed() {
-                      switch (state) {
-                        case SpaceJoinCardState.ended:
-                        case SpaceJoinCardState.cancelled:
-                        case SpaceJoinCardState.closed:
-                          toHome(HomeRoutes.spaces);
-                        case SpaceJoinCardState.joinable:
-                          if (event.meetingProvider ==
-                              MeetingProviderEnum.livekit) {
-                            joinLivekit();
-                          } else {
-                            followLink?.call();
-                          }
-                          _joined = true;
-                        case SpaceJoinCardState.attending:
-                          addToCalendar();
-                        case SpaceJoinCardState.full:
-                          toHome(HomeRoutes.spaces);
-                        case SpaceJoinCardState.notJoined:
-                          attend(ref);
-                      }
-                    }
-
-                    final content = Center(
-                      child: Text(
-                        switch (state) {
-                          SpaceJoinCardState.ended ||
-                          SpaceJoinCardState.cancelled ||
-                          SpaceJoinCardState.closed => 'Explore',
-                          SpaceJoinCardState.joinable => 'Join Now',
-                          SpaceJoinCardState.attending => 'Add to calendar',
-                          SpaceJoinCardState.full => 'Explore',
-                          SpaceJoinCardState.notJoined => 'Attend',
-                        },
-                        style: const TextStyle(fontWeight: FontWeight.w400),
-                      ),
-                    );
-
-                    switch (state) {
-                      case SpaceJoinCardState.closed:
-                        return Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          spacing: 14,
-                          children: [
-                            if (_attending)
-                              Tooltip(
-                                message: 'Give up your spot',
-                                child: OutlinedButton(
-                                  onPressed: _loading ? null : giveUpSpot,
-                                  style: secondaryButtonStyle,
-                                  child: const TotemIcon(
-                                    TotemIcons.giveUpSpot,
-                                    size: 24,
+                                      padding: const WidgetStatePropertyAll(
+                                        EdgeInsetsDirectional.symmetric(
+                                          horizontal: 10,
+                                        ),
+                                      ),
+                                    ),
+                                    child: _loading
+                                        ? const LoadingIndicator(size: 24)
+                                        : const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              TotemIcon(
+                                                TotemIcons.giveUpSpot,
+                                                size: 24,
+                                              ),
+                                              SizedBox(width: 8),
+                                              Text('Give up spot'),
+                                            ],
+                                          ),
                                   ),
                                 ),
-                              ),
+                              ],
+                            ),
+                          );
+                        }
+                        void onPressed() {
+                          switch (state) {
+                            case SpaceJoinCardState.ended:
+                            case SpaceJoinCardState.cancelled:
+                            case SpaceJoinCardState.closed:
+                              toHome(HomeRoutes.spaces);
+                            case SpaceJoinCardState.joinable:
+                              if (event.meetingProvider ==
+                                  MeetingProviderEnum.livekit) {
+                                joinLivekit();
+                              } else {
+                                followLink?.call();
+                              }
+                              _joined = true;
+                            case SpaceJoinCardState.attending:
+                              addToCalendar();
+                            case SpaceJoinCardState.full:
+                              toHome(HomeRoutes.spaces);
+                            case SpaceJoinCardState.notJoined:
+                              attend(ref);
+                          }
+                        }
 
-                            OutlinedButton(
-                              style: _attending ? secondaryButtonStyle : null,
+                        final content = Center(
+                          child: Text(
+                            switch (state) {
+                              SpaceJoinCardState.ended ||
+                              SpaceJoinCardState.cancelled ||
+                              SpaceJoinCardState.closed => 'Explore',
+                              SpaceJoinCardState.joinable => 'Join Now',
+                              SpaceJoinCardState.attending => 'Add to calendar',
+                              SpaceJoinCardState.full => 'Explore',
+                              SpaceJoinCardState.notJoined => 'Attend',
+                            },
+                            style: const TextStyle(fontWeight: FontWeight.w400),
+                          ),
+                        );
+
+                        switch (state) {
+                          case SpaceJoinCardState.closed:
+                            return Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              spacing: 14,
+                              children: [
+                                if (_attending)
+                                  Tooltip(
+                                    message: 'Give up your spot',
+                                    child: OutlinedButton(
+                                      onPressed: _loading ? null : giveUpSpot,
+                                      style: secondaryButtonStyle,
+                                      child: const TotemIcon(
+                                        TotemIcons.giveUpSpot,
+                                        size: 24,
+                                      ),
+                                    ),
+                                  ),
+
+                                OutlinedButton(
+                                  style: _attending
+                                      ? secondaryButtonStyle
+                                      : null,
+                                  onPressed: onPressed,
+                                  child: _loading
+                                      ? const LoadingIndicator(size: 24)
+                                      : content,
+                                ),
+                              ],
+                            );
+                          case SpaceJoinCardState.ended:
+                          case SpaceJoinCardState.cancelled:
+                          case SpaceJoinCardState.attending:
+                          case SpaceJoinCardState.full:
+                            return OutlinedButton(
                               onPressed: onPressed,
                               child: _loading
                                   ? const LoadingIndicator(size: 24)
                                   : content,
-                            ),
-                          ],
-                        );
-                      case SpaceJoinCardState.ended:
-                      case SpaceJoinCardState.cancelled:
-                      case SpaceJoinCardState.attending:
-                      case SpaceJoinCardState.full:
-                        return OutlinedButton(
-                          onPressed: onPressed,
-                          child: _loading
-                              ? const LoadingIndicator(size: 24)
-                              : content,
-                        );
-                      case SpaceJoinCardState.joinable:
-                      case SpaceJoinCardState.notJoined:
-                        return ElevatedButton(
-                          onPressed: onPressed,
-                          style: ElevatedButton.styleFrom(
-                            maximumSize: const Size(156, 46),
-                            minimumSize: const Size(46, 46),
-                            padding: const EdgeInsetsDirectional.symmetric(
-                              horizontal: 22,
-                            ),
-                            backgroundColor: AppTheme.mauve,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(26),
-                            ),
-                          ),
-                          child: _loading
-                              ? const LoadingIndicator(
-                                  color: Colors.white,
-                                  size: 24,
-                                )
-                              : content,
-                        );
-                    }
-                  },
-                ),
+                            );
+                          case SpaceJoinCardState.joinable:
+                          case SpaceJoinCardState.notJoined:
+                            return ElevatedButton(
+                              onPressed: onPressed,
+                              style: ElevatedButton.styleFrom(
+                                maximumSize: const Size(156, 46),
+                                minimumSize: const Size(46, 46),
+                                padding: const EdgeInsetsDirectional.symmetric(
+                                  horizontal: 22,
+                                ),
+                                backgroundColor: AppTheme.mauve,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(26),
+                                ),
+                              ),
+                              child: _loading
+                                  ? const LoadingIndicator(
+                                      color: Colors.white,
+                                      size: 24,
+                                    )
+                                  : content,
+                            );
+                        }
+                      },
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

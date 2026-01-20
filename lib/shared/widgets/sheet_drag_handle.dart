@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class SheetDragHandle extends StatelessWidget {
   const SheetDragHandle({
     super.key,
-    this.margin = const EdgeInsetsDirectional.only(top: 12, bottom: 14),
+    this.margin = const EdgeInsetsDirectional.only(top: 20, bottom: 20),
   });
 
   final EdgeInsetsGeometry margin;

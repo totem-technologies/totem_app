@@ -14,7 +14,6 @@ import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/widgets/audio_visualizer.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
-import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class ParticipantCard extends ConsumerWidget {
@@ -470,7 +469,7 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                     ],
                   );
                 } else if (videoTrack == null) {
-                  return const LoadingIndicator();
+                  return const LoadingVideoPlaceholder();
                 }
                 return RepaintBoundary(
                   child: VideoTrackRenderer(

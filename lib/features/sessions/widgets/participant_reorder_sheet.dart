@@ -8,6 +8,7 @@ import 'package:totem_app/features/sessions/repositories/session_repository.dart
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
+import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 Future<void> showParticipantReorderWidget(
@@ -18,7 +19,7 @@ Future<void> showParticipantReorderWidget(
 ) {
   return showModalBottomSheet(
     context: context,
-    showDragHandle: true,
+    showDragHandle: false,
     backgroundColor: const Color(0xFFF3F1E9),
     isScrollControlled: true,
     builder: (context) => ParticipantReorderWidget(
@@ -78,6 +79,7 @@ class _ParticipantReorderWidgetState
       child: CustomScrollView(
         shrinkWrap: true,
         slivers: [
+          const SliverToBoxAdapter(child: SheetDragHandle()),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsetsDirectional.only(

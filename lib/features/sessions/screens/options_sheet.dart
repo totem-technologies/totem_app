@@ -78,7 +78,6 @@ class OptionsSheet extends ConsumerWidget {
             padding: const EdgeInsetsDirectional.only(
               start: 20,
               end: 20,
-              top: 10,
               bottom: 36,
             ),
             shrinkWrap: true,
@@ -447,7 +446,7 @@ Future<void> showPrejoinOptionsSheet(
 }) {
   return showModalBottomSheet<void>(
     context: context,
-    showDragHandle: true,
+    showDragHandle: false,
     builder: (context) {
       return PrejoinOptionsSheet(
         onCameraChanged: onCameraChanged,
@@ -487,10 +486,10 @@ class PrejoinOptionsSheet extends StatelessWidget {
       padding: const EdgeInsetsDirectional.only(
         start: 20,
         end: 20,
-        top: 10,
         bottom: 36,
       ),
       children: [
+        const SheetDragHandle(),
         OptionsSheetTile.camera(
           cameraOptions,
           () {
@@ -503,7 +502,7 @@ class PrejoinOptionsSheet extends StatelessWidget {
             Navigator.of(context).pop();
           },
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 14),
         FutureBuilder(
           future: Hardware.instance.audioInputs(),
           builder: (context, snapshot) {
@@ -529,7 +528,7 @@ class PrejoinOptionsSheet extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 14),
         FutureBuilder(
           future: Hardware.instance.audioOutputs(),
           builder: (context, snapshot) {
