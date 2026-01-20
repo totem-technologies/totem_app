@@ -312,13 +312,13 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   }
 
   Widget buildActionBar(
-    Session notifier,
+    Session session,
     SessionRoomState state,
     SessionDetailSchema event,
   ) {
     return Builder(
       builder: (context) {
-        final room = notifier.room;
+        final room = session.room;
         final user = room.localParticipant!;
 
         final isUserTileVisible =
@@ -333,9 +333,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               active: room.microphoneOpened,
               onPressed: () async {
                 if (room.microphoneOpened) {
-                  await notifier.disableMicrophone();
+                  await session.disableMicrophone();
                 } else {
-                  await notifier.enableMicrophone();
+                  await session.enableMicrophone();
                 }
               },
               // if the user tile is not visible, display the speaking indicator
@@ -357,16 +357,16 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               active: room.cameraOpened,
               onPressed: () async {
                 if (room.cameraOpened) {
-                  await notifier.disableCamera();
+                  await session.disableCamera();
                 } else {
-                  await notifier.enableCamera();
+                  await session.enableCamera();
                 }
               },
               child: TotemIcon(
                 room.cameraOpened ? TotemIcons.cameraOn : TotemIcons.cameraOff,
               ),
             ),
-            if (!state.isMyTurn(notifier.room))
+            if (!state.isMyTurn(session.room))
               Builder(
                 builder: (button) {
                   return ActionBarButton(
@@ -378,7 +378,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                       await showEmojiBar(
                         button,
                         onEmojiSelected: (emoji) {
-                          notifier.sendEmoji(emoji);
+                          session.sendEmoji(emoji);
                           _onEmojiReceived(user.identity, emoji);
                         },
                       );
@@ -425,7 +425,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               child: IconButton(
                 padding: EdgeInsetsDirectional.zero,
                 onPressed: () =>
-                    showOptionsSheet(context, state, notifier, event),
+                    showOptionsSheet(context, state, session, event),
                 icon: const TotemIcon(
                   TotemIcons.more,
                   color: Colors.white,

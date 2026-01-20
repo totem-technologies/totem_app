@@ -77,10 +77,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     });
   }
 
-  // TODO(bdlukaa): Check requesting permissions before joining
   Future<void> _requestPermissions() async {
     if (_requestLock) return;
     _requestLock = true;
+
+    // TODO(bdlukaa): Make a beautiful dialog asking for permission if denied
 
     try {
       final statuses = await [

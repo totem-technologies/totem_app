@@ -219,7 +219,6 @@ class Session extends _$Session {
 
     room.localParticipant!.setCameraEnabled(_options.cameraEnabled);
 
-    // TODO(bdlukaa): This doesn't seem to work. Use room.connect to provide custom FastConnectOptions and disable microphone on start there.
     // The current behavior is to enable microphone only for keepers at the
     // beginning of the session.
     // room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)

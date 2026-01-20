@@ -102,7 +102,6 @@ extension BackgroundControl on Session {
       return false;
     }
 
-    // TODO(bdlukaa): Make a beautiful UI asking for permission
     if (Platform.isAndroid) {
       // Android 12+, there are restrictions on starting a foreground service.
       //
