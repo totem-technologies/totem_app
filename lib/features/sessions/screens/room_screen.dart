@@ -143,7 +143,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   bool _chatSheetOpen = false;
   bool _hasPendingChatMessages = false;
   void _onChatMessageReceived(String userIdentity, String message) {
-    if (!mounted) return;
+    if (!mounted || _chatSheetOpen) return;
     setState(() => _hasPendingChatMessages = !_chatSheetOpen);
     showNotificationPopup(
       context,

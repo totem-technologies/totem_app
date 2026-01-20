@@ -206,6 +206,9 @@ class NotificationPopup extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Container(
+        constraints: const BoxConstraints(
+          maxWidth: 400,
+        ),
         margin: const EdgeInsetsDirectional.only(
           top: 20,
           start: 15,
