@@ -2,8 +2,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
+import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/network.dart';
@@ -18,7 +18,7 @@ class SpaceDetailAppBar extends StatelessWidget {
   });
 
   final MobileSpaceDetailSchema space;
-  final AsyncValue<EventDetailSchema>? event;
+  final AsyncValue<SessionDetailSchema>? event;
 
   @override
   Widget build(BuildContext context) {

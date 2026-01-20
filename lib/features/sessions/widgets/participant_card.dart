@@ -4,7 +4,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
@@ -26,7 +26,7 @@ class ParticipantCard extends ConsumerWidget {
   });
 
   final Participant participant;
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
   final String participantIdentity;
 
   @override
@@ -38,7 +38,7 @@ class ParticipantCard extends ConsumerWidget {
 
     const overlayPadding = 6.0;
     final isKeeper = event.space.author.slug == participant.identity;
-    final shadowColor = isKeeper ? const Color(0x80FFD000) : Colors.black;
+    final shadowColor = isKeeper ? const Color(0x80FFD000) : Colors.black45;
 
     return RepaintBoundary(
       child: AspectRatio(
@@ -141,7 +141,7 @@ class ParticipantCard extends ConsumerWidget {
                     ),
                   ),
                 PositionedDirectional(
-                  bottom: 6,
+                  bottom: 8,
                   start: 6,
                   end: 6,
                   child: AutoSizeText(
@@ -150,7 +150,7 @@ class ParticipantCard extends ConsumerWidget {
                     maxLines: 2,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                       shadows: [
                         Shadow(
@@ -181,7 +181,7 @@ class ParticipantControlButton extends ConsumerWidget {
 
   final Participant participant;
   final double overlayPadding;
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
 
   final Color backgroundColor;
 
@@ -453,12 +453,12 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                         ),
                       ),
                       PositionedDirectional(
-                        bottom: 20,
-                        start: 20,
-                        end: 20,
+                        bottom: 14,
+                        start: 14,
+                        end: 14,
                         child: AutoSizeText(
                           user?.name ?? 'You',
-                          style: theme.textTheme.headlineMedium?.copyWith(
+                          style: theme.textTheme.titleLarge?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             shadows: kElevationToShadow[6],
@@ -512,7 +512,9 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   @override
   void dispose() {
     _statsTimer?.cancel();
-    _listener.dispose();
+    _listener
+      ..cancelAll()
+      ..dispose();
     super.dispose();
   }
 

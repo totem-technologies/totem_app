@@ -16,9 +16,7 @@ extension DevicesControl on Session {
   }
 
   LocalVideoTrack? get localVideoTrack {
-    final track =
-        room.localParticipant?.videoTrackPublications.firstOrNull?.track;
-    return track;
+    return room.localParticipant?.videoTrackPublications.firstOrNull?.track;
   }
 
   Future<void> switchCameraPosition() async {
@@ -38,29 +36,26 @@ extension DevicesControl on Session {
     }
   }
 
-  String? get selectedAudioDeviceId {
-    final userTrack = room.localParticipant
-        ?.getTrackPublications()
-        .firstWhereOrNull((track) => track.kind == TrackType.AUDIO)
-        ?.track;
-    return (userTrack?.currentOptions as AudioCaptureOptions?)?.deviceId;
+  LocalAudioTrack? get localAudioTrack {
+    return room.localParticipant?.audioTrackPublications.firstOrNull?.track;
   }
 
-  Future<void> selectAudioDevice(MediaDevice device) async {
-    final options = AudioCaptureOptions(deviceId: device.deviceId);
+  String? get selectedAudioDeviceId => localAudioTrack?.currentOptions.deviceId;
 
-    final userTrack = room.localParticipant
-        ?.getTrackPublications()
-        .firstWhereOrNull((track) => track.kind == TrackType.AUDIO)
-        ?.track;
-    if (userTrack != null) {
-      userTrack.restartTrack(options);
+  Future<void> selectAudioDevice(MediaDevice device) async {
+    final track = localAudioTrack;
+    if (track != null) {
+      track.setDeviceId(device.deviceId);
     } else {
       await room.localParticipant?.publishAudioTrack(
-        await LocalAudioTrack.create(options),
+        await LocalAudioTrack.create(
+          AudioCaptureOptions(deviceId: device.deviceId),
+        ),
       );
     }
 
+    // TODO(bdlukaa): This doesn't work on mobile.
+    // See https://github.com/livekit/client-sdk-flutter/issues/959
     await room.room.setAudioInputDevice(device);
     ref.notifyListeners();
   }
@@ -70,16 +65,15 @@ extension DevicesControl on Session {
   }
 
   Future<void> selectAudioOutputDevice(MediaDevice device) async {
+    // TODO(bdlukaa): This doesn't work on mobile.
+    // See https://github.com/livekit/client-sdk-flutter/issues/858
     await room.room.setAudioOutputDevice(device);
     ref.notifyListeners();
   }
 
   Future<void> enableMicrophone() async {
-    // workaround to use members on extension
-    // ignore: invalid_use_of_visible_for_testing_member
-    if (room.microphoneOpened || state.hasKeeperDisconnected) {
-      return;
-    }
+    if (room.microphoneOpened) return;
+
     if (room.localParticipant != null) {
       await room.localParticipant?.setMicrophoneEnabled(true);
     } else {

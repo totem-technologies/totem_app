@@ -120,7 +120,7 @@ class JoinOngoingSessionCard extends ConsumerWidget {
 
 Future<void> showOngoingSessionSheet(
   BuildContext context,
-  EventDetailSchema event,
+  SessionDetailSchema event,
 ) {
   return showModalBottomSheet<void>(
     context: context,
@@ -134,7 +134,7 @@ Future<void> showOngoingSessionSheet(
 class OngoingSessionSheet extends StatelessWidget {
   const OngoingSessionSheet({required this.event, super.key});
 
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
 
   @override
   Widget build(BuildContext context) {

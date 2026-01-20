@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_components/livekit_components.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
@@ -23,7 +23,7 @@ class NotMyTurn extends ConsumerWidget {
   final Widget actionBar;
   final SessionRoomState sessionState;
   final Session session;
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -130,8 +130,13 @@ class NotMyTurn extends ConsumerWidget {
 
           final nextUp = session.speakingNextParticipant();
           final nextUpText =
-              sessionState.sessionState.status == SessionStatus.started &&
-                  nextUp != null
+              sessionState.sessionState.status == SessionStatus.waiting
+              ? Text(
+                  'The session is about to start...',
+                  style: theme.textTheme.bodyLarge,
+                )
+              : sessionState.sessionState.status == SessionStatus.started &&
+                    nextUp != null
               ? RichText(
                   text: TextSpan(
                     children: [

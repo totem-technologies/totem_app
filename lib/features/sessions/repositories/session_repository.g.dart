@@ -127,7 +127,7 @@ final class RemoveParticipantProvider
   }
 }
 
-String _$removeParticipantHash() => r'04281cd7314c75590f956267eb74b78d566f4114';
+String _$removeParticipantHash() => r'11040d236aca40d13d90c9981ec87dea97055af9';
 
 final class RemoveParticipantFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, (String, String)> {
@@ -292,7 +292,7 @@ final class MuteEveryoneProvider
   }
 }
 
-String _$muteEveryoneHash() => r'eb83b27ea8c9e9b82d1602b5b19f370c86c31dea';
+String _$muteEveryoneHash() => r'0e038e9c31b8a2784f8311923ed78100832ce311';
 
 final class MuteEveryoneFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, String> {
@@ -361,7 +361,7 @@ final class PassTotemProvider
   }
 }
 
-String _$passTotemHash() => r'0c7fb482155b1f3d45a792d1b58580b713686c3e';
+String _$passTotemHash() => r'aeb11ba4153fe8c36831b876f6d29a0cd5689087';
 
 final class PassTotemFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, String> {
@@ -379,6 +379,75 @@ final class PassTotemFamily extends $Family
 
   @override
   String toString() => r'passTotemProvider';
+}
+
+@ProviderFor(acceptTotem)
+final acceptTotemProvider = AcceptTotemFamily._();
+
+final class AcceptTotemProvider
+    extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
+    with $FutureModifier<void>, $FutureProvider<void> {
+  AcceptTotemProvider._({
+    required AcceptTotemFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'acceptTotemProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$acceptTotemHash();
+
+  @override
+  String toString() {
+    return r'acceptTotemProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<void> create(Ref ref) {
+    final argument = this.argument as String;
+    return acceptTotem(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AcceptTotemProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$acceptTotemHash() => r'22ac74eb26369a8fb8452391f06c6981bfbfc930';
+
+final class AcceptTotemFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<void>, String> {
+  AcceptTotemFamily._()
+    : super(
+        retry: null,
+        name: r'acceptTotemProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  AcceptTotemProvider call(String eventSlug) =>
+      AcceptTotemProvider._(argument: eventSlug, from: this);
+
+  @override
+  String toString() => r'acceptTotemProvider';
 }
 
 @ProviderFor(reorderParticipants)
@@ -431,7 +500,7 @@ final class ReorderParticipantsProvider
 }
 
 String _$reorderParticipantsHash() =>
-    r'9b41757b5e091612e66a1e539e5c794f46b0f0f9';
+    r'086f9c1094c0a701204fe49ac633abf15599cd41';
 
 final class ReorderParticipantsFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, (String, List<String>)> {
@@ -500,7 +569,7 @@ final class StartSessionProvider
   }
 }
 
-String _$startSessionHash() => r'617d570d06f8422fde4ee265a73bdfef6496662a';
+String _$startSessionHash() => r'cf61d25c282b2bca7e85dd4d70a196f3849cd908';
 
 final class StartSessionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, String> {
@@ -638,7 +707,7 @@ final class SessionFeedbackProvider
   }
 }
 
-String _$sessionFeedbackHash() => r'a69c6bc5e33ee9a672ac74c1d7d56009ac6f32bd';
+String _$sessionFeedbackHash() => r'611b791e9cded8a563fe24c8f670e7ea4adde90f';
 
 final class SessionFeedbackFamily extends $Family
     with

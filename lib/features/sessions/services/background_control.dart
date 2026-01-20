@@ -47,7 +47,7 @@ extension BackgroundControl on Session {
     });
   }
 
-  Future<void> _updateNotification(EventDetailSchema event) async {
+  Future<void> _updateNotification(SessionDetailSchema event) async {
     try {
       final startTime = event.start;
       final duration = DateTime.now().difference(startTime);
@@ -78,7 +78,9 @@ extension BackgroundControl on Session {
     try {
       _notificationTimer?.cancel();
       _notificationTimer = null;
-      await FlutterForegroundTask.stopService();
+      if (await FlutterForegroundTask.isRunningService) {
+        await FlutterForegroundTask.stopService();
+      }
     } catch (_) {
       // fine if fail
     }
@@ -100,7 +102,6 @@ extension BackgroundControl on Session {
       return false;
     }
 
-    // TODO(bdlukaa): Make a beautiful UI asking for permission
     if (Platform.isAndroid) {
       // Android 12+, there are restrictions on starting a foreground service.
       //

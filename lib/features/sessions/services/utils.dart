@@ -20,29 +20,34 @@ List<TrackWidget> tracksSorting({
       return showSpeakingNow;
     }
     return true;
-  });
+  }).toList();
 
   if (sessionState.speakingOrder.isNotEmpty) {
-    final sortedTracks = <TrackWidget>[];
     final tracksMap = {
       for (final t in tracks) t.trackIdentifier.participant.identity: t,
     };
 
+    final speakingOrderSet = sessionState.speakingOrder.toSet();
+    final sortedTracks = <TrackWidget>[];
+
     for (final identity in sessionState.speakingOrder) {
-      if (tracksMap.containsKey(identity)) {
-        sortedTracks.add(tracksMap[identity]!);
+      final track = tracksMap[identity];
+      if (track != null) {
+        sortedTracks.add(track);
       }
     }
-    for (final MapEntry(:key, :value) in tracksMap.entries) {
-      if (!sessionState.speakingOrder.contains(key)) {
-        sortedTracks.add(value);
+
+    for (final track in tracks) {
+      final identity = track.trackIdentifier.participant.identity;
+      if (!speakingOrderSet.contains(identity)) {
+        sortedTracks.add(track);
       }
     }
 
     return sortedTracks;
   }
 
-  return defaultSorting(tracks.toList());
+  return defaultSorting(tracks);
 }
 
 extension SessionStateExtension on SessionState {

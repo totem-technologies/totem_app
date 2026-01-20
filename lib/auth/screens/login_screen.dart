@@ -144,7 +144,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   color: theme.colorScheme.primary,
                 ),
                 recognizer: TapGestureRecognizer()
-                  ..onTap = () => launchUrl(AppConfig.termsOfServiceUrl),
+                  ..onTap = () => launchUrl(
+                    AppConfig.termsOfServiceUrl,
+                    mode: LaunchMode.externalApplication,
+                  ),
               ),
               const TextSpan(text: ' and '),
               TextSpan(
@@ -155,7 +158,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   color: theme.colorScheme.primary,
                 ),
                 recognizer: TapGestureRecognizer()
-                  ..onTap = () => launchUrl(AppConfig.privacyPolicyUrl),
+                  ..onTap = () => launchUrl(
+                    AppConfig.privacyPolicyUrl,
+                    mode: LaunchMode.externalApplication,
+                  ),
               ),
             ],
           ),

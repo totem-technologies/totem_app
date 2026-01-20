@@ -8,8 +8,7 @@ import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
-import 'package:totem_app/api/models/event_detail_schema.dart';
-import 'package:totem_app/api/models/totem_status.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
@@ -42,7 +41,7 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
 
   final String eventSlug;
   final SessionOptions sessionOptions;
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
   final Widget loadingScreen;
   final GlobalKey actionBarKey;
 
@@ -226,14 +225,28 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         child: LivekitRoom(
           roomContext: sessionNotifier.room,
           builder: (context, roomCtx) {
+            // Use a navigator for modal sheets and dialogs inside the room
             return Navigator(
               key: _navigatorKey,
               clipBehavior: Clip.none,
               onDidRemovePage: (page) => {},
               pages: [
                 MaterialPage(
-                  child: RepaintBoundary(
-                    child: _buildBody(sessionNotifier, sessionState),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: RepaintBoundary(
+                          child: _buildBody(sessionNotifier, sessionState),
+                        ),
+                      ),
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: Overlay(
+                            key: EmojiReactions.emojiOverlayKey,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -248,6 +261,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     Session session,
     SessionRoomState state,
   ) {
+    if (state.sessionState.status == SessionStatus.ended) {
+      return SessionEndedScreen(event: widget.event, session: session);
+    }
+
     final roomCtx = session.room;
     switch (state.connectionState) {
       case RoomConnectionState.error:
@@ -257,9 +274,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       case RoomConnectionState.disconnected:
         return SessionEndedScreen(event: widget.event, session: session);
       case RoomConnectionState.connected:
-        if (state.sessionState.status == SessionStatus.ended) {
-          return SessionEndedScreen(event: widget.event, session: session);
-        }
         if (roomCtx.localParticipant == null) {
           return widget.loadingScreen;
         }
@@ -298,13 +312,13 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   }
 
   Widget buildActionBar(
-    Session notifier,
+    Session session,
     SessionRoomState state,
-    EventDetailSchema event,
+    SessionDetailSchema event,
   ) {
     return Builder(
       builder: (context) {
-        final room = notifier.room;
+        final room = session.room;
         final user = room.localParticipant!;
 
         final isUserTileVisible =
@@ -319,9 +333,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               active: room.microphoneOpened,
               onPressed: () async {
                 if (room.microphoneOpened) {
-                  await notifier.disableMicrophone();
+                  await session.disableMicrophone();
                 } else {
-                  await notifier.enableMicrophone();
+                  await session.enableMicrophone();
                 }
               },
               // if the user tile is not visible, display the speaking indicator
@@ -343,16 +357,16 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               active: room.cameraOpened,
               onPressed: () async {
                 if (room.cameraOpened) {
-                  await notifier.disableCamera();
+                  await session.disableCamera();
                 } else {
-                  await notifier.enableCamera();
+                  await session.enableCamera();
                 }
               },
               child: TotemIcon(
                 room.cameraOpened ? TotemIcons.cameraOn : TotemIcons.cameraOff,
               ),
             ),
-            if (!state.isMyTurn(notifier.room))
+            if (!state.isMyTurn(session.room))
               Builder(
                 builder: (button) {
                   return ActionBarButton(
@@ -364,7 +378,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                       await showEmojiBar(
                         button,
                         onEmojiSelected: (emoji) {
-                          notifier.sendEmoji(emoji);
+                          session.sendEmoji(emoji);
                           _onEmojiReceived(user.identity, emoji);
                         },
                       );
@@ -411,7 +425,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               child: IconButton(
                 padding: EdgeInsetsDirectional.zero,
                 onPressed: () =>
-                    showOptionsSheet(context, state, notifier, event),
+                    showOptionsSheet(context, state, session, event),
                 icon: const TotemIcon(
                   TotemIcons.more,
                   color: Colors.white,

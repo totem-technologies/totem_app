@@ -48,7 +48,7 @@ final class ListSpacesProvider
   }
 }
 
-String _$listSpacesHash() => r'408c472973ef34bfdc606357b93856c2afd0f570';
+String _$listSpacesHash() => r'52839e638c666de89cea3ceb580963c21158e9a4';
 
 @ProviderFor(event)
 final eventProvider = EventFamily._();
@@ -56,13 +56,13 @@ final eventProvider = EventFamily._();
 final class EventProvider
     extends
         $FunctionalProvider<
-          AsyncValue<EventDetailSchema>,
-          EventDetailSchema,
-          FutureOr<EventDetailSchema>
+          AsyncValue<SessionDetailSchema>,
+          SessionDetailSchema,
+          FutureOr<SessionDetailSchema>
         >
     with
-        $FutureModifier<EventDetailSchema>,
-        $FutureProvider<EventDetailSchema> {
+        $FutureModifier<SessionDetailSchema>,
+        $FutureProvider<SessionDetailSchema> {
   EventProvider._({
     required EventFamily super.from,
     required String super.argument,
@@ -86,12 +86,12 @@ final class EventProvider
 
   @$internal
   @override
-  $FutureProviderElement<EventDetailSchema> $createElement(
+  $FutureProviderElement<SessionDetailSchema> $createElement(
     $ProviderPointer pointer,
   ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<EventDetailSchema> create(Ref ref) {
+  FutureOr<SessionDetailSchema> create(Ref ref) {
     final argument = this.argument as String;
     return event(ref, argument);
   }
@@ -107,10 +107,10 @@ final class EventProvider
   }
 }
 
-String _$eventHash() => r'41915faecccdd05abac94bf2404494cc53ad320c';
+String _$eventHash() => r'0ea277c03d82ba2345a1eda0083aed2c986c0361';
 
 final class EventFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<EventDetailSchema>, String> {
+    with $FunctionalFamilyOverride<FutureOr<SessionDetailSchema>, String> {
   EventFamily._()
     : super(
         retry: null,
@@ -184,7 +184,7 @@ final class SpaceProvider
   }
 }
 
-String _$spaceHash() => r'0a7c201b4bb48c32db6e02a58cf0c8c421ce241f';
+String _$spaceHash() => r'394b182b744ce4d7965958be4dcabea9a802af82';
 
 final class SpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<MobileSpaceDetailSchema>, String> {
@@ -244,7 +244,7 @@ final class ListSubscribedSpacesProvider
 }
 
 String _$listSubscribedSpacesHash() =>
-    r'3b69d91b62109c709802530db370f8056383d723';
+    r'b255592a1c17a3ae339f0c798caf67e690f736fd';
 
 @ProviderFor(subscribeToSpace)
 final subscribeToSpaceProvider = SubscribeToSpaceFamily._();
@@ -295,7 +295,7 @@ final class SubscribeToSpaceProvider
   }
 }
 
-String _$subscribeToSpaceHash() => r'a4ad0210d97c06f9d1d30e59ea8e41fb444de736';
+String _$subscribeToSpaceHash() => r'217bb3e64c2ea5de2df8015e354a5a41779459a1';
 
 final class SubscribeToSpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
@@ -365,7 +365,7 @@ final class UnsubscribeFromSpaceProvider
 }
 
 String _$unsubscribeFromSpaceHash() =>
-    r'fd5cc65eb4a14fac326ffc7c4ffe440767c08ce8';
+    r'b81f25d8cdaa7c79c0ae6d59c85a2c0f1aac6103';
 
 final class UnsubscribeFromSpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
@@ -443,7 +443,7 @@ final class ListSpacesByKeeperProvider
 }
 
 String _$listSpacesByKeeperHash() =>
-    r'3a942dcae948f55fa347486aa8452ce1fe15b4c1';
+    r'97c825d79107257f896da14d0270b4e32a55b310';
 
 final class ListSpacesByKeeperFamily extends $Family
     with
@@ -473,13 +473,13 @@ final listSessionsHistoryProvider = ListSessionsHistoryProvider._();
 final class ListSessionsHistoryProvider
     extends
         $FunctionalProvider<
-          AsyncValue<List<EventDetailSchema>>,
-          List<EventDetailSchema>,
-          FutureOr<List<EventDetailSchema>>
+          AsyncValue<List<SessionDetailSchema>>,
+          List<SessionDetailSchema>,
+          FutureOr<List<SessionDetailSchema>>
         >
     with
-        $FutureModifier<List<EventDetailSchema>>,
-        $FutureProvider<List<EventDetailSchema>> {
+        $FutureModifier<List<SessionDetailSchema>>,
+        $FutureProvider<List<SessionDetailSchema>> {
   ListSessionsHistoryProvider._()
     : super(
         from: null,
@@ -496,18 +496,18 @@ final class ListSessionsHistoryProvider
 
   @$internal
   @override
-  $FutureProviderElement<List<EventDetailSchema>> $createElement(
+  $FutureProviderElement<List<SessionDetailSchema>> $createElement(
     $ProviderPointer pointer,
   ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<List<EventDetailSchema>> create(Ref ref) {
+  FutureOr<List<SessionDetailSchema>> create(Ref ref) {
     return listSessionsHistory(ref);
   }
 }
 
 String _$listSessionsHistoryHash() =>
-    r'1e2adbdf2646b92ac43a3fcf0084f45dbd22bb23';
+    r'd7e32c110bf14f63f1ebbe145db8b4517cd40d1f';
 
 @ProviderFor(getRecommendedSessions)
 final getRecommendedSessionsProvider = GetRecommendedSessionsFamily._();
@@ -515,13 +515,13 @@ final getRecommendedSessionsProvider = GetRecommendedSessionsFamily._();
 final class GetRecommendedSessionsProvider
     extends
         $FunctionalProvider<
-          AsyncValue<List<EventDetailSchema>>,
-          List<EventDetailSchema>,
-          FutureOr<List<EventDetailSchema>>
+          AsyncValue<List<SessionDetailSchema>>,
+          List<SessionDetailSchema>,
+          FutureOr<List<SessionDetailSchema>>
         >
     with
-        $FutureModifier<List<EventDetailSchema>>,
-        $FutureProvider<List<EventDetailSchema>> {
+        $FutureModifier<List<SessionDetailSchema>>,
+        $FutureProvider<List<SessionDetailSchema>> {
   GetRecommendedSessionsProvider._({
     required GetRecommendedSessionsFamily super.from,
     required String? super.argument,
@@ -545,12 +545,12 @@ final class GetRecommendedSessionsProvider
 
   @$internal
   @override
-  $FutureProviderElement<List<EventDetailSchema>> $createElement(
+  $FutureProviderElement<List<SessionDetailSchema>> $createElement(
     $ProviderPointer pointer,
   ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<List<EventDetailSchema>> create(Ref ref) {
+  FutureOr<List<SessionDetailSchema>> create(Ref ref) {
     final argument = this.argument as String?;
     return getRecommendedSessions(ref, argument);
   }
@@ -568,10 +568,14 @@ final class GetRecommendedSessionsProvider
 }
 
 String _$getRecommendedSessionsHash() =>
-    r'dc7a248558064985e6bcccb1e2cc336f08fe0c43';
+    r'715f75edb2e06edb5b7cea7016662b1d33365ae7';
 
 final class GetRecommendedSessionsFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<List<EventDetailSchema>>, String?> {
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<List<SessionDetailSchema>>,
+          String?
+        > {
   GetRecommendedSessionsFamily._()
     : super(
         retry: null,

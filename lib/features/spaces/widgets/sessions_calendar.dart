@@ -1,7 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:totem_app/api/models/next_event_schema.dart';
+import 'package:totem_app/api/models/next_session_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
 
 class SessionsCalendar extends StatefulWidget {
@@ -14,11 +14,11 @@ class SessionsCalendar extends StatefulWidget {
   /// List of upcoming events to highlight on the calendar
   /// The calendar will automatically start on the month of the first event,
   /// or the current month if no events are available
-  final List<NextEventSchema> nextEvents;
+  final List<NextSessionSchema> nextEvents;
 
   /// Optional callback when an event day is tapped
   /// Provides the list of events for that day and the day's DateTime
-  final void Function(DateTime day, List<NextEventSchema> events)?
+  final void Function(DateTime day, List<NextSessionSchema> events)?
   onEventDayTap;
 
   @override
@@ -157,7 +157,7 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
     });
   }
 
-  List<NextEventSchema> _getEventsForDay(DateTime? day) {
+  List<NextSessionSchema> _getEventsForDay(DateTime? day) {
     if (day == null) return [];
 
     final dayDate = _normalizeDate(day);

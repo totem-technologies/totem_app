@@ -198,10 +198,13 @@ class EmojiBar extends StatelessWidget {
 
 Future<void> displayReaction(
   BuildContext context,
-  String emoji,
-) async {
+  String emoji, {
+  GlobalKey<OverlayState>? overlayKey,
+}) async {
   final overlayBox =
-      Overlay.of(context).context.findRenderObject() as RenderBox?;
+      (overlayKey?.currentContext ?? Overlay.of(context).context)
+              .findRenderObject()
+          as RenderBox?;
   if (overlayBox == null) return;
 
   final box = context.findRenderObject() as RenderBox?;
@@ -209,7 +212,7 @@ Future<void> displayReaction(
 
   final position = box.localToGlobal(Offset.zero, ancestor: overlayBox);
 
-  final overlay = Overlay.of(context);
+  final overlay = overlayKey?.currentState ?? Overlay.of(context);
 
   final completer = Completer<void>();
   OverlayEntry? entry;
@@ -217,17 +220,33 @@ Future<void> displayReaction(
   try {
     entry = OverlayEntry(
       builder: (context) {
-        return RisingEmoji(
-          emoji: emoji,
-          startX: position.dx + box.size.width * 0.15,
-          startY: box.size.height / 2,
-          onCompleted: () {
-            if (entry?.mounted ?? false) {
-              entry?.remove();
-            }
-            if (!completer.isCompleted) {
-              completer.complete();
-            }
+        return OrientationBuilder(
+          builder: (context, orientation) {
+            final double startX = switch (orientation) {
+              Orientation.portrait => position.dx + box.size.width * 0.15,
+              Orientation.landscape => position.dx + box.size.width * 0.4,
+            };
+            final double startY = switch (orientation) {
+              Orientation.portrait => position.dy + box.size.height / 2,
+              Orientation.landscape => position.dy + box.size.height / 4,
+            };
+            return Stack(
+              children: [
+                RisingEmoji(
+                  emoji: emoji,
+                  startX: startX,
+                  startY: startY,
+                  onCompleted: () {
+                    if (entry?.mounted ?? false) {
+                      entry?.remove();
+                    }
+                    if (!completer.isCompleted) {
+                      completer.complete();
+                    }
+                  },
+                ),
+              ],
+            );
           },
         );
       },

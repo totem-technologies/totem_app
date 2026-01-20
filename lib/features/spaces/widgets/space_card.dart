@@ -3,9 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
-import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
-import 'package:totem_app/api/models/next_event_schema.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/date.dart';
@@ -25,7 +23,7 @@ const _textShadows = [
 ];
 
 MobileSpaceDetailSchema _spaceDetailFromEventDetailSchema(
-  EventDetailSchema event,
+  SessionDetailSchema event,
 ) {
   return MobileSpaceDetailSchema(
     slug: event.space.slug,
@@ -38,7 +36,7 @@ MobileSpaceDetailSchema _spaceDetailFromEventDetailSchema(
     price: event.space.price,
     subscribers: event.space.subscribers,
     nextEvents: [
-      NextEventSchema(
+      NextSessionSchema(
         start: event.start,
         link: event.calLink,
         seatsLeft: event.seatsLeft,
@@ -66,7 +64,7 @@ class SpaceCard extends StatelessWidget {
   });
 
   factory SpaceCard.fromEventDetailSchema(
-    EventDetailSchema event, {
+    SessionDetailSchema event, {
     bool compact = false,
     VoidCallback? onTap,
   }) {
@@ -317,7 +315,7 @@ class SmallSpaceCard extends StatelessWidget {
   });
 
   factory SmallSpaceCard.fromEventDetailSchema(
-    EventDetailSchema event, {
+    SessionDetailSchema event, {
     VoidCallback? onTap,
   }) {
     return SmallSpaceCard(

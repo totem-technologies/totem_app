@@ -221,6 +221,7 @@ class _GuidelinesTab extends StatelessWidget {
             style: theme.textTheme.bodyMedium,
             children: [
               const TextSpan(text: 'For more details, see the full '),
+              // TODO(adil): Use TextSpan + gesture recognizer
               WidgetSpan(
                 alignment: PlaceholderAlignment.middle,
                 child: GestureDetector(

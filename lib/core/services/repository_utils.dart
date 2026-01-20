@@ -16,7 +16,7 @@ class RepositoryUtils {
   /// [apiCall] - The API call function to execute
   /// [operationName] - Human-readable name for the operation (used in logs)
   /// [retryOnNetworkError] - Whether to retry on network errors
-  /// [maxRetries] - Maximum number of retry attempts
+  /// [maxRetries] - Maximum number of retry attempts (0 = no retries, just 1 attempt)
   ///
   /// Returns the result of [apiCall] if successful.
   /// Throws [AppAuthException] for authentication errors.
@@ -28,44 +28,44 @@ class RepositoryUtils {
     bool retryOnNetworkError = false,
     int maxRetries = 2,
   }) async {
-    int attempt = 0;
-    while (attempt < maxRetries) {
+    final totalAttempts = maxRetries + 1;
+
+    for (int attempt = 0; attempt < totalAttempts; attempt++) {
       try {
         return await apiCall();
       } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Error in $operationName',
-        );
-
-        // Don't retry on auth errors or client errors (4xx)
         if (error is AppAuthException) {
           rethrow;
         }
 
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message:
+              'Error in $operationName (attempt ${attempt + 1}/$totalAttempts)',
+        );
+
         if (error is DioException) {
           final statusCode = error.response?.statusCode;
-          // Don't retry on client errors (4xx)
           if (statusCode != null && statusCode >= 400 && statusCode < 500) {
-            attempt = maxRetries;
             rethrow;
           }
         }
 
-        // Retry logic for network errors
-        if (retryOnNetworkError &&
-            attempt < maxRetries &&
-            (error is AppNetworkException ||
-                error is DioException ||
-                error is TimeoutException)) {
-          attempt++;
-          logger.d('Retrying $operationName (attempt $attempt/$maxRetries)...');
-          await Future<void>.delayed(_getRetryDelay(attempt - 1));
+        final isLastAttempt = attempt >= maxRetries;
+        final isRetryableError =
+            error is AppNetworkException ||
+            error is DioException ||
+            error is TimeoutException;
+
+        if (!isLastAttempt && retryOnNetworkError && isRetryableError) {
+          logger.d(
+            'Retrying $operationName (attempt ${attempt + 2}/$totalAttempts)...',
+          );
+          await Future<void>.delayed(_getRetryDelay(attempt));
           continue;
         }
 
-        // Convert DioException to app-specific exceptions
         if (error is DioException) {
           throw _convertDioException(error, operationName);
         }
@@ -73,7 +73,10 @@ class RepositoryUtils {
         rethrow;
       }
     }
-    throw AppNetworkException.noConnection();
+
+    throw AppNetworkException(
+      'Unexpected error in $operationName: all attempts exhausted',
+    );
   }
 
   /// Converts DioException to app-specific exceptions.

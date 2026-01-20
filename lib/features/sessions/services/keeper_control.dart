@@ -4,6 +4,17 @@
 part of 'session_service.dart';
 
 extension KeeperControl on Session {
+  bool isKeeper([String? userSlug]) {
+    if (userSlug == null) {
+      final currentUserSlug = ref.read(
+        authControllerProvider.select((auth) => auth.user?.slug),
+      );
+      userSlug = currentUserSlug;
+    }
+
+    return state.sessionState.keeperSlug == userSlug;
+  }
+
   /// Get the participant who is currently speaking.
   Participant speakingNowParticipant() {
     return room.participants.firstWhere(
@@ -28,7 +39,6 @@ extension KeeperControl on Session {
 
   Future<void> _onKeeperDisconnected() async {
     state = state.copyWith(hasKeeperDisconnected: true);
-    await disableMicrophone();
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = Timer(

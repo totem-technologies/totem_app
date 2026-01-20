@@ -7,7 +7,7 @@ import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
@@ -70,10 +70,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   void _initializeAndCheckPermissions() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _requestPermissions();
-      if (await Permission.camera.isGranted &&
-          await Permission.microphone.isGranted) {
-        _initializeLocalVideo();
-      }
+      _initializeLocalVideo();
       if (mounted) {
         SentryDisplayWidget.of(context).reportFullyDisplayed();
       }
@@ -90,8 +87,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         Permission.microphone,
       ].request();
 
-      final cameraStatus = statuses[Permission.camera]!;
-      final micStatus = statuses[Permission.microphone]!;
+      final cameraStatus =
+          statuses[Permission.camera] ?? PermissionStatus.denied;
+      final micStatus =
+          statuses[Permission.microphone] ?? PermissionStatus.denied;
 
       if (!cameraStatus.isGranted || !micStatus.isGranted) {
         if (!mounted) return;
@@ -163,7 +162,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     setState(() => _isMicOn = !_isMicOn);
   }
 
-  Widget _buildPrejoinUI(String token, EventDetailSchema event) {
+  Widget _buildPrejoinUI(String token, SessionDetailSchema event) {
     return PrejoinRoomBaseScreen(
       title: 'Welcome',
       subtitle:
@@ -238,7 +237,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     );
   }
 
-  Future<void> _joinRoom(String token, EventDetailSchema event) async {
+  Future<void> _joinRoom(String token, SessionDetailSchema event) async {
     if (_sessionOptions != null) return;
     if (mounted) {
       setState(() {

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:totem_app/api/models/meeting_provider_enum.dart';
-import 'package:totem_app/api/models/next_event_schema.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/spaces/widgets/sessions_calendar.dart';
 
 void main() {
-  // Helper function to create a NextEventSchema with default values
-  NextEventSchema createEvent({
+  // Helper function to create a NextSessionSchema with default values
+  NextSessionSchema createEvent({
     required DateTime start,
     String? title,
     bool attending = false,
@@ -15,7 +14,7 @@ void main() {
     bool cancelled = false,
     bool joinable = false,
   }) {
-    return NextEventSchema(
+    return NextSessionSchema(
       slug: 'test-event-${start.millisecondsSinceEpoch}',
       start: start,
       link: 'https://example.com/event',
@@ -34,8 +33,8 @@ void main() {
   // Helper function to wrap the SessionsCalendar widget with proper constraints
   // This ensures the calendar has enough space to render without overflow
   Widget wrapCalendar({
-    required List<NextEventSchema> events,
-    void Function(DateTime, List<NextEventSchema>)? onEventDayTap,
+    required List<NextSessionSchema> events,
+    void Function(DateTime, List<NextSessionSchema>)? onEventDayTap,
   }) {
     return MaterialApp(
       home: Scaffold(
@@ -417,7 +416,7 @@ void main() {
       WidgetTester tester,
     ) async {
       DateTime? tappedDay;
-      List<NextEventSchema>? tappedEvents;
+      List<NextSessionSchema>? tappedEvents;
 
       final eventDate = DateTime(2025, 6, 15);
       final events = [createEvent(start: eventDate)];
@@ -495,7 +494,7 @@ void main() {
     testWidgets('should pass all events for the day in callback', (
       WidgetTester tester,
     ) async {
-      List<NextEventSchema>? tappedEvents;
+      List<NextSessionSchema>? tappedEvents;
 
       final eventDate = DateTime(2025, 6, 15);
       final events = [

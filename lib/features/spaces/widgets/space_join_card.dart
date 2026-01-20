@@ -10,9 +10,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import 'package:totem_app/api/models/event_detail_schema.dart';
 import 'package:totem_app/api/models/meeting_provider_enum.dart';
 import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
+import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -47,14 +47,14 @@ class SpaceJoinCard extends ConsumerStatefulWidget {
   const SpaceJoinCard({required this.space, required this.event, super.key});
 
   final MobileSpaceDetailSchema space;
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
 
   @override
   ConsumerState<SpaceJoinCard> createState() => _SpaceJoinCardState();
 }
 
 class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
-  EventDetailSchema get event => widget.event;
+  SessionDetailSchema get event => widget.event;
 
   late bool _attending = event.attending;
   var _loading = false;
@@ -104,9 +104,11 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     final state = () {
       if (event.cancelled) return SpaceJoinCardState.cancelled;
 
-      final hasEnded = event.start
-          .add(Duration(minutes: event.duration))
-          .isBefore(DateTime.now());
+      final hasEnded =
+          event.ended ||
+          event.start
+              .add(Duration(minutes: event.duration))
+              .isBefore(DateTime.now());
 
       if (hasEnded) return SpaceJoinCardState.ended;
 
@@ -384,7 +386,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     try {
       final mobileApiService = ref.read(mobileApiServiceProvider);
       final response = await mobileApiService.spaces
-          .totemCirclesMobileApiMobileApiRsvpConfirm(eventSlug: event.slug);
+          .totemSpacesMobileApiMobileApiRsvpConfirm(eventSlug: event.slug);
 
       if (mounted) {
         setState(() => _loading = false);
@@ -547,7 +549,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     try {
       final mobileApiService = ref.read(mobileApiServiceProvider);
       final response = await mobileApiService.spaces
-          .totemCirclesMobileApiMobileApiRsvpCancel(eventSlug: event.slug);
+          .totemSpacesMobileApiMobileApiRsvpCancel(eventSlug: event.slug);
 
       if (mounted) {
         setState(() => _loading = false);
@@ -754,8 +756,10 @@ class _AttendingDialogState extends State<AttendingDialog> {
                       decoration: TextDecoration.underline,
                     ),
                     recognizer: TapGestureRecognizer()
-                      ..onTap = () =>
-                          launchUrl(AppConfig.communityGuidelinesUrl),
+                      ..onTap = () => launchUrl(
+                        AppConfig.communityGuidelinesUrl,
+                        mode: LaunchMode.externalApplication,
+                      ),
                   ),
                   const TextSpan(
                     text: ' to learn more about how to participate.',

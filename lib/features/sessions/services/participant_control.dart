@@ -11,14 +11,7 @@ extension ParticipantControl on Session {
   Future<void> passTotem() async {
     if (!isKeeper() && !state.isMyTurn(room)) return;
     try {
-      await ref
-          .read(passTotemProvider(options.eventSlug).future)
-          .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              throw AppNetworkException.timeout();
-            },
-          );
+      await ref.read(passTotemProvider(options.eventSlug).future);
       logger.i('Passed totem successfully');
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -39,16 +32,7 @@ extension ParticipantControl on Session {
       throw StateError("Not the user's turn to accept the totem");
     }
     try {
-      await _apiService.meetings
-          .totemMeetingsMobileApiAcceptTotemEndpoint(
-            eventSlug: _options.eventSlug,
-          )
-          .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              throw AppNetworkException.timeout();
-            },
-          );
+      await ref.read(acceptTotemProvider(options.eventSlug).future);
       enableMicrophone();
       logger.i('Accepted totem successfully');
     } catch (error, stackTrace) {

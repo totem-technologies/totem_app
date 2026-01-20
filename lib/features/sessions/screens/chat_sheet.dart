@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_components/livekit_components.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/keeper/screens/keeper_profile_screen.dart';
@@ -12,12 +12,12 @@ import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 Future<void> showSessionChatSheet(
   BuildContext context,
-  EventDetailSchema event,
+  SessionDetailSchema event,
 ) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    showDragHandle: true,
+    showDragHandle: false,
     useSafeArea: true,
     backgroundColor: Colors.white,
     builder: (context) {
@@ -29,7 +29,7 @@ Future<void> showSessionChatSheet(
 class SessionChatSheet extends ConsumerStatefulWidget {
   const SessionChatSheet({required this.event, super.key});
 
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
 
   @override
   ConsumerState<SessionChatSheet> createState() => _SessionChatSheetState();
@@ -52,8 +52,18 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
     );
     final isKeeper = widget.event.space.author.slug == user?.slug;
 
+    const fastMessages = [
+      'Welcome! 🙏',
+      'Please mute your mic',
+      'Thank you for sharing',
+      "Let's begin",
+      'Please unmute to share',
+      'Take your time',
+    ];
+
     return ChatBuilder(
       builder: (context, enabled, chatCtx, messages) {
+        final listedMessages = List<ChatMessage>.from(messages.reversed);
         return DraggableScrollableSheet(
           maxChildSize: 0.9,
           initialChildSize: 0.75,
@@ -74,22 +84,34 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
 
             return Scaffold(
               backgroundColor: Colors.transparent,
-              // use scaffold to get proper virtual keyboard handling
+              // use scaffold to get proper virtual keyboard padding handling
               body: SafeArea(
                 top: false,
                 child: Padding(
                   padding: const EdgeInsetsDirectional.only(
-                    start: 20,
-                    end: 20,
-                    top: 8,
                     bottom: 20,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      Center(
+                        child: Container(
+                          margin: const EdgeInsets.only(top: 12, bottom: 14),
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[400],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
                       if (!isKeeper)
                         const Padding(
-                          padding: EdgeInsetsDirectional.only(bottom: 8),
+                          padding: EdgeInsetsDirectional.only(
+                            bottom: 8,
+                            start: 20,
+                            end: 20,
+                          ),
                           child: Text(
                             'Only the Keeper can post messages here',
                             style: TextStyle(color: Color(0xFF787D7E)),
@@ -101,6 +123,8 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                           padding: EdgeInsetsDirectional.only(
                             top: 20,
                             bottom: 8,
+                            start: 20,
+                            end: 20,
                           ),
                           child: Text(
                             'No messages yet',
@@ -114,11 +138,14 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                           child: ListView.separated(
                             padding: EdgeInsetsDirectional.only(
                               bottom: isKeeper ? 8 : 0,
+                              start: 20,
+                              end: 20,
                             ),
+                            reverse: true,
                             controller: scrollController,
-                            itemCount: messages.length,
+                            itemCount: listedMessages.length,
                             itemBuilder: (context, index) {
-                              final msg = messages[index];
+                              final msg = listedMessages[index];
                               final isMine =
                                   msg.participant?.identity == user?.email;
                               if (isMine) {
@@ -126,7 +153,14 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                               } else {
                                 final showAvatar =
                                     index == 0 ||
-                                    messages[index - 1].participant?.identity !=
+                                    listedMessages[(listedMessages.length -
+                                                    index)
+                                                .clamp(
+                                                  0,
+                                                  listedMessages.length - 1,
+                                                )]
+                                            .participant
+                                            ?.identity !=
                                         msg.participant?.identity;
                                 return OtherChatBubble(
                                   showAvatar: showAvatar,
@@ -139,9 +173,49 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                                 const SizedBox(height: 10),
                           ),
                         ),
-                      if (isKeeper)
+                      if (isKeeper) ...[
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(
+                            top: 8,
+                            start: 20,
+                            end: 20,
+                          ),
+                          child: Text(
+                            'Long press to send a quick message',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ),
                         Padding(
                           padding: const EdgeInsetsDirectional.only(top: 8),
+                          child: SizedBox(
+                            height: 36,
+                            child: ListView.separated(
+                              padding: const EdgeInsetsDirectional.only(
+                                start: 20,
+                                end: 20,
+                              ),
+                              scrollDirection: Axis.horizontal,
+                              itemCount: fastMessages.length,
+                              itemBuilder: (context, index) {
+                                final label = fastMessages[index];
+                                return _QuickMessageChip(
+                                  label: label,
+                                  onSend: () => chatCtx.sendMessage(label),
+                                );
+                              },
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(width: 8),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(
+                            top: 8,
+                            start: 20,
+                            end: 20,
+                          ),
                           child: TextField(
                             controller: _messageController,
                             onSubmitted: (_) => send(),
@@ -180,6 +254,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                             ),
                           ),
                         ),
+                      ],
                     ],
                   ),
                 ),
@@ -202,7 +277,7 @@ class OtherChatBubble extends StatelessWidget {
 
   final bool showAvatar;
   final ChatMessage message;
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
 
   @override
   Widget build(BuildContext context) {
@@ -321,6 +396,39 @@ class KeeperProfileSheet extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _QuickMessageChip extends StatelessWidget {
+  const _QuickMessageChip({
+    required this.label,
+    required this.onSend,
+  });
+
+  final String label;
+  final VoidCallback onSend;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.primaryContainer,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onLongPress: onSend,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: theme.colorScheme.onPrimaryContainer,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

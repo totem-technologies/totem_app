@@ -1,11 +1,15 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/export.dart';
+import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/core/services/repository_utils.dart';
 
 export 'package:totem_app/api/models/session_feedback_schema.dart';
 
 part 'session_repository.g.dart';
+
+const _shortTimeoutDuration = Duration(seconds: 10);
+const _timeoutDuration = Duration(seconds: 15);
 
 @riverpod
 Future<String> sessionToken(Ref ref, String eventSlug) async {
@@ -26,9 +30,9 @@ Future<void> removeParticipant(
   Ref ref,
   String eventSlug,
   String participantIdentity,
-) async {
+) {
   final apiService = ref.read(mobileApiServiceProvider);
-  await RepositoryUtils.handleApiCall<void>(
+  return RepositoryUtils.handleApiCall<void>(
     apiCall: () =>
         apiService.meetings.totemMeetingsMobileApiRemoveParticipantEndpoint(
           eventSlug: eventSlug,
@@ -64,27 +68,49 @@ Future<void> muteParticipant(
 Future<void> muteEveryone(
   Ref ref,
   String eventSlug,
-) async {
+) {
   final apiService = ref.read(mobileApiServiceProvider);
-  await RepositoryUtils.handleApiCall<void>(
+  return RepositoryUtils.handleApiCall<void>(
     apiCall: () =>
         apiService.meetings.totemMeetingsMobileApiMuteAllParticipantsEndpoint(
           eventSlug: eventSlug,
         ),
     operationName: 'mute participant',
     retryOnNetworkError: true,
+  ).timeout(
+    _shortTimeoutDuration,
+    onTimeout: () => throw AppNetworkException.timeout(),
   );
 }
 
 @riverpod
-Future<void> passTotem(Ref ref, String eventSlug) async {
+Future<void> passTotem(Ref ref, String eventSlug) {
   final apiService = ref.read(mobileApiServiceProvider);
-  await RepositoryUtils.handleApiCall<void>(
+  return RepositoryUtils.handleApiCall<void>(
     apiCall: () => apiService.meetings.totemMeetingsMobileApiPassTotemEndpoint(
       eventSlug: eventSlug,
     ),
     operationName: 'pass totem',
     retryOnNetworkError: true,
+  ).timeout(
+    _timeoutDuration,
+    onTimeout: () => throw AppNetworkException.timeout(),
+  );
+}
+
+@riverpod
+Future<void> acceptTotem(Ref ref, String eventSlug) {
+  final apiService = ref.read(mobileApiServiceProvider);
+  return RepositoryUtils.handleApiCall<void>(
+    apiCall: () =>
+        apiService.meetings.totemMeetingsMobileApiAcceptTotemEndpoint(
+          eventSlug: eventSlug,
+        ),
+    operationName: 'accept totem',
+    retryOnNetworkError: true,
+  ).timeout(
+    _timeoutDuration,
+    onTimeout: () => throw AppNetworkException.timeout(),
   );
 }
 
@@ -93,9 +119,9 @@ Future<void> reorderParticipants(
   Ref ref,
   String eventSlug,
   List<String> order,
-) async {
+) {
   final apiService = ref.read(mobileApiServiceProvider);
-  await RepositoryUtils.handleApiCall<void>(
+  return RepositoryUtils.handleApiCall<void>(
     apiCall: () =>
         apiService.meetings.totemMeetingsMobileApiReorderParticipantsEndpoint(
           eventSlug: eventSlug,
@@ -103,13 +129,16 @@ Future<void> reorderParticipants(
         ),
     operationName: 'reorder participants',
     retryOnNetworkError: true,
+  ).timeout(
+    _shortTimeoutDuration,
+    onTimeout: () => throw AppNetworkException.timeout(),
   );
 }
 
 @riverpod
-Future<void> startSession(Ref ref, String eventSlug) async {
+Future<void> startSession(Ref ref, String eventSlug) {
   final apiService = ref.read(mobileApiServiceProvider);
-  await RepositoryUtils.handleApiCall<void>(
+  return RepositoryUtils.handleApiCall<void>(
     apiCall: () => apiService.meetings.totemMeetingsMobileApiStartRoomEndpoint(
       eventSlug: eventSlug,
     ),
@@ -136,11 +165,11 @@ Future<void> sessionFeedback(
   String eventSlug,
   SessionFeedbackOptions feedback, [
   String? message,
-]) async {
+]) {
   final apiService = ref.read(mobileApiServiceProvider);
-  await RepositoryUtils.handleApiCall<void>(
+  return RepositoryUtils.handleApiCall<void>(
     apiCall: () =>
-        apiService.spaces.totemCirclesMobileApiMobileApiPostSessionFeedback(
+        apiService.spaces.totemSpacesMobileApiMobileApiPostSessionFeedback(
           eventSlug: eventSlug,
           body: SessionFeedbackSchema(
             feedback: feedback,

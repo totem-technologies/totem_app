@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' hide Session;
 import 'package:livekit_components/livekit_components.dart';
-import 'package:totem_app/api/models/event_detail_schema.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
@@ -35,16 +35,18 @@ Future<void> showOptionsSheet(
   BuildContext context,
   SessionRoomState state,
   Session session,
-  EventDetailSchema event,
+  SessionDetailSchema event,
 ) {
   return showModalBottomSheet(
     context: context,
-    showDragHandle: true,
+    showDragHandle: false,
     backgroundColor: const Color(0xFFF3F1E9),
     isScrollControlled: true,
     useSafeArea: true,
     builder: (context) {
-      return OptionsSheet(session: session, state: state, event: event);
+      return SafeArea(
+        child: OptionsSheet(session: session, state: state, event: event),
+      );
     },
   );
 }
@@ -59,203 +61,246 @@ class OptionsSheet extends ConsumerWidget {
 
   final SessionRoomState state;
   final Session session;
-  final EventDetailSchema event;
+  final SessionDetailSchema event;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    return ListView(
-      shrinkWrap: true,
-      padding: const EdgeInsetsDirectional.only(
-        start: 20,
-        end: 20,
-        top: 10,
-        bottom: 36,
-      ),
-      children: [
-        MediaDeviceSelectButton(
-          builder: (context, roomCtx, deviceCtx) {
-            final options =
-                session.localVideoTrack?.currentOptions
-                    as CameraCaptureOptions?;
-            return OptionsSheetTile.camera(
-              options,
-              () {
-                session.switchCameraPosition();
-                Navigator.of(context).pop();
-              },
-            );
-          },
-        ),
-        MediaDeviceSelectButton(
-          builder: (context, roomCtx, deviceCtx) {
-            final audioInputs = deviceCtx.audioInputs;
-            final selected =
-                deviceCtx.audioInputs?.firstWhereOrNull(
-                  (e) {
-                    return e.deviceId ==
-                            (roomCtx.localAudioTrack?.currentOptions.deviceId ??
-                                session.selectedAudioDeviceId) &&
-                        e.label.isNotEmpty;
-                  },
-                ) ??
-                deviceCtx.audioInputs?.firstOrNull;
-            return OptionsSheetTile.fromMediaDevice(
-              device: selected,
-              options: audioInputs ?? [],
-              onOptionChanged: (value) {
-                if (value != null) session.selectAudioDevice(value);
-              },
-              icon: TotemIcons.microphoneOn,
-            );
-          },
-        ),
-        MediaDeviceSelectButton(
-          builder: (context, roomCtx, deviceCtx) {
-            final audioOutputs = deviceCtx.audioOutputs?.where((device) {
-              // earpice should be handled on proximity
-              return device.label.isNotEmpty && device.label != 'Earpiece';
-            });
-            final selected =
-                deviceCtx.audioOutputs?.firstWhereOrNull(
-                  (e) {
-                    return e.deviceId == session.selectedAudioOutputDeviceId &&
-                        e.label.isNotEmpty;
-                  },
-                ) ??
-                deviceCtx.audioOutputs?.firstOrNull;
-            return OptionsSheetTile.fromMediaDevice(
-              device: selected,
-              options: audioOutputs ?? [],
-              onOptionChanged: (value) {
-                if (value != null) session.selectAudioOutputDevice(value);
-              },
-              icon: TotemIcons.speaker,
-            );
-          },
-        ),
-        OptionsSheetTile<void>(
-          title: 'Leave Session',
-          icon: TotemIcons.leaveCall,
-          type: OptionsSheetTileType.destructive,
-          onTap: () async {
-            final navigator = Navigator.of(context)..pop();
-            final shouldLeave = await showLeaveDialog(context) ?? false;
-            if (shouldLeave && navigator.mounted) popOrHome(navigator.context);
-          },
-        ),
+    final isKeeper = session.isKeeper();
 
-        if (session.isKeeper()) ...[
-          Text(
-            'Keeper Options',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.onSurface,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 12, bottom: 8),
+          width: 40,
+          height: 4,
+          decoration: BoxDecoration(
+            color: Colors.grey[400],
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        Flexible(
+          child: ListView(
+            padding: const EdgeInsetsDirectional.only(
+              start: 20,
+              end: 20,
+              top: 10,
+              bottom: 36,
             ),
-          ),
-          if (state.sessionState.status == SessionStatus.waiting)
-            OptionsSheetTile<void>(
-              title: 'Start session',
-              icon: TotemIcons.arrowForward,
-              onTap: () {
-                Navigator.of(context).pop();
-                _onStartSession(context);
-              },
-            ),
-          OptionsSheetTile<void>(
-            title: 'Reorder Participants',
-            icon: TotemIcons.reorderParticipants,
-            onTap: () {
-              Navigator.of(context).pop();
-              showParticipantReorderWidget(
-                context,
-                session,
-                state,
-                event,
-              );
-            },
-          ),
-          OptionsSheetTile<void>(
-            title: 'Mute everyone',
-            icon: TotemIcons.microphoneOff,
-            type: OptionsSheetTileType.destructive,
-            onTap: () {
-              Navigator.of(context).pop();
-              _onMuteEveryone();
-            },
-          ),
-          if (state.sessionState.status == SessionStatus.started)
-            OptionsSheetTile<void>(
-              title: 'Pass to Next',
-              icon: TotemIcons.passToNext,
-              type: OptionsSheetTileType.destructive,
-              onTap: state.sessionState.status == SessionStatus.started
-                  ? () {
+            shrinkWrap: true,
+            physics: const ClampingScrollPhysics(),
+            children: [
+              OptionsSheetTile.camera(
+                session.localVideoTrack?.currentOptions
+                    as CameraCaptureOptions?,
+                () {
+                  session.switchCameraPosition();
+                  Navigator.of(context).pop();
+                },
+              ),
+              MediaDeviceSelectButton(
+                builder: (context, roomCtx, deviceCtx) {
+                  final audioInputs = deviceCtx.audioInputs;
+                  final selected =
+                      deviceCtx.audioInputs?.firstWhereOrNull(
+                        (e) {
+                          return e.deviceId ==
+                                  (roomCtx
+                                          .localAudioTrack
+                                          ?.currentOptions
+                                          .deviceId ??
+                                      session.selectedAudioDeviceId) &&
+                              e.label.isNotEmpty;
+                        },
+                      ) ??
+                      deviceCtx.audioInputs?.firstOrNull;
+                  return OptionsSheetTile.fromMediaDevice(
+                    device: selected,
+                    options: audioInputs ?? [],
+                    onOptionChanged: (value) {
+                      if (value != null) session.selectAudioDevice(value);
+                    },
+                    icon: TotemIcons.microphoneOn,
+                  );
+                },
+              ),
+              MediaDeviceSelectButton(
+                builder: (context, roomCtx, deviceCtx) {
+                  final audioOutputs = deviceCtx.audioOutputs?.where((
+                    device,
+                  ) {
+                    return device.label.isNotEmpty &&
+                        device.label != 'Earpiece';
+                  });
+                  final selected =
+                      deviceCtx.audioOutputs?.firstWhereOrNull(
+                        (e) {
+                          return e.deviceId ==
+                                  session.selectedAudioOutputDeviceId &&
+                              e.label.isNotEmpty;
+                        },
+                      ) ??
+                      deviceCtx.audioOutputs?.firstOrNull;
+                  return OptionsSheetTile.fromMediaDevice(
+                    device: selected,
+                    options: audioOutputs ?? [],
+                    onOptionChanged: (value) {
+                      if (value != null) {
+                        session.selectAudioOutputDevice(value);
+                      }
+                    },
+                    icon: TotemIcons.speaker,
+                  );
+                },
+              ),
+              OptionsSheetTile<void>(
+                title: 'Leave Session',
+                icon: TotemIcons.leaveCall,
+                type: OptionsSheetTileType.destructive,
+                onTap: () async {
+                  final navigator = Navigator.of(context)..pop();
+                  final shouldLeave = await showLeaveDialog(context) ?? false;
+                  if (shouldLeave && navigator.mounted) {
+                    popOrHome(navigator.context);
+                  }
+                },
+              ),
+
+              if (isKeeper) ...[
+                Text(
+                  'Keeper Options',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                if (state.sessionState.status == SessionStatus.waiting)
+                  OptionsSheetTile<void>(
+                    title: 'Start session',
+                    icon: TotemIcons.feedback,
+                    onTap: () {
                       Navigator.of(context).pop();
-                      _onPassToNext(context);
-                    }
-                  : null,
-            ),
-          if (state.sessionState.status != SessionStatus.ended)
-            OptionsSheetTile<void>(
-              title: 'End Session',
-              icon: TotemIcons.cameraOff,
-              type: OptionsSheetTileType.destructive,
-              onTap: state.sessionState.status == SessionStatus.started
-                  ? () {
-                      Navigator.of(context).pop();
-                      _onEndSession(context);
-                    }
-                  : null,
-            ),
-          Text(
-            'Session State',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.onSurface,
-            ),
+                      _onStartSession(context);
+                    },
+                  ),
+                OptionsSheetTile<void>(
+                  title: 'Reorder Participants',
+                  icon: TotemIcons.reorderParticipants,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    showParticipantReorderWidget(
+                      context,
+                      session,
+                      state,
+                      event,
+                    );
+                  },
+                ),
+                OptionsSheetTile<void>(
+                  title: 'Mute everyone',
+                  icon: TotemIcons.microphoneOff,
+                  type: OptionsSheetTileType.destructive,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _onMuteEveryone();
+                  },
+                ),
+                if (state.sessionState.status == SessionStatus.started)
+                  Builder(
+                    builder: (context) {
+                      final next = state.sessionState.nextParticipantIdentity;
+                      final nextParticipantName = next != null
+                          ? session.room.participants
+                                .firstWhereOrNull(
+                                  (p) => p.identity == next,
+                                )
+                                ?.name
+                          : null;
+                      return OptionsSheetTile<void>(
+                        title: switch (state.sessionState.totemStatus) {
+                          TotemStatus.passing =>
+                            'Accept Totem for ${nextParticipantName ?? 'Next'}',
+                          TotemStatus.accepted =>
+                            'Pass Totem to ${nextParticipantName ?? 'Next'}',
+                          _ => 'Next Totem Action',
+                        },
+                        icon: TotemIcons.passToNext,
+                        type: OptionsSheetTileType.destructive,
+                        onTap:
+                            state.sessionState.status ==
+                                    SessionStatus.started &&
+                                state.sessionState.totemStatus !=
+                                    TotemStatus.none
+                            ? () {
+                                Navigator.of(context).pop();
+                                _onNextTotemAction(context);
+                              }
+                            : null,
+                      );
+                    },
+                  ),
+                if (state.sessionState.status != SessionStatus.ended)
+                  OptionsSheetTile<void>(
+                    title: 'End Session',
+                    icon: TotemIcons.cameraOff,
+                    type: OptionsSheetTileType.destructive,
+                    onTap: state.sessionState.status == SessionStatus.started
+                        ? () {
+                            Navigator.of(context).pop();
+                            _onEndSession(context);
+                          }
+                        : null,
+                  ),
+                Text(
+                  'Session State',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                OptionsSheetTile<void>(
+                  title:
+                      'Session Status: '
+                      '${state.sessionState.status.name.uppercaseFirst()}',
+                  icon: TotemIcons.checkboxOutlined,
+                ),
+                OptionsSheetTile<void>(
+                  title:
+                      'Totem Status: '
+                      '${state.sessionState.totemStatus.name.uppercaseFirst()}',
+                  icon: TotemIcons.feedback,
+                ),
+                Builder(
+                  builder: (context) {
+                    final String? userName =
+                        state.sessionState.speakingNow != null
+                        ? session.room.participants
+                              .firstWhereOrNull(
+                                (p) =>
+                                    p.identity ==
+                                    state.sessionState.speakingNow,
+                              )
+                              ?.name
+                        : null;
+                    return OptionsSheetTile<void>(
+                      title:
+                          'Speaking now: '
+                          '${userName ?? 'None'}',
+                      icon: TotemIcons.community,
+                    );
+                  },
+                ),
+              ],
+            ].expand((child) => [child, const SizedBox(height: 10)]).toList(),
           ),
-          OptionsSheetTile<void>(
-            title:
-                'Session Status: '
-                '${state.sessionState.status.name.uppercaseFirst()}',
-            icon: TotemIcons.checkboxOutlined,
-          ),
-          OptionsSheetTile<void>(
-            title:
-                'Totem Status: '
-                '${state.sessionState.totemStatus.name.uppercaseFirst()}',
-            icon: TotemIcons.feedback,
-          ),
-          Builder(
-            builder: (context) {
-              final String? userName = state.sessionState.speakingNow != null
-                  ? ref
-                        .watch(
-                          userProfileProvider(state.sessionState.speakingNow!),
-                        )
-                        .whenData((user) => user.name ?? user.slug)
-                        .value
-                  : null;
-              return OptionsSheetTile<void>(
-                title:
-                    'Speaking now: '
-                    '${userName ?? 'None'}',
-                icon: TotemIcons.community,
-              );
-            },
-          ),
-        ],
-      ].expand((child) => [child, const SizedBox(height: 10)]).toList(),
+        ),
+      ],
     );
   }
 
-  Future<void> _onMuteEveryone() async {
-    await session.muteEveryone();
-  }
+  Future<void> _onMuteEveryone() => session.muteEveryone();
 
-  Future<void> _onPassToNext(BuildContext context) async {
-    if (state.sessionState.nextParticipantIdentity == null) {
-      return;
-    }
+  Future<void> _onNextTotemAction(BuildContext context) async {
+    if (state.sessionState.nextParticipantIdentity == null) return;
 
     await showDialog<void>(
       context: context,
@@ -263,41 +308,61 @@ class OptionsSheet extends ConsumerWidget {
         final theme = Theme.of(context);
         final nextParticipantIdentity =
             state.sessionState.nextParticipantIdentity!;
+
         return Consumer(
           builder: (context, ref, child) {
-            final user = ref.watch(
-              userProfileProvider(nextParticipantIdentity),
-            );
+            final nextParticipantName =
+                session.room.participants
+                    .firstWhereOrNull(
+                      (p) => p.identity == nextParticipantIdentity,
+                    )
+                    ?.name ??
+                ref
+                    .watch(userProfileProvider(nextParticipantIdentity))
+                    .whenData((user) => user.name)
+                    .value;
             return ConfirmationDialog(
               title: null,
-              confirmButtonText: 'Pass',
-              content:
-                  'Pass totem to '
-                  '${user.whenData((user) => user.name).value ?? 'the next participant'}?',
+              confirmButtonText: switch (state.sessionState.totemStatus) {
+                TotemStatus.passing => 'Accept Totem',
+                TotemStatus.accepted => 'Pass Totem',
+                _ => 'Proceed',
+              },
+              content: switch (state.sessionState.totemStatus) {
+                TotemStatus.passing =>
+                  'Accept the totem on behalf of '
+                      '${nextParticipantName ?? 'the next participant'}?',
+                TotemStatus.accepted =>
+                  'Pass the totem to '
+                      '${nextParticipantName ?? 'the next participant'}?',
+                _ =>
+                  'Proceed with the next totem action for '
+                      '${nextParticipantName ?? 'the next participant'}?',
+              },
               contentStyle: theme.textTheme.titleMedium?.copyWith(
                 color: theme.colorScheme.onSurface,
               ),
               type: ConfirmationDialogType.standard,
               onConfirm: () async {
                 try {
-                  await session.passTotem();
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
+                  if (state.sessionState.totemStatus == TotemStatus.passing) {
+                    await session.acceptTotem();
+                    return;
+                  } else if (state.sessionState.totemStatus ==
+                      TotemStatus.accepted) {
+                    await session.passTotem();
+                    return;
                   }
                 } catch (error) {
                   if (context.mounted) {
-                    Navigator.of(context).pop();
-                    await ErrorHandler.handleApiError(
+                    ErrorHandler.showErrorSnackBar(
                       context,
-                      error,
-                      onRetry: () async {
-                        try {
-                          await session.passTotem();
-                        } catch (e) {
-                          // Error already handled by handleApiError
-                        }
-                      },
+                      'Failed to perform next totem action',
                     );
+                  }
+                } finally {
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
                   }
                 }
               },
@@ -590,51 +655,53 @@ class OptionsSheetTile<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     if (options != null && options!.isNotEmpty && options!.length > 1) {
-      return Container(
-        decoration: BoxDecoration(
-          color: type == OptionsSheetTileType.destructive
-              ? theme.colorScheme.errorContainer
-              : Colors.white,
-          borderRadius: BorderRadius.circular(30),
-        ),
-        padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            SizedBox.square(
-              dimension: 24,
-              child: TotemIcon(icon, size: 24),
-            ),
-            Expanded(
-              child: DropdownButton<T>(
-                padding: const EdgeInsetsDirectional.symmetric(horizontal: 12),
-                isExpanded: true,
-                value: selectedOption,
-                items: options
-                    ?.map(
-                      (e) => DropdownMenuItem<T>(
-                        value: e,
-                        child: AutoSizeText(
-                          optionToString?.call(e) ?? e.toString(),
-                          maxLines: 1,
+      return Material(
+        color: type == OptionsSheetTileType.destructive
+            ? theme.colorScheme.errorContainer
+            : Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        child: Padding(
+          padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              SizedBox.square(
+                dimension: 24,
+                child: TotemIcon(icon, size: 24),
+              ),
+              Expanded(
+                child: DropdownButton<T>(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 12,
+                  ),
+                  isExpanded: true,
+                  value: selectedOption,
+                  items: options
+                      ?.map(
+                        (e) => DropdownMenuItem<T>(
+                          value: e,
+                          child: AutoSizeText(
+                            optionToString?.call(e) ?? e.toString(),
+                            maxLines: 1,
+                          ),
                         ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: onOptionChanged,
-                underline: const SizedBox.shrink(),
-                borderRadius: BorderRadius.circular(30),
-                style: const TextStyle(fontSize: 16, color: Colors.black),
-                iconEnabledColor: type == OptionsSheetTileType.destructive
-                    ? theme.colorScheme.onErrorContainer
-                    : null,
-                dropdownColor: Colors.white,
-                icon: const SizedBox.square(
-                  dimension: 16,
-                  child: TotemIcon(TotemIcons.chevronDown, size: 16),
+                      )
+                      .toList(),
+                  onChanged: onOptionChanged,
+                  underline: const SizedBox.shrink(),
+                  borderRadius: BorderRadius.circular(30),
+                  style: const TextStyle(fontSize: 16, color: Colors.black),
+                  iconEnabledColor: type == OptionsSheetTileType.destructive
+                      ? theme.colorScheme.onErrorContainer
+                      : null,
+                  dropdownColor: Colors.white,
+                  icon: const SizedBox.square(
+                    dimension: 16,
+                    child: TotemIcon(TotemIcons.chevronDown, size: 16),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
