@@ -80,9 +80,6 @@ class OptionsSheet extends ConsumerWidget {
             borderRadius: BorderRadius.circular(2),
           ),
         ),
-        // 3. Use Flexible.
-        // This allows the ListView to shrink if items are few,
-        // but constrains it to the available screen space if items are many.
         Flexible(
           child: ListView(
             padding: const EdgeInsetsDirectional.only(
@@ -91,11 +88,7 @@ class OptionsSheet extends ConsumerWidget {
               top: 10,
               bottom: 36,
             ),
-            // 4. Set shrinkWrap to true.
-            // This is crucial for the list to calculate its height based on children.
             shrinkWrap: true,
-            // Use ClampingScrollPhysics to avoid "bouncing" when content is short,
-            // making it feel like a static sheet until it overflows.
             physics: const ClampingScrollPhysics(),
             children: [
               OptionsSheetTile.camera(
