@@ -15,7 +15,6 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
@@ -141,7 +140,6 @@ class SessionRoomState {
 class Session extends _$Session {
   late final RoomContext room;
   late final EventsListener<RoomEvent> _listener;
-  late final MobileTotemApi _apiService;
   late SessionOptions _options;
   String? _lastMetadata;
   SessionDetailSchema? event;
@@ -157,7 +155,6 @@ class Session extends _$Session {
   @override
   SessionRoomState build(SessionOptions options) {
     _options = options;
-    _apiService = ref.read(mobileApiServiceProvider);
 
     ref.watch(eventProvider(_options.eventSlug)).whenData((event) {
       this.event = event;

@@ -81,16 +81,16 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     if (_requestLock) return;
     _requestLock = true;
 
-    // TODO(bdlukaa): Make a beautiful dialog asking for permission if denied
-
     try {
       final statuses = await [
         Permission.camera,
         Permission.microphone,
       ].request();
 
-      final cameraStatus = statuses[Permission.camera]!;
-      final micStatus = statuses[Permission.microphone]!;
+      final cameraStatus =
+          statuses[Permission.camera] ?? PermissionStatus.denied;
+      final micStatus =
+          statuses[Permission.microphone] ?? PermissionStatus.denied;
 
       if (!cameraStatus.isGranted || !micStatus.isGranted) {
         if (!mounted) return;

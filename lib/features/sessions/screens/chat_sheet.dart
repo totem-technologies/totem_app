@@ -153,8 +153,12 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                               } else {
                                 final showAvatar =
                                     index == 0 ||
-                                    listedMessages[listedMessages.length -
-                                                index]
+                                    listedMessages[(listedMessages.length -
+                                                    index)
+                                                .clamp(
+                                                  0,
+                                                  listedMessages.length - 1,
+                                                )]
                                             .participant
                                             ?.identity !=
                                         msg.participant?.identity;

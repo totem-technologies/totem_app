@@ -43,7 +43,7 @@ final class EmojiReactionsProvider
   }
 }
 
-String _$emojiReactionsHash() => r'b1463b186762da1f568400e8eee56f40c9bd5ada';
+String _$emojiReactionsHash() => r'9f6c0c473bd79773ef951241c63abe3bdecd8913';
 
 abstract class _$EmojiReactions
     extends $Notifier<List<MapEntry<String, String>>> {

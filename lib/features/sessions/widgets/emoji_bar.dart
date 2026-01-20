@@ -220,17 +220,33 @@ Future<void> displayReaction(
   try {
     entry = OverlayEntry(
       builder: (context) {
-        return RisingEmoji(
-          emoji: emoji,
-          startX: position.dx + box.size.width * 0.15,
-          startY: box.size.height / 2,
-          onCompleted: () {
-            if (entry?.mounted ?? false) {
-              entry?.remove();
-            }
-            if (!completer.isCompleted) {
-              completer.complete();
-            }
+        return OrientationBuilder(
+          builder: (context, orientation) {
+            final double startX = switch (orientation) {
+              Orientation.portrait => position.dx + box.size.width * 0.15,
+              Orientation.landscape => position.dx + box.size.width * 0.4,
+            };
+            final double startY = switch (orientation) {
+              Orientation.portrait => position.dy + box.size.height / 2,
+              Orientation.landscape => position.dy + box.size.height / 4,
+            };
+            return Stack(
+              children: [
+                RisingEmoji(
+                  emoji: emoji,
+                  startX: startX,
+                  startY: startY,
+                  onCompleted: () {
+                    if (entry?.mounted ?? false) {
+                      entry?.remove();
+                    }
+                    if (!completer.isCompleted) {
+                      completer.complete();
+                    }
+                  },
+                ),
+              ],
+            );
           },
         );
       },
