@@ -187,9 +187,18 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     final sessionState = ref.watch(
       sessionProvider(_cachedSessionOptions ?? _buildSessionOptions()),
     );
-    final sessionNotifier = ref.read(
+    final session = ref.read(
       sessionProvider(_cachedSessionOptions ?? _buildSessionOptions()).notifier,
     );
+
+    if (widget.event.ended ||
+        (session.event?.ended ?? false) ||
+        sessionState.sessionState.status == SessionStatus.ended) {
+      return RoomBackground(
+        status: sessionState.sessionState.status,
+        child: SessionEndedScreen(event: widget.event, session: session),
+      );
+    }
 
     return PopScope(
       canPop: false,
@@ -223,7 +232,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       child: RoomBackground(
         status: sessionState.sessionState.status,
         child: LivekitRoom(
-          roomContext: sessionNotifier.room,
+          roomContext: session.room,
           builder: (context, roomCtx) {
             // Use a navigator for modal sheets and dialogs inside the room
             return Navigator(
@@ -236,7 +245,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                     children: [
                       Positioned.fill(
                         child: RepaintBoundary(
-                          child: _buildBody(sessionNotifier, sessionState),
+                          child: _buildBody(session, sessionState),
                         ),
                       ),
                       Positioned.fill(

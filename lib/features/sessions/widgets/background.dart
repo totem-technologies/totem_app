@@ -14,10 +14,13 @@ class RoomBackground extends StatelessWidget {
 
   final Widget child;
 
+  /// The padding to apply around the child widget.
   final EdgeInsetsGeometry padding;
 
+  /// The system UI overlay style to apply.
   final SystemUiOverlayStyle overlayStyle;
 
+  /// The status of the session to determine background style.
   final SessionStatus status;
 
   @override
