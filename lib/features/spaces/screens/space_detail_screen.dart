@@ -67,6 +67,8 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
         _selectedEventSlug ??
         widget.eventSlug ??
         spaceAsync.maybeWhen(
+          skipLoadingOnRefresh: false,
+          skipLoadingOnReload: false,
           data: (space) => space.nextEvents.firstOrNull?.slug,
           orElse: () => null,
         );

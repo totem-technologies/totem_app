@@ -134,8 +134,7 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
               Text(
                 switch (widget.session.reason) {
                   SessionEndedReason.finished =>
-                    'Thank you for joining! We hope you found '
-                        'the session enjoyable.',
+                    'Thank you for joining!\nWe hope you found the session enjoyable.',
                   SessionEndedReason.keeperLeft =>
                     'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
                 },
