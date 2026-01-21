@@ -8,10 +8,9 @@ import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
-import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
-import 'package:totem_app/features/sessions/widgets/audio_visualizer.dart';
+import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
@@ -82,51 +81,7 @@ class ParticipantCard extends ConsumerWidget {
                 PositionedDirectional(
                   top: overlayPadding,
                   start: overlayPadding,
-                  child: Consumer(
-                    builder: (context, ref, child) {
-                      final emojis = ref.watch(
-                        participantEmojisProvider(participantIdentity),
-                      );
-                      return AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        switchInCurve: Curves.easeInOut,
-                        switchOutCurve: Curves.easeInOut,
-                        child: emojis.isNotEmpty
-                            ? Container(
-                                key: ValueKey(emojis.first),
-                                width: 20,
-                                height: 20,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white,
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  emojis.first,
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    textBaseline: TextBaseline.ideographic,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              )
-                            : child,
-                      );
-                    },
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.black54,
-                      ),
-                      padding: const EdgeInsetsDirectional.all(2),
-                      alignment: Alignment.center,
-                      child: SpeakingIndicator(
-                        participant: participant,
-                      ),
-                    ),
-                  ),
+                  child: SpeakingIndicatorOrEmoji(participant: participant),
                 ),
                 if (currentUserIsKeeper &&
                     currentUserSlug != participant.identity)
@@ -363,49 +318,6 @@ class ParticipantControlButton extends ConsumerWidget {
         );
       },
     );
-  }
-}
-
-class SpeakingIndicator extends StatelessWidget {
-  const SpeakingIndicator({
-    required this.participant,
-    this.foregroundColor = Colors.white,
-    this.barCount = 3,
-    super.key,
-  });
-
-  final Participant participant;
-  final Color foregroundColor;
-  final int barCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final audioTracks = participant
-        .getTrackPublications()
-        .where((t) => t.kind == TrackType.AUDIO && t.track is AudioTrack)
-        .toList();
-    if (participant.isMuted || !participant.hasAudio || audioTracks.isEmpty) {
-      return TotemIcon(
-        TotemIcons.microphoneOff,
-        size: 20,
-        color: foregroundColor,
-      );
-    } else {
-      return RepaintBoundary(
-        child: SoundWaveformWidget(
-          audioTrack: audioTracks.firstOrNull?.track as AudioTrack?,
-          participant: participant,
-          options: AudioVisualizerWidgetOptions(
-            color: foregroundColor,
-            barCount: barCount,
-            barMinOpacity: 0.8,
-            spacing: 3,
-            minHeight: 4,
-            maxHeight: 12,
-          ),
-        ),
-      );
-    }
   }
 }
 

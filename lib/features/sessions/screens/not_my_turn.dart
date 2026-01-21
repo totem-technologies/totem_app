@@ -7,6 +7,7 @@ import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
+import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
 class NotMyTurn extends ConsumerWidget {
@@ -82,7 +83,7 @@ class NotMyTurn extends ConsumerWidget {
                               boxShadow: kElevationToShadow[6],
                             ),
                             padding: const EdgeInsetsDirectional.all(4),
-                            child: SpeakingIndicator(
+                            child: SpeakingIndicatorOrEmoji(
                               participant: activeSpeaker,
                             ),
                           ),
