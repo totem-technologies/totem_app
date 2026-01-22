@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
+import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
+import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 
 typedef OnFeedbackSubmitted = Future<void> Function(String feedback);
 
@@ -12,7 +14,7 @@ Future<void> showUserFeedbackDialog(
 }) async {
   return showModalBottomSheet(
     context: context,
-    showDragHandle: true,
+    showDragHandle: false,
     useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
@@ -94,14 +96,37 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
 
     return PopScope(
-      canPop: !_loading,
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (_feedbackController.text.isNotEmpty) {
+          return showDialog(
+            context: context,
+            builder: (context) {
+              return ConfirmationDialog(
+                title: 'Discard Feedback?',
+                content:
+                    'You have unsent feedback. Are you sure you want to discard it?',
+                confirmButtonText: 'Discard',
+                onConfirm: () async {
+                  _feedbackController.clear();
+                  if (mounted) {
+                    Navigator.of(context).pop(); // close the dialog
+                    Navigator.of(context).pop(); // close the feedback sheet
+                  }
+                },
+              );
+            },
+          );
+        }
+        Navigator.of(context).pop();
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
         padding: EdgeInsets.only(
           left: 24,
           right: 24,
-          top: 24,
           bottom: 24 + keyboardHeight,
         ),
         child: SafeArea(
@@ -113,6 +138,7 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const SheetDragHandle(),
                   Text(
                     'Feedback',
                     style: theme.textTheme.headlineSmall?.copyWith(

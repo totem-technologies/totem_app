@@ -22,8 +22,8 @@ import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
-import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/protection_overlay.dart';
+import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -143,7 +143,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   bool _chatSheetOpen = false;
   bool _hasPendingChatMessages = false;
   void _onChatMessageReceived(String userIdentity, String message) {
-    if (!mounted) return;
+    if (!mounted || _chatSheetOpen) return;
     setState(() => _hasPendingChatMessages = !_chatSheetOpen);
     showNotificationPopup(
       context,
@@ -187,9 +187,18 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     final sessionState = ref.watch(
       sessionProvider(_cachedSessionOptions ?? _buildSessionOptions()),
     );
-    final sessionNotifier = ref.read(
+    final session = ref.read(
       sessionProvider(_cachedSessionOptions ?? _buildSessionOptions()).notifier,
     );
+
+    if (widget.event.ended ||
+        (session.event?.ended ?? false) ||
+        sessionState.sessionState.status == SessionStatus.ended) {
+      return RoomBackground(
+        status: sessionState.sessionState.status,
+        child: SessionEndedScreen(event: widget.event, session: session),
+      );
+    }
 
     return PopScope(
       canPop: false,
@@ -223,7 +232,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       child: RoomBackground(
         status: sessionState.sessionState.status,
         child: LivekitRoom(
-          roomContext: sessionNotifier.room,
+          roomContext: session.room,
           builder: (context, roomCtx) {
             // Use a navigator for modal sheets and dialogs inside the room
             return Navigator(
@@ -236,7 +245,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                     children: [
                       Positioned.fill(
                         child: RepaintBoundary(
-                          child: _buildBody(sessionNotifier, sessionState),
+                          child: _buildBody(session, sessionState),
                         ),
                       ),
                       Positioned.fill(
@@ -261,10 +270,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     Session session,
     SessionRoomState state,
   ) {
-    if (state.sessionState.status == SessionStatus.ended) {
-      return SessionEndedScreen(event: widget.event, session: session);
-    }
-
     final roomCtx = session.room;
     switch (state.connectionState) {
       case RoomConnectionState.error:
@@ -274,6 +279,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       case RoomConnectionState.disconnected:
         return SessionEndedScreen(event: widget.event, session: session);
       case RoomConnectionState.connected:
+        if (state.sessionState.status == SessionStatus.ended) {
+          return SessionEndedScreen(event: widget.event, session: session);
+        }
+
         if (roomCtx.localParticipant == null) {
           return widget.loadingScreen;
         }

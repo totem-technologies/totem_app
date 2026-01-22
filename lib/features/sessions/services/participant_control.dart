@@ -28,7 +28,7 @@ extension ParticipantControl on Session {
   /// This fails silently if it's not the user's turn.
   /// Throws an exception if the operation fails.
   Future<void> acceptTotem() async {
-    if (!state.amNext(room)) {
+    if (!isKeeper() && !state.amNext(room)) {
       throw StateError("Not the user's turn to accept the totem");
     }
     try {

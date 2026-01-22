@@ -15,6 +15,7 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
+import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 
 Future<bool?> showLeaveDialog(BuildContext context) {
   return showDialog<bool>(
@@ -71,21 +72,12 @@ class OptionsSheet extends ConsumerWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          margin: const EdgeInsets.only(top: 12, bottom: 8),
-          width: 40,
-          height: 4,
-          decoration: BoxDecoration(
-            color: Colors.grey[400],
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
+        const SheetDragHandle(),
         Flexible(
           child: ListView(
             padding: const EdgeInsetsDirectional.only(
               start: 20,
               end: 20,
-              top: 10,
               bottom: 36,
             ),
             shrinkWrap: true,
@@ -454,7 +446,7 @@ Future<void> showPrejoinOptionsSheet(
 }) {
   return showModalBottomSheet<void>(
     context: context,
-    showDragHandle: true,
+    showDragHandle: false,
     builder: (context) {
       return PrejoinOptionsSheet(
         onCameraChanged: onCameraChanged,
@@ -494,10 +486,10 @@ class PrejoinOptionsSheet extends StatelessWidget {
       padding: const EdgeInsetsDirectional.only(
         start: 20,
         end: 20,
-        top: 10,
         bottom: 36,
       ),
       children: [
+        const SheetDragHandle(),
         OptionsSheetTile.camera(
           cameraOptions,
           () {
@@ -510,7 +502,7 @@ class PrejoinOptionsSheet extends StatelessWidget {
             Navigator.of(context).pop();
           },
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 14),
         FutureBuilder(
           future: Hardware.instance.audioInputs(),
           builder: (context, snapshot) {
@@ -536,7 +528,7 @@ class PrejoinOptionsSheet extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 14),
         FutureBuilder(
           future: Hardware.instance.audioOutputs(),
           builder: (context, snapshot) {

@@ -8,6 +8,7 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 Future<void> showSessionChatSheet(
@@ -94,17 +95,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Center(
-                        child: Container(
-                          margin: const EdgeInsets.only(top: 12, bottom: 14),
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[400],
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
+                      const SheetDragHandle(),
                       if (!isKeeper)
                         const Padding(
                           padding: EdgeInsetsDirectional.only(

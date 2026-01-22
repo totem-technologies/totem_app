@@ -9,6 +9,7 @@ import 'package:totem_app/features/home/repositories/home_screen_repository.dart
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
+import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 /// Keeps track of shown sheets to avoid showing multiple times in a row.
@@ -124,8 +125,9 @@ Future<void> showOngoingSessionSheet(
 ) {
   return showModalBottomSheet<void>(
     context: context,
-    isScrollControlled: false,
-    showDragHandle: true,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: false,
     useRootNavigator: true,
     builder: (context) => OngoingSessionSheet(event: event),
   );
@@ -142,6 +144,7 @@ class OngoingSessionSheet extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsetsDirectional.only(
+          top: 20,
           start: 20,
           end: 20,
           bottom: 20,
@@ -150,6 +153,7 @@ class OngoingSessionSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           spacing: 20,
           children: [
+            const SheetDragHandle(margin: EdgeInsetsDirectional.zero),
             Text(
               'Happening now!',
               style: theme.textTheme.titleLarge,
@@ -164,7 +168,9 @@ class OngoingSessionSheet extends StatelessWidget {
               widthFactor: 0.9,
               child: AspectRatio(
                 aspectRatio: 16 / 9,
-                child: SpaceCard.fromEventDetailSchema(event),
+                child: IgnorePointer(
+                  child: SpaceCard.fromEventDetailSchema(event),
+                ),
               ),
             ),
             ElevatedButton(
