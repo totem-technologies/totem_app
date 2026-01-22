@@ -290,7 +290,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                         }
 
                         final content = Center(
-                          child: Text(
+                          child: AutoSizeText(
                             switch (state) {
                               SpaceJoinCardState.ended ||
                               SpaceJoinCardState.cancelled ||
@@ -301,6 +301,8 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                               SpaceJoinCardState.notJoined => 'Attend',
                             },
                             style: const TextStyle(fontWeight: FontWeight.w400),
+                            maxLines: 1,
+                            minFontSize: 8,
                           ),
                         );
 
@@ -353,7 +355,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                                 maximumSize: const Size(156, 46),
                                 minimumSize: const Size(46, 46),
                                 padding: const EdgeInsetsDirectional.symmetric(
-                                  horizontal: 22,
+                                  horizontal: 8,
                                 ),
                                 backgroundColor: AppTheme.mauve,
                                 shape: RoundedRectangleBorder(
@@ -395,9 +397,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
       final response = await mobileApiService.spaces
           .totemSpacesMobileApiMobileApiRsvpConfirm(eventSlug: event.slug);
 
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+      _loading = false;
 
       if (response.attending) {
         if (mounted) {
@@ -428,6 +428,10 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
           title: 'Failed to attend to this circle',
           message: 'Please try again later',
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
       }
     }
   }
