@@ -126,6 +126,7 @@ Future<void> showOngoingSessionSheet(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     showDragHandle: false,
     useRootNavigator: true,
     builder: (context) => OngoingSessionSheet(event: event),

@@ -22,6 +22,7 @@ Future<void> showParticipantReorderWidget(
     showDragHandle: false,
     backgroundColor: const Color(0xFFF3F1E9),
     isScrollControlled: true,
+    useSafeArea: true,
     builder: (context) => ParticipantReorderWidget(
       session: session,
       state: state,

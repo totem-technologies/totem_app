@@ -410,14 +410,12 @@ class ParticipantVideo extends ConsumerStatefulWidget {
 class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   late final EventsListener<ParticipantEvent> _listener;
   Timer? _statsTimer;
-  static const _statsPollInterval = Duration(seconds: 2);
 
   @override
   void initState() {
     super.initState();
     _listener = widget.participant.createListener();
-    _listener.listen((event) => _scheduleStatsCheck());
-    _checkVideoStats();
+    _listener.listen((event) => _checkVideoStats());
   }
 
   @override
@@ -427,11 +425,6 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
       ..cancelAll()
       ..dispose();
     super.dispose();
-  }
-
-  void _scheduleStatsCheck() {
-    if (_statsTimer?.isActive ?? false) return;
-    _statsTimer = Timer(_statsPollInterval, _checkVideoStats);
   }
 
   bool _active = true;
