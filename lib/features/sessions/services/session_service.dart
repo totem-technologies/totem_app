@@ -98,11 +98,13 @@ class SessionRoomState {
     this.connectionState = RoomConnectionState.connecting,
     this.sessionState = const SessionState(keeperSlug: '', speakingOrder: []),
     this.hasKeeperDisconnected = false,
+    this.participants = const [],
   });
 
   final RoomConnectionState connectionState;
   final SessionState sessionState;
   final bool hasKeeperDisconnected;
+  final List<Participant> participants;
 
   bool isMyTurn(RoomContext room) {
     return sessionState.speakingNow != null &&
@@ -118,12 +120,14 @@ class SessionRoomState {
     RoomConnectionState? connectionState,
     SessionState? sessionState,
     bool? hasKeeperDisconnected,
+    List<Participant>? participants,
   }) {
     return SessionRoomState(
       connectionState: connectionState ?? this.connectionState,
       sessionState: sessionState ?? this.sessionState,
       hasKeeperDisconnected:
           hasKeeperDisconnected ?? this.hasKeeperDisconnected,
+      participants: participants ?? this.participants,
     );
   }
 
@@ -131,15 +135,17 @@ class SessionRoomState {
   String toString() {
     return 'SessionRoomState('
         'connectionState: $connectionState, '
-        'sessionState: $sessionState'
+        'sessionState: $sessionState, '
+        'hasKeeperDisconnected: $hasKeeperDisconnected, '
         ')';
   }
 }
 
 @riverpod
 class Session extends _$Session {
-  late final RoomContext room;
+  late final RoomContext context;
   late final EventsListener<RoomEvent> _listener;
+  Timer? _timer;
   late SessionOptions _options;
   String? _lastMetadata;
   SessionDetailSchema? event;
@@ -155,12 +161,16 @@ class Session extends _$Session {
   @override
   SessionRoomState build(SessionOptions options) {
     _options = options;
+    _timer = Timer.periodic(
+      const Duration(seconds: 10),
+      (_) => _checkUp(),
+    );
 
     ref.watch(eventProvider(_options.eventSlug)).whenData((event) {
       this.event = event;
     });
 
-    room = RoomContext(
+    context = RoomContext(
       url: AppConfig.liveKitUrl,
       token: _options.token,
       connect: true,
@@ -188,41 +198,73 @@ class Session extends _$Session {
       ),
     );
 
-    _listener = room.room.createListener();
+    _listener = context.room.createListener();
     _listener
       ..on<DataReceivedEvent>(_onDataReceived)
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
-      ..on<ParticipantConnectedEvent>(_onParticipantConnected);
-    room.addListener(_onRoomChanges);
+      ..on<ParticipantConnectedEvent>(_onParticipantConnected)
+      ..on<ParticipantEvent>(_updateParticipantsList);
+    context.addListener(_onRoomChanges);
 
     WakelockPlus.enable();
     setupBackgroundMode();
 
-    ref.onDispose(cleanUp);
+    ref.onDispose(_cleanUp);
 
     return const SessionRoomState();
   }
 
+  void _checkUp() {
+    _updateParticipantsList();
+  }
+
+  void _updateParticipantsList([ParticipantEvent? event]) {
+    try {
+      final participants = <Participant>[
+        ...context.room.remoteParticipants.values,
+        if (context.room.localParticipant != null)
+          context.room.localParticipant!,
+      ];
+
+      if (state.sessionState.speakingOrder.isNotEmpty) {
+        participants.sort((a, b) {
+          final aIndex = state.sessionState.speakingOrder.indexOf(a.identity);
+          final bIndex = state.sessionState.speakingOrder.indexOf(b.identity);
+          return aIndex.compareTo(bIndex);
+        });
+      }
+
+      state = state.copyWith(participants: participants);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error updating participants list',
+      );
+    }
+  }
+
   void _onConnected() {
-    if (room.localParticipant == null) {
+    if (context.room.localParticipant == null) {
       logger.i('Local participant is null on connected.');
       return;
     }
 
     logger.i(
       'Connected to LiveKit room as '
-      '"${room.localParticipant!.identity}".',
+      '"${context.room.localParticipant!.identity}".',
     );
 
-    room.localParticipant!.setCameraEnabled(_options.cameraEnabled);
+    context.room.localParticipant!.setCameraEnabled(_options.cameraEnabled);
 
     // The current behavior is to enable microphone only for keepers at the
     // beginning of the session.
     // room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
-    room.localParticipant!.setMicrophoneEnabled(isKeeper());
+    context.room.localParticipant!.setMicrophoneEnabled(isKeeper());
     state = state.copyWith(connectionState: RoomConnectionState.connected);
 
     options.onConnected();
+    _updateParticipantsList();
   }
 
   void _onDisconnected() {
@@ -237,7 +279,7 @@ class Session extends _$Session {
   }
 
   void _onRoomChanges() {
-    final metadata = room.room.metadata;
+    final metadata = context.room.metadata;
     if (metadata == null || metadata.isEmpty) return;
 
     try {
@@ -324,8 +366,8 @@ class Session extends _$Session {
 
   Future<void> _onSessionEnd() async {
     reason = SessionEndedReason.finished;
-    room.disconnect();
-    cleanUp();
+    context.disconnect();
+    _cleanUp();
     try {
       if (event != null) {
         ref.invalidate(spaceProvider(event!.space.slug));
@@ -334,11 +376,14 @@ class Session extends _$Session {
     } catch (_) {}
   }
 
-  void cleanUp() {
+  void _cleanUp() {
     logger.d('Disposing SessionService and closing connections.');
 
     endBackgroundMode(); // This closes _notificationTimer
     WakelockPlus.disable();
+
+    _timer?.cancel();
+    _timer = null;
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
@@ -352,7 +397,7 @@ class Session extends _$Session {
         ..dispose();
     } catch (_) {}
     try {
-      room
+      context
         ..removeListener(_onRoomChanges)
         ..dispose();
     } catch (_) {}

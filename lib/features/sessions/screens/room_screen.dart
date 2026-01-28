@@ -232,8 +232,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       child: RoomBackground(
         status: sessionState.sessionState.status,
         child: LivekitRoom(
-          roomContext: session.room,
-          builder: (context, roomCtx) {
+          roomContext: session.context,
+          builder: (context, _) {
             // Use a navigator for modal sheets and dialogs inside the room
             return Navigator(
               key: _navigatorKey,
@@ -250,9 +250,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                       ),
                       Positioned.fill(
                         child: IgnorePointer(
-                          child: Overlay(
-                            key: EmojiReactions.emojiOverlayKey,
-                          ),
+                          child: Overlay(key: EmojiReactions.emojiOverlayKey),
                         ),
                       ),
                     ],
@@ -266,14 +264,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     );
   }
 
-  Widget _buildBody(
-    Session session,
-    SessionRoomState state,
-  ) {
-    final roomCtx = session.room;
+  Widget _buildBody(Session session, SessionRoomState state) {
     switch (state.connectionState) {
       case RoomConnectionState.error:
-        return RoomErrorScreen(onRetry: roomCtx.connect);
+        return RoomErrorScreen(onRetry: session.context.connect);
       case RoomConnectionState.connecting:
         return widget.loadingScreen;
       case RoomConnectionState.disconnected:
@@ -283,12 +277,12 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           return SessionEndedScreen(event: widget.event, session: session);
         }
 
-        if (roomCtx.localParticipant == null) {
+        if (session.context.localParticipant == null) {
           return widget.loadingScreen;
         }
 
         if (state.sessionState.totemStatus == TotemStatus.passing &&
-            state.amNext(session.room)) {
+            state.amNext(session.context)) {
           return ReceiveTotemScreen(
             sessionState: state,
             actionBar: buildActionBar(session, state, widget.event),
@@ -296,7 +290,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           );
         }
 
-        if (state.isMyTurn(session.room)) {
+        if (state.isMyTurn(session.context)) {
           return ProtectionOverlay(
             child: MyTurn(
               actionBar: buildActionBar(session, state, widget.event),
@@ -327,7 +321,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   ) {
     return Builder(
       builder: (context) {
-        final room = session.room;
+        final room = session.context;
         final user = room.localParticipant!;
 
         final isUserTileVisible =
@@ -375,7 +369,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 room.cameraOpened ? TotemIcons.cameraOn : TotemIcons.cameraOff,
               ),
             ),
-            if (!state.isMyTurn(session.room))
+            if (!state.isMyTurn(session.context))
               Builder(
                 builder: (button) {
                   return ActionBarButton(

@@ -17,7 +17,7 @@ extension KeeperControl on Session {
 
   /// Get the participant who is currently speaking.
   Participant speakingNowParticipant() {
-    return room.participants.firstWhere(
+    return state.participants.firstWhere(
       (participant) {
         if (state.sessionState.speakingNow != null) {
           return participant.identity == state.sessionState.speakingNow;
@@ -26,13 +26,13 @@ extension KeeperControl on Session {
           return participant.identity == state.sessionState.keeperSlug;
         }
       },
-      orElse: () => room.localParticipant!,
+      orElse: () => context.localParticipant!,
     );
   }
 
   Participant? speakingNextParticipant() {
     if (state.sessionState.nextSpeaker == null) return null;
-    return room.participants.firstWhereOrNull((participant) {
+    return state.participants.firstWhereOrNull((participant) {
       return participant.identity == state.sessionState.nextSpeaker;
     });
   }
@@ -64,7 +64,7 @@ extension KeeperControl on Session {
     _keeperDisconnectedTimer = null;
     reason = SessionEndedReason.keeperLeft;
 
-    await room.disconnect();
+    await context.disconnect();
   }
 
   Future<bool> startSession() async {

@@ -202,10 +202,8 @@ class OptionsSheet extends ConsumerWidget {
                     builder: (context) {
                       final next = state.sessionState.nextParticipantIdentity;
                       final nextParticipantName = next != null
-                          ? session.room.participants
-                                .firstWhereOrNull(
-                                  (p) => p.identity == next,
-                                )
+                          ? state.participants
+                                .firstWhereOrNull((p) => p.identity == next)
                                 ?.name
                           : null;
                       return OptionsSheetTile<void>(
@@ -265,7 +263,7 @@ class OptionsSheet extends ConsumerWidget {
                   builder: (context) {
                     final String? userName =
                         state.sessionState.speakingNow != null
-                        ? session.room.participants
+                        ? state.participants
                               .firstWhereOrNull(
                                 (p) =>
                                     p.identity ==
@@ -304,7 +302,7 @@ class OptionsSheet extends ConsumerWidget {
         return Consumer(
           builder: (context, ref, child) {
             final nextParticipantName =
-                session.room.participants
+                state.participants
                     .firstWhereOrNull(
                       (p) => p.identity == nextParticipantIdentity,
                     )
