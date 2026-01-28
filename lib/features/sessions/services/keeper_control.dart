@@ -46,6 +46,8 @@ extension KeeperControl on Session {
       _onKeeperDisconnectedTimeout,
     );
 
+    closeKeeperLeftNotification?.call();
+    closeKeeperLeftNotification = null;
     closeKeeperLeftNotification ??= options.onKeeperLeaveRoom(this);
   }
 
@@ -62,6 +64,10 @@ extension KeeperControl on Session {
   Future<void> _onKeeperDisconnectedTimeout() async {
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
+
+    closeKeeperLeftNotification?.call();
+    closeKeeperLeftNotification = null;
+
     reason = SessionEndedReason.keeperLeft;
 
     await context.disconnect();

@@ -31,7 +31,7 @@ part 'keeper_control.dart';
 part 'session_service.g.dart';
 part 'participant_control.dart';
 
-enum SessionEndedReason { finished, keeperLeft }
+enum SessionEndedReason { finished, keeperLeft, keeperNotJoined }
 
 enum SessionCommunicationTopics {
   emoji('lk-emoji-topic'),
@@ -150,6 +150,7 @@ class Session extends _$Session {
   String? _lastMetadata;
   SessionDetailSchema? event;
 
+  bool _hasKeeperEverJoined = false;
   Timer? _notificationTimer;
   VoidCallback? closeKeeperLeftNotification;
   SessionEndedReason reason = SessionEndedReason.finished;
@@ -208,14 +209,28 @@ class Session extends _$Session {
 
     WakelockPlus.enable();
     setupBackgroundMode();
+    _checkUp();
 
     ref.onDispose(_cleanUp);
 
     return const SessionRoomState();
   }
 
+  static const keeperNotJoinedTimeout = Duration(minutes: 5);
+  bool get hasKeeperEverJoined => _hasKeeperEverJoined;
+
   void _checkUp() {
     _updateParticipantsList();
+
+    final startedAt = event?.start;
+    if (startedAt != null &&
+        !_hasKeeperEverJoined &&
+        DateTime.now().isAfter(
+          startedAt.add(Session.keeperNotJoinedTimeout),
+        )) {
+      reason = SessionEndedReason.keeperNotJoined;
+      context.disconnect();
+    }
   }
 
   void _updateParticipantsList([ParticipantEvent? event]) {
@@ -232,6 +247,11 @@ class Session extends _$Session {
           final bIndex = state.sessionState.speakingOrder.indexOf(b.identity);
           return aIndex.compareTo(bIndex);
         });
+      }
+
+      if (!_hasKeeperEverJoined &&
+          participants.any((p) => isKeeper(p.identity))) {
+        _hasKeeperEverJoined = true;
       }
 
       state = state.copyWith(participants: participants);
