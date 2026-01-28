@@ -261,12 +261,7 @@ class ParticipantControlButton extends ConsumerWidget {
         final user = ref.watch(userProfileProvider(participant.identity));
         return ConfirmationDialog(
           iconWidget: user
-              .whenData(
-                (user) => UserAvatar.fromUserSchema(
-                  user,
-                  radius: 40,
-                ),
-              )
+              .whenData((user) => UserAvatar.fromUserSchema(user, radius: 40))
               .value,
           confirmButtonText: 'Mute',
           title: 'Mute ${participant.name}',
@@ -294,12 +289,7 @@ class ParticipantControlButton extends ConsumerWidget {
         final user = ref.watch(userProfileProvider(participant.identity));
         return ConfirmationDialog(
           iconWidget: user
-              .whenData(
-                (user) => UserAvatar.fromUserSchema(
-                  user,
-                  radius: 40,
-                ),
-              )
+              .whenData((user) => UserAvatar.fromUserSchema(user, radius: 40))
               .value,
           confirmButtonText: 'Remove',
           content:
@@ -356,8 +346,8 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                 if (!isCameraOn) {
                   return Stack(
                     children: [
-                      const Positioned.fill(
-                        child: UserAvatar(
+                      Positioned.fill(
+                        child: UserAvatar.currentUser(
                           radius: 0,
                           borderRadius: BorderRadius.zero,
                           borderWidth: 0,
@@ -467,11 +457,11 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         ),
       );
     } else {
-      final localUser = ref.watch(
-        authControllerProvider.select((auth) => auth.user),
+      final localUserSlug = ref.watch(
+        authControllerProvider.select((auth) => auth.user?.slug),
       );
-      if (widget.participant.identity == localUser?.slug) {
-        return const UserAvatar(
+      if (widget.participant.identity == localUserSlug) {
+        return UserAvatar.currentUser(
           radius: 0,
           borderRadius: BorderRadius.zero,
           borderWidth: 0,
