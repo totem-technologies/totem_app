@@ -275,12 +275,23 @@ class Session extends _$Session {
       '"${context.room.localParticipant!.identity}".',
     );
 
+    _onRoomChanges();
+
     context.room.localParticipant!.setCameraEnabled(_options.cameraEnabled);
 
-    // The current behavior is to enable microphone only for keepers at the
-    // beginning of the session.
-    // room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
-    context.room.localParticipant!.setMicrophoneEnabled(isKeeper());
+    // If the user joined in the waiting
+    // If the keeper is not in the room, the participants will start unmuted.
+    final isKeeperInRoom = state.participants.any((p) => isKeeper(p.identity));
+    context.room.localParticipant!.setMicrophoneEnabled(() {
+      if (state.sessionState.status == SessionStatus.waiting &&
+          !isKeeperInRoom) {
+        // If joined in the waiting room, everyone can join unmuted.
+        return _options.microphoneEnabled;
+      }
+      // In other status, only the keeper can join unmuted.
+      return isKeeper() && _options.microphoneEnabled;
+    }());
+    // context.room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
     state = state.copyWith(connectionState: RoomConnectionState.connected);
 
     options.onConnected();
