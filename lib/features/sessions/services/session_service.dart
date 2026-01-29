@@ -15,6 +15,7 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
@@ -201,11 +202,11 @@ class Session extends _$Session {
 
     _listener = context.room.createListener();
     _listener
+      ..on((_) => _onRoomChanges())
       ..on<DataReceivedEvent>(_onDataReceived)
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
       ..on<ParticipantConnectedEvent>(_onParticipantConnected)
       ..on<ParticipantEvent>(_updateParticipantsList);
-    context.addListener(_onRoomChanges);
 
     WakelockPlus.enable();
     setupBackgroundMode();
@@ -230,7 +231,24 @@ class Session extends _$Session {
         )) {
       reason = SessionEndedReason.keeperNotJoined;
       context.disconnect();
+      return;
     }
+
+    ref
+        .read(mobileApiServiceProvider)
+        .meetings
+        .totemMeetingsMobileApiGetRoomStateEndpoint(
+          eventSlug: _options.eventSlug,
+        )
+        .then(_onRoomChanges)
+        .timeout(const Duration(seconds: 5))
+        .catchError((dynamic error, StackTrace stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Error checking room state',
+          );
+        });
   }
 
   void _updateParticipantsList([ParticipantEvent? event]) {
@@ -309,42 +327,46 @@ class Session extends _$Session {
     _options.onLivekitError(error);
   }
 
-  void _onRoomChanges() {
-    final metadata = context.room.metadata;
-    if (metadata == null || metadata.isEmpty) return;
+  void _onRoomChanges([SessionState? newSessionState]) {
+    if (newSessionState != null) {
+      state = state.copyWith(sessionState: newSessionState);
+    } else {
+      final metadata = context.room.metadata;
+      if (metadata == null || metadata.isEmpty) return;
 
-    try {
-      if (_lastMetadata == null) {
-        _lastMetadata = metadata;
-        state = state.copyWith(
-          sessionState: SessionState.fromJson(
+      try {
+        if (_lastMetadata == null) {
+          _lastMetadata = metadata;
+          state = state.copyWith(
+            sessionState: SessionState.fromJson(
+              jsonDecode(metadata) as Map<String, dynamic>,
+            ),
+          );
+        } else if (metadata != _lastMetadata) {
+          // final previousState = SessionState.fromJson(
+          //   jsonDecode(_lastMetadata!) as Map<String, dynamic>,
+          // );
+          final newState = SessionState.fromJson(
             jsonDecode(metadata) as Map<String, dynamic>,
-          ),
-        );
-      } else if (metadata != _lastMetadata) {
-        // final previousState = SessionState.fromJson(
-        //   jsonDecode(_lastMetadata!) as Map<String, dynamic>,
-        // );
-        final newState = SessionState.fromJson(
-          jsonDecode(metadata) as Map<String, dynamic>,
-        );
+          );
 
-        // if (previousState.speakingNow != newState.speakingNow) {
-        //    if (newState.speakingNow == room.localParticipant?.identity) {
-        //      debugPrint('You are now speaking');
-        //      _options.onReceiveTotem();
-        //    }
-        // }
+          // if (previousState.speakingNow != newState.speakingNow) {
+          //    if (newState.speakingNow == room.localParticipant?.identity) {
+          //      debugPrint('You are now speaking');
+          //      _options.onReceiveTotem();
+          //    }
+          // }
 
-        state = state.copyWith(sessionState: newState);
-        _lastMetadata = metadata;
+          state = state.copyWith(sessionState: newState);
+          _lastMetadata = metadata;
+        }
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Error decoding session metadata',
+        );
       }
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error decoding session metadata',
-      );
     }
 
     if (state.sessionState.status == SessionStatus.ended) {
