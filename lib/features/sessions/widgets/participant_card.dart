@@ -7,6 +7,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
@@ -405,7 +406,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   void initState() {
     super.initState();
     _listener = widget.participant.createListener();
-    _listener.listen((event) => _checkVideoStats());
+    _listener.on<ParticipantEvent>((event) => _checkVideoStats());
   }
 
   @override
@@ -417,22 +418,46 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     super.dispose();
   }
 
+  void _ensureActive() {
+    if (!_active && mounted) {
+      setState(() => _active = true);
+    }
+  }
+
   bool _active = true;
   void _checkVideoStats() async {
-    final videoTrack =
-        widget.participant.videoTrackPublications.firstOrNull?.track
-            as RemoteVideoTrack?;
-    if (videoTrack == null) return;
-    final stats = await videoTrack.getReceiverStats();
+    try {
+      final videoTrack =
+          widget.participant.videoTrackPublications.firstOrNull?.track;
+      if (videoTrack == null) return _ensureActive();
 
-    if (!mounted) return;
-    final fps = stats?.framesPerSecond;
-    if (fps == null || fps == 0) {
-      if (_active) {
-        setState(() => _active = false);
+      num fps;
+      if (videoTrack is RemoteVideoTrack) {
+        if (videoTrack.muted) return _ensureActive();
+
+        final stats = await videoTrack.getReceiverStats();
+        fps = stats?.framesDecoded ?? 0;
+      } else if (videoTrack is LocalVideoTrack) {
+        if (videoTrack.muted) return _ensureActive();
+
+        final stats = await videoTrack.getSenderStats();
+        fps = stats.firstOrNull?.framesSent ?? 0;
+      } else {
+        return _ensureActive();
       }
-    } else {
-      if (!_active) setState(() => _active = true);
+
+      if (!mounted) return _ensureActive();
+      if (fps == 0) {
+        if (_active) setState(() => _active = false);
+      } else {
+        if (!_active) setState(() => _active = true);
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error checking participant video stats',
+      );
     }
   }
 
@@ -446,7 +471,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
           t.participant.isCameraEnabled() &&
           !t.track!.muted,
     );
-    if (_active && videoTrack.isNotEmpty) {
+    if (videoTrack.isNotEmpty) {
       return IgnorePointer(
         child: RepaintBoundary(
           child: VideoTrackRenderer(
