@@ -166,6 +166,8 @@ class NotMyTurn extends ConsumerWidget {
                 )
               : const SizedBox.shrink();
 
+          // TODO(bdlukaa): Use state.participants
+
           final participantGrid = ParticipantLoop(
             layoutBuilder: NoMyTurnLayoutBuilder(isLandscape: isLandscape),
             sorting: (originalTracks) {

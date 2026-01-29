@@ -400,7 +400,6 @@ class ParticipantVideo extends ConsumerStatefulWidget {
 
 class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   late final EventsListener<ParticipantEvent> _listener;
-  Timer? _statsTimer;
   DateTime? _lastStatsCheck;
   static const _statsCheckThrottle = Duration(seconds: 2);
 
@@ -413,7 +412,6 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
   @override
   void dispose() {
-    _statsTimer?.cancel();
     _listener
       ..cancelAll()
       ..dispose();
@@ -455,7 +453,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         return _ensureActive();
       }
 
-      if (!mounted) return _ensureActive();
+      if (!mounted) return;
       if (fps == 0) {
         if (_active) setState(() => _active = false);
       } else {

@@ -269,8 +269,8 @@ class Session extends _$Session {
         .totemMeetingsMobileApiGetRoomStateEndpoint(
           eventSlug: _options.eventSlug,
         )
-        .then(_onRoomChanges)
         .timeout(const Duration(seconds: 5))
+        .then(_onRoomChanges)
         .catchError((dynamic error, StackTrace stackTrace) {
           ErrorHandler.logError(
             error,
