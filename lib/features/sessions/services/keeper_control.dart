@@ -26,7 +26,7 @@ extension KeeperControl on Session {
           return participant.identity == state.sessionState.keeperSlug;
         }
       },
-      orElse: () => context.localParticipant!,
+      orElse: () => context.room.localParticipant!,
     );
   }
 
@@ -37,8 +37,8 @@ extension KeeperControl on Session {
     });
   }
 
-  Future<void> _onKeeperDisconnected() async {
-    state = state.copyWith(hasKeeperDisconnected: true);
+  void _onKeeperDisconnected() {
+    if (state.sessionState.status != SessionStatus.started) return;
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = Timer(
@@ -49,16 +49,18 @@ extension KeeperControl on Session {
     closeKeeperLeftNotification?.call();
     closeKeeperLeftNotification = null;
     closeKeeperLeftNotification ??= options.onKeeperLeaveRoom(this);
+
+    state = state.copyWith(hasKeeperDisconnected: true);
   }
 
   void _onKeeperConnected() {
-    state = state.copyWith(hasKeeperDisconnected: false);
-
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
 
     closeKeeperLeftNotification?.call();
     closeKeeperLeftNotification = null;
+
+    state = state.copyWith(hasKeeperDisconnected: false);
   }
 
   Future<void> _onKeeperDisconnectedTimeout() async {
@@ -69,7 +71,6 @@ extension KeeperControl on Session {
     closeKeeperLeftNotification = null;
 
     reason = SessionEndedReason.keeperLeft;
-
     await context.disconnect();
   }
 

@@ -163,14 +163,12 @@ class Session extends _$Session {
   @override
   SessionRoomState build(SessionOptions options) {
     _options = options;
-    _timer = Timer.periodic(
-      const Duration(seconds: 10),
-      (_) => _checkUp(),
-    );
+    ref
+        .watch(eventProvider(_options.eventSlug))
+        .whenData((event) => this.event = event);
 
-    ref.watch(eventProvider(_options.eventSlug)).whenData((event) {
-      this.event = event;
-    });
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 10), (_) => _checkUp());
 
     context = RoomContext(
       url: AppConfig.liveKitUrl,
@@ -210,7 +208,6 @@ class Session extends _$Session {
 
     WakelockPlus.enable();
     setupBackgroundMode();
-    _checkUp();
 
     ref.onDispose(_cleanUp);
 
@@ -223,16 +220,26 @@ class Session extends _$Session {
   void _checkUp() {
     _updateParticipantsList();
 
-    final startedAt = event?.start;
-    if (startedAt != null &&
-        !_hasKeeperEverJoined &&
-        DateTime.now().isAfter(
-          startedAt.add(Session.keeperNotJoinedTimeout),
-        )) {
-      reason = SessionEndedReason.keeperNotJoined;
-      context.disconnect();
-      return;
-    }
+    // TODO(bdlukaa): This is very error prone.
+    // If the following flow happens, the user will be disconnected even if the keeper joins later:
+    //    1. Keeper joins the session.
+    //    2. User joins the session late, after the keeper.
+    //    3. User leaves the room.
+    //    4. Keeper leaves the room.
+    //    5. User joins the room again, but the keeper is not there.
+    //    6. After 10 seconds, the user is disconnected because the keeper "never joined".
+    //
+    // This should be controlled by the backend instead.
+    // final startedAt = event?.start;
+    // if (startedAt != null &&
+    //     !_hasKeeperEverJoined &&
+    //     DateTime.now().isAfter(
+    //       startedAt.add(Session.keeperNotJoinedTimeout),
+    //     )) {
+    //   reason = SessionEndedReason.keeperNotJoined;
+    //   context.disconnect();
+    //   return;
+    // }
 
     ref
         .read(mobileApiServiceProvider)
@@ -267,9 +274,12 @@ class Session extends _$Session {
         });
       }
 
-      if (!_hasKeeperEverJoined &&
-          participants.any((p) => isKeeper(p.identity))) {
-        _hasKeeperEverJoined = true;
+      final hasKeeper = participants.any((p) => isKeeper(p.identity));
+      if (!_hasKeeperEverJoined && hasKeeper) _hasKeeperEverJoined = true;
+      if (state.hasKeeperDisconnected && hasKeeper) {
+        _onKeeperConnected();
+      } else if (!state.hasKeeperDisconnected && !hasKeeper) {
+        _onKeeperDisconnected();
       }
 
       state = state.copyWith(participants: participants);
@@ -295,7 +305,7 @@ class Session extends _$Session {
 
     _onRoomChanges();
 
-    context.room.localParticipant!.setCameraEnabled(_options.cameraEnabled);
+    context.room.localParticipant?.setCameraEnabled(_options.cameraEnabled);
 
     // If the user joined in the waiting
     // If the keeper is not in the room, the participants will start unmuted.
@@ -318,6 +328,7 @@ class Session extends _$Session {
 
   void _onDisconnected() {
     state = state.copyWith(connectionState: RoomConnectionState.disconnected);
+    _cleanUp();
   }
 
   void _onError(LiveKitException? error) {
@@ -403,11 +414,9 @@ class Session extends _$Session {
   static const keeperDisconnectionTimeout = Duration(minutes: 3);
   Timer? _keeperDisconnectedTimer;
 
-  Future<void> _onParticipantDisconnected(
-    ParticipantDisconnectedEvent event,
-  ) async {
+  void _onParticipantDisconnected(ParticipantDisconnectedEvent event) {
     if (isKeeper(event.participant.identity)) {
-      await _onKeeperDisconnected();
+      _onKeeperDisconnected();
     }
   }
 
@@ -420,20 +429,22 @@ class Session extends _$Session {
   Future<void> _onSessionEnd() async {
     reason = SessionEndedReason.finished;
     context.disconnect();
-    _cleanUp();
+  }
+
+  void _cleanUp() {
+    logger.d('Disposing SessionService and closing connections.');
+
     try {
       if (event != null) {
         ref.invalidate(spaceProvider(event!.space.slug));
       }
       ref.invalidate(spacesSummaryProvider);
     } catch (_) {}
-  }
-
-  void _cleanUp() {
-    logger.d('Disposing SessionService and closing connections.');
 
     endBackgroundMode(); // This closes _notificationTimer
-    WakelockPlus.disable();
+    try {
+      WakelockPlus.disable();
+    } catch (_) {}
 
     _timer?.cancel();
     _timer = null;
