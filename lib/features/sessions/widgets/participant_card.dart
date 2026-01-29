@@ -378,6 +378,7 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                   child: VideoTrackRenderer(
                     videoTrack!,
                     fit: VideoViewFit.cover,
+                    mirrorMode: VideoViewMirrorMode.off,
                   ),
                 );
               },
@@ -401,7 +402,7 @@ class ParticipantVideo extends ConsumerStatefulWidget {
 class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   late final EventsListener<ParticipantEvent> _listener;
   DateTime? _lastStatsCheck;
-  static const _statsCheckThrottle = Duration(seconds: 2);
+  static const _statsCheckThrottle = Duration(seconds: 7);
 
   @override
   void initState() {
@@ -465,11 +466,21 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         stackTrace: stackTrace,
         message: 'Error checking participant video stats',
       );
+    } finally {
+      _lastStatsCheck = DateTime.now();
+      // This is useful to catch any state changes after the async calls
+      // Sometimes, when the user changes the camera front/back, the video track
+      // may briefly report 0 fps before resuming normal stats.
+      //
+      // This updates VideoTrackRenderer if needed.
+      if (mounted) setState(() {});
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(userProfileProvider(widget.participant.identity));
+
     final videoTrack = widget.participant.videoTrackPublications.where(
       (t) =>
           t.track != null &&
@@ -485,6 +496,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
             key: ValueKey(videoTrack.last.track!.sid),
             videoTrack.last.track! as VideoTrack,
             fit: VideoViewFit.cover,
+            mirrorMode: VideoViewMirrorMode.off,
           ),
         ),
       );
@@ -493,14 +505,15 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         authControllerProvider.select((auth) => auth.user?.slug),
       );
       if (widget.participant.identity == localUserSlug) {
-        return UserAvatar.currentUser(
-          radius: 0,
-          borderRadius: BorderRadius.zero,
-          borderWidth: 0,
+        return IgnorePointer(
+          child: UserAvatar.currentUser(
+            radius: 0,
+            borderRadius: BorderRadius.zero,
+            borderWidth: 0,
+          ),
         );
       }
 
-      final user = ref.watch(userProfileProvider(widget.participant.identity));
       return IgnorePointer(
         child: user.when(
           data: (user) {

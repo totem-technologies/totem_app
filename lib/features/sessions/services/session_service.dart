@@ -237,7 +237,12 @@ class Session extends _$Session {
 
     ref.onDispose(_cleanUp);
 
-    return const SessionRoomState();
+    return SessionRoomState(
+      sessionState: SessionState(
+        keeperSlug: event?.space.author.slug ?? '',
+        speakingOrder: [],
+      ),
+    );
   }
 
   static const keeperNotJoinedTimeout = Duration(minutes: 5);
