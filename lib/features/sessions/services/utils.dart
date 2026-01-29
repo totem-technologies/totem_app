@@ -11,8 +11,7 @@ List<Participant> participantsSorting({
   bool showSpeakingNow = false,
 }) {
   final participants = originalParticiapnts.where((participant) {
-    // Only show tracks from participants other than the speaking
-    // now
+    // Only show tracks from participants other than the speaking now
     if (participant.identity == (speakingNow ?? state.speakingNow)) {
       return showSpeakingNow;
     }

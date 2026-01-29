@@ -179,7 +179,7 @@ class Session extends _$Session {
 
   bool _hasKeeperEverJoined = false;
   Timer? _notificationTimer;
-  VoidCallback? closeKeeperLeftNotification;
+  List<VoidCallback> closeKeeperLeftNotification = [];
   SessionEndedReason reason = SessionEndedReason.finished;
 
   static const defaultCameraOptions = CameraCaptureOptions(
@@ -309,8 +309,6 @@ class Session extends _$Session {
       if (!_hasKeeperEverJoined && hasKeeper) _hasKeeperEverJoined = true;
       if (state.hasKeeperDisconnected && hasKeeper) {
         _onKeeperConnected();
-      } else if (!state.hasKeeperDisconnected && !hasKeeper) {
-        _onKeeperDisconnected();
       }
 
       state = state.copyWith(participants: participants);
@@ -484,8 +482,7 @@ class Session extends _$Session {
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
 
-    closeKeeperLeftNotification?.call();
-    closeKeeperLeftNotification = null;
+    closeKeeperLeftNotifications();
 
     try {
       _listener

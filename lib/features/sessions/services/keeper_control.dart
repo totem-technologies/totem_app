@@ -30,6 +30,13 @@ extension KeeperControl on Session {
     });
   }
 
+  void closeKeeperLeftNotifications() {
+    for (final close in closeKeeperLeftNotification) {
+      close.call();
+    }
+    closeKeeperLeftNotification.clear();
+  }
+
   void _onKeeperDisconnected() {
     if (state.sessionState.status != SessionStatus.started) return;
 
@@ -39,9 +46,8 @@ extension KeeperControl on Session {
       _onKeeperDisconnectedTimeout,
     );
 
-    closeKeeperLeftNotification?.call();
-    closeKeeperLeftNotification = null;
-    closeKeeperLeftNotification ??= options.onKeeperLeaveRoom(this);
+    closeKeeperLeftNotifications();
+    closeKeeperLeftNotification.add(options.onKeeperLeaveRoom(this));
 
     state = state.copyWith(hasKeeperDisconnected: true);
   }
@@ -50,8 +56,7 @@ extension KeeperControl on Session {
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
 
-    closeKeeperLeftNotification?.call();
-    closeKeeperLeftNotification = null;
+    closeKeeperLeftNotifications();
 
     state = state.copyWith(hasKeeperDisconnected: false);
   }
@@ -60,8 +65,7 @@ extension KeeperControl on Session {
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
 
-    closeKeeperLeftNotification?.call();
-    closeKeeperLeftNotification = null;
+    closeKeeperLeftNotifications();
 
     reason = SessionEndedReason.keeperLeft;
     await context.disconnect();
