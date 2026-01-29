@@ -1,10 +1,10 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:livekit_components/livekit_components.dart';
+import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/features/sessions/services/utils.dart';
+import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
@@ -24,38 +24,32 @@ class MyTurn extends StatelessWidget {
   final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
   final Future<void> Function() onPassTotem;
-  final SessionState sessionState;
+  final SessionRoomState sessionState;
   final SessionDetailSchema event;
 
   @override
   Widget build(BuildContext context) {
     return RoomBackground(
-      status: sessionState.status,
+      status: sessionState.sessionState.status,
       child: SafeArea(
         child: OrientationBuilder(
           builder: (context, orientation) {
             final isLandscape = orientation == Orientation.landscape;
-            final participantGrid = ParticipantLoop(
-              layoutBuilder: MyTurnLayoutBuilder(isLandscape: isLandscape),
-              sorting: (originalTracks) {
-                return tracksSorting(
-                  speakingNow: sessionState.speakingNow,
-                  originalTracks: originalTracks,
-                  sessionState: sessionState,
-                );
-              },
-              participantTrackBuilder: (context, identifier) {
+            final participantGrid = MyTurnGrid(
+              sessionState: sessionState,
+              isLandscape: isLandscape,
+              buildParticipant: (context, participant) {
                 return ParticipantCard(
-                  key: getParticipantKey(identifier.participant.identity),
-                  participant: identifier.participant,
+                  key: getParticipantKey(participant.identity),
+                  participant: participant,
                   event: event,
-                  participantIdentity: identifier.participant.identity,
+                  participantIdentity: participant.identity,
                 );
               },
             );
 
             final passCard = TransitionCard(
-              type: sessionState.totemStatus == TotemStatus.passing
+              type: sessionState.sessionState.totemStatus == TotemStatus.passing
                   ? TotemCardTransitionType.waitingReceive
                   : TotemCardTransitionType.pass,
               onActionPressed: () async {
@@ -144,11 +138,14 @@ class MyTurn extends StatelessWidget {
   }
 }
 
-class MyTurnLayoutBuilder implements ParticipantLayoutBuilder {
-  const MyTurnLayoutBuilder({
+class MyTurnGrid extends StatelessWidget {
+  const MyTurnGrid({
+    required this.sessionState,
+    required this.buildParticipant,
     this.maxPerLineCount,
     this.gap = 6,
     this.isLandscape = false,
+    super.key,
   });
 
   /// The amount of participants to show per line.
@@ -157,17 +154,25 @@ class MyTurnLayoutBuilder implements ParticipantLayoutBuilder {
   /// available participants.
   final int? maxPerLineCount;
 
+  /// The gap between participants.
   final double gap;
 
+  /// Whether the layout is in landscape mode.
   final bool isLandscape;
 
+  /// The session state.
+  final SessionRoomState sessionState;
+
+  final Widget Function(BuildContext context, Participant participant)
+  buildParticipant;
+
   @override
-  Widget build(
-    BuildContext context,
-    List<TrackWidget> children,
-    List<String> pinnedTracks,
-  ) {
-    final itemCount = children.length;
+  Widget build(BuildContext context) {
+    final sortedParticipants = participantsSorting(
+      originalParticiapnts: sessionState.participants,
+      state: sessionState,
+    );
+    final itemCount = sortedParticipants.length;
     if (itemCount == 0) return const SizedBox.shrink();
 
     late final int crossAxisCount;
@@ -198,6 +203,7 @@ class MyTurnLayoutBuilder implements ParticipantLayoutBuilder {
     }
 
     final rowCount = (itemCount / crossAxisCount).ceil();
+
     return Padding(
       padding: EdgeInsetsDirectional.symmetric(
         horizontal: isLandscape ? 16 : 28,
@@ -222,7 +228,14 @@ class MyTurnLayoutBuilder implements ParticipantLayoutBuilder {
                     final itemIndex = startIndex + colIndex;
                     if (itemIndex < itemCount) {
                       return Expanded(
-                        child: children[itemIndex].widget,
+                        child: Builder(
+                          builder: (context) {
+                            return buildParticipant(
+                              context,
+                              sortedParticipants[itemIndex],
+                            );
+                          },
+                        ),
                       );
                     } else {
                       return const Expanded(

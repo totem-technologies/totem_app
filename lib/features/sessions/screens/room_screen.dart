@@ -284,6 +284,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         if (state.sessionState.totemStatus == TotemStatus.passing &&
             state.amNext(session.context)) {
           return ReceiveTotemScreen(
+            session: session,
             sessionState: state,
             actionBar: buildActionBar(session, state, widget.event),
             onAcceptTotem: session.acceptTotem,
@@ -296,7 +297,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               actionBar: buildActionBar(session, state, widget.event),
               getParticipantKey: getParticipantKey,
               onPassTotem: session.passTotem,
-              sessionState: state.sessionState,
+              sessionState: state,
               event: widget.event,
             ),
           );

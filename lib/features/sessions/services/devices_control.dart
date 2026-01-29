@@ -16,7 +16,10 @@ extension DevicesControl on Session {
   }
 
   LocalVideoTrack? get localVideoTrack {
-    return context.localParticipant?.videoTrackPublications.firstOrNull?.track;
+    return context.localParticipant?.videoTrackPublications
+        .where((t) => t.track != null && t.track!.isActive)
+        .firstOrNull
+        ?.track;
   }
 
   Future<void> switchCameraPosition() async {

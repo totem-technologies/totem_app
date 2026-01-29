@@ -117,6 +117,10 @@ class SessionRoomState {
         sessionState.nextSpeaker == room.localParticipant?.identity;
   }
 
+  String get speakingNow {
+    return sessionState.speakingNow ?? sessionState.keeperSlug;
+  }
+
   SessionRoomState copyWith({
     RoomConnectionState? connectionState,
     SessionState? sessionState,

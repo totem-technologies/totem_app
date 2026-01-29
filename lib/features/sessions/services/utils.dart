@@ -1,53 +1,48 @@
-import 'package:livekit_components/livekit_components.dart';
-// We need the defaultSorting function from livekit_components
-// ignore: implementation_imports
-import 'package:livekit_components/src/ui/layout/sorting.dart'
-    show defaultSorting;
-import 'package:totem_app/api/export.dart';
+import 'package:livekit_client/livekit_client.dart';
+import 'package:totem_app/features/sessions/services/session_service.dart';
 
-List<TrackWidget> tracksSorting({
-  required List<TrackWidget> originalTracks,
-  required SessionState sessionState,
-  required String? speakingNow,
+List<Participant> participantsSorting({
+  required List<Participant> originalParticiapnts,
+  required SessionRoomState state,
 
   /// Whether to show the track of the participant who is currently speaking.
   bool showSpeakingNow = false,
 }) {
-  final tracks = originalTracks.where((track) {
+  final participants = originalParticiapnts.where((participant) {
     // Only show tracks from participants other than the speaking
     // now
-    if (track.trackIdentifier.participant.identity == speakingNow) {
+    if (participant.identity == state.speakingNow) {
       return showSpeakingNow;
     }
     return true;
   }).toList();
 
-  if (sessionState.speakingOrder.isNotEmpty) {
-    final tracksMap = {
-      for (final t in tracks) t.trackIdentifier.participant.identity: t,
+  if (state.sessionState.speakingOrder.isNotEmpty) {
+    final participantsMap = {
+      for (final p in participants) p.identity: p,
     };
 
-    final speakingOrderSet = sessionState.speakingOrder.toSet();
-    final sortedTracks = <TrackWidget>[];
+    final speakingOrderSet = state.sessionState.speakingOrder.toSet();
+    final sortedParticipants = <Participant>[];
 
-    for (final identity in sessionState.speakingOrder) {
-      final track = tracksMap[identity];
-      if (track != null) {
-        sortedTracks.add(track);
+    for (final identity in state.sessionState.speakingOrder) {
+      final participant = participantsMap[identity];
+      if (participant != null) {
+        sortedParticipants.add(participant);
       }
     }
 
-    for (final track in tracks) {
-      final identity = track.trackIdentifier.participant.identity;
+    for (final participant in participants) {
+      final identity = participant.identity;
       if (!speakingOrderSet.contains(identity)) {
-        sortedTracks.add(track);
+        sortedParticipants.add(participant);
       }
     }
 
-    return sortedTracks;
+    return sortedParticipants;
   }
 
-  return defaultSorting(tracks);
+  return participants;
 }
 
 extension SessionStateExtension on SessionState {

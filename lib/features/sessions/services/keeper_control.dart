@@ -18,14 +18,7 @@ extension KeeperControl on Session {
   /// Get the participant who is currently speaking.
   Participant speakingNowParticipant() {
     return state.participants.firstWhere(
-      (participant) {
-        if (state.sessionState.speakingNow != null) {
-          return participant.identity == state.sessionState.speakingNow;
-        } else {
-          // If no one is speaking right now, show the keeper's video
-          return participant.identity == state.sessionState.keeperSlug;
-        }
-      },
+      (participant) => participant.identity == state.speakingNow,
       orElse: () => context.room.localParticipant!,
     );
   }
