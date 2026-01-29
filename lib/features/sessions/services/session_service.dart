@@ -15,7 +15,6 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
@@ -272,21 +271,22 @@ class Session extends _$Session {
     //   return;
     // }
 
-    ref
-        .read(mobileApiServiceProvider)
-        .meetings
-        .totemMeetingsMobileApiGetRoomStateEndpoint(
-          eventSlug: _options.eventSlug,
-        )
-        .timeout(const Duration(seconds: 5))
-        .then(_onRoomChanges)
-        .catchError((dynamic error, StackTrace stackTrace) {
-          ErrorHandler.logError(
-            error,
-            stackTrace: stackTrace,
-            message: 'Error checking room state',
-          );
-        });
+    // TODO(bdlukaa): Do not use polling to get room state.
+    // ref
+    //     .read(mobileApiServiceProvider)
+    //     .meetings
+    //     .totemMeetingsMobileApiGetRoomStateEndpoint(
+    //       eventSlug: _options.eventSlug,
+    //     )
+    //     .timeout(const Duration(seconds: 5))
+    //     .then(_onRoomChanges)
+    //     .catchError((dynamic error, StackTrace stackTrace) {
+    //       ErrorHandler.logError(
+    //         error,
+    //         stackTrace: stackTrace,
+    //         message: 'Error checking room state',
+    //       );
+    //     });
   }
 
   void _updateParticipantsList([ParticipantEvent? event]) {
