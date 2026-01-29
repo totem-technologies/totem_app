@@ -467,6 +467,8 @@ class Session extends _$Session {
         if (event != null) {
           ref.invalidate(spaceProvider(event!.space.slug));
         }
+      } catch (_) {}
+      try {
         ref.invalidate(spacesSummaryProvider);
       } catch (_) {}
     }
