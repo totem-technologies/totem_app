@@ -347,7 +347,13 @@ class Session extends _$Session {
         // If joined in the waiting room, everyone can join unmuted.
         return _options.microphoneEnabled;
       }
-      // In other status, only the keeper can join unmuted.
+      if (state.sessionState.status == SessionStatus.started) {
+        if (state.speakingNow == context.room.localParticipant?.identity) {
+          // If it's the user's turn to speak, they can join unmuted.
+          return _options.microphoneEnabled;
+        }
+      }
+      // In other states, only the keeper can join unmuted.
       return isKeeper() && _options.microphoneEnabled;
     }());
     // context.room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
