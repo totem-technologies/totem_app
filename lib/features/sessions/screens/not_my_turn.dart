@@ -175,6 +175,7 @@ class NotMyTurn extends ConsumerWidget {
                 participantIdentity: participant.identity,
               );
             },
+            speakingNow: activeSpeaker.identity,
           );
 
           final Widget? startCard =
@@ -273,6 +274,7 @@ class NotMyTurnGrid extends StatelessWidget {
   const NotMyTurnGrid({
     required this.sessionState,
     required this.buildParticipant,
+    required this.speakingNow,
     this.maxPerLineCount,
     this.gap = 10,
     this.isLandscape = false,
@@ -291,6 +293,8 @@ class NotMyTurnGrid extends StatelessWidget {
   /// Whether the layout is in landscape mode.
   final bool isLandscape;
 
+  final String speakingNow;
+
   /// The session state.
   final SessionRoomState sessionState;
 
@@ -302,6 +306,7 @@ class NotMyTurnGrid extends StatelessWidget {
     final sortedParticipants = participantsSorting(
       originalParticiapnts: sessionState.participants,
       state: sessionState,
+      speakingNow: speakingNow,
     );
     final itemCount = sortedParticipants.length;
     if (itemCount == 0) return const SizedBox.shrink();
@@ -358,9 +363,7 @@ class NotMyTurnGrid extends StatelessWidget {
                       ),
                     );
                   } else {
-                    return const Expanded(
-                      child: SizedBox.shrink(),
-                    );
+                    return const Expanded(child: SizedBox.shrink());
                   }
                 },
               ),

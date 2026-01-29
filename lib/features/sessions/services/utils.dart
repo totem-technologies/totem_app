@@ -5,13 +5,15 @@ List<Participant> participantsSorting({
   required List<Participant> originalParticiapnts,
   required SessionRoomState state,
 
+  String? speakingNow,
+
   /// Whether to show the track of the participant who is currently speaking.
   bool showSpeakingNow = false,
 }) {
   final participants = originalParticiapnts.where((participant) {
     // Only show tracks from participants other than the speaking
     // now
-    if (participant.identity == state.speakingNow) {
+    if (participant.identity == (speakingNow ?? state.speakingNow)) {
       return showSpeakingNow;
     }
     return true;
