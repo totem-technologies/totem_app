@@ -95,6 +95,7 @@ dev_dependencies:
 dependency_overrides:
   # TODO: Remove this override when livekit supports latest protobuf
   protobuf: ^4.2.0
+  flutter_webrtc: ^1.3.0
 
 flutter:
   default-flavor: production
