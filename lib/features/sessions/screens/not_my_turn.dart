@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_components/livekit_components.dart';
+import 'package:livekit_client/livekit_client.dart' hide Session;
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -29,7 +29,6 @@ class NotMyTurn extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final room = RoomContext.of(context)!;
 
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
@@ -133,7 +132,12 @@ class NotMyTurn extends ConsumerWidget {
           final nextUpText =
               sessionState.sessionState.status == SessionStatus.waiting
               ? Text(
-                  'The session is about to start...',
+                  () {
+                    if (!session.hasKeeperEverJoined) {
+                      return 'Waiting for the Keeper to join...';
+                    }
+                    return 'The session is about to start...';
+                  }(),
                   style: theme.textTheme.bodyLarge,
                 )
               : sessionState.sessionState.status == SessionStatus.started &&
@@ -141,7 +145,7 @@ class NotMyTurn extends ConsumerWidget {
               ? RichText(
                   text: TextSpan(
                     children: [
-                      if (sessionState.amNext(room))
+                      if (sessionState.amNext(session.context))
                         const TextSpan(
                           text: 'You are Next',
                           style: TextStyle(fontWeight: FontWeight.bold),
@@ -161,23 +165,17 @@ class NotMyTurn extends ConsumerWidget {
                 )
               : const SizedBox.shrink();
 
-          final participantGrid = ParticipantLoop(
-            layoutBuilder: NoMyTurnLayoutBuilder(isLandscape: isLandscape),
-            sorting: (originalTracks) {
-              return tracksSorting(
-                speakingNow: activeSpeaker.identity,
-                originalTracks: originalTracks,
-                sessionState: sessionState.sessionState,
-              );
-            },
-            participantTrackBuilder: (context, identifier) {
+          final participantGrid = NotMyTurnGrid(
+            sessionState: sessionState,
+            buildParticipant: (context, participant) {
               return ParticipantCard(
-                key: getParticipantKey(identifier.participant.identity),
-                participant: identifier.participant,
+                key: getParticipantKey(participant.identity),
+                participant: participant,
                 event: event,
-                participantIdentity: identifier.participant.identity,
+                participantIdentity: participant.identity,
               );
             },
+            speakingNow: activeSpeaker.identity,
           );
 
           final Widget? startCard =
@@ -272,11 +270,15 @@ class NotMyTurn extends ConsumerWidget {
   }
 }
 
-class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
-  const NoMyTurnLayoutBuilder({
+class NotMyTurnGrid extends StatelessWidget {
+  const NotMyTurnGrid({
+    required this.sessionState,
+    required this.buildParticipant,
+    required this.speakingNow,
     this.maxPerLineCount,
     this.gap = 10,
     this.isLandscape = false,
+    super.key,
   });
 
   /// The amount of participants to show per line.
@@ -285,17 +287,28 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
   /// available participants.
   final int? maxPerLineCount;
 
+  /// The gap between participants.
   final double gap;
 
+  /// Whether the layout is in landscape mode.
   final bool isLandscape;
 
+  final String speakingNow;
+
+  /// The session state.
+  final SessionRoomState sessionState;
+
+  final Widget Function(BuildContext context, Participant participant)
+  buildParticipant;
+
   @override
-  Widget build(
-    BuildContext context,
-    List<TrackWidget> children,
-    List<String> pinnedTracks,
-  ) {
-    final itemCount = children.length;
+  Widget build(BuildContext context) {
+    final sortedParticipants = participantsSorting(
+      originalParticiapnts: sessionState.participants,
+      state: sessionState,
+      speakingNow: speakingNow,
+    );
+    final itemCount = sortedParticipants.length;
     if (itemCount == 0) return const SizedBox.shrink();
 
     late final int crossAxisCount;
@@ -340,12 +353,17 @@ class NoMyTurnLayoutBuilder implements ParticipantLayoutBuilder {
                   final itemIndex = startIndex + colIndex;
                   if (itemIndex < itemCount) {
                     return Expanded(
-                      child: children[itemIndex].widget,
+                      child: Builder(
+                        builder: (context) {
+                          return buildParticipant(
+                            context,
+                            sortedParticipants[itemIndex],
+                          );
+                        },
+                      ),
                     );
                   } else {
-                    return const Expanded(
-                      child: SizedBox.shrink(),
-                    );
+                    return const Expanded(child: SizedBox.shrink());
                   }
                 },
               ),

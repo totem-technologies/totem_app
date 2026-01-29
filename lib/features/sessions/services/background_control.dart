@@ -22,8 +22,12 @@ extension BackgroundControl on Session {
         ),
       );
       await _startBackgroundService();
-    } catch (_) {
-      // fine if fail
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error setting up background mode',
+      );
     }
   }
 
@@ -69,8 +73,12 @@ extension BackgroundControl on Session {
         notificationTitle: event.title,
         notificationText: formattedTime,
       );
-    } catch (_) {
-      // fine if fail
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error updating background notification',
+      );
     }
   }
 
@@ -81,8 +89,12 @@ extension BackgroundControl on Session {
       if (await FlutterForegroundTask.isRunningService) {
         await FlutterForegroundTask.stopService();
       }
-    } catch (_) {
-      // fine if fail
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error stopping background service',
+      );
     }
   }
 

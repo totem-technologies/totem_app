@@ -56,7 +56,7 @@ class _ParticipantReorderWidgetState
   @override
   void initState() {
     super.initState();
-    final roomParticipants = widget.session.room.participants
+    final roomParticipants = widget.state.participants
         .map((p) => p.identity)
         .toSet();
     _localOrder = Set<String>.from(
@@ -124,10 +124,9 @@ class _ParticipantReorderWidgetState
               itemBuilder: (context, index) {
                 final participantIdentity = participants[index];
 
-                final participant = widget.session.room.participants
-                    .firstWhereOrNull(
-                      (p) => p.identity == participantIdentity,
-                    );
+                final participant = widget.state.participants.firstWhereOrNull(
+                  (p) => p.identity == participantIdentity,
+                );
 
                 return _ParticipantReorderItem(
                   key: ValueKey(participantIdentity),
@@ -194,6 +193,16 @@ class _ParticipantReorderWidgetState
     final adjustedNewIndex = oldIndex < newIndex ? newIndex - 1 : newIndex;
     final item = _localOrder.removeAt(oldIndex);
     _localOrder.insert(adjustedNewIndex, item);
+
+    final keeperSlug = widget.event.space.author.slug;
+    if (keeperSlug != null) {
+      final keeperIndex = _localOrder.indexOf(keeperSlug);
+      if (keeperIndex != -1 && keeperIndex != 0) {
+        _localOrder
+          ..removeAt(keeperIndex)
+          ..insert(0, keeperSlug);
+      }
+    }
 
     setState(() {});
   }

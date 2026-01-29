@@ -1,5 +1,4 @@
 // file copied from livekit_components package and modified
-// ignore_for_file: depend_on_referenced_packages
 
 import 'dart:async';
 import 'dart:math' show max;
@@ -7,8 +6,6 @@ import 'dart:math' show max;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart' as sdk;
-import 'package:livekit_components/livekit_components.dart';
-import 'package:provider/provider.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 
 enum VisualizerState { thinking, listening, active }
@@ -74,33 +71,6 @@ class AudioVisualizerWidgetOptions {
 extension _ComputeExt on AudioVisualizerWidgetOptions {
   Color computeColor(BuildContext ctx) =>
       color ?? Theme.of(ctx).colorScheme.primary;
-}
-
-class AudioVisualizerWidget extends StatelessWidget {
-  const AudioVisualizerWidget({
-    super.key,
-    this.backgroundColor = Colors.transparent,
-    this.options = const AudioVisualizerWidgetOptions(),
-  });
-  final AudioVisualizerWidgetOptions options;
-  final Color backgroundColor;
-
-  @override
-  Widget build(BuildContext context) => Consumer<TrackReferenceContext?>(
-    builder:
-        (
-          BuildContext context,
-          TrackReferenceContext? trackCtx,
-          Widget? child,
-        ) => ColoredBox(
-          color: backgroundColor,
-          child: SoundWaveformWidget(
-            audioTrack: trackCtx?.audioTrack,
-            participant: trackCtx?.participant,
-            options: options,
-          ),
-        ),
-  );
 }
 
 class SoundWaveformWidget extends StatefulWidget {

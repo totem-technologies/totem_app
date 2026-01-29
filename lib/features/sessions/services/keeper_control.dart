@@ -17,28 +17,28 @@ extension KeeperControl on Session {
 
   /// Get the participant who is currently speaking.
   Participant speakingNowParticipant() {
-    return room.participants.firstWhere(
-      (participant) {
-        if (state.sessionState.speakingNow != null) {
-          return participant.identity == state.sessionState.speakingNow;
-        } else {
-          // If no one is speaking right now, show the keeper's video
-          return participant.identity == state.sessionState.keeperSlug;
-        }
-      },
-      orElse: () => room.localParticipant!,
+    return state.participants.firstWhere(
+      (participant) => participant.identity == state.speakingNow,
+      orElse: () => context.room.localParticipant!,
     );
   }
 
   Participant? speakingNextParticipant() {
     if (state.sessionState.nextSpeaker == null) return null;
-    return room.participants.firstWhereOrNull((participant) {
+    return state.participants.firstWhereOrNull((participant) {
       return participant.identity == state.sessionState.nextSpeaker;
     });
   }
 
-  Future<void> _onKeeperDisconnected() async {
-    state = state.copyWith(hasKeeperDisconnected: true);
+  void closeKeeperLeftNotifications() {
+    for (final close in closeKeeperLeftNotification) {
+      close.call();
+    }
+    closeKeeperLeftNotification.clear();
+  }
+
+  void _onKeeperDisconnected() {
+    if (state.sessionState.status != SessionStatus.started) return;
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = Timer(
@@ -46,25 +46,29 @@ extension KeeperControl on Session {
       _onKeeperDisconnectedTimeout,
     );
 
-    closeKeeperLeftNotification ??= options.onKeeperLeaveRoom(this);
+    closeKeeperLeftNotifications();
+    closeKeeperLeftNotification.add(options.onKeeperLeaveRoom(this));
+
+    state = state.copyWith(hasKeeperDisconnected: true);
   }
 
   void _onKeeperConnected() {
-    state = state.copyWith(hasKeeperDisconnected: false);
-
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
 
-    closeKeeperLeftNotification?.call();
-    closeKeeperLeftNotification = null;
+    closeKeeperLeftNotifications();
+
+    state = state.copyWith(hasKeeperDisconnected: false);
   }
 
   Future<void> _onKeeperDisconnectedTimeout() async {
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
-    reason = SessionEndedReason.keeperLeft;
 
-    await room.disconnect();
+    closeKeeperLeftNotifications();
+
+    reason = SessionEndedReason.keeperLeft;
+    await context.disconnect();
   }
 
   Future<bool> startSession() async {

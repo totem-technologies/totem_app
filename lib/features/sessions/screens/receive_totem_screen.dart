@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:livekit_client/livekit_client.dart';
-import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
@@ -13,18 +11,18 @@ class ReceiveTotemScreen extends StatelessWidget {
   const ReceiveTotemScreen({
     required this.actionBar,
     required this.onAcceptTotem,
+    required this.session,
     required this.sessionState,
     super.key,
   });
 
   final Widget actionBar;
   final Future<void> Function() onAcceptTotem;
+  final Session session;
   final SessionRoomState sessionState;
 
   @override
   Widget build(BuildContext context) {
-    final room = RoomContext.of(context)!;
-
     return RoomBackground(
       status: sessionState.sessionState.status,
       padding: const EdgeInsetsDirectional.all(20),
@@ -38,18 +36,9 @@ class ReceiveTotemScreen extends StatelessWidget {
             final videoCard = Padding(
               padding: const EdgeInsetsDirectional.all(20),
               child: LocalParticipantVideoCard(
-                isCameraOn: room.localParticipant!.isCameraEnabled(),
-                videoTrack:
-                    room.localParticipant?.trackPublications.values
-                            .where(
-                              (t) =>
-                                  t.track != null &&
-                                  t.kind == TrackType.VIDEO &&
-                                  t.track!.isActive,
-                            )
-                            .firstOrNull
-                            ?.track
-                        as VideoTrack?,
+                isCameraOn: session.context.room.localParticipant!
+                    .isCameraEnabled(),
+                videoTrack: session.localVideoTrack,
               ),
             );
 

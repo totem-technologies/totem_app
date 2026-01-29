@@ -124,7 +124,8 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
                 child: Text(
                   switch (widget.session.reason) {
                     SessionEndedReason.finished => 'Session Ended',
-                    SessionEndedReason.keeperLeft =>
+                    SessionEndedReason.keeperLeft ||
+                    SessionEndedReason.keeperNotJoined =>
                       'Session will be rescheduled',
                   },
                   style: theme.textTheme.headlineMedium,
@@ -137,6 +138,8 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
                     'Thank you for joining!\nWe hope you found the session enjoyable.',
                   SessionEndedReason.keeperLeft =>
                     'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
+                  SessionEndedReason.keeperNotJoined =>
+                    'The session ended as the Keeper did not join on time. We’ll notify you when it’s rescheduled.',
                 },
                 textAlign: TextAlign.center,
               ),

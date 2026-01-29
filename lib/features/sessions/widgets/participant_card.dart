@@ -7,6 +7,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
@@ -261,12 +262,7 @@ class ParticipantControlButton extends ConsumerWidget {
         final user = ref.watch(userProfileProvider(participant.identity));
         return ConfirmationDialog(
           iconWidget: user
-              .whenData(
-                (user) => UserAvatar.fromUserSchema(
-                  user,
-                  radius: 40,
-                ),
-              )
+              .whenData((user) => UserAvatar.fromUserSchema(user, radius: 40))
               .value,
           confirmButtonText: 'Mute',
           title: 'Mute ${participant.name}',
@@ -294,12 +290,7 @@ class ParticipantControlButton extends ConsumerWidget {
         final user = ref.watch(userProfileProvider(participant.identity));
         return ConfirmationDialog(
           iconWidget: user
-              .whenData(
-                (user) => UserAvatar.fromUserSchema(
-                  user,
-                  radius: 40,
-                ),
-              )
+              .whenData((user) => UserAvatar.fromUserSchema(user, radius: 40))
               .value,
           confirmButtonText: 'Remove',
           content:
@@ -356,8 +347,8 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                 if (!isCameraOn) {
                   return Stack(
                     children: [
-                      const Positioned.fill(
-                        child: UserAvatar(
+                      Positioned.fill(
+                        child: UserAvatar.currentUser(
                           radius: 0,
                           borderRadius: BorderRadius.zero,
                           borderWidth: 0,
@@ -387,6 +378,7 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                   child: VideoTrackRenderer(
                     videoTrack!,
                     fit: VideoViewFit.cover,
+                    mirrorMode: VideoViewMirrorMode.off,
                   ),
                 );
               },
@@ -409,45 +401,86 @@ class ParticipantVideo extends ConsumerStatefulWidget {
 
 class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   late final EventsListener<ParticipantEvent> _listener;
-  Timer? _statsTimer;
+  DateTime? _lastStatsCheck;
+  static const _statsCheckThrottle = Duration(seconds: 7);
 
   @override
   void initState() {
     super.initState();
     _listener = widget.participant.createListener();
-    _listener.listen((event) => _checkVideoStats());
+    _listener.on<ParticipantEvent>((event) => _checkVideoStats());
   }
 
   @override
   void dispose() {
-    _statsTimer?.cancel();
     _listener
       ..cancelAll()
       ..dispose();
     super.dispose();
   }
 
+  void _ensureActive() {
+    if (!_active && mounted) {
+      setState(() => _active = true);
+    }
+  }
+
   bool _active = true;
   void _checkVideoStats() async {
-    final videoTrack =
-        widget.participant.videoTrackPublications.firstOrNull?.track
-            as RemoteVideoTrack?;
-    if (videoTrack == null) return;
-    final stats = await videoTrack.getReceiverStats();
+    final now = DateTime.now();
+    if (_lastStatsCheck != null &&
+        now.difference(_lastStatsCheck!) < _statsCheckThrottle) {
+      return;
+    }
+    _lastStatsCheck = now;
 
-    if (!mounted) return;
-    final fps = stats?.framesPerSecond;
-    if (fps == null || fps == 0) {
-      if (_active) {
-        setState(() => _active = false);
+    try {
+      final videoTrack =
+          widget.participant.videoTrackPublications.firstOrNull?.track;
+      if (videoTrack == null) return _ensureActive();
+
+      num fps;
+      if (videoTrack is RemoteVideoTrack) {
+        if (videoTrack.muted) return _ensureActive();
+
+        final stats = await videoTrack.getReceiverStats();
+        fps = stats?.framesDecoded ?? 0;
+      } else if (videoTrack is LocalVideoTrack) {
+        if (videoTrack.muted) return _ensureActive();
+
+        final stats = await videoTrack.getSenderStats();
+        fps = stats.firstOrNull?.framesSent ?? 0;
+      } else {
+        return _ensureActive();
       }
-    } else {
-      if (!_active) setState(() => _active = true);
+
+      if (!mounted) return;
+      if (fps == 0) {
+        if (_active) setState(() => _active = false);
+      } else {
+        if (!_active) setState(() => _active = true);
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error checking participant video stats',
+      );
+    } finally {
+      _lastStatsCheck = DateTime.now();
+      // This is useful to catch any state changes after the async calls
+      // Sometimes, when the user changes the camera front/back, the video track
+      // may briefly report 0 fps before resuming normal stats.
+      //
+      // This updates VideoTrackRenderer if needed.
+      if (mounted) setState(() {});
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(userProfileProvider(widget.participant.identity));
+
     final videoTrack = widget.participant.videoTrackPublications.where(
       (t) =>
           t.track != null &&
@@ -456,29 +489,31 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
           t.participant.isCameraEnabled() &&
           !t.track!.muted,
     );
-    if (_active && videoTrack.isNotEmpty) {
+    if (videoTrack.isNotEmpty) {
       return IgnorePointer(
         child: RepaintBoundary(
           child: VideoTrackRenderer(
             key: ValueKey(videoTrack.last.track!.sid),
             videoTrack.last.track! as VideoTrack,
             fit: VideoViewFit.cover,
+            mirrorMode: VideoViewMirrorMode.off,
           ),
         ),
       );
     } else {
-      final localUser = ref.watch(
-        authControllerProvider.select((auth) => auth.user),
+      final localUserSlug = ref.watch(
+        authControllerProvider.select((auth) => auth.user?.slug),
       );
-      if (widget.participant.identity == localUser?.slug) {
-        return const UserAvatar(
-          radius: 0,
-          borderRadius: BorderRadius.zero,
-          borderWidth: 0,
+      if (widget.participant.identity == localUserSlug) {
+        return IgnorePointer(
+          child: UserAvatar.currentUser(
+            radius: 0,
+            borderRadius: BorderRadius.zero,
+            borderWidth: 0,
+          ),
         );
       }
 
-      final user = ref.watch(userProfileProvider(widget.participant.identity));
       return IgnorePointer(
         child: user.when(
           data: (user) {

@@ -106,7 +106,7 @@ class NotificationsService {
           ),
         );
         await flutterLocalNotificationsPlugin.initialize(
-          initializationSettings,
+          settings: initializationSettings,
           onDidReceiveNotificationResponse: _handleNotificationTap,
           onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
         );
@@ -213,10 +213,10 @@ class NotificationsService {
     final payload = jsonEncode(data);
 
     await flutterLocalNotificationsPlugin.show(
-      DateTime.timestamp().millisecondsSinceEpoch % 2147483647,
-      title,
-      body,
-      notificationDetails,
+      id: DateTime.timestamp().millisecondsSinceEpoch % 2147483647,
+      title: title,
+      body: body,
+      notificationDetails: notificationDetails,
       payload: payload,
     );
   }
