@@ -194,6 +194,16 @@ class _ParticipantReorderWidgetState
     final item = _localOrder.removeAt(oldIndex);
     _localOrder.insert(adjustedNewIndex, item);
 
+    final keeperSlug = widget.event.space.author.slug;
+    if (keeperSlug != null) {
+      final keeperIndex = _localOrder.indexOf(keeperSlug);
+      if (keeperIndex != -1 && keeperIndex != 0) {
+        _localOrder
+          ..removeAt(keeperIndex)
+          ..insert(0, keeperSlug);
+      }
+    }
+
     setState(() {});
   }
 
