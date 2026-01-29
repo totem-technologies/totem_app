@@ -147,6 +147,8 @@ class Session extends _$Session {
   late final RoomContext context;
   late final EventsListener<RoomEvent> _listener;
   Timer? _timer;
+  static const syncTimerDuration = Duration(seconds: 20);
+
   late SessionOptions _options;
   String? _lastMetadata;
   SessionDetailSchema? event;
@@ -168,7 +170,7 @@ class Session extends _$Session {
         .whenData((event) => this.event = event);
 
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 10), (_) => _checkUp());
+    _timer = Timer.periodic(Session.syncTimerDuration, (_) => _checkUp());
 
     context = RoomContext(
       url: AppConfig.liveKitUrl,
@@ -434,12 +436,14 @@ class Session extends _$Session {
   void _cleanUp() {
     logger.d('Disposing SessionService and closing connections.');
 
-    try {
-      if (event != null) {
-        ref.invalidate(spaceProvider(event!.space.slug));
-      }
-      ref.invalidate(spacesSummaryProvider);
-    } catch (_) {}
+    if (ref.mounted) {
+      try {
+        if (event != null) {
+          ref.invalidate(spaceProvider(event!.space.slug));
+        }
+        ref.invalidate(spacesSummaryProvider);
+      } catch (_) {}
+    }
 
     endBackgroundMode(); // This closes _notificationTimer
     try {

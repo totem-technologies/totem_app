@@ -104,8 +104,10 @@ Future<bool> unsubscribeFromSpace(Ref ref, String spaceSlug) async {
     operationName: 'unsubscribe from space',
   );
 
-  final refreshable = ref.refresh(listSubscribedSpacesProvider.future);
-  await refreshable;
+  if (ref.mounted) {
+    final refreshable = ref.refresh(listSubscribedSpacesProvider.future);
+    await refreshable;
+  }
 
   return success;
 }
