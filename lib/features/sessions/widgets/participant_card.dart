@@ -401,6 +401,8 @@ class ParticipantVideo extends ConsumerStatefulWidget {
 class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   late final EventsListener<ParticipantEvent> _listener;
   Timer? _statsTimer;
+  DateTime? _lastStatsCheck;
+  static const _statsCheckThrottle = Duration(seconds: 2);
 
   @override
   void initState() {
@@ -426,6 +428,13 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
   bool _active = true;
   void _checkVideoStats() async {
+    final now = DateTime.now();
+    if (_lastStatsCheck != null &&
+        now.difference(_lastStatsCheck!) < _statsCheckThrottle) {
+      return;
+    }
+    _lastStatsCheck = now;
+
     try {
       final videoTrack =
           widget.participant.videoTrackPublications.firstOrNull?.track;

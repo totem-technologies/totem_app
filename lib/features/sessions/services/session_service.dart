@@ -140,6 +140,26 @@ class SessionRoomState {
         'hasKeeperDisconnected: $hasKeeperDisconnected, '
         ')';
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is SessionRoomState &&
+        other.connectionState == connectionState &&
+        other.sessionState == sessionState &&
+        other.hasKeeperDisconnected == hasKeeperDisconnected &&
+        const DeepCollectionEquality().equals(
+          other.participants.map((p) => p.identity),
+          participants.map((p) => p.identity),
+        );
+  }
+
+  @override
+  int get hashCode =>
+      connectionState.hashCode ^
+      sessionState.hashCode ^
+      hasKeeperDisconnected.hashCode ^
+      const DeepCollectionEquality().hash(participants.map((p) => p.identity));
 }
 
 @riverpod
@@ -362,13 +382,6 @@ class Session extends _$Session {
           final newState = SessionState.fromJson(
             jsonDecode(metadata) as Map<String, dynamic>,
           );
-
-          // if (previousState.speakingNow != newState.speakingNow) {
-          //    if (newState.speakingNow == room.localParticipant?.identity) {
-          //      debugPrint('You are now speaking');
-          //      _options.onReceiveTotem();
-          //    }
-          // }
 
           state = state.copyWith(sessionState: newState);
           _lastMetadata = metadata;
