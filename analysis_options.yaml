@@ -1,14 +1,8 @@
 include: package:very_good_analysis/analysis_options.yaml
 
 analyzer:
-  plugins:
-    - custom_lint
   exclude:
     - "**/*.g.dart"
-
-custom_lint:
-  rules:
-    - avoid_manual_providers_as_generated_provider_dependency: false
 
 linter:
   rules:
