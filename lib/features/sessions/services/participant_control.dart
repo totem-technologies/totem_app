@@ -47,7 +47,7 @@ extension ParticipantControl on Session {
 
   /// Send an emoji to other participants.
   /// This operation is fire-and-forget and doesn't throw errors.
-  Future<void> sendEmoji(String emoji) async {
+  Future<void> sendReaction(String emoji) async {
     try {
       await context.localParticipant
           ?.publishData(
@@ -68,6 +68,22 @@ extension ParticipantControl on Session {
         error,
         stackTrace: stackTrace,
         message: 'Error sending emoji',
+      );
+    }
+  }
+
+  Future<void> emitAppState(AppLifecycleState state) async {
+    try {
+      await context.localParticipant?.publishData(
+        const Utf8Encoder().convert(state.name),
+        topic: SessionCommunicationTopics.lifecycle.topic,
+      );
+      logger.d('Emitted lifecycle status successfully');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error emitting lifecycle status',
       );
     }
   }

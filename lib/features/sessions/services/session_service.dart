@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -35,7 +35,8 @@ enum SessionEndedReason { finished, keeperLeft, keeperNotJoined }
 
 enum SessionCommunicationTopics {
   emoji('lk-emoji-topic'),
-  chat('lk-chat-topic');
+  chat('lk-chat-topic'),
+  lifecycle('lk-lifecycle-topic');
 
   const SessionCommunicationTopics(this.topic);
   final String topic;
@@ -166,7 +167,7 @@ class SessionRoomState {
 }
 
 @riverpod
-class Session extends _$Session {
+class Session extends _$Session with WidgetsBindingObserver {
   late final RoomContext context;
   late final EventsListener<RoomEvent> _listener;
   Timer? _timer;
@@ -232,6 +233,8 @@ class Session extends _$Session {
 
     WakelockPlus.enable();
     setupBackgroundMode();
+
+    WidgetsBinding.instance.addObserver(this);
 
     ref.onDispose(_cleanUp);
 
@@ -393,6 +396,7 @@ class Session extends _$Session {
     }
   }
 
+  Map<String, AppLifecycleState> userStates = {};
   void _onDataReceived(DataReceivedEvent event) {
     if (event.topic == null || event.participant == null) return;
     final data = const Utf8Decoder().convert(event.data);
@@ -416,6 +420,14 @@ class Session extends _$Session {
           message: 'Error decoding chat message',
         );
       }
+    } else if (event.topic == SessionCommunicationTopics.lifecycle.topic) {
+      logger.d(
+        'Received lifecycle event from ${event.participant!.identity}: $data',
+      );
+      userStates[event.participant!.identity] =
+          AppLifecycleState.values.firstWhereOrNull((e) => e.name == data) ??
+          AppLifecycleState.resumed;
+      ref.notifyListeners();
     }
   }
 
@@ -437,6 +449,21 @@ class Session extends _$Session {
   Future<void> _onSessionEnd() async {
     reason = SessionEndedReason.finished;
     context.disconnect();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    logger.d('App state changed to $state.');
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _onRoomChanges();
+      default:
+        break;
+    }
+
+    emitAppState(state);
   }
 
   void _cleanUp() {
@@ -476,5 +503,7 @@ class Session extends _$Session {
         ..removeListener(_onRoomChanges)
         ..dispose();
     } catch (_) {}
+
+    WidgetsBinding.instance.removeObserver(this);
   }
 }

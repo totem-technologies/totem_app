@@ -392,7 +392,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                       await showEmojiBar(
                         button,
                         onEmojiSelected: (emoji) {
-                          session.sendEmoji(emoji);
+                          session.sendReaction(emoji);
                           _onEmojiReceived(user.identity, emoji);
                         },
                       );
