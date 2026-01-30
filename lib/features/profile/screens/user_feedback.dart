@@ -69,7 +69,7 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
       }
     } catch (error, stackTrace) {
       if (mounted) {
-        await ErrorHandler.handleApiError(
+        ErrorHandler.handleApiError(
           context,
           error,
           stackTrace: stackTrace,

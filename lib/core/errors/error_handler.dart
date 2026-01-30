@@ -10,6 +10,7 @@ import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/logger.dart';
+import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 
 /// Centralized error handling for the Totem App.
 class ErrorHandler {
@@ -48,21 +49,17 @@ class ErrorHandler {
   static void logError(
     dynamic error, {
     StackTrace? stackTrace,
-    String? reason,
     String? message,
   }) {
     if (kDebugMode) {
-      logger.e(message ?? reason, error: error, stackTrace: stackTrace);
+      logger.e(message, error: error, stackTrace: stackTrace);
     }
 
     if (AppConfig.sentryDsn.isNotEmpty) {
       Sentry.captureException(
         error,
         stackTrace: stackTrace,
-        hint: Hint.withMap({
-          'reason': reason,
-          'message': message,
-        }),
+        message: message != null ? SentryMessage(message) : null,
       );
     }
   }
@@ -71,7 +68,7 @@ class ErrorHandler {
     logError(
       details.exception,
       stackTrace: details.stack,
-      reason: details.exceptionAsString(),
+      // reason: details.exceptionAsString(),
       message: 'Flutter Error in ${details.library ?? "unknown"}',
     );
   }
@@ -106,16 +103,11 @@ class ErrorHandler {
   }
 
   /// Show a snackbar with an error message
-  static void showErrorSnackBar(
-    BuildContext context,
-    String message, {
-    Duration duration = const Duration(seconds: 4),
-  }) {
+  static void showErrorSnackBar(BuildContext context, String message) {
     final theme = Theme.of(context);
 
     ScaffoldMessenger.of(context).clearSnackBars();
-    late ScaffoldFeatureController<SnackBar, SnackBarClosedReason> controller;
-    controller = ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           spacing: 12,
@@ -128,13 +120,6 @@ class ErrorHandler {
               ),
             ),
           ],
-        ),
-        duration: duration,
-        action: SnackBarAction(
-          label: 'Dismiss',
-          onPressed: () {
-            controller.close();
-          },
         ),
       ),
     );
@@ -176,14 +161,12 @@ class ErrorHandler {
     BuildContext context,
     Object error, {
     StackTrace? stackTrace,
-    VoidCallback? onRetry,
+    Future<void> Function()? onRetry,
     bool showError = true,
   }) async {
     logError(error, stackTrace: stackTrace);
-
     if (!context.mounted || !showError) return;
 
-    // Get user-friendly message
     final message = getUserFriendlyErrorMessage(error);
 
     // If it's an auth error, we might need to re-authenticate
@@ -200,24 +183,14 @@ class ErrorHandler {
       await showDialog<void>(
         context: context,
         builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Connection Error'),
-            content: Text(message),
-            actions: <Widget>[
-              TextButton(
-                child: const Text('Cancel'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-              TextButton(
-                child: const Text('Retry'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  onRetry();
-                },
-              ),
-            ],
+          return ConfirmationDialog(
+            title: 'Something Went Wrong',
+            content: message,
+            confirmButtonText: 'Retry',
+            onConfirm: () async {
+              Navigator.of(context).pop();
+              await onRetry();
+            },
           );
         },
       );

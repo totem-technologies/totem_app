@@ -43,7 +43,7 @@ Future<void> notificationTapBackground(
     ErrorHandler.logError(
       error,
       stackTrace: stackTrace,
-      reason: 'Failed to save background notification payload',
+      message: 'Failed to save background notification payload',
     );
   }
 }
@@ -136,7 +136,7 @@ class NotificationsService {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        reason: 'Failed to initialize notifications service',
+        message: 'Failed to initialize notifications service',
       );
       // Fail gracefully - mark as initialized anyway
       _initialized = true;
@@ -232,7 +232,7 @@ class NotificationsService {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        reason: 'Failed to request notification permissions',
+        message: 'Failed to request notification permissions',
       );
       return Future.value();
     }
