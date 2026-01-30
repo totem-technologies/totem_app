@@ -107,16 +107,11 @@ class ErrorHandler {
   }
 
   /// Show a snackbar with an error message
-  static void showErrorSnackBar(
-    BuildContext context,
-    String message, {
-    Duration duration = const Duration(seconds: 4),
-  }) {
+  static void showErrorSnackBar(BuildContext context, String message) {
     final theme = Theme.of(context);
 
     ScaffoldMessenger.of(context).clearSnackBars();
-    late ScaffoldFeatureController<SnackBar, SnackBarClosedReason> controller;
-    controller = ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           spacing: 12,
@@ -129,13 +124,6 @@ class ErrorHandler {
               ),
             ),
           ],
-        ),
-        duration: duration,
-        action: SnackBarAction(
-          label: 'Dismiss',
-          onPressed: () {
-            controller.close();
-          },
         ),
       ),
     );

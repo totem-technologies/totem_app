@@ -4,6 +4,8 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+typedef OnActionPerformed = Future<bool> Function();
+
 enum TotemCardTransitionType { pass, receive, start, waitingReceive }
 
 class TransitionCard extends StatelessWidget {
@@ -14,7 +16,7 @@ class TransitionCard extends StatelessWidget {
   });
 
   final TotemCardTransitionType type;
-  final Future<bool> Function() onActionPressed;
+  final OnActionPerformed onActionPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +85,7 @@ class _SlideToActionButton extends StatefulWidget {
   });
 
   final String text;
-  final Future<bool> Function() onActionCompleted;
+  final OnActionPerformed onActionCompleted;
 
   @override
   State<_SlideToActionButton> createState() => _SlideToActionButtonState();
