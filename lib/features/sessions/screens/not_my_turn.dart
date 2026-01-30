@@ -129,20 +129,26 @@ class NotMyTurn extends ConsumerWidget {
           );
 
           final nextUp = session.speakingNextParticipant();
-          final nextUpText =
-              sessionState.sessionState.status == SessionStatus.waiting
-              ? Text(
-                  () {
-                    if (!session.hasKeeper) {
-                      return 'Waiting for the Keeper to join...';
-                    }
-                    return 'The session is about to start...';
-                  }(),
+          final nextUpText = () {
+            final sessionStatus = sessionState.sessionState.status;
+            if (sessionStatus == SessionStatus.waiting) {
+              return Text(
+                () {
+                  if (!session.hasKeeper) {
+                    return 'Waiting for the Keeper to join...';
+                  }
+                  return 'The session is about to start...';
+                }(),
+                style: theme.textTheme.bodyLarge,
+              );
+            } else if (sessionStatus == SessionStatus.started) {
+              if (!session.hasKeeper) {
+                return Text(
+                  'The session has been paused...',
                   style: theme.textTheme.bodyLarge,
-                )
-              : sessionState.sessionState.status == SessionStatus.started &&
-                    nextUp != null
-              ? RichText(
+                );
+              } else if (nextUp != null) {
+                return RichText(
                   text: TextSpan(
                     children: [
                       if (sessionState.amNext(session.context))
@@ -162,8 +168,13 @@ class NotMyTurn extends ConsumerWidget {
                     ],
                     style: theme.textTheme.bodyLarge,
                   ),
-                )
-              : const SizedBox.shrink();
+                );
+              }
+            }
+
+            // Return a sized box because we want the spacing to remain consistent.
+            return const SizedBox.shrink();
+          }();
 
           final participantGrid = NotMyTurnGrid(
             sessionState: sessionState,
