@@ -10,6 +10,7 @@ import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/logger.dart';
+import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 
 /// Centralized error handling for the Totem App.
 class ErrorHandler {
@@ -176,14 +177,12 @@ class ErrorHandler {
     BuildContext context,
     Object error, {
     StackTrace? stackTrace,
-    VoidCallback? onRetry,
+    Future<void> Function()? onRetry,
     bool showError = true,
   }) async {
     logError(error, stackTrace: stackTrace);
-
     if (!context.mounted || !showError) return;
 
-    // Get user-friendly message
     final message = getUserFriendlyErrorMessage(error);
 
     // If it's an auth error, we might need to re-authenticate
@@ -200,24 +199,14 @@ class ErrorHandler {
       await showDialog<void>(
         context: context,
         builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Connection Error'),
-            content: Text(message),
-            actions: <Widget>[
-              TextButton(
-                child: const Text('Cancel'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-              TextButton(
-                child: const Text('Retry'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  onRetry();
-                },
-              ),
-            ],
+          return ConfirmationDialog(
+            title: 'Something Went Wrong',
+            content: message,
+            confirmButtonText: 'Retry',
+            onConfirm: () async {
+              Navigator.of(context).pop();
+              await onRetry();
+            },
           );
         },
       );
