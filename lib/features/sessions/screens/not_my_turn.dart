@@ -133,7 +133,7 @@ class NotMyTurn extends ConsumerWidget {
               sessionState.sessionState.status == SessionStatus.waiting
               ? Text(
                   () {
-                    if (!session.hasKeeperEverJoined) {
+                    if (!session.hasKeeper) {
                       return 'Waiting for the Keeper to join...';
                     }
                     return 'The session is about to start...';
