@@ -193,7 +193,7 @@ class Session extends _$Session {
         .whenData((event) => this.event = event);
 
     _timer?.cancel();
-    _timer = Timer.periodic(Session.syncTimerDuration, (_) => _checkUp());
+    _timer = Timer.periodic(Session.syncTimerDuration, (_) => _onRoomChanges());
 
     context = RoomContext(
       url: AppConfig.liveKitUrl,
@@ -228,8 +228,7 @@ class Session extends _$Session {
       ..on((_) => _onRoomChanges())
       ..on<DataReceivedEvent>(_onDataReceived)
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
-      ..on<ParticipantConnectedEvent>(_onParticipantConnected)
-      ..on<ParticipantEvent>(_updateParticipantsList);
+      ..on<ParticipantConnectedEvent>(_onParticipantConnected);
 
     WakelockPlus.enable();
     setupBackgroundMode();
@@ -247,49 +246,10 @@ class Session extends _$Session {
   static const keeperNotJoinedTimeout = Duration(minutes: 5);
   bool get hasKeeperEverJoined => _hasKeeperEverJoined;
 
-  void _checkUp() {
-    _updateParticipantsList();
+  /// Whether the keeper is currently in the session.
+  bool get hasKeeper => state.participants.any((p) => isKeeper(p.identity));
 
-    // TODO(bdlukaa): This is very error prone.
-    // If the following flow happens, the user will be disconnected even if the keeper joins later:
-    //    1. Keeper joins the session.
-    //    2. User joins the session late, after the keeper.
-    //    3. User leaves the room.
-    //    4. Keeper leaves the room.
-    //    5. User joins the room again, but the keeper is not there.
-    //    6. After 10 seconds, the user is disconnected because the keeper "never joined".
-    //
-    // This should be controlled by the backend instead.
-    // final startedAt = event?.start;
-    // if (startedAt != null &&
-    //     !_hasKeeperEverJoined &&
-    //     DateTime.now().isAfter(
-    //       startedAt.add(Session.keeperNotJoinedTimeout),
-    //     )) {
-    //   reason = SessionEndedReason.keeperNotJoined;
-    //   context.disconnect();
-    //   return;
-    // }
-
-    // TODO(bdlukaa): Do not use polling to get room state.
-    // ref
-    //     .read(mobileApiServiceProvider)
-    //     .meetings
-    //     .totemMeetingsMobileApiGetRoomStateEndpoint(
-    //       eventSlug: _options.eventSlug,
-    //     )
-    //     .timeout(const Duration(seconds: 5))
-    //     .then(_onRoomChanges)
-    //     .catchError((dynamic error, StackTrace stackTrace) {
-    //       ErrorHandler.logError(
-    //         error,
-    //         stackTrace: stackTrace,
-    //         message: 'Error checking room state',
-    //       );
-    //     });
-  }
-
-  void _updateParticipantsList([ParticipantEvent? event]) {
+  void _updateParticipantsList() {
     try {
       final participants = <Participant>[
         ...context.room.remoteParticipants.values,
@@ -338,10 +298,8 @@ class Session extends _$Session {
 
     // If the user joined in the waiting
     // If the keeper is not in the room, the participants will start unmuted.
-    final isKeeperInRoom = state.participants.any((p) => isKeeper(p.identity));
     context.room.localParticipant!.setMicrophoneEnabled(() {
-      if (state.sessionState.status == SessionStatus.waiting &&
-          !isKeeperInRoom) {
+      if (state.sessionState.status == SessionStatus.waiting && !hasKeeper) {
         // If joined in the waiting room, everyone can join unmuted.
         return _options.microphoneEnabled;
       }
@@ -374,6 +332,7 @@ class Session extends _$Session {
   }
 
   void _onRoomChanges([SessionState? newSessionState]) {
+    _updateParticipantsList();
     if (newSessionState != null) {
       state = state.copyWith(sessionState: newSessionState);
     } else {
@@ -407,6 +366,27 @@ class Session extends _$Session {
         );
       }
     }
+
+    // TODO(bdlukaa): This is very error prone.
+    // If the following flow happens, the user will be disconnected even if the keeper joins later:
+    //    1. Keeper joins the session.
+    //    2. User joins the session late, after the keeper.
+    //    3. User leaves the room.
+    //    4. Keeper leaves the room.
+    //    5. User joins the room again, but the keeper is not there.
+    //    6. After 10 seconds, the user is disconnected because the keeper "never joined".
+    //
+    // This should be controlled by the backend instead.
+    // final startedAt = event?.start;
+    // if (startedAt != null &&
+    //     !_hasKeeperEverJoined &&
+    //     DateTime.now().isAfter(
+    //       startedAt.add(Session.keeperNotJoinedTimeout),
+    //     )) {
+    //   reason = SessionEndedReason.keeperNotJoined;
+    //   context.disconnect();
+    //   return;
+    // }
 
     if (state.sessionState.status == SessionStatus.ended) {
       _onSessionEnd();
