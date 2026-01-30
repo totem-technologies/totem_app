@@ -49,21 +49,17 @@ class ErrorHandler {
   static void logError(
     dynamic error, {
     StackTrace? stackTrace,
-    String? reason,
     String? message,
   }) {
     if (kDebugMode) {
-      logger.e(message ?? reason, error: error, stackTrace: stackTrace);
+      logger.e(message, error: error, stackTrace: stackTrace);
     }
 
     if (AppConfig.sentryDsn.isNotEmpty) {
       Sentry.captureException(
         error,
         stackTrace: stackTrace,
-        hint: Hint.withMap({
-          'reason': reason,
-          'message': message,
-        }),
+        message: message != null ? SentryMessage(message) : null,
       );
     }
   }
@@ -72,7 +68,7 @@ class ErrorHandler {
     logError(
       details.exception,
       stackTrace: details.stack,
-      reason: details.exceptionAsString(),
+      // reason: details.exceptionAsString(),
       message: 'Flutter Error in ${details.library ?? "unknown"}',
     );
   }
