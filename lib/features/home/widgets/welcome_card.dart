@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/assets.dart';
 
@@ -17,7 +18,7 @@ class WelcomeCard extends StatelessWidget {
   static const double _borderRadius = 20;
 
   /// Square aspect ratio for both phone and tablet
-  static const double _aspectRatio = 1.0;
+  static const double _aspectRatio = 1;
 
   /// Max width on tablet to prevent card from being too large
   static const double _tabletMaxWidth = 400;
@@ -145,13 +146,11 @@ class WelcomeCard extends StatelessWidget {
   }
 
   /// Builds the "Read more" button with semi-transparent background.
+  // TODO(totem): Navigate to About Us page when implemented.
   Widget _buildReadMoreButton({double fontSize = 16}) {
-    // Light purple/mauve color matching the design
-    const buttonColor = Color(0xFFB8A5C7);
-
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: buttonColor.withValues(alpha: 0.85),
+        color: AppTheme.mauve.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Material(

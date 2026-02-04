@@ -89,31 +89,7 @@ class HomeScreen extends ConsumerWidget {
                               ),
                             ),
                             // View All link switches to Spaces tab
-                            TextButton(
-                              onPressed: () => toHome(HomeRoutes.spaces),
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsetsDirectional.zero,
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'View All',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: theme.colorScheme.primary,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  Icon(
-                                    Icons.chevron_right,
-                                    size: 18,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                ],
-                              ),
-                            ),
+                            const _ViewAllButton(),
                           ],
                         ),
                       ),
@@ -155,31 +131,7 @@ class HomeScreen extends ConsumerWidget {
                               ),
                             ),
                             // View All link switches to Spaces tab
-                            TextButton(
-                              onPressed: () => toHome(HomeRoutes.spaces),
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsetsDirectional.zero,
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'View All',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: theme.colorScheme.primary,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  Icon(
-                                    Icons.chevron_right,
-                                    size: 18,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                ],
-                              ),
-                            ),
+                            const _ViewAllButton(),
                           ],
                         ),
                       ),
@@ -266,6 +218,49 @@ class HomeScreen extends ConsumerWidget {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Private Widgets
+// =============================================================================
+
+/// A "View All" button that navigates to the Spaces tab.
+///
+/// Used in section headers to provide quick access to the full spaces list.
+/// Styled as a compact text button with a chevron icon.
+class _ViewAllButton extends StatelessWidget {
+  const _ViewAllButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return TextButton(
+      onPressed: () => toHome(HomeRoutes.spaces),
+      style: TextButton.styleFrom(
+        padding: EdgeInsetsDirectional.zero,
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'View All',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Icon(
+            Icons.chevron_right,
+            size: 18,
+            color: theme.colorScheme.primary,
+          ),
+        ],
       ),
     );
   }

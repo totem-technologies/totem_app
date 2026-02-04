@@ -10,6 +10,7 @@ import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/home/models/upcoming_session_data.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
+import 'package:totem_app/features/home/widgets/session_metadata.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/date.dart';
@@ -122,7 +123,7 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
       label: semanticLabel,
       excludeSemantics: true,
       // Container provides subtle border and shadow for depth (Apple-style)
-      child: Container(
+      child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(
             UpcomingSessionCard._borderRadius,
@@ -219,6 +220,7 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
 
   /// Builds the metadata row showing date, time, and seats left.
   /// Uses space-between layout to spread items across the width.
+  /// Uses shared [SessionMetadataItem] widgets for consistency.
   Widget _buildMetadataRow({
     required String formattedDate,
     required String formattedTime,
@@ -228,7 +230,7 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         // Date with calendar icon
-        _MetadataItem(
+        SessionMetadataItem(
           icon: TotemIcons.calendar,
           text: formattedDate,
           textStyle: const TextStyle(
@@ -239,56 +241,13 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
         ),
 
         // Time with clock icon
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const _MetadataIcon(icon: TotemIcons.clockCircle),
-            const SizedBox(width: 2.4),
-            Text(
-              formattedTime,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.slate,
-              ),
-            ),
-            const SizedBox(width: 2),
-            Text(
-              formattedTimePeriod,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w400,
-                color: AppTheme.gray,
-              ),
-            ),
-          ],
+        SessionTimeMetadata(
+          time: formattedTime,
+          period: formattedTimePeriod,
         ),
 
         // Seats left with chair icon
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const _MetadataIcon(icon: TotemIcons.seats),
-            const SizedBox(width: 2.4),
-            Text(
-              '${widget.data.seatsLeft}',
-              style: const TextStyle(
-                fontSize: 8.3,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.slate,
-              ),
-            ),
-            const SizedBox(width: 2),
-            const Text(
-              'seats left',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w400,
-                color: AppTheme.gray,
-              ),
-            ),
-          ],
-        ),
+        SessionSeatsMetadata(seatsLeft: widget.data.seatsLeft),
       ],
     );
   }
@@ -521,47 +480,6 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
   void _navigateToSession(BuildContext context) {
     context.push(
       RouteNames.spaceEvent(widget.data.spaceSlug, widget.data.sessionSlug),
-    );
-  }
-}
-
-/// Helper widget for metadata items with icon and text.
-class _MetadataItem extends StatelessWidget {
-  const _MetadataItem({
-    required this.icon,
-    required this.text,
-    required this.textStyle,
-  });
-
-  final String icon;
-  final String text;
-  final TextStyle textStyle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _MetadataIcon(icon: icon),
-        const SizedBox(width: 2.4),
-        Text(text, style: textStyle),
-      ],
-    );
-  }
-}
-
-/// Helper widget for metadata icons (10x10px).
-class _MetadataIcon extends StatelessWidget {
-  const _MetadataIcon({required this.icon});
-
-  final String icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return TotemIcon(
-      icon,
-      size: 10,
-      color: AppTheme.gray,
     );
   }
 }
