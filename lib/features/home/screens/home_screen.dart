@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/features/home/models/upcoming_session_data.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/home/screens/home_loading_screen.dart';
 import 'package:totem_app/features/home/widgets/next_session_card.dart';
 import 'package:totem_app/features/home/widgets/upcoming_session_card.dart';
+import 'package:totem_app/features/home/widgets/welcome_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/utils.dart';
@@ -20,6 +22,11 @@ class HomeScreen extends ConsumerWidget {
     final summary = ref.watch(spacesSummaryProvider);
     ref.sentryReportFullyDisplayed(spacesSummaryProvider);
 
+    // Get the user's circle count to determine if they're a new user
+    final circleCount = ref.watch(
+      authControllerProvider.select((auth) => auth.user?.circleCount ?? 0),
+    );
+
     return Scaffold(
       body: SafeArea(
         bottom: false,
@@ -30,7 +37,10 @@ class HomeScreen extends ConsumerWidget {
                 .where((event) => !event.ended)
                 .firstOrNull;
 
-            if (summary.explore.isEmpty && nextSession == null) {
+            // Determine if user is new (never attended a session)
+            final isNewUser = circleCount == 0 && nextSession == null;
+
+            if (summary.explore.isEmpty && nextSession == null && !isNewUser) {
               return EmptyIndicator(
                 icon: TotemIcons.home,
                 onRetry: () => ref.refresh(spacesSummaryProvider.future),
@@ -41,8 +51,22 @@ class HomeScreen extends ConsumerWidget {
               onRefresh: () => ref.refresh(spacesSummaryProvider.future),
               child: CustomScrollView(
                 slivers: [
+                  // Welcome card for new users who haven't attended any sessions
+                  if (isNewUser) ...[
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsetsDirectional.only(
+                          start: 16,
+                          end: 16,
+                          top: 16,
+                          bottom: 16,
+                        ),
+                        child: WelcomeCard(),
+                      ),
+                    ),
+                  ]
                   // Your next session - shows only one session if user has one
-                  if (nextSession != null) ...[
+                  else if (nextSession != null) ...[
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsetsDirectional.only(
