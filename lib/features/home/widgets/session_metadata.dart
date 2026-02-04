@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:totem_app/core/config/theme.dart';
-import 'package:totem_app/features/home/models/upcoming_session_data.dart';
-import 'package:totem_app/features/home/widgets/next_session_card.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
 /// Shared metadata components used across session cards.
