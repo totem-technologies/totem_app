@@ -204,10 +204,19 @@ class _SlideToActionButtonState extends State<_SlideToActionButton> {
               clipBehavior: Clip.none,
               children: [
                 Center(
-                  child: Text(
-                    widget.text,
-                    style: textStyle?.copyWith(
-                      color: foregroundColor.withValues(alpha: 1.0 - progress),
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: thumbSize * 1.25,
+                    ),
+                    child: AutoSizeText(
+                      widget.text,
+                      style: textStyle?.copyWith(
+                        color: foregroundColor.withValues(
+                          alpha: 1.0 - progress,
+                        ),
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
                     ),
                   ),
                 ),
