@@ -82,47 +82,62 @@ class UpcomingSessionCard extends StatelessWidget {
       button: true,
       label: semanticLabel,
       excludeSemantics: true,
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(_borderRadius),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap ?? () => _navigateToSession(context),
-          child: SizedBox(
-            height: _cardHeight,
-            child: Row(
-              children: [
-                // Left: Session image with rounded left corners only
-                _buildThumbnail(),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(_borderRadius),
+          border: Border.all(
+            color: Colors.black.withValues(alpha: 0.05),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(_borderRadius),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap ?? () => _navigateToSession(context),
+            child: SizedBox(
+              height: _cardHeight,
+              child: Row(
+                children: [
+                  // Left: Session image with rounded left corners only
+                  _buildThumbnail(),
 
-                // Right: Content area
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(_contentPadding),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Top: Metadata row (date, time, seats)
-                        _buildMetadataRow(
-                          formattedDate: formattedDate,
-                          formattedTime: formattedTime,
-                          formattedTimePeriod: formattedTimePeriod,
-                        ),
+                  // Right: Content area
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(_contentPadding),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Top: Metadata row (date, time, seats)
+                          _buildMetadataRow(
+                            formattedDate: formattedDate,
+                            formattedTime: formattedTime,
+                            formattedTimePeriod: formattedTimePeriod,
+                          ),
 
-                        // Middle: Space/category name
-                        _buildSpaceName(),
+                          // Middle: Space/category name
+                          _buildSpaceName(),
 
-                        // Middle: Session title
-                        _buildSessionTitle(),
+                          // Middle: Session title
+                          _buildSessionTitle(),
 
-                        // Bottom: Keeper info and attend button
-                        _buildKeeperRow(context),
-                      ],
+                          // Bottom: Keeper info and attend button
+                          _buildKeeperRow(context),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
