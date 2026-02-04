@@ -46,10 +46,10 @@ class HomeScreen extends ConsumerWidget {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsetsDirectional.only(
-                          start: 16,
-                          end: 16,
+                          start: 20,
+                          end: 20,
                           top: 16,
-                          bottom: 8,
+                          bottom: 16,
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -102,6 +102,9 @@ class HomeScreen extends ConsumerWidget {
                         child: NextSessionCard(session: nextSession),
                       ),
                     ),
+                    const SliverToBoxAdapter(
+                      child: SizedBox(height: 16),
+                    ),
                   ],
                   // Upcoming Sessions section - replacing Explore Spaces
                   // Gathers available sessions from explore spaces
@@ -109,10 +112,10 @@ class HomeScreen extends ConsumerWidget {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsetsDirectional.only(
-                          start: 16,
-                          end: 16,
+                          start: 20,
+                          end: 20,
                           top: 8,
-                          bottom: 8,
+                          bottom: 16,
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
