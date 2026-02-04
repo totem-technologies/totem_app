@@ -32,12 +32,9 @@ class HomeScreen extends ConsumerWidget {
         bottom: false,
         child: summary.when(
           data: (summary) {
-            // Get the first non-ended upcoming event (user's next session)
             final nextSession = summary.upcoming
                 .where((event) => !event.ended)
                 .firstOrNull;
-
-            // Determine if user is new (never attended a session)
             final isNewUser = circleCount == 0 && nextSession == null;
 
             if (summary.explore.isEmpty && nextSession == null && !isNewUser) {
@@ -51,7 +48,6 @@ class HomeScreen extends ConsumerWidget {
               onRefresh: () => ref.refresh(spacesSummaryProvider.future),
               child: CustomScrollView(
                 slivers: [
-                  // Welcome card for new users who haven't attended any sessions
                   if (isNewUser) ...[
                     const SliverToBoxAdapter(
                       child: Padding(
@@ -64,9 +60,7 @@ class HomeScreen extends ConsumerWidget {
                         child: WelcomeCard(),
                       ),
                     ),
-                  ]
-                  // Your next session - shows only one session if user has one
-                  else if (nextSession != null) ...[
+                  ] else if (nextSession != null) ...[
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsetsDirectional.only(
@@ -88,7 +82,6 @@ class HomeScreen extends ConsumerWidget {
                                 ),
                               ),
                             ),
-                            // View All link switches to Spaces tab
                             const _ViewAllButton(),
                           ],
                         ),
@@ -106,8 +99,6 @@ class HomeScreen extends ConsumerWidget {
                       child: SizedBox(height: 16),
                     ),
                   ],
-                  // Upcoming Sessions section - replacing Explore Spaces
-                  // Gathers available sessions from explore spaces
                   if (summary.explore.isNotEmpty) ...[
                     SliverToBoxAdapter(
                       child: Padding(
@@ -130,31 +121,22 @@ class HomeScreen extends ConsumerWidget {
                                 ),
                               ),
                             ),
-                            // View All link switches to Spaces tab
                             const _ViewAllButton(),
                           ],
                         ),
                       ),
                     ),
-                    // Build list/grid of upcoming sessions from explore spaces
-                    // Tablet: 2-column grid with 10 sessions
-                    // Phone: single-column list with 5 sessions
                     Builder(
                       builder: (context) {
                         final screenWidth = MediaQuery.sizeOf(context).width;
-                        // Tablet breakpoint at 600px
                         final isTablet = screenWidth >= 600;
-                        // Show 10 sessions on tablet, 5 on phone
                         final sessionLimit = isTablet ? 10 : 5;
-
-                        // Extract upcoming sessions with appropriate limit
                         final upcomingSessions =
                             UpcomingSessionData.fromSummary(
                               summary,
                               limit: sessionLimit,
                             );
 
-                        // Tablet: 2-column grid layout
                         if (isTablet) {
                           return SliverPadding(
                             padding: const EdgeInsetsDirectional.only(
@@ -168,7 +150,6 @@ class HomeScreen extends ConsumerWidget {
                                     crossAxisCount: 2,
                                     mainAxisSpacing: 20,
                                     crossAxisSpacing: 16,
-                                    // Approximate height for the card
                                     mainAxisExtent: 140,
                                   ),
                               delegate: SliverChildBuilderDelegate(
@@ -182,7 +163,6 @@ class HomeScreen extends ConsumerWidget {
                           );
                         }
 
-                        // Phone: single-column list layout
                         return SliverPadding(
                           padding: const EdgeInsetsDirectional.only(
                             start: 16,
@@ -224,14 +204,6 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-// =============================================================================
-// Private Widgets
-// =============================================================================
-
-/// A "View All" button that navigates to the Spaces tab.
-///
-/// Used in section headers to provide quick access to the full spaces list.
-/// Styled as a compact text button with a chevron icon.
 class _ViewAllButton extends StatelessWidget {
   const _ViewAllButton();
 

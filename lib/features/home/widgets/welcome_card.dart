@@ -3,27 +3,13 @@ import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/assets.dart';
 
-/// A welcome card displayed to new users who haven't attended any sessions yet.
-///
-/// Features a beautiful background image with text overlay encouraging
-/// users to explore and learn more about Totem.
-///
-/// Responsive sizing:
-/// - Phone: Square (1:1 aspect ratio), full width
-/// - Tablet: Square (1:1 aspect ratio), max width 400px
+/// A welcome card displayed to new users who haven't attended any sessions.
 class WelcomeCard extends StatelessWidget {
   const WelcomeCard({super.key});
 
-  /// Design constants
   static const double _borderRadius = 20;
-
-  /// Square aspect ratio for both phone and tablet
   static const double _aspectRatio = 1;
-
-  /// Max width on tablet to prevent card from being too large
   static const double _tabletMaxWidth = 400;
-
-  /// Tablet breakpoint
   static const double _tabletBreakpoint = 600;
 
   @override
@@ -41,13 +27,8 @@ class WelcomeCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Background image
               _buildBackgroundImage(),
-
-              // Gradient overlay for text readability
               _buildGradientOverlay(),
-
-              // Text content
               _buildTextContent(context, isTablet: isTablet),
             ],
           ),
@@ -55,7 +36,6 @@ class WelcomeCard extends StatelessWidget {
       ),
     );
 
-    // On tablet, constrain width and center the card
     if (isTablet) {
       card = Center(
         child: ConstrainedBox(
@@ -73,7 +53,6 @@ class WelcomeCard extends StatelessWidget {
     );
   }
 
-  /// Builds the background image filling the card.
   Widget _buildBackgroundImage() {
     return Image.asset(
       TotemAssets.welcomeCardImage,
@@ -81,7 +60,6 @@ class WelcomeCard extends StatelessWidget {
     );
   }
 
-  /// Builds a gradient overlay for better text readability.
   Widget _buildGradientOverlay() {
     return Container(
       decoration: const BoxDecoration(
@@ -100,10 +78,7 @@ class WelcomeCard extends StatelessWidget {
     );
   }
 
-  /// Builds the text content positioned at the bottom.
-  /// Adjusts text size slightly for tablet's smaller card.
   Widget _buildTextContent(BuildContext context, {required bool isTablet}) {
-    // Slightly smaller text on tablet since card is smaller
     final fontSize = isTablet ? 14.0 : 16.0;
     final bottomPadding = isTablet ? 16.0 : 24.0;
     final buttonFontSize = isTablet ? 14.0 : 16.0;
@@ -137,15 +112,12 @@ class WelcomeCard extends StatelessWidget {
             ),
           ),
           SizedBox(height: isTablet ? 12 : 20),
-
-          // Read more button
           _buildReadMoreButton(fontSize: buttonFontSize),
         ],
       ),
     );
   }
 
-  /// Builds the "Read more" button with semi-transparent background.
   // TODO(totem): Navigate to About Us page when implemented.
   Widget _buildReadMoreButton({double fontSize = 16}) {
     return DecoratedBox(

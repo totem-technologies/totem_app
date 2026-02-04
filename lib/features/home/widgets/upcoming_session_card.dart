@@ -21,13 +21,6 @@ import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 /// A card widget displaying an upcoming session with its details.
-///
-/// Design specs from Figma (node 2252:1202):
-/// - White background, 20px rounded corners, 131px height
-/// - Left: Image (130px width, rounded left corners only)
-/// - Right: Content area with 10px padding containing metadata, title, and CTA
-///
-/// The attend button makes an RSVP API call and updates its state accordingly.
 class UpcomingSessionCard extends ConsumerStatefulWidget {
   const UpcomingSessionCard({
     required this.data,
@@ -35,7 +28,6 @@ class UpcomingSessionCard extends ConsumerStatefulWidget {
     this.onTap,
   });
 
-  /// Convenience constructor from SessionDetailSchema
   factory UpcomingSessionCard.fromSessionDetail(
     SessionDetailSchema session, {
     Key? key,
@@ -48,7 +40,6 @@ class UpcomingSessionCard extends ConsumerStatefulWidget {
     );
   }
 
-  /// Convenience constructor from space and session
   factory UpcomingSessionCard.fromSpaceAndSession(
     MobileSpaceDetailSchema space,
     NextSessionSchema session, {
@@ -65,7 +56,6 @@ class UpcomingSessionCard extends ConsumerStatefulWidget {
   final UpcomingSessionData data;
   final VoidCallback? onTap;
 
-  /// Card dimensions from Figma design
   static const double _cardHeight = 131;
   static const double _imageWidth = 130;
   static const double _borderRadius = 20;
@@ -77,23 +67,14 @@ class UpcomingSessionCard extends ConsumerStatefulWidget {
 }
 
 class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
-  /// Track attending state locally for optimistic UI updates during API calls.
-  /// This is only used temporarily - we always sync back to widget.data.attending
-  /// when the widget updates or when not loading.
   bool? _optimisticAttending;
-
-  /// Loading state for the attend button
   bool _loading = false;
 
-  /// Returns the current attending status.
-  /// Uses optimistic state during loading, otherwise uses data from provider.
   bool get _isAttending => _optimisticAttending ?? widget.data.attending;
 
   @override
   void didUpdateWidget(UpcomingSessionCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // When widget data updates (e.g., from provider refresh), clear optimistic state
-    // so we use the fresh data from the provider
     if (oldWidget.data.sessionSlug != widget.data.sessionSlug ||
         oldWidget.data.attending != widget.data.attending) {
       _optimisticAttending = null;
@@ -103,12 +84,10 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
 
   @override
   Widget build(BuildContext context) {
-    // Format date and time for display using shared utilities
     final formattedDate = formatShortDate(widget.data.start);
     final formattedTime = formatTimeOnly(widget.data.start);
     final formattedTimePeriod = formatTimePeriod(widget.data.start);
 
-    // Build semantic label for accessibility
     final semanticLabel = [
       widget.data.sessionTitle,
       formattedDate,
@@ -122,7 +101,6 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
       button: true,
       label: semanticLabel,
       excludeSemantics: true,
-      // Container provides subtle border and shadow for depth (Apple-style)
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(
@@ -164,20 +142,13 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Top: Metadata row (date, time, seats)
                           _buildMetadataRow(
                             formattedDate: formattedDate,
                             formattedTime: formattedTime,
                             formattedTimePeriod: formattedTimePeriod,
                           ),
-
-                          // Middle: Space/category name
                           _buildSpaceName(),
-
-                          // Middle: Session title
                           _buildSessionTitle(),
-
-                          // Bottom: Keeper info and attend button
                           _buildKeeperRow(context),
                         ],
                       ),
@@ -192,7 +163,6 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
     );
   }
 
-  /// Builds the thumbnail image with rounded left corners only.
   Widget _buildThumbnail() {
     final imageUrl = widget.data.imageUrl;
 
@@ -218,9 +188,6 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
     );
   }
 
-  /// Builds the metadata row showing date, time, and seats left.
-  /// Uses space-between layout to spread items across the width.
-  /// Uses shared [SessionMetadataItem] widgets for consistency.
   Widget _buildMetadataRow({
     required String formattedDate,
     required String formattedTime,
@@ -229,7 +196,6 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Date with calendar icon
         SessionMetadataItem(
           icon: TotemIcons.calendar,
           text: formattedDate,
@@ -240,21 +206,16 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
           ),
         ),
 
-        // Time with clock icon
         SessionTimeMetadata(
           time: formattedTime,
           period: formattedTimePeriod,
         ),
-
-        // Seats left with chair icon
         SessionSeatsMetadata(seatsLeft: widget.data.seatsLeft),
       ],
     );
   }
 
-  /// Builds the space/category name text with muted styling.
   Widget _buildSpaceName() {
-    // Use space title as fallback if category is empty
     final displayText = (widget.data.category?.isNotEmpty ?? false)
         ? widget.data.category!
         : widget.data.spaceTitle;
@@ -277,7 +238,6 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
     );
   }
 
-  /// Builds the session title with bold styling.
   Widget _buildSessionTitle() {
     return SizedBox(
       height: 38,
@@ -298,19 +258,15 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
     );
   }
 
-  /// Builds the keeper info row with avatar, name, and attend button.
   Widget _buildKeeperRow(BuildContext context) {
     return Row(
       children: [
-        // Keeper avatar (28px diameter)
         UserAvatar.fromUserSchema(
           widget.data.author,
           radius: 14.12,
           borderWidth: 0,
         ),
         const SizedBox(width: 4),
-
-        // "with" text
         const Text(
           'with ',
           style: TextStyle(
@@ -319,8 +275,6 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
             color: AppTheme.slate,
           ),
         ),
-
-        // Keeper name
         Expanded(
           child: Text(
             widget.data.author.name ?? '',
@@ -333,19 +287,12 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-
-        // Attend/Attending button
         _buildAttendButton(context),
       ],
     );
   }
 
-  /// Builds the attend button with different states:
-  /// - "Attend" (outlined) - when not attending
-  /// - "Attending" (filled) - when already attending
-  /// - Loading indicator - when processing
   Widget _buildAttendButton(BuildContext context) {
-    // Already attending - show filled "Attending" button
     if (_isAttending) {
       return DecoratedBox(
         decoration: BoxDecoration(
@@ -384,7 +331,6 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
       );
     }
 
-    // Not attending - show outlined "Attend" button
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -417,7 +363,6 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
     );
   }
 
-  /// Handles the attend button tap - makes RSVP API call.
   Future<void> _handleAttend() async {
     if (_isAttending || _loading || !mounted) return;
 
@@ -438,7 +383,6 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
           _loading = false;
         });
 
-        // Refresh the spaces summary to update seat counts and sync data
         // ignore: unused_result
         ref.refresh(spacesSummaryProvider.future);
       } else {
@@ -476,7 +420,6 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
     }
   }
 
-  /// Navigates to the session detail screen.
   void _navigateToSession(BuildContext context) {
     context.push(
       RouteNames.spaceEvent(widget.data.spaceSlug, widget.data.sessionSlug),

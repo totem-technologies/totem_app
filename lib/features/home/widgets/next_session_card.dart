@@ -12,13 +12,6 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 /// A card widget displaying the user's next session with vertical layout.
-///
-/// Design based on screenshot:
-/// - Large image at top with rounded corners
-/// - Metadata row: date, time, seats left
-/// - Space title in muted color
-/// - Session title in bold
-/// - Author row with avatar
 class NextSessionCard extends StatelessWidget {
   const NextSessionCard({
     required this.session,
@@ -29,19 +22,16 @@ class NextSessionCard extends StatelessWidget {
   final SessionDetailSchema session;
   final VoidCallback? onTap;
 
-  /// Design constants
   static const double _borderRadius = 20;
   static const double _contentPadding = 16;
   static const double _imageAspectRatio = 16 / 9;
 
   @override
   Widget build(BuildContext context) {
-    // Format date and time for display
     final formattedDate = formatShortDate(session.start);
     final formattedTime = formatTimeOnly(session.start);
     final formattedTimePeriod = formatTimePeriod(session.start);
 
-    // Build semantic label for accessibility
     final semanticLabel = [
       session.title,
       formattedDate,
@@ -64,32 +54,22 @@ class NextSessionCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Top: Session image
               _buildImage(),
-
-              // Bottom: Content area
               Padding(
                 padding: const EdgeInsets.all(_contentPadding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Metadata row: date, time, seats
                     _buildMetadataRow(
                       formattedDate: formattedDate,
                       formattedTime: formattedTime,
                       formattedTimePeriod: formattedTimePeriod,
                     ),
                     const SizedBox(height: 12),
-
-                    // Space title in muted color
                     _buildSpaceTitle(),
                     const SizedBox(height: 4),
-
-                    // Session title in bold
                     _buildSessionTitle(),
                     const SizedBox(height: 12),
-
-                    // Author row with avatar
                     _buildAuthorRow(),
                   ],
                 ),
@@ -101,7 +81,6 @@ class NextSessionCard extends StatelessWidget {
     );
   }
 
-  /// Builds the session image with 16:9 aspect ratio.
   Widget _buildImage() {
     final imageUrl = session.space.imageLink;
 
@@ -126,14 +105,11 @@ class NextSessionCard extends StatelessWidget {
     );
   }
 
-  /// Builds the metadata row showing date, time, and seats left.
-  /// Uses shared [SessionMetadataItem] widgets with larger sizing for this card.
   Widget _buildMetadataRow({
     required String formattedDate,
     required String formattedTime,
     required String formattedTimePeriod,
   }) {
-    // Styling constants for this larger card variant
     const iconSize = 16.0;
     const spacing = 4.0;
     const textStyle = TextStyle(
@@ -149,7 +125,6 @@ class NextSessionCard extends StatelessWidget {
 
     return Row(
       children: [
-        // Date with calendar icon
         SessionMetadataItem(
           icon: TotemIcons.calendar,
           text: formattedDate,
@@ -158,8 +133,6 @@ class NextSessionCard extends StatelessWidget {
           textStyle: textStyle,
         ),
         const SizedBox(width: 24),
-
-        // Time with clock icon
         SessionTimeMetadata(
           time: formattedTime,
           period: formattedTimePeriod,
@@ -170,8 +143,6 @@ class NextSessionCard extends StatelessWidget {
           periodStyle: periodStyle,
         ),
         const SizedBox(width: 24),
-
-        // Seats left with chair icon
         SessionSeatsMetadata(
           seatsLeft: session.seatsLeft,
           iconSize: iconSize,
@@ -184,7 +155,6 @@ class NextSessionCard extends StatelessWidget {
     );
   }
 
-  /// Builds the space title with muted brown styling.
   Widget _buildSpaceTitle() {
     return Text(
       session.space.title,
@@ -198,7 +168,6 @@ class NextSessionCard extends StatelessWidget {
     );
   }
 
-  /// Builds the session title with bold black styling.
   Widget _buildSessionTitle() {
     return Text(
       session.title,
@@ -213,19 +182,15 @@ class NextSessionCard extends StatelessWidget {
     );
   }
 
-  /// Builds the author row with avatar and name.
   Widget _buildAuthorRow() {
     return Row(
       children: [
-        // Author avatar
         UserAvatar.fromUserSchema(
           session.space.author,
           radius: 16,
           borderWidth: 0,
         ),
         const SizedBox(width: 8),
-
-        // "with" text
         const Text(
           'with',
           style: TextStyle(
@@ -235,8 +200,6 @@ class NextSessionCard extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
-
-        // Author name
         Expanded(
           child: Text(
             session.space.author.name ?? '',
@@ -253,7 +216,6 @@ class NextSessionCard extends StatelessWidget {
     );
   }
 
-  /// Navigates to the session detail screen.
   void _navigateToSession(BuildContext context) {
     context.push(
       RouteNames.spaceEvent(session.space.slug, session.slug),
