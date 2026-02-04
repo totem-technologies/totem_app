@@ -409,8 +409,7 @@ class ParticipantVideo extends ConsumerWidget {
             key: ValueKey(videoTrack.track!.sid),
             videoTrack.track! as VideoTrack,
             fit: VideoViewFit.cover,
-            // TODO(bdlukaa): Define mirror mode
-            // mirrorMode: VideoViewMirrorMode.off,
+            mirrorMode: VideoViewMirrorMode.off,
           ),
         ),
       );
