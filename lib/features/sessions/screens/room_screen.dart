@@ -233,7 +233,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       child: RoomBackground(
         status: sessionState.sessionState.status,
         child: LivekitRoom(
-          roomContext: session.context,
+          roomContext: session.context!,
           builder: (context, _) {
             // Use a navigator for modal sheets and dialogs inside the room
             return Navigator(
@@ -268,7 +268,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   Widget _buildBody(Session session, SessionRoomState state) {
     switch (state.connectionState) {
       case RoomConnectionState.error:
-        return RoomErrorScreen(onRetry: session.context.connect);
+        return RoomErrorScreen(onRetry: session.context?.connect);
       case RoomConnectionState.connecting:
         return widget.loadingScreen;
       case RoomConnectionState.disconnected:
@@ -278,12 +278,12 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           return SessionEndedScreen(event: widget.event, session: session);
         }
 
-        if (session.context.localParticipant == null) {
+        if (session.context?.localParticipant == null) {
           return widget.loadingScreen;
         }
 
         if (state.sessionState.totemStatus == TotemStatus.passing &&
-            state.amNext(session.context)) {
+            state.amNext(session.context!)) {
           return ReceiveTotemScreen(
             session: session,
             sessionState: state,
@@ -292,7 +292,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           );
         }
 
-        if (state.isMyTurn(session.context)) {
+        if (state.isMyTurn(session.context!)) {
           return ProtectionOverlay(
             child: MyTurn(
               actionBar: buildActionBar(session, state, widget.event),
@@ -333,7 +333,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   ) {
     return Builder(
       builder: (context) {
-        final room = session.context;
+        final room = session.context!;
         final user = room.localParticipant!;
 
         final isUserTileVisible =
@@ -381,7 +381,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 room.cameraOpened ? TotemIcons.cameraOn : TotemIcons.cameraOff,
               ),
             ),
-            if (!state.isMyTurn(session.context))
+            if (!state.isMyTurn(room))
               Builder(
                 builder: (button) {
                   return ActionBarButton(

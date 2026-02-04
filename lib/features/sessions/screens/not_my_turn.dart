@@ -151,7 +151,7 @@ class NotMyTurn extends ConsumerWidget {
                 return RichText(
                   text: TextSpan(
                     children: [
-                      if (sessionState.amNext(session.context))
+                      if (sessionState.amNext(session.context!))
                         const TextSpan(
                           text: 'You are Next',
                           style: TextStyle(fontWeight: FontWeight.bold),
