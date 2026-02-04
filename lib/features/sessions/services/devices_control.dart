@@ -29,14 +29,12 @@ extension DevicesControl on Session {
         final newPosition = (track.currentOptions as CameraCaptureOptions)
             .cameraPosition
             .switched();
-        track.setCameraPosition(newPosition);
-        ref.notifyListeners();
+        await track.setCameraPosition(newPosition);
         logger.i('Switched camera to $newPosition');
       } else {
-        context.localParticipant?.publishVideoTrack(
+        await context.localParticipant?.publishVideoTrack(
           await LocalVideoTrack.createCameraTrack(Session.defaultCameraOptions),
         );
-        ref.notifyListeners();
       }
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -44,6 +42,8 @@ extension DevicesControl on Session {
         stackTrace: stackTrace,
         message: 'Failed to switch camera position',
       );
+    } finally {
+      ref.notifyListeners();
     }
   }
 
