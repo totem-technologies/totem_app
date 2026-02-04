@@ -12,11 +12,14 @@ class TransitionCard extends StatelessWidget {
   const TransitionCard({
     required this.type,
     required this.onActionPressed,
+    this.actionText,
     super.key,
   });
 
   final TotemCardTransitionType type;
   final OnActionPerformed onActionPressed;
+
+  final String? actionText;
 
   @override
   Widget build(BuildContext context) {
@@ -29,8 +32,8 @@ class TransitionCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsetsDirectional.only(
           top: 14,
-          start: 30,
-          end: 30,
+          start: 16,
+          end: 16,
           bottom: 16,
         ),
         child: Column(
@@ -57,18 +60,23 @@ class TransitionCard extends StatelessWidget {
               maxLines: 2,
             ),
             if (type != TotemCardTransitionType.waitingReceive)
-              ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minWidth: 160,
-                ),
-                child: _SlideToActionButton(
-                  text: switch (type) {
-                    TotemCardTransitionType.pass => 'Pass',
-                    TotemCardTransitionType.receive => 'Receive',
-                    TotemCardTransitionType.start => 'Start Session',
-                    _ => '',
-                  },
-                  onActionCompleted: onActionPressed,
+              Padding(
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 14),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minWidth: 160,
+                  ),
+                  child: _SlideToActionButton(
+                    text:
+                        actionText ??
+                        switch (type) {
+                          TotemCardTransitionType.pass => 'Pass',
+                          TotemCardTransitionType.receive => 'Receive',
+                          TotemCardTransitionType.start => 'Start Session',
+                          _ => '',
+                        },
+                    onActionCompleted: onActionPressed,
+                  ),
                 ),
               ),
           ],

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' hide Session;
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
@@ -13,6 +13,7 @@ class MyTurn extends StatelessWidget {
     required this.getParticipantKey,
     required this.actionBar,
     required this.onPassTotem,
+    required this.session,
     required this.sessionState,
     required this.event,
     super.key,
@@ -21,6 +22,7 @@ class MyTurn extends StatelessWidget {
   final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
   final OnActionPerformed onPassTotem;
+  final Session session;
   final SessionRoomState sessionState;
   final SessionDetailSchema event;
 
@@ -45,11 +47,19 @@ class MyTurn extends StatelessWidget {
               },
             );
 
+            final nextUp = session.speakingNextParticipant();
+            final transitionType =
+                sessionState.sessionState.totemStatus == TotemStatus.passing
+                ? TotemCardTransitionType.waitingReceive
+                : TotemCardTransitionType.pass;
             final passCard = TransitionCard(
-              type: sessionState.sessionState.totemStatus == TotemStatus.passing
-                  ? TotemCardTransitionType.waitingReceive
-                  : TotemCardTransitionType.pass,
+              type: transitionType,
               onActionPressed: onPassTotem,
+              actionText:
+                  nextUp != null &&
+                      transitionType == TotemCardTransitionType.pass
+                  ? 'Pass to ${nextUp.name}'
+                  : null,
             );
             if (isLandscape) {
               return Column(

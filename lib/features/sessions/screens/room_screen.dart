@@ -307,6 +307,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                   return false;
                 }
               },
+              session: session,
               sessionState: state,
               event: widget.event,
             ),
