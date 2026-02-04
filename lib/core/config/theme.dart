@@ -12,6 +12,7 @@ class AppTheme {
   static const Color mauve = Color(0xFF987AA5);
   static const Color slate = Color(0xFF262F37);
   static const Color deepGray = Color(0xFF514F4D);
+  static const Color gray = Color(0xFF787D7E); // Secondary text color from Figma
   static const Color blue = Color(0xFF9BC0DD);
   static const Color blueTint = Color(0xFF55778F);
   static const Color pink = Color(0xFFD999AA);
