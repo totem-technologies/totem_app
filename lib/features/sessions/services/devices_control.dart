@@ -17,7 +17,7 @@ extension DevicesControl on Session {
 
   LocalVideoTrack? get localVideoTrack {
     return context.localParticipant?.videoTrackPublications
-        .where((t) => t.track != null && t.track!.isActive)
+        .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)
         .firstOrNull
         ?.track;
   }
