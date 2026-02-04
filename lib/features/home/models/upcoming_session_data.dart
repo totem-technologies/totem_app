@@ -17,6 +17,7 @@ class UpcomingSessionData {
     required this.author,
     required this.start,
     required this.seatsLeft,
+    required this.attending,
   });
 
   /// Creates from MobileSpaceDetailSchema and NextSessionSchema
@@ -35,6 +36,7 @@ class UpcomingSessionData {
       author: space.author,
       start: session.start,
       seatsLeft: session.seatsLeft,
+      attending: session.attending,
     );
   }
 
@@ -50,6 +52,7 @@ class UpcomingSessionData {
       author: session.space.author,
       start: session.start,
       seatsLeft: session.seatsLeft,
+      attending: session.attending,
     );
   }
 
@@ -94,4 +97,5 @@ class UpcomingSessionData {
   final PublicUserSchema author;
   final DateTime start;
   final int seatsLeft;
+  final bool attending;
 }
