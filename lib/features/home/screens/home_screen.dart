@@ -148,10 +148,11 @@ class HomeScreen extends ConsumerWidget {
                         final sessionLimit = isTablet ? 10 : 5;
 
                         // Extract upcoming sessions with appropriate limit
-                        final upcomingSessions = UpcomingSessionData.fromSummary(
-                          summary,
-                          limit: sessionLimit,
-                        );
+                        final upcomingSessions =
+                            UpcomingSessionData.fromSummary(
+                              summary,
+                              limit: sessionLimit,
+                            );
 
                         // Tablet: 2-column grid layout
                         if (isTablet) {
@@ -164,12 +165,12 @@ class HomeScreen extends ConsumerWidget {
                             sliver: SliverGrid(
                               gridDelegate:
                                   const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                mainAxisSpacing: 20,
-                                crossAxisSpacing: 16,
-                                // Approximate height for the card
-                                mainAxisExtent: 140,
-                              ),
+                                    crossAxisCount: 2,
+                                    mainAxisSpacing: 20,
+                                    crossAxisSpacing: 16,
+                                    // Approximate height for the card
+                                    mainAxisExtent: 140,
+                                  ),
                               delegate: SliverChildBuilderDelegate(
                                 (context, index) {
                                   final sessionData = upcomingSessions[index];
