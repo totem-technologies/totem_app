@@ -136,7 +136,7 @@ class UpcomingSessionCard extends StatelessWidget {
 
     return SizedBox(
       width: _imageWidth,
-      height: _cardHeight,
+      height: double.infinity,
       child: imageUrl != null && imageUrl.isNotEmpty
           ? CachedNetworkImage(
               imageUrl: getFullUrl(imageUrl),

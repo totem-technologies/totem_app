@@ -160,13 +160,52 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    // Build list of upcoming sessions from explore spaces
+                    // Build list/grid of upcoming sessions from explore spaces
+                    // Tablet: 2-column grid with 10 sessions
+                    // Phone: single-column list with 5 sessions
                     Builder(
                       builder: (context) {
-                        // Extract upcoming sessions from explore spaces
-                        final upcomingSessions =
-                            UpcomingSessionData.fromSummary(summary);
+                        final screenWidth = MediaQuery.sizeOf(context).width;
+                        // Tablet breakpoint at 600px
+                        final isTablet = screenWidth >= 600;
+                        // Show 10 sessions on tablet, 5 on phone
+                        final sessionLimit = isTablet ? 10 : 5;
 
+                        // Extract upcoming sessions with appropriate limit
+                        final upcomingSessions = UpcomingSessionData.fromSummary(
+                          summary,
+                          limit: sessionLimit,
+                        );
+
+                        // Tablet: 2-column grid layout
+                        if (isTablet) {
+                          return SliverPadding(
+                            padding: const EdgeInsetsDirectional.only(
+                              start: 16,
+                              end: 16,
+                              bottom: 16,
+                            ),
+                            sliver: SliverGrid(
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                mainAxisSpacing: 20,
+                                crossAxisSpacing: 16,
+                                // Approximate height for the card
+                                mainAxisExtent: 140,
+                              ),
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final sessionData = upcomingSessions[index];
+                                  return UpcomingSessionCard(data: sessionData);
+                                },
+                                childCount: upcomingSessions.length,
+                              ),
+                            ),
+                          );
+                        }
+
+                        // Phone: single-column list layout
                         return SliverPadding(
                           padding: const EdgeInsetsDirectional.only(
                             start: 16,
