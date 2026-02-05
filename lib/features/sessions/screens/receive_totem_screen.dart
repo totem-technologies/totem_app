@@ -36,7 +36,7 @@ class ReceiveTotemScreen extends StatelessWidget {
             final videoCard = Padding(
               padding: const EdgeInsetsDirectional.all(20),
               child: LocalParticipantVideoCard(
-                isCameraOn: session.context.room.localParticipant!
+                isCameraOn: session.context!.room.localParticipant!
                     .isCameraEnabled(),
                 videoTrack: session.localVideoTrack,
               ),

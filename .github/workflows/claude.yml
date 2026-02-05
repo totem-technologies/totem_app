@@ -69,7 +69,7 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
           claude_args: |
-            --model claude-opus-4-5
+            --model claude-opus-4-6
 
           # Optional: Trigger when specific user is assigned to an issue
           # assignee_trigger: "claude-bot"

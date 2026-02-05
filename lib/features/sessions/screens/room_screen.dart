@@ -10,6 +10,7 @@ import 'package:livekit_components/livekit_components.dart'
     hide RoomConnectionState;
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
@@ -232,7 +233,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       child: RoomBackground(
         status: sessionState.sessionState.status,
         child: LivekitRoom(
-          roomContext: session.context,
+          roomContext: session.context!,
           builder: (context, _) {
             // Use a navigator for modal sheets and dialogs inside the room
             return Navigator(
@@ -267,7 +268,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   Widget _buildBody(Session session, SessionRoomState state) {
     switch (state.connectionState) {
       case RoomConnectionState.error:
-        return RoomErrorScreen(onRetry: session.context.connect);
+        return RoomErrorScreen(onRetry: session.context?.connect);
       case RoomConnectionState.connecting:
         return widget.loadingScreen;
       case RoomConnectionState.disconnected:
@@ -277,12 +278,12 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           return SessionEndedScreen(event: widget.event, session: session);
         }
 
-        if (session.context.localParticipant == null) {
+        if (session.context?.localParticipant == null) {
           return widget.loadingScreen;
         }
 
         if (state.sessionState.totemStatus == TotemStatus.passing &&
-            state.amNext(session.context)) {
+            state.amNext(session.context!)) {
           return ReceiveTotemScreen(
             session: session,
             sessionState: state,
@@ -291,12 +292,22 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           );
         }
 
-        if (state.isMyTurn(session.context)) {
+        if (state.isMyTurn(session.context!)) {
           return ProtectionOverlay(
             child: MyTurn(
               actionBar: buildActionBar(session, state, widget.event),
               getParticipantKey: getParticipantKey,
-              onPassTotem: session.passTotem,
+              onPassTotem: () async {
+                try {
+                  await session.passTotem();
+                  return true;
+                } catch (error) {
+                  if (!mounted) return false;
+                  ErrorHandler.handleApiError(context, error);
+                  return false;
+                }
+              },
+              session: session,
               sessionState: state,
               event: widget.event,
             ),
@@ -322,7 +333,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   ) {
     return Builder(
       builder: (context) {
-        final room = session.context;
+        final room = session.context!;
         final user = room.localParticipant!;
 
         final isUserTileVisible =
@@ -370,7 +381,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 room.cameraOpened ? TotemIcons.cameraOn : TotemIcons.cameraOff,
               ),
             ),
-            if (!state.isMyTurn(session.context))
+            if (!state.isMyTurn(room))
               Builder(
                 builder: (button) {
                   return ActionBarButton(
@@ -382,7 +393,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                       await showEmojiBar(
                         button,
                         onEmojiSelected: (emoji) {
-                          session.sendEmoji(emoji);
+                          session.sendReaction(emoji);
                           _onEmojiReceived(user.identity, emoji);
                         },
                       );
