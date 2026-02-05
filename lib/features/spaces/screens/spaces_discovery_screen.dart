@@ -194,22 +194,11 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
   }
 
   List<UpcomingSessionData> _extractAllSessions(SummarySpacesSchema summary) {
-    final now = DateTime.now();
-    final sessions = <UpcomingSessionData>[];
-
-    for (final space in summary.explore) {
-      for (final event in space.nextEvents) {
-        final isFutureSession = event.start.isAfter(now);
-        final hasAvailableSeats = event.seatsLeft > 0;
-        final userIsAttending = event.attending;
-
-        if (isFutureSession && (hasAvailableSeats || userIsAttending)) {
-          sessions.add(UpcomingSessionData.fromSpaceAndSession(space, event));
-        }
-      }
-    }
-
-    return sessions..sort((a, b) => a.start.compareTo(b.start));
+    return UpcomingSessionData.fromSummary(
+      summary,
+      limit: null,
+      includeAttendingFullSessions: true,
+    );
   }
 
   List<String> _extractCategories(List<UpcomingSessionData> sessions) {
