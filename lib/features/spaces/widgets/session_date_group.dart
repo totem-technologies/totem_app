@@ -14,19 +14,23 @@ class SessionDateGroup {
 class SessionDateGroupWidget extends StatelessWidget {
   const SessionDateGroupWidget({
     required this.dateGroup,
+    required this.today,
     super.key,
   });
 
   final SessionDateGroup dateGroup;
+  final DateTime today;
 
   @override
   Widget build(BuildContext context) {
+    final isToday = DateUtils.isSameDay(dateGroup.date, today);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DateIndicator(date: dateGroup.date),
+          DateIndicator(date: dateGroup.date, isToday: isToday),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -46,20 +50,18 @@ class SessionDateGroupWidget extends StatelessWidget {
 }
 
 class DateIndicator extends StatelessWidget {
-  const DateIndicator({required this.date, super.key});
+  const DateIndicator({
+    required this.date,
+    required this.isToday,
+    super.key,
+  });
 
   final DateTime date;
+  final bool isToday;
 
   static const _width = 50.0;
   static const _height = 70.0;
   static const _borderRadius = 10.0;
-
-  bool get _isToday {
-    final now = DateTime.now();
-    return date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +77,7 @@ class DateIndicator extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(_borderRadius),
         ),
-        child: _isToday
+        child: isToday
             ? _buildTodayContent(dayNumber, dayOfWeek)
             : _buildDateContent(dayNumber, dayOfWeek, monthName),
       ),

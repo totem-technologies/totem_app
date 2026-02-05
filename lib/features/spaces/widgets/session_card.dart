@@ -58,6 +58,7 @@ class SessionCard extends StatelessWidget {
                       _SessionMetadata(
                         time: data.start,
                         seatsLeft: data.seatsLeft,
+                        isAttending: data.attending,
                       ),
                       const SizedBox(height: 8),
                       _SessionSpaceTitle(title: data.spaceTitle),
@@ -108,10 +109,15 @@ class _SessionImage extends StatelessWidget {
 }
 
 class _SessionMetadata extends StatelessWidget {
-  const _SessionMetadata({required this.time, required this.seatsLeft});
+  const _SessionMetadata({
+    required this.time,
+    required this.seatsLeft,
+    required this.isAttending,
+  });
 
   final DateTime time;
   final int seatsLeft;
+  final bool isAttending;
 
   static final _textStyle = TextStyle(
     fontSize: 12,
@@ -120,6 +126,12 @@ class _SessionMetadata extends StatelessWidget {
   );
 
   static final Color _iconColor = AppTheme.slate.withValues(alpha: 0.7);
+
+  String get _availabilityText {
+    if (isAttending) return 'Attending';
+    if (seatsLeft == 0) return 'Full';
+    return '$seatsLeft seats left';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -132,9 +144,12 @@ class _SessionMetadata extends StatelessWidget {
         const SizedBox(width: 4),
         Text('$formattedTime $formattedPeriod', style: _textStyle),
         const SizedBox(width: 16),
-        TotemIcon(TotemIcons.seats, size: 14, color: _iconColor),
+        if (isAttending)
+          Icon(Icons.check_circle_outline, size: 14, color: _iconColor)
+        else
+          TotemIcon(TotemIcons.seats, size: 14, color: _iconColor),
         const SizedBox(width: 4),
-        Text('$seatsLeft seats left', style: _textStyle),
+        Text(_availabilityText, style: _textStyle),
       ],
     );
   }

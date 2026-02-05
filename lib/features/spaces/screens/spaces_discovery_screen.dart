@@ -167,7 +167,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                     selectedCategory,
                     isMySessionsSelected,
                   )
-                : _buildSessionsList(groupedSessions),
+                : _buildSessionsList(groupedSessions, DateTime.now()),
           ),
         ),
       ],
@@ -228,12 +228,16 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSessionsList(List<SessionDateGroup> groupedSessions) {
+  Widget _buildSessionsList(
+    List<SessionDateGroup> groupedSessions,
+    DateTime today,
+  ) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 20),
       itemCount: groupedSessions.length,
       itemBuilder: (_, index) => SessionDateGroupWidget(
         dateGroup: groupedSessions[index],
+        today: today,
       ),
     );
   }
