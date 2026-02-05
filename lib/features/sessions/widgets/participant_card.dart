@@ -10,6 +10,7 @@ import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
+import 'package:totem_app/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
@@ -96,12 +97,10 @@ class ParticipantCard extends ConsumerWidget {
                   ),
                 PositionedDirectional(
                   bottom: 8,
-                  start: 6,
-                  end: 6,
-                  child: AutoSizeText(
-                    participant.name,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
+                  start: 8,
+                  end: 8,
+                  child: SmartNameText(
+                    name: participant.name,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 13,
