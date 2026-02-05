@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:totem_app/api/models/public_user_schema.dart';
 import 'package:totem_app/api/models/summary_spaces_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -19,11 +20,6 @@ import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
-// =============================================================================
-// PROVIDERS
-// =============================================================================
-
-/// Provider to track the selected category filter for sessions.
 final selectedCategoryProvider =
     NotifierProvider<_SelectedCategoryNotifier, String?>(
       _SelectedCategoryNotifier.new,
@@ -39,7 +35,6 @@ class _SelectedCategoryNotifier extends Notifier<String?> {
   }
 }
 
-/// Provider to track "My Sessions" filter state (shows only attending sessions).
 final mySessionsFilterProvider =
     NotifierProvider<_MySessionsFilterNotifier, bool>(
       _MySessionsFilterNotifier.new,
@@ -53,17 +48,6 @@ class _MySessionsFilterNotifier extends Notifier<bool> {
   void toggle() => state = !state;
 }
 
-// =============================================================================
-// MAIN SCREEN
-// =============================================================================
-
-/// Sessions discovery screen displaying all available sessions grouped by date.
-///
-/// Features:
-/// - Sessions grouped by date with visual date indicators
-/// - Category filter bar for filtering by session category
-/// - "My Sessions" toggle to show only attending sessions
-/// - Pull-to-refresh support
 class SpacesDiscoveryScreen extends ConsumerWidget {
   const SpacesDiscoveryScreen({super.key});
 
@@ -170,6 +154,11 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
     final filterName = isMySessionsSelected
         ? 'My Sessions'
         : (category ?? 'All');
+
+    final hintMessage = isMySessionsSelected
+        ? "You haven't joined any sessions yet"
+        : 'Try selecting a different category';
+
     return ListView(
       children: [
         Padding(
@@ -177,7 +166,11 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.filter_list, size: 60, color: Colors.grey[400]),
+              Icon(
+                isMySessionsSelected ? Icons.event_busy : Icons.filter_list,
+                size: 60,
+                color: Colors.grey[400],
+              ),
               const SizedBox(height: 16),
               Text(
                 'No sessions in "$filterName"',
@@ -187,9 +180,9 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Try selecting a different category',
-                style: TextStyle(color: Colors.grey),
+              Text(
+                hintMessage,
+                style: const TextStyle(color: Colors.grey),
               ),
             ],
           ),
@@ -208,18 +201,17 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Data Processing
-  // ---------------------------------------------------------------------------
-
-  /// Extracts all upcoming sessions from the summary, sorted by start time.
   List<UpcomingSessionData> _extractAllSessions(SummarySpacesSchema summary) {
     final now = DateTime.now();
     final sessions = <UpcomingSessionData>[];
 
     for (final space in summary.explore) {
       for (final event in space.nextEvents) {
-        if (event.start.isAfter(now) && event.seatsLeft > 0) {
+        final isFutureSession = event.start.isAfter(now);
+        final hasAvailableSeats = event.seatsLeft > 0;
+        final userIsAttending = event.attending;
+
+        if (isFutureSession && (hasAvailableSeats || userIsAttending)) {
           sessions.add(UpcomingSessionData.fromSpaceAndSession(space, event));
         }
       }
@@ -228,7 +220,6 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
     return sessions..sort((a, b) => a.start.compareTo(b.start));
   }
 
-  /// Extracts unique categories from sessions list.
   List<String> _extractCategories(List<UpcomingSessionData> sessions) {
     return sessions
         .map((s) => s.category)
@@ -239,7 +230,6 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
       ..sort();
   }
 
-  /// Filters sessions by category and/or attending status.
   List<UpcomingSessionData> _filterSessions(
     List<UpcomingSessionData> sessions,
     String? category,
@@ -258,7 +248,6 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
     return filtered;
   }
 
-  /// Groups sessions by date for display with date indicators.
   List<_SessionDateGroup> _groupSessionsByDate(
     List<UpcomingSessionData> sessions,
   ) {
@@ -280,11 +269,6 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
   }
 }
 
-// =============================================================================
-// DATA MODELS
-// =============================================================================
-
-/// Data holder for a group of sessions on the same date.
 class _SessionDateGroup {
   const _SessionDateGroup({required this.date, required this.sessions});
 
@@ -292,11 +276,6 @@ class _SessionDateGroup {
   final List<UpcomingSessionData> sessions;
 }
 
-// =============================================================================
-// WIDGETS
-// =============================================================================
-
-/// Header widget displaying "Sessions" title and "My Sessions" filter button.
 class _SessionsHeader extends StatelessWidget {
   const _SessionsHeader({
     required this.onMySessionsTapped,
@@ -331,7 +310,6 @@ class _SessionsHeader extends StatelessWidget {
   }
 }
 
-/// Toggle button for filtering "My Sessions" (attending sessions).
 class _MySessionsButton extends StatelessWidget {
   const _MySessionsButton({
     required this.isSelected,
@@ -346,42 +324,57 @@ class _MySessionsButton extends StatelessWidget {
     final primaryColor = Theme.of(context).colorScheme.primary;
     final contentColor = isSelected ? Colors.white : primaryColor;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? primaryColor : Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TotemIcon(TotemIcons.mySessions, size: 16, color: contentColor),
-            const SizedBox(width: 8),
-            Text(
-              'My Sessions',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: contentColor,
+    return Semantics(
+      button: true,
+      label: 'My Sessions filter',
+      selected: isSelected,
+      child: Material(
+        color: isSelected ? primaryColor : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        elevation: 0,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(24),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TotemIcon(
+                    TotemIcons.mySessions,
+                    size: 16,
+                    color: contentColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'My Sessions',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: contentColor,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// Widget displaying a date group with date indicator and session cards.
 class _SessionDateGroupWidget extends StatelessWidget {
   const _SessionDateGroupWidget({required this.dateGroup});
 
@@ -413,7 +406,6 @@ class _SessionDateGroupWidget extends StatelessWidget {
   }
 }
 
-/// Date indicator widget with different styles for "today" and other dates.
 class _DateIndicator extends StatelessWidget {
   const _DateIndicator({required this.date});
 
@@ -422,8 +414,6 @@ class _DateIndicator extends StatelessWidget {
   static const _width = 50.0;
   static const _height = 70.0;
   static const _borderRadius = 10.0;
-  static const _secondaryTextColor = Color(0xff7D8287);
-  static const _headerBgColor = Color(0xffC4C4C4);
 
   bool get _isToday {
     final now = DateTime.now();
@@ -435,8 +425,8 @@ class _DateIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dayNumber = date.day.toString();
-    final dayOfWeek = _dayOfWeekShort(date.weekday);
-    final monthName = _monthShort(date.month);
+    final dayOfWeek = DateFormat('E').format(date);
+    final monthName = DateFormat('MMM').format(date);
 
     return SizedBox(
       width: _width,
@@ -485,7 +475,7 @@ class _DateIndicator extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: _secondaryTextColor,
+                color: AppTheme.gray,
               ),
             ),
           ),
@@ -506,7 +496,7 @@ class _DateIndicator extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 4),
             decoration: BoxDecoration(
-              color: _headerBgColor.withValues(alpha: 0.7),
+              color: AppTheme.gray.withValues(alpha: 0.3),
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(_borderRadius),
               ),
@@ -517,7 +507,7 @@ class _DateIndicator extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
-                color: Color(0xff444444),
+                color: AppTheme.deepGray,
               ),
             ),
           ),
@@ -532,7 +522,7 @@ class _DateIndicator extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: _secondaryTextColor,
+                  color: AppTheme.gray,
                   height: 1.2,
                 ),
               ),
@@ -541,7 +531,7 @@ class _DateIndicator extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: _secondaryTextColor,
+                  color: AppTheme.gray,
                 ),
               ),
             ],
@@ -550,27 +540,8 @@ class _DateIndicator extends StatelessWidget {
       ],
     );
   }
-
-  String _dayOfWeekShort(int weekday) =>
-      const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][weekday - 1];
-
-  String _monthShort(int month) => const [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ][month - 1];
 }
 
-/// Vertical session card displaying session details.
 class _SessionCard extends StatelessWidget {
   const _SessionCard({required this.data});
 
@@ -582,11 +553,11 @@ class _SessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _navigateToSession(context),
-      child: Container(
+    return Semantics(
+      button: true,
+      label: 'Session: ${data.sessionTitle}',
+      child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.white,
           borderRadius: BorderRadius.circular(_borderRadius),
           boxShadow: [
             BoxShadow(
@@ -596,30 +567,38 @@ class _SessionCard extends StatelessWidget {
             ),
           ],
         ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _SessionImage(imageUrl: data.imageUrl, height: _imageHeight),
-            Padding(
-              padding: _contentPadding,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _SessionMetadata(
-                    time: data.start,
-                    seatsLeft: data.seatsLeft,
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(_borderRadius),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => _navigateToSession(context),
+            borderRadius: BorderRadius.circular(_borderRadius),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SessionImage(imageUrl: data.imageUrl, height: _imageHeight),
+                Padding(
+                  padding: _contentPadding,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SessionMetadata(
+                        time: data.start,
+                        seatsLeft: data.seatsLeft,
+                      ),
+                      const SizedBox(height: 8),
+                      _SessionSpaceTitle(title: data.spaceTitle),
+                      const SizedBox(height: 4),
+                      _SessionTitle(title: data.sessionTitle),
+                      const SizedBox(height: 10),
+                      _SessionFacilitator(author: data.author),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  _SessionSpaceTitle(title: data.spaceTitle),
-                  const SizedBox(height: 4),
-                  _SessionTitle(title: data.sessionTitle),
-                  const SizedBox(height: 10),
-                  _SessionFacilitator(author: data.author),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -630,7 +609,6 @@ class _SessionCard extends StatelessWidget {
   }
 }
 
-/// Session card image with placeholder and error handling.
 class _SessionImage extends StatelessWidget {
   const _SessionImage({required this.imageUrl, required this.height});
 
@@ -657,7 +635,6 @@ class _SessionImage extends StatelessWidget {
   }
 }
 
-/// Session time and seats metadata row.
 class _SessionMetadata extends StatelessWidget {
   const _SessionMetadata({required this.time, required this.seatsLeft});
 
@@ -691,7 +668,6 @@ class _SessionMetadata extends StatelessWidget {
   }
 }
 
-/// Session space title (subtitle).
 class _SessionSpaceTitle extends StatelessWidget {
   const _SessionSpaceTitle({required this.title});
 
@@ -712,7 +688,6 @@ class _SessionSpaceTitle extends StatelessWidget {
   }
 }
 
-/// Session title (main heading).
 class _SessionTitle extends StatelessWidget {
   const _SessionTitle({required this.title});
 
@@ -734,7 +709,6 @@ class _SessionTitle extends StatelessWidget {
   }
 }
 
-/// Session facilitator row with avatar and name.
 class _SessionFacilitator extends StatelessWidget {
   const _SessionFacilitator({required this.author});
 
