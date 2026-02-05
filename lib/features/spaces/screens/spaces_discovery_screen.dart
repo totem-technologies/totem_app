@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/api/models/public_user_schema.dart';
 import 'package:totem_app/api/models/summary_spaces_schema.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/home/models/upcoming_session_data.dart';
@@ -18,249 +19,360 @@ import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
-// Provider to track the selected category filter for sessions
-class SelectedCategoryNotifier extends Notifier<String?> {
+// =============================================================================
+// PROVIDERS
+// =============================================================================
+
+/// Provider to track the selected category filter for sessions.
+final selectedCategoryProvider =
+    NotifierProvider<_SelectedCategoryNotifier, String?>(
+      _SelectedCategoryNotifier.new,
+      name: 'selectedCategoryProvider',
+    );
+
+class _SelectedCategoryNotifier extends Notifier<String?> {
   @override
   String? build() => null;
 
-  void toggleCategory(String? category) {
+  void toggle(String? category) {
     state = (state == category) ? null : category;
   }
 }
 
-// Provider
-final selectedCategoryProvider =
-    NotifierProvider<SelectedCategoryNotifier, String?>(
-      SelectedCategoryNotifier.new,
-      name: 'Selected Category Provider',
+/// Provider to track "My Sessions" filter state (shows only attending sessions).
+final mySessionsFilterProvider =
+    NotifierProvider<_MySessionsFilterNotifier, bool>(
+      _MySessionsFilterNotifier.new,
+      name: 'mySessionsFilterProvider',
     );
 
-// Provider to track "My Sessions" filter state (shows only attending sessions)
-class MySessionsFilterNotifier extends Notifier<bool> {
+class _MySessionsFilterNotifier extends Notifier<bool> {
   @override
   bool build() => false;
 
-  void toggle() {
-    state = !state;
-  }
-
-  void setFilter(bool value) {
-    state = value;
-  }
+  void toggle() => state = !state;
 }
 
-// Provider for My Sessions filter
-final mySessionsFilterProvider =
-    NotifierProvider<MySessionsFilterNotifier, bool>(
-      MySessionsFilterNotifier.new,
-      name: 'My Sessions Filter Provider',
-    );
+// =============================================================================
+// MAIN SCREEN
+// =============================================================================
 
+/// Sessions discovery screen displaying all available sessions grouped by date.
+///
+/// Features:
+/// - Sessions grouped by date with visual date indicators
+/// - Category filter bar for filtering by session category
+/// - "My Sessions" toggle to show only attending sessions
+/// - Pull-to-refresh support
 class SpacesDiscoveryScreen extends ConsumerWidget {
   const SpacesDiscoveryScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = ref.watch(spacesSummaryProvider);
-    ref.sentryReportFullyDisplayed(spacesSummaryProvider);
-
     final selectedCategory = ref.watch(selectedCategoryProvider);
     final isMySessionsSelected = ref.watch(mySessionsFilterProvider);
+
+    ref.sentryReportFullyDisplayed(spacesSummaryProvider);
 
     return Scaffold(
       body: SafeArea(
         bottom: false,
         child: summary.when(
-          data: (summaryData) {
-            // Extract all sessions from the summary (no limit for discovery screen)
-            final allSessions = _extractAllSessions(summaryData);
-
-            if (allSessions.isEmpty) {
-              return EmptyIndicator(
-                icon: TotemIcons.spacesFilled,
-                text: 'No sessions available yet.',
-                onRetry: () => ref.refresh(spacesSummaryProvider.future),
-              );
-            }
-
-            // Extract unique categories from sessions
-            final categories = _extractCategories(allSessions);
-
-            // Filter sessions by "My Sessions" (attending) first
-            var filteredSessions = isMySessionsSelected
-                ? allSessions.where((session) => session.attending).toList()
-                : allSessions;
-
-            // Then filter by selected category
-            if (selectedCategory != null) {
-              filteredSessions = filteredSessions
-                  .where((session) => session.category == selectedCategory)
-                  .toList();
-            }
-
-            // Group sessions by date for display
-            final groupedSessions = _groupSessionsByDate(filteredSessions);
-
-            return Column(
-              children: [
-                // Fixed header - Sessions title with "My Sessions" button
-                _SessionsHeader(
-                  isMySessionsSelected: isMySessionsSelected,
-                  onMySessionsTapped: () {
-                    // Toggle the "My Sessions" filter
-                    ref.read(mySessionsFilterProvider.notifier).toggle();
-                  },
-                ),
-                // Fixed category filter bar
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: SpacesFilterBar(
-                    categories: categories,
-                    selectedCategory: selectedCategory,
-                    onCategorySelected: (category) {
-                      ref
-                          .read(selectedCategoryProvider.notifier)
-                          .toggleCategory(category);
-                    },
-                  ),
-                ),
-                // Scrollable content - sessions grouped by date
-                Expanded(
-                  child: RefreshIndicator.adaptive(
-                    onRefresh: () => ref.refresh(spacesSummaryProvider.future),
-                    child: filteredSessions.isEmpty
-                        ? ListView(
-                            children: [
-                              _buildNoResultsMessage(
-                                isMySessionsSelected
-                                    ? 'My Sessions'
-                                    : (selectedCategory ?? 'All'),
-                              ),
-                            ],
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsetsDirectional.only(
-                              start: 16,
-                              end: 16,
-                              bottom: 20,
-                            ),
-                            itemCount: groupedSessions.length,
-                            itemBuilder: (context, index) {
-                              final dateGroup = groupedSessions[index];
-                              return _SessionDateGroup(
-                                date: dateGroup.date,
-                                sessions: dateGroup.sessions,
-                              );
-                            },
-                          ),
-                  ),
-                ),
-              ],
-            );
-          },
-          error: (err, stack) => ErrorScreen(
+          data: (data) => _buildContent(
+            context,
+            ref,
+            data,
+            selectedCategory,
+            isMySessionsSelected,
+          ),
+          loading: () => _buildLoadingState(ref, isMySessionsSelected),
+          error: (err, _) => ErrorScreen(
             error: err,
             showHomeButton: false,
             onRetry: () => ref.refresh(spacesSummaryProvider.future),
           ),
-          loading: () {
-            return Column(
-              children: [
-                // Fixed header - Sessions title with "My Sessions" button
-                _SessionsHeader(
-                  isMySessionsSelected: isMySessionsSelected,
-                  onMySessionsTapped: () {
-                    ref.read(mySessionsFilterProvider.notifier).toggle();
-                  },
-                ),
-                // Loading indicator
-                const Expanded(
-                  child: Center(child: LoadingIndicator()),
-                ),
-              ],
-            );
-          },
         ),
       ),
     );
   }
 
-  /// Extracts all upcoming sessions from the summary, sorted by start time.
-  List<UpcomingSessionData> _extractAllSessions(
+  Widget _buildContent(
+    BuildContext context,
+    WidgetRef ref,
     SummarySpacesSchema summaryData,
+    String? selectedCategory,
+    bool isMySessionsSelected,
   ) {
-    final sessions = <UpcomingSessionData>[];
-    final now = DateTime.now();
+    final allSessions = _extractAllSessions(summaryData);
 
-    for (final space in summaryData.explore) {
+    if (allSessions.isEmpty) {
+      return EmptyIndicator(
+        icon: TotemIcons.spacesFilled,
+        text: 'No sessions available yet.',
+        onRetry: () => ref.refresh(spacesSummaryProvider.future),
+      );
+    }
+
+    final categories = _extractCategories(allSessions);
+    final filteredSessions = _filterSessions(
+      allSessions,
+      selectedCategory,
+      isMySessionsSelected,
+    );
+    final groupedSessions = _groupSessionsByDate(filteredSessions);
+
+    return Column(
+      children: [
+        _SessionsHeader(
+          isMySessionsSelected: isMySessionsSelected,
+          onMySessionsTapped: () =>
+              ref.read(mySessionsFilterProvider.notifier).toggle(),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: SpacesFilterBar(
+            categories: categories,
+            selectedCategory: selectedCategory,
+            onCategorySelected: (category) =>
+                ref.read(selectedCategoryProvider.notifier).toggle(category),
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator.adaptive(
+            onRefresh: () => ref.refresh(spacesSummaryProvider.future),
+            child: filteredSessions.isEmpty
+                ? _buildEmptyFilterResult(
+                    selectedCategory,
+                    isMySessionsSelected,
+                  )
+                : _buildSessionsList(groupedSessions),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoadingState(WidgetRef ref, bool isMySessionsSelected) {
+    return Column(
+      children: [
+        _SessionsHeader(
+          isMySessionsSelected: isMySessionsSelected,
+          onMySessionsTapped: () =>
+              ref.read(mySessionsFilterProvider.notifier).toggle(),
+        ),
+        const Expanded(child: Center(child: LoadingIndicator())),
+      ],
+    );
+  }
+
+  Widget _buildEmptyFilterResult(String? category, bool isMySessionsSelected) {
+    final filterName = isMySessionsSelected
+        ? 'My Sessions'
+        : (category ?? 'All');
+    return ListView(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 100),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.filter_list, size: 60, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                'No sessions in "$filterName"',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Try selecting a different category',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSessionsList(List<_SessionDateGroup> groupedSessions) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 20),
+      itemCount: groupedSessions.length,
+      itemBuilder: (_, index) => _SessionDateGroupWidget(
+        dateGroup: groupedSessions[index],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Data Processing
+  // ---------------------------------------------------------------------------
+
+  /// Extracts all upcoming sessions from the summary, sorted by start time.
+  List<UpcomingSessionData> _extractAllSessions(SummarySpacesSchema summary) {
+    final now = DateTime.now();
+    final sessions = <UpcomingSessionData>[];
+
+    for (final space in summary.explore) {
       for (final event in space.nextEvents) {
-        // Include sessions that haven't started yet and have seats available
         if (event.start.isAfter(now) && event.seatsLeft > 0) {
           sessions.add(UpcomingSessionData.fromSpaceAndSession(space, event));
         }
       }
     }
 
-    // Sort by start time
-    sessions.sort((a, b) => a.start.compareTo(b.start));
-    return sessions;
+    return sessions..sort((a, b) => a.start.compareTo(b.start));
   }
 
   /// Extracts unique categories from sessions list.
   List<String> _extractCategories(List<UpcomingSessionData> sessions) {
-    final categories = <String>{
-      for (final session in sessions)
-        if (session.category != null && session.category!.isNotEmpty)
-          session.category!,
-    }.toList()..sort();
+    return sessions
+        .map((s) => s.category)
+        .whereType<String>()
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+  }
 
-    return categories;
+  /// Filters sessions by category and/or attending status.
+  List<UpcomingSessionData> _filterSessions(
+    List<UpcomingSessionData> sessions,
+    String? category,
+    bool onlyAttending,
+  ) {
+    var filtered = sessions;
+
+    if (onlyAttending) {
+      filtered = filtered.where((s) => s.attending).toList();
+    }
+
+    if (category != null) {
+      filtered = filtered.where((s) => s.category == category).toList();
+    }
+
+    return filtered;
   }
 
   /// Groups sessions by date for display with date indicators.
-  List<_SessionDateGroupData> _groupSessionsByDate(
+  List<_SessionDateGroup> _groupSessionsByDate(
     List<UpcomingSessionData> sessions,
   ) {
-    final Map<DateTime, List<UpcomingSessionData>> grouped = {};
+    final grouped = <DateTime, List<UpcomingSessionData>>{};
 
     for (final session in sessions) {
-      // Normalize to date only (strip time)
       final dateKey = DateTime(
         session.start.year,
         session.start.month,
         session.start.day,
       );
-
       grouped.putIfAbsent(dateKey, () => []).add(session);
     }
 
-    // Convert to list and sort by date
-    final result =
-        grouped.entries
-            .map((e) => _SessionDateGroupData(date: e.key, sessions: e.value))
-            .toList()
-          ..sort((a, b) => a.date.compareTo(b.date));
-
-    return result;
+    return grouped.entries
+        .map((e) => _SessionDateGroup(date: e.key, sessions: e.value))
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
   }
+}
 
-  Widget _buildNoResultsMessage(String category) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.only(top: 100),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.filter_list, size: 60, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'No sessions in "$category"',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+// =============================================================================
+// DATA MODELS
+// =============================================================================
+
+/// Data holder for a group of sessions on the same date.
+class _SessionDateGroup {
+  const _SessionDateGroup({required this.date, required this.sessions});
+
+  final DateTime date;
+  final List<UpcomingSessionData> sessions;
+}
+
+// =============================================================================
+// WIDGETS
+// =============================================================================
+
+/// Header widget displaying "Sessions" title and "My Sessions" filter button.
+class _SessionsHeader extends StatelessWidget {
+  const _SessionsHeader({
+    required this.onMySessionsTapped,
+    this.isMySessionsSelected = false,
+  });
+
+  final VoidCallback onMySessionsTapped;
+  final bool isMySessionsSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(20).copyWith(bottom: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Sessions',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Try selecting a different category',
-              style: TextStyle(color: Colors.grey),
+          ),
+          _MySessionsButton(
+            isSelected: isMySessionsSelected,
+            onTap: onMySessionsTapped,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Toggle button for filtering "My Sessions" (attending sessions).
+class _MySessionsButton extends StatelessWidget {
+  const _MySessionsButton({
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final contentColor = isSelected ? Colors.white : primaryColor;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? primaryColor : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TotemIcon(TotemIcons.mySessions, size: 16, color: contentColor),
+            const SizedBox(width: 8),
+            Text(
+              'My Sessions',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: contentColor,
+              ),
             ),
           ],
         ),
@@ -269,26 +381,11 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
   }
 }
 
-/// Data holder for a group of sessions on the same date.
-class _SessionDateGroupData {
-  const _SessionDateGroupData({
-    required this.date,
-    required this.sessions,
-  });
+/// Widget displaying a date group with date indicator and session cards.
+class _SessionDateGroupWidget extends StatelessWidget {
+  const _SessionDateGroupWidget({required this.dateGroup});
 
-  final DateTime date;
-  final List<UpcomingSessionData> sessions;
-}
-
-/// Widget displaying a date group with date indicator on the left and sessions on the right.
-class _SessionDateGroup extends StatelessWidget {
-  const _SessionDateGroup({
-    required this.date,
-    required this.sessions,
-  });
-
-  final DateTime date;
-  final List<UpcomingSessionData> sessions;
+  final _SessionDateGroup dateGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -297,16 +394,15 @@ class _SessionDateGroup extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Date indicator on the left
-          _DateIndicator(date: date),
+          _DateIndicator(date: dateGroup.date),
           const SizedBox(width: 12),
-          // Sessions column on the right
           Expanded(
             child: Column(
               children: [
-                for (int i = 0; i < sessions.length; i++) ...[
-                  _SessionCard(data: sessions[i]),
-                  if (i < sessions.length - 1) const SizedBox(height: 16),
+                for (int i = 0; i < dateGroup.sessions.length; i++) ...[
+                  _SessionCard(data: dateGroup.sessions[i]),
+                  if (i < dateGroup.sessions.length - 1)
+                    const SizedBox(height: 16),
                 ],
               ],
             ),
@@ -317,21 +413,175 @@ class _SessionDateGroup extends StatelessWidget {
   }
 }
 
-/// Vertical session card widget matching the Figma design.
-/// Shows image on top, time/seats, category, title, and facilitator row.
+/// Date indicator widget with different styles for "today" and other dates.
+class _DateIndicator extends StatelessWidget {
+  const _DateIndicator({required this.date});
+
+  final DateTime date;
+
+  static const _width = 50.0;
+  static const _height = 70.0;
+  static const _borderRadius = 10.0;
+  static const _secondaryTextColor = Color(0xff7D8287);
+  static const _headerBgColor = Color(0xffC4C4C4);
+
+  bool get _isToday {
+    final now = DateTime.now();
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dayNumber = date.day.toString();
+    final dayOfWeek = _dayOfWeekShort(date.weekday);
+    final monthName = _monthShort(date.month);
+
+    return SizedBox(
+      width: _width,
+      height: _height,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(_borderRadius),
+        ),
+        child: _isToday
+            ? _buildTodayContent(dayNumber, dayOfWeek)
+            : _buildDateContent(dayNumber, dayOfWeek, monthName),
+      ),
+    );
+  }
+
+  Widget _buildTodayContent(String dayNumber, String dayOfWeek) {
+    return Column(
+      children: [
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            decoration: const BoxDecoration(
+              color: AppTheme.mauve,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(_borderRadius),
+              ),
+            ),
+            child: Text(
+              '$dayNumber ${dayOfWeek.toUpperCase()}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+        const Expanded(
+          flex: 2,
+          child: Center(
+            child: Text(
+              'Today',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: _secondaryTextColor,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateContent(
+    String dayNumber,
+    String dayOfWeek,
+    String monthName,
+  ) {
+    return Column(
+      children: [
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            decoration: BoxDecoration(
+              color: _headerBgColor.withValues(alpha: 0.7),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(_borderRadius),
+              ),
+            ),
+            child: Text(
+              monthName.toUpperCase(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Color(0xff444444),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 2,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                dayNumber,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: _secondaryTextColor,
+                  height: 1.2,
+                ),
+              ),
+              Text(
+                dayOfWeek.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: _secondaryTextColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _dayOfWeekShort(int weekday) =>
+      const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][weekday - 1];
+
+  String _monthShort(int month) => const [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ][month - 1];
+}
+
+/// Vertical session card displaying session details.
 class _SessionCard extends StatelessWidget {
   const _SessionCard({required this.data});
 
   final UpcomingSessionData data;
 
-  static const double _borderRadius = 16;
-  static const double _imageHeight = 160;
+  static const _borderRadius = 16.0;
+  static const _imageHeight = 160.0;
+  static const _contentPadding = EdgeInsets.all(12);
 
   @override
   Widget build(BuildContext context) {
-    final formattedTime = formatTimeOnly(data.start);
-    final formattedTimePeriod = formatTimePeriod(data.start);
-
     return GestureDetector(
       onTap: () => _navigateToSession(context),
       child: Container(
@@ -350,25 +600,22 @@ class _SessionCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Session image
-            _buildImage(),
-            // Content section
+            _SessionImage(imageUrl: data.imageUrl, height: _imageHeight),
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: _contentPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Time and seats row
-                  _buildTimeSeatsRow(formattedTime, formattedTimePeriod),
+                  _SessionMetadata(
+                    time: data.start,
+                    seatsLeft: data.seatsLeft,
+                  ),
                   const SizedBox(height: 8),
-                  // Category/short description
-                  _buildSpaceTitle(),
+                  _SessionSpaceTitle(title: data.spaceTitle),
                   const SizedBox(height: 4),
-                  // Session title
-                  _buildTitle(),
+                  _SessionTitle(title: data.sessionTitle),
                   const SizedBox(height: 10),
-                  // Facilitator row
-                  _buildFacilitatorRow(context),
+                  _SessionFacilitator(author: data.author),
                 ],
               ),
             ),
@@ -378,72 +625,82 @@ class _SessionCard extends StatelessWidget {
     );
   }
 
-  Widget _buildImage() {
-    final imageUrl = data.imageUrl;
+  void _navigateToSession(BuildContext context) {
+    context.push(RouteNames.spaceEvent(data.spaceSlug, data.sessionSlug));
+  }
+}
 
+/// Session card image with placeholder and error handling.
+class _SessionImage extends StatelessWidget {
+  const _SessionImage({required this.imageUrl, required this.height});
+
+  final String? imageUrl;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
     return SizedBox(
-      height: _imageHeight,
+      height: height,
       width: double.infinity,
-      child: imageUrl != null && imageUrl.isNotEmpty
+      child: (imageUrl != null && imageUrl!.isNotEmpty)
           ? CachedNetworkImage(
-              imageUrl: getFullUrl(imageUrl),
+              imageUrl: getFullUrl(imageUrl!),
               fit: BoxFit.cover,
-              placeholder: (context, url) => Container(
-                color: Colors.grey.shade200,
-              ),
-              errorWidget: (context, url, error) => Image.asset(
+              placeholder: (_, __) => Container(color: Colors.grey.shade200),
+              errorWidget: (_, __, ___) => Image.asset(
                 TotemAssets.genericBackground,
                 fit: BoxFit.cover,
               ),
             )
-          : Image.asset(
-              TotemAssets.genericBackground,
-              fit: BoxFit.cover,
-            ),
+          : Image.asset(TotemAssets.genericBackground, fit: BoxFit.cover),
     );
   }
+}
 
-  Widget _buildTimeSeatsRow(String formattedTime, String formattedTimePeriod) {
+/// Session time and seats metadata row.
+class _SessionMetadata extends StatelessWidget {
+  const _SessionMetadata({required this.time, required this.seatsLeft});
+
+  final DateTime time;
+  final int seatsLeft;
+
+  static final _textStyle = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+    color: AppTheme.slate.withValues(alpha: 0.8),
+  );
+
+  static final _iconColor = AppTheme.slate.withValues(alpha: 0.7);
+
+  @override
+  Widget build(BuildContext context) {
+    final formattedTime = formatTimeOnly(time);
+    final formattedPeriod = formatTimePeriod(time);
+
     return Row(
       children: [
-        // Time with clock icon
-        Icon(
-          Icons.access_time_outlined,
-          size: 14,
-          color: AppTheme.slate.withValues(alpha: 0.7),
-        ),
+        Icon(Icons.access_time_outlined, size: 14, color: _iconColor),
         const SizedBox(width: 4),
-        Text(
-          '$formattedTime $formattedTimePeriod',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: AppTheme.slate.withValues(alpha: 0.8),
-          ),
-        ),
+        Text('$formattedTime $formattedPeriod', style: _textStyle),
         const SizedBox(width: 16),
-        // Seats left with icon
-        TotemIcon(
-          TotemIcons.seats,
-          size: 14,
-          color: AppTheme.slate.withValues(alpha: 0.7),
-        ),
+        TotemIcon(TotemIcons.seats, size: 14, color: _iconColor),
         const SizedBox(width: 4),
-        Text(
-          '${data.seatsLeft} seats left',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: AppTheme.slate.withValues(alpha: 0.8),
-          ),
-        ),
+        Text('$seatsLeft seats left', style: _textStyle),
       ],
     );
   }
+}
 
-  Widget _buildSpaceTitle() {
+/// Session space title (subtitle).
+class _SessionSpaceTitle extends StatelessWidget {
+  const _SessionSpaceTitle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
     return Text(
-      data.spaceTitle,
+      title,
       style: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w400,
@@ -453,10 +710,18 @@ class _SessionCard extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
     );
   }
+}
 
-  Widget _buildTitle() {
+/// Session title (main heading).
+class _SessionTitle extends StatelessWidget {
+  const _SessionTitle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
     return Text(
-      data.sessionTitle,
+      title,
       style: const TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w600,
@@ -467,18 +732,20 @@ class _SessionCard extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
     );
   }
+}
 
-  Widget _buildFacilitatorRow(BuildContext context) {
+/// Session facilitator row with avatar and name.
+class _SessionFacilitator extends StatelessWidget {
+  const _SessionFacilitator({required this.author});
+
+  final PublicUserSchema author;
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
-        // Facilitator avatar
-        UserAvatar.fromUserSchema(
-          data.author,
-          radius: 14,
-          borderWidth: 0,
-        ),
+        UserAvatar.fromUserSchema(author, radius: 14, borderWidth: 0),
         const SizedBox(width: 6),
-        // "with" text
         Text(
           'with ',
           style: TextStyle(
@@ -487,10 +754,9 @@ class _SessionCard extends StatelessWidget {
             color: AppTheme.slate.withValues(alpha: 0.7),
           ),
         ),
-        // Facilitator name
         Expanded(
           child: Text(
-            data.author.name ?? '',
+            author.name ?? '',
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -501,278 +767,6 @@ class _SessionCard extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-
-  void _navigateToSession(BuildContext context) {
-    context.push(
-      RouteNames.spaceEvent(data.spaceSlug, data.sessionSlug),
-    );
-  }
-}
-
-/// Date indicator widget showing day number, day of week, and "Today" label.
-///
-/// Design variations:
-/// - Today: Purple badge with "21 WED", "Today" label below
-/// - Not today: Gray "NOV" text, large day number, gray "WED" text
-class _DateIndicator extends StatelessWidget {
-  const _DateIndicator({required this.date});
-
-  final DateTime date;
-
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final isToday = date == today;
-
-    // Format day number and day of week
-    final dayNumber = date.day.toString();
-    final dayOfWeek = _getDayOfWeekShort(date.weekday);
-    final monthName = _getMonthShort(date.month);
-
-    if (isToday) {
-      return _buildTodayIndicator(dayNumber, dayOfWeek);
-    } else {
-      return _buildDateIndicator(dayNumber, dayOfWeek, monthName);
-    }
-  }
-
-  /// Builds the "Today" date indicator with purple badge and "Today" label
-  Widget _buildTodayIndicator(String dayNumber, String dayOfWeek) {
-    return SizedBox(
-      width: 50,
-      height: 70,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 5),
-                decoration: const BoxDecoration(
-                  color: AppTheme.mauve,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(10),
-                    topRight: Radius.circular(10),
-                  ),
-                ),
-                child: Text(
-                  '$dayNumber ${dayOfWeek.toUpperCase()}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.white,
-                  ),
-                ),
-              ),
-            ),
-            const Expanded(
-              flex: 2,
-              child: Center(
-                child: Text(
-                  'Today',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xff7D8287),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Builds the standard date indicator for non-today dates
-  /// Shows: NOV (gray), 9 (large), WED (gray)
-  Widget _buildDateIndicator(
-    String dayNumber,
-    String dayOfWeek,
-    String monthName,
-  ) {
-    return SizedBox(
-      width: 50,
-      height: 70,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xffC4C4C4).withValues(alpha: 0.7),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(10),
-                    topRight: Radius.circular(10),
-                  ),
-                ),
-                child: Text(
-                  monthName.toUpperCase(),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xff444444),
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    dayNumber,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xff7D8287),
-                      height: 1.2,
-                    ),
-                  ),
-                  // Day of week
-                  Text(
-                    dayOfWeek.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xff7D8287),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _getDayOfWeekShort(int weekday) {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return days[weekday - 1];
-  }
-
-  String _getMonthShort(int month) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return months[month - 1];
-  }
-}
-
-/// Header widget displaying "Sessions" title and "My Sessions" button.
-/// The button has selected/unselected states for filtering attending sessions.
-class _SessionsHeader extends StatelessWidget {
-  const _SessionsHeader({
-    required this.onMySessionsTapped,
-    this.isMySessionsSelected = false,
-  });
-
-  final VoidCallback onMySessionsTapped;
-  final bool isMySessionsSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 16,
-        bottom: 16,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // "Sessions" title
-          Text(
-            'Sessions',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          // "My Sessions" button with selected/unselected state
-          _buildMySessionsButton(theme),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMySessionsButton(ThemeData theme) {
-    return GestureDetector(
-      onTap: onMySessionsTapped,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isMySessionsSelected
-              ? theme.colorScheme.primary
-              : Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Icon: people icon (different colors based on state)
-            TotemIcon(
-              TotemIcons.mySessions,
-              size: 16,
-              color: isMySessionsSelected
-                  ? Colors.white
-                  : theme.colorScheme.primary,
-            ),
-            const SizedBox(width: 8),
-            // Label
-            Text(
-              'My Sessions',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: isMySessionsSelected
-                    ? Colors.white
-                    : theme.colorScheme.primary,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
