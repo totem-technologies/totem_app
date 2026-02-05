@@ -10,9 +10,10 @@ List<Participant> participantsSorting({
   /// Whether to show the track of the participant who is currently speaking.
   bool showSpeakingNow = false,
 }) {
+  final speakingNowIndetity = speakingNow ?? state.speakingNow;
   final participants = originalParticiapnts.where((participant) {
     // Only show tracks from participants other than the speaking now
-    if (participant.identity == (speakingNow ?? state.speakingNow)) {
+    if (participant.identity == speakingNowIndetity) {
       return showSpeakingNow;
     }
     return true;
@@ -37,6 +38,21 @@ List<Participant> participantsSorting({
       final identity = participant.identity;
       if (!speakingOrderSet.contains(identity)) {
         sortedParticipants.add(participant);
+      }
+    }
+
+    // Rotate the list so the next participant is first (circular order)
+    final nextIdentity = state.sessionState.nextParticipantIdentity;
+    if (nextIdentity != null) {
+      final nextIndex = sortedParticipants.indexWhere(
+        (p) => p.identity == nextIdentity,
+      );
+      if (nextIndex > 0) {
+        final rotated = [
+          ...sortedParticipants.sublist(nextIndex),
+          ...sortedParticipants.sublist(0, nextIndex),
+        ];
+        return rotated;
       }
     }
 

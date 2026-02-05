@@ -34,11 +34,7 @@ class UserAvatar extends ConsumerWidget {
       image:
           author?.profileImage != null &&
               author?.profileAvatarType == ProfileAvatarTypeEnum.im
-          ? CachedNetworkImageProvider(
-              getFullUrl(author!.profileImage!),
-              maxHeight: 100,
-              maxWidth: 100,
-            )
+          ? CachedNetworkImageProvider(getFullUrl(author!.profileImage!))
           : null,
       seed: author?.profileAvatarSeed,
       radius: radius,
@@ -68,11 +64,7 @@ class UserAvatar extends ConsumerWidget {
           image:
               user?.profileImage != null &&
                   user?.profileAvatarType == ProfileAvatarTypeEnum.im
-              ? CachedNetworkImageProvider(
-                  getFullUrl(user!.profileImage!),
-                  maxHeight: 100,
-                  maxWidth: 100,
-                )
+              ? CachedNetworkImageProvider(getFullUrl(user!.profileImage!))
               : null,
           seed: user?.profileAvatarSeed,
           radius: radius,
@@ -96,15 +88,6 @@ class UserAvatar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final heroTag = 'avatar-${seed ?? image.hashCode}';
-    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-    final avatarSize = (radius * 2 * pixelRatio).round();
-    final optimizedImage = image != null && image is CachedNetworkImageProvider
-        ? ResizeImage(
-            image!,
-            width: avatarSize,
-            height: avatarSize,
-          )
-        : image;
 
     return GestureDetector(
       onTap:
@@ -131,9 +114,9 @@ class UserAvatar extends ConsumerWidget {
         decoration: BoxDecoration(
           border: Border.all(color: Colors.white, width: borderWidth),
           borderRadius: borderRadius,
-          image: showImage && optimizedImage != null
+          image: showImage && image != null
               ? DecorationImage(
-                  image: optimizedImage,
+                  image: image!,
                   fit: BoxFit.cover,
                 )
               : null,

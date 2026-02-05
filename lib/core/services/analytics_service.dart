@@ -125,7 +125,7 @@ class AnalyticsService {
   }
 
   bool _shouldLog() {
-    if (!_isInitialized) {
+    if (!_isInitialized || kDebugMode) {
       return false;
     }
 

@@ -287,7 +287,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     final tokenData = ref.watch(sessionTokenProvider(widget.eventSlug));
     final eventData = ref.watch(eventProvider(widget.eventSlug));
 
-    if (tokenData.isLoading || eventData.isLoading) {
+    // The room should not display loading screen when its provider is refreshing.
+    if ((tokenData.isLoading && !tokenData.isRefreshing) ||
+        (eventData.isLoading && !eventData.isRefreshing)) {
       return LoadingRoomScreen(actionBarKey: actionBarKey);
     }
 

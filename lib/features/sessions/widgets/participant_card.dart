@@ -7,10 +7,10 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
+import 'package:totem_app/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
@@ -97,12 +97,10 @@ class ParticipantCard extends ConsumerWidget {
                   ),
                 PositionedDirectional(
                   bottom: 8,
-                  start: 6,
-                  end: 6,
-                  child: AutoSizeText(
-                    participant.name,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
+                  start: 8,
+                  end: 8,
+                  child: SmartNameText(
+                    name: participant.name,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 13,
@@ -390,111 +388,25 @@ class LocalParticipantVideoCard extends ConsumerWidget {
   }
 }
 
-class ParticipantVideo extends ConsumerStatefulWidget {
+class ParticipantVideo extends ConsumerWidget {
   const ParticipantVideo({required this.participant, super.key});
 
   final Participant<TrackPublication<Track>> participant;
 
   @override
-  ConsumerState<ParticipantVideo> createState() => _ParticipantVideoState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(userProfileProvider(participant.identity));
 
-class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
-  late final EventsListener<ParticipantEvent> _listener;
-  DateTime? _lastStatsCheck;
-  static const _statsCheckThrottle = Duration(seconds: 7);
-
-  @override
-  void initState() {
-    super.initState();
-    _listener = widget.participant.createListener();
-    _listener.on<ParticipantEvent>((event) => _checkVideoStats());
-  }
-
-  @override
-  void dispose() {
-    _listener
-      ..cancelAll()
-      ..dispose();
-    super.dispose();
-  }
-
-  void _ensureActive() {
-    if (!_active && mounted) {
-      setState(() => _active = true);
-    }
-  }
-
-  bool _active = true;
-  void _checkVideoStats() async {
-    final now = DateTime.now();
-    if (_lastStatsCheck != null &&
-        now.difference(_lastStatsCheck!) < _statsCheckThrottle) {
-      return;
-    }
-    _lastStatsCheck = now;
-
-    try {
-      final videoTrack =
-          widget.participant.videoTrackPublications.firstOrNull?.track;
-      if (videoTrack == null) return _ensureActive();
-
-      num fps;
-      if (videoTrack is RemoteVideoTrack) {
-        if (videoTrack.muted) return _ensureActive();
-
-        final stats = await videoTrack.getReceiverStats();
-        fps = stats?.framesDecoded ?? 0;
-      } else if (videoTrack is LocalVideoTrack) {
-        if (videoTrack.muted) return _ensureActive();
-
-        final stats = await videoTrack.getSenderStats();
-        fps = stats.firstOrNull?.framesSent ?? 0;
-      } else {
-        return _ensureActive();
-      }
-
-      if (!mounted) return;
-      if (fps == 0) {
-        if (_active) setState(() => _active = false);
-      } else {
-        if (!_active) setState(() => _active = true);
-      }
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error checking participant video stats',
-      );
-    } finally {
-      _lastStatsCheck = DateTime.now();
-      // This is useful to catch any state changes after the async calls
-      // Sometimes, when the user changes the camera front/back, the video track
-      // may briefly report 0 fps before resuming normal stats.
-      //
-      // This updates VideoTrackRenderer if needed.
-      if (mounted) setState(() {});
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final user = ref.watch(userProfileProvider(widget.participant.identity));
-
-    final videoTrack = widget.participant.videoTrackPublications.where(
-      (t) =>
-          t.track != null &&
-          t.kind == TrackType.VIDEO &&
-          t.track!.isActive &&
-          t.participant.isCameraEnabled() &&
-          !t.track!.muted,
+    final videoTrack = participant.getTrackPublicationBySource(
+      TrackSource.camera,
     );
-    if (videoTrack.isNotEmpty) {
+
+    if (videoTrack != null && videoTrack.subscribed && !videoTrack.muted) {
       return IgnorePointer(
         child: RepaintBoundary(
           child: VideoTrackRenderer(
-            key: ValueKey(videoTrack.last.track!.sid),
-            videoTrack.last.track! as VideoTrack,
+            key: ValueKey(videoTrack.track!.sid),
+            videoTrack.track! as VideoTrack,
             fit: VideoViewFit.cover,
             mirrorMode: VideoViewMirrorMode.off,
           ),
@@ -504,7 +416,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
       final localUserSlug = ref.watch(
         authControllerProvider.select((auth) => auth.user?.slug),
       );
-      if (widget.participant.identity == localUserSlug) {
+      if (participant.identity == localUserSlug) {
         return IgnorePointer(
           child: UserAvatar.currentUser(
             radius: 0,
