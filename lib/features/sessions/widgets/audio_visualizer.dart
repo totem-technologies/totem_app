@@ -103,6 +103,11 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   // Agent support
   sdk.AgentState _agentState = sdk.AgentState.initializing;
 
+  // Cached bar items to avoid allocations every frame
+  List<BarsViewItem>? _cachedBarItems;
+  VisualizerState? _lastState;
+  List<double>? _lastSamples;
+
   @override
   void didUpdateWidget(SoundWaveformWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -232,7 +237,8 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
     _controller = AnimationController(
       duration: Duration(milliseconds: widget.options.durationInMilliseconds),
       vsync: this,
-    )..repeat(reverse: true);
+    );
+    // Don't start animation immediately - only when needed for thinking/listening
 
     _pulseAnimation = CurvedAnimation(
       parent: _controller,
@@ -297,6 +303,26 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
     final baseColor = widget.options.computeColor(context);
     final centerIndex = (samples.length / 2).floor();
 
+    // For active state, only regenerate if samples changed
+    // This avoids creating new objects every animation frame
+    if (state == VisualizerState.active) {
+      final samplesChanged =
+          _lastSamples == null ||
+          _lastSamples!.length != samples.length ||
+          !listEquals(_lastSamples, samples);
+
+      if (_cachedBarItems != null && _lastState == state && !samplesChanged) {
+        return _cachedBarItems!;
+      }
+
+      _lastSamples = List.of(samples);
+      _lastState = state;
+      _cachedBarItems = _createBarsViewItems(samples.length, (_) => baseColor);
+      return _cachedBarItems!;
+    }
+
+    // For thinking/listening states, we need animation so regenerate
+    _lastState = state;
     switch (state) {
       case VisualizerState.thinking:
         final activeIndex = (_pulseAnimation.value * (samples.length - 1))
@@ -313,7 +339,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
         );
 
       case VisualizerState.active:
-        return _createBarsViewItems(samples.length, (_) => baseColor);
+        return _cachedBarItems!; // Already handled above
     }
   }
 
@@ -335,12 +361,31 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
 
   @override
   Widget build(BuildContext context) {
+    final state = _determineState();
+
+    // Only use AnimatedBuilder when animation is needed (thinking/listening)
+    // For active state, just rebuild when samples change via setState
+    if (state == VisualizerState.active) {
+      // Stop animation to save CPU when not needed
+      if (_controller.isAnimating) {
+        _controller.stop();
+      }
+      final elements = _generateElements(context, state);
+      return BarsView(
+        options: widget.options,
+        elements: elements,
+      );
+    }
+
+    // Resume animation for thinking/listening states
+    if (!_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    }
+
     return AnimatedBuilder(
       animation: _pulseAnimation,
       builder: (ctx, _) {
-        final state = _determineState();
         final elements = _generateElements(ctx, state);
-
         return BarsView(
           options: widget.options,
           elements: elements,

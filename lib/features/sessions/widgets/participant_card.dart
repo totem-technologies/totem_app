@@ -379,6 +379,8 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                     videoTrack!,
                     fit: VideoViewFit.cover,
                     mirrorMode: VideoViewMirrorMode.off,
+                    // Use platform view for better CPU performance on mobile
+                    renderMode: VideoRenderMode.platformView,
                   ),
                 );
               },
@@ -466,14 +468,6 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         stackTrace: stackTrace,
         message: 'Error checking participant video stats',
       );
-    } finally {
-      _lastStatsCheck = DateTime.now();
-      // This is useful to catch any state changes after the async calls
-      // Sometimes, when the user changes the camera front/back, the video track
-      // may briefly report 0 fps before resuming normal stats.
-      //
-      // This updates VideoTrackRenderer if needed.
-      if (mounted) setState(() {});
     }
   }
 
@@ -497,6 +491,8 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
             videoTrack.last.track! as VideoTrack,
             fit: VideoViewFit.cover,
             mirrorMode: VideoViewMirrorMode.off,
+            // Use platform view for better CPU performance on mobile
+            renderMode: VideoRenderMode.platformView,
           ),
         ),
       );
