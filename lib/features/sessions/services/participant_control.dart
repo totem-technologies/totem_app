@@ -71,20 +71,4 @@ extension ParticipantControl on Session {
       );
     }
   }
-
-  Future<void> emitAppState(AppLifecycleState state) async {
-    try {
-      await context?.localParticipant?.publishData(
-        const Utf8Encoder().convert(state.name),
-        topic: SessionCommunicationTopics.lifecycle.topic,
-      );
-      logger.d('Emitted lifecycle status successfully');
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error emitting lifecycle status',
-      );
-    }
-  }
 }

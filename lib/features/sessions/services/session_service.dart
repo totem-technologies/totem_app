@@ -167,7 +167,7 @@ class SessionRoomState {
 }
 
 @riverpod
-class Session extends _$Session with WidgetsBindingObserver {
+class Session extends _$Session {
   RoomContext? context;
   EventsListener<RoomEvent>? _listener;
   Timer? _timer;
@@ -237,8 +237,6 @@ class Session extends _$Session with WidgetsBindingObserver {
 
     WakelockPlus.enable();
     setupBackgroundMode();
-
-    WidgetsBinding.instance.addObserver(this);
 
     ref.onDispose(_cleanUp);
 
@@ -462,21 +460,6 @@ class Session extends _$Session with WidgetsBindingObserver {
     context?.disconnect();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    logger.d('App state changed to $state.');
-
-    switch (state) {
-      case AppLifecycleState.resumed:
-        _onRoomChanges();
-      default:
-        break;
-    }
-
-    emitAppState(state);
-  }
-
   void _cleanUp() {
     logger.d('Disposing SessionService and closing connections.');
 
@@ -514,7 +497,5 @@ class Session extends _$Session with WidgetsBindingObserver {
         ?..removeListener(_onRoomChanges)
         ..dispose();
     } catch (_) {}
-
-    WidgetsBinding.instance.removeObserver(this);
   }
 }
