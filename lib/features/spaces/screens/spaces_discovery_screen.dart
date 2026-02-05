@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/api/models/summary_spaces_schema.dart';
 import 'package:totem_app/features/home/models/upcoming_session_data.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/spaces/widgets/filter.dart';
@@ -12,6 +11,7 @@ import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
+// Filter state providers
 final selectedCategoryProvider =
     NotifierProvider<_SelectedCategoryNotifier, String?>(
       _SelectedCategoryNotifier.new,
@@ -40,13 +40,73 @@ class _MySessionsFilterNotifier extends Notifier<bool> {
   void toggle() => state = !state;
 }
 
+// Memoized data providers - only recompute when dependencies change
+final _allSessionsProvider = Provider<List<UpcomingSessionData>>((ref) {
+  final summaryAsync = ref.watch(spacesSummaryProvider);
+  return summaryAsync.maybeWhen(
+    data: (summary) => UpcomingSessionData.fromSummary(
+      summary,
+      limit: null,
+      includeAttendingFullSessions: true,
+    ),
+    orElse: () => [],
+  );
+});
+
+final _sessionCategoriesProvider = Provider<List<String>>((ref) {
+  final sessions = ref.watch(_allSessionsProvider);
+  return sessions
+      .map((s) => s.category)
+      .whereType<String>()
+      .where((c) => c.isNotEmpty)
+      .toSet()
+      .toList()
+    ..sort();
+});
+
+final _filteredSessionsProvider = Provider<List<UpcomingSessionData>>((ref) {
+  final sessions = ref.watch(_allSessionsProvider);
+  final category = ref.watch(selectedCategoryProvider);
+  final onlyAttending = ref.watch(mySessionsFilterProvider);
+
+  var filtered = sessions;
+
+  if (onlyAttending) {
+    filtered = filtered.where((s) => s.attending).toList();
+  }
+
+  if (category != null) {
+    filtered = filtered.where((s) => s.category == category).toList();
+  }
+
+  return filtered;
+});
+
+final _groupedSessionsProvider = Provider<List<SessionDateGroup>>((ref) {
+  final sessions = ref.watch(_filteredSessionsProvider);
+  final grouped = <DateTime, List<UpcomingSessionData>>{};
+
+  for (final session in sessions) {
+    final dateKey = DateTime(
+      session.start.year,
+      session.start.month,
+      session.start.day,
+    );
+    grouped.putIfAbsent(dateKey, () => []).add(session);
+  }
+
+  return grouped.entries
+      .map((e) => SessionDateGroup(date: e.key, sessions: e.value))
+      .toList()
+    ..sort((a, b) => a.date.compareTo(b.date));
+});
+
 class SpacesDiscoveryScreen extends ConsumerWidget {
   const SpacesDiscoveryScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final summary = ref.watch(spacesSummaryProvider);
-    final selectedCategory = ref.watch(selectedCategoryProvider);
+    final summaryAsync = ref.watch(spacesSummaryProvider);
     final isMySessionsSelected = ref.watch(mySessionsFilterProvider);
 
     ref.sentryReportFullyDisplayed(spacesSummaryProvider);
@@ -54,14 +114,8 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: summary.when(
-          data: (data) => _buildContent(
-            context,
-            ref,
-            data,
-            selectedCategory,
-            isMySessionsSelected,
-          ),
+        child: summaryAsync.when(
+          data: (_) => _buildContent(context, ref),
           loading: () => _buildLoadingState(ref, isMySessionsSelected),
           error: (err, _) => ErrorScreen(
             error: err,
@@ -73,14 +127,13 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(
-    BuildContext context,
-    WidgetRef ref,
-    SummarySpacesSchema summaryData,
-    String? selectedCategory,
-    bool isMySessionsSelected,
-  ) {
-    final allSessions = _extractAllSessions(summaryData);
+  Widget _buildContent(BuildContext context, WidgetRef ref) {
+    final allSessions = ref.watch(_allSessionsProvider);
+    final categories = ref.watch(_sessionCategoriesProvider);
+    final filteredSessions = ref.watch(_filteredSessionsProvider);
+    final groupedSessions = ref.watch(_groupedSessionsProvider);
+    final selectedCategory = ref.watch(selectedCategoryProvider);
+    final isMySessionsSelected = ref.watch(mySessionsFilterProvider);
 
     if (allSessions.isEmpty) {
       return EmptyIndicator(
@@ -89,14 +142,6 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
         onRetry: () => ref.refresh(spacesSummaryProvider.future),
       );
     }
-
-    final categories = _extractCategories(allSessions);
-    final filteredSessions = _filterSessions(
-      allSessions,
-      selectedCategory,
-      isMySessionsSelected,
-    );
-    final groupedSessions = _groupSessionsByDate(filteredSessions);
 
     return Column(
       children: [
@@ -191,61 +236,5 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
         dateGroup: groupedSessions[index],
       ),
     );
-  }
-
-  List<UpcomingSessionData> _extractAllSessions(SummarySpacesSchema summary) {
-    return UpcomingSessionData.fromSummary(
-      summary,
-      limit: null,
-      includeAttendingFullSessions: true,
-    );
-  }
-
-  List<String> _extractCategories(List<UpcomingSessionData> sessions) {
-    return sessions
-        .map((s) => s.category)
-        .whereType<String>()
-        .where((c) => c.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-  }
-
-  List<UpcomingSessionData> _filterSessions(
-    List<UpcomingSessionData> sessions,
-    String? category,
-    bool onlyAttending,
-  ) {
-    var filtered = sessions;
-
-    if (onlyAttending) {
-      filtered = filtered.where((s) => s.attending).toList();
-    }
-
-    if (category != null) {
-      filtered = filtered.where((s) => s.category == category).toList();
-    }
-
-    return filtered;
-  }
-
-  List<SessionDateGroup> _groupSessionsByDate(
-    List<UpcomingSessionData> sessions,
-  ) {
-    final grouped = <DateTime, List<UpcomingSessionData>>{};
-
-    for (final session in sessions) {
-      final dateKey = DateTime(
-        session.start.year,
-        session.start.month,
-        session.start.day,
-      );
-      grouped.putIfAbsent(dateKey, () => []).add(session);
-    }
-
-    return grouped.entries
-        .map((e) => SessionDateGroup(date: e.key, sessions: e.value))
-        .toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
   }
 }
