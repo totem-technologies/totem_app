@@ -646,8 +646,8 @@ class _SessionImage extends StatelessWidget {
           ? CachedNetworkImage(
               imageUrl: getFullUrl(imageUrl!),
               fit: BoxFit.cover,
-              placeholder: (_, __) => Container(color: Colors.grey.shade200),
-              errorWidget: (_, __, ___) => Image.asset(
+              placeholder: (_, _) => Container(color: Colors.grey.shade200),
+              errorWidget: (_, _, _) => Image.asset(
                 TotemAssets.genericBackground,
                 fit: BoxFit.cover,
               ),
@@ -670,7 +670,7 @@ class _SessionMetadata extends StatelessWidget {
     color: AppTheme.slate.withValues(alpha: 0.8),
   );
 
-  static final _iconColor = AppTheme.slate.withValues(alpha: 0.7);
+  static final Color _iconColor = AppTheme.slate.withValues(alpha: 0.7);
 
   @override
   Widget build(BuildContext context) {
