@@ -117,34 +117,17 @@ class OptionsSheet extends ConsumerWidget {
                   );
                 },
               ),
-              MediaDeviceSelectButton(
-                builder: (context, roomCtx, deviceCtx) {
-                  final audioOutputs = deviceCtx.audioOutputs?.where((
-                    device,
-                  ) {
-                    return device.label.isNotEmpty &&
-                        device.label != 'Earpiece';
-                  });
-                  final selected =
-                      deviceCtx.audioOutputs?.firstWhereOrNull(
-                        (e) {
-                          return e.deviceId ==
-                                  session.selectedAudioOutputDeviceId &&
-                              e.label.isNotEmpty;
-                        },
-                      ) ??
-                      deviceCtx.audioOutputs?.firstOrNull;
-                  return OptionsSheetTile.fromMediaDevice(
-                    device: selected,
-                    options: audioOutputs ?? [],
-                    onOptionChanged: (value) {
-                      if (value != null) {
-                        session.selectAudioOutputDevice(value);
-                      }
-                    },
-                    icon: TotemIcons.speaker,
-                  );
+              OptionsSheetTile.output(
+                AudioOutputOptions(
+                  speakerOn: session.isSpeakerphoneEnabled,
+                  deviceId: session.selectedAudioOutputDeviceId,
+                ),
+                (options) {
+                  if (options.speakerOn != null) {
+                    session.setSpeakerphone(options.speakerOn ?? false);
+                  }
                 },
+                session.selectAudioOutputDevice,
               ),
               OptionsSheetTile<void>(
                 title: 'Leave Session',
@@ -527,31 +510,17 @@ class PrejoinOptionsSheet extends StatelessWidget {
           },
         ),
         const SizedBox(height: 14),
-        FutureBuilder(
-          future: Hardware.instance.audioOutputs(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) return const SizedBox.shrink();
-            final audioOutputs = snapshot.data!.where((device) {
-              return device.label.isNotEmpty && device.label != 'Earpiece';
-            });
-            final selected =
-                audioOutputs.firstWhereOrNull(
-                  (e) => e.deviceId == audioOptions.deviceId,
-                ) ??
-                audioOutputs.firstOrNull;
-            return OptionsSheetTile.fromMediaDevice(
-              device: selected,
-              options: audioOutputs,
-              onOptionChanged: (value) async {
-                if (value != null) {
-                  onAudioOutputChanged(
-                    AudioOutputOptions(deviceId: value.deviceId),
-                  );
-                  Navigator.of(context).pop();
-                }
-              },
-              icon: TotemIcons.speaker,
+        OptionsSheetTile.output(
+          audioOutputOptions,
+          (options) {
+            onAudioOutputChanged(options);
+            Navigator.of(context).pop();
+          },
+          (device) {
+            onAudioOutputChanged(
+              audioOutputOptions.copyWith(deviceId: device.deviceId),
             );
+            Navigator.of(context).pop();
           },
         ),
       ],
@@ -621,6 +590,54 @@ class OptionsSheetTile<T> extends StatelessWidget {
             )
           : null,
     );
+  }
+
+  static Widget output(
+    AudioOutputOptions options,
+    ValueChanged<AudioOutputOptions> onSwitch,
+    ValueChanged<MediaDevice> onDeviceSelect,
+  ) {
+    if (lkPlatformIsMobile()) {
+      return OptionsSheetTile<MediaDevice>(
+        title: 'Speaker',
+        icon: TotemIcons.speaker,
+        trailing: Switch.adaptive(
+          value: options.speakerOn ?? false,
+          onChanged: (enabled) {
+            onSwitch(
+              options.copyWith(speakerOn: enabled),
+            );
+          },
+        ),
+      );
+    } else {
+      return MediaDeviceSelectButton(
+        builder: (context, roomCtx, deviceCtx) {
+          final audioOutputs = deviceCtx.audioOutputs?.where((
+            device,
+          ) {
+            return device.label.isNotEmpty && device.label != 'Earpiece';
+          });
+          final selected =
+              deviceCtx.audioOutputs?.firstWhereOrNull(
+                (e) {
+                  return e.deviceId == options.deviceId && e.label.isNotEmpty;
+                },
+              ) ??
+              deviceCtx.audioOutputs?.firstOrNull;
+          return OptionsSheetTile.fromMediaDevice(
+            device: selected,
+            options: audioOutputs ?? [],
+            onOptionChanged: (value) {
+              if (value != null) {
+                onDeviceSelect(value);
+              }
+            },
+            icon: TotemIcons.speaker,
+          );
+        },
+      );
+    }
   }
 
   static Widget fromMediaDevice({

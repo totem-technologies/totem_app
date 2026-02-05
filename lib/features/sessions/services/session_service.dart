@@ -226,7 +226,11 @@ class Session extends _$Session with WidgetsBindingObserver {
 
     _listener = context?.room.createListener();
     _listener
-      ?..on((_) => _onRoomChanges())
+      ?..on((_) {
+        if (ref.mounted) {
+          _onRoomChanges();
+        }
+      })
       ..on<DataReceivedEvent>(_onDataReceived)
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
       ..on<ParticipantConnectedEvent>(_onParticipantConnected);
@@ -255,7 +259,7 @@ class Session extends _$Session with WidgetsBindingObserver {
   void _updateParticipantsList() {
     try {
       final participants = <Participant>[
-        ...?context?.room.remoteParticipants.values,
+        if (context?.room != null) ...context!.room.remoteParticipants.values,
         if (context?.room.localParticipant != null)
           context!.room.localParticipant!,
       ];

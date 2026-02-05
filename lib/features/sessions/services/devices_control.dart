@@ -56,6 +56,13 @@ extension DevicesControl on Session {
     return context?.localParticipant?.audioTrackPublications.firstOrNull?.track;
   }
 
+  bool get isSpeakerphoneEnabled => context?.room.speakerOn ?? false;
+
+  Future<void> setSpeakerphone(bool enabled) async {
+    await context?.room.setSpeakerOn(enabled);
+    ref.notifyListeners();
+  }
+
   String? get selectedAudioDeviceId => localAudioTrack?.currentOptions.deviceId;
 
   Future<void> selectAudioDevice(MediaDevice device) async {

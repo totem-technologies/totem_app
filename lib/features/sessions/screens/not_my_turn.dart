@@ -249,6 +249,9 @@ class NotMyTurn extends ConsumerWidget {
           } else {
             return SafeArea(
               top: false,
+              // TODO(bdlukaa): Check if this should be true.
+              // No need to avoid bottom safe area because the app is in fullscreen
+              bottom: false,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 spacing: 20,
