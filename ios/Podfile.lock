@@ -11,7 +11,7 @@ PODS:
     - WebRTC-SDK (= 137.7151.04)
   - permission_handler_apple (9.3.0):
     - Flutter
-  - PostHog (3.36.2)
+  - PostHog (3.39.0)
   - posthog_flutter (0.0.1):
     - Flutter
     - FlutterMacOS
