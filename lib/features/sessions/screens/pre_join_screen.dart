@@ -37,7 +37,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   CameraCaptureOptions? _cameraOptions;
   var _audioOptions = const AudioCaptureOptions();
-  var _audioOutputOptions = const AudioOutputOptions();
+  var _audioOutputOptions = const AudioOutputOptions(speakerOn: true);
 
   SessionOptions? _sessionOptions;
   final GlobalKey actionBarKey = GlobalKey();
