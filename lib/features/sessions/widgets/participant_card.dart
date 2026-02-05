@@ -376,7 +376,6 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                   child: VideoTrackRenderer(
                     videoTrack!,
                     fit: VideoViewFit.cover,
-                    mirrorMode: VideoViewMirrorMode.off,
                   ),
                 );
               },
@@ -408,7 +407,6 @@ class ParticipantVideo extends ConsumerWidget {
             key: ValueKey(videoTrack.track!.sid),
             videoTrack.track! as VideoTrack,
             fit: VideoViewFit.cover,
-            mirrorMode: VideoViewMirrorMode.off,
           ),
         ),
       );
