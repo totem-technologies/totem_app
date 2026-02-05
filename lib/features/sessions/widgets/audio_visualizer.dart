@@ -175,26 +175,27 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   Future<void> _detachListeners() async {
     try {
       if (_visualizer != null) {
+        // TODO(bdlukaa): This is not closing visualizer correctly, causing spamming.
         // Do not stop before dispose. https://github.com/livekit/client-sdk-flutter/issues/800#issuecomment-3765712228
-        // try {
-        //   await _visualizer?.stop();
-        // } catch (error, stackTrace) {
-        //   ErrorHandler.logError(
-        //     error,
-        //     stackTrace: stackTrace,
-        //     message: 'Failed to stop visualizer',
-        //   );
-        // }
-
         try {
-          await _visualizer?.dispose();
+          await _visualizer?.stop();
         } catch (error, stackTrace) {
           ErrorHandler.logError(
             error,
             stackTrace: stackTrace,
-            message: 'Failed to dispose visualizer',
+            message: 'Failed to stop visualizer',
           );
         }
+
+        // try {
+        //   await _visualizer?.dispose();
+        // } catch (error, stackTrace) {
+        //   ErrorHandler.logError(
+        //     error,
+        //     stackTrace: stackTrace,
+        //     message: 'Failed to dispose visualizer',
+        //   );
+        // }
       }
     } finally {
       _visualizer = null;
