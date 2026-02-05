@@ -581,7 +581,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
       title: switch (options?.cameraPosition) {
         CameraPosition.front => 'Front',
         CameraPosition.back => 'Back',
-        null => 'No camera connected',
+        null => 'Camera disabled',
       },
       icon: options == null ? TotemIcons.cameraOff : TotemIcons.cameraOn,
       trailing: options != null
