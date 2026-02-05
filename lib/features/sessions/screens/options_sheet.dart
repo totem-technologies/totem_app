@@ -91,32 +91,33 @@ class OptionsSheet extends ConsumerWidget {
                   Navigator.of(context).pop();
                 },
               ),
-              MediaDeviceSelectButton(
-                builder: (context, roomCtx, deviceCtx) {
-                  final audioInputs = deviceCtx.audioInputs;
-                  final selected =
-                      deviceCtx.audioInputs?.firstWhereOrNull(
-                        (e) {
-                          return e.deviceId ==
-                                  (roomCtx
-                                          .localAudioTrack
-                                          ?.currentOptions
-                                          .deviceId ??
-                                      session.selectedAudioDeviceId) &&
-                              e.label.isNotEmpty;
-                        },
-                      ) ??
-                      deviceCtx.audioInputs?.firstOrNull;
-                  return OptionsSheetTile.fromMediaDevice(
-                    device: selected,
-                    options: audioInputs ?? [],
-                    onOptionChanged: (value) {
-                      if (value != null) session.selectAudioDevice(value);
-                    },
-                    icon: TotemIcons.microphoneOn,
-                  );
-                },
-              ),
+              if (lkPlatformIsDesktop())
+                MediaDeviceSelectButton(
+                  builder: (context, roomCtx, deviceCtx) {
+                    final audioInputs = deviceCtx.audioInputs;
+                    final selected =
+                        deviceCtx.audioInputs?.firstWhereOrNull(
+                          (e) {
+                            return e.deviceId ==
+                                    (roomCtx
+                                            .localAudioTrack
+                                            ?.currentOptions
+                                            .deviceId ??
+                                        session.selectedAudioDeviceId) &&
+                                e.label.isNotEmpty;
+                          },
+                        ) ??
+                        deviceCtx.audioInputs?.firstOrNull;
+                    return OptionsSheetTile.fromMediaDevice(
+                      device: selected,
+                      options: audioInputs ?? [],
+                      onOptionChanged: (value) {
+                        if (value != null) session.selectAudioDevice(value);
+                      },
+                      icon: TotemIcons.microphoneOn,
+                    );
+                  },
+                ),
               OptionsSheetTile.output(
                 AudioOutputOptions(
                   speakerOn: session.isSpeakerphoneEnabled,
