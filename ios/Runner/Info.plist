@@ -67,5 +67,7 @@
 		<string>This app uses reminders to alert you before sessions.</string>
 		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<false/>
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
 	</dict>
 </plist>
