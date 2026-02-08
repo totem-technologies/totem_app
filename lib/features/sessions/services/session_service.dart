@@ -173,7 +173,6 @@ class Session extends _$Session {
   RoomContext? context;
   EventsListener<RoomEvent>? _listener;
   Timer? _timer;
-  Timer? _participantUpdateDebounce;
   static const syncTimerDuration = Duration(seconds: 20);
 
   SessionOptions? _options;
@@ -213,6 +212,10 @@ class Session extends _$Session {
 
         dynacast: true,
         defaultVideoPublishOptions: const VideoPublishOptions(
+          // https://docs.livekit.io/transport/media/advanced/#video-codec-support
+          // https://livekit.io/webrtc/codecs-guide
+          videoCodec: 'vp9',
+          backupVideoCodec: BackupVideoCodec(simulcast: false),
           simulcast: false,
           videoSimulcastLayers: [
             VideoParametersPresets.h360_169,
@@ -485,9 +488,6 @@ class Session extends _$Session {
 
     _timer?.cancel();
     _timer = null;
-
-    _participantUpdateDebounce?.cancel();
-    _participantUpdateDebounce = null;
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
