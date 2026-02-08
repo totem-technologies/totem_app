@@ -1,9 +1,11 @@
+// ignore_for_file: unused_element_parameter
+
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart' hide Session;
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
@@ -14,21 +16,20 @@ class NotMyTurn extends ConsumerWidget {
   const NotMyTurn({
     required this.getParticipantKey,
     required this.actionBar,
-    required this.sessionState,
-    required this.session,
     required this.event,
     super.key,
   });
 
   final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
-  final SessionRoomState sessionState;
-  final Session session;
   final SessionDetailSchema event;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final sessionStatus = ref.watch(sessionStatusProvider);
+    final amNext = ref.watch(amNextSpeakerProvider);
+    final session = ref.watch(currentSessionProvider)!;
 
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
@@ -37,7 +38,7 @@ class NotMyTurn extends ConsumerWidget {
     final activeSpeaker = session.speakingNowParticipant();
 
     return RoomBackground(
-      status: sessionState.sessionState.status,
+      status: sessionStatus,
       child: OrientationBuilder(
         builder: (context, orientation) {
           final isLandscape = orientation == Orientation.landscape;
@@ -130,7 +131,6 @@ class NotMyTurn extends ConsumerWidget {
 
           final nextUp = session.speakingNextParticipant();
           final nextUpText = () {
-            final sessionStatus = sessionState.sessionState.status;
             if (sessionStatus == SessionStatus.waiting) {
               return Text(
                 () {
@@ -151,7 +151,7 @@ class NotMyTurn extends ConsumerWidget {
                 return RichText(
                   text: TextSpan(
                     children: [
-                      if (sessionState.amNext(session.context!))
+                      if (amNext)
                         const TextSpan(
                           text: 'You are Next',
                           style: TextStyle(fontWeight: FontWeight.bold),
@@ -176,22 +176,15 @@ class NotMyTurn extends ConsumerWidget {
             return const SizedBox.shrink();
           }();
 
-          final participantGrid = NotMyTurnGrid(
-            sessionState: sessionState,
-            buildParticipant: (context, participant) {
-              return ParticipantCard(
-                key: getParticipantKey(participant.identity),
-                participant: participant,
-                event: event,
-                participantIdentity: participant.identity,
-              );
-            },
+          final participantGrid = _NotMyTurnGrid(
+            getParticipantKey: getParticipantKey,
+            event: event,
             speakingNow: activeSpeaker.identity,
+            isLandscape: isLandscape,
           );
 
           final Widget? startCard =
-              sessionState.sessionState.status == SessionStatus.waiting &&
-                  session.isKeeper()
+              sessionStatus == SessionStatus.waiting && session.isKeeper()
               ? TransitionCard(
                   type: TotemCardTransitionType.start,
                   onActionPressed: session.startSession,
@@ -284,41 +277,28 @@ class NotMyTurn extends ConsumerWidget {
   }
 }
 
-class NotMyTurnGrid extends StatelessWidget {
-  const NotMyTurnGrid({
-    required this.sessionState,
-    required this.buildParticipant,
+class _NotMyTurnGrid extends ConsumerWidget {
+  const _NotMyTurnGrid({
+    required this.getParticipantKey,
+    required this.event,
     required this.speakingNow,
-    this.maxPerLineCount,
     this.gap = 10,
     this.isLandscape = false,
-    super.key,
   });
 
-  /// The amount of participants to show per line.
-  ///
-  /// If there are less participants than this number, it will show only the
-  /// available participants.
-  final int? maxPerLineCount;
-
-  /// The gap between participants.
+  final GlobalKey Function(String) getParticipantKey;
+  final SessionDetailSchema event;
+  final String speakingNow;
   final double gap;
-
-  /// Whether the layout is in landscape mode.
   final bool isLandscape;
 
-  final String speakingNow;
-
-  /// The session state.
-  final SessionRoomState sessionState;
-
-  final Widget Function(BuildContext context, Participant participant)
-  buildParticipant;
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final participants = ref.watch(sessionParticipantsProvider);
+    final sessionState = ref.watch(currentSessionStateProvider)!;
+
     final sortedParticipants = participantsSorting(
-      originalParticiapnts: sessionState.participants,
+      originalParticiapnts: participants,
       state: sessionState,
       speakingNow: speakingNow,
     );
@@ -365,14 +345,13 @@ class NotMyTurnGrid extends StatelessWidget {
                 (colIndex) {
                   final itemIndex = startIndex + colIndex;
                   if (itemIndex < itemCount) {
+                    final participant = sortedParticipants[itemIndex];
                     return Expanded(
-                      child: Builder(
-                        builder: (context) {
-                          return buildParticipant(
-                            context,
-                            sortedParticipants[itemIndex],
-                          );
-                        },
+                      child: ParticipantCard(
+                        key: getParticipantKey(participant.identity),
+                        participant: participant,
+                        event: event,
+                        participantIdentity: participant.identity,
                       ),
                     );
                   } else {

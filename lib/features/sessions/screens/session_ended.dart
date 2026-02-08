@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/profile/screens/user_feedback.dart';
+import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
@@ -23,12 +24,10 @@ import 'package:totem_app/shared/totem_icons.dart';
 class SessionEndedScreen extends ConsumerStatefulWidget {
   const SessionEndedScreen({
     required this.event,
-    required this.session,
     super.key,
   });
 
   final SessionDetailSchema event;
-  final Session session;
 
   @override
   ConsumerState<SessionEndedScreen> createState() => _SessionEndedScreenState();
@@ -120,6 +119,7 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final recommended = ref.watch(getRecommendedSessionsProvider());
+    final session = ref.watch(currentSessionProvider);
 
     final nextEvents = widget.event.space.nextEvents
         .where((e) => e.slug != widget.event.slug)
@@ -142,28 +142,28 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
               Semantics(
                 header: true,
                 child: Text(
-                  switch (widget.session.reason) {
-                    SessionEndedReason.finished => 'Session Ended',
+                  switch (session?.reason) {
                     SessionEndedReason.keeperLeft ||
                     SessionEndedReason.keeperNotJoined =>
                       'Session will be rescheduled',
+                    SessionEndedReason.finished || _ => 'Session Ended',
                   },
                   style: theme.textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
               ),
               Text(
-                switch (widget.session.reason) {
-                  SessionEndedReason.finished =>
-                    'Thank you for joining!\nWe hope you found the session enjoyable.',
+                switch (session?.reason) {
                   SessionEndedReason.keeperLeft =>
                     'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
                   SessionEndedReason.keeperNotJoined =>
                     'The session ended as the Keeper did not join on time. We’ll notify you when it’s rescheduled.',
+                  SessionEndedReason.finished || _ =>
+                    'Thank you for joining!\nWe hope you found the session enjoyable.',
                 },
                 textAlign: TextAlign.center,
               ),
-              if (widget.session.reason == SessionEndedReason.finished) ...[
+              if (session?.reason == SessionEndedReason.finished) ...[
                 _SessionFeedbackWidget(
                   state: _thumbState,
                   onThumbUpPressed: () async {

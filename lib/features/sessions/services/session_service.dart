@@ -18,8 +18,8 @@ import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
-import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/sessions/services/utils.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/logger.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -30,8 +30,8 @@ export 'package:totem_app/features/sessions/services/utils.dart';
 part 'background_control.dart';
 part 'devices_control.dart';
 part 'keeper_control.dart';
-part 'session_service.g.dart';
 part 'participant_control.dart';
+part 'session_service.g.dart';
 
 enum SessionEndedReason { finished, keeperLeft, keeperNotJoined }
 

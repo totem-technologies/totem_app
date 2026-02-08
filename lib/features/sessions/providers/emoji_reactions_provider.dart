@@ -44,12 +44,8 @@ class EmojiReactions extends _$EmojiReactions {
         overlayKey: EmojiReactions.emojiOverlayKey,
       );
     } finally {
-      removeReaction(entry);
+      state = state.where((e) => e != entry).toList();
     }
-  }
-
-  void removeReaction(MapEntry<String, String> entry) {
-    state = state.where((e) => e != entry).toList();
   }
 
   void clear() {
@@ -58,7 +54,7 @@ class EmojiReactions extends _$EmojiReactions {
   }
 }
 
-@Riverpod(keepAlive: true)
+@riverpod
 List<String> participantEmojis(
   Ref ref,
   String participantIdentity,
