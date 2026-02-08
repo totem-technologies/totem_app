@@ -186,11 +186,12 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final options = _cachedSessionOptions ?? _buildSessionOptions();
-
     return ProviderScope(
       overrides: [
-        sessionScopeProvider.overrideWithValue(options),
+        sessionScopeProvider.overrideWith((ref) {
+          final options = _cachedSessionOptions ?? _buildSessionOptions();
+          return options;
+        }),
       ],
       child: _RoomContent(
         event: widget.event,

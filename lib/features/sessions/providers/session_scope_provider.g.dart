@@ -29,7 +29,7 @@ final class SessionScopeProvider
         argument: null,
         retry: null,
         name: r'sessionScopeProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -56,7 +56,7 @@ final class SessionScopeProvider
   }
 }
 
-String _$sessionScopeHash() => r'e04113d280234c4d312c85168afffda12c534adc';
+String _$sessionScopeHash() => r'efa9c68198a4616b78f64e225a4149d1a9d49e7c';
 
 /// Convenience provider to get the current session notifier.
 
@@ -76,9 +76,13 @@ final class CurrentSessionProvider
         retry: null,
         name: r'currentSessionProvider',
         isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
+        dependencies: <ProviderOrFamily>[sessionScopeProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          CurrentSessionProvider.$allTransitiveDependencies0,
+        ],
       );
+
+  static final $allTransitiveDependencies0 = sessionScopeProvider;
 
   @override
   String debugGetCreateSourceHash() => _$currentSessionHash();
@@ -102,7 +106,7 @@ final class CurrentSessionProvider
   }
 }
 
-String _$currentSessionHash() => r'ec443bb0a8faa45cbdcfc07b1e7b2b2c2b2721e0';
+String _$currentSessionHash() => r'21efb5479aa019d4f0539ac3bce8577c5ab17c78';
 
 /// Convenience provider to get the current session state.
 
@@ -127,9 +131,13 @@ final class CurrentSessionStateProvider
         retry: null,
         name: r'currentSessionStateProvider',
         isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
+        dependencies: <ProviderOrFamily>[sessionScopeProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          CurrentSessionStateProvider.$allTransitiveDependencies0,
+        ],
       );
+
+  static final $allTransitiveDependencies0 = sessionScopeProvider;
 
   @override
   String debugGetCreateSourceHash() => _$currentSessionStateHash();
@@ -155,7 +163,7 @@ final class CurrentSessionStateProvider
 }
 
 String _$currentSessionStateHash() =>
-    r'b6e1f462e3c7fffea06f30a1d11cc9fd467a6844';
+    r'e7a486704dfcdc004ffb74dc9a1df2c0582941f7';
 
 /// The connection state of the current session.
 
@@ -180,9 +188,16 @@ final class ConnectionStateProvider
         retry: null,
         name: r'connectionStateProvider',
         isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
+        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          ConnectionStateProvider.$allTransitiveDependencies0,
+          ConnectionStateProvider.$allTransitiveDependencies1,
+        ],
       );
+
+  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionStateProvider.$allTransitiveDependencies0;
 
   @override
   String debugGetCreateSourceHash() => _$connectionStateHash();
@@ -207,7 +222,7 @@ final class ConnectionStateProvider
   }
 }
 
-String _$connectionStateHash() => r'8efbe701958703193973cb95d4d74037b2a963d3';
+String _$connectionStateHash() => r'fcc0d972a83bcfa6c64f4639f186b568549b94b7';
 
 /// The current session status (waiting, started, ended).
 
@@ -227,9 +242,16 @@ final class SessionStatusProvider
         retry: null,
         name: r'sessionStatusProvider',
         isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
+        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          SessionStatusProvider.$allTransitiveDependencies0,
+          SessionStatusProvider.$allTransitiveDependencies1,
+        ],
       );
+
+  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionStateProvider.$allTransitiveDependencies0;
 
   @override
   String debugGetCreateSourceHash() => _$sessionStatusHash();
@@ -253,7 +275,7 @@ final class SessionStatusProvider
   }
 }
 
-String _$sessionStatusHash() => r'eecd5c48d330588b6ea87cd188a812a22ecaeee6';
+String _$sessionStatusHash() => r'dcabd34b601dfe6dac5e47a1c97c3688b9775976';
 
 /// The current totem status (none, accepted, passing).
 
@@ -273,9 +295,16 @@ final class TotemStatusProvider
         retry: null,
         name: r'totemStatusProvider',
         isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
+        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          TotemStatusProvider.$allTransitiveDependencies0,
+          TotemStatusProvider.$allTransitiveDependencies1,
+        ],
       );
+
+  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionStateProvider.$allTransitiveDependencies0;
 
   @override
   String debugGetCreateSourceHash() => _$totemStatusHash();
@@ -299,7 +328,7 @@ final class TotemStatusProvider
   }
 }
 
-String _$totemStatusHash() => r'24ce6085900907638c8887efe82d4f04c690896c';
+String _$totemStatusHash() => r'de7efbf3e13c08c82ea57328f81280ad6a0fb2bf';
 
 /// The list of participants in the session.
 
@@ -324,9 +353,16 @@ final class SessionParticipantsProvider
         retry: null,
         name: r'sessionParticipantsProvider',
         isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
+        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          SessionParticipantsProvider.$allTransitiveDependencies0,
+          SessionParticipantsProvider.$allTransitiveDependencies1,
+        ],
       );
+
+  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionStateProvider.$allTransitiveDependencies0;
 
   @override
   String debugGetCreateSourceHash() => _$sessionParticipantsHash();
@@ -353,7 +389,7 @@ final class SessionParticipantsProvider
 }
 
 String _$sessionParticipantsHash() =>
-    r'7623d8a416b74ad5f94b7b9cdf4845aae914d3d7';
+    r'8a215684dad4d3634ab710d3c5fe0726af4df440';
 
 /// Whether it's the current user's turn to speak.
 
@@ -372,9 +408,21 @@ final class IsMyTurnProvider extends $FunctionalProvider<bool, bool, bool>
         retry: null,
         name: r'isMyTurnProvider',
         isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
+        dependencies: <ProviderOrFamily>[
+          currentSessionProvider,
+          currentSessionStateProvider,
+        ],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          IsMyTurnProvider.$allTransitiveDependencies0,
+          IsMyTurnProvider.$allTransitiveDependencies1,
+          IsMyTurnProvider.$allTransitiveDependencies2,
+        ],
       );
+
+  static final $allTransitiveDependencies0 = currentSessionProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 = currentSessionStateProvider;
 
   @override
   String debugGetCreateSourceHash() => _$isMyTurnHash();
@@ -398,7 +446,7 @@ final class IsMyTurnProvider extends $FunctionalProvider<bool, bool, bool>
   }
 }
 
-String _$isMyTurnHash() => r'ed38d07c9f1211e9f4b8c2941589bd58d80cc5f3';
+String _$isMyTurnHash() => r'7bd945a29b1d57c58309085354d17a95ef60bc29';
 
 /// Whether the current user is next to speak.
 
@@ -417,9 +465,21 @@ final class AmNextSpeakerProvider extends $FunctionalProvider<bool, bool, bool>
         retry: null,
         name: r'amNextSpeakerProvider',
         isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
+        dependencies: <ProviderOrFamily>[
+          currentSessionProvider,
+          currentSessionStateProvider,
+        ],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          AmNextSpeakerProvider.$allTransitiveDependencies0,
+          AmNextSpeakerProvider.$allTransitiveDependencies1,
+          AmNextSpeakerProvider.$allTransitiveDependencies2,
+        ],
       );
+
+  static final $allTransitiveDependencies0 = currentSessionProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 = currentSessionStateProvider;
 
   @override
   String debugGetCreateSourceHash() => _$amNextSpeakerHash();
@@ -443,4 +503,4 @@ final class AmNextSpeakerProvider extends $FunctionalProvider<bool, bool, bool>
   }
 }
 
-String _$amNextSpeakerHash() => r'1c84feec9aac91aa8fad50c59b39bbace38bd7eb';
+String _$amNextSpeakerHash() => r'3304d081696a13768fd4775199af723a1fe4800f';

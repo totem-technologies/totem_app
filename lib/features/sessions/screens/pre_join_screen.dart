@@ -239,23 +239,22 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   Future<void> _joinRoom(String token, SessionDetailSchema event) async {
     if (_sessionOptions != null) return;
+    _sessionOptions = SessionOptions(
+      eventSlug: widget.eventSlug,
+      token: token,
+      cameraEnabled: _isCameraOn,
+      microphoneEnabled: _isMicOn,
+      cameraOptions: _cameraOptions ?? Session.defaultCameraOptions,
+      audioOptions: _audioOptions,
+      audioOutputOptions: _audioOutputOptions,
+      onEmojiReceived: (_, _) async {},
+      onMessageReceived: (_, _) {},
+      onLivekitError: (_) {},
+      onKeeperLeaveRoom: (_) => () {},
+      onConnected: _onRoomConnected,
+    );
     if (mounted) {
-      setState(() {
-        _sessionOptions = SessionOptions(
-          eventSlug: widget.eventSlug,
-          token: token,
-          cameraEnabled: _isCameraOn,
-          microphoneEnabled: _isMicOn,
-          cameraOptions: _cameraOptions ?? Session.defaultCameraOptions,
-          audioOptions: _audioOptions,
-          audioOutputOptions: _audioOutputOptions,
-          onEmojiReceived: (_, _) async {},
-          onMessageReceived: (_, _) {},
-          onLivekitError: (_) {},
-          onKeeperLeaveRoom: (_) => () {},
-          onConnected: _onRoomConnected,
-        );
-      });
+      setState(() {});
     }
   }
 

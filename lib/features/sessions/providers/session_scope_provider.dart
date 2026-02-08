@@ -9,11 +9,11 @@ part 'session_scope_provider.g.dart';
 
 /// Provider that will be overridden at room scope.
 /// Returns the current session options for the active room.
-@riverpod
+@Riverpod(keepAlive: true)
 SessionOptions? sessionScope(Ref ref) => null;
 
 /// Convenience provider to get the current session notifier.
-@riverpod
+@Riverpod(dependencies: [sessionScope])
 Session? currentSession(Ref ref) {
   final options = ref.watch(sessionScopeProvider);
   if (options == null) return null;
@@ -21,7 +21,7 @@ Session? currentSession(Ref ref) {
 }
 
 /// Convenience provider to get the current session state.
-@riverpod
+@Riverpod(dependencies: [sessionScope])
 SessionRoomState? currentSessionState(Ref ref) {
   final options = ref.watch(sessionScopeProvider);
   if (options == null) return null;
@@ -32,7 +32,7 @@ SessionRoomState? currentSessionState(Ref ref) {
 // These allow widgets to watch only specific fields, minimizing rebuilds.
 
 /// The connection state of the current session.
-@riverpod
+@Riverpod(dependencies: [currentSessionState])
 RoomConnectionState connectionState(Ref ref) {
   return ref.watch(
         currentSessionStateProvider.select((s) => s?.connectionState),
@@ -41,7 +41,7 @@ RoomConnectionState connectionState(Ref ref) {
 }
 
 /// The current session status (waiting, started, ended).
-@riverpod
+@Riverpod(dependencies: [currentSessionState])
 SessionStatus sessionStatus(Ref ref) {
   return ref.watch(
         currentSessionStateProvider.select((s) => s?.sessionState.status),
@@ -50,7 +50,7 @@ SessionStatus sessionStatus(Ref ref) {
 }
 
 /// The current totem status (none, accepted, passing).
-@riverpod
+@Riverpod(dependencies: [currentSessionState])
 TotemStatus totemStatus(Ref ref) {
   return ref.watch(
         currentSessionStateProvider.select((s) => s?.sessionState.totemStatus),
@@ -59,7 +59,7 @@ TotemStatus totemStatus(Ref ref) {
 }
 
 /// The list of participants in the session.
-@riverpod
+@Riverpod(dependencies: [currentSessionState])
 List<Participant> sessionParticipants(Ref ref) {
   return ref.watch(
         currentSessionStateProvider.select((s) => s?.participants),
@@ -68,7 +68,7 @@ List<Participant> sessionParticipants(Ref ref) {
 }
 
 /// Whether it's the current user's turn to speak.
-@riverpod
+@Riverpod(dependencies: [currentSession, currentSessionState])
 bool isMyTurn(Ref ref) {
   final session = ref.watch(currentSessionProvider);
   final state = ref.watch(currentSessionStateProvider);
@@ -77,7 +77,7 @@ bool isMyTurn(Ref ref) {
 }
 
 /// Whether the current user is next to speak.
-@riverpod
+@Riverpod(dependencies: [currentSession, currentSessionState])
 bool amNextSpeaker(Ref ref) {
   final session = ref.watch(currentSessionProvider);
   final state = ref.watch(currentSessionStateProvider);
