@@ -200,12 +200,20 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         navigatorKey: _navigatorKey,
         getParticipantKey: getParticipantKey,
         showEmojiPicker: _showEmojiPicker,
-        setShowEmojiPicker: (value) => setState(() => _showEmojiPicker = value),
+        setShowEmojiPicker: (value) {
+          if (!mounted) return;
+          setState(() => _showEmojiPicker = value);
+        },
         chatSheetOpen: _chatSheetOpen,
-        setChatSheetOpen: (value) => setState(() => _chatSheetOpen = value),
+        setChatSheetOpen: (value) {
+          if (!mounted) return;
+          setState(() => _chatSheetOpen = value);
+        },
         hasPendingChatMessages: _hasPendingChatMessages,
-        setHasPendingChatMessages: (value) =>
-            setState(() => _hasPendingChatMessages = value),
+        setHasPendingChatMessages: (value) {
+          if (!mounted) return;
+          setState(() => _hasPendingChatMessages = value);
+        },
         onEmojiReceived: _onEmojiReceived,
       ),
     );

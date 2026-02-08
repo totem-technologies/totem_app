@@ -119,7 +119,9 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final recommended = ref.watch(getRecommendedSessionsProvider());
-    final session = ref.watch(currentSessionProvider);
+    final sessionReason = ref.watch(
+      currentSessionProvider.select((s) => s?.reason),
+    );
 
     final nextEvents = widget.event.space.nextEvents
         .where((e) => e.slug != widget.event.slug)
@@ -142,7 +144,7 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
               Semantics(
                 header: true,
                 child: Text(
-                  switch (session?.reason) {
+                  switch (sessionReason) {
                     SessionEndedReason.keeperLeft ||
                     SessionEndedReason.keeperNotJoined =>
                       'Session will be rescheduled',
@@ -153,7 +155,7 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
                 ),
               ),
               Text(
-                switch (session?.reason) {
+                switch (sessionReason) {
                   SessionEndedReason.keeperLeft =>
                     'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
                   SessionEndedReason.keeperNotJoined =>
@@ -163,7 +165,7 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
                 },
                 textAlign: TextAlign.center,
               ),
-              if (session?.reason == SessionEndedReason.finished) ...[
+              if (sessionReason == SessionEndedReason.finished) ...[
                 _SessionFeedbackWidget(
                   state: _thumbState,
                   onThumbUpPressed: () async {
