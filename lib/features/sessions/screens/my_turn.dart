@@ -1,21 +1,19 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' hide Session;
 import 'package:totem_app/api/export.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
-import 'package:totem_app/shared/totem_icons.dart';
-import 'package:totem_app/shared/widgets/popups.dart';
 
 class MyTurn extends StatelessWidget {
   const MyTurn({
     required this.getParticipantKey,
     required this.actionBar,
     required this.onPassTotem,
+    required this.session,
     required this.sessionState,
     required this.event,
     super.key,
@@ -23,7 +21,8 @@ class MyTurn extends StatelessWidget {
 
   final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
-  final Future<void> Function() onPassTotem;
+  final OnActionPerformed onPassTotem;
+  final Session session;
   final SessionRoomState sessionState;
   final SessionDetailSchema event;
 
@@ -48,51 +47,19 @@ class MyTurn extends StatelessWidget {
               },
             );
 
+            final nextUp = session.speakingNextParticipant();
+            final transitionType =
+                sessionState.sessionState.totemStatus == TotemStatus.passing
+                ? TotemCardTransitionType.waitingReceive
+                : TotemCardTransitionType.pass;
             final passCard = TransitionCard(
-              type: sessionState.sessionState.totemStatus == TotemStatus.passing
-                  ? TotemCardTransitionType.waitingReceive
-                  : TotemCardTransitionType.pass,
-              onActionPressed: () async {
-                try {
-                  await onPassTotem();
-                  if (context.mounted) {
-                    showNotificationPopup(
-                      context,
-                      icon: TotemIcons.passToNext,
-                      title: 'Totem Passed',
-                      message:
-                          'The totem has been passed to the next participant.',
-                    );
-                  }
-                  return true;
-                } catch (error) {
-                  if (context.mounted) {
-                    await ErrorHandler.handleApiError(
-                      context,
-                      error,
-                      onRetry: () async {
-                        try {
-                          await onPassTotem();
-                          if (context.mounted) {
-                            showNotificationPopup(
-                              context,
-                              icon: TotemIcons.passToNext,
-                              title: 'Totem Passed',
-                              message:
-                                  'The totem has been passed '
-                                  'to the next participant.',
-                            );
-                          }
-                        } catch (e) {
-                          // Error already handled by handleApiError
-                        }
-                      },
-                    );
-                  }
-                }
-
-                return false;
-              },
+              type: transitionType,
+              onActionPressed: onPassTotem,
+              actionText:
+                  nextUp != null &&
+                      transitionType == TotemCardTransitionType.pass
+                  ? 'Pass to ${nextUp.name}'
+                  : null,
             );
             if (isLandscape) {
               return Column(

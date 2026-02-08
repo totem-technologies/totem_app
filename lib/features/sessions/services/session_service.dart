@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -37,7 +37,8 @@ enum SessionEndedReason { finished, keeperLeft, keeperNotJoined }
 
 enum SessionCommunicationTopics {
   emoji('lk-emoji-topic'),
-  chat('lk-chat-topic');
+  chat('lk-chat-topic'),
+  lifecycle('lk-lifecycle-topic');
 
   const SessionCommunicationTopics(this.topic);
   final String topic;
@@ -169,13 +170,13 @@ class SessionRoomState {
 
 @riverpod
 class Session extends _$Session {
-  late final RoomContext context;
-  late final EventsListener<RoomEvent> _listener;
+  RoomContext? context;
+  EventsListener<RoomEvent>? _listener;
   Timer? _timer;
   Timer? _participantUpdateDebounce;
   static const syncTimerDuration = Duration(seconds: 20);
 
-  late SessionOptions _options;
+  SessionOptions? _options;
   String? _lastMetadata;
   SessionDetailSchema? event;
 
@@ -192,23 +193,23 @@ class Session extends _$Session {
   SessionRoomState build(SessionOptions options) {
     _options = options;
     ref
-        .watch(eventProvider(_options.eventSlug))
+        .watch(eventProvider(options.eventSlug))
         .whenData((event) => this.event = event);
 
     _timer?.cancel();
-    _timer = Timer.periodic(Session.syncTimerDuration, (_) => _checkUp());
+    _timer = Timer.periodic(Session.syncTimerDuration, (_) => _onRoomChanges());
 
     context = RoomContext(
       url: AppConfig.liveKitUrl,
-      token: _options.token,
+      token: options.token,
       connect: true,
       onConnected: _onConnected,
       onDisconnected: _onDisconnected,
       onError: _onError,
       roomOptions: RoomOptions(
-        defaultCameraCaptureOptions: _options.cameraOptions,
-        defaultAudioCaptureOptions: _options.audioOptions,
-        defaultAudioOutputOptions: _options.audioOutputOptions,
+        defaultCameraCaptureOptions: options.cameraOptions,
+        defaultAudioCaptureOptions: options.audioOptions,
+        defaultAudioOutputOptions: options.audioOutputOptions,
 
         dynacast: true,
         defaultVideoPublishOptions: const VideoPublishOptions(
@@ -226,13 +227,16 @@ class Session extends _$Session {
       ),
     );
 
-    _listener = context.room.createListener();
+    _listener = context?.room.createListener();
     _listener
-      ..on((_) => _onRoomChanges())
+      ?..on((_) {
+        if (ref.mounted) {
+          _onRoomChanges();
+        }
+      })
       ..on<DataReceivedEvent>(_onDataReceived)
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
-      ..on<ParticipantConnectedEvent>(_onParticipantConnected)
-      ..on<ParticipantEvent>((_) => _debouncedUpdateParticipantsList());
+      ..on<ParticipantConnectedEvent>(_onParticipantConnected);
 
     WakelockPlus.enable();
     setupBackgroundMode();
@@ -250,62 +254,15 @@ class Session extends _$Session {
   static const keeperNotJoinedTimeout = Duration(minutes: 5);
   bool get hasKeeperEverJoined => _hasKeeperEverJoined;
 
-  void _checkUp() {
-    _updateParticipantsList();
-
-    // TODO(bdlukaa): This is very error prone.
-    // If the following flow happens, the user will be disconnected even if the keeper joins later:
-    //    1. Keeper joins the session.
-    //    2. User joins the session late, after the keeper.
-    //    3. User leaves the room.
-    //    4. Keeper leaves the room.
-    //    5. User joins the room again, but the keeper is not there.
-    //    6. After 10 seconds, the user is disconnected because the keeper "never joined".
-    //
-    // This should be controlled by the backend instead.
-    // final startedAt = event?.start;
-    // if (startedAt != null &&
-    //     !_hasKeeperEverJoined &&
-    //     DateTime.now().isAfter(
-    //       startedAt.add(Session.keeperNotJoinedTimeout),
-    //     )) {
-    //   reason = SessionEndedReason.keeperNotJoined;
-    //   context.disconnect();
-    //   return;
-    // }
-
-    // TODO(bdlukaa): Do not use polling to get room state.
-    // ref
-    //     .read(mobileApiServiceProvider)
-    //     .meetings
-    //     .totemMeetingsMobileApiGetRoomStateEndpoint(
-    //       eventSlug: _options.eventSlug,
-    //     )
-    //     .timeout(const Duration(seconds: 5))
-    //     .then(_onRoomChanges)
-    //     .catchError((dynamic error, StackTrace stackTrace) {
-    //       ErrorHandler.logError(
-    //         error,
-    //         stackTrace: stackTrace,
-    //         message: 'Error checking room state',
-    //       );
-    //     });
-  }
-
-  void _debouncedUpdateParticipantsList() {
-    _participantUpdateDebounce?.cancel();
-    _participantUpdateDebounce = Timer(
-      const Duration(milliseconds: 100),
-      _updateParticipantsList,
-    );
-  }
+  /// Whether the keeper is currently in the session.
+  bool get hasKeeper => state.participants.any((p) => isKeeper(p.identity));
 
   void _updateParticipantsList() {
     try {
       final participants = <Participant>[
-        ...context.room.remoteParticipants.values,
-        if (context.room.localParticipant != null)
-          context.room.localParticipant!,
+        if (context?.room != null) ...context!.room.remoteParticipants.values,
+        if (context?.room.localParticipant != null)
+          context!.room.localParticipant!,
       ];
 
       final sortedParticipants = participantsSorting(
@@ -331,38 +288,43 @@ class Session extends _$Session {
   }
 
   void _onConnected() {
-    if (context.room.localParticipant == null) {
+    if (context?.room.localParticipant == null) {
       logger.i('Local participant is null on connected.');
       return;
     }
 
     logger.i(
       'Connected to LiveKit room as '
-      '"${context.room.localParticipant!.identity}".',
+      '"${context!.room.localParticipant!.identity}".',
     );
 
     _onRoomChanges();
 
-    context.room.localParticipant?.setCameraEnabled(_options.cameraEnabled);
+    context!.room.localParticipant?.setCameraEnabled(
+      _options?.cameraEnabled ?? false,
+    );
 
     // If the user joined in the waiting
     // If the keeper is not in the room, the participants will start unmuted.
-    final isKeeperInRoom = state.participants.any((p) => isKeeper(p.identity));
-    context.room.localParticipant!.setMicrophoneEnabled(() {
-      if (state.sessionState.status == SessionStatus.waiting &&
-          !isKeeperInRoom) {
-        // If joined in the waiting room, everyone can join unmuted.
-        return _options.microphoneEnabled;
-      }
-      if (state.sessionState.status == SessionStatus.started) {
-        if (state.speakingNow == context.room.localParticipant?.identity) {
-          // If it's the user's turn to speak, they can join unmuted.
-          return _options.microphoneEnabled;
-        }
-      }
-      // In other states, only the keeper can join unmuted.
-      return isKeeper() && _options.microphoneEnabled;
-    }());
+    context!.room.localParticipant!.setMicrophoneEnabled(
+      () {
+            if (state.sessionState.status == SessionStatus.waiting &&
+                !hasKeeper) {
+              // If joined in the waiting room, everyone can join unmuted.
+              return _options?.microphoneEnabled;
+            }
+            if (state.sessionState.status == SessionStatus.started) {
+              if (state.speakingNow ==
+                  context!.room.localParticipant?.identity) {
+                // If it's the user's turn to speak, they can join unmuted.
+                return _options?.microphoneEnabled;
+              }
+            }
+            // In other states, only the keeper can join unmuted.
+            return isKeeper() && (_options?.microphoneEnabled ?? false);
+          }() ??
+          false,
+    );
     // context.room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
     state = state.copyWith(connectionState: RoomConnectionState.connected);
 
@@ -379,14 +341,15 @@ class Session extends _$Session {
     if (error == null) return;
     ErrorHandler.handleLivekitError(error);
     state = state.copyWith(connectionState: RoomConnectionState.error);
-    _options.onLivekitError(error);
+    _options?.onLivekitError(error);
   }
 
   void _onRoomChanges([SessionState? newSessionState]) {
+    _updateParticipantsList();
     if (newSessionState != null) {
       state = state.copyWith(sessionState: newSessionState);
     } else {
-      final metadata = context.room.metadata;
+      final metadata = context?.room.metadata;
       if (metadata == null || metadata.isEmpty) return;
 
       try {
@@ -417,24 +380,46 @@ class Session extends _$Session {
       }
     }
 
+    // TODO(bdlukaa): This is very error prone.
+    // If the following flow happens, the user will be disconnected even if the keeper joins later:
+    //    1. Keeper joins the session.
+    //    2. User joins the session late, after the keeper.
+    //    3. User leaves the room.
+    //    4. Keeper leaves the room.
+    //    5. User joins the room again, but the keeper is not there.
+    //    6. After 10 seconds, the user is disconnected because the keeper "never joined".
+    //
+    // This should be controlled by the backend instead.
+    // final startedAt = event?.start;
+    // if (startedAt != null &&
+    //     !_hasKeeperEverJoined &&
+    //     DateTime.now().isAfter(
+    //       startedAt.add(Session.keeperNotJoinedTimeout),
+    //     )) {
+    //   reason = SessionEndedReason.keeperNotJoined;
+    //   context.disconnect();
+    //   return;
+    // }
+
     if (state.sessionState.status == SessionStatus.ended) {
       _onSessionEnd();
     }
   }
 
+  Map<String, AppLifecycleState> userStates = {};
   void _onDataReceived(DataReceivedEvent event) {
     if (event.topic == null || event.participant == null) return;
     final data = const Utf8Decoder().convert(event.data);
 
     if (event.topic == SessionCommunicationTopics.emoji.topic) {
-      _options.onEmojiReceived(event.participant!.identity, data);
+      _options?.onEmojiReceived(event.participant!.identity, data);
     } else if (event.topic == SessionCommunicationTopics.chat.topic) {
       try {
         final message = ChatMessage.fromMap(
           jsonDecode(data) as Map<String, dynamic>,
           event.participant,
         );
-        _options.onMessageReceived(
+        _options?.onMessageReceived(
           event.participant!.identity,
           message.message,
         );
@@ -445,6 +430,14 @@ class Session extends _$Session {
           message: 'Error decoding chat message',
         );
       }
+    } else if (event.topic == SessionCommunicationTopics.lifecycle.topic) {
+      logger.d(
+        'Received lifecycle event from ${event.participant!.identity}: $data',
+      );
+      userStates[event.participant!.identity] =
+          AppLifecycleState.values.firstWhereOrNull((e) => e.name == data) ??
+          AppLifecycleState.resumed;
+      ref.notifyListeners();
     }
   }
 
@@ -465,7 +458,7 @@ class Session extends _$Session {
 
   Future<void> _onSessionEnd() async {
     reason = SessionEndedReason.finished;
-    context.disconnect();
+    context?.disconnect();
   }
 
   void _cleanUp() {
@@ -503,12 +496,12 @@ class Session extends _$Session {
 
     try {
       _listener
-        ..cancelAll()
+        ?..cancelAll()
         ..dispose();
     } catch (_) {}
     try {
       context
-        ..removeListener(_onRoomChanges)
+        ?..removeListener(_onRoomChanges)
         ..dispose();
     } catch (_) {}
   }

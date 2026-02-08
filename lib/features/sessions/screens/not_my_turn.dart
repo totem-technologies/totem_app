@@ -129,23 +129,29 @@ class NotMyTurn extends ConsumerWidget {
           );
 
           final nextUp = session.speakingNextParticipant();
-          final nextUpText =
-              sessionState.sessionState.status == SessionStatus.waiting
-              ? Text(
-                  () {
-                    if (!session.hasKeeperEverJoined) {
-                      return 'Waiting for the Keeper to join...';
-                    }
-                    return 'The session is about to start...';
-                  }(),
+          final nextUpText = () {
+            final sessionStatus = sessionState.sessionState.status;
+            if (sessionStatus == SessionStatus.waiting) {
+              return Text(
+                () {
+                  if (!session.hasKeeper) {
+                    return 'Waiting for the Keeper to join...';
+                  }
+                  return 'The session is about to start...';
+                }(),
+                style: theme.textTheme.bodyLarge,
+              );
+            } else if (sessionStatus == SessionStatus.started) {
+              if (!session.hasKeeper) {
+                return Text(
+                  'The session has been paused...',
                   style: theme.textTheme.bodyLarge,
-                )
-              : sessionState.sessionState.status == SessionStatus.started &&
-                    nextUp != null
-              ? RichText(
+                );
+              } else if (nextUp != null) {
+                return RichText(
                   text: TextSpan(
                     children: [
-                      if (sessionState.amNext(session.context))
+                      if (sessionState.amNext(session.context!))
                         const TextSpan(
                           text: 'You are Next',
                           style: TextStyle(fontWeight: FontWeight.bold),
@@ -162,8 +168,13 @@ class NotMyTurn extends ConsumerWidget {
                     ],
                     style: theme.textTheme.bodyLarge,
                   ),
-                )
-              : const SizedBox.shrink();
+                );
+              }
+            }
+
+            // Return a sized box because we want the spacing to remain consistent.
+            return const SizedBox.shrink();
+          }();
 
           final participantGrid = NotMyTurnGrid(
             sessionState: sessionState,
@@ -238,6 +249,9 @@ class NotMyTurn extends ConsumerWidget {
           } else {
             return SafeArea(
               top: false,
+              // TODO(bdlukaa): Check if this should be true.
+              // No need to avoid bottom safe area because the app is in fullscreen
+              bottom: false,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 spacing: 20,
@@ -323,12 +337,10 @@ class NotMyTurnGrid extends StatelessWidget {
         crossAxisCount = 4;
       }
     } else {
-      if (itemCount <= 3) {
+      if (itemCount <= 6) {
         crossAxisCount = 3;
-      } else if (itemCount <= 5) {
-        crossAxisCount = itemCount;
-      } else if (itemCount <= 10) {
-        crossAxisCount = (itemCount / 2).ceil();
+      } else if (itemCount <= 12) {
+        crossAxisCount = 4;
       } else {
         crossAxisCount = 5;
       }
@@ -336,6 +348,7 @@ class NotMyTurnGrid extends StatelessWidget {
 
     final rowCount = (itemCount / crossAxisCount).ceil();
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       spacing: gap,
       children: List.generate(
@@ -343,7 +356,7 @@ class NotMyTurnGrid extends StatelessWidget {
         (rowIndex) {
           final startIndex = rowIndex * crossAxisCount;
 
-          return Expanded(
+          return Flexible(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: gap,

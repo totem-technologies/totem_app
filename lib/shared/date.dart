@@ -1,6 +1,34 @@
 import 'package:flutter/material.dart' show DateUtils;
 import 'package:intl/intl.dart';
 
+/// Formats date as "Today", "Tomorrow", or short format like "5 Feb".
+/// Used for compact date displays in cards.
+String formatShortDate(DateTime dateTime) {
+  final now = DateTime.now();
+  final date = dateTime.toLocal();
+
+  if (DateUtils.isSameDay(now, date)) {
+    return 'Today';
+  }
+
+  final tomorrow = now.add(const Duration(days: 1));
+  if (DateUtils.isSameDay(tomorrow, date)) {
+    return 'Tomorrow';
+  }
+
+  return DateFormat('d MMM').format(date);
+}
+
+/// Formats time without period (e.g., "4:00").
+String formatTimeOnly(DateTime dateTime) {
+  return DateFormat('h:mm').format(dateTime.toLocal());
+}
+
+/// Formats time period only (e.g., "AM" or "PM").
+String formatTimePeriod(DateTime dateTime) {
+  return DateFormat('a').format(dateTime.toLocal());
+}
+
 String formatEventDate(DateTime dateTime) {
   try {
     final date = dateTime.toLocal();

@@ -80,7 +80,7 @@ class AuthController extends Notifier<AuthState> {
         ErrorHandler.logError(
           error,
           stackTrace: stackTrace,
-          reason: 'FCM token refresh failed',
+          message: 'FCM token refresh failed',
         );
       },
     );
@@ -235,7 +235,7 @@ class AuthController extends Notifier<AuthState> {
         ErrorHandler.logError(
           error,
           stackTrace: stackTrace,
-          reason: 'Failed to update profile image',
+          message: 'Failed to update profile image',
         );
         overallSuccess = false;
       }
@@ -277,7 +277,7 @@ class AuthController extends Notifier<AuthState> {
         ErrorHandler.logError(
           error,
           stackTrace: stackTrace,
-          reason: 'Failed to update name/email',
+          message: 'Failed to update name/email',
         );
         overallSuccess = false;
       }
@@ -302,11 +302,12 @@ class AuthController extends Notifier<AuthState> {
         _setState(
           state.copyWith(status: AuthStatus.authenticated, user: refreshedUser),
         );
-      } catch (e) {
+      } catch (error, stackTrace) {
         overallSuccess = false;
         ErrorHandler.logError(
-          e,
-          reason: 'Failed to refresh user after profile update',
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to refresh user after profile update',
         );
       }
     }
@@ -332,7 +333,7 @@ class AuthController extends Notifier<AuthState> {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        reason: 'Logout failed',
+        message: 'Logout failed',
       );
       _setState(AuthState.unauthenticated());
       await _clearTokens();
@@ -352,7 +353,7 @@ class AuthController extends Notifier<AuthState> {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        reason: 'Account deletion failed',
+        message: 'Account deletion failed',
       );
       _setState(AuthState.unauthenticated());
     } finally {
@@ -426,7 +427,7 @@ class AuthController extends Notifier<AuthState> {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        reason: 'Auth Check Failed',
+        message: 'Check existing auth failed',
       );
       await _clearTokens();
       _setState(AuthState.unauthenticated());
@@ -487,7 +488,7 @@ class AuthController extends Notifier<AuthState> {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        reason: '🔑 Failed to store tokens',
+        message: '🔑 Failed to store tokens locally',
       );
       // Optionally rethrow or handle the error as needed
       throw const AppAuthException('Failed to store tokens');
@@ -567,7 +568,7 @@ class AuthController extends Notifier<AuthState> {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        reason: 'FCM token update failed',
+        message: 'FCM token update failed',
       );
     }
   }

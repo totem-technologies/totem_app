@@ -19,7 +19,7 @@ extension KeeperControl on Session {
   Participant speakingNowParticipant() {
     return state.participants.firstWhere(
       (participant) => participant.identity == state.speakingNow,
-      orElse: () => context.room.localParticipant!,
+      orElse: () => context!.room.localParticipant!,
     );
   }
 
@@ -68,14 +68,14 @@ extension KeeperControl on Session {
     closeKeeperLeftNotifications();
 
     reason = SessionEndedReason.keeperLeft;
-    await context.disconnect();
+    await context?.disconnect();
   }
 
   Future<bool> startSession() async {
     if (!isKeeper()) return false;
     try {
       await ref
-          .read(startSessionProvider(_options.eventSlug).future)
+          .read(startSessionProvider(_options!.eventSlug).future)
           .timeout(
             const Duration(seconds: 20),
             onTimeout: () {
@@ -97,7 +97,7 @@ extension KeeperControl on Session {
     if (!isKeeper()) return false;
     try {
       await ref
-          .read(endSessionProvider(_options.eventSlug).future)
+          .read(endSessionProvider(_options!.eventSlug).future)
           .timeout(
             const Duration(seconds: 20),
             onTimeout: () {
@@ -118,7 +118,7 @@ extension KeeperControl on Session {
   Future<void> muteEveryone() async {
     try {
       await ref
-          .read(muteEveryoneProvider(_options.eventSlug).future)
+          .read(muteEveryoneProvider(_options!.eventSlug).future)
           .timeout(
             const Duration(seconds: 20),
             onTimeout: () {

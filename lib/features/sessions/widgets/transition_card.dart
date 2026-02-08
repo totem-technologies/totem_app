@@ -4,17 +4,22 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+typedef OnActionPerformed = Future<bool> Function();
+
 enum TotemCardTransitionType { pass, receive, start, waitingReceive }
 
 class TransitionCard extends StatelessWidget {
   const TransitionCard({
     required this.type,
     required this.onActionPressed,
+    this.actionText,
     super.key,
   });
 
   final TotemCardTransitionType type;
-  final Future<bool> Function() onActionPressed;
+  final OnActionPerformed onActionPressed;
+
+  final String? actionText;
 
   @override
   Widget build(BuildContext context) {
@@ -27,8 +32,8 @@ class TransitionCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsetsDirectional.only(
           top: 14,
-          start: 30,
-          end: 30,
+          start: 16,
+          end: 16,
           bottom: 16,
         ),
         child: Column(
@@ -55,18 +60,23 @@ class TransitionCard extends StatelessWidget {
               maxLines: 2,
             ),
             if (type != TotemCardTransitionType.waitingReceive)
-              ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minWidth: 160,
-                ),
-                child: _SlideToActionButton(
-                  text: switch (type) {
-                    TotemCardTransitionType.pass => 'Pass',
-                    TotemCardTransitionType.receive => 'Receive',
-                    TotemCardTransitionType.start => 'Start Session',
-                    _ => '',
-                  },
-                  onActionCompleted: onActionPressed,
+              Padding(
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 14),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minWidth: 160,
+                  ),
+                  child: _SlideToActionButton(
+                    text:
+                        actionText ??
+                        switch (type) {
+                          TotemCardTransitionType.pass => 'Pass',
+                          TotemCardTransitionType.receive => 'Receive',
+                          TotemCardTransitionType.start => 'Start Session',
+                          _ => '',
+                        },
+                    onActionCompleted: onActionPressed,
+                  ),
                 ),
               ),
           ],
@@ -83,7 +93,7 @@ class _SlideToActionButton extends StatefulWidget {
   });
 
   final String text;
-  final Future<bool> Function() onActionCompleted;
+  final OnActionPerformed onActionCompleted;
 
   @override
   State<_SlideToActionButton> createState() => _SlideToActionButtonState();
@@ -194,10 +204,19 @@ class _SlideToActionButtonState extends State<_SlideToActionButton> {
               clipBehavior: Clip.none,
               children: [
                 Center(
-                  child: Text(
-                    widget.text,
-                    style: textStyle?.copyWith(
-                      color: foregroundColor.withValues(alpha: 1.0 - progress),
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: thumbSize * 1.25,
+                    ),
+                    child: AutoSizeText(
+                      widget.text,
+                      style: textStyle?.copyWith(
+                        color: foregroundColor.withValues(
+                          alpha: 1.0 - progress,
+                        ),
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
                     ),
                   ),
                 ),

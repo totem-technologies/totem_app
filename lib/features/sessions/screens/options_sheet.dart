@@ -91,60 +91,44 @@ class OptionsSheet extends ConsumerWidget {
                   Navigator.of(context).pop();
                 },
               ),
-              MediaDeviceSelectButton(
-                builder: (context, roomCtx, deviceCtx) {
-                  final audioInputs = deviceCtx.audioInputs;
-                  final selected =
-                      deviceCtx.audioInputs?.firstWhereOrNull(
-                        (e) {
-                          return e.deviceId ==
-                                  (roomCtx
-                                          .localAudioTrack
-                                          ?.currentOptions
-                                          .deviceId ??
-                                      session.selectedAudioDeviceId) &&
-                              e.label.isNotEmpty;
-                        },
-                      ) ??
-                      deviceCtx.audioInputs?.firstOrNull;
-                  return OptionsSheetTile.fromMediaDevice(
-                    device: selected,
-                    options: audioInputs ?? [],
-                    onOptionChanged: (value) {
-                      if (value != null) session.selectAudioDevice(value);
-                    },
-                    icon: TotemIcons.microphoneOn,
-                  );
+              if (lkPlatformIsDesktop())
+                MediaDeviceSelectButton(
+                  builder: (context, roomCtx, deviceCtx) {
+                    final audioInputs = deviceCtx.audioInputs;
+                    final selected =
+                        deviceCtx.audioInputs?.firstWhereOrNull(
+                          (e) {
+                            return e.deviceId ==
+                                    (roomCtx
+                                            .localAudioTrack
+                                            ?.currentOptions
+                                            .deviceId ??
+                                        session.selectedAudioDeviceId) &&
+                                e.label.isNotEmpty;
+                          },
+                        ) ??
+                        deviceCtx.audioInputs?.firstOrNull;
+                    return OptionsSheetTile.fromMediaDevice(
+                      device: selected,
+                      options: audioInputs ?? [],
+                      onOptionChanged: (value) {
+                        if (value != null) session.selectAudioDevice(value);
+                      },
+                      icon: TotemIcons.microphoneOn,
+                    );
+                  },
+                ),
+              OptionsSheetTile.output(
+                AudioOutputOptions(
+                  speakerOn: session.isSpeakerphoneEnabled,
+                  deviceId: session.selectedAudioOutputDeviceId,
+                ),
+                (options) {
+                  if (options.speakerOn != null) {
+                    session.setSpeakerphone(options.speakerOn ?? false);
+                  }
                 },
-              ),
-              MediaDeviceSelectButton(
-                builder: (context, roomCtx, deviceCtx) {
-                  final audioOutputs = deviceCtx.audioOutputs?.where((
-                    device,
-                  ) {
-                    return device.label.isNotEmpty &&
-                        device.label != 'Earpiece';
-                  });
-                  final selected =
-                      deviceCtx.audioOutputs?.firstWhereOrNull(
-                        (e) {
-                          return e.deviceId ==
-                                  session.selectedAudioOutputDeviceId &&
-                              e.label.isNotEmpty;
-                        },
-                      ) ??
-                      deviceCtx.audioOutputs?.firstOrNull;
-                  return OptionsSheetTile.fromMediaDevice(
-                    device: selected,
-                    options: audioOutputs ?? [],
-                    onOptionChanged: (value) {
-                      if (value != null) {
-                        session.selectAudioOutputDevice(value);
-                      }
-                    },
-                    icon: TotemIcons.speaker,
-                  );
-                },
+                session.selectAudioOutputDevice,
               ),
               OptionsSheetTile<void>(
                 title: 'Leave Session',
@@ -527,31 +511,17 @@ class PrejoinOptionsSheet extends StatelessWidget {
           },
         ),
         const SizedBox(height: 14),
-        FutureBuilder(
-          future: Hardware.instance.audioOutputs(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) return const SizedBox.shrink();
-            final audioOutputs = snapshot.data!.where((device) {
-              return device.label.isNotEmpty && device.label != 'Earpiece';
-            });
-            final selected =
-                audioOutputs.firstWhereOrNull(
-                  (e) => e.deviceId == audioOptions.deviceId,
-                ) ??
-                audioOutputs.firstOrNull;
-            return OptionsSheetTile.fromMediaDevice(
-              device: selected,
-              options: audioOutputs,
-              onOptionChanged: (value) async {
-                if (value != null) {
-                  onAudioOutputChanged(
-                    AudioOutputOptions(deviceId: value.deviceId),
-                  );
-                  Navigator.of(context).pop();
-                }
-              },
-              icon: TotemIcons.speaker,
+        OptionsSheetTile.output(
+          audioOutputOptions,
+          (options) {
+            onAudioOutputChanged(options);
+            Navigator.of(context).pop();
+          },
+          (device) {
+            onAudioOutputChanged(
+              audioOutputOptions.copyWith(deviceId: device.deviceId),
             );
+            Navigator.of(context).pop();
           },
         ),
       ],
@@ -611,7 +581,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
       title: switch (options?.cameraPosition) {
         CameraPosition.front => 'Front',
         CameraPosition.back => 'Back',
-        null => 'No camera connected',
+        null => 'Camera disabled',
       },
       icon: options == null ? TotemIcons.cameraOff : TotemIcons.cameraOn,
       trailing: options != null
@@ -621,6 +591,54 @@ class OptionsSheetTile<T> extends StatelessWidget {
             )
           : null,
     );
+  }
+
+  static Widget output(
+    AudioOutputOptions options,
+    ValueChanged<AudioOutputOptions> onSwitch,
+    ValueChanged<MediaDevice> onDeviceSelect,
+  ) {
+    if (lkPlatformIsMobile()) {
+      return OptionsSheetTile<MediaDevice>(
+        title: 'Speaker',
+        icon: TotemIcons.speaker,
+        trailing: Switch.adaptive(
+          value: options.speakerOn ?? false,
+          onChanged: (enabled) {
+            onSwitch(
+              options.copyWith(speakerOn: enabled),
+            );
+          },
+        ),
+      );
+    } else {
+      return MediaDeviceSelectButton(
+        builder: (context, roomCtx, deviceCtx) {
+          final audioOutputs = deviceCtx.audioOutputs?.where((
+            device,
+          ) {
+            return device.label.isNotEmpty && device.label != 'Earpiece';
+          });
+          final selected =
+              deviceCtx.audioOutputs?.firstWhereOrNull(
+                (e) {
+                  return e.deviceId == options.deviceId && e.label.isNotEmpty;
+                },
+              ) ??
+              deviceCtx.audioOutputs?.firstOrNull;
+          return OptionsSheetTile.fromMediaDevice(
+            device: selected,
+            options: audioOutputs ?? [],
+            onOptionChanged: (value) {
+              if (value != null) {
+                onDeviceSelect(value);
+              }
+            },
+            icon: TotemIcons.speaker,
+          );
+        },
+      );
+    }
   }
 
   static Widget fromMediaDevice({

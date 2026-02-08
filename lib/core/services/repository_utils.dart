@@ -26,7 +26,7 @@ class RepositoryUtils {
     required Future<T> Function() apiCall,
     required String operationName,
     bool retryOnNetworkError = false,
-    int maxRetries = 2,
+    int maxRetries = 1,
   }) async {
     final totalAttempts = maxRetries + 1;
 

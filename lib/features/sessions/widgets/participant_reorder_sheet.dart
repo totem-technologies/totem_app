@@ -77,106 +77,118 @@ class _ParticipantReorderWidgetState
 
     return PopScope(
       canPop: !_loading,
-      child: CustomScrollView(
-        shrinkWrap: true,
-        slivers: [
-          const SliverToBoxAdapter(child: SheetDragHandle()),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsetsDirectional.only(
-                start: 20,
-                end: 20,
-                bottom: 6,
-              ),
-              child: Text(
-                'Reorder Participants',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsetsDirectional.only(
-                start: 20,
-                end: 20,
-                bottom: 20,
-              ),
-              child: Text(
-                'Drag to set participant order',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: Colors.black,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: SliverReorderableList(
-              itemCount: participants.length,
-              onReorder: (oldIndex, newIndex) {
-                _handleReorder(context, ref, oldIndex, newIndex);
-              },
-              itemBuilder: (context, index) {
-                final participantIdentity = participants[index];
-
-                final participant = widget.state.participants.firstWhereOrNull(
-                  (p) => p.identity == participantIdentity,
-                );
-
-                return _ParticipantReorderItem(
-                  key: ValueKey(participantIdentity),
-                  participantIdentity: participantIdentity,
-                  participant: participant,
-                  index: index,
-                  isSpeakingNow:
-                      participantIdentity ==
-                      widget.state.sessionState.speakingNow,
-                );
-              },
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                spacing: 16,
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
+      child: Column(
+        children: [
+          const SheetDragHandle(),
+          Expanded(
+            child: CustomScrollView(
+              shrinkWrap: true,
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      start: 20,
+                      end: 20,
+                      bottom: 6,
+                    ),
+                    child: Text(
+                      'Reorder Participants',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        if (_loading) return;
-                        setState(() => _loading = true);
-                        await _updateParticipantOrder(
-                          context,
-                          ref,
-                          _localOrder,
-                        );
-                        if (mounted && context.mounted) {
-                          setState(() => _loading = false);
-                          Navigator.of(context).pop();
-                        }
-                      },
-                      child: _loading
-                          ? const LoadingIndicator(
-                              color: Colors.white,
-                              size: 24,
-                            )
-                          : const Text('Save'),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      start: 20,
+                      end: 20,
+                      bottom: 20,
+                    ),
+                    child: Text(
+                      'Drag to set participant order',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.black,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                ],
-              ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  sliver: SliverReorderableList(
+                    itemCount: participants.length,
+                    onReorder: (oldIndex, newIndex) {
+                      _handleReorder(context, ref, oldIndex, newIndex);
+                    },
+                    itemBuilder: (context, index) {
+                      final participantIdentity = participants[index];
+
+                      final participant = widget.state.participants
+                          .firstWhereOrNull(
+                            (p) => p.identity == participantIdentity,
+                          );
+
+                      return _ParticipantReorderItem(
+                        key: ValueKey(participantIdentity),
+                        participantIdentity: participantIdentity,
+                        participant: participant,
+                        index: index,
+                        isSpeakingNow:
+                            participantIdentity ==
+                            widget.state.sessionState.speakingNow,
+                      );
+                    },
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Row(
+                      spacing: 16,
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              if (_loading) return;
+                              setState(() => _loading = true);
+                              await _updateParticipantOrder(
+                                context,
+                                ref,
+                                _localOrder,
+                              );
+                              if (mounted && context.mounted) {
+                                setState(() => _loading = false);
+                                Navigator.of(context).pop();
+                              }
+                            },
+                            child: _loading
+                                ? const LoadingIndicator(
+                                    color: Colors.white,
+                                    size: 24,
+                                  )
+                                : const Text('Save'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SliverSafeArea(
+                  top: false,
+                  bottom: true,
+                  sliver: SliverToBoxAdapter(),
+                ),
+              ],
             ),
           ),
         ],
@@ -194,15 +206,15 @@ class _ParticipantReorderWidgetState
     final item = _localOrder.removeAt(oldIndex);
     _localOrder.insert(adjustedNewIndex, item);
 
-    final keeperSlug = widget.event.space.author.slug;
-    if (keeperSlug != null) {
-      final keeperIndex = _localOrder.indexOf(keeperSlug);
-      if (keeperIndex != -1 && keeperIndex != 0) {
-        _localOrder
-          ..removeAt(keeperIndex)
-          ..insert(0, keeperSlug);
-      }
-    }
+    // final keeperSlug = widget.event.space.author.slug;
+    // if (keeperSlug != null) {
+    //   final keeperIndex = _localOrder.indexOf(keeperSlug);
+    //   if (keeperIndex != -1 && keeperIndex != 0) {
+    //     _localOrder
+    //       ..removeAt(keeperIndex)
+    //       ..insert(0, keeperSlug);
+    //   }
+    // }
 
     setState(() {});
   }
