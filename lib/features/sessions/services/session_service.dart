@@ -16,8 +16,10 @@ import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
+import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
+import 'package:totem_app/features/sessions/services/utils.dart';
 import 'package:totem_app/shared/logger.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -306,21 +308,19 @@ class Session extends _$Session {
           context.room.localParticipant!,
       ];
 
-      if (state.sessionState.speakingOrder.isNotEmpty) {
-        participants.sort((a, b) {
-          final aIndex = state.sessionState.speakingOrder.indexOf(a.identity);
-          final bIndex = state.sessionState.speakingOrder.indexOf(b.identity);
-          return aIndex.compareTo(bIndex);
-        });
-      }
+      final sortedParticipants = participantsSorting(
+        originalParticiapnts: participants,
+        state: state,
+        showSpeakingNow: true,
+      );
 
-      final hasKeeper = participants.any((p) => isKeeper(p.identity));
+      final hasKeeper = sortedParticipants.any((p) => isKeeper(p.identity));
       if (!_hasKeeperEverJoined && hasKeeper) _hasKeeperEverJoined = true;
       if (state.hasKeeperDisconnected && hasKeeper) {
         _onKeeperConnected();
       }
 
-      state = state.copyWith(participants: participants);
+      state = state.copyWith(participants: sortedParticipants);
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -472,6 +472,9 @@ class Session extends _$Session {
     logger.d('Disposing SessionService and closing connections.');
 
     if (ref.mounted) {
+      try {
+        ref.read(emojiReactionsProvider.notifier).clear();
+      } catch (_) {}
       try {
         if (event != null) {
           ref.invalidate(spaceProvider(event!.space.slug));
