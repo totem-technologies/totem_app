@@ -170,6 +170,7 @@ class Session extends _$Session {
   late final RoomContext context;
   late final EventsListener<RoomEvent> _listener;
   Timer? _timer;
+  Timer? _participantUpdateDebounce;
   static const syncTimerDuration = Duration(seconds: 20);
 
   late SessionOptions _options;
@@ -229,7 +230,7 @@ class Session extends _$Session {
       ..on<DataReceivedEvent>(_onDataReceived)
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
       ..on<ParticipantConnectedEvent>(_onParticipantConnected)
-      ..on<ParticipantEvent>(_updateParticipantsList);
+      ..on<ParticipantEvent>((_) => _debouncedUpdateParticipantsList());
 
     WakelockPlus.enable();
     setupBackgroundMode();
@@ -289,7 +290,15 @@ class Session extends _$Session {
     //     });
   }
 
-  void _updateParticipantsList([ParticipantEvent? event]) {
+  void _debouncedUpdateParticipantsList() {
+    _participantUpdateDebounce?.cancel();
+    _participantUpdateDebounce = Timer(
+      const Duration(milliseconds: 100),
+      _updateParticipantsList,
+    );
+  }
+
+  void _updateParticipantsList() {
     try {
       final participants = <Participant>[
         ...context.room.remoteParticipants.values,
@@ -480,6 +489,9 @@ class Session extends _$Session {
 
     _timer?.cancel();
     _timer = null;
+
+    _participantUpdateDebounce?.cancel();
+    _participantUpdateDebounce = null;
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
