@@ -43,8 +43,7 @@ class EmojiReactions extends _$EmojiReactions {
         emoji,
         overlayKey: EmojiReactions.emojiOverlayKey,
       );
-      removeReaction(entry);
-    } catch (_) {
+    } finally {
       removeReaction(entry);
     }
   }
