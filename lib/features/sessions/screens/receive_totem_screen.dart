@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
@@ -7,24 +9,23 @@ import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 
-class ReceiveTotemScreen extends StatelessWidget {
+class ReceiveTotemScreen extends ConsumerWidget {
   const ReceiveTotemScreen({
     required this.actionBar,
     required this.onAcceptTotem,
-    required this.session,
-    required this.sessionState,
     super.key,
   });
 
   final Widget actionBar;
   final Future<void> Function() onAcceptTotem;
-  final Session session;
-  final SessionRoomState sessionState;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sessionStatus = ref.watch(sessionStatusProvider);
+    final session = ref.watch(currentSessionProvider);
+
     return RoomBackground(
-      status: sessionState.sessionState.status,
+      status: sessionStatus,
       padding: const EdgeInsetsDirectional.all(20),
       child: SafeArea(
         child: OrientationBuilder(
@@ -36,9 +37,11 @@ class ReceiveTotemScreen extends StatelessWidget {
             final videoCard = Padding(
               padding: const EdgeInsetsDirectional.all(20),
               child: LocalParticipantVideoCard(
-                isCameraOn: session.context!.room.localParticipant!
-                    .isCameraEnabled(),
-                videoTrack: session.localVideoTrack,
+                isCameraOn:
+                    session?.context!.room.localParticipant!
+                        .isCameraEnabled() ??
+                    true,
+                videoTrack: session?.localVideoTrack,
               ),
             );
 

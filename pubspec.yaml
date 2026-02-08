@@ -57,7 +57,7 @@ dependencies:
   markdown: ^7.3.0
   # flutter_native_splash: ^2.4.6
   pinput: ^6.0.1
-  flutter_boring_avatars: ^2.0.1
+  flutter_boring_avatars: ^2.1.0
   flutter_svg: ^2.2.3
   image_picker: ^1.1.2
   timeago: ^3.7.1

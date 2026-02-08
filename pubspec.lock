@@ -522,10 +522,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_boring_avatars
-      sha256: "281305a2f5441d00b12ff36f94ba8ae3b5eb3dda4114953f6040c8d899e99773"
+      sha256: c4439a5e6753db58debd8d85a92e9747727e5f5c05cc1f3a252ba70d2c1df720
       url: "https://pub.dev"
     source: hosted
-    version: "2.0.1"
+    version: "2.1.0"
   flutter_cache_manager:
     dependency: transitive
     description:

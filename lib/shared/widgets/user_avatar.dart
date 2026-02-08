@@ -151,7 +151,7 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
-  Offset _dragPosition = Offset.zero;
+  final _dragPositionNotifier = ValueNotifier<Offset>(Offset.zero);
   late final _transformationController = TransformationController();
 
   @override
@@ -167,6 +167,7 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
   @override
   void dispose() {
     _controller.dispose();
+    _dragPositionNotifier.dispose();
     super.dispose();
   }
 
@@ -176,8 +177,9 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
       behavior: HitTestBehavior.deferToChild,
       onTap: () => Navigator.of(context).pop(),
       child: AnimatedBuilder(
-        animation: _controller,
+        animation: Listenable.merge([_controller, _dragPositionNotifier]),
         builder: (context, child) {
+          final dragPosition = _dragPositionNotifier.value;
           return ColoredBox(
             color: Colors.black.withValues(
               alpha: clampDouble(0.0 - _controller.value, 0, 1),
@@ -188,20 +190,16 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
               minScale: 1,
               maxScale: 4,
               onInteractionUpdate: (details) {
-                setState(() {
-                  _dragPosition += details.focalPointDelta;
-                  final dragDistance = _dragPosition.dy.abs();
-                  _controller.value = clampDouble(dragDistance / 200, 0, 1);
-                });
+                _dragPositionNotifier.value += details.focalPointDelta;
+                final dragDistance = _dragPositionNotifier.value.dy.abs();
+                _controller.value = clampDouble(dragDistance / 200, 0, 1);
               },
               onInteractionEnd: (details) {
                 if (_controller.value > 0.5) {
                   Navigator.of(context).pop();
                 } else {
                   _transformationController.value = Matrix4.identity();
-                  setState(() {
-                    _dragPosition = Offset.zero;
-                  });
+                  _dragPositionNotifier.value = Offset.zero;
                   _controller.reverse();
                 }
               },
@@ -209,7 +207,7 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
                 child: Padding(
                   padding: const EdgeInsetsDirectional.all(50),
                   child: Transform.translate(
-                    offset: _dragPosition,
+                    offset: dragPosition,
                     child: Transform.scale(
                       scale: _scaleAnimation.value,
                       child: child,

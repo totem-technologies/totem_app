@@ -372,11 +372,10 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                 } else if (videoTrack == null) {
                   return const LoadingVideoPlaceholder();
                 }
-                return RepaintBoundary(
-                  child: VideoTrackRenderer(
-                    videoTrack!,
-                    fit: VideoViewFit.cover,
-                  ),
+                return VideoTrackRenderer(
+                  videoTrack!,
+                  fit: VideoViewFit.cover,
+                  renderMode: VideoRenderMode.platformView,
                 );
               },
             ),
@@ -402,12 +401,13 @@ class ParticipantVideo extends ConsumerWidget {
 
     if (videoTrack != null && videoTrack.subscribed && !videoTrack.muted) {
       return IgnorePointer(
-        child: RepaintBoundary(
-          child: VideoTrackRenderer(
-            key: ValueKey(videoTrack.track!.sid),
-            videoTrack.track! as VideoTrack,
-            fit: VideoViewFit.cover,
-          ),
+        child: VideoTrackRenderer(
+          key: ValueKey(videoTrack.track!.sid),
+          videoTrack.track! as VideoTrack,
+          fit: VideoViewFit.cover,
+          // Use platform view for better CPU performance on iOS
+          // https://github.com/livekit/client-sdk-flutter/issues/364
+          renderMode: VideoRenderMode.platformView,
         ),
       );
     } else {
