@@ -365,7 +365,7 @@ final class UnsubscribeFromSpaceProvider
 }
 
 String _$unsubscribeFromSpaceHash() =>
-    r'b81f25d8cdaa7c79c0ae6d59c85a2c0f1aac6103';
+    r'd76f0421640f7cc09c6e995a469894c0a79df94e';
 
 final class UnsubscribeFromSpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
