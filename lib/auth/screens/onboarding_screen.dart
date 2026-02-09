@@ -129,6 +129,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       child: Material(
         // Use a Stack to layer the fixed top bar and the paged content
         child: Stack(
+          alignment: Alignment.topCenter,
           children: [
             PageView.builder(
               hitTestBehavior: HitTestBehavior.translucent,
@@ -144,50 +145,47 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ),
 
             /// Fixed Top Container (logo, skip button, gradient)
-            Align(
-              alignment: Alignment.topCenter,
-              child: Container(
-                height: 150,
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      AppTheme.slate,
-                      Colors.transparent,
-                    ],
-                  ),
+            Container(
+              height: 150,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppTheme.slate,
+                    Colors.transparent,
+                  ],
                 ),
-                child: SafeArea(
-                  minimum: const EdgeInsets.symmetric(horizontal: 20),
-                  bottom: false,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IgnorePointer(
-                        child: SvgPicture.asset(
-                          'assets/logo/logo-black.svg',
-                          colorFilter: const ColorFilter.mode(
-                            AppTheme.white,
-                            BlendMode.srcIn,
-                          ),
-                          width: 100,
+              ),
+              child: SafeArea(
+                minimum: const EdgeInsets.symmetric(horizontal: 20),
+                bottom: false,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IgnorePointer(
+                      child: SvgPicture.asset(
+                        'assets/logo/logo-black.svg',
+                        colorFilter: const ColorFilter.mode(
+                          AppTheme.white,
+                          BlendMode.srcIn,
                         ),
+                        width: 100,
                       ),
-                      const Spacer(),
-                      Semantics(
-                        label: 'Log in button',
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppTheme.white,
-                          ),
-                          onPressed: _onSkip,
-                          child: const Text('Log in'),
+                    ),
+                    const Spacer(),
+                    Semantics(
+                      label: 'Log in button',
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.white,
                         ),
+                        onPressed: _onSkip,
+                        child: const Text('Log in'),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -314,69 +312,56 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               ),
                             ),
                             const SizedBox(width: 10),
-                            AnimatedSize(
-                              duration: const Duration(milliseconds: 450),
-                              curve: Curves.easeInOutCubic,
-                              alignment: Alignment.centerRight,
-                              child: AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 500),
-                                switchInCurve: Curves.easeOutCubic,
-                                switchOutCurve: Curves.easeInCubic,
-                                transitionBuilder: (child, animation) {
-                                  final scale =
-                                      Tween<double>(
-                                        begin: 0.98,
-                                        end: 1,
-                                      ).animate(
-                                        CurvedAnimation(
-                                          parent: animation,
-                                          curve: Curves.easeOutCubic,
-                                        ),
-                                      );
-
-                                  return FadeTransition(
-                                    opacity: animation,
-                                    child: ScaleTransition(
-                                      scale: scale,
-                                      child: child,
+                            Semantics(
+                              label: isLastPage
+                                  ? 'Create account'
+                                  : 'Next page',
+                              button: true,
+                              child: Material(
+                                color: AppTheme.mauve,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(27),
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(27),
+                                  onTap: isLastPage ? _onSkip : _onNext,
+                                  child: AnimatedSize(
+                                    duration: const Duration(
+                                      milliseconds: 400,
                                     ),
-                                  );
-                                },
-                                child: isLastPage
-                                    ? Semantics(
-                                        key: const ValueKey(
-                                          'create_account_cta',
+                                    curve: Curves.easeInOutCubic,
+                                    alignment: Alignment.centerRight,
+                                    child: SizedBox(
+                                      height: 54,
+                                      child: Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: isLastPage ? 24 : 15,
                                         ),
-                                        label: 'Create account',
-                                        button: true,
-                                        child: ConstrainedBox(
-                                          constraints: const BoxConstraints(
-                                            minHeight: 54,
-                                          ),
-                                          child: ElevatedButton(
-                                            onPressed: _onSkip,
-                                            child: const Text('Create account'),
-                                          ),
-                                        ),
-                                      )
-                                    : Semantics(
-                                        key: const ValueKey(
-                                          'next_page_chevron',
-                                        ),
-                                        label: 'Next page',
-                                        button: true,
-                                        child: GestureDetector(
-                                          onTap: _onNext,
-                                          child: const CircleAvatar(
-                                            radius: 27,
-                                            backgroundColor: AppTheme.mauve,
-                                            child: Icon(
-                                              Icons.arrow_forward_ios,
-                                              color: AppTheme.white,
-                                            ),
-                                          ),
+                                        child: Center(
+                                          widthFactor: 1,
+                                          child: isLastPage
+                                              ? const Text(
+                                                  'Create account',
+                                                  style: TextStyle(
+                                                    fontFamily: AppTheme
+                                                        .fontFamilySans,
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 21,
+                                                    height: 1.2,
+                                                    letterSpacing: 0,
+                                                    color: AppTheme.white,
+                                                  ),
+                                                )
+                                              : const Icon(
+                                                  Icons.arrow_forward_ios,
+                                                  color: AppTheme.white,
+                                                ),
                                         ),
                                       ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ],
