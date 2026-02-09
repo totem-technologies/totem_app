@@ -268,7 +268,7 @@ class _RoomContent extends ConsumerWidget {
         sessionStatus == SessionStatus.ended) {
       return RoomBackground(
         status: sessionStatus,
-        child: SessionEndedScreen(event: event),
+        child: SessionDisconnectedScreen(event: event),
       );
     }
 
@@ -361,10 +361,10 @@ class _RoomContent extends ConsumerWidget {
       case RoomConnectionState.connecting:
         return loadingScreen;
       case RoomConnectionState.disconnected:
-        return SessionEndedScreen(event: event);
+        return SessionDisconnectedScreen(event: event);
       case RoomConnectionState.connected:
         if (sessionStatus == SessionStatus.ended) {
-          return SessionEndedScreen(event: event);
+          return SessionDisconnectedScreen(event: event);
         }
 
         if (session.context?.localParticipant == null) {

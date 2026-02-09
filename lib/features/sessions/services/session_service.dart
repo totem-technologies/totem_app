@@ -33,7 +33,19 @@ part 'keeper_control.dart';
 part 'participant_control.dart';
 part 'session_service.g.dart';
 
-enum SessionEndedReason { finished, keeperLeft, keeperNotJoined }
+enum SessionDisconnectedReason {
+  /// The session has ended normally, usually by the keeper.
+  finished,
+
+  /// The keeper left the session and didn't come back within the timeout period.
+  keeperLeft,
+
+  /// The keeper never joined the session, and the timeout period has passed.
+  keeperNotJoined,
+
+  /// The user was kicked out of the session by the keeper.
+  removed,
+}
 
 enum SessionCommunicationTopics {
   emoji('lk-emoji-topic'),
@@ -182,7 +194,7 @@ class Session extends _$Session {
   bool _hasKeeperEverJoined = false;
   Timer? _notificationTimer;
   List<VoidCallback> closeKeeperLeftNotification = [];
-  SessionEndedReason reason = SessionEndedReason.finished;
+  SessionDisconnectedReason reason = SessionDisconnectedReason.finished;
 
   static const defaultCameraOptions = CameraCaptureOptions(
     params: VideoParametersPresets.h540_169,
@@ -460,7 +472,7 @@ class Session extends _$Session {
   }
 
   Future<void> _onSessionEnd() async {
-    reason = SessionEndedReason.finished;
+    reason = SessionDisconnectedReason.finished;
     context?.disconnect();
   }
 
