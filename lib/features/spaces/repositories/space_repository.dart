@@ -167,5 +167,6 @@ Future<List<SessionDetailSchema>> getRecommendedSessions(
         ),
     operationName: 'get recommended sessions',
     maxRetries: 0,
+    timeout: const Duration(seconds: 5),
   );
 }

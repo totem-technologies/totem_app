@@ -17,6 +17,7 @@ class RepositoryUtils {
   /// [operationName] - Human-readable name for the operation (used in logs)
   /// [retryOnNetworkError] - Whether to retry on network errors
   /// [maxRetries] - Maximum number of retry attempts (0 = no retries, just 1 attempt)
+  /// [timeout] - Optional timeout for each attempt
   ///
   /// Returns the result of [apiCall] if successful.
   /// Throws [AppAuthException] for authentication errors.
@@ -27,12 +28,14 @@ class RepositoryUtils {
     required String operationName,
     bool retryOnNetworkError = false,
     int maxRetries = 1,
+    Duration? timeout,
   }) async {
     final totalAttempts = maxRetries + 1;
 
     for (int attempt = 0; attempt < totalAttempts; attempt++) {
       try {
-        return await apiCall();
+        final future = apiCall();
+        return await (timeout != null ? future.timeout(timeout) : future);
       } catch (error, stackTrace) {
         if (error is AppAuthException) {
           rethrow;
