@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_app/shared/assets.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -23,21 +24,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       description:
           'Totem provides online discussion groups where you can '
           'cultivate your voice, and be a better listener.',
-      image: 'assets/images/onboarding_1.jpg',
+      image: TotemAssets.onboarding1,
     ),
     const _OnboardingData(
       title: 'Our Promise',
       description:
           'We provide a moderated space you can safely express '
           'yourself and learn from others.',
-      image: 'assets/images/onboarding_2.jpg',
+      image: TotemAssets.onboarding2,
     ),
     const _OnboardingData(
       title: 'Our Ask',
       description:
           'We ask that you keep everything confidential, and that '
           'you only speak from your experience.',
-      image: 'assets/images/onboarding_3.jpg',
+      image: TotemAssets.onboarding3,
     ),
   ];
 
@@ -130,6 +131,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         child: Stack(
           children: [
             PageView.builder(
+              hitTestBehavior: HitTestBehavior.translucent,
               itemCount: onboardingData.length,
               controller: _backgroundPageController,
               onPageChanged: (index) => setState(() => currentPage = index),
@@ -159,16 +161,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ),
                 child: SafeArea(
                   minimum: const EdgeInsets.symmetric(horizontal: 20),
+                  bottom: false,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      SvgPicture.asset(
-                        'assets/logo/logo-black.svg',
-                        colorFilter: const ColorFilter.mode(
-                          AppTheme.white,
-                          BlendMode.srcIn,
+                      IgnorePointer(
+                        child: SvgPicture.asset(
+                          'assets/logo/logo-black.svg',
+                          colorFilter: const ColorFilter.mode(
+                            AppTheme.white,
+                            BlendMode.srcIn,
+                          ),
+                          width: 100,
                         ),
-                        width: 100,
                       ),
                       const Spacer(),
                       Semantics(
@@ -202,7 +207,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                 ),
                 child: Container(
-                  height: 400,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  height: MediaQuery.textScalerOf(context).scale(200),
                   width: double.infinity,
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
@@ -215,48 +221,51 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     ),
                   ),
                   child: SafeArea(
-                    minimum: const EdgeInsets.symmetric(horizontal: 20),
+                    top: false,
                     child: Column(
                       children: [
                         // Onboarding title
                         Expanded(
-                          child: PageView.builder(
-                            itemCount: onboardingData.length,
-                            controller: _contentPageController,
-                            onPageChanged: (index) =>
-                                setState(() => currentPage = index),
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemBuilder: (context, index) {
-                              final onboarding = onboardingData[index];
-                              final textTheme = Theme.of(context).textTheme;
-                              return Column(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  Semantics(
-                                    label: 'Onboarding title',
-                                    child: Text(
-                                      onboarding.title,
-                                      style: textTheme.headlineMedium?.copyWith(
-                                        color: AppTheme.white,
+                          child: IgnorePointer(
+                            child: PageView.builder(
+                              itemCount: onboardingData.length,
+                              controller: _contentPageController,
+                              onPageChanged: (index) =>
+                                  setState(() => currentPage = index),
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemBuilder: (context, index) {
+                                final onboarding = onboardingData[index];
+                                final textTheme = Theme.of(context).textTheme;
+                                return Column(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Semantics(
+                                      label: 'Onboarding title',
+                                      child: Text(
+                                        onboarding.title,
+                                        style: textTheme.headlineMedium
+                                            ?.copyWith(
+                                              color: AppTheme.white,
+                                            ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  // Onboarding description
-                                  Semantics(
-                                    label: 'Onboarding description',
-                                    child: Text(
-                                      onboarding.description,
-                                      textAlign: TextAlign.center,
-                                      style: textTheme.bodyMedium?.copyWith(
-                                        color: AppTheme.white,
+                                    const SizedBox(height: 10),
+                                    // Onboarding description
+                                    Semantics(
+                                      label: 'Onboarding description',
+                                      child: Text(
+                                        onboarding.description,
+                                        textAlign: TextAlign.center,
+                                        style: textTheme.bodyMedium?.copyWith(
+                                          color: AppTheme.white,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                ],
-                              );
-                            },
+                                    const SizedBox(height: 20),
+                                  ],
+                                );
+                              },
+                            ),
                           ),
                         ),
                         Row(
@@ -264,19 +273,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           children: [
                             ...List.generate(
                               onboardingData.length,
-                              (index) => AnimatedContainer(
-                                key: ValueKey(index),
-                                duration: const Duration(milliseconds: 200),
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 4,
-                                ),
-                                width: index == currentPage ? 30 : 10,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  color: index == currentPage
-                                      ? AppTheme.mauve
-                                      : AppTheme.white,
-                                  borderRadius: BorderRadius.circular(5),
+                              (index) => IgnorePointer(
+                                child: AnimatedContainer(
+                                  key: ValueKey(index),
+                                  duration: const Duration(milliseconds: 200),
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                  ),
+                                  width: index == currentPage ? 30 : 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: index == currentPage
+                                        ? AppTheme.mauve
+                                        : AppTheme.white,
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
                                 ),
                               ),
                             ),
