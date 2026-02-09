@@ -247,9 +247,12 @@ class NotMyTurn extends ConsumerWidget {
               bottom: false,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 20,
+                spacing: 16,
                 children: [
-                  Expanded(flex: 3, child: speakerVideo),
+                  SizedBox(
+                    height: MediaQuery.heightOf(context) * 0.475,
+                    child: speakerVideo,
+                  ),
                   Padding(
                     padding: const EdgeInsetsDirectional.symmetric(
                       horizontal: 28,
