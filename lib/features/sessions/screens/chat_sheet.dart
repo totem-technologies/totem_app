@@ -38,6 +38,7 @@ class SessionChatSheet extends ConsumerStatefulWidget {
 
 class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
   final _messageController = TextEditingController();
+  int _previousMessageCount = 0;
 
   @override
   void dispose() {
@@ -64,23 +65,39 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
 
     return ChatBuilder(
       builder: (context, enabled, chatCtx, messages) {
-        final listedMessages = List<ChatMessage>.from(messages.reversed);
         return DraggableScrollableSheet(
           maxChildSize: 0.9,
           initialChildSize: 0.75,
           expand: false,
           builder: (context, scrollController) {
-            Future<void> send() async {
+            if (messages.length != _previousMessageCount) {
+              _previousMessageCount = messages.length;
+              if (messages.isNotEmpty) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (scrollController.hasClients) {
+                    scrollController.jumpTo(
+                      scrollController.position.maxScrollExtent,
+                    );
+                  }
+                });
+              }
+            }
+
+            void send() {
               final message = _messageController.text.trim();
               if (message.isNotEmpty) {
                 chatCtx.sendMessage(message);
                 _messageController.clear();
               }
-              await scrollController.animateTo(
-                scrollController.position.maxScrollExtent + 80,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOut,
-              );
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (scrollController.hasClients) {
+                  scrollController.animateTo(
+                    scrollController.position.maxScrollExtent,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                  );
+                }
+              });
             }
 
             return Scaffold(
@@ -132,11 +149,10 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                               start: 20,
                               end: 20,
                             ),
-                            reverse: true,
                             controller: scrollController,
-                            itemCount: listedMessages.length,
+                            itemCount: messages.length,
                             itemBuilder: (context, index) {
-                              final msg = listedMessages[index];
+                              final msg = messages[index];
                               final isMine =
                                   msg.participant?.identity == user?.email;
                               if (isMine) {
@@ -144,14 +160,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                               } else {
                                 final showAvatar =
                                     index == 0 ||
-                                    listedMessages[(listedMessages.length -
-                                                    index)
-                                                .clamp(
-                                                  0,
-                                                  listedMessages.length - 1,
-                                                )]
-                                            .participant
-                                            ?.identity !=
+                                    messages[index - 1].participant?.identity !=
                                         msg.participant?.identity;
                                 return OtherChatBubble(
                                   showAvatar: showAvatar,
