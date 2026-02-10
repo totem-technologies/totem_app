@@ -37,7 +37,7 @@ class ParticipantCard extends ConsumerWidget {
 
     const overlayPadding = 6.0;
     final isKeeper = event.space.author.slug == participant.identity;
-    final shadowColor = isKeeper ? const Color(0x80FFD000) : Colors.black45;
+    const shadowColor = Color(0x80FFD000);
 
     return RepaintBoundary(
       child: AspectRatio(
@@ -50,24 +50,26 @@ class ParticipantCard extends ConsumerWidget {
               color: isKeeper ? const Color(0xFFFFD000) : Colors.white,
               width: 2,
             ),
-            boxShadow: [
-              BoxShadow(
-                offset: const Offset(0, 3),
-                blurRadius: 1,
-                spreadRadius: -2,
-                color: shadowColor,
-              ),
-              BoxShadow(
-                offset: const Offset(0, 2),
-                blurRadius: 2,
-                color: shadowColor,
-              ),
-              BoxShadow(
-                offset: const Offset(0, 1),
-                blurRadius: 5,
-                color: shadowColor,
-              ),
-            ],
+            boxShadow: isKeeper
+                ? const [
+                    BoxShadow(
+                      offset: Offset(0, 3),
+                      blurRadius: 1,
+                      spreadRadius: -2,
+                      color: shadowColor,
+                    ),
+                    BoxShadow(
+                      offset: Offset(0, 2),
+                      blurRadius: 2,
+                      color: shadowColor,
+                    ),
+                    BoxShadow(
+                      offset: Offset(0, 1),
+                      blurRadius: 5,
+                      color: shadowColor,
+                    ),
+                  ]
+                : null,
           ),
           clipBehavior: Clip.hardEdge,
           child: ClipRRect(
