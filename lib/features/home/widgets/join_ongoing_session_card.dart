@@ -11,6 +11,7 @@ import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Keeps track of shown sheets to avoid showing multiple times in a row.
 final _shownSheetFor = <String>{};
@@ -174,11 +175,21 @@ class OngoingSessionSheet extends StatelessWidget {
               ),
             ),
             ElevatedButton(
-              onPressed: () async {
+              onPressed: () {
                 Navigator.of(context).pop();
-                await context.push(
-                  RouteNames.spaceEvent(event.space.slug, event.slug),
-                );
+                switch (event.meetingProvider) {
+                  case MeetingProviderEnum.livekit:
+                    context.pushNamed(
+                      RouteNames.videoSessionPrejoin,
+                      extra: event.slug,
+                    );
+                  case MeetingProviderEnum.googleMeet:
+                    launchUrl(
+                      Uri.parse(event.calLink),
+                      mode: LaunchMode.externalApplication,
+                    );
+                  default:
+                }
               },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsetsDirectional.symmetric(
