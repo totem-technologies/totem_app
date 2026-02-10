@@ -344,8 +344,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                               ? const Text(
                                                   'Create account',
                                                   style: TextStyle(
-                                                    fontFamily: AppTheme
-                                                        .fontFamilySans,
+                                                    fontFamily:
+                                                        AppTheme.fontFamilySans,
                                                     fontWeight: FontWeight.w600,
                                                     fontSize: 21,
                                                     height: 1.2,
