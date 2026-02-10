@@ -77,7 +77,7 @@ extension DevicesControl on Session {
       );
     }
 
-    // TODO(bdlukaa): This doesn't work on mobile.
+    // This doesn't work on mobile.
     // See https://github.com/livekit/client-sdk-flutter/issues/959
     await context?.room.setAudioInputDevice(device);
     ref.notifyListeners();
@@ -88,7 +88,7 @@ extension DevicesControl on Session {
   }
 
   Future<void> selectAudioOutputDevice(MediaDevice device) async {
-    // TODO(bdlukaa): This doesn't work on mobile.
+    // This doesn't work on mobile.
     // See https://github.com/livekit/client-sdk-flutter/issues/858
     await context?.room.setAudioOutputDevice(device);
     ref.notifyListeners();

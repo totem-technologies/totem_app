@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,11 +71,47 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   void _initializeAndCheckPermissions() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _requestPermissions();
+      await _detectHeadphones();
       _initializeLocalVideo();
       if (mounted) {
         SentryDisplayWidget.of(context).reportFullyDisplayed();
       }
     });
+  }
+
+  Future<void> _detectHeadphones() async {
+    const externalAudioOutputTypes = <AudioDeviceType>{
+      AudioDeviceType.wiredHeadset,
+      AudioDeviceType.wiredHeadphones,
+      AudioDeviceType.bluetoothSco,
+      AudioDeviceType.bluetoothA2dp,
+      AudioDeviceType.bluetoothLe,
+      AudioDeviceType.airPlay,
+      AudioDeviceType.hdmi,
+      AudioDeviceType.usbAudio,
+      AudioDeviceType.carAudio,
+    };
+    try {
+      final session = await AudioSession.instance;
+      final Set<AudioDevice> devices = await session.getDevices(
+        includeInputs: false,
+      );
+      final hasExternalOutput = devices.any(
+        (d) => externalAudioOutputTypes.contains(d.type),
+      );
+
+      if (hasExternalOutput && mounted) {
+        setState(() {
+          _audioOutputOptions = const AudioOutputOptions(speakerOn: false);
+        });
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to detect audio output devices',
+      );
+    }
   }
 
   Future<void> _requestPermissions() async {
