@@ -19,7 +19,7 @@ import 'package:totem_app/features/sessions/screens/my_turn.dart';
 import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
 import 'package:totem_app/features/sessions/screens/options_sheet.dart';
 import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
-import 'package:totem_app/features/sessions/screens/session_ended.dart';
+import 'package:totem_app/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';

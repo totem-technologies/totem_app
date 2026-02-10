@@ -486,32 +486,6 @@ class PrejoinOptionsSheet extends StatelessWidget {
           },
         ),
         const SizedBox(height: 14),
-        FutureBuilder(
-          future: Hardware.instance.audioInputs(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) return const SizedBox.shrink();
-            final audioInputs = snapshot.data!;
-            final selected =
-                audioInputs.firstWhereOrNull(
-                  (e) => e.deviceId == audioOptions.deviceId,
-                ) ??
-                audioInputs.firstOrNull;
-            return OptionsSheetTile.fromMediaDevice(
-              device: selected,
-              options: audioInputs,
-              onOptionChanged: (value) async {
-                if (value != null) {
-                  onAudioChanged(
-                    AudioCaptureOptions(deviceId: value.deviceId),
-                  );
-                  Navigator.of(context).pop();
-                }
-              },
-              icon: TotemIcons.microphoneOn,
-            );
-          },
-        ),
-        const SizedBox(height: 14),
         OptionsSheetTile.output(
           audioOutputOptions,
           (options) {
