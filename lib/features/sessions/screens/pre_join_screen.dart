@@ -8,6 +8,7 @@ import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
@@ -92,19 +93,36 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       AudioDeviceType.carAudio,
     };
     try {
-      final session = await AudioSession.instance;
-      final Set<AudioDevice> devices = await session.getDevices(
-        includeInputs: false,
-      );
-      final hasExternalOutput = devices.any(
-        (d) => externalAudioOutputTypes.contains(d.type),
-      );
-
-      if (hasExternalOutput && mounted) {
-        setState(() {
-          _audioOutputOptions = const AudioOutputOptions(speakerOn: false);
-        });
+      bool? speakerOn;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final savedPreference = prefs.getBool(
+          DevicesControl.speakerPreferenceKey,
+        );
+        if (savedPreference != null) speakerOn = savedPreference;
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to load speaker preference',
+        );
       }
+
+      if (speakerOn == null) {
+        final session = await AudioSession.instance;
+        final Set<AudioDevice> devices = await session.getDevices(
+          includeInputs: false,
+        );
+        final hasExternalOutput = devices.any(
+          (d) => externalAudioOutputTypes.contains(d.type),
+        );
+        speakerOn = hasExternalOutput;
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _audioOutputOptions = AudioOutputOptions(speakerOn: speakerOn);
+      });
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,

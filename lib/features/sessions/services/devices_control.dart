@@ -4,6 +4,60 @@
 part of 'session_service.dart';
 
 extension DevicesControl on Session {
+  static const speakerPreferenceKey = 'speaker_preference';
+
+  static const _externalAudioOutputTypes = <audio.AudioDeviceType>{
+    audio.AudioDeviceType.wiredHeadset,
+    audio.AudioDeviceType.wiredHeadphones,
+    audio.AudioDeviceType.bluetoothSco,
+    audio.AudioDeviceType.bluetoothA2dp,
+    audio.AudioDeviceType.bluetoothLe,
+    audio.AudioDeviceType.airPlay,
+    audio.AudioDeviceType.hdmi,
+    audio.AudioDeviceType.usbAudio,
+    audio.AudioDeviceType.carAudio,
+  };
+
+  Future<void> setupDeviceChangeListener() async {
+    try {
+      final session = await audio.AudioSession.instance;
+
+      _becomingNoisySubscription = session.becomingNoisyEventStream.listen((_) {
+        logger.i(
+          'Headphones unplugged, restoring speaker to $_userSpeakerPreference.',
+        );
+        _autoSetSpeakerphone(_userSpeakerPreference);
+      });
+
+      _devicesChangedSubscription = session.devicesChangedEventStream.listen((
+        event,
+      ) {
+        final addedExternal = event.devicesAdded
+            .where((d) => d.isOutput)
+            .any((d) => _externalAudioOutputTypes.contains(d.type));
+        final removedExternal = event.devicesRemoved
+            .where((d) => d.isOutput)
+            .any((d) => _externalAudioOutputTypes.contains(d.type));
+
+        if (addedExternal) {
+          logger.i('External audio output connected, disabling speaker.');
+          _autoSetSpeakerphone(false);
+        } else if (removedExternal) {
+          logger.i(
+            'External audio output disconnected, restoring speaker to $_userSpeakerPreference.',
+          );
+          _autoSetSpeakerphone(_userSpeakerPreference);
+        }
+      });
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to setup device change listener',
+      );
+    }
+  }
+
   String? get selectedCameraDeviceId {
     final userTrack = context?.localParticipant
         ?.getTrackPublications()
@@ -59,6 +113,14 @@ extension DevicesControl on Session {
   bool get isSpeakerphoneEnabled => context?.room.speakerOn ?? false;
 
   Future<void> setSpeakerphone(bool enabled) async {
+    _userSpeakerPreference = enabled;
+    await _autoSetSpeakerphone(enabled);
+    SharedPreferences.getInstance().then(
+      (prefs) => prefs.setBool(DevicesControl.speakerPreferenceKey, enabled),
+    );
+  }
+
+  Future<void> _autoSetSpeakerphone(bool enabled) async {
     await context?.room.setSpeakerOn(enabled);
     ref.notifyListeners();
   }
@@ -77,7 +139,6 @@ extension DevicesControl on Session {
       );
     }
 
-    // This doesn't work on mobile.
     // See https://github.com/livekit/client-sdk-flutter/issues/959
     await context?.room.setAudioInputDevice(device);
     ref.notifyListeners();
@@ -88,7 +149,6 @@ extension DevicesControl on Session {
   }
 
   Future<void> selectAudioOutputDevice(MediaDevice device) async {
-    // This doesn't work on mobile.
     // See https://github.com/livekit/client-sdk-flutter/issues/858
     await context?.room.setAudioOutputDevice(device);
     ref.notifyListeners();

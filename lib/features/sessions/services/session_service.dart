@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:audio_session/audio_session.dart' as audio;
 import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
@@ -10,6 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage, logger;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
@@ -196,6 +198,11 @@ class Session extends _$Session {
   List<VoidCallback> closeKeeperLeftNotification = [];
   SessionDisconnectedReason reason = SessionDisconnectedReason.finished;
 
+  StreamSubscription<void>? _becomingNoisySubscription;
+  StreamSubscription<audio.AudioDevicesChangedEvent>?
+  _devicesChangedSubscription;
+  bool _userSpeakerPreference = true;
+
   static const defaultCameraOptions = CameraCaptureOptions(
     params: VideoParametersPresets.h540_169,
   );
@@ -343,8 +350,10 @@ class Session extends _$Session {
     // context.room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
     state = state.copyWith(connectionState: RoomConnectionState.connected);
 
+    _userSpeakerPreference = context?.room.speakerOn ?? true;
     options.onConnected();
     _updateParticipantsList();
+    setupDeviceChangeListener();
   }
 
   void _onDisconnected() {
@@ -503,6 +512,12 @@ class Session extends _$Session {
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
+
+    _becomingNoisySubscription?.cancel();
+    _becomingNoisySubscription = null;
+
+    _devicesChangedSubscription?.cancel();
+    _devicesChangedSubscription = null;
 
     closeKeeperLeftNotifications();
 
