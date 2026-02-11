@@ -72,7 +72,8 @@ class UpcomingSessionData {
         final hasAvailableSeats = event.seatsLeft > 0;
         final userIsAttending = event.attending;
 
-        final shouldInclude = isFutureSession &&
+        final shouldInclude =
+            isFutureSession &&
             (hasAvailableSeats ||
                 (includeAttendingFullSessions && userIsAttending));
 
