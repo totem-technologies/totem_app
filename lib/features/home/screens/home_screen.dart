@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/home/models/upcoming_session_data.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/home/screens/home_loading_screen.dart';
 import 'package:totem_app/features/home/widgets/next_session_card.dart';
 import 'package:totem_app/features/home/widgets/upcoming_session_card.dart';
 import 'package:totem_app/features/home/widgets/welcome_card.dart';
+import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/utils.dart';
@@ -82,7 +84,7 @@ class HomeScreen extends ConsumerWidget {
                                 ),
                               ),
                             ),
-                            const _ViewAllButton(),
+                            const _ViewAllButton(filterMySessions: true),
                           ],
                         ),
                       ),
@@ -204,15 +206,22 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _ViewAllButton extends StatelessWidget {
-  const _ViewAllButton();
+class _ViewAllButton extends ConsumerWidget {
+  const _ViewAllButton({this.filterMySessions = false});
+
+  final bool filterMySessions;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
     return TextButton(
-      onPressed: () => toHome(HomeRoutes.spaces),
+      onPressed: () {
+        if (filterMySessions) {
+          ref.read(mySessionsFilterProvider.notifier).setMySessionFilter(true);
+        }
+        toHome(HomeRoutes.spaces);
+      },
       style: TextButton.styleFrom(
         padding: EdgeInsetsDirectional.zero,
         minimumSize: Size.zero,
@@ -223,15 +232,15 @@ class _ViewAllButton extends StatelessWidget {
         children: [
           Text(
             'View All',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.primary,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppTheme.gray,
               fontWeight: FontWeight.w500,
             ),
           ),
-          Icon(
+          const Icon(
             Icons.chevron_right,
             size: 18,
-            color: theme.colorScheme.primary,
+            color: AppTheme.gray,
           ),
         ],
       ),

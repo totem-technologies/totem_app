@@ -38,17 +38,31 @@ class _MySessionsFilterNotifier extends Notifier<bool> {
   bool build() => false;
 
   void toggle() => state = !state;
+
+  // ignore: use_setters_to_change_properties
+  void setMySessionFilter(bool enabled) => state = enabled;
 }
 
 // Memoized data providers - only recompute when dependencies change
 final _allSessionsProvider = Provider<List<UpcomingSessionData>>((ref) {
   final summaryAsync = ref.watch(spacesSummaryProvider);
   return summaryAsync.maybeWhen(
-    data: (summary) => UpcomingSessionData.fromSummary(
-      summary,
-      limit: null,
-      includeAttendingFullSessions: true,
-    ),
+    data: (summary) {
+      final exploreSessions = UpcomingSessionData.fromSummary(
+        summary,
+        limit: null,
+        includeAttendingFullSessions: true,
+      );
+
+      // Also include sessions from upcoming that aren't already in explore
+      final exploreSlugs = exploreSessions.map((s) => s.sessionSlug).toSet();
+      final upcomingSessions = summary.upcoming
+          .where((s) => !s.ended && !exploreSlugs.contains(s.slug))
+          .map(UpcomingSessionData.fromSessionDetail);
+
+      return [...exploreSessions, ...upcomingSessions]
+        ..sort((a, b) => a.start.compareTo(b.start));
+    },
     orElse: () => [],
   );
 });
