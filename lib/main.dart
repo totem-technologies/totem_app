@@ -14,6 +14,7 @@ import 'package:totem_app/core/services/notifications_service.dart';
 import 'package:totem_app/core/services/observer_service.dart';
 import 'package:totem_app/firebase_options.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/shared/assets.dart';
 
 Future<void> main() async {
   await Sentry.runZonedGuarded(
@@ -24,9 +25,6 @@ Future<void> main() async {
 
       final container = ProviderContainer(observers: [ObserverService()]);
       await container.read(authControllerProvider.notifier).checkExistingAuth();
-
-      // TODO(adil): Precache onboarding images if authentication doesn't exist.
-      // Currently, the image loading time is noticeable
 
       runApp(
         UncontrolledProviderScope(
@@ -70,6 +68,7 @@ class TotemApp extends ConsumerStatefulWidget {
 
 class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
   late final GoRouter _router;
+  bool _imagesPrecached = false;
 
   @override
   void initState() {
@@ -77,6 +76,24 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _router = createRouter(ref);
     ref.read(notificationsProvider).requestPermissions();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_imagesPrecached) {
+      _imagesPrecached = true;
+      final authState = ref.read(authControllerProvider.notifier);
+      if (!authState.isOnboardingCompleted) {
+        for (final path in <String>[
+          TotemAssets.onboarding1,
+          TotemAssets.onboarding2,
+          TotemAssets.onboarding3,
+        ]) {
+          precacheImage(AssetImage(path), context);
+        }
+      }
+    }
   }
 
   @override

@@ -11,6 +11,7 @@ import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Keeps track of shown sheets to avoid showing multiple times in a row.
 final _shownSheetFor = <String>{};
@@ -22,23 +23,23 @@ class JoinOngoingSessionCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
-    final ongoingEventProvider = spacesSummaryProvider.select((summaryAsync) {
+    final ongoingSessionProvider = spacesSummaryProvider.select((summaryAsync) {
       if (summaryAsync.hasValue) {
         final summary = summaryAsync.value!;
         if (summary.upcoming.isNotEmpty) {
-          final event = summary.upcoming.firstWhereOrNull(
-            (event) => event.canJoinNow(user),
+          final session = summary.upcoming.firstWhereOrNull(
+            (session) => session.canJoinNow(user),
           );
-          if (event != null) {
-            return event;
+          if (session != null) {
+            return session;
           }
         }
       }
     });
-    final ongoingEvent = ref.watch(ongoingEventProvider);
+    final ongoingSession = ref.watch(ongoingSessionProvider);
 
     ref.listen(
-      ongoingEventProvider,
+      ongoingSessionProvider,
       (previous, next) async {
         if (previous != next && next != null) {
           if (_shownSheetFor.contains(next.slug)) return;
@@ -54,10 +55,10 @@ class JoinOngoingSessionCard extends ConsumerWidget {
       },
     );
 
-    if (ongoingEvent != null) {
+    if (ongoingSession != null) {
       return GestureDetector(
         onTap: () async {
-          return showOngoingSessionSheet(context, ongoingEvent);
+          return showOngoingSessionSheet(context, ongoingSession);
         },
         child: Card(
           margin: const EdgeInsetsDirectional.only(
@@ -71,7 +72,7 @@ class JoinOngoingSessionCard extends ConsumerWidget {
               spacing: 10,
               children: [
                 UserAvatar.fromUserSchema(
-                  ongoingEvent.space.author,
+                  ongoingSession.space.author,
                   radius: 24,
                 ),
                 Expanded(
@@ -84,7 +85,7 @@ class JoinOngoingSessionCard extends ConsumerWidget {
                         style: theme.textTheme.titleSmall,
                       ),
                       AutoSizeText(
-                        ongoingEvent.title,
+                        ongoingSession.title,
                         style: theme.textTheme.titleMedium,
                         maxLines: 1,
                       ),
@@ -93,12 +94,7 @@ class JoinOngoingSessionCard extends ConsumerWidget {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    await context.push(
-                      RouteNames.spaceEvent(
-                        ongoingEvent.space.slug,
-                        ongoingEvent.slug,
-                      ),
-                    );
+                    context.launchSession(ongoingSession);
                   },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsetsDirectional.symmetric(
@@ -121,7 +117,7 @@ class JoinOngoingSessionCard extends ConsumerWidget {
 
 Future<void> showOngoingSessionSheet(
   BuildContext context,
-  SessionDetailSchema event,
+  SessionDetailSchema session,
 ) {
   return showModalBottomSheet<void>(
     context: context,
@@ -129,14 +125,14 @@ Future<void> showOngoingSessionSheet(
     useSafeArea: true,
     showDragHandle: false,
     useRootNavigator: true,
-    builder: (context) => OngoingSessionSheet(event: event),
+    builder: (context) => OngoingSessionSheet(session: session),
   );
 }
 
 class OngoingSessionSheet extends StatelessWidget {
-  const OngoingSessionSheet({required this.event, super.key});
+  const OngoingSessionSheet({required this.session, super.key});
 
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +156,7 @@ class OngoingSessionSheet extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             Text(
-              'Your space "${event.title}" with ${event.space.author.name} is happening now!',
+              'Your space "${session.title}" with ${session.space.author.name} is happening now!',
               style: theme.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
@@ -169,16 +165,14 @@ class OngoingSessionSheet extends StatelessWidget {
               child: AspectRatio(
                 aspectRatio: 16 / 9,
                 child: IgnorePointer(
-                  child: SpaceCard.fromEventDetailSchema(event),
+                  child: SpaceCard.fromSessionDetailSchema(session),
                 ),
               ),
             ),
             ElevatedButton(
-              onPressed: () async {
+              onPressed: () {
                 Navigator.of(context).pop();
-                await context.push(
-                  RouteNames.spaceEvent(event.space.slug, event.slug),
-                );
+                context.launchSession(session);
               },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsetsDirectional.symmetric(
@@ -192,5 +186,23 @@ class OngoingSessionSheet extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+extension on BuildContext {
+  void launchSession(SessionDetailSchema session) {
+    switch (session.meetingProvider) {
+      case MeetingProviderEnum.livekit:
+        pushNamed(
+          RouteNames.videoSessionPrejoin,
+          extra: session.slug,
+        );
+      case MeetingProviderEnum.googleMeet:
+        launchUrl(
+          Uri.parse(session.calLink),
+          mode: LaunchMode.externalApplication,
+        );
+      default:
+    }
   }
 }

@@ -61,9 +61,9 @@ class UpcomingSessionData {
     final now = DateTime.now();
 
     for (final space in summary.explore) {
-      for (final event in space.nextEvents) {
-        if (event.start.isAfter(now) && event.seatsLeft > 0) {
-          sessions.add(UpcomingSessionData.fromSpaceAndSession(space, event));
+      for (final session in space.nextEvents) {
+        if (session.start.isAfter(now) && session.seatsLeft > 0) {
+          sessions.add(UpcomingSessionData.fromSpaceAndSession(space, session));
         }
       }
     }

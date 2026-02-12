@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -221,11 +222,15 @@ class _GuidelinesTab extends StatelessWidget {
             style: theme.textTheme.bodyMedium,
             children: [
               const TextSpan(text: 'For more details, see the full '),
-              // TODO(adil): Use TextSpan + gesture recognizer
-              WidgetSpan(
-                alignment: PlaceholderAlignment.middle,
-                child: GestureDetector(
-                  onTap: () async {
+              TextSpan(
+                text: 'Community Guidelines',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.purple,
+                  decoration: TextDecoration.underline,
+                ),
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () async {
                     final url = AppConfig.communityGuidelinesUrl;
                     if (await canLaunchUrl(url)) {
                       await launchUrl(
@@ -234,15 +239,6 @@ class _GuidelinesTab extends StatelessWidget {
                       );
                     }
                   },
-                  child: Text(
-                    'Community Guidelines',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.purple,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ),
               ),
               const TextSpan(text: '.'),
             ],
@@ -599,16 +595,16 @@ class _SuggestionsTab extends ConsumerWidget {
         ),
         const SizedBox(height: 20),
         recommended.when(
-          data: (events) {
-            if (events.isEmpty) {
+          data: (sessions) {
+            if (sessions.isEmpty) {
               return const InfoText(
                 'No suggestions yet. Try selecting a few topics.',
               );
             }
             return Column(
               children: [
-                for (final event in events) ...[
-                  SuggestedSpaceCard(event: event),
+                for (final session in sessions) ...[
+                  SuggestedSpaceCard(session: session),
                   const SizedBox(height: 12),
                 ],
                 const SizedBox(height: 8),
@@ -637,7 +633,22 @@ class _SuggestionsTab extends ConsumerWidget {
               ],
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator.adaptive(strokeWidth: 1.5),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: onSeeAllSpaces,
+                    child: const Text('See all spaces'),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ],
     );

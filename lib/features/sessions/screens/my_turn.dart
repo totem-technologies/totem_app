@@ -29,7 +29,7 @@ class MyTurn extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionStatus = ref.watch(sessionStatusProvider);
     final totemStatus = ref.watch(totemStatusProvider);
-    final session = ref.watch(currentSessionProvider);
+    final currentSession = ref.watch(currentSessionProvider);
 
     return RoomBackground(
       status: sessionStatus,
@@ -43,7 +43,7 @@ class MyTurn extends ConsumerWidget {
               event: event,
             );
 
-            final nextUp = session?.speakingNextParticipant();
+            final nextUp = currentSession?.speakingNextParticipant();
             final transitionType = totemStatus == TotemStatus.passing
                 ? TotemCardTransitionType.waitingReceive
                 : TotemCardTransitionType.pass;
@@ -184,7 +184,7 @@ class _MyTurnGrid extends ConsumerWidget {
                         child: ParticipantCard(
                           key: getParticipantKey(participant.identity),
                           participant: participant,
-                          event: event,
+                          session: event,
                           participantIdentity: participant.identity,
                         ),
                       );

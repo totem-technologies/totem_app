@@ -13,7 +13,7 @@ import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 Future<void> showSessionChatSheet(
   BuildContext context,
-  SessionDetailSchema event,
+  SessionDetailSchema session,
 ) {
   return showModalBottomSheet(
     context: context,
@@ -22,15 +22,15 @@ Future<void> showSessionChatSheet(
     useSafeArea: true,
     backgroundColor: Colors.white,
     builder: (context) {
-      return SessionChatSheet(event: event);
+      return SessionChatSheet(session: session);
     },
   );
 }
 
 class SessionChatSheet extends ConsumerStatefulWidget {
-  const SessionChatSheet({required this.event, super.key});
+  const SessionChatSheet({required this.session, super.key});
 
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
 
   @override
   ConsumerState<SessionChatSheet> createState() => _SessionChatSheetState();
@@ -38,6 +38,7 @@ class SessionChatSheet extends ConsumerStatefulWidget {
 
 class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
   final _messageController = TextEditingController();
+  int _previousMessageCount = 0;
 
   @override
   void dispose() {
@@ -51,7 +52,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
     final user = ref.watch(
       authControllerProvider.select((auth) => auth.user),
     );
-    final isKeeper = widget.event.space.author.slug == user?.slug;
+    final isKeeper = widget.session.space.author.slug == user?.slug;
 
     const fastMessages = [
       'Welcome! 🙏',
@@ -64,23 +65,39 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
 
     return ChatBuilder(
       builder: (context, enabled, chatCtx, messages) {
-        final listedMessages = List<ChatMessage>.from(messages.reversed);
         return DraggableScrollableSheet(
           maxChildSize: 0.9,
           initialChildSize: 0.75,
           expand: false,
           builder: (context, scrollController) {
-            Future<void> send() async {
+            if (messages.length != _previousMessageCount) {
+              _previousMessageCount = messages.length;
+              if (messages.isNotEmpty) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (scrollController.hasClients) {
+                    scrollController.jumpTo(
+                      scrollController.position.maxScrollExtent,
+                    );
+                  }
+                });
+              }
+            }
+
+            void send() {
               final message = _messageController.text.trim();
               if (message.isNotEmpty) {
                 chatCtx.sendMessage(message);
                 _messageController.clear();
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (scrollController.hasClients) {
+                    scrollController.animateTo(
+                      scrollController.position.maxScrollExtent,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  }
+                });
               }
-              await scrollController.animateTo(
-                scrollController.position.maxScrollExtent + 80,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOut,
-              );
             }
 
             return Scaffold(
@@ -132,11 +149,10 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                               start: 20,
                               end: 20,
                             ),
-                            reverse: true,
                             controller: scrollController,
-                            itemCount: listedMessages.length,
+                            itemCount: messages.length,
                             itemBuilder: (context, index) {
-                              final msg = listedMessages[index];
+                              final msg = messages[index];
                               final isMine =
                                   msg.participant?.identity == user?.email;
                               if (isMine) {
@@ -144,19 +160,12 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                               } else {
                                 final showAvatar =
                                     index == 0 ||
-                                    listedMessages[(listedMessages.length -
-                                                    index)
-                                                .clamp(
-                                                  0,
-                                                  listedMessages.length - 1,
-                                                )]
-                                            .participant
-                                            ?.identity !=
+                                    messages[index - 1].participant?.identity !=
                                         msg.participant?.identity;
                                 return OtherChatBubble(
                                   showAvatar: showAvatar,
                                   message: msg,
-                                  event: widget.event,
+                                  session: widget.session,
                                 );
                               }
                             },
@@ -262,13 +271,13 @@ class OtherChatBubble extends StatelessWidget {
   const OtherChatBubble({
     required this.showAvatar,
     required this.message,
-    required this.event,
+    required this.session,
     super.key,
   });
 
   final bool showAvatar;
   final ChatMessage message;
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
 
   @override
   Widget build(BuildContext context) {
@@ -278,12 +287,12 @@ class OtherChatBubble extends StatelessWidget {
       children: [
         if (showAvatar)
           UserAvatar.fromUserSchema(
-            event.space.author,
+            session.space.author,
             radius: 20,
-            onTap: event.space.author.slug != null
+            onTap: session.space.author.slug != null
                 ? () => showKeeperProfileSheet(
                     context,
-                    event.space.author.slug!,
+                    session.space.author.slug!,
                   )
                 : null,
           )

@@ -218,7 +218,7 @@ class NextSessionCard extends StatelessWidget {
 
   void _navigateToSession(BuildContext context) {
     context.push(
-      RouteNames.spaceEvent(session.space.slug, session.slug),
+      RouteNames.spaceSession(session.space.slug, session.slug),
     );
   }
 }

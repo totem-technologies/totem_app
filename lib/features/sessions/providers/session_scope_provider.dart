@@ -70,17 +70,17 @@ List<Participant> sessionParticipants(Ref ref) {
 /// Whether it's the current user's turn to speak.
 @Riverpod(dependencies: [currentSession, currentSessionState])
 bool isMyTurn(Ref ref) {
-  final session = ref.watch(currentSessionProvider);
+  final currentSession = ref.watch(currentSessionProvider);
   final state = ref.watch(currentSessionStateProvider);
-  if (session?.context == null || state == null) return false;
-  return state.isMyTurn(session!.context!);
+  if (currentSession?.context == null || state == null) return false;
+  return state.isMyTurn(currentSession!.context!);
 }
 
 /// Whether the current user is next to speak.
 @Riverpod(dependencies: [currentSession, currentSessionState])
 bool amNextSpeaker(Ref ref) {
-  final session = ref.watch(currentSessionProvider);
+  final currentSession = ref.watch(currentSessionProvider);
   final state = ref.watch(currentSessionStateProvider);
-  if (session?.context == null || state == null) return false;
-  return state.amNext(session!.context!);
+  if (currentSession?.context == null || state == null) return false;
+  return state.amNext(currentSession!.context!);
 }

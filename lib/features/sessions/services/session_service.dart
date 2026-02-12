@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:audio_session/audio_session.dart' as audio;
 import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
@@ -10,6 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage, logger;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
@@ -33,7 +35,19 @@ part 'keeper_control.dart';
 part 'participant_control.dart';
 part 'session_service.g.dart';
 
-enum SessionEndedReason { finished, keeperLeft, keeperNotJoined }
+enum SessionDisconnectedReason {
+  /// The session has ended normally, usually by the keeper.
+  finished,
+
+  /// The keeper left the session and didn't come back within the timeout period.
+  keeperLeft,
+
+  /// The keeper never joined the session, and the timeout period has passed.
+  keeperNotJoined,
+
+  /// The user was kicked out of the session by the keeper.
+  removed,
+}
 
 enum SessionCommunicationTopics {
   emoji('lk-emoji-topic'),
@@ -182,7 +196,12 @@ class Session extends _$Session {
   bool _hasKeeperEverJoined = false;
   Timer? _notificationTimer;
   List<VoidCallback> closeKeeperLeftNotification = [];
-  SessionEndedReason reason = SessionEndedReason.finished;
+  SessionDisconnectedReason reason = SessionDisconnectedReason.finished;
+
+  StreamSubscription<void>? _becomingNoisySubscription;
+  StreamSubscription<audio.AudioDevicesChangedEvent>?
+  _devicesChangedSubscription;
+  bool _userSpeakerPreference = true;
 
   static const defaultCameraOptions = CameraCaptureOptions(
     params: VideoParametersPresets.h540_169,
@@ -331,8 +350,10 @@ class Session extends _$Session {
     // context.room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
     state = state.copyWith(connectionState: RoomConnectionState.connected);
 
+    _userSpeakerPreference = context?.room.speakerOn ?? true;
     options.onConnected();
     _updateParticipantsList();
+    setupDeviceChangeListener();
   }
 
   void _onDisconnected() {
@@ -460,7 +481,7 @@ class Session extends _$Session {
   }
 
   Future<void> _onSessionEnd() async {
-    reason = SessionEndedReason.finished;
+    reason = SessionDisconnectedReason.finished;
     context?.disconnect();
   }
 
@@ -491,6 +512,12 @@ class Session extends _$Session {
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
+
+    _becomingNoisySubscription?.cancel();
+    _becomingNoisySubscription = null;
+
+    _devicesChangedSubscription?.cancel();
+    _devicesChangedSubscription = null;
 
     closeKeeperLeftNotifications();
 
