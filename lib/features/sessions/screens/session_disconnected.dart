@@ -181,7 +181,7 @@ class _SessionDisconnectedScreenState
                             context.push(RouteNames.communityGuidelines);
                           },
                       ),
-                      const TextSpan(text: '.'),
+                      const TextSpan(text: '. '),
                       const TextSpan(
                         text:
                             'If you believe this was a mistake, reach out to us at ',

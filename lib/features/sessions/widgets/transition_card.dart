@@ -193,13 +193,14 @@ class _SlideToActionButtonState extends State<_SlideToActionButton> {
           onPanUpdate: (details) => _onPanUpdate(details, maxSlideDistance),
           onPanEnd: (details) => _onPanEnd(details, maxSlideDistance),
           child: Container(
-            height: MediaQuery.textScalerOf(context).scale(48),
+            constraints: const BoxConstraints(minHeight: 48),
             decoration: BoxDecoration(
               color: backgroundColor,
               borderRadius: BorderRadius.circular(25),
             ),
             child: Stack(
               clipBehavior: Clip.none,
+              alignment: Alignment.center,
               children: [
                 Center(
                   child: Padding(
