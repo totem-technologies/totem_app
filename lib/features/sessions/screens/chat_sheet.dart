@@ -13,7 +13,7 @@ import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 Future<void> showSessionChatSheet(
   BuildContext context,
-  SessionDetailSchema event,
+  SessionDetailSchema session,
 ) {
   return showModalBottomSheet(
     context: context,
@@ -22,15 +22,15 @@ Future<void> showSessionChatSheet(
     useSafeArea: true,
     backgroundColor: Colors.white,
     builder: (context) {
-      return SessionChatSheet(event: event);
+      return SessionChatSheet(session: session);
     },
   );
 }
 
 class SessionChatSheet extends ConsumerStatefulWidget {
-  const SessionChatSheet({required this.event, super.key});
+  const SessionChatSheet({required this.session, super.key});
 
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
 
   @override
   ConsumerState<SessionChatSheet> createState() => _SessionChatSheetState();
@@ -52,7 +52,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
     final user = ref.watch(
       authControllerProvider.select((auth) => auth.user),
     );
-    final isKeeper = widget.event.space.author.slug == user?.slug;
+    final isKeeper = widget.session.space.author.slug == user?.slug;
 
     const fastMessages = [
       'Welcome! 🙏',
@@ -165,7 +165,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                                 return OtherChatBubble(
                                   showAvatar: showAvatar,
                                   message: msg,
-                                  event: widget.event,
+                                  session: widget.session,
                                 );
                               }
                             },
@@ -271,13 +271,13 @@ class OtherChatBubble extends StatelessWidget {
   const OtherChatBubble({
     required this.showAvatar,
     required this.message,
-    required this.event,
+    required this.session,
     super.key,
   });
 
   final bool showAvatar;
   final ChatMessage message;
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
 
   @override
   Widget build(BuildContext context) {
@@ -287,12 +287,12 @@ class OtherChatBubble extends StatelessWidget {
       children: [
         if (showAvatar)
           UserAvatar.fromUserSchema(
-            event.space.author,
+            session.space.author,
             radius: 20,
-            onTap: event.space.author.slug != null
+            onTap: session.space.author.slug != null
                 ? () => showKeeperProfileSheet(
                     context,
-                    event.space.author.slug!,
+                    session.space.author.slug!,
                   )
                 : null,
           )

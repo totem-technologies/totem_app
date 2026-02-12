@@ -166,9 +166,9 @@ class NotificationsService {
         case NotificationType.circleAdvertisement:
         case NotificationType.missedEvent:
           final spaceSlug = payload['space_slug'] as String?;
-          final eventSlug = payload['event_slug'] as String?;
-          if (spaceSlug != null && eventSlug != null) {
-            _handlePath(RouteNames.spaceEvent(spaceSlug, eventSlug));
+          final sessionSlug = payload['event_slug'] as String?;
+          if (spaceSlug != null && sessionSlug != null) {
+            _handlePath(RouteNames.spaceSession(spaceSlug, sessionSlug));
           }
           return;
         default:

@@ -29,13 +29,13 @@ class NotMyTurn extends ConsumerWidget {
     final theme = Theme.of(context);
     final sessionStatus = ref.watch(sessionStatusProvider);
     final amNext = ref.watch(amNextSpeakerProvider);
-    final session = ref.watch(currentSessionProvider)!;
+    final currentSession = ref.watch(currentSessionProvider)!;
 
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );
     final amKeeper = currentUserSlug == event.space.author.slug!;
-    final activeSpeaker = session.speakingNowParticipant();
+    final activeSpeaker = currentSession.speakingNowParticipant();
 
     return RoomBackground(
       status: sessionStatus,
@@ -104,7 +104,7 @@ class NotMyTurn extends ConsumerWidget {
                               padding: const EdgeInsetsDirectional.all(3),
                               child: ParticipantControlButton(
                                 overlayPadding: -28,
-                                event: event,
+                                session: event,
                                 participant: activeSpeaker,
                                 backgroundColor: Colors.transparent,
                               ),
@@ -129,12 +129,12 @@ class NotMyTurn extends ConsumerWidget {
             ),
           );
 
-          final nextUp = session.speakingNextParticipant();
+          final nextUp = currentSession.speakingNextParticipant();
           final nextUpText = () {
             if (sessionStatus == SessionStatus.waiting) {
               return Text(
                 () {
-                  if (!session.hasKeeper) {
+                  if (!currentSession.hasKeeper) {
                     return 'Waiting for the Keeper to join...';
                   }
                   return 'The session is about to start...';
@@ -142,7 +142,7 @@ class NotMyTurn extends ConsumerWidget {
                 style: theme.textTheme.bodyLarge,
               );
             } else if (sessionStatus == SessionStatus.started) {
-              if (!session.hasKeeper) {
+              if (!currentSession.hasKeeper) {
                 return Text(
                   'The session has been paused...',
                   style: theme.textTheme.bodyLarge,
@@ -184,10 +184,11 @@ class NotMyTurn extends ConsumerWidget {
           );
 
           final Widget? startCard =
-              sessionStatus == SessionStatus.waiting && session.isKeeper()
+              sessionStatus == SessionStatus.waiting &&
+                  currentSession.isKeeper()
               ? TransitionCard(
                   type: TotemCardTransitionType.start,
-                  onActionPressed: session.startSession,
+                  onActionPressed: currentSession.startSession,
                 )
               : null;
 
@@ -353,7 +354,7 @@ class _NotMyTurnGrid extends ConsumerWidget {
                       child: ParticipantCard(
                         key: getParticipantKey(participant.identity),
                         participant: participant,
-                        event: event,
+                        session: event,
                         participantIdentity: participant.identity,
                       ),
                     );

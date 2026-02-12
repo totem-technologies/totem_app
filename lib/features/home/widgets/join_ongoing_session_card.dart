@@ -27,11 +27,11 @@ class JoinOngoingSessionCard extends ConsumerWidget {
       if (summaryAsync.hasValue) {
         final summary = summaryAsync.value!;
         if (summary.upcoming.isNotEmpty) {
-          final event = summary.upcoming.firstWhereOrNull(
-            (event) => event.canJoinNow(user),
+          final session = summary.upcoming.firstWhereOrNull(
+            (session) => session.canJoinNow(user),
           );
-          if (event != null) {
-            return event;
+          if (session != null) {
+            return session;
           }
         }
       }
@@ -165,7 +165,7 @@ class OngoingSessionSheet extends StatelessWidget {
               child: AspectRatio(
                 aspectRatio: 16 / 9,
                 child: IgnorePointer(
-                  child: SpaceCard.fromEventDetailSchema(session),
+                  child: SpaceCard.fromSessionDetailSchema(session),
                 ),
               ),
             ),

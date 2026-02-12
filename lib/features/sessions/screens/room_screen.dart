@@ -33,17 +33,17 @@ import 'package:totem_app/shared/widgets/popups.dart';
 
 class VideoRoomScreen extends ConsumerStatefulWidget {
   const VideoRoomScreen({
-    required this.eventSlug,
+    required this.sessionSlug,
     required this.sessionOptions,
-    required this.event,
+    required this.session,
     required this.loadingScreen,
     required this.actionBarKey,
     super.key,
   });
 
-  final String eventSlug;
+  final String sessionSlug;
   final SessionOptions sessionOptions;
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
   final Widget loadingScreen;
   final GlobalKey actionBarKey;
 
@@ -194,7 +194,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         }),
       ],
       child: _RoomContent(
-        event: widget.event,
+        session: widget.session,
         loadingScreen: widget.loadingScreen,
         actionBarKey: widget.actionBarKey,
         navigatorKey: _navigatorKey,
@@ -222,7 +222,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
 class _RoomContent extends ConsumerWidget {
   const _RoomContent({
-    required this.event,
+    required this.session,
     required this.loadingScreen,
     required this.actionBarKey,
     required this.navigatorKey,
@@ -236,7 +236,7 @@ class _RoomContent extends ConsumerWidget {
     required this.onEmojiReceived,
   });
 
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
   final Widget loadingScreen;
   final GlobalKey actionBarKey;
   final GlobalKey<NavigatorState> navigatorKey;
@@ -251,7 +251,7 @@ class _RoomContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final session = ref.watch(currentSessionProvider);
+    final currentSession = ref.watch(currentSessionProvider);
     final connectionState = ref.watch(connectionStateProvider);
     final sessionStatus = ref.watch(sessionStatusProvider);
     final sessionState = ref.watch(currentSessionStateProvider);
@@ -259,16 +259,16 @@ class _RoomContent extends ConsumerWidget {
     final isMyTurn = ref.watch(isMyTurnProvider);
     final amNext = ref.watch(amNextSpeakerProvider);
 
-    if (session == null || sessionState == null) {
+    if (currentSession == null || sessionState == null) {
       return loadingScreen;
     }
 
-    if (event.ended ||
-        (session.event?.ended ?? false) ||
+    if (session.ended ||
+        (currentSession.event?.ended ?? false) ||
         sessionStatus == SessionStatus.ended) {
       return RoomBackground(
         status: sessionStatus,
-        child: SessionDisconnectedScreen(event: event),
+        child: SessionDisconnectedScreen(session: session),
       );
     }
 
@@ -304,7 +304,7 @@ class _RoomContent extends ConsumerWidget {
       child: RoomBackground(
         status: sessionStatus,
         child: LivekitRoom(
-          roomContext: session.context!,
+          roomContext: currentSession.context!,
           builder: (ctx, _) {
             // Use a navigator for modal sheets and dialogs inside the room
             return Navigator(
@@ -319,7 +319,7 @@ class _RoomContent extends ConsumerWidget {
                         child: RepaintBoundary(
                           child: _buildBody(
                             ctx,
-                            session,
+                            currentSession,
                             sessionState,
                             connectionState,
                             sessionStatus,
@@ -361,10 +361,10 @@ class _RoomContent extends ConsumerWidget {
       case RoomConnectionState.connecting:
         return loadingScreen;
       case RoomConnectionState.disconnected:
-        return SessionDisconnectedScreen(event: event);
+        return SessionDisconnectedScreen(session: this.session);
       case RoomConnectionState.connected:
         if (sessionStatus == SessionStatus.ended) {
-          return SessionDisconnectedScreen(event: event);
+          return SessionDisconnectedScreen(session: this.session);
         }
 
         if (session.context?.localParticipant == null) {
@@ -403,7 +403,7 @@ class _RoomContent extends ConsumerWidget {
                   return false;
                 }
               },
-              event: event,
+              event: this.session,
             ),
           );
         } else {
@@ -416,7 +416,7 @@ class _RoomContent extends ConsumerWidget {
                 isMyTurn,
               ),
               getParticipantKey: getParticipantKey,
-              event: event,
+              event: this.session,
             ),
           );
         }
@@ -507,7 +507,7 @@ class _RoomContent extends ConsumerWidget {
               onPressed: () async {
                 setHasPendingChatMessages(false);
                 setChatSheetOpen(true);
-                await showSessionChatSheet(context, event);
+                await showSessionChatSheet(context, this.session);
                 setChatSheetOpen(false);
               },
               child: Stack(
@@ -534,7 +534,7 @@ class _RoomContent extends ConsumerWidget {
               child: IconButton(
                 padding: EdgeInsetsDirectional.zero,
                 onPressed: () =>
-                    showOptionsSheet(context, sessionState, session, event),
+                    showOptionsSheet(context, sessionState, this.session),
                 icon: const TotemIcon(
                   TotemIcons.more,
                   color: Colors.white,

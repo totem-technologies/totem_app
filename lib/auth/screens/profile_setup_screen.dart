@@ -595,16 +595,16 @@ class _SuggestionsTab extends ConsumerWidget {
         ),
         const SizedBox(height: 20),
         recommended.when(
-          data: (events) {
-            if (events.isEmpty) {
+          data: (sessions) {
+            if (sessions.isEmpty) {
               return const InfoText(
                 'No suggestions yet. Try selecting a few topics.',
               );
             }
             return Column(
               children: [
-                for (final event in events) ...[
-                  SuggestedSpaceCard(event: event),
+                for (final session in sessions) ...[
+                  SuggestedSpaceCard(session: session),
                   const SizedBox(height: 12),
                 ],
                 const SizedBox(height: 8),

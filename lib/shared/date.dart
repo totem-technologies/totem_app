@@ -29,7 +29,7 @@ String formatTimePeriod(DateTime dateTime) {
   return DateFormat('a').format(dateTime.toLocal());
 }
 
-String formatEventDate(DateTime dateTime) {
+String formatSessionDate(DateTime dateTime) {
   try {
     final date = dateTime.toLocal();
 
@@ -48,7 +48,7 @@ String formatEventDate(DateTime dateTime) {
   }
 }
 
-String formatEventTime(DateTime dateTime, [String? userTimezone]) {
+String formatSessionTime(DateTime dateTime, [String? userTimezone]) {
   try {
     final date = dateTime.toLocal();
     final timeFormat = DateFormat.jm(); // e.g., 2:30 PM

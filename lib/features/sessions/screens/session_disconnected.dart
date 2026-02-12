@@ -24,9 +24,9 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SessionDisconnectedScreen extends ConsumerStatefulWidget {
-  const SessionDisconnectedScreen({required this.event, super.key});
+  const SessionDisconnectedScreen({required this.session, super.key});
 
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
 
   @override
   ConsumerState<SessionDisconnectedScreen> createState() =>
@@ -112,8 +112,8 @@ class _SessionDisconnectedScreenState
   void refresh() {
     ref
       ..invalidate(spacesSummaryProvider)
-      ..invalidate(sessionTokenProvider(widget.event.slug))
-      ..invalidate(eventProvider(widget.event.slug));
+      ..invalidate(sessionTokenProvider(widget.session.slug))
+      ..invalidate(eventProvider(widget.session.slug));
   }
 
   @override
@@ -124,8 +124,8 @@ class _SessionDisconnectedScreenState
       currentSessionProvider.select((s) => s?.reason),
     );
 
-    final nextEvents = widget.event.space.nextEvents
-        .where((e) => e.slug != widget.event.slug)
+    final nextEvents = widget.session.space.nextEvents
+        .where((e) => e.slug != widget.session.slug)
         .take(2)
         .toList();
 
@@ -215,7 +215,7 @@ class _SessionDisconnectedScreenState
                     _showConfetti();
                     await ref.read(
                       sessionFeedbackProvider(
-                        widget.event.slug,
+                        widget.session.slug,
                         SessionFeedbackOptions.up,
                       ).future,
                     );
@@ -229,7 +229,7 @@ class _SessionDisconnectedScreenState
                         if (mounted) setState(() {});
                         return ref.read(
                           sessionFeedbackProvider(
-                            widget.event.slug,
+                            widget.session.slug,
                             SessionFeedbackOptions.down,
                             message,
                           ).future,
@@ -256,14 +256,14 @@ class _SessionDisconnectedScreenState
                       ),
                       child: SmallSpaceCard(
                         space: MobileSpaceDetailSchemaExtension.copyWith(
-                          widget.event.space,
+                          widget.session.space,
                           nextEvents: [nextEvent],
                         ),
                         onTap: () {
                           refresh();
                           return context.pushReplacement(
-                            RouteNames.spaceEvent(
-                              widget.event.space.slug,
+                            RouteNames.spaceSession(
+                              widget.session.space.slug,
                               nextEvent.slug,
                             ),
                           );
@@ -286,7 +286,7 @@ class _SessionDisconnectedScreenState
                             constraints: const BoxConstraints(
                               maxHeight: 140,
                             ),
-                            child: SmallSpaceCard.fromEventDetailSchema(
+                            child: SmallSpaceCard.fromSessionDetailSchema(
                               event,
                               onTap: () {
                                 refresh();

@@ -19,13 +19,13 @@ import 'package:totem_app/shared/widgets/user_avatar.dart';
 class ParticipantCard extends ConsumerWidget {
   const ParticipantCard({
     required this.participant,
-    required this.event,
+    required this.session,
     required this.participantIdentity,
     super.key,
   });
 
   final Participant participant;
-  final SessionDetailSchema event;
+  final SessionDetailSchema? session;
   final String participantIdentity;
 
   @override
@@ -33,10 +33,10 @@ class ParticipantCard extends ConsumerWidget {
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );
-    final currentUserIsKeeper = currentUserSlug == event.space.author.slug!;
+    final currentUserIsKeeper = currentUserSlug == session?.space.author.slug!;
 
     const overlayPadding = 6.0;
-    final isKeeper = event.space.author.slug == participant.identity;
+    final isKeeper = session?.space.author.slug == participant.identity;
     const shadowColor = Color(0x80FFD000);
 
     return RepaintBoundary(
@@ -86,7 +86,8 @@ class ParticipantCard extends ConsumerWidget {
                   start: overlayPadding,
                   child: SpeakingIndicatorOrEmoji(participant: participant),
                 ),
-                if (currentUserIsKeeper &&
+                if (session != null &&
+                    currentUserIsKeeper &&
                     currentUserSlug != participant.identity)
                   PositionedDirectional(
                     end: overlayPadding,
@@ -94,7 +95,7 @@ class ParticipantCard extends ConsumerWidget {
                     child: ParticipantControlButton(
                       participant: participant,
                       overlayPadding: overlayPadding,
-                      event: event,
+                      session: session!,
                     ),
                   ),
                 PositionedDirectional(
@@ -129,14 +130,14 @@ class ParticipantControlButton extends ConsumerWidget {
   const ParticipantControlButton({
     required this.participant,
     required this.overlayPadding,
-    required this.event,
+    required this.session,
     this.backgroundColor = Colors.black54,
     super.key,
   });
 
   final Participant participant;
   final double overlayPadding;
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
 
   final Color backgroundColor;
 
@@ -270,7 +271,7 @@ class ParticipantControlButton extends ConsumerWidget {
           onConfirm: () async {
             await ref.read(
               muteParticipantProvider(
-                event.slug,
+                session.slug,
                 participant.identity,
               ).future,
             );
@@ -299,7 +300,7 @@ class ParticipantControlButton extends ConsumerWidget {
           onConfirm: () async {
             await ref.read(
               removeParticipantProvider(
-                event.slug,
+                session.slug,
                 participant.identity,
               ).future,
             );

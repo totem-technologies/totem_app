@@ -24,9 +24,9 @@ import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
 class PreJoinScreen extends ConsumerStatefulWidget {
-  const PreJoinScreen({required this.eventSlug, super.key});
+  const PreJoinScreen({required this.sessionSlug, super.key});
 
-  final String eventSlug;
+  final String sessionSlug;
 
   @override
   ConsumerState<PreJoinScreen> createState() => _PreJoinScreenState();
@@ -217,7 +217,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     setState(() => _isMicOn = !_isMicOn);
   }
 
-  Widget _buildPrejoinUI(String token, SessionDetailSchema event) {
+  Widget _buildPrejoinUI(String token, SessionDetailSchema session) {
     return PrejoinRoomBaseScreen(
       title: 'Welcome',
       subtitle:
@@ -282,7 +282,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
             width: 96,
             child: ActionBarButton(
               semanticsLabel: 'Join session',
-              onPressed: () => _joinRoom(token, event),
+              onPressed: () => _joinRoom(token, session),
               square: false,
               child: const Text('Join'),
             ),
@@ -292,10 +292,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     );
   }
 
-  Future<void> _joinRoom(String token, SessionDetailSchema event) async {
+  Future<void> _joinRoom(String token, SessionDetailSchema session) async {
     if (_sessionOptions != null) return;
     _sessionOptions = SessionOptions(
-      eventSlug: widget.eventSlug,
+      eventSlug: widget.sessionSlug,
       token: token,
       cameraEnabled: _isCameraOn,
       microphoneEnabled: _isMicOn,
@@ -338,12 +338,12 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final tokenData = ref.watch(sessionTokenProvider(widget.eventSlug));
-    final eventData = ref.watch(eventProvider(widget.eventSlug));
+    final tokenData = ref.watch(sessionTokenProvider(widget.sessionSlug));
+    final sessionData = ref.watch(eventProvider(widget.sessionSlug));
 
     // The room should not display loading screen when its provider is refreshing.
     if ((tokenData.isLoading && !tokenData.isRefreshing) ||
-        (eventData.isLoading && !eventData.isRefreshing)) {
+        (sessionData.isLoading && !sessionData.isRefreshing)) {
       return LoadingRoomScreen(actionBarKey: actionBarKey);
     }
 
@@ -351,31 +351,31 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       return RoomBackground(
         child: RoomErrorScreen(
           onRetry: () =>
-              ref.refresh(sessionTokenProvider(widget.eventSlug).future),
+              ref.refresh(sessionTokenProvider(widget.sessionSlug).future),
         ),
       );
     }
 
-    if (eventData.hasError) {
+    if (sessionData.hasError) {
       return RoomBackground(
         child: RoomErrorScreen(
-          onRetry: () => ref.refresh(eventProvider(widget.eventSlug).future),
+          onRetry: () => ref.refresh(eventProvider(widget.sessionSlug).future),
         ),
       );
     }
 
     final token = tokenData.value!;
-    final event = eventData.value!;
+    final session = sessionData.value!;
 
     if (_sessionOptions == null) {
-      return _buildPrejoinUI(token, event);
+      return _buildPrejoinUI(token, session);
     }
 
     return VideoRoomScreen(
-      eventSlug: widget.eventSlug,
+      sessionSlug: widget.sessionSlug,
       sessionOptions: _sessionOptions!,
-      event: event,
-      loadingScreen: _buildPrejoinUI(token, event),
+      session: session,
+      loadingScreen: _buildPrejoinUI(token, session),
       actionBarKey: actionBarKey,
     );
   }

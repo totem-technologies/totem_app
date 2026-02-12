@@ -48,7 +48,7 @@ class RoutingUtils {
               segments[1].isNotEmpty &&
               segments[2] == 'event' &&
               segments[3].isNotEmpty) {
-            return RouteNames.spaceEvent(segments[1], segments[3]);
+            return RouteNames.spaceSession(segments[1], segments[3]);
           }
 
         case 'keeper':

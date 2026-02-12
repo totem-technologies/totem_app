@@ -22,7 +22,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionStatus = ref.watch(sessionStatusProvider);
-    final session = ref.watch(currentSessionProvider);
+    final currentSession = ref.watch(currentSessionProvider);
 
     return RoomBackground(
       status: sessionStatus,
@@ -38,10 +38,10 @@ class ReceiveTotemScreen extends ConsumerWidget {
               padding: const EdgeInsetsDirectional.all(20),
               child: LocalParticipantVideoCard(
                 isCameraOn:
-                    session?.context!.room.localParticipant!
+                    currentSession?.context!.room.localParticipant!
                         .isCameraEnabled() ??
                     true,
-                videoTrack: session?.localVideoTrack,
+                videoTrack: currentSession?.localVideoTrack,
               ),
             );
 
