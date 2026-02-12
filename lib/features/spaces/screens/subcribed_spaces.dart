@@ -92,7 +92,7 @@ class SubscribedSpacesScreen extends ConsumerWidget {
                         bottom: 20,
                       ),
                       sliver: SliverList.separated(
-                        itemBuilder: (BuildContext context, int index) {
+                        itemBuilder: (context, index) {
                           final space = spaces[index];
                           return _SubscribedSpaceTile(
                             key: ValueKey(space.slug!),

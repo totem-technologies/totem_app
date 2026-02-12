@@ -147,7 +147,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         await showAdaptiveDialog<void>(
           context: context,
           barrierDismissible: false,
-          builder: (BuildContext context) => AlertDialog.adaptive(
+          builder: (context) => AlertDialog.adaptive(
             title: const Text('Permissions Required'),
             content: Text(
               '${missing.join(' and ')} access is required. ${isPermanent ? 'Please enable them in System Settings.' : 'Please grant these permissions to continue.'}',

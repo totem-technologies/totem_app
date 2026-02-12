@@ -51,7 +51,7 @@ void main() {
   group('SessionsCalendar Initialization', () {
     testWidgets(
       'should initialize with current month when no events provided',
-      (WidgetTester tester) async {
+      (tester) async {
         await tester.pumpWidget(
           wrapCalendar(events: const []),
         );
@@ -62,7 +62,7 @@ void main() {
 
     testWidgets(
       'should initialize with first event month when events provided',
-      (WidgetTester tester) async {
+      (tester) async {
         // Create an event in a specific month (e.g., March 2025)
         final eventDate = DateTime(2025, 3, 15);
         final events = [createEvent(start: eventDate)];
@@ -77,7 +77,7 @@ void main() {
     );
 
     testWidgets('should handle multiple events and use first event month', (
-      WidgetTester tester,
+      tester,
     ) async {
       // Create events in different months
       final firstEvent = createEvent(start: DateTime(2025, 5, 10));
@@ -95,7 +95,7 @@ void main() {
 
   group('SessionsCalendar Month Navigation', () {
     testWidgets('should navigate to previous month when left arrow is tapped', (
-      WidgetTester tester,
+      tester,
     ) async {
       final eventDate = DateTime(2025, 6, 15);
       final events = [createEvent(start: eventDate)];
@@ -118,7 +118,7 @@ void main() {
     });
 
     testWidgets('should navigate to next month when right arrow is tapped', (
-      WidgetTester tester,
+      tester,
     ) async {
       final eventDate = DateTime(2025, 6, 15);
       final events = [createEvent(start: eventDate)];
@@ -141,7 +141,7 @@ void main() {
     });
 
     testWidgets('should handle month navigation across year boundaries', (
-      WidgetTester tester,
+      tester,
     ) async {
       final eventDate = DateTime(2025, 1, 15);
       final events = [createEvent(start: eventDate)];
@@ -167,7 +167,7 @@ void main() {
 
   group('SessionsCalendar Day Generation', () {
     testWidgets('should generate correct number of calendar days (35 cells)', (
-      WidgetTester tester,
+      tester,
     ) async {
       final eventDate = DateTime(2025, 6, 15);
       final events = [createEvent(start: eventDate)];
@@ -183,7 +183,7 @@ void main() {
     });
 
     testWidgets('should display day abbreviations correctly', (
-      WidgetTester tester,
+      tester,
     ) async {
       await tester.pumpWidget(
         wrapCalendar(events: const []),
@@ -199,7 +199,7 @@ void main() {
 
     testWidgets(
       'should display days from previous month when month starts mid-week',
-      (WidgetTester tester) async {
+      (tester) async {
         // June 2025 starts on a Sunday (June 1, 2025 is a Sunday)
         // So we should see May days at the end
         final eventDate = DateTime(2025, 6, 15);
@@ -219,7 +219,7 @@ void main() {
   group('SessionsCalendar Event Highlighting Logic', () {
     testWidgets(
       'should highlight day with event (grey circle when not open/attending)',
-      (WidgetTester tester) async {
+      (tester) async {
         // Create an event that is not open and user is not attending
         final eventDate = DateTime(2025, 6, 15);
         final events = [
@@ -254,7 +254,7 @@ void main() {
     );
 
     testWidgets('should highlight day with open event (mauve border)', (
-      WidgetTester tester,
+      tester,
     ) async {
       // Create an event that is open but user is not attending
       final eventDate = DateTime(2025, 6, 15);
@@ -292,7 +292,7 @@ void main() {
 
     testWidgets(
       'should highlight day with attending event (mauve filled circle)',
-      (WidgetTester tester) async {
+      (tester) async {
         // Create an event where user is attending
         final eventDate = DateTime(2025, 6, 15);
         final events = [
@@ -329,7 +329,7 @@ void main() {
     );
 
     testWidgets('should not highlight day without event', (
-      WidgetTester tester,
+      tester,
     ) async {
       // Create an event on a different day
       final eventDate = DateTime(2025, 6, 15);
@@ -354,7 +354,7 @@ void main() {
     });
 
     testWidgets('should handle multiple events on the same day', (
-      WidgetTester tester,
+      tester,
     ) async {
       // Create multiple events on the same day
       final eventDate = DateTime(2025, 6, 15);
@@ -378,7 +378,7 @@ void main() {
     });
 
     testWidgets('should prioritize attending over open status', (
-      WidgetTester tester,
+      tester,
     ) async {
       // Create an event where user is attending (should show mauve filled)
       final eventDate = DateTime(2025, 6, 15);
@@ -413,7 +413,7 @@ void main() {
 
   group('SessionsCalendar Event Day Tap', () {
     testWidgets('should call onEventDayTap when event day is tapped', (
-      WidgetTester tester,
+      tester,
     ) async {
       DateTime? tappedDay;
       List<NextSessionSchema>? tappedEvents;
@@ -447,7 +447,7 @@ void main() {
     });
 
     testWidgets('should not call onEventDayTap when non-event day is tapped', (
-      WidgetTester tester,
+      tester,
     ) async {
       bool callbackCalled = false;
 
@@ -473,7 +473,7 @@ void main() {
     });
 
     testWidgets('should handle null onEventDayTap gracefully', (
-      WidgetTester tester,
+      tester,
     ) async {
       final eventDate = DateTime(2025, 6, 15);
       final events = [createEvent(start: eventDate)];
@@ -492,7 +492,7 @@ void main() {
     });
 
     testWidgets('should pass all events for the day in callback', (
-      WidgetTester tester,
+      tester,
     ) async {
       List<NextSessionSchema>? tappedEvents;
 
@@ -524,7 +524,7 @@ void main() {
 
   group('SessionsCalendar Visual Rendering', () {
     testWidgets('should render regular day with correct text color', (
-      WidgetTester tester,
+      tester,
     ) async {
       final eventDate = DateTime(2025, 6, 15);
       final events = [createEvent(start: eventDate)];
@@ -540,7 +540,7 @@ void main() {
     });
 
     testWidgets('should render previous/next month days with grey text', (
-      WidgetTester tester,
+      tester,
     ) async {
       // Use a month that has days from previous/next month visible
       final eventDate = DateTime(2025, 6, 15);
@@ -559,7 +559,7 @@ void main() {
 
     testWidgets(
       'should render event day text with white color when attending',
-      (WidgetTester tester) async {
+      (tester) async {
         final eventDate = DateTime(2025, 6, 15);
         final events = [
           createEvent(
@@ -579,7 +579,7 @@ void main() {
     );
 
     testWidgets('should render open event day text with slate color', (
-      WidgetTester tester,
+      tester,
     ) async {
       final eventDate = DateTime(2025, 6, 15);
       final events = [
@@ -600,7 +600,7 @@ void main() {
     });
 
     testWidgets('should render closed event day text with white color', (
-      WidgetTester tester,
+      tester,
     ) async {
       final eventDate = DateTime(2025, 6, 15);
       final events = [
@@ -621,7 +621,7 @@ void main() {
 
   group('SessionsCalendar Edge Cases', () {
     testWidgets('should handle events with different times on same day', (
-      WidgetTester tester,
+      tester,
     ) async {
       // Create events on the same day but different times
       final baseDate = DateTime(2025, 6, 15);
@@ -651,7 +651,7 @@ void main() {
       expect(decoratedBox.decoration, isNotNull);
     });
 
-    testWidgets('should handle empty events list', (WidgetTester tester) async {
+    testWidgets('should handle empty events list', (tester) async {
       await tester.pumpWidget(
         wrapCalendar(events: const []),
       );
@@ -662,7 +662,7 @@ void main() {
     });
 
     testWidgets('should handle events spanning multiple months', (
-      WidgetTester tester,
+      tester,
     ) async {
       final events = [
         createEvent(start: DateTime(2025, 5, 10)),
@@ -689,7 +689,7 @@ void main() {
     });
 
     testWidgets('should normalize dates correctly ignoring time components', (
-      WidgetTester tester,
+      tester,
     ) async {
       // Create events with same date but different times
       final baseDate = DateTime(2025, 6, 15);

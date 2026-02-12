@@ -29,15 +29,17 @@ class ErrorHandler {
             // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
             ..sendDefaultPii = true
             ..tracesSampleRate = AppConfig.isDevelopment ? 1.0 : 0.1
+            // ignore: experimental_member_use
             ..profilesSampleRate = AppConfig.isDevelopment ? 1.0 : 0.1
             ..enableLogs = true
             ..attachScreenshot = true
+            // ignore: experimental_member_use
             ..attachViewHierarchy = true
             ..enableAutoPerformanceTracing = true
             ..enableTimeToFullDisplayTracing = true;
         },
         appRunner: () async {
-          FlutterError.onError = (FlutterErrorDetails details) {
+          FlutterError.onError = (details) {
             FlutterError.presentError(details);
             logFlutterError(details);
           };
@@ -137,7 +139,7 @@ class ErrorHandler {
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (context) {
         return AlertDialog(
           title: Text(title, style: theme.textTheme.titleLarge),
           content: SingleChildScrollView(
@@ -182,7 +184,7 @@ class ErrorHandler {
     if (error is AppNetworkException && onRetry != null) {
       await showDialog<void>(
         context: context,
-        builder: (BuildContext context) {
+        builder: (context) {
           return ConfirmationDialog(
             title: 'Something Went Wrong',
             content: message,
