@@ -233,11 +233,11 @@ class Session extends _$Session {
         defaultVideoPublishOptions: const VideoPublishOptions(
           // https://docs.livekit.io/transport/media/advanced/#video-codec-support
           // https://livekit.io/webrtc/codecs-guide
-          videoCodec: 'vp9',
+          // https://github.com/flutter-webrtc/flutter-webrtc/issues/252
+          videoCodec: 'h264',
           backupVideoCodec: BackupVideoCodec(simulcast: false),
           simulcast: false,
           videoSimulcastLayers: [
-            VideoParametersPresets.h360_169,
             VideoParametersPresets.h540_169,
             VideoParametersPresets.h720_169,
           ],
