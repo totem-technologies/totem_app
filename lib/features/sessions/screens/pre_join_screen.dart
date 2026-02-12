@@ -81,17 +81,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   Future<void> _detectHeadphones() async {
-    const externalAudioOutputTypes = <AudioDeviceType>{
-      AudioDeviceType.wiredHeadset,
-      AudioDeviceType.wiredHeadphones,
-      AudioDeviceType.bluetoothSco,
-      AudioDeviceType.bluetoothA2dp,
-      AudioDeviceType.bluetoothLe,
-      AudioDeviceType.airPlay,
-      AudioDeviceType.hdmi,
-      AudioDeviceType.usbAudio,
-      AudioDeviceType.carAudio,
-    };
     try {
       bool? speakerOn;
       try {
@@ -110,13 +99,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
       if (speakerOn == null) {
         final session = await AudioSession.instance;
-        final Set<AudioDevice> devices = await session.getDevices(
-          includeInputs: false,
-        );
+        final devices = await session.getDevices(includeInputs: false);
         final hasExternalOutput = devices.any(
-          (d) => externalAudioOutputTypes.contains(d.type),
+          (d) => DevicesControl.externalAudioOutputTypes.contains(d.type),
         );
-        speakerOn = hasExternalOutput;
+        speakerOn = !hasExternalOutput;
       }
 
       if (!mounted) return;
@@ -271,6 +258,12 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                 },
                 onAudioOutputChanged: (options) {
                   setState(() => _audioOutputOptions = options);
+                  SharedPreferences.getInstance().then(
+                    (prefs) => prefs.setBool(
+                      DevicesControl.speakerPreferenceKey,
+                      options.speakerOn ?? false,
+                    ),
+                  );
                 },
               );
             },

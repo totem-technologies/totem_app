@@ -108,8 +108,9 @@ class OptionsSheet extends ConsumerWidget {
                       device: selected,
                       options: audioInputs ?? [],
                       onOptionChanged: (value) {
-                        if (value != null)
+                        if (value != null) {
                           currentSession.selectAudioDevice(value);
+                        }
                       },
                       icon: TotemIcons.microphoneOn,
                     );
@@ -165,7 +166,7 @@ class OptionsSheet extends ConsumerWidget {
                       context,
                       currentSession,
                       state,
-                      this.session,
+                      session,
                     );
                   },
                 ),

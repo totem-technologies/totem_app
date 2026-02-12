@@ -6,7 +6,7 @@ part of 'session_service.dart';
 extension DevicesControl on Session {
   static const speakerPreferenceKey = 'speaker_preference';
 
-  static const _externalAudioOutputTypes = <audio.AudioDeviceType>{
+  static const externalAudioOutputTypes = <audio.AudioDeviceType>{
     audio.AudioDeviceType.wiredHeadset,
     audio.AudioDeviceType.wiredHeadphones,
     audio.AudioDeviceType.bluetoothSco,
@@ -22,6 +22,14 @@ extension DevicesControl on Session {
     try {
       final session = await audio.AudioSession.instance;
 
+      final devices = await session.getDevices(includeOutputs: true);
+      final hasExternalOutput = devices
+          .where((d) => d.isOutput)
+          .any((d) => externalAudioOutputTypes.contains(d.type));
+      if (hasExternalOutput) {
+        _autoSetSpeakerphone(false);
+      }
+
       _becomingNoisySubscription = session.becomingNoisyEventStream.listen((_) {
         logger.i(
           'Headphones unplugged, restoring speaker to $_userSpeakerPreference.',
@@ -34,10 +42,10 @@ extension DevicesControl on Session {
       ) {
         final addedExternal = event.devicesAdded
             .where((d) => d.isOutput)
-            .any((d) => _externalAudioOutputTypes.contains(d.type));
+            .any((d) => externalAudioOutputTypes.contains(d.type));
         final removedExternal = event.devicesRemoved
             .where((d) => d.isOutput)
-            .any((d) => _externalAudioOutputTypes.contains(d.type));
+            .any((d) => externalAudioOutputTypes.contains(d.type));
 
         if (addedExternal) {
           logger.i('External audio output connected, disabling speaker.');
