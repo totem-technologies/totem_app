@@ -5,14 +5,15 @@ part of 'session_service.dart';
 
 extension KeeperControl on Session {
   bool isKeeper([String? userSlug]) {
-    if (userSlug == null) {
+    String? slug = userSlug;
+    if (slug == null) {
       final currentUserSlug = ref.read(
         authControllerProvider.select((auth) => auth.user?.slug),
       );
-      userSlug = currentUserSlug;
+      slug = currentUserSlug;
     }
 
-    return state.sessionState.keeperSlug == userSlug;
+    return state.sessionState.keeperSlug == slug;
   }
 
   /// Get the participant who is currently speaking.

@@ -75,7 +75,7 @@ class NotificationsService {
         }
         FirebaseMessaging.onMessageOpenedApp.listen(_handleFirebaseMessage);
 
-        FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        FirebaseMessaging.onMessage.listen((message) {
           logger
             ..i('⏰ Got a message whilst in the foreground!')
             ..i('⏰ Message data: ${message.data}');

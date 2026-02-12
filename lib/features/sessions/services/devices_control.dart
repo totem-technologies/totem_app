@@ -1,5 +1,5 @@
 // We need to access LivekitService.ref to notify listeners
-// ignore_for_file: invalid_use_of_protected_member
+// ignore_for_file: experimental_member_use, invalid_use_of_protected_member
 
 part of 'session_service.dart';
 

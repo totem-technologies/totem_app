@@ -159,9 +159,7 @@ void main() {
       expect(options.hashCode, equals(options.hashCode));
     });
 
-    testWidgets('should compute color correctly with theme', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('should compute color correctly with theme', (tester) async {
       const options = AudioVisualizerWidgetOptions();
 
       await tester.pumpWidget(
@@ -186,7 +184,7 @@ void main() {
     });
 
     testWidgets('should compute color correctly with custom color', (
-      WidgetTester tester,
+      tester,
     ) async {
       const options = AudioVisualizerWidgetOptions(color: Colors.green);
 
@@ -250,7 +248,7 @@ void main() {
 
   group('BarsView Tests', () {
     testWidgets('should render with empty elements list', (
-      WidgetTester tester,
+      tester,
     ) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -268,7 +266,7 @@ void main() {
     });
 
     testWidgets('should render with single element', (
-      WidgetTester tester,
+      tester,
     ) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -291,7 +289,7 @@ void main() {
     });
 
     testWidgets('should render with multiple elements', (
-      WidgetTester tester,
+      tester,
     ) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -313,7 +311,7 @@ void main() {
     });
 
     testWidgets('should have correct row properties', (
-      WidgetTester tester,
+      tester,
     ) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -341,7 +339,7 @@ void main() {
     });
 
     testWidgets('should handle different constraint sizes', (
-      WidgetTester tester,
+      tester,
     ) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -364,7 +362,7 @@ void main() {
       expect(find.byType(BarsView), findsOneWidget);
     });
 
-    testWidgets('should handle zero constraints', (WidgetTester tester) async {
+    testWidgets('should handle zero constraints', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
