@@ -22,7 +22,7 @@ class SpeakingIndicator extends StatelessWidget {
     final audioTrack = participant.getTrackPublicationBySource(
       TrackSource.microphone,
     );
-    if (audioTrack != null && audioTrack.subscribed && !audioTrack.muted) {
+    if (audioTrack != null && audioTrack.subscribed && audioTrack.muted) {
       return TotemIcon(
         TotemIcons.microphoneOff,
         size: 20,
