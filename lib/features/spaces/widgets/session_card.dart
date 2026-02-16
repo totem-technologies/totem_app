@@ -78,7 +78,7 @@ class SessionCard extends StatelessWidget {
   }
 
   void _navigateToSession(BuildContext context) {
-    context.push(RouteNames.spaceEvent(data.spaceSlug, data.sessionSlug));
+    context.push(RouteNames.spaceSession(data.spaceSlug, data.sessionSlug));
   }
 }
 
