@@ -155,21 +155,21 @@ class _BlogImage extends StatelessWidget {
       return CachedNetworkImage(
         imageUrl: getFullUrl(imageUrl!),
         fit: BoxFit.cover,
-        placeholder: (_, __) => Container(
+        placeholder: (_, _) => ColoredBox(
           color: Colors.grey.shade200,
           child: const Center(child: CircularProgressIndicator()),
         ),
-        errorWidget: (_, __, ___) => Container(
+        errorWidget: (_, _, _) => const ColoredBox(
           color: AppTheme.cream,
-          child: const Center(
+          child: Center(
             child: Icon(Icons.article_outlined, size: 48, color: AppTheme.gray),
           ),
         ),
       );
     }
-    return Container(
+    return const ColoredBox(
       color: AppTheme.cream,
-      child: const Center(
+      child: Center(
         child: Icon(Icons.article_outlined, size: 48, color: AppTheme.gray),
       ),
     );
