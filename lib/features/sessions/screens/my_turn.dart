@@ -1,20 +1,21 @@
+// ignore_for_file: unused_element_parameter
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:livekit_client/livekit_client.dart' hide Session;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/export.dart';
+import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
-class MyTurn extends StatelessWidget {
+class MyTurn extends ConsumerWidget {
   const MyTurn({
     required this.getParticipantKey,
     required this.actionBar,
     required this.onPassTotem,
-    required this.session,
-    required this.sessionState,
     required this.event,
     super.key,
   });
@@ -22,34 +23,28 @@ class MyTurn extends StatelessWidget {
   final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
   final OnActionPerformed onPassTotem;
-  final Session session;
-  final SessionRoomState sessionState;
   final SessionDetailSchema event;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sessionStatus = ref.watch(sessionStatusProvider);
+    final totemStatus = ref.watch(totemStatusProvider);
+    final currentSession = ref.watch(currentSessionProvider);
+
     return RoomBackground(
-      status: sessionState.sessionState.status,
+      status: sessionStatus,
       child: SafeArea(
         child: OrientationBuilder(
           builder: (context, orientation) {
             final isLandscape = orientation == Orientation.landscape;
-            final participantGrid = MyTurnGrid(
-              sessionState: sessionState,
+            final participantGrid = _MyTurnGrid(
               isLandscape: isLandscape,
-              buildParticipant: (context, participant) {
-                return ParticipantCard(
-                  key: getParticipantKey(participant.identity),
-                  participant: participant,
-                  event: event,
-                  participantIdentity: participant.identity,
-                );
-              },
+              getParticipantKey: getParticipantKey,
+              event: event,
             );
 
-            final nextUp = session.speakingNextParticipant();
-            final transitionType =
-                sessionState.sessionState.totemStatus == TotemStatus.passing
+            final nextUp = currentSession?.speakingNextParticipant();
+            final transitionType = totemStatus == TotemStatus.passing
                 ? TotemCardTransitionType.waitingReceive
                 : TotemCardTransitionType.pass;
             final passCard = TransitionCard(
@@ -105,38 +100,28 @@ class MyTurn extends StatelessWidget {
   }
 }
 
-class MyTurnGrid extends StatelessWidget {
-  const MyTurnGrid({
-    required this.sessionState,
-    required this.buildParticipant,
-    this.maxPerLineCount,
+class _MyTurnGrid extends ConsumerWidget {
+  const _MyTurnGrid({
+    required this.isLandscape,
+    required this.getParticipantKey,
+    required this.event,
+    this.maxPerLineCount = 10,
     this.gap = 6,
-    this.isLandscape = false,
-    super.key,
   });
 
-  /// The amount of participants to show per line.
-  ///
-  /// If there are less participants than this number, it will show only the
-  /// available participants.
-  final int? maxPerLineCount;
-
-  /// The gap between participants.
+  final bool isLandscape;
+  final GlobalKey Function(String) getParticipantKey;
+  final SessionDetailSchema event;
+  final int maxPerLineCount;
   final double gap;
 
-  /// Whether the layout is in landscape mode.
-  final bool isLandscape;
-
-  /// The session state.
-  final SessionRoomState sessionState;
-
-  final Widget Function(BuildContext context, Participant participant)
-  buildParticipant;
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final participants = ref.watch(sessionParticipantsProvider);
+    final sessionState = ref.watch(currentSessionStateProvider)!;
+
     final sortedParticipants = participantsSorting(
-      originalParticiapnts: sessionState.participants,
+      originalParticiapnts: participants,
       state: sessionState,
     );
     final itemCount = sortedParticipants.length;
@@ -157,7 +142,7 @@ class MyTurnGrid extends StatelessWidget {
             // This distributes the cards alongside the available space better
             // than .round() when in landscape screens.
             .ceil()
-            .clamp(3, maxPerLineCount ?? 10);
+            .clamp(3, maxPerLineCount);
       }
     } else {
       crossAxisCount = math
@@ -166,7 +151,7 @@ class MyTurnGrid extends StatelessWidget {
           // This distributes the cards alongside the available space better
           // than .ceil() when in portrait screens.
           .round()
-          .clamp(1, maxPerLineCount ?? 10);
+          .clamp(1, maxPerLineCount);
     }
 
     final rowCount = (itemCount / crossAxisCount).ceil();
@@ -194,14 +179,13 @@ class MyTurnGrid extends StatelessWidget {
                   (colIndex) {
                     final itemIndex = startIndex + colIndex;
                     if (itemIndex < itemCount) {
+                      final participant = sortedParticipants[itemIndex];
                       return Expanded(
-                        child: Builder(
-                          builder: (context) {
-                            return buildParticipant(
-                              context,
-                              sortedParticipants[itemIndex],
-                            );
-                          },
+                        child: ParticipantCard(
+                          key: getParticipantKey(participant.identity),
+                          participant: participant,
+                          session: event,
+                          participantIdentity: participant.identity,
                         ),
                       );
                     } else {

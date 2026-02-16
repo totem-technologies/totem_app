@@ -59,9 +59,6 @@ jobs:
           echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
           echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 -d > android/app/google-services.json
 
-      - name: Flutter pub get
-        run: flutter pub get
-
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1

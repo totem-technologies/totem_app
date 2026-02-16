@@ -9,6 +9,7 @@ import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
+import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/participant_reorder_sheet.dart';
 import 'package:totem_app/navigation/app_router.dart';
@@ -35,8 +36,7 @@ Future<bool?> showLeaveDialog(BuildContext context) {
 Future<void> showOptionsSheet(
   BuildContext context,
   SessionRoomState state,
-  Session session,
-  SessionDetailSchema event,
+  SessionDetailSchema session,
 ) {
   return showModalBottomSheet(
     context: context,
@@ -46,28 +46,24 @@ Future<void> showOptionsSheet(
     useSafeArea: true,
     builder: (context) {
       return SafeArea(
-        child: OptionsSheet(session: session, state: state, event: event),
+        child: OptionsSheet(session: session),
       );
     },
   );
 }
 
 class OptionsSheet extends ConsumerWidget {
-  const OptionsSheet({
-    required this.state,
-    required this.session,
-    required this.event,
-    super.key,
-  });
+  const OptionsSheet({required this.session, super.key});
 
-  final SessionRoomState state;
-  final Session session;
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final isKeeper = session.isKeeper();
+    final currentSession = ref.watch(currentSessionProvider)!;
+    final state = ref.watch(currentSessionStateProvider)!;
+
+    final isKeeper = currentSession.isKeeper();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -84,10 +80,10 @@ class OptionsSheet extends ConsumerWidget {
             physics: const ClampingScrollPhysics(),
             children: [
               OptionsSheetTile.camera(
-                session.localVideoTrack?.currentOptions
+                currentSession.localVideoTrack?.currentOptions
                     as CameraCaptureOptions?,
                 () {
-                  session.switchCameraPosition();
+                  currentSession.switchCameraPosition();
                   Navigator.of(context).pop();
                 },
               ),
@@ -103,7 +99,7 @@ class OptionsSheet extends ConsumerWidget {
                                             .localAudioTrack
                                             ?.currentOptions
                                             .deviceId ??
-                                        session.selectedAudioDeviceId) &&
+                                        currentSession.selectedAudioDeviceId) &&
                                 e.label.isNotEmpty;
                           },
                         ) ??
@@ -112,7 +108,9 @@ class OptionsSheet extends ConsumerWidget {
                       device: selected,
                       options: audioInputs ?? [],
                       onOptionChanged: (value) {
-                        if (value != null) session.selectAudioDevice(value);
+                        if (value != null) {
+                          currentSession.selectAudioDevice(value);
+                        }
                       },
                       icon: TotemIcons.microphoneOn,
                     );
@@ -120,15 +118,15 @@ class OptionsSheet extends ConsumerWidget {
                 ),
               OptionsSheetTile.output(
                 AudioOutputOptions(
-                  speakerOn: session.isSpeakerphoneEnabled,
-                  deviceId: session.selectedAudioOutputDeviceId,
+                  speakerOn: currentSession.isSpeakerphoneEnabled,
+                  deviceId: currentSession.selectedAudioOutputDeviceId,
                 ),
                 (options) {
                   if (options.speakerOn != null) {
-                    session.setSpeakerphone(options.speakerOn ?? false);
+                    currentSession.setSpeakerphone(options.speakerOn ?? false);
                   }
                 },
-                session.selectAudioOutputDevice,
+                currentSession.selectAudioOutputDevice,
               ),
               OptionsSheetTile<void>(
                 title: 'Leave Session',
@@ -156,7 +154,7 @@ class OptionsSheet extends ConsumerWidget {
                     icon: TotemIcons.feedback,
                     onTap: () {
                       Navigator.of(context).pop();
-                      _onStartSession(context);
+                      _onStartSession(context, currentSession);
                     },
                   ),
                 OptionsSheetTile<void>(
@@ -166,9 +164,9 @@ class OptionsSheet extends ConsumerWidget {
                     Navigator.of(context).pop();
                     showParticipantReorderWidget(
                       context,
-                      session,
+                      currentSession,
                       state,
-                      event,
+                      session,
                     );
                   },
                 ),
@@ -178,7 +176,7 @@ class OptionsSheet extends ConsumerWidget {
                   type: OptionsSheetTileType.destructive,
                   onTap: () {
                     Navigator.of(context).pop();
-                    _onMuteEveryone();
+                    _onMuteEveryone(currentSession);
                   },
                 ),
                 if (state.sessionState.status == SessionStatus.started)
@@ -207,7 +205,11 @@ class OptionsSheet extends ConsumerWidget {
                                     TotemStatus.none
                             ? () {
                                 Navigator.of(context).pop();
-                                _onNextTotemAction(context);
+                                _onNextTotemAction(
+                                  context,
+                                  currentSession,
+                                  state,
+                                );
                               }
                             : null,
                       );
@@ -221,7 +223,7 @@ class OptionsSheet extends ConsumerWidget {
                     onTap: state.sessionState.status == SessionStatus.started
                         ? () {
                             Navigator.of(context).pop();
-                            _onEndSession(context);
+                            _onEndSession(context, currentSession);
                           }
                         : null,
                   ),
@@ -271,9 +273,13 @@ class OptionsSheet extends ConsumerWidget {
     );
   }
 
-  Future<void> _onMuteEveryone() => session.muteEveryone();
+  Future<void> _onMuteEveryone(Session session) => session.muteEveryone();
 
-  Future<void> _onNextTotemAction(BuildContext context) async {
+  Future<void> _onNextTotemAction(
+    BuildContext context,
+    Session session,
+    SessionRoomState state,
+  ) async {
     if (state.sessionState.nextParticipantIdentity == null) return;
 
     await showDialog<void>(
@@ -347,7 +353,7 @@ class OptionsSheet extends ConsumerWidget {
     );
   }
 
-  Future<void> _onStartSession(BuildContext context) async {
+  Future<void> _onStartSession(BuildContext context, Session session) async {
     return showDialog<void>(
       context: context,
       builder: (context) {
@@ -382,7 +388,7 @@ class OptionsSheet extends ConsumerWidget {
     );
   }
 
-  Future<void> _onEndSession(BuildContext context) async {
+  Future<void> _onEndSession(BuildContext context, Session session) async {
     return showDialog<void>(
       context: context,
       builder: (context) {
@@ -485,32 +491,6 @@ class PrejoinOptionsSheet extends StatelessWidget {
           },
         ),
         const SizedBox(height: 14),
-        FutureBuilder(
-          future: Hardware.instance.audioInputs(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) return const SizedBox.shrink();
-            final audioInputs = snapshot.data!;
-            final selected =
-                audioInputs.firstWhereOrNull(
-                  (e) => e.deviceId == audioOptions.deviceId,
-                ) ??
-                audioInputs.firstOrNull;
-            return OptionsSheetTile.fromMediaDevice(
-              device: selected,
-              options: audioInputs,
-              onOptionChanged: (value) async {
-                if (value != null) {
-                  onAudioChanged(
-                    AudioCaptureOptions(deviceId: value.deviceId),
-                  );
-                  Navigator.of(context).pop();
-                }
-              },
-              icon: TotemIcons.microphoneOn,
-            );
-          },
-        ),
-        const SizedBox(height: 14),
         OptionsSheetTile.output(
           audioOutputOptions,
           (options) {
@@ -581,7 +561,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
       title: switch (options?.cameraPosition) {
         CameraPosition.front => 'Front',
         CameraPosition.back => 'Back',
-        null => 'No camera connected',
+        null => 'Camera disabled',
       },
       icon: options == null ? TotemIcons.cameraOff : TotemIcons.cameraOn,
       trailing: options != null

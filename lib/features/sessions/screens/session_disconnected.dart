@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/profile/screens/user_feedback.dart';
+import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
@@ -19,25 +21,23 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class SessionEndedScreen extends ConsumerStatefulWidget {
-  const SessionEndedScreen({
-    required this.event,
-    required this.session,
-    super.key,
-  });
+class SessionDisconnectedScreen extends ConsumerStatefulWidget {
+  const SessionDisconnectedScreen({required this.session, super.key});
 
-  final SessionDetailSchema event;
-  final Session session;
+  final SessionDetailSchema session;
 
   @override
-  ConsumerState<SessionEndedScreen> createState() => _SessionEndedScreenState();
+  ConsumerState<SessionDisconnectedScreen> createState() =>
+      _SessionDisconnectedScreenState();
 
   static const _reviewRequestedKey = 'session_review_requested';
   static const _sessionLikedCountKey = 'session_liked_count';
 }
 
-class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
+class _SessionDisconnectedScreenState
+    extends ConsumerState<SessionDisconnectedScreen> {
   ThumbState _thumbState = ThumbState.none;
   Timer? _confettiTimer;
 
@@ -112,17 +112,20 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
   void refresh() {
     ref
       ..invalidate(spacesSummaryProvider)
-      ..invalidate(sessionTokenProvider(widget.event.slug))
-      ..invalidate(eventProvider(widget.event.slug));
+      ..invalidate(sessionTokenProvider(widget.session.slug))
+      ..invalidate(eventProvider(widget.session.slug));
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final recommended = ref.watch(getRecommendedSessionsProvider());
+    final sessionReason = ref.watch(
+      currentSessionProvider.select((s) => s?.reason),
+    );
 
-    final nextEvents = widget.event.space.nextEvents
-        .where((e) => e.slug != widget.event.slug)
+    final nextEvents = widget.session.space.nextEvents
+        .where((e) => e.slug != widget.session.slug)
         .take(2)
         .toList();
 
@@ -142,28 +145,69 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
               Semantics(
                 header: true,
                 child: Text(
-                  switch (widget.session.reason) {
-                    SessionEndedReason.finished => 'Session Ended',
-                    SessionEndedReason.keeperLeft ||
-                    SessionEndedReason.keeperNotJoined =>
+                  switch (sessionReason) {
+                    SessionDisconnectedReason.keeperLeft ||
+                    SessionDisconnectedReason.keeperNotJoined =>
                       'Session will be rescheduled',
+                    SessionDisconnectedReason.removed =>
+                      'You’ve been removed from this session.',
+                    SessionDisconnectedReason.finished || _ => 'Session Ended',
                   },
                   style: theme.textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
               ),
-              Text(
-                switch (widget.session.reason) {
-                  SessionEndedReason.finished =>
-                    'Thank you for joining!\nWe hope you found the session enjoyable.',
-                  SessionEndedReason.keeperLeft =>
-                    'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
-                  SessionEndedReason.keeperNotJoined =>
-                    'The session ended as the Keeper did not join on time. We’ll notify you when it’s rescheduled.',
+              Text.rich(
+                switch (sessionReason) {
+                  SessionDisconnectedReason.keeperLeft => const TextSpan(
+                    text:
+                        'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
+                  ),
+                  SessionDisconnectedReason.keeperNotJoined => const TextSpan(
+                    text:
+                        'The session ended as the Keeper did not join on time. We’ll notify you when it’s rescheduled.',
+                  ),
+                  SessionDisconnectedReason.removed => TextSpan(
+                    text: 'Please take a moment to review our ',
+                    children: [
+                      TextSpan(
+                        text: 'Community Guidelines',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            context.push(RouteNames.communityGuidelines);
+                          },
+                      ),
+                      const TextSpan(text: '. '),
+                      const TextSpan(
+                        text:
+                            'If you believe this was a mistake, reach out to us at ',
+                      ),
+                      TextSpan(
+                        text: 'help@totem.org',
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          decoration: TextDecoration.underline,
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            launchUrl(Uri.parse('mailto:help@totem.org'));
+                          },
+                      ),
+                      const TextSpan(text: '.'),
+                    ],
+                  ),
+                  SessionDisconnectedReason.finished || _ => const TextSpan(
+                    text:
+                        'Thank you for joining!\nWe hope you found the session enjoyable.',
+                  ),
                 },
                 textAlign: TextAlign.center,
               ),
-              if (widget.session.reason == SessionEndedReason.finished) ...[
+              if (sessionReason == SessionDisconnectedReason.finished) ...[
                 _SessionFeedbackWidget(
                   state: _thumbState,
                   onThumbUpPressed: () async {
@@ -171,7 +215,7 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
                     _showConfetti();
                     await ref.read(
                       sessionFeedbackProvider(
-                        widget.event.slug,
+                        widget.session.slug,
                         SessionFeedbackOptions.up,
                       ).future,
                     );
@@ -185,7 +229,7 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
                         if (mounted) setState(() {});
                         return ref.read(
                           sessionFeedbackProvider(
-                            widget.event.slug,
+                            widget.session.slug,
                             SessionFeedbackOptions.down,
                             message,
                           ).future,
@@ -212,14 +256,14 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
                       ),
                       child: SmallSpaceCard(
                         space: MobileSpaceDetailSchemaExtension.copyWith(
-                          widget.event.space,
+                          widget.session.space,
                           nextEvents: [nextEvent],
                         ),
                         onTap: () {
                           refresh();
                           return context.pushReplacement(
-                            RouteNames.spaceEvent(
-                              widget.event.space.slug,
+                            RouteNames.spaceSession(
+                              widget.session.space.slug,
                               nextEvent.slug,
                             ),
                           );
@@ -242,7 +286,7 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
                             constraints: const BoxConstraints(
                               maxHeight: 140,
                             ),
-                            child: SmallSpaceCard.fromEventDetailSchema(
+                            child: SmallSpaceCard.fromSessionDetailSchema(
                               event,
                               onTap: () {
                                 refresh();
@@ -276,18 +320,22 @@ class _SessionEndedScreenState extends ConsumerState<SessionEndedScreen> {
   Future<void> _incrementSessionLikedCount() async {
     final prefs = await SharedPreferences.getInstance();
     final alreadyRequested =
-        prefs.getBool(SessionEndedScreen._reviewRequestedKey) ?? false;
+        prefs.getBool(SessionDisconnectedScreen._reviewRequestedKey) ?? false;
     if (alreadyRequested) return;
 
     final count =
-        (prefs.getInt(SessionEndedScreen._sessionLikedCountKey) ?? 0) + 1;
-    await prefs.setInt(SessionEndedScreen._sessionLikedCountKey, count);
+        (prefs.getInt(SessionDisconnectedScreen._sessionLikedCountKey) ?? 0) +
+        1;
+    await prefs.setInt(SessionDisconnectedScreen._sessionLikedCountKey, count);
     if (count >= 5) {
       final inAppReview = InAppReview.instance;
       try {
         if (await inAppReview.isAvailable()) {
           await inAppReview.requestReview();
-          await prefs.setBool(SessionEndedScreen._reviewRequestedKey, true);
+          await prefs.setBool(
+            SessionDisconnectedScreen._reviewRequestedKey,
+            true,
+          );
         }
       } catch (_) {
         // Fine if fail

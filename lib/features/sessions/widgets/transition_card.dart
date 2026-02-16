@@ -31,7 +31,7 @@ class TransitionCard extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsetsDirectional.only(
-          top: 14,
+          top: 12,
           start: 16,
           end: 16,
           bottom: 16,
@@ -187,21 +187,20 @@ class _SlideToActionButtonState extends State<_SlideToActionButton> {
           baseTextStyle = buttonStyle.textStyle?.resolve({});
         }
         final textStyle = (baseTextStyle ?? theme.textTheme.labelLarge)
-            ?.copyWith(
-              color: foregroundColor,
-            );
+            ?.copyWith(color: foregroundColor);
 
         return GestureDetector(
           onPanUpdate: (details) => _onPanUpdate(details, maxSlideDistance),
           onPanEnd: (details) => _onPanEnd(details, maxSlideDistance),
           child: Container(
-            height: 48,
+            constraints: const BoxConstraints(minHeight: 48),
             decoration: BoxDecoration(
               color: backgroundColor,
               borderRadius: BorderRadius.circular(25),
             ),
             child: Stack(
               clipBehavior: Clip.none,
+              alignment: Alignment.center,
               children: [
                 Center(
                   child: Padding(

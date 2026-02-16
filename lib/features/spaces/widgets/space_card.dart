@@ -22,36 +22,36 @@ const _textShadows = [
   ),
 ];
 
-MobileSpaceDetailSchema _spaceDetailFromEventDetailSchema(
-  SessionDetailSchema event,
+MobileSpaceDetailSchema _spaceDetailFromSessionDetailSchema(
+  SessionDetailSchema session,
 ) {
   return MobileSpaceDetailSchema(
-    slug: event.space.slug,
-    title: event.space.title,
-    imageLink: event.space.imageLink,
-    content: event.space.content,
-    shortDescription: event.space.shortDescription,
-    author: event.space.author,
-    recurring: event.space.recurring,
-    price: event.space.price,
-    subscribers: event.space.subscribers,
+    slug: session.space.slug,
+    title: session.space.title,
+    imageLink: session.space.imageLink,
+    content: session.space.content,
+    shortDescription: session.space.shortDescription,
+    author: session.space.author,
+    recurring: session.space.recurring,
+    price: session.space.price,
+    subscribers: session.space.subscribers,
     nextEvents: [
       NextSessionSchema(
-        start: event.start,
-        link: event.calLink,
-        seatsLeft: event.seatsLeft,
-        slug: event.slug,
-        title: event.title,
-        attending: event.attending,
-        calLink: event.calLink,
-        cancelled: event.cancelled,
-        duration: event.duration,
-        joinable: event.joinable,
-        meetingProvider: event.meetingProvider,
-        open: event.open,
+        start: session.start,
+        link: session.calLink,
+        seatsLeft: session.seatsLeft,
+        slug: session.slug,
+        title: session.title,
+        attending: session.attending,
+        calLink: session.calLink,
+        cancelled: session.cancelled,
+        duration: session.duration,
+        joinable: session.joinable,
+        meetingProvider: session.meetingProvider,
+        open: session.open,
       ),
     ],
-    category: event.space.category,
+    category: session.space.category,
   );
 }
 
@@ -63,13 +63,13 @@ class SpaceCard extends StatelessWidget {
     this.onTap,
   });
 
-  factory SpaceCard.fromEventDetailSchema(
-    SessionDetailSchema event, {
+  factory SpaceCard.fromSessionDetailSchema(
+    SessionDetailSchema session, {
     bool compact = false,
     VoidCallback? onTap,
   }) {
     return SpaceCard(
-      space: _spaceDetailFromEventDetailSchema(event),
+      space: _spaceDetailFromSessionDetailSchema(session),
       compact: compact,
       onTap: onTap,
     );
@@ -99,15 +99,15 @@ class SpaceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final nextEvent = space.nextEvents.firstOrNull;
+    final nextSession = space.nextEvents.firstOrNull;
 
     final semanticParts = <String>[
       space.title,
-      if (nextEvent != null) ...[
-        'next session: ${nextEvent.title}',
-        buildTimeLabel(nextEvent.start),
-        if (nextEvent.seatsLeft > 0)
-          '${nextEvent.seatsLeft} ${nextEvent.seatsLeft == 1 ? 'spot' : 'spots'} left',
+      if (nextSession != null) ...[
+        'next session: ${nextSession.title}',
+        buildTimeLabel(nextSession.start),
+        if (nextSession.seatsLeft > 0)
+          '${nextSession.seatsLeft} ${nextSession.seatsLeft == 1 ? 'spot' : 'spots'} left',
       ],
       'with keeper ${space.author.name}',
     ];
@@ -130,11 +130,11 @@ class SpaceCard extends StatelessWidget {
               onTap:
                   onTap ??
                   () async {
-                    if (nextEvent != null) {
+                    if (nextSession != null) {
                       await context.push(
-                        RouteNames.spaceEvent(
+                        RouteNames.spaceSession(
                           space.slug,
-                          nextEvent.slug,
+                          nextSession.slug,
                         ),
                       );
                     } else {
@@ -180,7 +180,7 @@ class SpaceCard extends StatelessWidget {
                         if (!isContentVisible) {
                           return const SizedBox.shrink();
                         }
-                        final seatsLeft = nextEvent != null
+                        final seatsLeft = nextSession != null
                             ? DefaultTextStyle.merge(
                                 style: const TextStyle(
                                   color: Colors.white,
@@ -189,14 +189,14 @@ class SpaceCard extends StatelessWidget {
                                   shadows: _textShadows,
                                 ),
                                 child: SeatsLeftText(
-                                  seatsLeft: nextEvent.seatsLeft,
+                                  seatsLeft: nextSession.seatsLeft,
                                 ),
                               )
                             : const SizedBox.shrink();
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (nextEvent != null)
+                            if (nextSession != null)
                               Container(
                                 padding: const EdgeInsetsDirectional.all(8),
                                 decoration: BoxDecoration(
@@ -214,7 +214,7 @@ class SpaceCard extends StatelessWidget {
                                     ),
                                     Flexible(
                                       child: Text(
-                                        buildTimeLabel(nextEvent.start),
+                                        buildTimeLabel(nextSession.start),
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 8,
@@ -240,9 +240,9 @@ class SpaceCard extends StatelessWidget {
                               maxLines: 2,
                               overflow: TextOverflow.fade,
                             ),
-                            if (nextEvent?.title != null)
+                            if (nextSession?.title != null)
                               AutoSizeText(
-                                'Next: ${nextEvent!.title}',
+                                'Next: ${nextSession!.title}',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 9,
@@ -314,12 +314,12 @@ class SmallSpaceCard extends StatelessWidget {
     super.key,
   });
 
-  factory SmallSpaceCard.fromEventDetailSchema(
-    SessionDetailSchema event, {
+  factory SmallSpaceCard.fromSessionDetailSchema(
+    SessionDetailSchema session, {
     VoidCallback? onTap,
   }) {
     return SmallSpaceCard(
-      space: _spaceDetailFromEventDetailSchema(event),
+      space: _spaceDetailFromSessionDetailSchema(session),
       onTap: onTap,
     );
   }
@@ -344,7 +344,7 @@ class SmallSpaceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final nextEvent = space.nextEvents.firstOrNull;
+    final nextSession = space.nextEvents.firstOrNull;
 
     return InkWell(
       borderRadius: BorderRadius.circular(20),
@@ -398,7 +398,7 @@ class SmallSpaceCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (nextEvent != null)
+                if (nextSession != null)
                   Container(
                     padding: const EdgeInsetsDirectional.all(8),
                     decoration: BoxDecoration(
@@ -406,7 +406,7 @@ class SmallSpaceCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      buildTimeLabel(nextEvent.start),
+                      buildTimeLabel(nextSession.start),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 8,
@@ -416,14 +416,14 @@ class SmallSpaceCard extends StatelessWidget {
                     ),
                   ),
                 const Spacer(),
-                if (nextEvent != null) ...[
+                if (nextSession != null) ...[
                   DefaultTextStyle.merge(
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
                       shadows: _textShadows,
                     ),
-                    child: SeatsLeftText(seatsLeft: nextEvent.seatsLeft),
+                    child: SeatsLeftText(seatsLeft: nextSession.seatsLeft),
                   ),
                   const SizedBox(height: 5),
                 ],

@@ -10,7 +10,7 @@ void main() {
     await setupFirebase();
   });
 
-  testWidgets('App builds smoke test', (WidgetTester tester) async {
+  testWidgets('App builds smoke test', (tester) async {
     await tester.pumpWidget(
       const ProviderScope(child: app.TotemApp()),
     );

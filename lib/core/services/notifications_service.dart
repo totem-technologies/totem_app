@@ -75,7 +75,7 @@ class NotificationsService {
         }
         FirebaseMessaging.onMessageOpenedApp.listen(_handleFirebaseMessage);
 
-        FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        FirebaseMessaging.onMessage.listen((message) {
           logger
             ..i('⏰ Got a message whilst in the foreground!')
             ..i('⏰ Message data: ${message.data}');
@@ -166,9 +166,9 @@ class NotificationsService {
         case NotificationType.circleAdvertisement:
         case NotificationType.missedEvent:
           final spaceSlug = payload['space_slug'] as String?;
-          final eventSlug = payload['event_slug'] as String?;
-          if (spaceSlug != null && eventSlug != null) {
-            _handlePath(RouteNames.spaceEvent(spaceSlug, eventSlug));
+          final sessionSlug = payload['event_slug'] as String?;
+          if (spaceSlug != null && sessionSlug != null) {
+            _handlePath(RouteNames.spaceSession(spaceSlug, sessionSlug));
           }
           return;
         default:

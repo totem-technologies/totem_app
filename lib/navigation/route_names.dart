@@ -14,10 +14,10 @@ class RouteNames {
   // Main app routes
   static const home = '/home';
   static const spaces = '/spaces';
-  static const spaceDetail = '/spaces/event/';
+  static const spaceDetail = '/spaces/session/';
   static String space(String slug) => '/spaces/$slug';
-  static String spaceEvent(String spaceSlug, String eventSlug) =>
-      '/spaces/$spaceSlug/event/$eventSlug';
+  static String spaceSession(String spaceSlug, String sessionSlug) =>
+      '/spaces/$spaceSlug/session/$sessionSlug';
 
   static const profile = '/profile';
   static const profileDetail = '/profile/detail';

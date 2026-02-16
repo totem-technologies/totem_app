@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,7 @@ import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
@@ -22,9 +24,9 @@ import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
 class PreJoinScreen extends ConsumerStatefulWidget {
-  const PreJoinScreen({required this.eventSlug, super.key});
+  const PreJoinScreen({required this.sessionSlug, super.key});
 
-  final String eventSlug;
+  final String sessionSlug;
 
   @override
   ConsumerState<PreJoinScreen> createState() => _PreJoinScreenState();
@@ -37,7 +39,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   CameraCaptureOptions? _cameraOptions;
   var _audioOptions = const AudioCaptureOptions();
-  var _audioOutputOptions = const AudioOutputOptions();
+  var _audioOutputOptions = const AudioOutputOptions(speakerOn: true);
 
   SessionOptions? _sessionOptions;
   final GlobalKey actionBarKey = GlobalKey();
@@ -70,11 +72,51 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   void _initializeAndCheckPermissions() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _requestPermissions();
+      await _detectHeadphones();
       _initializeLocalVideo();
       if (mounted) {
         SentryDisplayWidget.of(context).reportFullyDisplayed();
       }
     });
+  }
+
+  Future<void> _detectHeadphones() async {
+    try {
+      bool? speakerOn;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final savedPreference = prefs.getBool(
+          DevicesControl.speakerPreferenceKey,
+        );
+        if (savedPreference != null) speakerOn = savedPreference;
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to load speaker preference',
+        );
+      }
+
+      if (speakerOn == null) {
+        final session = await AudioSession.instance;
+        final devices = await session.getDevices(includeInputs: false);
+        final hasExternalOutput = devices.any(
+          (d) => DevicesControl.externalAudioOutputTypes.contains(d.type),
+        );
+        speakerOn = !hasExternalOutput;
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _audioOutputOptions = AudioOutputOptions(speakerOn: speakerOn);
+      });
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to detect audio output devices',
+      );
+    }
   }
 
   Future<void> _requestPermissions() async {
@@ -105,7 +147,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         await showAdaptiveDialog<void>(
           context: context,
           barrierDismissible: false,
-          builder: (BuildContext context) => AlertDialog.adaptive(
+          builder: (context) => AlertDialog.adaptive(
             title: const Text('Permissions Required'),
             content: Text(
               '${missing.join(' and ')} access is required. ${isPermanent ? 'Please enable them in System Settings.' : 'Please grant these permissions to continue.'}',
@@ -162,7 +204,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     setState(() => _isMicOn = !_isMicOn);
   }
 
-  Widget _buildPrejoinUI(String token, SessionDetailSchema event) {
+  Widget _buildPrejoinUI(String token, SessionDetailSchema session) {
     return PrejoinRoomBaseScreen(
       title: 'Welcome',
       subtitle:
@@ -216,6 +258,12 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
                 },
                 onAudioOutputChanged: (options) {
                   setState(() => _audioOutputOptions = options);
+                  SharedPreferences.getInstance().then(
+                    (prefs) => prefs.setBool(
+                      DevicesControl.speakerPreferenceKey,
+                      options.speakerOn ?? false,
+                    ),
+                  );
                 },
               );
             },
@@ -227,7 +275,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
             width: 96,
             child: ActionBarButton(
               semanticsLabel: 'Join session',
-              onPressed: () => _joinRoom(token, event),
+              onPressed: () => _joinRoom(token, session),
               square: false,
               child: const Text('Join'),
             ),
@@ -237,25 +285,24 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     );
   }
 
-  Future<void> _joinRoom(String token, SessionDetailSchema event) async {
+  Future<void> _joinRoom(String token, SessionDetailSchema session) async {
     if (_sessionOptions != null) return;
+    _sessionOptions = SessionOptions(
+      eventSlug: widget.sessionSlug,
+      token: token,
+      cameraEnabled: _isCameraOn,
+      microphoneEnabled: _isMicOn,
+      cameraOptions: _cameraOptions ?? Session.defaultCameraOptions,
+      audioOptions: _audioOptions,
+      audioOutputOptions: _audioOutputOptions,
+      onEmojiReceived: (_, _) async {},
+      onMessageReceived: (_, _) {},
+      onLivekitError: (_) {},
+      onKeeperLeaveRoom: (_) => () {},
+      onConnected: _onRoomConnected,
+    );
     if (mounted) {
-      setState(() {
-        _sessionOptions = SessionOptions(
-          eventSlug: widget.eventSlug,
-          token: token,
-          cameraEnabled: _isCameraOn,
-          microphoneEnabled: _isMicOn,
-          cameraOptions: _cameraOptions ?? Session.defaultCameraOptions,
-          audioOptions: _audioOptions,
-          audioOutputOptions: _audioOutputOptions,
-          onEmojiReceived: (_, _) async {},
-          onMessageReceived: (_, _) {},
-          onLivekitError: (_) {},
-          onKeeperLeaveRoom: (_) => () {},
-          onConnected: _onRoomConnected,
-        );
-      });
+      setState(() {});
     }
   }
 
@@ -284,12 +331,12 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final tokenData = ref.watch(sessionTokenProvider(widget.eventSlug));
-    final eventData = ref.watch(eventProvider(widget.eventSlug));
+    final tokenData = ref.watch(sessionTokenProvider(widget.sessionSlug));
+    final sessionData = ref.watch(eventProvider(widget.sessionSlug));
 
     // The room should not display loading screen when its provider is refreshing.
     if ((tokenData.isLoading && !tokenData.isRefreshing) ||
-        (eventData.isLoading && !eventData.isRefreshing)) {
+        (sessionData.isLoading && !sessionData.isRefreshing)) {
       return LoadingRoomScreen(actionBarKey: actionBarKey);
     }
 
@@ -297,31 +344,31 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       return RoomBackground(
         child: RoomErrorScreen(
           onRetry: () =>
-              ref.refresh(sessionTokenProvider(widget.eventSlug).future),
+              ref.refresh(sessionTokenProvider(widget.sessionSlug).future),
         ),
       );
     }
 
-    if (eventData.hasError) {
+    if (sessionData.hasError) {
       return RoomBackground(
         child: RoomErrorScreen(
-          onRetry: () => ref.refresh(eventProvider(widget.eventSlug).future),
+          onRetry: () => ref.refresh(eventProvider(widget.sessionSlug).future),
         ),
       );
     }
 
     final token = tokenData.value!;
-    final event = eventData.value!;
+    final session = sessionData.value!;
 
     if (_sessionOptions == null) {
-      return _buildPrejoinUI(token, event);
+      return _buildPrejoinUI(token, session);
     }
 
     return VideoRoomScreen(
-      eventSlug: widget.eventSlug,
+      sessionSlug: widget.sessionSlug,
       sessionOptions: _sessionOptions!,
-      event: event,
-      loadingScreen: _buildPrejoinUI(token, event),
+      session: session,
+      loadingScreen: _buildPrejoinUI(token, session),
       actionBarKey: actionBarKey,
     );
   }

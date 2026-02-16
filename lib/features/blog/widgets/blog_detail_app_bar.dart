@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/blog_post_schema.dart';
 import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 class BlogDetailAppBar extends StatelessWidget {
-  const BlogDetailAppBar({required this.event, super.key});
+  const BlogDetailAppBar({required this.post, super.key});
 
-  final BlogPostSchema event;
+  final BlogPostSchema post;
 
   @override
   Widget build(BuildContext context) {
@@ -29,13 +30,13 @@ class BlogDetailAppBar extends StatelessWidget {
                 bottom: Radius.circular(25),
               ),
               child: CachedNetworkImage(
-                imageUrl: event.headerImageUrl!,
+                imageUrl: post.headerImageUrl!,
                 fit: BoxFit.cover,
                 color: Colors.black38,
                 colorBlendMode: BlendMode.darken,
                 errorWidget: (context, url, error) {
                   return Image.asset(
-                    'assets/images/welcome_background.jpg',
+                    TotemAssets.genericBackground,
                     fit: BoxFit.cover,
                   );
                 },
@@ -56,7 +57,7 @@ class BlogDetailAppBar extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         Text(
-                          event.title,
+                          post.title,
                           style: theme.textTheme.headlineLarge?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -70,7 +71,7 @@ class BlogDetailAppBar extends StatelessWidget {
                             children: <TextSpan>[
                               const TextSpan(text: 'by '),
                               TextSpan(
-                                text: event.author?.name ?? 'Unknown Author',
+                                text: post.author?.name ?? 'Unknown Author',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -82,10 +83,10 @@ class BlogDetailAppBar extends StatelessWidget {
                     ),
                   ),
                   UserAvatar.fromUserSchema(
-                    event.author,
-                    onTap: event.author?.slug != null
+                    post.author,
+                    onTap: post.author?.slug != null
                         ? () => context.push(
-                            RouteNames.keeperProfile(event.author!.slug!),
+                            RouteNames.keeperProfile(post.author!.slug!),
                           )
                         : null,
                   ),

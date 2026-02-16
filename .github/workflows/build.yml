@@ -79,7 +79,7 @@ jobs:
 
   build_ios_ipa:
     name: iOS IPA (${{ matrix.flavor }})
-    runs-on: macos-latest
+    runs-on: macos-26
     needs: validate_ios_signing
 
     strategy:

@@ -31,13 +31,13 @@ import 'package:totem_app/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SpaceDetailScreen extends ConsumerStatefulWidget {
-  const SpaceDetailScreen({required this.slug, this.eventSlug, super.key});
+  const SpaceDetailScreen({required this.slug, this.sessionSlug, super.key});
 
   final String slug;
 
-  /// The slug used to get a specific event. If null, the event will be the
-  /// next upcoming event.
-  final String? eventSlug;
+  /// The slug used to get a specific session. If null, the session will be the
+  /// next upcoming session.
+  final String? sessionSlug;
 
   @override
   ConsumerState<SpaceDetailScreen> createState() => _SpaceDetailScreenState();
@@ -62,10 +62,10 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
     final spaceAsync = ref.watch(spaceProvider(widget.slug));
     ref.sentryReportFullyDisplayed(spaceProvider(widget.slug));
 
-    // Determine if we have a valid event slug to watch
+    // Determine if we have a valid session slug to watch
     final String? effectiveEventSlug =
         _selectedEventSlug ??
-        widget.eventSlug ??
+        widget.sessionSlug ??
         spaceAsync.maybeWhen(
           skipLoadingOnRefresh: false,
           skipLoadingOnReload: false,
@@ -223,7 +223,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                               'charge. It costs nothing to get '
                                               'started.'
                                         : 'This price grants you full access '
-                                              'to the event. Secure your spot '
+                                              'to the session. Secure your spot '
                                               'and enjoy all the activities '
                                               'and content available.',
                                   ),
@@ -335,7 +335,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                               constraints: const BoxConstraints(
                                 maxHeight: 160,
                               ),
-                              child: SpaceCard.fromEventDetailSchema(
+                              child: SpaceCard.fromSessionDetailSchema(
                                 event,
                                 onTap: () =>
                                     _showSessionSheet(context, space, event),
@@ -384,7 +384,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                   child: SpaceJoinCard(
                     key: ValueKey('${space.hashCode}${event.hashCode}'),
                     space: space,
-                    event: event,
+                    session: event,
                   ),
                 ),
               ),
@@ -415,7 +415,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
   Future<void> _showSessionSheet(
     BuildContext context,
     MobileSpaceDetailSchema space,
-    SessionDetailSchema event,
+    SessionDetailSchema session,
   ) {
     return showModalBottomSheet(
       context: context,
@@ -423,7 +423,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
       useSafeArea: true,
       showDragHandle: true,
       builder: (context) {
-        return SessionSheet(space: space, event: event);
+        return SessionSheet(space: space, session: session);
       },
     );
   }
@@ -545,10 +545,10 @@ class AboutSpaceSheet extends StatelessWidget {
 }
 
 class SessionSheet extends StatelessWidget {
-  const SessionSheet({required this.space, required this.event, super.key});
+  const SessionSheet({required this.space, required this.session, super.key});
 
   final MobileSpaceDetailSchema space;
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
 
   @override
   Widget build(BuildContext context) {
@@ -576,7 +576,10 @@ class SessionSheet extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(event.title, style: theme.textTheme.titleLarge),
+                          Text(
+                            session.title,
+                            style: theme.textTheme.titleLarge,
+                          ),
                           Text.rich(
                             TextSpan(
                               text: 'with ',
@@ -617,16 +620,16 @@ class SessionSheet extends StatelessWidget {
                   children: [
                     CompactInfoText(
                       const TotemIcon(TotemIcons.clockCircle),
-                      Text('${event.duration} minutes'),
+                      Text('${session.duration} minutes'),
                     ),
                     CompactInfoText(
                       const TotemIcon(TotemIcons.seats),
-                      SeatsLeftText(seatsLeft: event.seatsLeft),
+                      SeatsLeftText(seatsLeft: session.seatsLeft),
                     ),
                   ],
                 ),
                 Html(
-                  data: event.content,
+                  data: session.content,
                   shrinkWrap: true,
                   style: AppTheme.compactHtmlStyle,
                   extensions: [TotemImageHtmlExtension()],
@@ -658,7 +661,7 @@ class SessionSheet extends StatelessWidget {
               ],
             ),
           ),
-          SpaceJoinCard(space: space, event: event),
+          SpaceJoinCard(space: space, session: session),
         ],
       ),
     );

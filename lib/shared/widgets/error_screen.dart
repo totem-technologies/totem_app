@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
@@ -63,7 +64,7 @@ class _ErrorScreenState extends State<ErrorScreen> {
                   child: AspectRatio(
                     aspectRatio: 1.2,
                     child: SvgPicture.asset(
-                      'assets/images/error_indicator.svg',
+                      TotemAssets.errorIndicatorSvg,
                       semanticsLabel: 'Error Indicator',
                     ),
                   ),

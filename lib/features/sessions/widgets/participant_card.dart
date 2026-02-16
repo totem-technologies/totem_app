@@ -19,13 +19,13 @@ import 'package:totem_app/shared/widgets/user_avatar.dart';
 class ParticipantCard extends ConsumerWidget {
   const ParticipantCard({
     required this.participant,
-    required this.event,
+    required this.session,
     required this.participantIdentity,
     super.key,
   });
 
   final Participant participant;
-  final SessionDetailSchema event;
+  final SessionDetailSchema? session;
   final String participantIdentity;
 
   @override
@@ -33,11 +33,11 @@ class ParticipantCard extends ConsumerWidget {
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );
-    final currentUserIsKeeper = currentUserSlug == event.space.author.slug!;
+    final currentUserIsKeeper = currentUserSlug == session?.space.author.slug!;
 
     const overlayPadding = 6.0;
-    final isKeeper = event.space.author.slug == participant.identity;
-    final shadowColor = isKeeper ? const Color(0x80FFD000) : Colors.black45;
+    final isKeeper = session?.space.author.slug == participant.identity;
+    const shadowColor = Color(0x80FFD000);
 
     return RepaintBoundary(
       child: AspectRatio(
@@ -50,24 +50,26 @@ class ParticipantCard extends ConsumerWidget {
               color: isKeeper ? const Color(0xFFFFD000) : Colors.white,
               width: 2,
             ),
-            boxShadow: [
-              BoxShadow(
-                offset: const Offset(0, 3),
-                blurRadius: 1,
-                spreadRadius: -2,
-                color: shadowColor,
-              ),
-              BoxShadow(
-                offset: const Offset(0, 2),
-                blurRadius: 2,
-                color: shadowColor,
-              ),
-              BoxShadow(
-                offset: const Offset(0, 1),
-                blurRadius: 5,
-                color: shadowColor,
-              ),
-            ],
+            boxShadow: isKeeper
+                ? const [
+                    BoxShadow(
+                      offset: Offset(0, 3),
+                      blurRadius: 1,
+                      spreadRadius: -2,
+                      color: shadowColor,
+                    ),
+                    BoxShadow(
+                      offset: Offset(0, 2),
+                      blurRadius: 2,
+                      color: shadowColor,
+                    ),
+                    BoxShadow(
+                      offset: Offset(0, 1),
+                      blurRadius: 5,
+                      color: shadowColor,
+                    ),
+                  ]
+                : null,
           ),
           clipBehavior: Clip.hardEdge,
           child: ClipRRect(
@@ -84,7 +86,8 @@ class ParticipantCard extends ConsumerWidget {
                   start: overlayPadding,
                   child: SpeakingIndicatorOrEmoji(participant: participant),
                 ),
-                if (currentUserIsKeeper &&
+                if (session != null &&
+                    currentUserIsKeeper &&
                     currentUserSlug != participant.identity)
                   PositionedDirectional(
                     end: overlayPadding,
@@ -92,7 +95,7 @@ class ParticipantCard extends ConsumerWidget {
                     child: ParticipantControlButton(
                       participant: participant,
                       overlayPadding: overlayPadding,
-                      event: event,
+                      session: session!,
                     ),
                   ),
                 PositionedDirectional(
@@ -127,14 +130,14 @@ class ParticipantControlButton extends ConsumerWidget {
   const ParticipantControlButton({
     required this.participant,
     required this.overlayPadding,
-    required this.event,
+    required this.session,
     this.backgroundColor = Colors.black54,
     super.key,
   });
 
   final Participant participant;
   final double overlayPadding;
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
 
   final Color backgroundColor;
 
@@ -268,7 +271,7 @@ class ParticipantControlButton extends ConsumerWidget {
           onConfirm: () async {
             await ref.read(
               muteParticipantProvider(
-                event.slug,
+                session.slug,
                 participant.identity,
               ).future,
             );
@@ -297,7 +300,7 @@ class ParticipantControlButton extends ConsumerWidget {
           onConfirm: () async {
             await ref.read(
               removeParticipantProvider(
-                event.slug,
+                session.slug,
                 participant.identity,
               ).future,
             );
@@ -372,12 +375,10 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                 } else if (videoTrack == null) {
                   return const LoadingVideoPlaceholder();
                 }
-                return RepaintBoundary(
-                  child: VideoTrackRenderer(
-                    videoTrack!,
-                    fit: VideoViewFit.cover,
-                    mirrorMode: VideoViewMirrorMode.off,
-                  ),
+                return VideoTrackRenderer(
+                  videoTrack!,
+                  fit: VideoViewFit.cover,
+                  renderMode: VideoRenderMode.platformView,
                 );
               },
             ),
@@ -403,13 +404,13 @@ class ParticipantVideo extends ConsumerWidget {
 
     if (videoTrack != null && videoTrack.subscribed && !videoTrack.muted) {
       return IgnorePointer(
-        child: RepaintBoundary(
-          child: VideoTrackRenderer(
-            key: ValueKey(videoTrack.track!.sid),
-            videoTrack.track! as VideoTrack,
-            fit: VideoViewFit.cover,
-            mirrorMode: VideoViewMirrorMode.off,
-          ),
+        child: VideoTrackRenderer(
+          key: ValueKey(videoTrack.track!.sid),
+          videoTrack.track! as VideoTrack,
+          fit: VideoViewFit.cover,
+          // Use platform view for better CPU performance on iOS
+          // https://github.com/livekit/client-sdk-flutter/issues/364
+          renderMode: VideoRenderMode.platformView,
         ),
       );
     } else {

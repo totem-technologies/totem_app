@@ -9,22 +9,23 @@ import 'package:totem_app/shared/date.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/utils.dart';
 
-/// Card used in Suggestions tab, built from EventDetailSchema.
 class SuggestedSpaceCard extends StatelessWidget {
   const SuggestedSpaceCard({
-    required this.event,
+    required this.session,
     super.key,
   });
 
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final backgroundImage = event.space.imageLink;
-    final timeLabel = buildTimeLabel(event.start);
-    final title = event.title.isNotEmpty ? event.title : event.space.title;
-    final keeperName = event.space.author.name ?? 'Keeper';
+    final backgroundImage = session.space.imageLink;
+    final timeLabel = buildTimeLabel(session.start);
+    final title = session.title.isNotEmpty
+        ? session.title
+        : session.space.title;
+    final keeperName = session.space.author.name ?? 'Keeper';
 
     return Container(
       height: 120,
@@ -151,7 +152,7 @@ class SuggestedSpaceCard extends StatelessWidget {
                           child: ClipOval(
                             child: () {
                               final profileImage =
-                                  event.space.author.profileImage;
+                                  session.space.author.profileImage;
                               if (profileImage != null &&
                                   profileImage.isNotEmpty) {
                                 return CachedNetworkImage(
@@ -222,7 +223,7 @@ class SuggestedSpaceCard extends StatelessWidget {
                             height: 1,
                             fontSize: 8,
                           ),
-                          child: SeatsLeftText(seatsLeft: event.seatsLeft),
+                          child: SeatsLeftText(seatsLeft: session.seatsLeft),
                         ),
                       ],
                     ),

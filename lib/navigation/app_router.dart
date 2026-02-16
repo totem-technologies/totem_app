@@ -352,13 +352,13 @@ GoRouter createRouter(WidgetRef ref) {
       ),
 
       GoRoute(
-        path: RouteNames.spaceEvent(':spaceSlug', ':eventSlug'),
-        name: RouteNames.spaceEvent(':spaceSlug', ':eventSlug'),
+        path: RouteNames.spaceSession(':spaceSlug', ':eventSlug'),
+        name: RouteNames.spaceSession(':spaceSlug', ':eventSlug'),
         builder: (context, state) {
           final spaceSlug = state.pathParameters['spaceSlug'] ?? '';
           final eventSlug = state.pathParameters['eventSlug'];
           return SentryDisplayWidget(
-            child: SpaceDetailScreen(slug: spaceSlug, eventSlug: eventSlug),
+            child: SpaceDetailScreen(slug: spaceSlug, sessionSlug: eventSlug),
           );
         },
       ),
@@ -386,7 +386,7 @@ GoRouter createRouter(WidgetRef ref) {
         name: RouteNames.videoSessionPrejoin,
         builder: (context, state) {
           return SentryDisplayWidget(
-            child: PreJoinScreen(eventSlug: state.extra! as String),
+            child: PreJoinScreen(sessionSlug: state.extra! as String),
           );
         },
       ),

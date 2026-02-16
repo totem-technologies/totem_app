@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:totem_app/shared/assets.dart';
 
 class CardScreen extends StatefulWidget {
   /// Creates a card screen.
@@ -85,7 +86,7 @@ class _CardScreenState extends State<CardScreen>
                         },
                         blendMode: BlendMode.darken,
                         child: Image.asset(
-                          'assets/images/welcome_background.jpg',
+                          TotemAssets.genericBackground,
                           fit: BoxFit.cover,
                         ),
                       ),

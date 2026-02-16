@@ -66,7 +66,7 @@ class SessionHistoryScreen extends ConsumerWidget {
                   for (final session in data)
                     Padding(
                       padding: const EdgeInsetsDirectional.only(top: 20),
-                      child: SpaceCard.fromEventDetailSchema(session),
+                      child: SpaceCard.fromSessionDetailSchema(session),
                     ),
                 ],
               ),

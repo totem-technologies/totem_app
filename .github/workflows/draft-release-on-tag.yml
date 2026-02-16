@@ -66,7 +66,7 @@ jobs:
 
   ios:
     name: iOS (${{ matrix.flavor }})
-    runs-on: macos-latest
+    runs-on: macos-26
     needs: create_draft_release
 
     strategy:

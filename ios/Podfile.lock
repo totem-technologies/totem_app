@@ -5,17 +5,17 @@ PODS:
   - flutter_webrtc (1.2.0):
     - Flutter
     - WebRTC-SDK (= 137.7151.04)
-  - livekit_client (2.6.1):
+  - livekit_client (2.6.2):
     - Flutter
     - flutter_webrtc
     - WebRTC-SDK (= 137.7151.04)
   - permission_handler_apple (9.3.0):
     - Flutter
-  - PostHog (3.39.0)
+  - PostHog (3.40.0)
   - posthog_flutter (0.0.1):
     - Flutter
     - FlutterMacOS
-    - PostHog (< 4.0.0, >= 3.32.0)
+    - PostHog (< 4.0.0, >= 3.40.0)
   - WebRTC-SDK (137.7151.04)
 
 DEPENDENCIES:
@@ -49,12 +49,12 @@ SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_foreground_task: a159d2c2173b33699ddb3e6c2a067045d7cebb89
   flutter_webrtc: c3e21fc0dcd9d8eb246ae4d5256fcbeb2f5ecd22
-  livekit_client: ee5503a79b5e1a5cbf6bbf741b4625d2531c8bb9
+  livekit_client: e266d6c90ba57a121aa126df808ac032b12e26f3
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
-  PostHog: 43ba4f42cc8dda909b33033e9ba0a1f64a2a8eb2
-  posthog_flutter: 9535ac2d4ab65ccb9ace3886dcc0b3105198bad5
+  PostHog: 1118eb27c5f54a0f7f11fe669d60f1a77c6b3a9d
+  posthog_flutter: 074371576a1f82dc8d3c7ca6b0b6c3c930e03ba5
   WebRTC-SDK: 40d4f5ba05cadff14e4db5614aec402a633f007e
 
-PODFILE CHECKSUM: b30b865938d0fb1567b95f877f9a8bc353310887
+PODFILE CHECKSUM: 828208901b6fdb0e53d9036ed74c75e2e1ebafa9
 
 COCOAPODS: 1.16.2

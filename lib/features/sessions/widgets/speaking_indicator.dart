@@ -19,11 +19,10 @@ class SpeakingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final audioTracks = participant
-        .getTrackPublications()
-        .where((t) => t.kind == TrackType.AUDIO && t.track is AudioTrack)
-        .toList();
-    if (participant.isMuted || !participant.hasAudio || audioTracks.isEmpty) {
+    final audioTrack = participant.getTrackPublicationBySource(
+      TrackSource.microphone,
+    );
+    if (audioTrack == null || !audioTrack.subscribed || audioTrack.muted) {
       return TotemIcon(
         TotemIcons.microphoneOff,
         size: 20,
@@ -32,7 +31,7 @@ class SpeakingIndicator extends StatelessWidget {
     } else {
       return RepaintBoundary(
         child: SoundWaveformWidget(
-          audioTrack: audioTracks.firstOrNull?.track as AudioTrack?,
+          audioTrack: audioTrack.track as AudioTrack?,
           participant: participant,
           options: AudioVisualizerWidgetOptions(
             color: foregroundColor,

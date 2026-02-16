@@ -92,7 +92,7 @@ class HomeScreen extends ConsumerWidget {
         child: summary.when(
           data: (summary) {
             final nextSession = summary.upcoming
-                .where((event) => !event.ended)
+                .where((session) => !session.ended)
                 .firstOrNull;
             final isNewUser = circleCount == 0 && nextSession == null;
 

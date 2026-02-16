@@ -44,19 +44,19 @@ enum SpaceJoinCardState {
 }
 
 class SpaceJoinCard extends ConsumerStatefulWidget {
-  const SpaceJoinCard({required this.space, required this.event, super.key});
+  const SpaceJoinCard({required this.space, required this.session, super.key});
 
   final MobileSpaceDetailSchema space;
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
 
   @override
   ConsumerState<SpaceJoinCard> createState() => _SpaceJoinCardState();
 }
 
 class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
-  SessionDetailSchema get event => widget.event;
+  SessionDetailSchema get session => widget.session;
 
-  late bool _attending = event.attending;
+  late bool _attending = session.attending;
   var _loading = false;
   var _joined = false;
   late String _currentTimeago;
@@ -68,11 +68,11 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   @override
   void initState() {
     super.initState();
-    _currentTimeago = timeago.format(event.start, allowFromNow: true);
+    _currentTimeago = timeago.format(session.start, allowFromNow: true);
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         final newTimeago = timeago.format(
-          event.start,
+          session.start,
           allowFromNow: true,
         );
         if (_currentTimeago != newTimeago) {
@@ -97,28 +97,28 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
 
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
 
-    final hasEnded = event.start
-        .add(Duration(minutes: event.duration))
+    final hasEnded = session.start
+        .add(Duration(minutes: session.duration))
         .isBefore(DateTime.now());
 
     final state = () {
-      if (event.cancelled) return SpaceJoinCardState.cancelled;
+      if (session.cancelled) return SpaceJoinCardState.cancelled;
 
       final hasEnded =
-          event.ended ||
-          event.start
-              .add(Duration(minutes: event.duration))
+          session.ended ||
+          session.start
+              .add(Duration(minutes: session.duration))
               .isBefore(DateTime.now());
 
       if (hasEnded) return SpaceJoinCardState.ended;
 
-      if (_joined || (event.canJoinNow(user) && event.joinable)) {
+      if (_joined || (session.canJoinNow(user) && session.joinable)) {
         return SpaceJoinCardState.joinable;
       } else if (_attending) {
         return SpaceJoinCardState.attending;
-      } else if (event.seatsLeft <= 0) {
+      } else if (session.seatsLeft <= 0) {
         return SpaceJoinCardState.full;
-      } else if (!event.open) {
+      } else if (!session.open) {
         return SpaceJoinCardState.closed;
       } else {
         return SpaceJoinCardState.notJoined;
@@ -162,7 +162,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                                 return 'This session is full';
                               case SpaceJoinCardState.attending:
                               case SpaceJoinCardState.notJoined:
-                                return formatEventDate(event.start);
+                                return formatSessionDate(session.start);
                             }
                           }(),
                           style: theme.textTheme.titleMedium?.copyWith(
@@ -175,7 +175,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                             switch (state) {
                               case SpaceJoinCardState.attending:
                               case SpaceJoinCardState.notJoined:
-                                return formatEventTime(event.start);
+                                return formatSessionTime(session.start);
                               case SpaceJoinCardState.joinable:
                                 return _currentTimeago;
                               case SpaceJoinCardState.ended:
@@ -200,10 +200,10 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                     child: Link(
                       uri: hasEnded
                           ? null
-                          : event.canJoinNow(user) &&
-                                event.meetingProvider ==
+                          : session.canJoinNow(user) &&
+                                session.meetingProvider ==
                                     MeetingProviderEnum.googleMeet
-                          ? Uri.parse(getFullUrl(event.calLink))
+                          ? Uri.parse(getFullUrl(session.calLink))
                           : null,
                       builder: (context, followLink) {
                         const secondaryButtonStyle = ButtonStyle(
@@ -273,7 +273,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
                             case SpaceJoinCardState.closed:
                               toHome(HomeRoutes.spaces);
                             case SpaceJoinCardState.joinable:
-                              if (event.meetingProvider ==
+                              if (session.meetingProvider ==
                                   MeetingProviderEnum.livekit) {
                                 joinLivekit();
                               } else {
@@ -395,7 +395,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     try {
       final mobileApiService = ref.read(mobileApiServiceProvider);
       final response = await mobileApiService.spaces
-          .totemSpacesMobileApiMobileApiRsvpConfirm(eventSlug: event.slug);
+          .totemSpacesMobileApiMobileApiRsvpConfirm(eventSlug: session.slug);
 
       _loading = false;
 
@@ -441,7 +441,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
       context: context,
       builder: (context) {
         return AttendingDialog(
-          eventSlug: event.slug,
+          eventSlug: session.slug,
           onAddToCalendar: addToCalendar,
         );
       },
@@ -501,11 +501,11 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     // Reference:
     // https://github.com/totem-technologies/totem-server/blob/main/assets/js/components/AddToCalendarButton.tsx#L29-L43
     final calendarEvent = AppCalendarEvent(
-      title: '[TOTEM] ${widget.event.title} - ${widget.space.title}',
+      title: '[TOTEM] ${widget.session.title} - ${widget.space.title}',
       description: widget.space.shortDescription,
-      location: getFullUrl(event.calLink),
-      start: event.start.toLocal(),
-      end: event.start.add(Duration(minutes: event.duration)).toLocal(),
+      location: getFullUrl(session.calLink),
+      start: session.start.toLocal(),
+      end: session.start.add(Duration(minutes: session.duration)).toLocal(),
       reminderMinutesBefore: 10,
     );
 
@@ -560,7 +560,7 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
     try {
       final mobileApiService = ref.read(mobileApiServiceProvider);
       final response = await mobileApiService.spaces
-          .totemSpacesMobileApiMobileApiRsvpCancel(eventSlug: event.slug);
+          .totemSpacesMobileApiMobileApiRsvpCancel(eventSlug: session.slug);
 
       if (mounted) {
         setState(() => _loading = false);
@@ -607,15 +607,18 @@ class _SpaceJoinCardState extends ConsumerState<SpaceJoinCard> {
   Future<void> refresh() async {
     // We still want to wait for the refresh to complete
     // ignore: unused_result
-    await ref.refresh(eventProvider(event.slug).future);
+    await ref.refresh(eventProvider(session.slug).future);
     // We still want to wait for the refresh to complete
     // ignore: unused_result
     await ref.refresh(spaceProvider(widget.space.slug).future);
   }
 
   Future<void> joinLivekit() async {
-    logger.d('Joining livekit session for event: ${event.slug}');
-    await context.pushNamed(RouteNames.videoSessionPrejoin, extra: event.slug);
+    logger.d('Joining livekit session for event: ${session.slug}');
+    await context.pushNamed(
+      RouteNames.videoSessionPrejoin,
+      extra: session.slug,
+    );
   }
 }
 

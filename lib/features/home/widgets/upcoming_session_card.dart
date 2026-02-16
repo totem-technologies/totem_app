@@ -422,7 +422,7 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
 
   void _navigateToSession(BuildContext context) {
     context.push(
-      RouteNames.spaceEvent(widget.data.spaceSlug, widget.data.sessionSlug),
+      RouteNames.spaceSession(widget.data.spaceSlug, widget.data.sessionSlug),
     );
   }
 }
