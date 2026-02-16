@@ -259,11 +259,11 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
 
     if (isLargeScreen) {
       // On large screens, skip date grouping and show a 2-column grid
-      final allSessions =
-          groupedSessions.expand((g) => g.sessions).toList();
+      final allSessions = groupedSessions.expand((g) => g.sessions).toList();
       return GridView.builder(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 100).copyWith(bottom: 20),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 100,
+        ).copyWith(bottom: 20),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           mainAxisSpacing: 16,
