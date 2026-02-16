@@ -18,50 +18,58 @@ import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 
-/// Builds slivers for the Blogs section when blog posts are available.
-List<Widget> _blogSectionSlivers(WidgetRef ref, ThemeData theme) {
-  final blogAsync = ref.watch(listBlogPostsProvider);
-  final items = blogAsync.maybeWhen(
-    data: (page) => page.items,
-    orElse: () => <BlogPostListSchema>[],
-  );
-  if (items.isEmpty) return const [];
+/// Renders the Blogs section slivers when blog posts are available.
+class _BlogSection extends ConsumerWidget {
+  const _BlogSection();
 
-  return [
-    SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsetsDirectional.only(
-          start: 20,
-          end: 20,
-          top: 24,
-          bottom: 16,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Semantics(
-              header: true,
-              child: Text(
-                'Blogs',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18,
-                ),
-              ),
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final blogAsync = ref.watch(listBlogPostsProvider);
+    final items = blogAsync.maybeWhen(
+      data: (page) => page.items,
+      orElse: () => <BlogPostListSchema>[],
+    );
+    if (items.isEmpty) return const SliverToBoxAdapter();
+
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsetsDirectional.only(
+              start: 20,
+              end: 20,
+              top: 24,
+              bottom: 16,
             ),
-            const _ViewAllButton(destination: HomeRoutes.blog),
-          ],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text(
+                    'Blogs',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+                const _ViewAllButton(destination: HomeRoutes.blog),
+              ],
+            ),
+          ),
         ),
-      ),
-    ),
-    SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
-        child: HomeBlogCard(data: items.first),
-      ),
-    ),
-    const SliverToBoxAdapter(child: SizedBox(height: 16)),
-  ];
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
+            child: HomeBlogCard(data: items.first),
+          ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
+      ],
+    );
+  }
 }
 
 class HomeScreen extends ConsumerWidget {
@@ -234,7 +242,7 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ],
                   // Blog section at bottom (Figma: "Blogs" header + single card + View All)
-                  ..._blogSectionSlivers(ref, theme),
+                  const _BlogSection(),
                   const SliverSafeArea(
                     top: false,
                     sliver: SliverToBoxAdapter(),
@@ -277,7 +285,7 @@ class _ViewAllButton extends ConsumerWidget {
     return TextButton(
       onPressed: () {
         if (route == HomeRoutes.spaces && filterMySessions) {
-          ref.read(mySessionsFilterProvider.notifier).setMySessionFilter(true);
+          ref.read(mySessionsFilterProvider.notifier).mySessionFilter = true;
         }
         toHome(route);
       },

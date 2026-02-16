@@ -67,9 +67,8 @@ class MySessionsButton extends StatelessWidget {
             ),
           ],
         ),
-        child: InkWell(
+        child: GestureDetector(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(24),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(

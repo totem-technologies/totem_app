@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/home/models/upcoming_session_data.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/spaces/widgets/filter.dart';
+import 'package:totem_app/features/spaces/widgets/session_card.dart';
 import 'package:totem_app/features/spaces/widgets/session_date_group.dart';
 import 'package:totem_app/features/spaces/widgets/sessions_header.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -39,8 +40,9 @@ class _MySessionsFilterNotifier extends Notifier<bool> {
 
   void toggle() => state = !state;
 
-  // ignore: use_setters_to_change_properties
-  void setMySessionFilter(bool enabled) => state = enabled;
+  bool get mySessionFilter => state;
+
+  set mySessionFilter(bool enabled) => state = enabled;
 }
 
 // Memoized data providers - only recompute when dependencies change
@@ -55,9 +57,15 @@ final _allSessionsProvider = Provider<List<UpcomingSessionData>>((ref) {
       );
 
       // Also include sessions from upcoming that aren't already in explore
+      final now = DateTime.now();
       final exploreSlugs = exploreSessions.map((s) => s.sessionSlug).toSet();
       final upcomingSessions = summary.upcoming
-          .where((s) => !s.ended && !exploreSlugs.contains(s.slug))
+          .where(
+            (s) =>
+                !s.ended &&
+                s.start.isAfter(now) &&
+                !exploreSlugs.contains(s.slug),
+          )
           .map(UpcomingSessionData.fromSessionDetail);
 
       return [...exploreSessions, ...upcomingSessions]
@@ -181,7 +189,7 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
                     selectedCategory,
                     isMySessionsSelected,
                   )
-                : _buildSessionsList(groupedSessions, DateTime.now()),
+                : _buildSessionsList(context, groupedSessions, DateTime.now()),
           ),
         ),
       ],
@@ -243,9 +251,30 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
   }
 
   Widget _buildSessionsList(
+    BuildContext context,
     List<SessionDateGroup> groupedSessions,
     DateTime today,
   ) {
+    final isLargeScreen = MediaQuery.widthOf(context) > 600;
+
+    if (isLargeScreen) {
+      // On large screens, skip date grouping and show a 2-column grid
+      final allSessions =
+          groupedSessions.expand((g) => g.sessions).toList();
+      return GridView.builder(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 100).copyWith(bottom: 20),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          childAspectRatio: 16 / 14,
+        ),
+        itemCount: allSessions.length,
+        itemBuilder: (_, index) => SessionCard(data: allSessions[index]),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 20),
       itemCount: groupedSessions.length,
