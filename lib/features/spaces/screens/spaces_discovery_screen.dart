@@ -275,13 +275,12 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 20),
-      itemCount: groupedSessions.length,
-      itemBuilder: (_, index) => SessionDateGroupWidget(
-        dateGroup: groupedSessions[index],
-        today: today,
-      ),
+    return CustomScrollView(
+      slivers: [
+        for (final group in groupedSessions)
+          SliverStickyDateGroup(dateGroup: group, today: today),
+        const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
+      ],
     );
   }
 }

@@ -11,8 +11,8 @@ class SessionDateGroup {
   final List<UpcomingSessionData> sessions;
 }
 
-class SessionDateGroupWidget extends StatelessWidget {
-  const SessionDateGroupWidget({
+class SliverStickyDateGroup extends StatelessWidget {
+  const SliverStickyDateGroup({
     required this.dateGroup,
     required this.today,
     super.key,
@@ -21,31 +21,82 @@ class SessionDateGroupWidget extends StatelessWidget {
   final SessionDateGroup dateGroup;
   final DateTime today;
 
+  static const double _dateColumnWidth =
+      DateIndicator._width + 16 + 12; // left pad + width + gap
+
   @override
   Widget build(BuildContext context) {
     final isToday = DateUtils.isSameDay(dateGroup.date, today);
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          DateIndicator(date: dateGroup.date, isToday: isToday),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              children: [
-                for (int i = 0; i < dateGroup.sessions.length; i++) ...[
-                  SessionCard(data: dateGroup.sessions[i]),
-                  if (i < dateGroup.sessions.length - 1)
-                    const SizedBox(height: 16),
-                ],
-              ],
-            ),
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.only(bottom: 16),
+          sliver: SliverCrossAxisGroup(
+            slivers: [
+              SliverConstrainedCrossAxis(
+                maxExtent: _dateColumnWidth,
+                sliver: SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _DateIndicatorHeaderDelegate(
+                    date: dateGroup.date,
+                    isToday: isToday,
+                  ),
+                ),
+              ),
+              SliverCrossAxisExpanded(
+                flex: 1,
+                sliver: SliverPadding(
+                  padding: const EdgeInsets.only(right: 16),
+                  sliver: SliverList.separated(
+                    itemCount: dateGroup.sessions.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 16),
+                    itemBuilder: (_, index) =>
+                        SessionCard(data: dateGroup.sessions[index]),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
+      ],
+    );
+  }
+}
+
+class _DateIndicatorHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _DateIndicatorHeaderDelegate({
+    required this.date,
+    required this.isToday,
+  });
+
+  final DateTime date;
+  final bool isToday;
+
+  @override
+  double get minExtent => DateIndicator._height;
+
+  @override
+  double get maxExtent => DateIndicator._height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 16),
+        child: DateIndicator(date: date, isToday: isToday),
       ),
     );
+  }
+
+  @override
+  bool shouldRebuild(covariant _DateIndicatorHeaderDelegate oldDelegate) {
+    return date != oldDelegate.date || isToday != oldDelegate.isToday;
   }
 }
 
