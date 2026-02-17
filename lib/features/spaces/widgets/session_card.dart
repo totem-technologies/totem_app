@@ -100,16 +100,16 @@ class _SessionImage extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: height),
         child: (imageUrl != null && imageUrl!.isNotEmpty)
-          ? CachedNetworkImage(
-              imageUrl: getFullUrl(imageUrl!),
-              fit: BoxFit.cover,
-              placeholder: (_, _) => Container(color: Colors.grey.shade200),
-              errorWidget: (_, _, _) => Image.asset(
-                TotemAssets.genericBackground,
+            ? CachedNetworkImage(
+                imageUrl: getFullUrl(imageUrl!),
                 fit: BoxFit.cover,
-              ),
-            )
-          : Image.asset(TotemAssets.genericBackground, fit: BoxFit.cover),
+                placeholder: (_, _) => Container(color: Colors.grey.shade200),
+                errorWidget: (_, _, _) => Image.asset(
+                  TotemAssets.genericBackground,
+                  fit: BoxFit.cover,
+                ),
+              )
+            : Image.asset(TotemAssets.genericBackground, fit: BoxFit.cover),
       ),
     );
   }
