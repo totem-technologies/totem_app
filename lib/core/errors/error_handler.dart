@@ -29,11 +29,9 @@ class ErrorHandler {
             // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
             ..sendDefaultPii = true
             ..tracesSampleRate = AppConfig.isDevelopment ? 1.0 : 0.1
-            // ignore: experimental_member_use
             ..profilesSampleRate = AppConfig.isDevelopment ? 1.0 : 0.1
             ..enableLogs = true
             ..attachScreenshot = true
-            // ignore: experimental_member_use
             ..attachViewHierarchy = true
             ..enableAutoPerformanceTracing = true
             ..enableTimeToFullDisplayTracing = true;
