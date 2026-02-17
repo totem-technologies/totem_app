@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/home/models/upcoming_session_data.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/spaces/widgets/filter.dart';
@@ -123,11 +124,33 @@ final _groupedSessionsProvider = Provider<List<SessionDateGroup>>((ref) {
     ..sort((a, b) => a.date.compareTo(b.date));
 });
 
-class SpacesDiscoveryScreen extends ConsumerWidget {
+/// Threshold in pixels of scroll before the header collapses.
+const _collapseScrollThreshold = 30.0;
+
+class SpacesDiscoveryScreen extends ConsumerStatefulWidget {
   const SpacesDiscoveryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SpacesDiscoveryScreen> createState() =>
+      _SpacesDiscoveryScreenState();
+}
+
+class _SpacesDiscoveryScreenState extends ConsumerState<SpacesDiscoveryScreen> {
+  bool _isCollapsed = false;
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollUpdateNotification) {
+      final offset = notification.metrics.pixels;
+      final shouldCollapse = offset > _collapseScrollThreshold;
+      if (shouldCollapse != _isCollapsed) {
+        setState(() => _isCollapsed = shouldCollapse);
+      }
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final summaryAsync = ref.watch(spacesSummaryProvider);
     final isMySessionsSelected = ref.watch(mySessionsFilterProvider);
 
@@ -165,31 +188,73 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
       );
     }
 
+    void toggleMySessions() =>
+        ref.read(mySessionsFilterProvider.notifier).toggle();
+
     return Column(
       children: [
-        SessionsHeader(
-          isMySessionsSelected: isMySessionsSelected,
-          onMySessionsTapped: () =>
-              ref.read(mySessionsFilterProvider.notifier).toggle(),
+        // Animated header: collapses title + My Sessions button on scroll
+        AnimatedCrossFade(
+          duration: const Duration(milliseconds: 250),
+          sizeCurve: Curves.easeInOut,
+          firstChild: SessionsHeader(
+            isMySessionsSelected: isMySessionsSelected,
+            onMySessionsTapped: toggleMySessions,
+          ),
+          secondChild: const SizedBox(width: double.infinity),
+          crossFadeState: _isCollapsed
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
         ),
         Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: SpacesFilterBar(
-            categories: categories,
-            selectedCategory: selectedCategory,
-            onCategorySelected: (category) =>
-                ref.read(selectedCategoryProvider.notifier).toggle(category),
+          padding: const EdgeInsets.only(bottom: 8, right: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: SpacesFilterBar(
+                  categories: categories,
+                  selectedCategory: selectedCategory,
+                  onCategorySelected: (category) => ref
+                      .read(selectedCategoryProvider.notifier)
+                      .toggle(category),
+                ),
+              ),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: _isCollapsed
+                    ? Padding(
+                        padding: const EdgeInsets.only(left: 16),
+                        child: MySessionsButton(
+                          isSelected: isMySessionsSelected,
+                          onTap: toggleMySessions,
+                          iconOnly: true,
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
           ),
         ),
         Expanded(
-          child: RefreshIndicator.adaptive(
-            onRefresh: () => ref.refresh(spacesSummaryProvider.future),
-            child: filteredSessions.isEmpty
-                ? _buildEmptyFilterResult(
-                    selectedCategory,
-                    isMySessionsSelected,
-                  )
-                : _buildSessionsList(context, groupedSessions, DateTime.now()),
+          child: _ScrollFadeWrapper(
+            showShadow: _isCollapsed,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _handleScrollNotification,
+              child: RefreshIndicator.adaptive(
+                onRefresh: () => ref.refresh(spacesSummaryProvider.future),
+                child: filteredSessions.isEmpty
+                    ? _buildEmptyFilterResult(
+                        selectedCategory,
+                        isMySessionsSelected,
+                      )
+                    : _buildSessionsList(
+                        context,
+                        groupedSessions,
+                        DateTime.now(),
+                      ),
+              ),
+            ),
           ),
         ),
       ],
@@ -280,6 +345,54 @@ class SpacesDiscoveryScreen extends ConsumerWidget {
         for (final group in groupedSessions)
           SliverStickyDateGroup(dateGroup: group, today: today),
         const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
+      ],
+    );
+  }
+}
+
+class _ScrollFadeWrapper extends StatelessWidget {
+  const _ScrollFadeWrapper({
+    required this.child,
+    required this.showShadow,
+  });
+
+  final Widget child;
+  final bool showShadow;
+
+  static const _fadeHeight = 20.0;
+  // Offset the gradient to start after the date indicator column
+  static const _dateColumnWidth = 78.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        child,
+        // Fade gradient that appears when scrolling, only over session cards
+        Positioned(
+          top: 0,
+          left: _dateColumnWidth,
+          right: 0,
+          height: _fadeHeight,
+          child: IgnorePointer(
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 250),
+              opacity: showShadow ? 1.0 : 0.0,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppTheme.cream,
+                      AppTheme.cream.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }

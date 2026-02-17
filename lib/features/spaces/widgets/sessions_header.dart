@@ -40,11 +40,13 @@ class MySessionsButton extends StatelessWidget {
   const MySessionsButton({
     required this.isSelected,
     required this.onTap,
+    this.iconOnly = false,
     super.key,
   });
 
   final bool isSelected;
   final VoidCallback onTap;
+  final bool iconOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -55,41 +57,54 @@ class MySessionsButton extends StatelessWidget {
       button: true,
       label: 'My Sessions filter',
       selected: isSelected,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: isSelected ? primaryColor : Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: GestureDetector(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TotemIcon(
-                  TotemIcons.mySessions,
-                  size: 16,
-                  color: contentColor,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'My Sessions',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: contentColor,
-                  ),
-                ),
-              ],
-            ),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          decoration: BoxDecoration(
+            color: isSelected ? primaryColor : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: iconOnly ? 10 : 16,
+            vertical: 10,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TotemIcon(
+                TotemIcons.mySessions,
+                size: 16,
+                color: contentColor,
+              ),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: iconOnly
+                    ? const SizedBox.shrink()
+                    : Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          Text(
+                            'My Sessions',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: contentColor,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ],
           ),
         ),
       ),
