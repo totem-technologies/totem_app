@@ -49,7 +49,12 @@ class SessionCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SessionImage(imageUrl: data.imageUrl, height: _imageHeight),
+                Flexible(
+                  child: _SessionImage(
+                    imageUrl: data.imageUrl,
+                    height: _imageHeight,
+                  ),
+                ),
                 Padding(
                   padding: _contentPadding,
                   child: Column(
@@ -91,9 +96,10 @@ class _SessionImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: height,
       width: double.infinity,
-      child: (imageUrl != null && imageUrl!.isNotEmpty)
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: height),
+        child: (imageUrl != null && imageUrl!.isNotEmpty)
           ? CachedNetworkImage(
               imageUrl: getFullUrl(imageUrl!),
               fit: BoxFit.cover,
@@ -104,6 +110,7 @@ class _SessionImage extends StatelessWidget {
               ),
             )
           : Image.asset(TotemAssets.genericBackground, fit: BoxFit.cover),
+      ),
     );
   }
 }
