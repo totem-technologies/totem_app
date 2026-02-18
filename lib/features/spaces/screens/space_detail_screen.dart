@@ -839,7 +839,8 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   }
 
   Future<void> _refresh(SessionDetailSchema event) async {
-    _initialized = false; // allow _initFromEvent to re-run with fresh start time
+    _initialized =
+        false; // allow _initFromEvent to re-run with fresh start time
     // ignore: unused_result
     await ref.refresh(eventProvider(event.slug).future);
     // ignore: unused_result
