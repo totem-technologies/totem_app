@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:flutter_html/flutter_html.dart';
@@ -22,7 +23,6 @@ import 'package:totem_app/core/services/calendar_service.dart';
 import 'package:totem_app/features/keeper/screens/meet_user_card.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/info_text.dart';
-import 'package:totem_app/features/spaces/widgets/space_join_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
@@ -41,6 +41,16 @@ import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+enum SpaceJoinCardState {
+  ended,
+  cancelled,
+  closed,
+  joinable,
+  full,
+  attending,
+  notJoined,
+}
+
 class SpaceDetailScreen extends ConsumerStatefulWidget {
   const SpaceDetailScreen({required this.slug, this.sessionSlug, super.key});
 
@@ -55,13 +65,30 @@ class SpaceDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
+  final _scrollController = ScrollController();
+  bool _appBarCollapsed = false;
+  String? _selectedEventSlug;
+
   @override
   void initState() {
     super.initState();
     ref.read(analyticsProvider).logSpaceViewed(widget.slug);
+    _scrollController.addListener(_onScroll);
   }
 
-  String? _selectedEventSlug;
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final collapsed =
+        _scrollController.hasClients && _scrollController.offset > 180;
+    if (collapsed != _appBarCollapsed) {
+      setState(() => _appBarCollapsed = collapsed);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +123,13 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
               const SizedBox.expand(),
               Positioned.fill(
                 child: NestedScrollView(
+                  controller: _scrollController,
                   headerSliverBuilder: (context, _) {
+                    final collapsedTitle = eventAsync?.maybeWhen(
+                          data: (event) => event.title,
+                          orElse: () => null,
+                        ) ??
+                        space.title;
                     return [
                       SliverAppBar(
                         expandedHeight: 262,
@@ -104,6 +137,19 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                         automaticallyImplyLeading: false,
                         backgroundColor: theme.scaffoldBackgroundColor,
                         scrolledUnderElevation: 0,
+                        title: AnimatedOpacity(
+                          opacity: _appBarCollapsed ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 200),
+                          child: Text(
+                            collapsedTitle,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.slate,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                         flexibleSpace: FlexibleSpaceBar(
                           collapseMode: CollapseMode.parallax,
                           background: _SpaceHeaderImage(space: space),
@@ -186,24 +232,26 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               spacing: 10,
                               children: [
-                                // Space category / short description
-                                if (space.shortDescription.trim().isNotEmpty)
+                                // Space title — shown as a label only when
+                                // a session title will appear below it
+                                if (eventAsync != null &&
+                                    space.title.trim().isNotEmpty)
                                   Text(
-                                    space.shortDescription,
+                                    space.title,
                                     style: theme.textTheme.bodyLarge?.copyWith(
-                                      color: const Color(
-                                        0xFF262F37,
-                                      ).withValues(alpha: 0.7),
+                                      color: AppTheme.slate.withValues(
+                                        alpha: 0.7,
+                                      ),
                                     ),
-                                    maxLines: 3,
+                                    maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
 
-                                // Session or space title
+                                // Session title (or space title when no session)
                                 Text(
                                   eventAsync?.maybeWhen(
                                         data: (event) => event.title,
-                                        orElse: () => space.title,
+                                        orElse: () => null,
                                       ) ??
                                       space.title,
                                   style: theme.textTheme.headlineSmall
@@ -377,15 +425,14 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                               'View Profile',
                                               style: theme.textTheme.bodySmall
                                                   ?.copyWith(
-                                                    color: const Color(
-                                                      0xFF262F37,
-                                                    ).withValues(alpha: 0.7),
+                                                    color: AppTheme.slate
+                                                        .withValues(alpha: 0.7),
                                                   ),
                                             ),
                                             const TotemIcon(
                                               TotemIcons.arrowForward,
                                               size: 12,
-                                              color: Color(0xFF787D7E),
+                                              color: AppTheme.gray,
                                             ),
                                           ],
                                         ),
@@ -579,7 +626,6 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
             const SizedBox(height: 17),
             widget.eventAsync!.when(
               data: (event) {
-                _initFromEvent(event);
                 final state = _computeState(event, user);
                 return _DateAttendRow(
                   event: event,
@@ -590,6 +636,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
                   onGiveUpSpot: () => _giveUpSpot(event),
                   onAddToCalendar: () => _addToCalendar(event),
                   onJoinLivekit: () => _joinLivekit(event),
+                  onJoinGoogleMeet: () => _joinGoogleMeet(event),
                   onExplore: () => toHome(HomeRoutes.spaces),
                 );
               },
@@ -795,6 +842,14 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     await context.pushNamed(RouteNames.videoSessionPrejoin, extra: event.slug);
   }
 
+  Future<void> _joinGoogleMeet(SessionDetailSchema event) async {
+    setState(() => _joined = true);
+    await launchUrl(
+      Uri.parse(getFullUrl(event.calLink)),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
   Future<void> _refresh(SessionDetailSchema event) async {
     // ignore: unused_result
     await ref.refresh(eventProvider(event.slug).future);
@@ -817,6 +872,7 @@ class _DateAttendRow extends StatelessWidget {
     required this.onGiveUpSpot,
     required this.onAddToCalendar,
     required this.onJoinLivekit,
+    required this.onJoinGoogleMeet,
     required this.onExplore,
   });
 
@@ -828,6 +884,7 @@ class _DateAttendRow extends StatelessWidget {
   final VoidCallback onGiveUpSpot;
   final VoidCallback onAddToCalendar;
   final VoidCallback onJoinLivekit;
+  final VoidCallback onJoinGoogleMeet;
   final VoidCallback onExplore;
 
   @override
@@ -941,7 +998,7 @@ class _DateAttendRow extends StatelessWidget {
       SpaceJoinCardState.joinable =>
         event.meetingProvider == MeetingProviderEnum.livekit
             ? onJoinLivekit()
-            : onExplore(),
+            : onJoinGoogleMeet(),
       SpaceJoinCardState.notJoined => onAttend(),
       SpaceJoinCardState.attending => onAddToCalendar(),
     };
@@ -1357,128 +1414,169 @@ class AboutSpaceSheet extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Session Sheet (modal with join card)
+// Attending confirmation dialog
 // ─────────────────────────────────────────────────────────────
 
-class SessionSheet extends StatelessWidget {
-  const SessionSheet({required this.space, required this.session, super.key});
+class AttendingDialog extends StatefulWidget {
+  const AttendingDialog({
+    required this.onAddToCalendar,
+    required this.eventSlug,
+    super.key,
+  });
 
-  final MobileSpaceDetailSchema space;
-  final SessionDetailSchema session;
+  final String eventSlug;
+  final VoidCallback onAddToCalendar;
+
+  @override
+  State<AttendingDialog> createState() => _AttendingDialogState();
+}
+
+class _AttendingDialogState extends State<AttendingDialog> {
+  var _addedToCalendar = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.8,
-      builder: (context, controller) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: ListView(
-              controller: controller,
-              shrinkWrap: true,
-              padding: const EdgeInsetsDirectional.only(
-                start: 20,
-                end: 20,
-                bottom: 20,
-              ),
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: 14,
+          vertical: 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 10,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            session.title,
-                            style: theme.textTheme.titleLarge,
-                          ),
-                          Text.rich(
-                            TextSpan(
-                              text: 'with ',
-                              children: [
-                                TextSpan(
-                                  text: space.author.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                Builder(
+                  builder: (context) {
+                    return Container(
+                      height: 30,
+                      width: 30,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
                       ),
-                    ),
-                    UserAvatar.fromUserSchema(
-                      space.author,
-                      radius: 40,
-                      onTap: space.author.slug != null
-                          ? () => context.push(
-                              RouteNames.keeperProfile(space.author.slug!),
-                            )
-                          : null,
-                    ),
-                  ],
+                      child: IconButton(
+                        padding: EdgeInsetsDirectional.zero,
+                        iconSize: 18,
+                        color: AppTheme.gray,
+                        onPressed: () async {
+                          final box = context.findRenderObject() as RenderBox?;
+                          await SharePlus.instance.share(
+                            ShareParams(
+                              uri: Uri.parse(AppConfig.mobileApiUrl)
+                                  .resolve(
+                                    '/spaces/event/${widget.eventSlug}',
+                                  )
+                                  .resolve('?utm_source=app&utm_medium=share'),
+                              sharePositionOrigin: box != null
+                                  ? box.localToGlobal(Offset.zero) & box.size
+                                  : null,
+                            ),
+                          );
+                        },
+                        icon: Icon(Icons.adaptive.share),
+                      ),
+                    );
+                  },
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'About this session',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                const Spacer(),
+                Container(
+                  height: 30,
+                  width: 30,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
                   ),
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    CompactInfoText(
-                      const TotemIcon(TotemIcons.clockCircle),
-                      Text('${session.duration} minutes'),
-                    ),
-                    CompactInfoText(
-                      const TotemIcon(TotemIcons.seats),
-                      SeatsLeftText(seatsLeft: session.seatsLeft),
-                    ),
-                  ],
-                ),
-                Html(
-                  data: session.content,
-                  shrinkWrap: true,
-                  style: AppTheme.compactHtmlStyle,
-                  extensions: [TotemImageHtmlExtension()],
-                  onLinkTap: (url, _, _) async {
-                    if (url != null) {
-                      final appRoute = RoutingUtils.parseTotemDeepLink(url);
-                      if (appRoute != null && context.mounted) {
-                        // Navigate to app route instead of browser
-                        await context.push(appRoute);
-                      } else {
-                        // Open external URL for non-Totem links
-                        launchUrl(Uri.parse(url));
-                      }
-                    }
-                  },
-                  onAnchorTap: (url, _, _) async {
-                    if (url != null) {
-                      final appRoute = RoutingUtils.parseTotemDeepLink(url);
-                      if (appRoute != null && context.mounted) {
-                        // Navigate to app route instead of browser
-                        await context.push(appRoute);
-                      } else {
-                        // Open external URL for non-Totem links
-                        launchUrl(Uri.parse(url));
-                      }
-                    }
-                  },
+                  child: IconButton(
+                    padding: EdgeInsetsDirectional.zero,
+                    iconSize: 18,
+                    color: AppTheme.gray,
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
                 ),
               ],
             ),
-          ),
-          SpaceJoinCard(space: space, session: session),
-        ],
+            const TotemIcon(
+              TotemIcons.greenCheckbox,
+              size: 95,
+              color: Color(0xFF98BD44),
+            ),
+            Text(
+              "You're going!",
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            const Text.rich(
+              TextSpan(
+                children: <TextSpan>[
+                  TextSpan(
+                    text:
+                        "We'll send you a notification before the session "
+                        'starts.',
+                  ),
+                  TextSpan(text: '\n\n'),
+                  TextSpan(
+                    text:
+                        'When you join, you\u2019ll be in a Space where we take '
+                        'turns speaking while holding the virtual Totem \u2014 '
+                        'feel free to share when it\u2019s your turn, or simply '
+                        'listen if you prefer.',
+                  ),
+                  TextSpan(text: '\n\n'),
+                  TextSpan(
+                    text: 'Totem is better with friends!',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  TextSpan(
+                    text:
+                        " Share this link with your friends and they'll be "
+                        'able to join as well.',
+                  ),
+                ],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (!_addedToCalendar) {
+                  widget.onAddToCalendar();
+                  setState(() => _addedToCalendar = true);
+                } else {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: Text(_addedToCalendar ? 'Added!' : 'Add to Calendar'),
+            ),
+            Text.rich(
+              TextSpan(
+                children: [
+                  const TextSpan(text: 'In the meantime, review our '),
+                  TextSpan(
+                    text: 'Community Guidelines',
+                    style: const TextStyle(
+                      decoration: TextDecoration.underline,
+                    ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => launchUrl(
+                        AppConfig.communityGuidelinesUrl,
+                        mode: LaunchMode.externalApplication,
+                      ),
+                  ),
+                  const TextSpan(
+                    text: ' to learn more about how to participate.',
+                  ),
+                ],
+              ),
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
