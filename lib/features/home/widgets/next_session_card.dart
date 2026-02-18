@@ -147,7 +147,11 @@ class NextSessionCard extends StatelessWidget {
           const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.check_circle_outline, size: iconSize, color: AppTheme.gray),
+              Icon(
+                Icons.check_circle_outline,
+                size: iconSize,
+                color: AppTheme.gray,
+              ),
               SizedBox(width: spacing),
               Text('Attending', style: textStyle),
             ],
