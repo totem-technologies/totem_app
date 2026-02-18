@@ -18,60 +18,6 @@ import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 
-/// Renders the Blogs section slivers when blog posts are available.
-class _BlogSection extends ConsumerWidget {
-  const _BlogSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final blogAsync = ref.watch(listBlogPostsProvider);
-    final items = blogAsync.maybeWhen(
-      data: (page) => page.items,
-      orElse: () => <BlogPostListSchema>[],
-    );
-    if (items.isEmpty) return const SliverToBoxAdapter();
-
-    return SliverMainAxisGroup(
-      slivers: [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsetsDirectional.only(
-              start: 20,
-              end: 20,
-              top: 24,
-              bottom: 16,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Semantics(
-                  header: true,
-                  child: Text(
-                    'Blogs',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 18,
-                    ),
-                  ),
-                ),
-                const _ViewAllButton(destination: HomeRoutes.blog),
-              ],
-            ),
-          ),
-        ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
-            child: HomeBlogCard(data: items.first),
-          ),
-        ),
-        const SliverToBoxAdapter(child: SizedBox(height: 16)),
-      ],
-    );
-  }
-}
-
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -134,7 +80,7 @@ class HomeScreen extends ConsumerWidget {
                             Semantics(
                               header: true,
                               child: Text(
-                                'Your Next session',
+                                'Your Next Session',
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 18,
@@ -311,6 +257,60 @@ class _ViewAllButton extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Renders the Blogs section slivers when blog posts are available.
+class _BlogSection extends ConsumerWidget {
+  const _BlogSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final blogAsync = ref.watch(listBlogPostsProvider);
+    final items = blogAsync.maybeWhen(
+      data: (page) => page.items,
+      orElse: () => <BlogPostListSchema>[],
+    );
+    if (items.isEmpty) return const SliverToBoxAdapter();
+
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsetsDirectional.only(
+              start: 20,
+              end: 20,
+              top: 24,
+              bottom: 16,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text(
+                    'Blogs',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+                const _ViewAllButton(destination: HomeRoutes.blog),
+              ],
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
+            child: HomeBlogCard(data: items.first),
+          ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
+      ],
     );
   }
 }

@@ -21,7 +21,7 @@ class SliverStickyDateGroup extends StatelessWidget {
   final SessionDateGroup dateGroup;
   final DateTime today;
 
-  static const double _dateColumnWidth =
+  static const double dateColumnWidth =
       DateIndicator._width + 16 + 12; // left pad + width + gap
 
   @override
@@ -35,7 +35,7 @@ class SliverStickyDateGroup extends StatelessWidget {
           sliver: SliverCrossAxisGroup(
             slivers: [
               SliverConstrainedCrossAxis(
-                maxExtent: _dateColumnWidth,
+                maxExtent: dateColumnWidth,
                 sliver: SliverPersistentHeader(
                   pinned: true,
                   delegate: _DateIndicatorHeaderDelegate(

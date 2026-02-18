@@ -57,7 +57,10 @@ final _allSessionsProvider = Provider<List<UpcomingSessionData>>((ref) {
         includeAttendingFullSessions: true,
       );
 
-      // Also include sessions from upcoming that aren't already in explore
+      // Also include sessions from upcoming that aren't already in explore.
+      // Both UpcomingSessionData.sessionSlug (sourced from NextSessionSchema.slug
+      // via fromSpaceAndSession) and SessionDetailSchema.slug represent the same
+      // session identifier, so this slug-based dedup is valid.
       final now = DateTime.now();
       final exploreSlugs = exploreSessions.map((s) => s.sessionSlug).toSet();
       final upcomingSessions = summary.upcoming
@@ -323,7 +326,11 @@ class _SpacesDiscoveryScreenState extends ConsumerState<SpacesDiscoveryScreen> {
     final isLargeScreen = MediaQuery.widthOf(context) > 600;
 
     if (isLargeScreen) {
-      // On large screens, skip date grouping and show a 2-column grid
+      // On large screens, intentionally skip date grouping in favour of a
+      // compact 2-column grid. The sticky date column would consume too much
+      // horizontal space at wide widths.
+      // TODO(totem): Consider a two-column layout within each date group
+      //   to preserve date grouping on tablets if that UX becomes a priority.
       final allSessions = groupedSessions.expand((g) => g.sessions).toList();
       return GridView.builder(
         padding: const EdgeInsets.symmetric(
@@ -360,8 +367,9 @@ class _ScrollFadeWrapper extends StatelessWidget {
   final bool showShadow;
 
   static const _fadeHeight = 20.0;
-  // Offset the gradient to start after the date indicator column
-  static const _dateColumnWidth = 78.0;
+  // Offset the gradient to start after the date indicator column.
+  // References the single source of truth in SliverStickyDateGroup.
+  static const double _dateColumnWidth = SliverStickyDateGroup.dateColumnWidth;
 
   @override
   Widget build(BuildContext context) {
