@@ -51,6 +51,16 @@ enum SpaceJoinCardState {
   notJoined,
 }
 
+Future<void> _handleHtmlLinkTap(String? url, BuildContext context) async {
+  if (url == null) return;
+  final appRoute = RoutingUtils.parseTotemDeepLink(url);
+  if (appRoute != null && context.mounted) {
+    await context.push(appRoute);
+  } else {
+    launchUrl(Uri.parse(url));
+  }
+}
+
 class SpaceDetailScreen extends ConsumerStatefulWidget {
   const SpaceDetailScreen({required this.slug, this.sessionSlug, super.key});
 
@@ -343,34 +353,10 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                       extensions: [
                                         TotemImageHtmlExtension(),
                                       ],
-                                      onLinkTap: (url, _, _) async {
-                                        if (url != null) {
-                                          final appRoute =
-                                              RoutingUtils.parseTotemDeepLink(
-                                                url,
-                                              );
-                                          if (appRoute != null &&
-                                              context.mounted) {
-                                            await context.push(appRoute);
-                                          } else {
-                                            launchUrl(Uri.parse(url));
-                                          }
-                                        }
-                                      },
-                                      onAnchorTap: (url, _, _) async {
-                                        if (url != null) {
-                                          final appRoute =
-                                              RoutingUtils.parseTotemDeepLink(
-                                                url,
-                                              );
-                                          if (appRoute != null &&
-                                              context.mounted) {
-                                            await context.push(appRoute);
-                                          } else {
-                                            launchUrl(Uri.parse(url));
-                                          }
-                                        }
-                                      },
+                                      onLinkTap: (url, _, _) =>
+                                          _handleHtmlLinkTap(url, context),
+                                      onAnchorTap: (url, _, _) =>
+                                          _handleHtmlLinkTap(url, context),
                                     ),
                                     loading: () => const SizedBox(height: 80),
                                     error: (_, _) => const SizedBox.shrink(),
@@ -385,7 +371,6 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                           _UpcomingSessionsSection(
                             space: space,
                             currentEventSlug: effectiveEventSlug,
-                            theme: theme,
                           ),
 
                           const SizedBox(height: 24),
@@ -547,20 +532,21 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     SessionDetailSchema event,
     UserSchema? user,
   ) {
-    if (event.cancelled) return SpaceJoinCardState.cancelled;
     final ended =
         event.ended ||
         event.start
             .add(Duration(minutes: event.duration))
             .isBefore(DateTime.now());
-    if (ended) return SpaceJoinCardState.ended;
-    if (_joined || (event.canJoinNow(user) && event.joinable)) {
-      return SpaceJoinCardState.joinable;
-    }
-    if (_attending) return SpaceJoinCardState.attending;
-    if (event.seatsLeft <= 0) return SpaceJoinCardState.full;
-    if (!event.open) return SpaceJoinCardState.closed;
-    return SpaceJoinCardState.notJoined;
+    return switch (event) {
+      _ when event.cancelled => SpaceJoinCardState.cancelled,
+      _ when ended => SpaceJoinCardState.ended,
+      _ when _joined || (event.canJoinNow(user) && event.joinable) =>
+        SpaceJoinCardState.joinable,
+      _ when _attending => SpaceJoinCardState.attending,
+      _ when event.seatsLeft <= 0 => SpaceJoinCardState.full,
+      _ when !event.open => SpaceJoinCardState.closed,
+      _ => SpaceJoinCardState.notJoined,
+    };
   }
 
   @override
@@ -717,8 +703,9 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
         return;
       }
       final count = ((1 - progress / total) * 50).toInt();
+      final ctx = context; // snapshot after mounted check
       Confetti.launch(
-        context,
+        ctx,
         options: ConfettiOptions(
           particleCount: count,
           startVelocity: 30,
@@ -729,7 +716,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
         ),
       );
       Confetti.launch(
-        context,
+        ctx,
         options: ConfettiOptions(
           particleCount: count,
           startVelocity: 30,
@@ -852,6 +839,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   }
 
   Future<void> _refresh(SessionDetailSchema event) async {
+    _initialized = false; // allow _initFromEvent to re-run with fresh start time
     // ignore: unused_result
     await ref.refresh(eventProvider(event.slug).future);
     // ignore: unused_result
@@ -1047,15 +1035,14 @@ class _UpcomingSessionsSection extends StatelessWidget {
   const _UpcomingSessionsSection({
     required this.space,
     required this.currentEventSlug,
-    required this.theme,
   });
 
   final MobileSpaceDetailSchema space;
   final String? currentEventSlug;
-  final ThemeData theme;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final upcomingSessions = space.nextEvents
         .where((e) => e.slug != currentEventSlug)
         .toList();
@@ -1080,7 +1067,6 @@ class _UpcomingSessionsSection extends StatelessWidget {
             _UpcomingSessionCard(
               space: space,
               session: session,
-              theme: theme,
             ),
         ],
       ),
@@ -1096,21 +1082,19 @@ class _UpcomingSessionCard extends StatelessWidget {
   const _UpcomingSessionCard({
     required this.space,
     required this.session,
-    required this.theme,
   });
 
   final MobileSpaceDetailSchema space;
   final NextSessionSchema session;
-  final ThemeData theme;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return GestureDetector(
       onTap: () => context.push(
         RouteNames.spaceSession(space.slug, session.slug),
       ),
       child: Container(
-        height: 131,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -1233,7 +1217,7 @@ class _UpcomingSessionCard extends StatelessWidget {
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
                           child: const Text(
-                            'Attend',
+                            'View',
                             style: TextStyle(fontSize: 11),
                           ),
                         ),
@@ -1372,34 +1356,10 @@ class AboutSpaceSheet extends StatelessWidget {
                           style: {...AppTheme.compactHtmlStyle},
                           extensions: [TotemImageHtmlExtension()],
                           shrinkWrap: true,
-                          onLinkTap: (url, _, _) async {
-                            if (url != null) {
-                              final appRoute = RoutingUtils.parseTotemDeepLink(
-                                url,
-                              );
-                              if (appRoute != null && context.mounted) {
-                                // Navigate to app route instead of browser
-                                await context.push(appRoute);
-                              } else {
-                                // Open external URL for non-Totem links
-                                launchUrl(Uri.parse(url));
-                              }
-                            }
-                          },
-                          onAnchorTap: (url, _, _) async {
-                            if (url != null) {
-                              final appRoute = RoutingUtils.parseTotemDeepLink(
-                                url,
-                              );
-                              if (appRoute != null && context.mounted) {
-                                // Navigate to app route instead of browser
-                                await context.push(appRoute);
-                              } else {
-                                // Open external URL for non-Totem links
-                                launchUrl(Uri.parse(url));
-                              }
-                            }
-                          },
+                          onLinkTap: (url, _, _) =>
+                              _handleHtmlLinkTap(url, context),
+                          onAnchorTap: (url, _, _) =>
+                              _handleHtmlLinkTap(url, context),
                         ),
                       ],
                     ),
