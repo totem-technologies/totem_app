@@ -48,12 +48,11 @@ class SessionCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(_borderRadius),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Flexible(
-                  child: _SessionImage(
-                    imageUrl: data.imageUrl,
-                    height: _imageHeight,
-                  ),
+                _SessionImage(
+                  imageUrl: data.imageUrl,
+                  height: _imageHeight,
                 ),
                 Padding(
                   padding: _contentPadding,
