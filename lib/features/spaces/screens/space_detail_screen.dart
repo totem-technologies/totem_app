@@ -125,7 +125,8 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                 child: NestedScrollView(
                   controller: _scrollController,
                   headerSliverBuilder: (context, _) {
-                    final collapsedTitle = eventAsync?.maybeWhen(
+                    final collapsedTitle =
+                        eventAsync?.maybeWhen(
                           data: (event) => event.title,
                           orElse: () => null,
                         ) ??
