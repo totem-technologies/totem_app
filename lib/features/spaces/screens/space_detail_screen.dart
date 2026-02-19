@@ -1101,12 +1101,12 @@ class _UpcomingSessionCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
         clipBehavior: Clip.antiAlias,
-        child: Row(
+        child: IntrinsicHeight(
+          child: Row(
           children: [
             // ── Image ──────────────────────────────────────────
             SizedBox(
               width: 130,
-              height: double.infinity,
               child: (space.imageLink != null && space.imageLink!.isNotEmpty)
                   ? CachedNetworkImage(
                       imageUrl: getFullUrl(space.imageLink!),
@@ -1229,6 +1229,7 @@ class _UpcomingSessionCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
