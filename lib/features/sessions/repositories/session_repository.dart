@@ -12,12 +12,13 @@ const _shortTimeoutDuration = Duration(seconds: 10);
 const _timeoutDuration = Duration(seconds: 15);
 
 @riverpod
-Future<String> sessionToken(Ref ref, String eventSlug) async {
+Future<String> sessionToken(Ref ref, String sessionSlug) async {
   final apiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<String>(
     apiCall: () async {
-      final response = await apiService.meetings
-          .totemMeetingsMobileApiGetLivekitToken(eventSlug: eventSlug);
+      final response = await apiService.rooms.totemRoomsApiJoinRoom(
+        sessionSlug: sessionSlug,
+      );
       return response.token;
     },
     operationName: 'get session token',
@@ -28,16 +29,15 @@ Future<String> sessionToken(Ref ref, String eventSlug) async {
 @riverpod
 Future<void> removeParticipant(
   Ref ref,
-  String eventSlug,
+  String sessionSlug,
   String participantIdentity,
 ) {
   final apiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<void>(
-    apiCall: () =>
-        apiService.meetings.totemMeetingsMobileApiRemoveParticipantEndpoint(
-          eventSlug: eventSlug,
-          participantIdentity: participantIdentity,
-        ),
+    apiCall: () => apiService.rooms.totemRoomsApiRemove(
+      sessionSlug: sessionSlug,
+      participantIdentity: participantIdentity,
+    ),
     operationName: 'remove participant',
     retryOnNetworkError: true,
   );
@@ -49,16 +49,15 @@ Future<void> removeParticipant(
 @riverpod
 Future<void> muteParticipant(
   Ref ref,
-  String eventSlug,
+  String sessionSlug,
   String participantIdentity,
 ) async {
   final apiService = ref.read(mobileApiServiceProvider);
   await RepositoryUtils.handleApiCall<void>(
-    apiCall: () =>
-        apiService.meetings.totemMeetingsMobileApiMuteParticipantEndpoint(
-          eventSlug: eventSlug,
-          participantIdentity: participantIdentity,
-        ),
+    apiCall: () => apiService.rooms.totemRoomsApiMute(
+      sessionSlug: sessionSlug,
+      participantIdentity: participantIdentity,
+    ),
     operationName: 'mute participant',
     retryOnNetworkError: true,
   );
@@ -67,14 +66,12 @@ Future<void> muteParticipant(
 @riverpod
 Future<void> muteEveryone(
   Ref ref,
-  String eventSlug,
+  String sessionSlug,
 ) {
   final apiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<void>(
     apiCall: () =>
-        apiService.meetings.totemMeetingsMobileApiMuteAllParticipantsEndpoint(
-          eventSlug: eventSlug,
-        ),
+        apiService.rooms.totemRoomsApiMuteAll(sessionSlug: sessionSlug),
     operationName: 'mute participant',
     retryOnNetworkError: true,
   ).timeout(
@@ -83,12 +80,26 @@ Future<void> muteEveryone(
   );
 }
 
+const eventsType = <Type, Object?>{
+  EventRequestEventSealedAcceptStickEvent: 'accept_stick',
+  EventRequestEventSealedEndRoomEvent: 'end_room',
+  EventRequestEventSealedPassStickEvent: 'pass_stick',
+  EventRequestEventSealedReorderEvent: 'reorder',
+  EventRequestEventSealedStartRoomEvent: 'start_room',
+};
+
 @riverpod
-Future<void> passTotem(Ref ref, String eventSlug) {
+Future<void> passTotem(Ref ref, String sessionSlug, int lastSeenVersion) {
   final apiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<void>(
-    apiCall: () => apiService.meetings.totemMeetingsMobileApiPassTotemEndpoint(
-      eventSlug: eventSlug,
+    apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
+      sessionSlug: sessionSlug,
+      body: EventRequest(
+        event: EventRequestEventSealedPassStickEvent(
+          type: eventsType[EventRequestEventSealedPassStickEvent]! as String,
+        ),
+        lastSeenVersion: lastSeenVersion,
+      ),
     ),
     operationName: 'pass totem',
     retryOnNetworkError: true,
@@ -99,13 +110,18 @@ Future<void> passTotem(Ref ref, String eventSlug) {
 }
 
 @riverpod
-Future<void> acceptTotem(Ref ref, String eventSlug) {
+Future<void> acceptTotem(Ref ref, String sessionSlug, int lastSeenVersion) {
   final apiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<void>(
-    apiCall: () =>
-        apiService.meetings.totemMeetingsMobileApiAcceptTotemEndpoint(
-          eventSlug: eventSlug,
+    apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
+      sessionSlug: sessionSlug,
+      body: EventRequest(
+        event: EventRequestEventSealedAcceptStickEvent(
+          type: eventsType[EventRequestEventSealedAcceptStickEvent]! as String,
         ),
+        lastSeenVersion: lastSeenVersion,
+      ),
+    ),
     operationName: 'accept totem',
     retryOnNetworkError: true,
   ).timeout(
@@ -117,16 +133,22 @@ Future<void> acceptTotem(Ref ref, String eventSlug) {
 @riverpod
 Future<void> reorderParticipants(
   Ref ref,
-  String eventSlug,
+  String sessionSlug,
   List<String> order,
+  int lastSeenVersion,
 ) {
   final apiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<void>(
-    apiCall: () =>
-        apiService.meetings.totemMeetingsMobileApiReorderParticipantsEndpoint(
-          eventSlug: eventSlug,
-          body: LivekitOrderSchema(order: order),
+    apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
+      sessionSlug: sessionSlug,
+      body: EventRequest(
+        event: EventRequestEventSealedReorderEvent(
+          type: eventsType[EventRequestEventSealedReorderEvent]! as String,
+          talkingOrder: order,
         ),
+        lastSeenVersion: lastSeenVersion,
+      ),
+    ),
     operationName: 'reorder participants',
     retryOnNetworkError: true,
   ).timeout(
@@ -136,11 +158,17 @@ Future<void> reorderParticipants(
 }
 
 @riverpod
-Future<void> startSession(Ref ref, String eventSlug) {
+Future<void> startSession(Ref ref, String sessionSlug, int lastSeenVersion) {
   final apiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<void>(
-    apiCall: () => apiService.meetings.totemMeetingsMobileApiStartRoomEndpoint(
-      eventSlug: eventSlug,
+    apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
+      sessionSlug: sessionSlug,
+      body: EventRequest(
+        event: EventRequestEventSealedStartRoomEvent(
+          type: eventsType[EventRequestEventSealedStartRoomEvent]! as String,
+        ),
+        lastSeenVersion: lastSeenVersion,
+      ),
     ),
     operationName: 'start session',
     retryOnNetworkError: true,
@@ -148,11 +176,22 @@ Future<void> startSession(Ref ref, String eventSlug) {
 }
 
 @riverpod
-Future<void> endSession(Ref ref, String eventSlug) async {
+Future<void> endSession(
+  Ref ref,
+  String sessionSlug,
+  int lastSeenVersion,
+) async {
   final apiService = ref.read(mobileApiServiceProvider);
   await RepositoryUtils.handleApiCall<void>(
-    apiCall: () => apiService.meetings.totemMeetingsMobileApiEndRoomEndpoint(
-      eventSlug: eventSlug,
+    apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
+      sessionSlug: sessionSlug,
+      body: EventRequest(
+        event: EventRequestEventSealedEndRoomEvent(
+          type: eventsType[EventRequestEventSealedEndRoomEvent]! as String,
+          reason: EndReason.keeperEnded,
+        ),
+        lastSeenVersion: lastSeenVersion,
+      ),
     ),
     operationName: 'end session',
     retryOnNetworkError: true,
@@ -162,7 +201,7 @@ Future<void> endSession(Ref ref, String eventSlug) async {
 @riverpod
 Future<void> sessionFeedback(
   Ref ref,
-  String eventSlug,
+  String sessionSlug,
   SessionFeedbackOptions feedback, [
   String? message,
 ]) {
@@ -170,7 +209,7 @@ Future<void> sessionFeedback(
   return RepositoryUtils.handleApiCall<void>(
     apiCall: () =>
         apiService.spaces.totemSpacesMobileApiMobileApiPostSessionFeedback(
-          eventSlug: eventSlug,
+          eventSlug: sessionSlug,
           body: SessionFeedbackSchema(
             feedback: feedback,
             message: message,

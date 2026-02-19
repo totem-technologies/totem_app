@@ -13,7 +13,7 @@ extension KeeperControl on Session {
       slug = currentUserSlug;
     }
 
-    return state.sessionState.keeperSlug == slug;
+    return state.roomState.keeper == slug;
   }
 
   /// Get the participant who is currently speaking.
@@ -25,9 +25,9 @@ extension KeeperControl on Session {
   }
 
   Participant? speakingNextParticipant() {
-    if (state.sessionState.nextSpeaker == null) return null;
+    if (state.roomState.nextSpeaker == null) return null;
     return state.participants.firstWhereOrNull((participant) {
-      return participant.identity == state.sessionState.nextSpeaker;
+      return participant.identity == state.roomState.nextSpeaker;
     });
   }
 
@@ -39,7 +39,7 @@ extension KeeperControl on Session {
   }
 
   void _onKeeperDisconnected() {
-    if (state.sessionState.status != SessionStatus.started) return;
+    if (state.roomState.status != RoomStatus.active) return;
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = Timer(
@@ -76,7 +76,12 @@ extension KeeperControl on Session {
     if (!isKeeper()) return false;
     try {
       await ref
-          .read(startSessionProvider(_options!.eventSlug).future)
+          .read(
+            startSessionProvider(
+              _options!.eventSlug,
+              state.roomState.version,
+            ).future,
+          )
           .timeout(
             const Duration(seconds: 20),
             onTimeout: () {
@@ -98,7 +103,12 @@ extension KeeperControl on Session {
     if (!isKeeper()) return false;
     try {
       await ref
-          .read(endSessionProvider(_options!.eventSlug).future)
+          .read(
+            endSessionProvider(
+              _options!.eventSlug,
+              state.roomState.version,
+            ).future,
+          )
           .timeout(
             const Duration(seconds: 20),
             onTimeout: () {

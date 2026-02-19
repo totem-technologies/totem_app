@@ -27,12 +27,12 @@ class MyTurn extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessionStatus = ref.watch(sessionStatusProvider);
-    final totemStatus = ref.watch(totemStatusProvider);
+    final roomStatus = ref.watch(roomStatusProvider);
+    final turnState = ref.watch(turnStateProvider);
     final currentSession = ref.watch(currentSessionProvider);
 
     return RoomBackground(
-      status: sessionStatus,
+      status: roomStatus,
       child: SafeArea(
         child: OrientationBuilder(
           builder: (context, orientation) {
@@ -44,7 +44,7 @@ class MyTurn extends ConsumerWidget {
             );
 
             final nextUp = currentSession?.speakingNextParticipant();
-            final transitionType = totemStatus == TotemStatus.passing
+            final transitionType = turnState == TurnState.passing
                 ? TotemCardTransitionType.waitingReceive
                 : TotemCardTransitionType.pass;
             final passCard = TransitionCard(

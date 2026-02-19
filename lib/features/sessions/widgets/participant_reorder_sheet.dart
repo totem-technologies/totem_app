@@ -60,7 +60,7 @@ class _ParticipantReorderWidgetState
         .map((p) => p.identity)
         .toSet();
     _localOrder = Set<String>.from(
-      widget.state.sessionState.speakingOrder.where(roomParticipants.contains),
+      widget.state.roomState.talkingOrder.where(roomParticipants.contains),
     ).toList();
   }
 
@@ -139,7 +139,7 @@ class _ParticipantReorderWidgetState
                         index: index,
                         isSpeakingNow:
                             participantIdentity ==
-                            widget.state.sessionState.speakingNow,
+                            widget.state.roomState.currentSpeaker,
                       );
                     },
                   ),
@@ -229,6 +229,7 @@ class _ParticipantReorderWidgetState
         reorderParticipantsProvider(
           widget.session.options.eventSlug,
           newOrder,
+          widget.state.roomState.version,
         ).future,
       );
 
