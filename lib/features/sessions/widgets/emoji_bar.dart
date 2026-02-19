@@ -134,14 +134,12 @@ class _EmojiBarOverlayState extends State<_EmojiBarOverlay>
                 _startTimer();
               },
               emojis: const [
-                '👍',
-                '👏',
-                '😂',
-                '😍',
-                '😮',
+                '🫶🏼',
+                '💖',
                 '😢',
                 '🔥',
-                '💯',
+                '👏',
+                '🎉',
               ],
             ),
           ),
