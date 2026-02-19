@@ -2,10 +2,8 @@
 
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
-import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
@@ -51,27 +49,44 @@ class NotMyTurn extends ConsumerWidget {
                 : const BorderRadiusDirectional.vertical(
                     bottom: Radius.circular(30),
                   ),
-            child: DecoratedBox(
-              decoration: const BoxDecoration(color: AppTheme.blue),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: ParticipantVideo(
-                      key: getParticipantKey(activeSpeaker.identity),
-                      participant: activeSpeaker,
-                      quality: VideoQuality.HIGH,
-                    ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Positioned.fill(
+                  child: ParticipantVideo(
+                    key: getParticipantKey(activeSpeaker.identity),
+                    participant: activeSpeaker,
                   ),
-                  PositionedDirectional(
-                    start: 20,
-                    end: 20,
-                    bottom: 20,
-                    child: SafeArea(
-                      bottom: false,
-                      child: Row(
-                        spacing: 12,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
+                ),
+                PositionedDirectional(
+                  start: 20,
+                  end: 20,
+                  bottom: 20,
+                  child: SafeArea(
+                    bottom: false,
+                    child: Row(
+                      spacing: 12,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.black54,
+                            border: Border.all(
+                              color: Colors.white,
+                              width: 0.5,
+                            ),
+                            boxShadow: kElevationToShadow[6],
+                          ),
+                          padding: const EdgeInsetsDirectional.all(4),
+                          child: SpeakingIndicatorOrEmoji(
+                            participant: activeSpeaker,
+                          ),
+                        ),
+                        if (amKeeper &&
+                            currentUserSlug != activeSpeaker.identity)
                           Container(
                             width: 24,
                             height: 24,
@@ -84,50 +99,30 @@ class NotMyTurn extends ConsumerWidget {
                               ),
                               boxShadow: kElevationToShadow[6],
                             ),
-                            padding: const EdgeInsetsDirectional.all(4),
-                            child: SpeakingIndicatorOrEmoji(
+                            padding: const EdgeInsetsDirectional.all(3),
+                            child: ParticipantControlButton(
+                              overlayPadding: -28,
+                              session: event,
                               participant: activeSpeaker,
+                              backgroundColor: Colors.transparent,
                             ),
                           ),
-                          if (amKeeper &&
-                              currentUserSlug != activeSpeaker.identity)
-                            Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.black54,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 0.5,
-                                ),
-                                boxShadow: kElevationToShadow[6],
-                              ),
-                              padding: const EdgeInsetsDirectional.all(3),
-                              child: ParticipantControlButton(
-                                overlayPadding: -28,
-                                session: event,
-                                participant: activeSpeaker,
-                                backgroundColor: Colors.transparent,
-                              ),
+                        Flexible(
+                          child: Text(
+                            activeSpeaker.name,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              shadows: kElevationToShadow[6],
                             ),
-                          Flexible(
-                            child: Text(
-                              activeSpeaker.name,
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                shadows: kElevationToShadow[6],
-                              ),
-                              textAlign: TextAlign.end,
-                            ),
+                            textAlign: TextAlign.end,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
 
