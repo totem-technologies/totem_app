@@ -1106,6 +1106,7 @@ class _UpcomingSessionCard extends StatelessWidget {
             children: [
               // ── Image ──────────────────────────────────────────
               SizedBox(
+                height: double.infinity,
                 width: 130,
                 child: (space.imageLink != null && space.imageLink!.isNotEmpty)
                     ? CachedNetworkImage(
