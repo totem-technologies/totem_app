@@ -1103,133 +1103,133 @@ class _UpcomingSessionCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: IntrinsicHeight(
           child: Row(
-          children: [
-            // ── Image ──────────────────────────────────────────
-            SizedBox(
-              width: 130,
-              child: (space.imageLink != null && space.imageLink!.isNotEmpty)
-                  ? CachedNetworkImage(
-                      imageUrl: getFullUrl(space.imageLink!),
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => ColoredBox(
-                        color: Colors.black.withValues(alpha: 0.3),
-                      ),
-                      errorWidget: (context, url, error) => Image.asset(
+            children: [
+              // ── Image ──────────────────────────────────────────
+              SizedBox(
+                width: 130,
+                child: (space.imageLink != null && space.imageLink!.isNotEmpty)
+                    ? CachedNetworkImage(
+                        imageUrl: getFullUrl(space.imageLink!),
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => ColoredBox(
+                          color: Colors.black.withValues(alpha: 0.3),
+                        ),
+                        errorWidget: (context, url, error) => Image.asset(
+                          TotemAssets.genericBackground,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : Image.asset(
                         TotemAssets.genericBackground,
                         fit: BoxFit.cover,
                       ),
-                    )
-                  : Image.asset(
-                      TotemAssets.genericBackground,
-                      fit: BoxFit.cover,
-                    ),
-            ),
+              ),
 
-            // ── Info ───────────────────────────────────────────
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsetsDirectional.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Date / time / seats row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _MiniInfoChip(
-                          icon: TotemIcons.calendar,
-                          label: formatShortDate(session.start),
-                        ),
-                        _MiniInfoChip(
-                          icon: TotemIcons.clockCircle,
-                          label: formatTimeOnly(session.start),
-                          suffix: formatTimePeriod(session.start),
-                        ),
-                        _MiniInfoChip(
-                          icon: TotemIcons.seats,
-                          label: '${session.seatsLeft}',
-                          suffix: ' seats',
-                        ),
-                      ],
-                    ),
+              // ── Info ───────────────────────────────────────────
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Date / time / seats row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _MiniInfoChip(
+                            icon: TotemIcons.calendar,
+                            label: formatShortDate(session.start),
+                          ),
+                          _MiniInfoChip(
+                            icon: TotemIcons.clockCircle,
+                            label: formatTimeOnly(session.start),
+                            suffix: formatTimePeriod(session.start),
+                          ),
+                          _MiniInfoChip(
+                            icon: TotemIcons.seats,
+                            label: '${session.seatsLeft}',
+                            suffix: ' seats',
+                          ),
+                        ],
+                      ),
 
-                    // Space category
-                    if (space.shortDescription.trim().isNotEmpty)
+                      // Space category
+                      if (space.shortDescription.trim().isNotEmpty)
+                        Text(
+                          space.shortDescription,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppTheme.slate.withValues(alpha: 0.7),
+                            fontSize: 10,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+
+                      // Session title
                       Text(
-                        space.shortDescription,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppTheme.slate.withValues(alpha: 0.7),
-                          fontSize: 10,
+                        session.title ?? '',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: AppTheme.slate,
                         ),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
 
-                    // Session title
-                    Text(
-                      session.title ?? '',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: AppTheme.slate,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-
-                    // Author + Attend button
-                    Row(
-                      children: [
-                        UserAvatar.fromUserSchema(space.author, radius: 14),
-                        const SizedBox(width: 4),
-                        Text(
-                          'with ',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontSize: 10,
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            space.author.name ?? '',
+                      // Author + Attend button
+                      Row(
+                        children: [
+                          UserAvatar.fromUserSchema(space.author, radius: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'with ',
                             style: theme.textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
-                              color: AppTheme.slate,
+                              fontSize: 10,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        OutlinedButton(
-                          onPressed: () => context.push(
-                            RouteNames.spaceSession(space.slug, session.slug),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.mauve,
-                            side: const BorderSide(color: AppTheme.mauve),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                          Expanded(
+                            child: Text(
+                              space.author.name ?? '',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                                color: AppTheme.slate,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            padding: const EdgeInsetsDirectional.symmetric(
-                              horizontal: 12,
-                              vertical: 4,
+                          ),
+                          OutlinedButton(
+                            onPressed: () => context.push(
+                              RouteNames.spaceSession(space.slug, session.slug),
                             ),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.mauve,
+                              side: const BorderSide(color: AppTheme.mauve),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              padding: const EdgeInsetsDirectional.symmetric(
+                                horizontal: 12,
+                                vertical: 4,
+                              ),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: const Text(
+                              'View',
+                              style: TextStyle(fontSize: 11),
+                            ),
                           ),
-                          child: const Text(
-                            'View',
-                            style: TextStyle(fontSize: 11),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
       ),
     );
