@@ -226,26 +226,26 @@ String _$connectionStateHash() => r'fcc0d972a83bcfa6c64f4639f186b568549b94b7';
 
 /// The current session status (waiting, started, ended).
 
-@ProviderFor(sessionStatus)
-final sessionStatusProvider = SessionStatusProvider._();
+@ProviderFor(roomStatus)
+final roomStatusProvider = RoomStatusProvider._();
 
 /// The current session status (waiting, started, ended).
 
-final class SessionStatusProvider
-    extends $FunctionalProvider<SessionStatus, SessionStatus, SessionStatus>
-    with $Provider<SessionStatus> {
+final class RoomStatusProvider
+    extends $FunctionalProvider<RoomStatus, RoomStatus, RoomStatus>
+    with $Provider<RoomStatus> {
   /// The current session status (waiting, started, ended).
-  SessionStatusProvider._()
+  RoomStatusProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'sessionStatusProvider',
+        name: r'roomStatusProvider',
         isAutoDispose: true,
         dependencies: <ProviderOrFamily>[currentSessionStateProvider],
         $allTransitiveDependencies: <ProviderOrFamily>[
-          SessionStatusProvider.$allTransitiveDependencies0,
-          SessionStatusProvider.$allTransitiveDependencies1,
+          RoomStatusProvider.$allTransitiveDependencies0,
+          RoomStatusProvider.$allTransitiveDependencies1,
         ],
       );
 
@@ -254,51 +254,51 @@ final class SessionStatusProvider
       CurrentSessionStateProvider.$allTransitiveDependencies0;
 
   @override
-  String debugGetCreateSourceHash() => _$sessionStatusHash();
+  String debugGetCreateSourceHash() => _$roomStatusHash();
 
   @$internal
   @override
-  $ProviderElement<SessionStatus> $createElement($ProviderPointer pointer) =>
+  $ProviderElement<RoomStatus> $createElement($ProviderPointer pointer) =>
       $ProviderElement(pointer);
 
   @override
-  SessionStatus create(Ref ref) {
-    return sessionStatus(ref);
+  RoomStatus create(Ref ref) {
+    return roomStatus(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(SessionStatus value) {
+  Override overrideWithValue(RoomStatus value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<SessionStatus>(value),
+      providerOverride: $SyncValueProvider<RoomStatus>(value),
     );
   }
 }
 
-String _$sessionStatusHash() => r'dcabd34b601dfe6dac5e47a1c97c3688b9775976';
+String _$roomStatusHash() => r'2d319a778320a8982f1a45cd592f749e43d3919d';
 
 /// The current totem status (none, accepted, passing).
 
-@ProviderFor(totemStatus)
-final totemStatusProvider = TotemStatusProvider._();
+@ProviderFor(turnState)
+final turnStateProvider = TurnStateProvider._();
 
 /// The current totem status (none, accepted, passing).
 
-final class TotemStatusProvider
-    extends $FunctionalProvider<TotemStatus, TotemStatus, TotemStatus>
-    with $Provider<TotemStatus> {
+final class TurnStateProvider
+    extends $FunctionalProvider<TurnState, TurnState, TurnState>
+    with $Provider<TurnState> {
   /// The current totem status (none, accepted, passing).
-  TotemStatusProvider._()
+  TurnStateProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'totemStatusProvider',
+        name: r'turnStateProvider',
         isAutoDispose: true,
         dependencies: <ProviderOrFamily>[currentSessionStateProvider],
         $allTransitiveDependencies: <ProviderOrFamily>[
-          TotemStatusProvider.$allTransitiveDependencies0,
-          TotemStatusProvider.$allTransitiveDependencies1,
+          TurnStateProvider.$allTransitiveDependencies0,
+          TurnStateProvider.$allTransitiveDependencies1,
         ],
       );
 
@@ -307,28 +307,28 @@ final class TotemStatusProvider
       CurrentSessionStateProvider.$allTransitiveDependencies0;
 
   @override
-  String debugGetCreateSourceHash() => _$totemStatusHash();
+  String debugGetCreateSourceHash() => _$turnStateHash();
 
   @$internal
   @override
-  $ProviderElement<TotemStatus> $createElement($ProviderPointer pointer) =>
+  $ProviderElement<TurnState> $createElement($ProviderPointer pointer) =>
       $ProviderElement(pointer);
 
   @override
-  TotemStatus create(Ref ref) {
-    return totemStatus(ref);
+  TurnState create(Ref ref) {
+    return turnState(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(TotemStatus value) {
+  Override overrideWithValue(TurnState value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<TotemStatus>(value),
+      providerOverride: $SyncValueProvider<TurnState>(value),
     );
   }
 }
 
-String _$totemStatusHash() => r'de7efbf3e13c08c82ea57328f81280ad6a0fb2bf';
+String _$turnStateHash() => r'2681884a14fea31b39e8e90e59ff498adad7720e';
 
 /// The list of participants in the session.
 
@@ -446,7 +446,7 @@ final class IsMyTurnProvider extends $FunctionalProvider<bool, bool, bool>
   }
 }
 
-String _$isMyTurnHash() => r'7bd945a29b1d57c58309085354d17a95ef60bc29';
+String _$isMyTurnHash() => r'8f85cd9f22c0c5d3c523b274e1c14a1b78c697cd';
 
 /// Whether the current user is next to speak.
 
@@ -503,4 +503,4 @@ final class AmNextSpeakerProvider extends $FunctionalProvider<bool, bool, bool>
   }
 }
 
-String _$amNextSpeakerHash() => r'3304d081696a13768fd4775199af723a1fe4800f';
+String _$amNextSpeakerHash() => r'fb905a9f9f144169dd486b4e243e86bd11c986b7';

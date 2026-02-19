@@ -8,7 +8,7 @@ class RoomBackground extends StatelessWidget {
     required this.child,
     this.padding = EdgeInsetsDirectional.zero,
     this.overlayStyle = SystemUiOverlayStyle.light,
-    this.status = SessionStatus.waiting,
+    this.status = RoomStatus.waitingRoom,
     super.key,
   });
 
@@ -21,7 +21,7 @@ class RoomBackground extends StatelessWidget {
   final SystemUiOverlayStyle overlayStyle;
 
   /// The status of the session to determine background style.
-  final SessionStatus status;
+  final RoomStatus status;
 
   @override
   Widget build(BuildContext context) {
@@ -51,13 +51,13 @@ class RoomBackground extends StatelessWidget {
           );
 
           final foregroudColor = switch (status) {
-            SessionStatus.waiting => Colors.black,
+            RoomStatus.waitingRoom => Colors.black,
             _ => Colors.white,
           };
           return AnimatedContainer(
             duration: kThemeAnimationDuration,
             decoration: switch (status) {
-              SessionStatus.waiting => waitingDecoration,
+              RoomStatus.waitingRoom => waitingDecoration,
               _ => roomDecoration,
             },
             padding: padding,

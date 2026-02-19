@@ -568,7 +568,7 @@ final class GetRecommendedSessionsProvider
 }
 
 String _$getRecommendedSessionsHash() =>
-    r'715f75edb2e06edb5b7cea7016662b1d33365ae7';
+    r'a78680298aabdee1126861e66aa8fc8288c83f86';
 
 final class GetRecommendedSessionsFamily extends $Family
     with

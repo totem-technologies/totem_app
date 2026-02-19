@@ -58,7 +58,7 @@ final class SessionTokenProvider
   }
 }
 
-String _$sessionTokenHash() => r'b599d7329d4615cba92d18375fb508ea8dc5da19';
+String _$sessionTokenHash() => r'c633ea66c2c3a94ca1302948d43a7bc5d9734188';
 
 final class SessionTokenFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<String>, String> {
@@ -71,8 +71,8 @@ final class SessionTokenFamily extends $Family
         isAutoDispose: true,
       );
 
-  SessionTokenProvider call(String eventSlug) =>
-      SessionTokenProvider._(argument: eventSlug, from: this);
+  SessionTokenProvider call(String sessionSlug) =>
+      SessionTokenProvider._(argument: sessionSlug, from: this);
 
   @override
   String toString() => r'sessionTokenProvider';
@@ -127,7 +127,7 @@ final class RemoveParticipantProvider
   }
 }
 
-String _$removeParticipantHash() => r'11040d236aca40d13d90c9981ec87dea97055af9';
+String _$removeParticipantHash() => r'53bc1e4a0380a8a28f61a33309c19119fbea0047';
 
 final class RemoveParticipantFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, (String, String)> {
@@ -141,10 +141,10 @@ final class RemoveParticipantFamily extends $Family
       );
 
   RemoveParticipantProvider call(
-    String eventSlug,
+    String sessionSlug,
     String participantIdentity,
   ) => RemoveParticipantProvider._(
-    argument: (eventSlug, participantIdentity),
+    argument: (sessionSlug, participantIdentity),
     from: this,
   );
 
@@ -212,7 +212,7 @@ final class MuteParticipantProvider
   }
 }
 
-String _$muteParticipantHash() => r'16cc9d401dd4ce042df99f415da9db59210d9cf5';
+String _$muteParticipantHash() => r'd22a3a2438c3033ce363016a37acf250290e3e85';
 
 /// Mutes a participant.
 ///
@@ -233,11 +233,13 @@ final class MuteParticipantFamily extends $Family
   ///
   /// An error can be thrown if the participant is already muted.
 
-  MuteParticipantProvider call(String eventSlug, String participantIdentity) =>
-      MuteParticipantProvider._(
-        argument: (eventSlug, participantIdentity),
-        from: this,
-      );
+  MuteParticipantProvider call(
+    String sessionSlug,
+    String participantIdentity,
+  ) => MuteParticipantProvider._(
+    argument: (sessionSlug, participantIdentity),
+    from: this,
+  );
 
   @override
   String toString() => r'muteParticipantProvider';
@@ -292,7 +294,7 @@ final class MuteEveryoneProvider
   }
 }
 
-String _$muteEveryoneHash() => r'0e038e9c31b8a2784f8311923ed78100832ce311';
+String _$muteEveryoneHash() => r'1ebecb1a4bcf013f945f7f1995527a8af80e1d71';
 
 final class MuteEveryoneFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, String> {
@@ -305,8 +307,8 @@ final class MuteEveryoneFamily extends $Family
         isAutoDispose: true,
       );
 
-  MuteEveryoneProvider call(String eventSlug) =>
-      MuteEveryoneProvider._(argument: eventSlug, from: this);
+  MuteEveryoneProvider call(String sessionSlug) =>
+      MuteEveryoneProvider._(argument: sessionSlug, from: this);
 
   @override
   String toString() => r'muteEveryoneProvider';
@@ -320,7 +322,7 @@ final class PassTotemProvider
     with $FutureModifier<void>, $FutureProvider<void> {
   PassTotemProvider._({
     required PassTotemFamily super.from,
-    required String super.argument,
+    required (String, int) super.argument,
   }) : super(
          retry: null,
          name: r'passTotemProvider',
@@ -336,7 +338,7 @@ final class PassTotemProvider
   String toString() {
     return r'passTotemProvider'
         ''
-        '($argument)';
+        '$argument';
   }
 
   @$internal
@@ -346,8 +348,8 @@ final class PassTotemProvider
 
   @override
   FutureOr<void> create(Ref ref) {
-    final argument = this.argument as String;
-    return passTotem(ref, argument);
+    final argument = this.argument as (String, int);
+    return passTotem(ref, argument.$1, argument.$2);
   }
 
   @override
@@ -361,10 +363,10 @@ final class PassTotemProvider
   }
 }
 
-String _$passTotemHash() => r'aeb11ba4153fe8c36831b876f6d29a0cd5689087';
+String _$passTotemHash() => r'fc372df54e4c348f70513b8a94fdbf55f32209af';
 
 final class PassTotemFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<void>, String> {
+    with $FunctionalFamilyOverride<FutureOr<void>, (String, int)> {
   PassTotemFamily._()
     : super(
         retry: null,
@@ -374,8 +376,8 @@ final class PassTotemFamily extends $Family
         isAutoDispose: true,
       );
 
-  PassTotemProvider call(String eventSlug) =>
-      PassTotemProvider._(argument: eventSlug, from: this);
+  PassTotemProvider call(String sessionSlug, int lastSeenVersion) =>
+      PassTotemProvider._(argument: (sessionSlug, lastSeenVersion), from: this);
 
   @override
   String toString() => r'passTotemProvider';
@@ -389,7 +391,7 @@ final class AcceptTotemProvider
     with $FutureModifier<void>, $FutureProvider<void> {
   AcceptTotemProvider._({
     required AcceptTotemFamily super.from,
-    required String super.argument,
+    required (String, int) super.argument,
   }) : super(
          retry: null,
          name: r'acceptTotemProvider',
@@ -405,7 +407,7 @@ final class AcceptTotemProvider
   String toString() {
     return r'acceptTotemProvider'
         ''
-        '($argument)';
+        '$argument';
   }
 
   @$internal
@@ -415,8 +417,8 @@ final class AcceptTotemProvider
 
   @override
   FutureOr<void> create(Ref ref) {
-    final argument = this.argument as String;
-    return acceptTotem(ref, argument);
+    final argument = this.argument as (String, int);
+    return acceptTotem(ref, argument.$1, argument.$2);
   }
 
   @override
@@ -430,10 +432,10 @@ final class AcceptTotemProvider
   }
 }
 
-String _$acceptTotemHash() => r'22ac74eb26369a8fb8452391f06c6981bfbfc930';
+String _$acceptTotemHash() => r'4672577c13112346951c7c775f634de47a5b9302';
 
 final class AcceptTotemFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<void>, String> {
+    with $FunctionalFamilyOverride<FutureOr<void>, (String, int)> {
   AcceptTotemFamily._()
     : super(
         retry: null,
@@ -443,8 +445,11 @@ final class AcceptTotemFamily extends $Family
         isAutoDispose: true,
       );
 
-  AcceptTotemProvider call(String eventSlug) =>
-      AcceptTotemProvider._(argument: eventSlug, from: this);
+  AcceptTotemProvider call(String sessionSlug, int lastSeenVersion) =>
+      AcceptTotemProvider._(
+        argument: (sessionSlug, lastSeenVersion),
+        from: this,
+      );
 
   @override
   String toString() => r'acceptTotemProvider';
@@ -458,7 +463,7 @@ final class ReorderParticipantsProvider
     with $FutureModifier<void>, $FutureProvider<void> {
   ReorderParticipantsProvider._({
     required ReorderParticipantsFamily super.from,
-    required (String, List<String>) super.argument,
+    required (String, List<String>, int) super.argument,
   }) : super(
          retry: null,
          name: r'reorderParticipantsProvider',
@@ -484,8 +489,8 @@ final class ReorderParticipantsProvider
 
   @override
   FutureOr<void> create(Ref ref) {
-    final argument = this.argument as (String, List<String>);
-    return reorderParticipants(ref, argument.$1, argument.$2);
+    final argument = this.argument as (String, List<String>, int);
+    return reorderParticipants(ref, argument.$1, argument.$2, argument.$3);
   }
 
   @override
@@ -500,10 +505,11 @@ final class ReorderParticipantsProvider
 }
 
 String _$reorderParticipantsHash() =>
-    r'086f9c1094c0a701204fe49ac633abf15599cd41';
+    r'85679a2f199e40271a00f4954a751ae5b3f2d260';
 
 final class ReorderParticipantsFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<void>, (String, List<String>)> {
+    with
+        $FunctionalFamilyOverride<FutureOr<void>, (String, List<String>, int)> {
   ReorderParticipantsFamily._()
     : super(
         retry: null,
@@ -513,8 +519,14 @@ final class ReorderParticipantsFamily extends $Family
         isAutoDispose: true,
       );
 
-  ReorderParticipantsProvider call(String eventSlug, List<String> order) =>
-      ReorderParticipantsProvider._(argument: (eventSlug, order), from: this);
+  ReorderParticipantsProvider call(
+    String sessionSlug,
+    List<String> order,
+    int lastSeenVersion,
+  ) => ReorderParticipantsProvider._(
+    argument: (sessionSlug, order, lastSeenVersion),
+    from: this,
+  );
 
   @override
   String toString() => r'reorderParticipantsProvider';
@@ -528,7 +540,7 @@ final class StartSessionProvider
     with $FutureModifier<void>, $FutureProvider<void> {
   StartSessionProvider._({
     required StartSessionFamily super.from,
-    required String super.argument,
+    required (String, int) super.argument,
   }) : super(
          retry: null,
          name: r'startSessionProvider',
@@ -544,7 +556,7 @@ final class StartSessionProvider
   String toString() {
     return r'startSessionProvider'
         ''
-        '($argument)';
+        '$argument';
   }
 
   @$internal
@@ -554,8 +566,8 @@ final class StartSessionProvider
 
   @override
   FutureOr<void> create(Ref ref) {
-    final argument = this.argument as String;
-    return startSession(ref, argument);
+    final argument = this.argument as (String, int);
+    return startSession(ref, argument.$1, argument.$2);
   }
 
   @override
@@ -569,10 +581,10 @@ final class StartSessionProvider
   }
 }
 
-String _$startSessionHash() => r'cf61d25c282b2bca7e85dd4d70a196f3849cd908';
+String _$startSessionHash() => r'77b57cb9cbd24c2d1f7821fb9718d719104211b0';
 
 final class StartSessionFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<void>, String> {
+    with $FunctionalFamilyOverride<FutureOr<void>, (String, int)> {
   StartSessionFamily._()
     : super(
         retry: null,
@@ -582,8 +594,11 @@ final class StartSessionFamily extends $Family
         isAutoDispose: true,
       );
 
-  StartSessionProvider call(String eventSlug) =>
-      StartSessionProvider._(argument: eventSlug, from: this);
+  StartSessionProvider call(String sessionSlug, int lastSeenVersion) =>
+      StartSessionProvider._(
+        argument: (sessionSlug, lastSeenVersion),
+        from: this,
+      );
 
   @override
   String toString() => r'startSessionProvider';
@@ -597,7 +612,7 @@ final class EndSessionProvider
     with $FutureModifier<void>, $FutureProvider<void> {
   EndSessionProvider._({
     required EndSessionFamily super.from,
-    required String super.argument,
+    required (String, int) super.argument,
   }) : super(
          retry: null,
          name: r'endSessionProvider',
@@ -613,7 +628,7 @@ final class EndSessionProvider
   String toString() {
     return r'endSessionProvider'
         ''
-        '($argument)';
+        '$argument';
   }
 
   @$internal
@@ -623,8 +638,8 @@ final class EndSessionProvider
 
   @override
   FutureOr<void> create(Ref ref) {
-    final argument = this.argument as String;
-    return endSession(ref, argument);
+    final argument = this.argument as (String, int);
+    return endSession(ref, argument.$1, argument.$2);
   }
 
   @override
@@ -638,10 +653,10 @@ final class EndSessionProvider
   }
 }
 
-String _$endSessionHash() => r'f4a9896ded183609b5e8a277b4d96e4cdd8da9af';
+String _$endSessionHash() => r'176aea1b9eae7ed578145dca45462a49bc90f62f';
 
 final class EndSessionFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<void>, String> {
+    with $FunctionalFamilyOverride<FutureOr<void>, (String, int)> {
   EndSessionFamily._()
     : super(
         retry: null,
@@ -651,8 +666,11 @@ final class EndSessionFamily extends $Family
         isAutoDispose: true,
       );
 
-  EndSessionProvider call(String eventSlug) =>
-      EndSessionProvider._(argument: eventSlug, from: this);
+  EndSessionProvider call(String sessionSlug, int lastSeenVersion) =>
+      EndSessionProvider._(
+        argument: (sessionSlug, lastSeenVersion),
+        from: this,
+      );
 
   @override
   String toString() => r'endSessionProvider';
@@ -707,7 +725,7 @@ final class SessionFeedbackProvider
   }
 }
 
-String _$sessionFeedbackHash() => r'611b791e9cded8a563fe24c8f670e7ea4adde90f';
+String _$sessionFeedbackHash() => r'18524a4ffebbbb0ae3aa6211d8b9d9681b0f743a';
 
 final class SessionFeedbackFamily extends $Family
     with
@@ -725,11 +743,11 @@ final class SessionFeedbackFamily extends $Family
       );
 
   SessionFeedbackProvider call(
-    String eventSlug,
+    String sessionSlug,
     SessionFeedbackOptions feedback, [
     String? message,
   ]) => SessionFeedbackProvider._(
-    argument: (eventSlug, feedback, message),
+    argument: (sessionSlug, feedback, message),
     from: this,
   );
 
