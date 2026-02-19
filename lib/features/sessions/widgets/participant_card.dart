@@ -1,9 +1,13 @@
+// ignore_for_file: implementation_imports
+
 import 'dart:async';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/src/core/signal_client.dart';
+import 'package:livekit_client/src/proto/livekit_rtc.pb.dart' as lk_rtc;
 import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -79,10 +83,7 @@ class ParticipantCard extends ConsumerWidget {
               clipBehavior: Clip.none,
               children: [
                 Positioned.fill(
-                  child: ParticipantVideo(
-                    participant: participant,
-                    quality: VideoQuality.LOW,
-                  ),
+                  child: ParticipantVideo(participant: participant),
                 ),
                 PositionedDirectional(
                   top: overlayPadding,
@@ -393,55 +394,49 @@ class LocalParticipantVideoCard extends ConsumerWidget {
 }
 
 class ParticipantVideo extends ConsumerStatefulWidget {
-  const ParticipantVideo({
-    required this.participant,
-    this.quality, // Add this optional parameter
-    super.key,
-  });
+  const ParticipantVideo({required this.participant, super.key});
 
   final Participant<TrackPublication<Track>> participant;
-  final VideoQuality? quality; // The targeted quality layer
 
   @override
   ConsumerState<ParticipantVideo> createState() => _ParticipantVideoState();
 }
 
 class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
-  @override
-  void initState() {
-    super.initState();
-    _updateQuality();
-  }
-
-  @override
-  void didUpdateWidget(covariant ParticipantVideo oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.participant != widget.participant ||
-        oldWidget.quality != widget.quality) {
-      _updateQuality();
+  void _sendRawUpdateTrackSettings(bool isVisible, Size size) {
+    final videoTrack = widget.participant
+        .getTrackPublicationBySource(TrackSource.camera)
+        ?.track;
+    if (videoTrack == null ||
+        videoTrack.sid == null ||
+        widget.participant is! RemoteParticipant) {
+      return;
     }
-  }
 
-  void _updateQuality() {
-    // Only RemoteParticipants receive video; local participants send it.
-    if (widget.quality != null && widget.participant is RemoteParticipant) {
-      final track = widget.participant.getTrackPublicationBySource(
-        TrackSource.camera,
-      );
+    // Construct the exact protobuf payload
+    final settings = lk_rtc.UpdateTrackSettings(
+      trackSids: [videoTrack.sid!],
+      disabled: !isVisible,
+    );
 
-      if (track is RemoteTrackPublication) {
-        print(
-          'Setting video quality for ${widget.participant.identity} to ${widget.quality}',
-        );
-        // Explicitly demand the LiveKit server send this specific quality layer
-        track.setVideoQuality(widget.quality!);
-      } else {
-        print(
-          'No camera track found for ${widget.participant.identity} to set quality',
-        );
-      }
+    if (isVisible) {
+      settings
+        ..width = size.width.round()
+        ..height = size.height.round();
     }
+
+    // ignore: invalid_use_of_internal_member
+    widget.participant.room.engine.signalClient.sendUpdateTrackSettings(
+      settings,
+    );
+
+    debugPrint(
+      'Sent raw UpdateTrackSettings(${widget.participant.name}): disabled=${settings.disabled}, '
+      'width=${settings.width}, height=${settings.height}',
+    );
   }
+
+  BoxConstraints? _lastConstraints;
 
   @override
   Widget build(BuildContext context) {
@@ -453,20 +448,22 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
     if (videoTrack != null && videoTrack.subscribed && !videoTrack.muted) {
       return IgnorePointer(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: VideoTrackRenderer(
-                key: ValueKey(videoTrack.track!.sid),
-                videoTrack.track! as VideoTrack,
-                fit: VideoViewFit.cover,
-                // Use platform view for better CPU performance on iOS
-                // https://github.com/livekit/client-sdk-flutter/issues/364
-                renderMode: VideoRenderMode.platformView,
-              ),
-            ),
-            Text('${videoTrack.dimensions}'),
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            if (_lastConstraints != constraints) {
+              _lastConstraints = constraints;
+              final size = Size(constraints.maxWidth, constraints.maxHeight);
+              _sendRawUpdateTrackSettings(true, size);
+            }
+            return VideoTrackRenderer(
+              key: ValueKey(videoTrack.track!.sid),
+              videoTrack.track! as VideoTrack,
+              fit: VideoViewFit.cover,
+              // Use platform view for better CPU performance on iOS
+              // https://github.com/livekit/client-sdk-flutter/issues/364
+              renderMode: VideoRenderMode.platformView,
+            );
+          },
         ),
       );
     } else {

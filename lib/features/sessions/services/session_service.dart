@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:audio_session/audio_session.dart' as audio;
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -234,7 +235,12 @@ class Session extends _$Session {
           // https://docs.livekit.io/transport/media/advanced/#video-codec-support
           // https://livekit.io/webrtc/codecs-guide
           // https://github.com/flutter-webrtc/flutter-webrtc/issues/252
-          videoCodec: 'h264',
+          // videoCodec: 'h264',
+          videoCodec: switch (defaultTargetPlatform) {
+            TargetPlatform.android => 'av1',
+            TargetPlatform.iOS => 'vp9',
+            _ => 'vp8',
+          },
           backupVideoCodec: const BackupVideoCodec(simulcast: true),
           simulcast: true,
           videoSimulcastLayers: [
@@ -243,26 +249,25 @@ class Session extends _$Session {
             VideoParameters(
               dimensions: VideoParametersPresets.h180_169.dimensions,
               encoding: const VideoEncoding(
-                maxBitrate: 80000, // Very aggressive constraint
+                maxBitrate: 80000,
                 maxFramerate: 15,
               ),
             ),
 
-            // Layer 2: "Standard Grid"
+            // // Layer 2: "Standard Grid"
             VideoParameters(
               dimensions: VideoParametersPresets.h360_169.dimensions,
               encoding: const VideoEncoding(
                 maxBitrate: 250000,
-                maxFramerate: 24,
+                maxFramerate: 20,
               ),
             ),
 
             // Layer 3: "Active Speaker"
-            // Capped strictly at 720p / 24fps. Meet does not push 1080p from mobile.
             VideoParameters(
-              dimensions: VideoParametersPresets.h720_169.dimensions,
+              dimensions: VideoParametersPresets.h540_43.dimensions,
               encoding: const VideoEncoding(
-                maxBitrate: 700000,
+                maxBitrate: 500000,
                 maxFramerate: 24,
               ),
             ),
@@ -271,7 +276,7 @@ class Session extends _$Session {
         // defaultAudioPublishOptions: const AudioPublishOptions(),
 
         /// https://docs.livekit.io/home/client/tracks/subscribe/#adaptive-stream
-        adaptiveStream: true,
+        adaptiveStream: false,
       ),
     );
 
