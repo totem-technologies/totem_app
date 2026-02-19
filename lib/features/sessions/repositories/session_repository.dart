@@ -125,7 +125,7 @@ Future<void> reorderParticipants(
     apiCall: () =>
         apiService.meetings.totemMeetingsMobileApiReorderParticipantsEndpoint(
           eventSlug: eventSlug,
-          body: LivekitMuteParticipantSchema(order: order),
+          body: LivekitOrderSchema(order: order),
         ),
     operationName: 'reorder participants',
     retryOnNetworkError: true,
