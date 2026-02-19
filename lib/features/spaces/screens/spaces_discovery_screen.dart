@@ -1,203 +1,407 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sliver_tools/sliver_tools.dart';
-import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
-import 'package:totem_app/features/spaces/repositories/space_repository.dart';
+import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/features/home/models/upcoming_session_data.dart';
+import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/spaces/widgets/filter.dart';
-import 'package:totem_app/features/spaces/widgets/space_card.dart';
+import 'package:totem_app/features/spaces/widgets/session_card.dart';
+import 'package:totem_app/features/spaces/widgets/session_date_group.dart';
+import 'package:totem_app/features/spaces/widgets/sessions_header.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/empty_indicator.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
-import 'package:totem_app/shared/widgets/totem_icon.dart';
+import 'package:totem_app/shared/widgets/loading_indicator.dart';
 
-// Provider to track the selected category filter
-class SelectedCategoryNotifier extends Notifier<String?> {
+// Filter state providers
+final selectedCategoryProvider =
+    NotifierProvider<_SelectedCategoryNotifier, String?>(
+      _SelectedCategoryNotifier.new,
+      name: 'selectedCategoryProvider',
+    );
+
+class _SelectedCategoryNotifier extends Notifier<String?> {
   @override
   String? build() => null;
 
-  void toggleCategory(String? category) {
+  void toggle(String? category) {
     state = (state == category) ? null : category;
   }
 }
 
-// Provider
-final selectedCategoryProvider =
-    NotifierProvider<SelectedCategoryNotifier, String?>(
-      SelectedCategoryNotifier.new,
-      name: 'Selected Category Provider',
+final mySessionsFilterProvider =
+    NotifierProvider<_MySessionsFilterNotifier, bool>(
+      _MySessionsFilterNotifier.new,
+      name: 'mySessionsFilterProvider',
     );
 
-class SpacesDiscoveryScreen extends ConsumerWidget {
+class _MySessionsFilterNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void toggle() => state = !state;
+
+  bool get mySessionFilter => state;
+
+  set mySessionFilter(bool enabled) => state = enabled;
+}
+
+// Memoized data providers - only recompute when dependencies change
+final _allSessionsProvider = Provider<List<UpcomingSessionData>>((ref) {
+  final summaryAsync = ref.watch(spacesSummaryProvider);
+  return summaryAsync.maybeWhen(
+    data: (summary) {
+      final exploreSessions = UpcomingSessionData.fromSummary(
+        summary,
+        limit: null,
+        includeAttendingFullSessions: true,
+      );
+
+      // Also include sessions from upcoming that aren't already in explore.
+      // Both UpcomingSessionData.sessionSlug (sourced from NextSessionSchema.slug
+      // via fromSpaceAndSession) and SessionDetailSchema.slug represent the same
+      // session identifier, so this slug-based dedup is valid.
+      final now = DateTime.now();
+      final exploreSlugs = exploreSessions.map((s) => s.sessionSlug).toSet();
+      final upcomingSessions = summary.upcoming
+          .where(
+            (s) =>
+                !s.ended &&
+                s.start.isAfter(now) &&
+                !exploreSlugs.contains(s.slug),
+          )
+          .map(UpcomingSessionData.fromSessionDetail);
+
+      return [...exploreSessions, ...upcomingSessions]
+        ..sort((a, b) => a.start.compareTo(b.start));
+    },
+    orElse: () => [],
+  );
+});
+
+final _sessionCategoriesProvider = Provider<List<String>>((ref) {
+  final sessions = ref.watch(_allSessionsProvider);
+  return sessions
+      .map((s) => s.category)
+      .whereType<String>()
+      .where((c) => c.isNotEmpty)
+      .toSet()
+      .toList()
+    ..sort();
+});
+
+final _filteredSessionsProvider = Provider<List<UpcomingSessionData>>((ref) {
+  final sessions = ref.watch(_allSessionsProvider);
+  final category = ref.watch(selectedCategoryProvider);
+  final onlyAttending = ref.watch(mySessionsFilterProvider);
+
+  var filtered = sessions;
+
+  if (onlyAttending) {
+    filtered = filtered.where((s) => s.attending).toList();
+  }
+
+  if (category != null) {
+    filtered = filtered.where((s) => s.category == category).toList();
+  }
+
+  return filtered;
+});
+
+final _groupedSessionsProvider = Provider<List<SessionDateGroup>>((ref) {
+  final sessions = ref.watch(_filteredSessionsProvider);
+  final grouped = <DateTime, List<UpcomingSessionData>>{};
+
+  for (final session in sessions) {
+    final dateKey = DateTime(
+      session.start.year,
+      session.start.month,
+      session.start.day,
+    );
+    grouped.putIfAbsent(dateKey, () => []).add(session);
+  }
+
+  return grouped.entries
+      .map((e) => SessionDateGroup(date: e.key, sessions: e.value))
+      .toList()
+    ..sort((a, b) => a.date.compareTo(b.date));
+});
+
+/// Threshold in pixels of scroll before the header collapses.
+const _collapseScrollThreshold = 30.0;
+
+class SpacesDiscoveryScreen extends ConsumerStatefulWidget {
   const SpacesDiscoveryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final spaces = ref.watch(listSpacesProvider);
-    ref.sentryReportFullyDisplayed(listSpacesProvider);
+  ConsumerState<SpacesDiscoveryScreen> createState() =>
+      _SpacesDiscoveryScreenState();
+}
 
-    final selectedCategory = ref.watch(selectedCategoryProvider);
+class _SpacesDiscoveryScreenState extends ConsumerState<SpacesDiscoveryScreen> {
+  bool _isCollapsed = false;
 
-    final isLargeScreen = MediaQuery.widthOf(context) > 600;
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollUpdateNotification) {
+      final offset = notification.metrics.pixels;
+      final shouldCollapse = offset > _collapseScrollThreshold;
+      if (shouldCollapse != _isCollapsed) {
+        setState(() => _isCollapsed = shouldCollapse);
+      }
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final summaryAsync = ref.watch(spacesSummaryProvider);
+    final isMySessionsSelected = ref.watch(mySessionsFilterProvider);
+
+    ref.sentryReportFullyDisplayed(spacesSummaryProvider);
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        toolbarHeight: 72,
-        titleSpacing: 0,
-        centerTitle: true,
-        title: spaces.maybeWhen(
-          data: (spacesList) {
-            if (spacesList.isEmpty) return const TotemLogo(size: 24);
-            return SpacesFilterBar(
-              categories: _extractCategories(spacesList),
-              selectedCategory: selectedCategory,
-              onCategorySelected: (category) {
-                ref
-                    .read(selectedCategoryProvider.notifier)
-                    .toggleCategory(category);
-              },
-            );
-          },
-          orElse: () => const TotemLogo(size: 24),
-        ),
-      ),
-      body: spaces.when(
-        data: (spacesList) {
-          if (spacesList.isEmpty) {
-            return EmptyIndicator(
-              icon: TotemIcons.spacesFilled,
-              text: 'No spaces available yet.',
-              onRetry: () => ref.refresh(listSpacesProvider.future),
-            );
-          }
-
-          final filteredSpaces = selectedCategory == null
-              ? spacesList
-              : spacesList
-                    .where((space) => space.category == selectedCategory)
-                    .toList();
-
-          return RefreshIndicator.adaptive(
-            edgeOffset: 80,
-            onRefresh: () => ref.refresh(listSpacesProvider.future),
-            child: CustomScrollView(
-              slivers: [
-                SliverSafeArea(
-                  top: false,
-                  sliver: MultiSliver(
-                    children: <Widget>[
-                      SliverPadding(
-                        padding: EdgeInsets.only(
-                          top: MediaQuery.paddingOf(context).top + 80,
-                        ),
-                      ),
-                      if (filteredSpaces.isEmpty)
-                        SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: _buildNoResultsMessage(
-                            selectedCategory ?? 'All',
-                          ),
-                        )
-                      else ...[
-                        if (!isLargeScreen)
-                          SliverPadding(
-                            padding: const EdgeInsetsDirectional.only(
-                              start: 16,
-                              end: 16,
-                              bottom: 20,
-                            ),
-                            sliver: SliverList.separated(
-                              itemCount: filteredSpaces.length,
-                              itemBuilder: (_, index) =>
-                                  SpaceCard(space: filteredSpaces[index]),
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(height: 16),
-                            ),
-                          )
-                        else
-                          SliverPadding(
-                            padding: const EdgeInsetsDirectional.symmetric(
-                              horizontal: 100,
-                            ),
-                            sliver: SliverGrid.builder(
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    mainAxisSpacing: 16,
-                                    crossAxisSpacing: 16,
-                                    childAspectRatio: 16 / 14,
-                                  ),
-                              itemCount: filteredSpaces.length,
-                              itemBuilder: (_, index) =>
-                                  SpaceCard(space: filteredSpaces[index]),
-                            ),
-                          ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-        error: (err, stack) => Padding(
-          padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top + 72),
-          child: ErrorScreen(
+      body: SafeArea(
+        bottom: false,
+        child: summaryAsync.when(
+          data: (_) => _buildContent(context, ref),
+          loading: () => _buildLoadingState(ref, isMySessionsSelected),
+          error: (err, _) => ErrorScreen(
             error: err,
             showHomeButton: false,
-            onRetry: () => ref.refresh(listSpacesProvider.future),
+            onRetry: () => ref.refresh(spacesSummaryProvider.future),
           ),
         ),
-        loading: () {
-          return ListView.separated(
-            physics: const NeverScrollableScrollPhysics(),
-            padding: EdgeInsetsDirectional.only(
-              start: 16,
-              end: 16,
-              bottom: 16,
-              top: MediaQuery.paddingOf(context).top + 80,
-            ),
-            itemBuilder: (_, _) => SpaceCard.shimmer(),
-            separatorBuilder: (_, _) => const SizedBox(height: 16),
-            itemCount: (MediaQuery.heightOf(context) / 100).round(),
-          );
-        },
       ),
     );
   }
 
-  List<String> _extractCategories(List<MobileSpaceDetailSchema> spaces) {
-    final categories = <String>{
-      for (final space in spaces)
-        if (space.category != null) space.category!,
-    }.toList()..sort();
+  Widget _buildContent(BuildContext context, WidgetRef ref) {
+    final allSessions = ref.watch(_allSessionsProvider);
+    final categories = ref.watch(_sessionCategoriesProvider);
+    final filteredSessions = ref.watch(_filteredSessionsProvider);
+    final groupedSessions = ref.watch(_groupedSessionsProvider);
+    final selectedCategory = ref.watch(selectedCategoryProvider);
+    final isMySessionsSelected = ref.watch(mySessionsFilterProvider);
 
-    return categories;
+    if (allSessions.isEmpty) {
+      return EmptyIndicator(
+        icon: TotemIcons.spacesFilled,
+        text: 'No sessions available yet.',
+        onRetry: () => ref.refresh(spacesSummaryProvider.future),
+      );
+    }
+
+    void toggleMySessions() =>
+        ref.read(mySessionsFilterProvider.notifier).toggle();
+
+    return Column(
+      children: [
+        // Animated header: collapses title + My Sessions button on scroll
+        AnimatedCrossFade(
+          duration: const Duration(milliseconds: 250),
+          sizeCurve: Curves.easeInOut,
+          firstChild: SessionsHeader(
+            isMySessionsSelected: isMySessionsSelected,
+            onMySessionsTapped: toggleMySessions,
+          ),
+          secondChild: const SizedBox(width: double.infinity),
+          crossFadeState: _isCollapsed
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8, right: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: SpacesFilterBar(
+                  categories: categories,
+                  selectedCategory: selectedCategory,
+                  onCategorySelected: (category) => ref
+                      .read(selectedCategoryProvider.notifier)
+                      .toggle(category),
+                ),
+              ),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: _isCollapsed
+                    ? Padding(
+                        padding: const EdgeInsets.only(left: 16),
+                        child: MySessionsButton(
+                          isSelected: isMySessionsSelected,
+                          onTap: toggleMySessions,
+                          iconOnly: true,
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _ScrollFadeWrapper(
+            showShadow: _isCollapsed,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _handleScrollNotification,
+              child: RefreshIndicator.adaptive(
+                onRefresh: () => ref.refresh(spacesSummaryProvider.future),
+                child: filteredSessions.isEmpty
+                    ? _buildEmptyFilterResult(
+                        selectedCategory,
+                        isMySessionsSelected,
+                      )
+                    : _buildSessionsList(
+                        context,
+                        groupedSessions,
+                        DateTime.now(),
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
-  Widget _buildNoResultsMessage(String category) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.filter_list, size: 60, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            'No spaces in "$category"',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+  Widget _buildLoadingState(WidgetRef ref, bool isMySessionsSelected) {
+    return Column(
+      children: [
+        SessionsHeader(
+          isMySessionsSelected: isMySessionsSelected,
+          onMySessionsTapped: () =>
+              ref.read(mySessionsFilterProvider.notifier).toggle(),
+        ),
+        const Expanded(child: Center(child: LoadingIndicator())),
+      ],
+    );
+  }
+
+  Widget _buildEmptyFilterResult(String? category, bool isMySessionsSelected) {
+    final filterName = isMySessionsSelected
+        ? 'My Sessions'
+        : (category ?? 'All');
+
+    final hintMessage = isMySessionsSelected
+        ? "You haven't joined any sessions yet"
+        : 'Try selecting a different category';
+
+    return ListView(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 100),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isMySessionsSelected ? Icons.event_busy : Icons.filter_list,
+                size: 60,
+                color: Colors.grey[400],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No sessions in "$filterName"',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                hintMessage,
+                style: const TextStyle(color: Colors.grey),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Try selecting a different category',
-            style: TextStyle(color: Colors.grey),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSessionsList(
+    BuildContext context,
+    List<SessionDateGroup> groupedSessions,
+    DateTime today,
+  ) {
+    final isLargeScreen = MediaQuery.widthOf(context) > 600;
+
+    if (isLargeScreen) {
+      // On large screens, intentionally skip date grouping in favour of a
+      // compact 2-column grid. The sticky date column would consume too much
+      // horizontal space at wide widths.
+      // TODO(totem): Consider a two-column layout within each date group
+      //   to preserve date grouping on tablets if that UX becomes a priority.
+      final allSessions = groupedSessions.expand((g) => g.sessions).toList();
+      return GridView.builder(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 100,
+        ).copyWith(bottom: 20),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          childAspectRatio: 16 / 14,
+        ),
+        itemCount: allSessions.length,
+        itemBuilder: (_, index) => SessionCard(data: allSessions[index]),
+      );
+    }
+
+    return CustomScrollView(
+      slivers: [
+        for (final group in groupedSessions)
+          SliverStickyDateGroup(dateGroup: group, today: today),
+        const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
+      ],
+    );
+  }
+}
+
+class _ScrollFadeWrapper extends StatelessWidget {
+  const _ScrollFadeWrapper({
+    required this.child,
+    required this.showShadow,
+  });
+
+  final Widget child;
+  final bool showShadow;
+
+  static const _fadeHeight = 20.0;
+  // Offset the gradient to start after the date indicator column.
+  // References the single source of truth in SliverStickyDateGroup.
+  static const double _dateColumnWidth = SliverStickyDateGroup.dateColumnWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        child,
+        // Fade gradient that appears when scrolling, only over session cards
+        Positioned(
+          top: 0,
+          left: _dateColumnWidth,
+          right: 0,
+          height: _fadeHeight,
+          child: IgnorePointer(
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 250),
+              opacity: showShadow ? 1.0 : 0.0,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppTheme.cream,
+                      AppTheme.cream.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

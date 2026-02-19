@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_app/api/models/blog_post_list_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/home/models/upcoming_session_data.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/home/screens/home_loading_screen.dart';
+import 'package:totem_app/features/home/widgets/home_blog_card.dart';
 import 'package:totem_app/features/home/widgets/next_session_card.dart';
 import 'package:totem_app/features/home/widgets/upcoming_session_card.dart';
 import 'package:totem_app/features/home/widgets/welcome_card.dart';
+import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/utils.dart';
@@ -75,14 +80,14 @@ class HomeScreen extends ConsumerWidget {
                             Semantics(
                               header: true,
                               child: Text(
-                                'Your Next session',
+                                'Your Next Session',
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 18,
                                 ),
                               ),
                             ),
-                            const _ViewAllButton(),
+                            const _ViewAllButton(filterMySessions: true),
                           ],
                         ),
                       ),
@@ -182,6 +187,8 @@ class HomeScreen extends ConsumerWidget {
                       },
                     ),
                   ],
+                  // Blog section at bottom (Figma: "Blogs" header + single card + View All)
+                  const _BlogSection(),
                   const SliverSafeArea(
                     top: false,
                     sliver: SliverToBoxAdapter(),
@@ -204,15 +211,30 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _ViewAllButton extends StatelessWidget {
-  const _ViewAllButton();
+class _ViewAllButton extends ConsumerWidget {
+  const _ViewAllButton({
+    this.filterMySessions = false,
+    this.destination,
+  });
+
+  /// When true, sets "My Sessions" filter before navigating to Spaces.
+  final bool filterMySessions;
+
+  /// When set, navigates to this tab instead of Spaces (e.g. HomeRoutes.blog).
+  final HomeRoutes? destination;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final route = destination ?? HomeRoutes.spaces;
 
     return TextButton(
-      onPressed: () => toHome(HomeRoutes.spaces),
+      onPressed: () {
+        if (route == HomeRoutes.spaces && filterMySessions) {
+          ref.read(mySessionsFilterProvider.notifier).mySessionFilter = true;
+        }
+        toHome(route);
+      },
       style: TextButton.styleFrom(
         padding: EdgeInsetsDirectional.zero,
         minimumSize: Size.zero,
@@ -223,18 +245,72 @@ class _ViewAllButton extends StatelessWidget {
         children: [
           Text(
             'View All',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.primary,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppTheme.gray,
               fontWeight: FontWeight.w500,
             ),
           ),
-          Icon(
+          const Icon(
             Icons.chevron_right,
             size: 18,
-            color: theme.colorScheme.primary,
+            color: AppTheme.gray,
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Renders the Blogs section slivers when blog posts are available.
+class _BlogSection extends ConsumerWidget {
+  const _BlogSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final blogAsync = ref.watch(listBlogPostsProvider);
+    final items = blogAsync.maybeWhen(
+      data: (page) => page.items,
+      orElse: () => <BlogPostListSchema>[],
+    );
+    if (items.isEmpty) return const SliverToBoxAdapter();
+
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsetsDirectional.only(
+              start: 20,
+              end: 20,
+              top: 24,
+              bottom: 16,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text(
+                    'Blogs',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+                const _ViewAllButton(destination: HomeRoutes.blog),
+              ],
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
+            child: HomeBlogCard(data: items.first),
+          ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
+      ],
     );
   }
 }

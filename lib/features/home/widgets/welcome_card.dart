@@ -47,7 +47,7 @@ class WelcomeCard extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: 'Welcome to Totem. Tap to learn more about our mission.',
+      label: 'Welcome to Totem. Tap to explore sessions.',
       excludeSemantics: true,
       child: card,
     );
@@ -133,7 +133,7 @@ class WelcomeCard extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
             child: Text(
-              'Read more',
+              'Explore Sessions',
               style: TextStyle(
                 fontSize: fontSize,
                 fontWeight: FontWeight.w600,

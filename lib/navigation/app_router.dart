@@ -96,7 +96,7 @@ class BottomNavScaffold extends StatelessWidget {
                     TotemIcons.spacesFilled,
                     fillColor: false,
                   ),
-                  label: 'Spaces',
+                  label: 'Sessions',
                 ),
                 NavigationDestination(
                   icon: TotemIcon(TotemIcons.blog),
