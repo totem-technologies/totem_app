@@ -53,23 +53,38 @@ class UpcomingSessionData {
   }
 
   /// Extracts upcoming sessions from a spaces summary, sorted by start time.
+  ///
+  /// Parameters:
+  /// - [limit]: Maximum number of sessions to return. Use `null` for no limit.
+  /// - [includeAttendingFullSessions]: If true, includes sessions the user is
+  ///   attending even if they have no seats left.
   static List<UpcomingSessionData> fromSummary(
     SummarySpacesSchema summary, {
-    int limit = 5,
+    int? limit = 5,
+    bool includeAttendingFullSessions = false,
   }) {
     final sessions = <UpcomingSessionData>[];
     final now = DateTime.now();
 
     for (final space in summary.explore) {
-      for (final session in space.nextEvents) {
-        if (session.start.isAfter(now) && session.seatsLeft > 0) {
-          sessions.add(UpcomingSessionData.fromSpaceAndSession(space, session));
+      for (final event in space.nextEvents) {
+        final isFutureSession = event.start.isAfter(now);
+        final hasAvailableSeats = event.seatsLeft > 0;
+        final userIsAttending = event.attending;
+
+        final shouldInclude =
+            isFutureSession &&
+            (hasAvailableSeats ||
+                (includeAttendingFullSessions && userIsAttending));
+
+        if (shouldInclude) {
+          sessions.add(UpcomingSessionData.fromSpaceAndSession(space, event));
         }
       }
     }
 
     sessions.sort((a, b) => a.start.compareTo(b.start));
-    return sessions.take(limit).toList();
+    return limit != null ? sessions.take(limit).toList() : sessions;
   }
 
   final String sessionSlug;

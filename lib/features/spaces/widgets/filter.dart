@@ -17,9 +17,10 @@ class SpacesFilterBar extends StatelessWidget {
     return Container(
       height: 56,
       constraints: const BoxConstraints(maxWidth: 500),
-      margin: const EdgeInsetsDirectional.symmetric(
-        horizontal: 16,
-        vertical: 8,
+      margin: const EdgeInsetsDirectional.only(
+        top: 8,
+        bottom: 8,
+        start: 16,
       ),
       decoration: BoxDecoration(
         color: Colors.white,

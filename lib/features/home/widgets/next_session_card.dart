@@ -36,7 +36,7 @@ class NextSessionCard extends StatelessWidget {
       session.title,
       formattedDate,
       '$formattedTime $formattedTimePeriod',
-      '${session.seatsLeft} seats left',
+      if (session.attending) 'Attending' else '${session.seatsLeft} seats left',
       'with ${session.space.author.name ?? ''}',
     ].join(', ');
 
@@ -143,14 +143,28 @@ class NextSessionCard extends StatelessWidget {
           periodStyle: periodStyle,
         ),
         const SizedBox(width: 24),
-        SessionSeatsMetadata(
-          seatsLeft: session.seatsLeft,
-          iconSize: iconSize,
-          iconSpacing: spacing,
-          labelSpacing: spacing,
-          countStyle: textStyle,
-          labelStyle: periodStyle,
-        ),
+        if (session.attending)
+          const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.check_circle_outline,
+                size: iconSize,
+                color: AppTheme.gray,
+              ),
+              SizedBox(width: spacing),
+              Text('Attending', style: textStyle),
+            ],
+          )
+        else
+          SessionSeatsMetadata(
+            seatsLeft: session.seatsLeft,
+            iconSize: iconSize,
+            iconSpacing: spacing,
+            labelSpacing: spacing,
+            countStyle: textStyle,
+            labelStyle: periodStyle,
+          ),
       ],
     );
   }
