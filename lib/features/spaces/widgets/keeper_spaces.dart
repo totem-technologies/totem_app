@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:totem_app/features/home/models/upcoming_session_data.dart';
+import 'package:totem_app/features/home/widgets/upcoming_session_card.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
-import 'package:totem_app/features/spaces/widgets/space_card.dart';
 
 class KeeperSpaces extends ConsumerWidget {
   const KeeperSpaces({
@@ -25,7 +27,16 @@ class KeeperSpaces extends ConsumerWidget {
 
     return spaces.when(
       data: (spaces) {
-        if (spaces.isEmpty) {
+        final sessions = [
+          for (final space in spaces)
+            if (space.nextEvents.isNotEmpty)
+              UpcomingSessionData.fromSpaceAndSession(
+                space,
+                space.nextEvents.first,
+              ),
+        ];
+
+        if (sessions.isEmpty) {
           return const SizedBox.shrink();
         }
         return Column(
@@ -35,26 +46,16 @@ class KeeperSpaces extends ConsumerWidget {
             Padding(
               padding: horizontalPadding,
               child: Text(
-                title ?? 'Upcoming Spaces',
+                title ?? 'Upcoming Sessions',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-            SizedBox(
-              height: 210,
-              child: ListView.separated(
+            ...sessions.map(
+              (data) => Padding(
                 padding: horizontalPadding,
-                scrollDirection: Axis.horizontal,
-                itemCount: spaces.length,
-                itemBuilder: (context, index) {
-                  final space = spaces[index];
-                  return SizedBox(
-                    width: 160,
-                    child: SmallSpaceCard(space: space),
-                  );
-                },
-                separatorBuilder: (context, index) => const SizedBox(width: 8),
+                child: UpcomingSessionCard(data: data),
               ),
             ),
           ],
@@ -69,26 +70,27 @@ class KeeperSpaces extends ConsumerWidget {
             Padding(
               padding: horizontalPadding,
               child: Text(
-                title ?? 'Upcoming Spaces',
+                title ?? 'Upcoming Sessions',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-            SizedBox(
-              height: 210,
-              child: ListView.separated(
+            ...List.generate(
+              3,
+              (_) => Padding(
                 padding: horizontalPadding,
-                scrollDirection: Axis.horizontal,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: 3,
-                itemBuilder: (context, index) {
-                  return SizedBox(
-                    width: 160,
-                    child: SmallSpaceCard.shimmer(),
-                  );
-                },
-                separatorBuilder: (context, index) => const SizedBox(width: 8),
+                child: Shimmer.fromColors(
+                  baseColor: Colors.grey.shade300,
+                  highlightColor: Colors.grey.shade100,
+                  child: Container(
+                    height: 131,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
