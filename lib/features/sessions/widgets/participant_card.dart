@@ -79,7 +79,10 @@ class ParticipantCard extends ConsumerWidget {
               clipBehavior: Clip.none,
               children: [
                 Positioned.fill(
-                  child: ParticipantVideo(participant: participant),
+                  child: ParticipantVideo(
+                    participant: participant,
+                    quality: VideoQuality.LOW,
+                  ),
                 ),
                 PositionedDirectional(
                   top: overlayPadding,
@@ -389,35 +392,88 @@ class LocalParticipantVideoCard extends ConsumerWidget {
   }
 }
 
-class ParticipantVideo extends ConsumerWidget {
-  const ParticipantVideo({required this.participant, super.key});
+class ParticipantVideo extends ConsumerStatefulWidget {
+  const ParticipantVideo({
+    required this.participant,
+    this.quality, // Add this optional parameter
+    super.key,
+  });
 
   final Participant<TrackPublication<Track>> participant;
+  final VideoQuality? quality; // The targeted quality layer
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(userProfileProvider(participant.identity));
+  ConsumerState<ParticipantVideo> createState() => _ParticipantVideoState();
+}
 
-    final videoTrack = participant.getTrackPublicationBySource(
+class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
+  @override
+  void initState() {
+    super.initState();
+    _updateQuality();
+  }
+
+  @override
+  void didUpdateWidget(covariant ParticipantVideo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.participant != widget.participant ||
+        oldWidget.quality != widget.quality) {
+      _updateQuality();
+    }
+  }
+
+  void _updateQuality() {
+    // Only RemoteParticipants receive video; local participants send it.
+    if (widget.quality != null && widget.participant is RemoteParticipant) {
+      final track = widget.participant.getTrackPublicationBySource(
+        TrackSource.camera,
+      );
+
+      if (track is RemoteTrackPublication) {
+        print(
+          'Setting video quality for ${widget.participant.identity} to ${widget.quality}',
+        );
+        // Explicitly demand the LiveKit server send this specific quality layer
+        track.setVideoQuality(widget.quality!);
+      } else {
+        print(
+          'No camera track found for ${widget.participant.identity} to set quality',
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(userProfileProvider(widget.participant.identity));
+
+    final videoTrack = widget.participant.getTrackPublicationBySource(
       TrackSource.camera,
     );
 
     if (videoTrack != null && videoTrack.subscribed && !videoTrack.muted) {
       return IgnorePointer(
-        child: VideoTrackRenderer(
-          key: ValueKey(videoTrack.track!.sid),
-          videoTrack.track! as VideoTrack,
-          fit: VideoViewFit.cover,
-          // Use platform view for better CPU performance on iOS
-          // https://github.com/livekit/client-sdk-flutter/issues/364
-          renderMode: VideoRenderMode.platformView,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: VideoTrackRenderer(
+                key: ValueKey(videoTrack.track!.sid),
+                videoTrack.track! as VideoTrack,
+                fit: VideoViewFit.cover,
+                // Use platform view for better CPU performance on iOS
+                // https://github.com/livekit/client-sdk-flutter/issues/364
+                renderMode: VideoRenderMode.platformView,
+              ),
+            ),
+            Text('${videoTrack.dimensions}'),
+          ],
         ),
       );
     } else {
       final localUserSlug = ref.watch(
         authControllerProvider.select((auth) => auth.user?.slug),
       );
-      if (participant.identity == localUserSlug) {
+      if (widget.participant.identity == localUserSlug) {
         return IgnorePointer(
           child: UserAvatar.currentUser(
             radius: 0,

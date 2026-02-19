@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -58,6 +59,7 @@ class NotMyTurn extends ConsumerWidget {
                     child: ParticipantVideo(
                       key: getParticipantKey(activeSpeaker.identity),
                       participant: activeSpeaker,
+                      quality: VideoQuality.HIGH,
                     ),
                   ),
                   PositionedDirectional(

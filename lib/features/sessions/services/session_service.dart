@@ -230,16 +230,42 @@ class Session extends _$Session {
         defaultAudioOutputOptions: options.audioOutputOptions,
 
         dynacast: true,
-        defaultVideoPublishOptions: const VideoPublishOptions(
+        defaultVideoPublishOptions: VideoPublishOptions(
           // https://docs.livekit.io/transport/media/advanced/#video-codec-support
           // https://livekit.io/webrtc/codecs-guide
           // https://github.com/flutter-webrtc/flutter-webrtc/issues/252
           videoCodec: 'h264',
-          backupVideoCodec: BackupVideoCodec(simulcast: false),
-          simulcast: false,
+          backupVideoCodec: const BackupVideoCodec(simulcast: true),
+          simulcast: true,
           videoSimulcastLayers: [
-            VideoParametersPresets.h540_169,
-            VideoParametersPresets.h720_169,
+            // Layer 1: "Tunnel Mode"
+            // Meet will drop the framerate to 15fps before letting the video freeze
+            VideoParameters(
+              dimensions: VideoParametersPresets.h180_169.dimensions,
+              encoding: const VideoEncoding(
+                maxBitrate: 80000, // Very aggressive constraint
+                maxFramerate: 15,
+              ),
+            ),
+
+            // Layer 2: "Standard Grid"
+            VideoParameters(
+              dimensions: VideoParametersPresets.h360_169.dimensions,
+              encoding: const VideoEncoding(
+                maxBitrate: 250000,
+                maxFramerate: 24,
+              ),
+            ),
+
+            // Layer 3: "Active Speaker"
+            // Capped strictly at 720p / 24fps. Meet does not push 1080p from mobile.
+            VideoParameters(
+              dimensions: VideoParametersPresets.h720_169.dimensions,
+              encoding: const VideoEncoding(
+                maxBitrate: 700000,
+                maxFramerate: 24,
+              ),
+            ),
           ],
         ),
         // defaultAudioPublishOptions: const AudioPublishOptions(),
