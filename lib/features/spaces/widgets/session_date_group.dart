@@ -1,3 +1,4 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -41,6 +42,7 @@ class SliverStickyDateGroup extends StatelessWidget {
                   delegate: _DateIndicatorHeaderDelegate(
                     date: dateGroup.date,
                     isToday: isToday,
+                    scaler: MediaQuery.textScalerOf(context),
                   ),
                 ),
               ),
@@ -68,16 +70,18 @@ class _DateIndicatorHeaderDelegate extends SliverPersistentHeaderDelegate {
   _DateIndicatorHeaderDelegate({
     required this.date,
     required this.isToday,
+    required this.scaler,
   });
 
   final DateTime date;
   final bool isToday;
+  final TextScaler scaler;
 
   @override
-  double get minExtent => DateIndicator._height;
+  double get minExtent => scaler.scale(DateIndicator._height);
 
   @override
-  double get maxExtent => DateIndicator._height;
+  double get maxExtent => scaler.scale(DateIndicator._height);
 
   @override
   Widget build(
@@ -96,7 +100,9 @@ class _DateIndicatorHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _DateIndicatorHeaderDelegate oldDelegate) {
-    return date != oldDelegate.date || isToday != oldDelegate.isToday;
+    return date != oldDelegate.date ||
+        isToday != oldDelegate.isToday ||
+        scaler != oldDelegate.scaler;
   }
 }
 
@@ -120,9 +126,12 @@ class DateIndicator extends StatelessWidget {
     final dayOfWeek = DateFormat('E').format(date);
     final monthName = DateFormat('MMM').format(date);
 
-    return SizedBox(
-      width: _width,
-      height: _height,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minWidth: _width,
+        maxWidth: _width,
+        minHeight: _height,
+      ),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -162,13 +171,15 @@ class DateIndicator extends StatelessWidget {
         const Expanded(
           flex: 2,
           child: Center(
-            child: Text(
+            child: AutoSizeText(
               'Today',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.gray,
               ),
+              maxLines: 1,
+              minFontSize: 8,
             ),
           ),
         ),
@@ -182,52 +193,49 @@ class DateIndicator extends StatelessWidget {
     String monthName,
   ) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            decoration: BoxDecoration(
-              color: AppTheme.gray.withValues(alpha: 0.3),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(_borderRadius),
-              ),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          decoration: BoxDecoration(
+            color: AppTheme.gray.withValues(alpha: 0.3),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(_borderRadius),
             ),
-            child: Text(
-              monthName.toUpperCase(),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.deepGray,
-              ),
+          ),
+          child: Text(
+            monthName.toUpperCase(),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.deepGray,
             ),
           ),
         ),
-        Expanded(
-          flex: 2,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                dayNumber,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.gray,
-                  height: 1.2,
-                ),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              dayNumber,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.gray,
+                height: 1.2,
               ),
-              Text(
-                dayOfWeek.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: AppTheme.gray,
-                ),
+            ),
+            Text(
+              dayOfWeek.toUpperCase(),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.gray,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );

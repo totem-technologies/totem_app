@@ -56,7 +56,6 @@ class UpcomingSessionCard extends ConsumerStatefulWidget {
   final UpcomingSessionData data;
   final VoidCallback? onTap;
 
-  static const double _cardHeight = 131;
   static const double _imageWidth = 130;
   static const double _borderRadius = 20;
   static const double _contentPadding = 10;
@@ -125,8 +124,7 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: widget.onTap ?? () => _navigateToSession(context),
-            child: SizedBox(
-              height: UpcomingSessionCard._cardHeight,
+            child: IntrinsicHeight(
               child: Row(
                 children: [
                   // Left: Session image with rounded left corners only
@@ -220,8 +218,10 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
         ? widget.data.category!
         : widget.data.spaceTitle;
 
-    return SizedBox(
-      height: 20,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minHeight: 20,
+      ),
       child: Align(
         alignment: AlignmentDirectional.centerStart,
         child: Text(
@@ -239,8 +239,10 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
   }
 
   Widget _buildSessionTitle() {
-    return SizedBox(
-      height: 38,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minHeight: 38,
+      ),
       child: Align(
         alignment: AlignmentDirectional.centerStart,
         child: Text(
