@@ -72,7 +72,7 @@ Future<void> muteEveryone(
   return RepositoryUtils.handleApiCall<void>(
     apiCall: () =>
         apiService.rooms.totemRoomsApiMuteAll(sessionSlug: sessionSlug),
-    operationName: 'mute participant',
+    operationName: 'mute everyone',
     retryOnNetworkError: true,
   ).timeout(
     _shortTimeoutDuration,

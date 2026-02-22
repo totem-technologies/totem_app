@@ -394,9 +394,6 @@ class Session extends _$Session {
             ),
           );
         } else if (metadata != _lastMetadata) {
-          // final previousState = SessionState.fromJson(
-          //   jsonDecode(_lastMetadata!) as Map<String, dynamic>,
-          // );
           final newState = RoomState.fromJson(
             jsonDecode(metadata) as Map<String, dynamic>,
           );
