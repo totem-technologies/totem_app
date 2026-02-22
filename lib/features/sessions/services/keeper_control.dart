@@ -75,7 +75,7 @@ extension KeeperControl on Session {
   Future<bool> startSession() async {
     if (!isKeeper()) return false;
     try {
-      await ref
+      final roomState = await ref
           .read(
             startSessionProvider(
               _options!.eventSlug,
@@ -88,6 +88,7 @@ extension KeeperControl on Session {
               throw AppNetworkException.timeout();
             },
           );
+      _onRoomChanges(roomState);
       return true;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -102,7 +103,7 @@ extension KeeperControl on Session {
   Future<bool> endSession() async {
     if (!isKeeper()) return false;
     try {
-      await ref
+      final roomState = await ref
           .read(
             endSessionProvider(
               _options!.eventSlug,
@@ -115,6 +116,7 @@ extension KeeperControl on Session {
               throw AppNetworkException.timeout();
             },
           );
+      _onRoomChanges(roomState);
       return true;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -141,6 +143,27 @@ extension KeeperControl on Session {
         error,
         stackTrace: stackTrace,
         message: 'Error muting everyone',
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> reorder(List<String> newOrder) async {
+    try {
+      final roomState = await ref.read(
+        reorderParticipantsProvider(
+          options.eventSlug,
+          newOrder,
+          state.roomState.version,
+        ).future,
+      );
+      _onRoomChanges(roomState);
+      logger.i('Reordered participants successfully');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error reordering participants',
       );
       rethrow;
     }

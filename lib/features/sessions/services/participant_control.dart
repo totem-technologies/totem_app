@@ -11,12 +11,13 @@ extension ParticipantControl on Session {
   Future<void> passTotem() async {
     if (!isKeeper() && !state.isMyTurn(context!)) return;
     try {
-      await ref.read(
+      final roomState = await ref.read(
         passTotemProvider(
           options.eventSlug,
           state.roomState.version,
         ).future,
       );
+      _onRoomChanges(roomState);
       logger.i('Passed totem successfully');
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -37,12 +38,13 @@ extension ParticipantControl on Session {
       throw StateError("Not the user's turn to accept the totem");
     }
     try {
-      await ref.read(
+      final roomState = await ref.read(
         acceptTotemProvider(
           options.eventSlug,
           state.roomState.version,
         ).future,
       );
+      _onRoomChanges(roomState);
       enableMicrophone();
       logger.i('Accepted totem successfully');
     } catch (error, stackTrace) {

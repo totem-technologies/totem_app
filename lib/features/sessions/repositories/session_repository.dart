@@ -89,9 +89,9 @@ const eventsType = <Type, Object?>{
 };
 
 @riverpod
-Future<void> passTotem(Ref ref, String sessionSlug, int lastSeenVersion) {
+Future<RoomState> passTotem(Ref ref, String sessionSlug, int lastSeenVersion) {
   final apiService = ref.read(mobileApiServiceProvider);
-  return RepositoryUtils.handleApiCall<void>(
+  return RepositoryUtils.handleApiCall<RoomState>(
     apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
       sessionSlug: sessionSlug,
       body: EventRequest(
@@ -110,9 +110,13 @@ Future<void> passTotem(Ref ref, String sessionSlug, int lastSeenVersion) {
 }
 
 @riverpod
-Future<void> acceptTotem(Ref ref, String sessionSlug, int lastSeenVersion) {
+Future<RoomState> acceptTotem(
+  Ref ref,
+  String sessionSlug,
+  int lastSeenVersion,
+) {
   final apiService = ref.read(mobileApiServiceProvider);
-  return RepositoryUtils.handleApiCall<void>(
+  return RepositoryUtils.handleApiCall<RoomState>(
     apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
       sessionSlug: sessionSlug,
       body: EventRequest(
@@ -131,14 +135,14 @@ Future<void> acceptTotem(Ref ref, String sessionSlug, int lastSeenVersion) {
 }
 
 @riverpod
-Future<void> reorderParticipants(
+Future<RoomState> reorderParticipants(
   Ref ref,
   String sessionSlug,
   List<String> order,
   int lastSeenVersion,
 ) {
   final apiService = ref.read(mobileApiServiceProvider);
-  return RepositoryUtils.handleApiCall<void>(
+  return RepositoryUtils.handleApiCall<RoomState>(
     apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
       sessionSlug: sessionSlug,
       body: EventRequest(
@@ -158,9 +162,13 @@ Future<void> reorderParticipants(
 }
 
 @riverpod
-Future<void> startSession(Ref ref, String sessionSlug, int lastSeenVersion) {
+Future<RoomState> startSession(
+  Ref ref,
+  String sessionSlug,
+  int lastSeenVersion,
+) {
   final apiService = ref.read(mobileApiServiceProvider);
-  return RepositoryUtils.handleApiCall<void>(
+  return RepositoryUtils.handleApiCall<RoomState>(
     apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
       sessionSlug: sessionSlug,
       body: EventRequest(
@@ -176,13 +184,13 @@ Future<void> startSession(Ref ref, String sessionSlug, int lastSeenVersion) {
 }
 
 @riverpod
-Future<void> endSession(
+Future<RoomState> endSession(
   Ref ref,
   String sessionSlug,
   int lastSeenVersion,
-) async {
+) {
   final apiService = ref.read(mobileApiServiceProvider);
-  await RepositoryUtils.handleApiCall<void>(
+  return RepositoryUtils.handleApiCall<RoomState>(
     apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
       sessionSlug: sessionSlug,
       body: EventRequest(
