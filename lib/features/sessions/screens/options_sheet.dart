@@ -148,7 +148,7 @@ class OptionsSheet extends ConsumerWidget {
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
-                if (state.sessionState.status == SessionStatus.waiting)
+                if (state.roomState.status == RoomStatus.waitingRoom)
                   OptionsSheetTile<void>(
                     title: 'Start session',
                     icon: TotemIcons.feedback,
@@ -179,30 +179,28 @@ class OptionsSheet extends ConsumerWidget {
                     _onMuteEveryone(currentSession);
                   },
                 ),
-                if (state.sessionState.status == SessionStatus.started)
+                if (state.roomState.status == RoomStatus.active)
                   Builder(
                     builder: (context) {
-                      final next = state.sessionState.nextParticipantIdentity;
+                      final next = state.roomState.nextParticipantIdentity;
                       final nextParticipantName = next != null
                           ? state.participants
                                 .firstWhereOrNull((p) => p.identity == next)
                                 ?.name
                           : null;
                       return OptionsSheetTile<void>(
-                        title: switch (state.sessionState.totemStatus) {
-                          TotemStatus.passing =>
+                        title: switch (state.roomState.turnState) {
+                          TurnState.passing =>
                             'Accept Totem for ${nextParticipantName ?? 'Next'}',
-                          TotemStatus.accepted =>
+                          TurnState.speaking =>
                             'Pass Totem to ${nextParticipantName ?? 'Next'}',
                           _ => 'Next Totem Action',
                         },
                         icon: TotemIcons.passToNext,
                         type: OptionsSheetTileType.destructive,
                         onTap:
-                            state.sessionState.status ==
-                                    SessionStatus.started &&
-                                state.sessionState.totemStatus !=
-                                    TotemStatus.none
+                            state.roomState.status == RoomStatus.active &&
+                                state.roomState.turnState != TurnState.idle
                             ? () {
                                 Navigator.of(context).pop();
                                 _onNextTotemAction(
@@ -215,12 +213,12 @@ class OptionsSheet extends ConsumerWidget {
                       );
                     },
                   ),
-                if (state.sessionState.status != SessionStatus.ended)
+                if (state.roomState.status != RoomStatus.ended)
                   OptionsSheetTile<void>(
                     title: 'End Session',
                     icon: TotemIcons.cameraOff,
                     type: OptionsSheetTileType.destructive,
-                    onTap: state.sessionState.status == SessionStatus.started
+                    onTap: state.roomState.status == RoomStatus.active
                         ? () {
                             Navigator.of(context).pop();
                             _onEndSession(context, currentSession);
@@ -236,24 +234,24 @@ class OptionsSheet extends ConsumerWidget {
                 OptionsSheetTile<void>(
                   title:
                       'Session Status: '
-                      '${state.sessionState.status.name.uppercaseFirst()}',
+                      '${state.roomState.status.name.uppercaseFirst()}',
                   icon: TotemIcons.checkboxOutlined,
                 ),
                 OptionsSheetTile<void>(
                   title:
                       'Totem Status: '
-                      '${state.sessionState.totemStatus.name.uppercaseFirst()}',
+                      '${state.roomState.turnState.name.uppercaseFirst()}',
                   icon: TotemIcons.feedback,
                 ),
                 Builder(
                   builder: (context) {
                     final String? userName =
-                        state.sessionState.speakingNow != null
+                        state.roomState.currentSpeaker != null
                         ? state.participants
                               .firstWhereOrNull(
                                 (p) =>
                                     p.identity ==
-                                    state.sessionState.speakingNow,
+                                    state.roomState.currentSpeaker,
                               )
                               ?.name
                         : null;
@@ -280,14 +278,14 @@ class OptionsSheet extends ConsumerWidget {
     Session session,
     SessionRoomState state,
   ) async {
-    if (state.sessionState.nextParticipantIdentity == null) return;
+    if (state.roomState.nextParticipantIdentity == null) return;
 
     await showDialog<void>(
       context: context,
       builder: (context) {
         final theme = Theme.of(context);
         final nextParticipantIdentity =
-            state.sessionState.nextParticipantIdentity!;
+            state.roomState.nextParticipantIdentity!;
 
         return Consumer(
           builder: (context, ref, child) {
@@ -303,16 +301,16 @@ class OptionsSheet extends ConsumerWidget {
                     .value;
             return ConfirmationDialog(
               title: null,
-              confirmButtonText: switch (state.sessionState.totemStatus) {
-                TotemStatus.passing => 'Accept Totem',
-                TotemStatus.accepted => 'Pass Totem',
+              confirmButtonText: switch (state.roomState.turnState) {
+                TurnState.passing => 'Accept Totem',
+                TurnState.speaking => 'Pass Totem',
                 _ => 'Proceed',
               },
-              content: switch (state.sessionState.totemStatus) {
-                TotemStatus.passing =>
+              content: switch (state.roomState.turnState) {
+                TurnState.passing =>
                   'Accept the totem on behalf of '
                       '${nextParticipantName ?? 'the next participant'}?',
-                TotemStatus.accepted =>
+                TurnState.speaking =>
                   'Pass the totem to '
                       '${nextParticipantName ?? 'the next participant'}?',
                 _ =>
@@ -325,11 +323,10 @@ class OptionsSheet extends ConsumerWidget {
               type: ConfirmationDialogType.standard,
               onConfirm: () async {
                 try {
-                  if (state.sessionState.totemStatus == TotemStatus.passing) {
+                  if (state.roomState.turnState == TurnState.passing) {
                     await session.acceptTotem();
                     return;
-                  } else if (state.sessionState.totemStatus ==
-                      TotemStatus.accepted) {
+                  } else if (state.roomState.turnState == TurnState.speaking) {
                     await session.passTotem();
                     return;
                   }

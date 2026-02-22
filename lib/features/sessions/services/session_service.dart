@@ -112,40 +112,40 @@ enum RoomConnectionState { connecting, connected, disconnected, error }
 @immutable
 class SessionRoomState {
   const SessionRoomState({
+    required this.roomState,
     this.connectionState = RoomConnectionState.connecting,
-    this.sessionState = const SessionState(keeperSlug: '', speakingOrder: []),
     this.hasKeeperDisconnected = false,
     this.participants = const [],
   });
 
   final RoomConnectionState connectionState;
-  final SessionState sessionState;
+  final RoomState roomState;
   final bool hasKeeperDisconnected;
   final List<Participant> participants;
 
   bool isMyTurn(RoomContext room) {
-    return sessionState.speakingNow != null &&
-        sessionState.speakingNow == room.localParticipant?.identity;
+    return roomState.currentSpeaker != null &&
+        roomState.currentSpeaker == room.localParticipant?.identity;
   }
 
   bool amNext(RoomContext room) {
-    return sessionState.nextSpeaker != null &&
-        sessionState.nextSpeaker == room.localParticipant?.identity;
+    return roomState.nextSpeaker != null &&
+        roomState.nextSpeaker == room.localParticipant?.identity;
   }
 
   String get speakingNow {
-    return sessionState.speakingNow ?? sessionState.keeperSlug;
+    return roomState.currentSpeaker ?? roomState.keeper;
   }
 
   SessionRoomState copyWith({
     RoomConnectionState? connectionState,
-    SessionState? sessionState,
+    RoomState? roomState,
     bool? hasKeeperDisconnected,
     List<Participant>? participants,
   }) {
     return SessionRoomState(
       connectionState: connectionState ?? this.connectionState,
-      sessionState: sessionState ?? this.sessionState,
+      roomState: roomState ?? this.roomState,
       hasKeeperDisconnected:
           hasKeeperDisconnected ?? this.hasKeeperDisconnected,
       participants: participants ?? this.participants,
@@ -156,7 +156,7 @@ class SessionRoomState {
   String toString() {
     return 'SessionRoomState('
         'connectionState: $connectionState, '
-        'sessionState: $sessionState, '
+        'sessionState: $roomState, '
         'hasKeeperDisconnected: $hasKeeperDisconnected, '
         ')';
   }
@@ -166,7 +166,7 @@ class SessionRoomState {
     if (identical(this, other)) return true;
     return other is SessionRoomState &&
         other.connectionState == connectionState &&
-        other.sessionState == sessionState &&
+        other.roomState == roomState &&
         other.hasKeeperDisconnected == hasKeeperDisconnected &&
         const DeepCollectionEquality().equals(
           other.participants.map((p) => p.identity),
@@ -177,7 +177,7 @@ class SessionRoomState {
   @override
   int get hashCode =>
       connectionState.hashCode ^
-      sessionState.hashCode ^
+      roomState.hashCode ^
       hasKeeperDisconnected.hashCode ^
       const DeepCollectionEquality().hash(participants.map((p) => p.identity));
 }
@@ -266,9 +266,18 @@ class Session extends _$Session {
     ref.onDispose(_cleanUp);
 
     return SessionRoomState(
-      sessionState: SessionState(
-        keeperSlug: event?.space.author.slug ?? '',
-        speakingOrder: [],
+      roomState: RoomState(
+        keeper: event?.space.author.slug ?? '',
+        nextSpeaker: '',
+        currentSpeaker: '',
+        status: RoomStatus.waitingRoom,
+        turnState: TurnState.idle,
+        sessionSlug: options.eventSlug,
+        statusDetail: const RoomStateStatusDetailSealedWaitingRoomDetail(
+          type: 'waiting_room',
+        ),
+        talkingOrder: [],
+        version: 0,
       ),
     );
   }
@@ -330,12 +339,12 @@ class Session extends _$Session {
     // If the keeper is not in the room, the participants will start unmuted.
     context!.room.localParticipant!.setMicrophoneEnabled(
       () {
-            if (state.sessionState.status == SessionStatus.waiting &&
+            if (state.roomState.status == RoomStatus.waitingRoom &&
                 !hasKeeper) {
               // If joined in the waiting room, everyone can join unmuted.
               return _options?.microphoneEnabled;
             }
-            if (state.sessionState.status == SessionStatus.started) {
+            if (state.roomState.status == RoomStatus.active) {
               if (state.speakingNow ==
                   context!.room.localParticipant?.identity) {
                 // If it's the user's turn to speak, they can join unmuted.
@@ -368,10 +377,10 @@ class Session extends _$Session {
     _options?.onLivekitError(error);
   }
 
-  void _onRoomChanges([SessionState? newSessionState]) {
+  void _onRoomChanges([RoomState? newSessionState]) {
     _updateParticipantsList();
     if (newSessionState != null) {
-      state = state.copyWith(sessionState: newSessionState);
+      state = state.copyWith(roomState: newSessionState);
     } else {
       final metadata = context?.room.metadata;
       if (metadata == null || metadata.isEmpty) return;
@@ -380,19 +389,16 @@ class Session extends _$Session {
         if (_lastMetadata == null) {
           _lastMetadata = metadata;
           state = state.copyWith(
-            sessionState: SessionState.fromJson(
+            roomState: RoomState.fromJson(
               jsonDecode(metadata) as Map<String, dynamic>,
             ),
           );
         } else if (metadata != _lastMetadata) {
-          // final previousState = SessionState.fromJson(
-          //   jsonDecode(_lastMetadata!) as Map<String, dynamic>,
-          // );
-          final newState = SessionState.fromJson(
+          final newState = RoomState.fromJson(
             jsonDecode(metadata) as Map<String, dynamic>,
           );
 
-          state = state.copyWith(sessionState: newState);
+          state = state.copyWith(roomState: newState);
           _lastMetadata = metadata;
         }
       } catch (error, stackTrace) {
@@ -425,7 +431,7 @@ class Session extends _$Session {
     //   return;
     // }
 
-    if (state.sessionState.status == SessionStatus.ended) {
+    if (state.roomState.status == RoomStatus.ended) {
       _onSessionEnd();
     }
   }

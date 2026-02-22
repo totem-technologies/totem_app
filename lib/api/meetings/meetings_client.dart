@@ -5,7 +5,7 @@
 import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
-import '../models/livekit_mute_participant_schema.dart';
+import '../models/livekit_order_schema.dart';
 import '../models/livekit_token_response_schema.dart';
 import '../models/session_state.dart';
 
@@ -71,10 +71,9 @@ abstract class MeetingsClient {
 
   /// Reorder Participants Endpoint
   @POST('/api/mobile/protected/meetings/event/{event_slug}/reorder')
-  Future<LivekitMuteParticipantSchema>
-  totemMeetingsMobileApiReorderParticipantsEndpoint({
+  Future<LivekitOrderSchema> totemMeetingsMobileApiReorderParticipantsEndpoint({
     @Path('event_slug') required String eventSlug,
-    @Body() required LivekitMuteParticipantSchema body,
+    @Body() required LivekitOrderSchema body,
   });
 
   /// Get Room State Endpoint.

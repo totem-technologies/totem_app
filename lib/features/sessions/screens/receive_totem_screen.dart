@@ -21,7 +21,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessionStatus = ref.watch(sessionStatusProvider);
+    final sessionStatus = ref.watch(roomStatusProvider);
     final currentSession = ref.watch(currentSessionProvider);
 
     return RoomBackground(

@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/api/models/totem_status.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 
 part 'session_scope_provider.g.dart';
@@ -42,20 +42,20 @@ RoomConnectionState connectionState(Ref ref) {
 
 /// The current session status (waiting, started, ended).
 @Riverpod(dependencies: [currentSessionState])
-SessionStatus sessionStatus(Ref ref) {
+RoomStatus roomStatus(Ref ref) {
   return ref.watch(
-        currentSessionStateProvider.select((s) => s?.sessionState.status),
+        currentSessionStateProvider.select((s) => s?.roomState.status),
       ) ??
-      SessionStatus.waiting;
+      RoomStatus.waitingRoom;
 }
 
 /// The current totem status (none, accepted, passing).
 @Riverpod(dependencies: [currentSessionState])
-TotemStatus totemStatus(Ref ref) {
+TurnState turnState(Ref ref) {
   return ref.watch(
-        currentSessionStateProvider.select((s) => s?.sessionState.totemStatus),
+        currentSessionStateProvider.select((s) => s?.roomState.turnState),
       ) ??
-      TotemStatus.none;
+      TurnState.idle;
 }
 
 /// The list of participants in the session.

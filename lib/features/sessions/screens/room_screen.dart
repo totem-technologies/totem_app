@@ -253,9 +253,9 @@ class _RoomContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentSession = ref.watch(currentSessionProvider);
     final connectionState = ref.watch(connectionStateProvider);
-    final sessionStatus = ref.watch(sessionStatusProvider);
+    final roomStatus = ref.watch(roomStatusProvider);
     final sessionState = ref.watch(currentSessionStateProvider);
-    final totemStatus = ref.watch(totemStatusProvider);
+    final turnState = ref.watch(turnStateProvider);
     final isMyTurn = ref.watch(isMyTurnProvider);
     final amNext = ref.watch(amNextSpeakerProvider);
 
@@ -265,9 +265,9 @@ class _RoomContent extends ConsumerWidget {
 
     if (session.ended ||
         (currentSession.event?.ended ?? false) ||
-        sessionStatus == SessionStatus.ended) {
+        roomStatus == RoomStatus.ended) {
       return RoomBackground(
-        status: sessionStatus,
+        status: roomStatus,
         child: SessionDisconnectedScreen(session: session),
       );
     }
@@ -302,7 +302,7 @@ class _RoomContent extends ConsumerWidget {
         }
       },
       child: RoomBackground(
-        status: sessionStatus,
+        status: roomStatus,
         child: LivekitRoom(
           roomContext: currentSession.context!,
           builder: (ctx, _) {
@@ -322,8 +322,8 @@ class _RoomContent extends ConsumerWidget {
                             currentSession,
                             sessionState,
                             connectionState,
-                            sessionStatus,
-                            totemStatus,
+                            roomStatus,
+                            turnState,
                             isMyTurn,
                             amNext,
                           ),
@@ -350,8 +350,8 @@ class _RoomContent extends ConsumerWidget {
     Session session,
     SessionRoomState sessionState,
     RoomConnectionState connectionState,
-    SessionStatus sessionStatus,
-    TotemStatus totemStatus,
+    RoomStatus roomStatus,
+    TurnState turnState,
     bool isMyTurn,
     bool amNext,
   ) {
@@ -363,7 +363,7 @@ class _RoomContent extends ConsumerWidget {
       case RoomConnectionState.disconnected:
         return SessionDisconnectedScreen(session: this.session);
       case RoomConnectionState.connected:
-        if (sessionStatus == SessionStatus.ended) {
+        if (roomStatus == RoomStatus.ended) {
           return SessionDisconnectedScreen(session: this.session);
         }
 
@@ -371,7 +371,7 @@ class _RoomContent extends ConsumerWidget {
           return loadingScreen;
         }
 
-        if (totemStatus == TotemStatus.passing && amNext) {
+        if (turnState == TurnState.passing && amNext) {
           return ReceiveTotemScreen(
             actionBar: _buildActionBar(
               context,
