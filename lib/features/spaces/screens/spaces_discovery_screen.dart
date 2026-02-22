@@ -351,7 +351,10 @@ class _SpacesDiscoveryScreenState extends ConsumerState<SpacesDiscoveryScreen> {
       slivers: [
         for (final group in groupedSessions)
           SliverStickyDateGroup(dateGroup: group, today: today),
-        const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
+        const SliverSafeArea(
+          top: false,
+          sliver: SliverToBoxAdapter(),
+        ),
       ],
     );
   }
