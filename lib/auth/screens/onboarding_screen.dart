@@ -147,7 +147,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
             /// Fixed Top Container (logo, skip button, gradient)
             Container(
-              height: 150,
+              constraints: const BoxConstraints(minHeight: 150),
               width: double.infinity,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -194,10 +194,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             Align(
               alignment: Alignment.bottomCenter,
               child: Container(
-                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                constraints: const BoxConstraints(
+                  minHeight: 200,
+                  maxWidth: double.infinity,
+                ),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topCenter,
+                    begin: Alignment(
+                      0,
+                      -0.5, // center-top pos
+                    ),
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
@@ -205,174 +212,157 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     ],
                   ),
                 ),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  height: MediaQuery.textScalerOf(context).scale(200),
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        AppTheme.slate,
-                      ],
-                    ),
-                  ),
-                  child: SafeArea(
-                    top: false,
-                    child: Column(
-                      children: [
-                        // Onboarding title
-                        Expanded(
-                          child: IgnorePointer(
-                            child: PageView.builder(
-                              itemCount: onboardingData.length,
-                              controller: _contentPageController,
-                              onPageChanged: (index) =>
-                                  setState(() => currentPage = index),
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemBuilder: (context, index) {
-                                final onboarding = onboardingData[index];
-                                final textTheme = Theme.of(context).textTheme;
-                                return Column(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    Semantics(
-                                      label: 'Onboarding title',
-                                      child: Text(
-                                        onboarding.title,
-                                        style: textTheme.headlineMedium
-                                            ?.copyWith(
-                                              color: AppTheme.white,
-                                            ),
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Onboarding title
+                      Expanded(
+                        child: IgnorePointer(
+                          child: PageView.builder(
+                            itemCount: onboardingData.length,
+                            controller: _contentPageController,
+                            onPageChanged: (index) =>
+                                setState(() => currentPage = index),
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemBuilder: (context, index) {
+                              final onboarding = onboardingData[index];
+                              final textTheme = Theme.of(context).textTheme;
+                              return Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Semantics(
+                                    label: 'Onboarding title',
+                                    child: Text(
+                                      onboarding.title,
+                                      style: textTheme.headlineMedium?.copyWith(
+                                        color: AppTheme.white,
                                       ),
                                     ),
-                                    const SizedBox(height: 10),
-                                    // Onboarding description
-                                    Semantics(
-                                      label: 'Onboarding description',
-                                      child: Text(
-                                        onboarding.description,
-                                        textAlign: TextAlign.center,
-                                        style: textTheme.bodyMedium?.copyWith(
-                                          color: AppTheme.white,
-                                        ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  // Onboarding description
+                                  Semantics(
+                                    label: 'Onboarding description',
+                                    child: Text(
+                                      onboarding.description,
+                                      textAlign: TextAlign.center,
+                                      style: textTheme.bodyMedium?.copyWith(
+                                        color: AppTheme.white,
                                       ),
                                     ),
-                                    const SizedBox(height: 20),
-                                  ],
-                                );
-                              },
-                            ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                ],
+                              );
+                            },
                           ),
                         ),
-                        Row(
-                          children: [
-                            ...List.generate(
-                              onboardingData.length,
-                              (index) => IgnorePointer(
-                                child: AnimatedContainer(
-                                  key: ValueKey(index),
-                                  duration: const Duration(milliseconds: 200),
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                  ),
-                                  width: index == currentPage ? 30 : 10,
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    color: index == currentPage
-                                        ? AppTheme.mauve
-                                        : AppTheme.white,
-                                    borderRadius: BorderRadius.circular(5),
-                                  ),
+                      ),
+                      Row(
+                        children: [
+                          ...List.generate(
+                            onboardingData.length,
+                            (index) => IgnorePointer(
+                              child: AnimatedContainer(
+                                key: ValueKey(index),
+                                duration: const Duration(milliseconds: 200),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                ),
+                                width: index == currentPage ? 30 : 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: index == currentPage
+                                      ? AppTheme.mauve
+                                      : AppTheme.white,
+                                  borderRadius: BorderRadius.circular(5),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                spacing: 10,
-                                children: [
-                                  AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 200),
-                                    child: Visibility(
-                                      key: ValueKey(currentPage > 0),
-                                      visible: currentPage > 0,
-                                      child: Semantics(
-                                        label: 'Previous page',
-                                        child: GestureDetector(
-                                          onTap: _onPrevious,
-                                          child: const CircleAvatar(
-                                            radius: 27,
-                                            backgroundColor: AppTheme.mauve,
-                                            child: Icon(
-                                              Icons.arrow_back_ios_new,
-                                              color: AppTheme.white,
-                                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              spacing: 10,
+                              children: [
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Visibility(
+                                    key: ValueKey(currentPage > 0),
+                                    visible: currentPage > 0,
+                                    child: Semantics(
+                                      label: 'Previous page',
+                                      child: GestureDetector(
+                                        onTap: _onPrevious,
+                                        child: const CircleAvatar(
+                                          radius: 27,
+                                          backgroundColor: AppTheme.mauve,
+                                          child: Icon(
+                                            Icons.arrow_back_ios_new,
+                                            color: AppTheme.white,
                                           ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                  Flexible(
-                                    child: Semantics(
-                                      label: isLastPage
-                                          ? 'Create account'
-                                          : 'Next page',
-                                      button: true,
-                                      child: Material(
-                                        color: AppTheme.mauve,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            27,
-                                          ),
+                                ),
+                                Flexible(
+                                  child: Semantics(
+                                    label: isLastPage
+                                        ? 'Create account'
+                                        : 'Next page',
+                                    button: true,
+                                    child: Material(
+                                      color: AppTheme.mauve,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          27,
                                         ),
-                                        clipBehavior: Clip.antiAlias,
-                                        child: InkWell(
-                                          borderRadius: BorderRadius.circular(
-                                            27,
+                                      ),
+                                      clipBehavior: Clip.antiAlias,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(
+                                          27,
+                                        ),
+                                        onTap: isLastPage ? _onSkip : _onNext,
+                                        child: AnimatedSize(
+                                          duration: const Duration(
+                                            milliseconds: 400,
                                           ),
-                                          onTap: isLastPage ? _onSkip : _onNext,
-                                          child: AnimatedSize(
-                                            duration: const Duration(
-                                              milliseconds: 400,
-                                            ),
-                                            curve: Curves.easeInOutCubic,
-                                            alignment: Alignment.centerRight,
-                                            child: SizedBox(
-                                              height: 54,
-                                              child: Padding(
-                                                padding: EdgeInsets.symmetric(
-                                                  horizontal: isLastPage
-                                                      ? 24
-                                                      : 15,
-                                                ),
-                                                child: Center(
-                                                  widthFactor: 1,
-                                                  child: isLastPage
-                                                      ? const AutoSizeText(
-                                                          'Create account',
-                                                          style: TextStyle(
-                                                            fontFamily: AppTheme
-                                                                .fontFamilySans,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            fontSize: 21,
-                                                            height: 1.2,
-                                                            letterSpacing: 0,
-                                                            color:
-                                                                AppTheme.white,
-                                                          ),
-                                                          maxLines: 1,
-                                                        )
-                                                      : const Icon(
-                                                          Icons
-                                                              .arrow_forward_ios,
+                                          curve: Curves.easeInOutCubic,
+                                          alignment: Alignment.centerRight,
+                                          child: SizedBox(
+                                            height: 54,
+                                            child: Padding(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: isLastPage
+                                                    ? 24
+                                                    : 15,
+                                              ),
+                                              child: Center(
+                                                widthFactor: 1,
+                                                child: isLastPage
+                                                    ? const AutoSizeText(
+                                                        'Create account',
+                                                        style: TextStyle(
+                                                          fontFamily: AppTheme
+                                                              .fontFamilySans,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          fontSize: 21,
+                                                          height: 1.2,
+                                                          letterSpacing: 0,
                                                           color: AppTheme.white,
                                                         ),
-                                                ),
+                                                        maxLines: 1,
+                                                      )
+                                                    : const Icon(
+                                                        Icons.arrow_forward_ios,
+                                                        color: AppTheme.white,
+                                                      ),
                                               ),
                                             ),
                                           ),
@@ -380,14 +370,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                       ),
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                      ],
-                    ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                    ],
                   ),
                 ),
               ),
