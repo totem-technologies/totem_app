@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -267,7 +268,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           ),
                         ),
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             ...List.generate(
                               onboardingData.length,
@@ -289,79 +289,98 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                 ),
                               ),
                             ),
-                            const Spacer(),
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 200),
-                              child: Visibility(
-                                key: ValueKey(currentPage > 0),
-                                visible: currentPage > 0,
-                                child: Semantics(
-                                  label: 'Previous page',
-                                  child: GestureDetector(
-                                    onTap: _onPrevious,
-                                    child: const CircleAvatar(
-                                      radius: 27,
-                                      backgroundColor: AppTheme.mauve,
-                                      child: Icon(
-                                        Icons.arrow_back_ios_new,
-                                        color: AppTheme.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
                             const SizedBox(width: 10),
-                            Semantics(
-                              label: isLastPage
-                                  ? 'Create account'
-                                  : 'Next page',
-                              button: true,
-                              child: Material(
-                                color: AppTheme.mauve,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(27),
-                                ),
-                                clipBehavior: Clip.antiAlias,
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(27),
-                                  onTap: isLastPage ? _onSkip : _onNext,
-                                  child: AnimatedSize(
-                                    duration: const Duration(
-                                      milliseconds: 400,
-                                    ),
-                                    curve: Curves.easeInOutCubic,
-                                    alignment: Alignment.centerRight,
-                                    child: SizedBox(
-                                      height: 54,
-                                      child: Padding(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: isLastPage ? 24 : 15,
-                                        ),
-                                        child: Center(
-                                          widthFactor: 1,
-                                          child: isLastPage
-                                              ? const Text(
-                                                  'Create account',
-                                                  style: TextStyle(
-                                                    fontFamily:
-                                                        AppTheme.fontFamilySans,
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize: 21,
-                                                    height: 1.2,
-                                                    letterSpacing: 0,
-                                                    color: AppTheme.white,
-                                                  ),
-                                                )
-                                              : const Icon(
-                                                  Icons.arrow_forward_ios,
-                                                  color: AppTheme.white,
-                                                ),
+                            Expanded(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                spacing: 10,
+                                children: [
+                                  AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 200),
+                                    child: Visibility(
+                                      key: ValueKey(currentPage > 0),
+                                      visible: currentPage > 0,
+                                      child: Semantics(
+                                        label: 'Previous page',
+                                        child: GestureDetector(
+                                          onTap: _onPrevious,
+                                          child: const CircleAvatar(
+                                            radius: 27,
+                                            backgroundColor: AppTheme.mauve,
+                                            child: Icon(
+                                              Icons.arrow_back_ios_new,
+                                              color: AppTheme.white,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
+                                  Flexible(
+                                    child: Semantics(
+                                      label: isLastPage
+                                          ? 'Create account'
+                                          : 'Next page',
+                                      button: true,
+                                      child: Material(
+                                        color: AppTheme.mauve,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            27,
+                                          ),
+                                        ),
+                                        clipBehavior: Clip.antiAlias,
+                                        child: InkWell(
+                                          borderRadius: BorderRadius.circular(
+                                            27,
+                                          ),
+                                          onTap: isLastPage ? _onSkip : _onNext,
+                                          child: AnimatedSize(
+                                            duration: const Duration(
+                                              milliseconds: 400,
+                                            ),
+                                            curve: Curves.easeInOutCubic,
+                                            alignment: Alignment.centerRight,
+                                            child: SizedBox(
+                                              height: 54,
+                                              child: Padding(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: isLastPage
+                                                      ? 24
+                                                      : 15,
+                                                ),
+                                                child: Center(
+                                                  widthFactor: 1,
+                                                  child: isLastPage
+                                                      ? const AutoSizeText(
+                                                          'Create account',
+                                                          style: TextStyle(
+                                                            fontFamily: AppTheme
+                                                                .fontFamilySans,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            fontSize: 21,
+                                                            height: 1.2,
+                                                            letterSpacing: 0,
+                                                            color:
+                                                                AppTheme.white,
+                                                          ),
+                                                          maxLines: 1,
+                                                        )
+                                                      : const Icon(
+                                                          Icons
+                                                              .arrow_forward_ios,
+                                                          color: AppTheme.white,
+                                                        ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
