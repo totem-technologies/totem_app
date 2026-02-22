@@ -1,3 +1,4 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -99,7 +100,9 @@ class _DateIndicatorHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _DateIndicatorHeaderDelegate oldDelegate) {
-    return date != oldDelegate.date || isToday != oldDelegate.isToday;
+    return date != oldDelegate.date ||
+        isToday != oldDelegate.isToday ||
+        scaler != oldDelegate.scaler;
   }
 }
 
@@ -168,13 +171,15 @@ class DateIndicator extends StatelessWidget {
         const Expanded(
           flex: 2,
           child: Center(
-            child: Text(
+            child: AutoSizeText(
               'Today',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.gray,
               ),
+              maxLines: 1,
+              minFontSize: 8,
             ),
           ),
         ),
