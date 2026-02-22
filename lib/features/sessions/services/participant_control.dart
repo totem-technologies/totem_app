@@ -10,6 +10,7 @@ extension ParticipantControl on Session {
   /// Throws an exception if the operation fails.
   Future<void> passTotem() async {
     if (!isKeeper() && !state.isMyTurn(context!)) return;
+    disableMicrophone();
     try {
       final roomState = await ref.read(
         passTotemProvider(
