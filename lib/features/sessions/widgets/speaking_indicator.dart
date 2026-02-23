@@ -22,24 +22,39 @@ class SpeakingIndicator extends StatefulWidget {
 }
 
 class _SpeakingIndicatorState extends State<SpeakingIndicator> {
-  late final EventsListener<ParticipantEvent> _listener;
+  EventsListener<ParticipantEvent>? _listener;
 
   @override
   void initState() {
     super.initState();
+    setup();
+  }
+
+  @override
+  void didUpdateWidget(covariant SpeakingIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.participant.sid != widget.participant.sid) {
+      setup();
+    }
+  }
+
+  void setup() {
+    _listener?.dispose();
     _listener = widget.participant.createListener();
-    _listener
+    _listener!
       ..on<TrackMutedEvent>(_onTrackMuted)
       ..on<TrackUnmutedEvent>(_onTrackUnmuted);
   }
 
   void _onTrackMuted(TrackMutedEvent event) {
+    if (!mounted) return;
     if (event.publication.source == TrackSource.microphone) {
       setState(() {});
     }
   }
 
   void _onTrackUnmuted(TrackUnmutedEvent event) {
+    if (!mounted) return;
     if (event.publication.source == TrackSource.microphone) {
       setState(() {});
     }
@@ -47,7 +62,7 @@ class _SpeakingIndicatorState extends State<SpeakingIndicator> {
 
   @override
   void dispose() {
-    _listener.dispose();
+    _listener?.dispose();
     super.dispose();
   }
 
