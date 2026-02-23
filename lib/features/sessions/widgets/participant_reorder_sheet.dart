@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' show Participant;
 import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
-import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -60,7 +59,7 @@ class _ParticipantReorderWidgetState
         .map((p) => p.identity)
         .toSet();
     _localOrder = Set<String>.from(
-      widget.state.sessionState.speakingOrder.where(roomParticipants.contains),
+      widget.state.roomState.talkingOrder.where(roomParticipants.contains),
     ).toList();
   }
 
@@ -139,7 +138,7 @@ class _ParticipantReorderWidgetState
                         index: index,
                         isSpeakingNow:
                             participantIdentity ==
-                            widget.state.sessionState.speakingNow,
+                            widget.state.roomState.currentSpeaker,
                       );
                     },
                   ),
@@ -225,12 +224,7 @@ class _ParticipantReorderWidgetState
     List<String> newOrder,
   ) async {
     try {
-      await ref.read(
-        reorderParticipantsProvider(
-          widget.session.options.eventSlug,
-          newOrder,
-        ).future,
-      );
+      await widget.session.reorder(newOrder);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

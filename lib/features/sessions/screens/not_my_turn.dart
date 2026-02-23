@@ -26,7 +26,7 @@ class NotMyTurn extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final sessionStatus = ref.watch(sessionStatusProvider);
+    final sessionStatus = ref.watch(roomStatusProvider);
     final amNext = ref.watch(amNextSpeakerProvider);
     final currentSession = ref.watch(currentSessionProvider)!;
 
@@ -128,7 +128,7 @@ class NotMyTurn extends ConsumerWidget {
 
           final nextUp = currentSession.speakingNextParticipant();
           final nextUpText = () {
-            if (sessionStatus == SessionStatus.waiting) {
+            if (sessionStatus == RoomStatus.waitingRoom) {
               return Text(
                 () {
                   if (!currentSession.hasKeeper) {
@@ -138,7 +138,7 @@ class NotMyTurn extends ConsumerWidget {
                 }(),
                 style: theme.textTheme.bodyLarge,
               );
-            } else if (sessionStatus == SessionStatus.started) {
+            } else if (sessionStatus == RoomStatus.active) {
               if (!currentSession.hasKeeper) {
                 return Text(
                   'The session has been paused...',
@@ -181,7 +181,7 @@ class NotMyTurn extends ConsumerWidget {
           );
 
           final Widget? startCard =
-              sessionStatus == SessionStatus.waiting &&
+              sessionStatus == RoomStatus.waitingRoom &&
                   currentSession.isKeeper()
               ? TransitionCard(
                   type: TotemCardTransitionType.start,

@@ -1,4 +1,5 @@
 import 'package:livekit_client/livekit_client.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 
 List<Participant> participantsSorting({
@@ -10,24 +11,24 @@ List<Participant> participantsSorting({
   /// Whether to show the track of the participant who is currently speaking.
   bool showSpeakingNow = false,
 }) {
-  final speakingNowIndetity = speakingNow ?? state.speakingNow;
+  final speakingNowIndentity = speakingNow ?? state.speakingNow;
   final participants = originalParticiapnts.where((participant) {
     // Only show tracks from participants other than the speaking now
-    if (participant.identity == speakingNowIndetity) {
+    if (participant.identity == speakingNowIndentity) {
       return showSpeakingNow;
     }
     return true;
   }).toList();
 
-  if (state.sessionState.speakingOrder.isNotEmpty) {
+  if (state.roomState.talkingOrder.isNotEmpty) {
     final participantsMap = {
       for (final p in participants) p.identity: p,
     };
 
-    final speakingOrderSet = state.sessionState.speakingOrder.toSet();
+    final speakingOrderSet = state.roomState.talkingOrder.toSet();
     final sortedParticipants = <Participant>[];
 
-    for (final identity in state.sessionState.speakingOrder) {
+    for (final identity in state.roomState.talkingOrder) {
       final participant = participantsMap[identity];
       if (participant != null) {
         sortedParticipants.add(participant);
@@ -42,7 +43,7 @@ List<Participant> participantsSorting({
     }
 
     // Rotate the list so the next participant is first (circular order)
-    final nextIdentity = state.sessionState.nextParticipantIdentity;
+    final nextIdentity = state.roomState.nextParticipantIdentity;
     if (nextIdentity != null) {
       final nextIndex = sortedParticipants.indexWhere(
         (p) => p.identity == nextIdentity,
@@ -62,14 +63,14 @@ List<Participant> participantsSorting({
   return participants;
 }
 
-extension SessionStateExtension on SessionState {
+extension SessionStateExtension on RoomState {
   String? get nextParticipantIdentity {
-    if (speakingOrder.isEmpty) return null;
-    if (speakingNow == null) return speakingOrder.first;
+    if (talkingOrder.isEmpty) return null;
+    if (currentSpeaker == null) return talkingOrder.first;
 
-    final currentIndex = speakingOrder.indexOf(speakingNow!);
+    final currentIndex = talkingOrder.indexOf(currentSpeaker!);
     if (currentIndex == -1) return null;
-    if (currentIndex == speakingOrder.length - 1) return speakingOrder.first;
-    return speakingOrder[currentIndex + 1];
+    if (currentIndex == talkingOrder.length - 1) return talkingOrder.first;
+    return talkingOrder[currentIndex + 1];
   }
 }

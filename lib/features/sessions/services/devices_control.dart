@@ -179,13 +179,21 @@ extension DevicesControl on Session {
     if (!(context?.microphoneOpened ?? false)) {
       return;
     }
-    if (context?.connected ?? false) {
-      await context?.localParticipant?.setMicrophoneEnabled(false);
-    } else {
-      await context?.localAudioTrack?.dispose();
-      context?.localAudioTrack = null;
+    try {
+      if (context?.connected ?? false) {
+        await context?.localParticipant?.setMicrophoneEnabled(false);
+      } else {
+        await context?.localAudioTrack?.dispose();
+        context?.localAudioTrack = null;
+      }
+      ref.notifyListeners();
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to disable microphone',
+      );
     }
-    ref.notifyListeners();
   }
 
   Future<void> enableCamera() async {
