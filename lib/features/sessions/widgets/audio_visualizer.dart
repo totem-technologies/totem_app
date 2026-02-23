@@ -184,15 +184,15 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
       curve: Curves.easeInOut,
     );
 
-    // THE UI LOOP: Runs safely at ~7-8 FPS (every 33ms) instead of per-packet
-    _uiThrottleTimer = Timer.periodic(const Duration(milliseconds: 33), (_) {
+    // THE UI LOOP: Runs safely at ~7-8 FPS (every 140ms) instead of per-packet
+    _uiThrottleTimer = Timer.periodic(const Duration(milliseconds: 140), (_) {
       if (!mounted) return;
 
       bool hasChanges = false;
 
       // Only trigger a rebuild if the volume delta is large enough to see (> 1%)
       if (_backgroundSamples.length == samples.length) {
-        for (int i = 0; i < samples.length; i++) {
+        for (var i = 0; i < samples.length; i++) {
           if ((samples[i] - _backgroundSamples[i]).abs() > 0.01) {
             hasChanges = true;
             break;
