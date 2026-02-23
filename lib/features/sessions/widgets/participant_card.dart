@@ -403,7 +403,11 @@ class ParticipantVideo extends ConsumerStatefulWidget {
 }
 
 class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
+  bool _locked = false;
   void _sendRawUpdateTrackSettings(bool isVisible, Size size) {
+    if (_locked) return;
+    _locked = true;
+
     final videoTrack = widget.participant
         .getTrackPublicationBySource(TrackSource.camera)
         ?.track;
@@ -429,6 +433,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     widget.participant.room.engine.signalClient.sendUpdateTrackSettings(
       settings,
     );
+    _locked = false;
 
     debugPrint(
       'Sent raw UpdateTrackSettings(${widget.participant.name}): disabled=${settings.disabled}, '
@@ -453,7 +458,9 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
             if (_lastConstraints != constraints) {
               _lastConstraints = constraints;
               final size = Size(constraints.maxWidth, constraints.maxHeight);
-              _sendRawUpdateTrackSettings(true, size);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _sendRawUpdateTrackSettings(true, size);
+              });
             }
             return VideoTrackRenderer(
               key: ValueKey(videoTrack.track!.sid),
