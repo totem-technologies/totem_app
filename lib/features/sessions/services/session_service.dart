@@ -7,7 +7,6 @@ import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage, logger;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -230,22 +229,50 @@ class Session extends _$Session {
         defaultAudioOutputOptions: options.audioOutputOptions,
 
         dynacast: true,
-        defaultVideoPublishOptions: const VideoPublishOptions(
+        defaultVideoPublishOptions: VideoPublishOptions(
           // https://docs.livekit.io/transport/media/advanced/#video-codec-support
           // https://livekit.io/webrtc/codecs-guide
           // https://github.com/flutter-webrtc/flutter-webrtc/issues/252
-          videoCodec: 'h264',
-          backupVideoCodec: BackupVideoCodec(simulcast: false),
-          simulcast: false,
+          videoCodec: 'h265',
+          backupVideoCodec: const BackupVideoCodec(
+            codec: 'vp8',
+            simulcast: true,
+          ),
+          simulcast: true,
           videoSimulcastLayers: [
-            VideoParametersPresets.h540_169,
-            VideoParametersPresets.h720_169,
+            // Layer 1: "Tunnel Mode"
+            // Meet will drop the framerate to 15fps before letting the video freeze
+            VideoParameters(
+              dimensions: VideoParametersPresets.h360_43.dimensions,
+              encoding: const VideoEncoding(
+                maxBitrate: 80000,
+                maxFramerate: 15,
+              ),
+            ),
+
+            // // Layer 2: "Standard Grid"
+            VideoParameters(
+              dimensions: VideoParametersPresets.h540_43.dimensions,
+              encoding: const VideoEncoding(
+                maxBitrate: 150000,
+                maxFramerate: 15,
+              ),
+            ),
+
+            // Layer 3: "Active Speaker"
+            VideoParameters(
+              dimensions: VideoParametersPresets.h540_43.dimensions,
+              encoding: const VideoEncoding(
+                maxBitrate: 400000,
+                maxFramerate: 20,
+              ),
+            ),
           ],
         ),
         // defaultAudioPublishOptions: const AudioPublishOptions(),
 
         /// https://docs.livekit.io/home/client/tracks/subscribe/#adaptive-stream
-        adaptiveStream: true,
+        adaptiveStream: false,
       ),
     );
 

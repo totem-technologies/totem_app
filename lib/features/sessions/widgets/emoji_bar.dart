@@ -260,6 +260,7 @@ Future<void> displayReaction(
   } finally {
     if (entry?.mounted ?? false) {
       entry?.remove();
+      entry = null;
     }
   }
 }
@@ -324,7 +325,7 @@ class _RisingEmojiState extends State<RisingEmoji>
     _controller
       ..forward()
       ..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
+        if (mounted && status == AnimationStatus.completed) {
           widget.onCompleted();
         }
       });

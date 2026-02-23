@@ -4,7 +4,6 @@ import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
-import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
@@ -42,18 +41,19 @@ class NotMyTurn extends ConsumerWidget {
       child: OrientationBuilder(
         builder: (context, orientation) {
           final isLandscape = orientation == Orientation.landscape;
-          final speakerVideo = ClipRRect(
-            borderRadius: isLandscape
-                ? const BorderRadiusDirectional.horizontal(
-                    end: Radius.circular(30),
-                  )
-                : const BorderRadiusDirectional.vertical(
-                    bottom: Radius.circular(30),
-                  ),
-            child: DecoratedBox(
-              decoration: const BoxDecoration(color: AppTheme.blue),
+          final speakerVideo = RepaintBoundary(
+            child: ClipRRect(
+              borderRadius: isLandscape
+                  ? const BorderRadiusDirectional.horizontal(
+                      end: Radius.circular(30),
+                    )
+                  : const BorderRadiusDirectional.vertical(
+                      bottom: Radius.circular(30),
+                    ),
               child: Stack(
+                fit: StackFit.expand,
                 children: [
+                  Positioned.fill(child: Container(color: Colors.black)),
                   Positioned.fill(
                     child: ParticipantVideo(
                       key: getParticipantKey(activeSpeaker.identity),
