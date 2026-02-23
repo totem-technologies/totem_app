@@ -354,10 +354,12 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                   return Stack(
                     children: [
                       Positioned.fill(
-                        child: UserAvatar.currentUser(
-                          radius: 0,
-                          borderRadius: BorderRadius.zero,
-                          borderWidth: 0,
+                        child: IgnorePointer(
+                          child: UserAvatar.currentUser(
+                            radius: 0,
+                            borderRadius: BorderRadius.zero,
+                            borderWidth: 0,
+                          ),
                         ),
                       ),
                       PositionedDirectional(
