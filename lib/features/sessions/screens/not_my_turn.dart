@@ -41,52 +41,34 @@ class NotMyTurn extends ConsumerWidget {
       child: OrientationBuilder(
         builder: (context, orientation) {
           final isLandscape = orientation == Orientation.landscape;
-          final speakerVideo = ClipRRect(
-            borderRadius: isLandscape
-                ? const BorderRadiusDirectional.horizontal(
-                    end: Radius.circular(30),
-                  )
-                : const BorderRadiusDirectional.vertical(
-                    bottom: Radius.circular(30),
+          final speakerVideo = RepaintBoundary(
+            child: ClipRRect(
+              borderRadius: isLandscape
+                  ? const BorderRadiusDirectional.horizontal(
+                      end: Radius.circular(30),
+                    )
+                  : const BorderRadiusDirectional.vertical(
+                      bottom: Radius.circular(30),
+                    ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Positioned.fill(
+                    child: ParticipantVideo(
+                      key: getParticipantKey(activeSpeaker.identity),
+                      participant: activeSpeaker,
+                    ),
                   ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Positioned.fill(
-                  child: ParticipantVideo(
-                    key: getParticipantKey(activeSpeaker.identity),
-                    participant: activeSpeaker,
-                  ),
-                ),
-                PositionedDirectional(
-                  start: 20,
-                  end: 20,
-                  bottom: 20,
-                  child: SafeArea(
-                    bottom: false,
-                    child: Row(
-                      spacing: 12,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.black54,
-                            border: Border.all(
-                              color: Colors.white,
-                              width: 0.5,
-                            ),
-                            boxShadow: kElevationToShadow[6],
-                          ),
-                          padding: const EdgeInsetsDirectional.all(4),
-                          child: SpeakingIndicatorOrEmoji(
-                            participant: activeSpeaker,
-                          ),
-                        ),
-                        if (amKeeper &&
-                            currentUserSlug != activeSpeaker.identity)
+                  PositionedDirectional(
+                    start: 20,
+                    end: 20,
+                    bottom: 20,
+                    child: SafeArea(
+                      bottom: false,
+                      child: Row(
+                        spacing: 12,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
                           Container(
                             width: 24,
                             height: 24,
@@ -99,30 +81,50 @@ class NotMyTurn extends ConsumerWidget {
                               ),
                               boxShadow: kElevationToShadow[6],
                             ),
-                            padding: const EdgeInsetsDirectional.all(3),
-                            child: ParticipantControlButton(
-                              overlayPadding: -28,
-                              session: event,
+                            padding: const EdgeInsetsDirectional.all(4),
+                            child: SpeakingIndicatorOrEmoji(
                               participant: activeSpeaker,
-                              backgroundColor: Colors.transparent,
                             ),
                           ),
-                        Flexible(
-                          child: Text(
-                            activeSpeaker.name,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              shadows: kElevationToShadow[6],
+                          if (amKeeper &&
+                              currentUserSlug != activeSpeaker.identity)
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.black54,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 0.5,
+                                ),
+                                boxShadow: kElevationToShadow[6],
+                              ),
+                              padding: const EdgeInsetsDirectional.all(3),
+                              child: ParticipantControlButton(
+                                overlayPadding: -28,
+                                session: event,
+                                participant: activeSpeaker,
+                                backgroundColor: Colors.transparent,
+                              ),
                             ),
-                            textAlign: TextAlign.end,
+                          Flexible(
+                            child: Text(
+                              activeSpeaker.name,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                shadows: kElevationToShadow[6],
+                              ),
+                              textAlign: TextAlign.end,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
 

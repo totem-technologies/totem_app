@@ -69,25 +69,27 @@ class ActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0x40000000),
-        borderRadius: BorderRadius.circular(30),
-      ),
-      margin: const EdgeInsetsDirectional.only(bottom: 20),
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: 10,
-        vertical: 10,
-      ),
-      child: AnimatedSize(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeInOut,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 20,
-          children: [
-            for (final child in children) child,
-          ],
+    return RepaintBoundary(
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0x40000000),
+          borderRadius: BorderRadius.circular(30),
+        ),
+        margin: const EdgeInsetsDirectional.only(bottom: 20),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: 10,
+          vertical: 10,
+        ),
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeInOut,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 20,
+            children: [
+              for (final child in children) child,
+            ],
+          ),
         ),
       ),
     );
