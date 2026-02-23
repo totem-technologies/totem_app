@@ -5,7 +5,7 @@ import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.d
 import 'package:totem_app/features/sessions/widgets/audio_visualizer.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
-class SpeakingIndicator extends StatelessWidget {
+class SpeakingIndicator extends StatefulWidget {
   const SpeakingIndicator({
     required this.participant,
     this.foregroundColor = Colors.white,
@@ -18,29 +18,61 @@ class SpeakingIndicator extends StatelessWidget {
   final int barCount;
 
   @override
+  State<SpeakingIndicator> createState() => _SpeakingIndicatorState();
+}
+
+class _SpeakingIndicatorState extends State<SpeakingIndicator> {
+  late final EventsListener<ParticipantEvent> _listener;
+
+  @override
+  void initState() {
+    super.initState();
+    _listener = widget.participant.createListener();
+    _listener
+      ..on<TrackMutedEvent>(_onTrackMuted)
+      ..on<TrackUnmutedEvent>(_onTrackUnmuted);
+  }
+
+  void _onTrackMuted(TrackMutedEvent event) {
+    if (event.publication.source == TrackSource.microphone) {
+      setState(() {});
+    }
+  }
+
+  void _onTrackUnmuted(TrackUnmutedEvent event) {
+    if (event.publication.source == TrackSource.microphone) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _listener.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final audioTrack = participant.getTrackPublicationBySource(
+    final audioTrack = widget.participant.getTrackPublicationBySource(
       TrackSource.microphone,
     );
     if (audioTrack == null || !audioTrack.subscribed || audioTrack.muted) {
       return TotemIcon(
         TotemIcons.microphoneOff,
         size: 20,
-        color: foregroundColor,
+        color: widget.foregroundColor,
       );
     } else {
-      return RepaintBoundary(
-        child: SoundWaveformWidget(
-          audioTrack: audioTrack.track as AudioTrack?,
-          participant: participant,
-          options: AudioVisualizerWidgetOptions(
-            color: foregroundColor,
-            barCount: barCount,
-            barMinOpacity: 0.8,
-            spacing: 3,
-            minHeight: 4,
-            maxHeight: 12,
-          ),
+      return SoundWaveformWidget(
+        audioTrack: audioTrack.track as AudioTrack?,
+        participant: widget.participant,
+        options: AudioVisualizerWidgetOptions(
+          color: widget.foregroundColor,
+          barCount: widget.barCount,
+          barMinOpacity: 0.8,
+          spacing: 3,
+          minHeight: 4,
+          maxHeight: 12,
         ),
       );
     }
