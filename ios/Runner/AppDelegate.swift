@@ -5,26 +5,44 @@ import EventKit
 import EventKitUI
 
 @main
-@objc class AppDelegate: FlutterAppDelegate, EKEventEditViewDelegate {
-    
+@objc class AppDelegate: FlutterAppDelegate, EKEventEditViewDelegate, FlutterImplicitEngineDelegate {
+
     // MARK: - Properties
-    
+
     /// The method channel name for communication with Flutter
     private let channelName = "org.totem.calendar"
-    
+
     /// EventKit store for calendar operations
     private let eventStore = EKEventStore()
-    
+
     /// Callback to return results to Flutter
     private var flutterResultCallback: FlutterResult?
-  override func application(
-    _ application: UIApplication,
-    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
-  ) -> Bool {
-  
-      let controller : FlutterViewController = window?.rootViewController as! FlutterViewController
-      let methodChannel = FlutterMethodChannel(name: channelName,
-                                                 binaryMessenger: controller.binaryMessenger)
+
+    override func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+    ) -> Bool {
+        // This is required to make any communication available in the action isolate.
+        FlutterLocalNotificationsPlugin.setPluginRegistrantCallback { (registry) in
+            GeneratedPluginRegistrant.register(with: registry)
+        }
+
+        if #available(iOS 10.0, *) {
+            UNUserNotificationCenter.current().delegate = self as UNUserNotificationCenterDelegate
+        }
+
+        return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    }
+
+    // MARK: - FlutterImplicitEngineDelegate
+
+    func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
+        GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+        let methodChannel = FlutterMethodChannel(
+            name: channelName,
+            binaryMessenger: engineBridge.applicationRegistrar.messenger()
+        )
 
         methodChannel.setMethodCallHandler { [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) in
             guard let self = self else { return }
@@ -36,34 +54,19 @@ import EventKitUI
                     return
                 }
                 self.flutterResultCallback = result
-                self.handleAddToCalendar(args: args, controller: controller)
+                self.handleAddToCalendar(args: args)
 
             default:
                 result(FlutterMethodNotImplemented)
             }
         }
-
-
-    // This is required to make any communication available in the action isolate.
-    FlutterLocalNotificationsPlugin.setPluginRegistrantCallback { (registry) in
-        GeneratedPluginRegistrant.register(with: registry)
     }
-
-    if #available(iOS 10.0, *) {
-      UNUserNotificationCenter.current().delegate = self as UNUserNotificationCenterDelegate
-    }
-
-    GeneratedPluginRegistrant.register(with: self)
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
-  }
 
     // MARK: - Calendar Methods
-    
+
     /// Handles adding an event to the device calendar
-    /// - Parameters:
-    ///   - args: Dictionary containing event details from Flutter
-    ///   - controller: The Flutter view controller for presenting UI
-    private func handleAddToCalendar(args: [String: Any], controller: FlutterViewController) {
+    /// - Parameter args: Dictionary containing event details from Flutter
+    private func handleAddToCalendar(args: [String: Any]) {
         // Request access to Calendar if needed
         eventStore.requestAccess(to: .event) { [weak self] (granted: Bool, error: Error?) in
             guard let self = self else { return }
@@ -109,18 +112,25 @@ import EventKitUI
                 }
 
                 // Present native edit UI
+                guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                      let rootVC = windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController else {
+                    self.flutterResultCallback?(FlutterError(code: "NO_VC", message: "No view controller available", details: nil))
+                    self.flutterResultCallback = nil
+                    return
+                }
+
                 let editVC = EKEventEditViewController()
                 editVC.event = event
                 editVC.eventStore = self.eventStore
                 editVC.editViewDelegate = self
 
-                controller.present(editVC, animated: true, completion: nil)
+                rootVC.present(editVC, animated: true, completion: nil)
             }
         }
     }
 
     // MARK: - EKEventEditViewDelegate
-    
+
     /// Handles completion of the event edit view controller
     /// - Parameters:
     ///   - controller: The event edit view controller
