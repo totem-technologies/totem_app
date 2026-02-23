@@ -63,16 +63,18 @@ class _SpeakingIndicatorState extends State<SpeakingIndicator> {
         color: widget.foregroundColor,
       );
     } else {
-      return SoundWaveformWidget(
-        audioTrack: audioTrack.track as AudioTrack?,
-        participant: widget.participant,
-        options: AudioVisualizerWidgetOptions(
-          color: widget.foregroundColor,
-          barCount: widget.barCount,
-          barMinOpacity: 0.8,
-          spacing: 3,
-          minHeight: 4,
-          maxHeight: 12,
+      return RepaintBoundary(
+        child: SoundWaveformWidget(
+          audioTrack: audioTrack.track as AudioTrack?,
+          participant: widget.participant,
+          options: AudioVisualizerWidgetOptions(
+            color: widget.foregroundColor,
+            barCount: widget.barCount,
+            barMinOpacity: 0.8,
+            spacing: 3,
+            minHeight: 4,
+            maxHeight: 12,
+          ),
         ),
       );
     }

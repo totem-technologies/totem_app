@@ -249,10 +249,15 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
         _visualizerListener?.on<sdk.AudioVisualizerEvent>((element) {
           if (!mounted) return;
 
-          _backgroundSamples = element.event
-              .where((event) => event != null && event is num)
-              .map((event) => (event! as num).toDouble())
-              .toList();
+          final events = element.event;
+          for (
+            var i = 0;
+            i < _backgroundSamples.length && i < events.length;
+            i++
+          ) {
+            final v = events[i];
+            _backgroundSamples[i] = (v is num) ? v.toDouble() : 0.0;
+          }
         });
 
         await _visualizer!.start();

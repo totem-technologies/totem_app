@@ -255,7 +255,7 @@ class Session extends _$Session {
             VideoParameters(
               dimensions: VideoParametersPresets.h540_43.dimensions,
               encoding: const VideoEncoding(
-                maxBitrate: 250000,
+                maxBitrate: 150000,
                 maxFramerate: 15,
               ),
             ),
@@ -264,7 +264,7 @@ class Session extends _$Session {
             VideoParameters(
               dimensions: VideoParametersPresets.h540_43.dimensions,
               encoding: const VideoEncoding(
-                maxBitrate: 500000,
+                maxBitrate: 400000,
                 maxFramerate: 20,
               ),
             ),
