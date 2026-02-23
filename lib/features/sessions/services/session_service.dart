@@ -235,13 +235,11 @@ class Session extends _$Session {
           // https://docs.livekit.io/transport/media/advanced/#video-codec-support
           // https://livekit.io/webrtc/codecs-guide
           // https://github.com/flutter-webrtc/flutter-webrtc/issues/252
-          // videoCodec: 'h264',
-          videoCodec: switch (defaultTargetPlatform) {
-            TargetPlatform.android => 'av1',
-            TargetPlatform.iOS => 'vp9',
-            _ => 'vp8',
-          },
-          backupVideoCodec: const BackupVideoCodec(simulcast: true),
+          videoCodec: 'h265',
+          backupVideoCodec: const BackupVideoCodec(
+            codec: 'vp8',
+            simulcast: true,
+          ),
           simulcast: true,
           videoSimulcastLayers: [
             // Layer 1: "Tunnel Mode"
@@ -259,7 +257,7 @@ class Session extends _$Session {
               dimensions: VideoParametersPresets.h360_169.dimensions,
               encoding: const VideoEncoding(
                 maxBitrate: 250000,
-                maxFramerate: 20,
+                maxFramerate: 15,
               ),
             ),
 
@@ -268,7 +266,7 @@ class Session extends _$Session {
               dimensions: VideoParametersPresets.h540_43.dimensions,
               encoding: const VideoEncoding(
                 maxBitrate: 500000,
-                maxFramerate: 24,
+                maxFramerate: 20,
               ),
             ),
           ],
