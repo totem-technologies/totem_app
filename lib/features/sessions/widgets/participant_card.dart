@@ -11,6 +11,7 @@ import 'package:livekit_client/src/proto/livekit_rtc.pb.dart' as lk_rtc;
 import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
@@ -406,39 +407,53 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   bool _locked = false;
   void _sendRawUpdateTrackSettings(bool isVisible, Size size) {
     if (_locked) return;
-    _locked = true;
 
-    final videoTrack = widget.participant
-        .getTrackPublicationBySource(TrackSource.camera)
-        ?.track;
-    if (videoTrack == null ||
-        videoTrack.sid == null ||
-        widget.participant is! RemoteParticipant) {
-      return;
+    try {
+      _locked = true;
+
+      final videoTrack = widget.participant
+          .getTrackPublicationBySource(TrackSource.camera)
+          ?.track;
+      if (videoTrack == null ||
+          videoTrack.sid == null ||
+          widget.participant is! RemoteParticipant) {
+        return;
+      }
+
+      // Construct the exact protobuf payload
+      final settings = lk_rtc.UpdateTrackSettings(
+        trackSids: [videoTrack.sid!],
+        disabled: !isVisible,
+      );
+
+      if (isVisible) {
+        settings
+          ..width = size.width.round()
+          ..height = size.height.round();
+      }
+
+      // This is a workaround to send the raw UpdateTrackSettings signal to LiveKit server.
+      // The official API does not provide a way to send the raw signal, so we have to access
+      // the internal SignalClient directly.
+      //
+      // We use this to improve the performance of video decoding.
+      //
+      // https://docs.livekit.io/transport/media/subscribe/#adaptive-stream
+      //
+      // ignore: invalid_use_of_internal_member
+      widget.participant.room.engine.signalClient.sendUpdateTrackSettings(
+        settings,
+      );
+
+      logger.info(
+        'Sent raw UpdateTrackSettings(${widget.participant.name}): disabled=${settings.disabled}, '
+        'width=${settings.width}, height=${settings.height}',
+      );
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(error, stackTrace: stackTrace);
+    } finally {
+      _locked = false;
     }
-
-    // Construct the exact protobuf payload
-    final settings = lk_rtc.UpdateTrackSettings(
-      trackSids: [videoTrack.sid!],
-      disabled: !isVisible,
-    );
-
-    if (isVisible) {
-      settings
-        ..width = size.width.round()
-        ..height = size.height.round();
-    }
-
-    // ignore: invalid_use_of_internal_member
-    widget.participant.room.engine.signalClient.sendUpdateTrackSettings(
-      settings,
-    );
-    _locked = false;
-
-    debugPrint(
-      'Sent raw UpdateTrackSettings(${widget.participant.name}): disabled=${settings.disabled}, '
-      'width=${settings.width}, height=${settings.height}',
-    );
   }
 
   BoxConstraints? _lastConstraints;
@@ -466,7 +481,9 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
               key: ValueKey(videoTrack.track!.sid),
               videoTrack.track! as VideoTrack,
               fit: VideoViewFit.cover,
-              // Use platform view for better CPU performance on iOS
+              // Use platform view for better CPU performance on iOS.
+              // The [VideoTrackRenderer] widget only supports platform views for iOS.
+              // On Android, it will still use the default texture rendering.
               // https://github.com/livekit/client-sdk-flutter/issues/364
               renderMode: VideoRenderMode.platformView,
             );
