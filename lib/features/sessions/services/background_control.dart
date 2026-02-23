@@ -46,32 +46,21 @@ extension BackgroundControl on Session {
     );
 
     _notificationTimer?.cancel();
-    _notificationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _notificationTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
       if (this.event != null) _updateNotification(this.event!);
     });
   }
 
   Future<void> _updateNotification(SessionDetailSchema event) async {
     try {
-      final startTime = event.start;
-      final duration = DateTime.now().difference(startTime);
-      final formattedTime =
-          DateFormat(
-            'HH:mm:ss',
-          ).format(
-            DateTime(
-              0,
-              1,
-              1,
-              duration.inHours,
-              duration.inMinutes % 60,
-              duration.inSeconds % 60,
-            ),
-          );
+      final endTime = event.start.add(Duration(minutes: event.duration));
+      final minutesLeft = endTime.difference(DateTime.now()).inMinutes;
 
       await FlutterForegroundTask.updateService(
         notificationTitle: event.title,
-        notificationText: formattedTime,
+        notificationText: minutesLeft.isNegative
+            ? 'at ${event.space.title}'
+            : '$minutesLeft minutes left',
       );
     } catch (error, stackTrace) {
       ErrorHandler.logError(
