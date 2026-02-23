@@ -94,7 +94,10 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _pulseAnimation;
-  List<double> samples = [];
+
+  List<double> samples = <double>[];
+  List<double> _backgroundSamples = <double>[];
+  Timer? _uiThrottleTimer;
 
   sdk.AudioVisualizer? _visualizer;
   sdk.EventsListener<sdk.AudioVisualizerEvent>? _visualizerListener;
@@ -107,75 +110,6 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   List<BarsViewItem>? _cachedBarItems;
   VisualizerState? _lastState;
   List<double>? _lastSamples;
-
-  @override
-  void didUpdateWidget(SoundWaveformWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final didUpdateParams =
-        oldWidget.participant?.sid != widget.participant?.sid ||
-        oldWidget.audioTrack?.sid != widget.audioTrack?.sid ||
-        oldWidget.options != widget.options;
-
-    if (didUpdateParams) {
-      // Re-attach listeners
-      _detachListeners();
-      _attachListeners();
-    }
-  }
-
-  Future<void> _attachListeners() async {
-    try {
-      if (widget.participant != null) {
-        _participantListener = widget.participant!.createListener();
-        _participantListener?.on<sdk.TrackMutedEvent>((e) {
-          if (!mounted) return;
-          setState(() {
-            samples = List.filled(widget.options.barCount, 0);
-          });
-        });
-
-        // If participant is agent, listen to agent state changes
-        if (widget.participant?.kind == sdk.ParticipantKind.AGENT) {
-          _participantListener?.on<sdk.ParticipantAttributesChanged>((e) {
-            if (!mounted) return;
-            final agentAttributes = sdk.AgentAttributes.fromJson(e.attributes);
-            setState(() {
-              _agentState =
-                  agentAttributes.lkAgentState ?? sdk.AgentState.initializing;
-            });
-          });
-        }
-      }
-
-      if (widget.audioTrack != null) {
-        _visualizer = sdk.createVisualizer(
-          widget.audioTrack!,
-          options: sdk.AudioVisualizerOptions(
-            barCount: widget.options.barCount,
-            centeredBands: widget.options.centeredBands,
-          ),
-        );
-        _visualizerListener = _visualizer?.createListener();
-        _visualizerListener?.on<sdk.AudioVisualizerEvent>((element) {
-          if (!mounted) return;
-          setState(() {
-            samples = element.event
-                .where((event) => event != null && event is num)
-                .map((event) => (event! as num).toDouble())
-                .toList();
-          });
-        });
-
-        await _visualizer!.start();
-      }
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to attach audio visualizer listeners',
-      );
-    }
-  }
 
   Future<void> _detachListeners() async {
     try {
@@ -234,23 +168,121 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
     super.initState();
 
     samples = List.filled(widget.options.barCount, 0, growable: false);
+    _backgroundSamples = List.filled(
+      widget.options.barCount,
+      0,
+      growable: false,
+    );
 
     _controller = AnimationController(
       duration: Duration(milliseconds: widget.options.durationInMilliseconds),
       vsync: this,
     );
-    // Don't start animation immediately - only when needed for thinking/listening
 
     _pulseAnimation = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeInOut,
     );
 
+    // THE UI LOOP: Runs safely at ~7-8 FPS (every 33ms) instead of per-packet
+    _uiThrottleTimer = Timer.periodic(const Duration(milliseconds: 33), (_) {
+      if (!mounted) return;
+
+      bool hasChanges = false;
+
+      // Only trigger a rebuild if the volume delta is large enough to see (> 1%)
+      if (_backgroundSamples.length == samples.length) {
+        for (int i = 0; i < samples.length; i++) {
+          if ((samples[i] - _backgroundSamples[i]).abs() > 0.01) {
+            hasChanges = true;
+            break;
+          }
+        }
+      } else {
+        hasChanges = true;
+      }
+
+      if (hasChanges) {
+        setState(() {
+          samples = List.of(_backgroundSamples);
+        });
+      }
+    });
+
     _attachListeners();
+  }
+
+  Future<void> _attachListeners() async {
+    try {
+      if (widget.participant != null) {
+        _participantListener = widget.participant!.createListener();
+        _participantListener?.on<sdk.TrackMutedEvent>((e) {
+          if (!mounted) return;
+          _backgroundSamples = List.filled(widget.options.barCount, 0);
+          setState(() {
+            samples = List.filled(widget.options.barCount, 0);
+          });
+        });
+
+        if (widget.participant?.kind == sdk.ParticipantKind.AGENT) {
+          _participantListener?.on<sdk.ParticipantAttributesChanged>((e) {
+            if (!mounted) return;
+            final agentAttributes = sdk.AgentAttributes.fromJson(e.attributes);
+            setState(() {
+              _agentState =
+                  agentAttributes.lkAgentState ?? sdk.AgentState.initializing;
+            });
+          });
+        }
+      }
+
+      if (widget.audioTrack != null) {
+        _visualizer = sdk.createVisualizer(
+          widget.audioTrack!,
+          options: sdk.AudioVisualizerOptions(
+            barCount: widget.options.barCount,
+            centeredBands: widget.options.centeredBands,
+          ),
+        );
+
+        _visualizerListener = _visualizer?.createListener();
+        _visualizerListener?.on<sdk.AudioVisualizerEvent>((element) {
+          if (!mounted) return;
+
+          _backgroundSamples = element.event
+              .where((event) => event != null && event is num)
+              .map((event) => (event! as num).toDouble())
+              .toList();
+        });
+
+        await _visualizer!.start();
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to attach audio visualizer listeners',
+      );
+    }
+  }
+
+  @override
+  void didUpdateWidget(SoundWaveformWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final didUpdateParams =
+        oldWidget.participant?.sid != widget.participant?.sid ||
+        oldWidget.audioTrack?.sid != widget.audioTrack?.sid ||
+        oldWidget.options != widget.options;
+
+    if (didUpdateParams) {
+      _detachListeners();
+      _attachListeners();
+    }
   }
 
   @override
   void dispose() {
+    _uiThrottleTimer?.cancel();
     _controller.dispose();
     _detachListeners();
     super.dispose();
