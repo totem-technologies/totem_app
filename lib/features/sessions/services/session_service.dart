@@ -244,7 +244,7 @@ class Session extends _$Session {
             // Layer 1: "Tunnel Mode"
             // Meet will drop the framerate to 15fps before letting the video freeze
             VideoParameters(
-              dimensions: VideoParametersPresets.h180_43.dimensions,
+              dimensions: VideoParametersPresets.h360_43.dimensions,
               encoding: const VideoEncoding(
                 maxBitrate: 80000,
                 maxFramerate: 15,
@@ -253,7 +253,7 @@ class Session extends _$Session {
 
             // // Layer 2: "Standard Grid"
             VideoParameters(
-              dimensions: VideoParametersPresets.h360_43.dimensions,
+              dimensions: VideoParametersPresets.h540_43.dimensions,
               encoding: const VideoEncoding(
                 maxBitrate: 250000,
                 maxFramerate: 15,
