@@ -39,6 +39,15 @@ const _$EndReasonEnumMap = {
   EndReason.$unknown: r'$unknown',
 };
 
+EventRequestEventSealedForcePassStickEvent
+_$EventRequestEventSealedForcePassStickEventFromJson(
+  Map<String, dynamic> json,
+) => EventRequestEventSealedForcePassStickEvent(type: json['type'] as String);
+
+Map<String, dynamic> _$EventRequestEventSealedForcePassStickEventToJson(
+  EventRequestEventSealedForcePassStickEvent instance,
+) => <String, dynamic>{'type': instance.type};
+
 EventRequestEventSealedPassStickEvent
 _$EventRequestEventSealedPassStickEventFromJson(Map<String, dynamic> json) =>
     EventRequestEventSealedPassStickEvent(type: json['type'] as String);

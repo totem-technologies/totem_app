@@ -7,6 +7,7 @@ import 'package:json_annotation/json_annotation.dart';
 import 'accept_stick_event.dart';
 import 'end_reason.dart';
 import 'end_room_event.dart';
+import 'force_pass_stick_event.dart';
 import 'pass_stick_event.dart';
 import 'reorder_event.dart';
 import 'start_room_event.dart';
@@ -32,6 +33,7 @@ extension EventRequestEventSealedDeserializer on EventRequestEventSealed {
     final mappingFallback = const <Type, Object?>{
       EventRequestEventSealedAcceptStickEvent: 'accept_stick',
       EventRequestEventSealedEndRoomEvent: 'end_room',
+      EventRequestEventSealedForcePassStickEvent: 'force_pass_stick',
       EventRequestEventSealedPassStickEvent: 'pass_stick',
       EventRequestEventSealedReorderEvent: 'reorder',
       EventRequestEventSealedStartRoomEvent: 'start_room',
@@ -43,6 +45,8 @@ extension EventRequestEventSealedDeserializer on EventRequestEventSealed {
         EventRequestEventSealedAcceptStickEvent.fromJson(json),
       _ when value == effective[EventRequestEventSealedEndRoomEvent] =>
         EventRequestEventSealedEndRoomEvent.fromJson(json),
+      _ when value == effective[EventRequestEventSealedForcePassStickEvent] =>
+        EventRequestEventSealedForcePassStickEvent.fromJson(json),
       _ when value == effective[EventRequestEventSealedPassStickEvent] =>
         EventRequestEventSealedPassStickEvent.fromJson(json),
       _ when value == effective[EventRequestEventSealedReorderEvent] =>
@@ -95,6 +99,25 @@ class EventRequestEventSealedEndRoomEvent extends EventRequestEventSealed
   @override
   Map<String, dynamic> toJson() =>
       _$EventRequestEventSealedEndRoomEventToJson(this);
+}
+
+@JsonSerializable()
+class EventRequestEventSealedForcePassStickEvent extends EventRequestEventSealed
+    implements ForcePassStickEvent {
+  @override
+  final String type;
+
+  const EventRequestEventSealedForcePassStickEvent({
+    required this.type,
+  });
+
+  factory EventRequestEventSealedForcePassStickEvent.fromJson(
+    Map<String, dynamic> json,
+  ) => _$EventRequestEventSealedForcePassStickEventFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() =>
+      _$EventRequestEventSealedForcePassStickEventToJson(this);
 }
 
 @JsonSerializable()

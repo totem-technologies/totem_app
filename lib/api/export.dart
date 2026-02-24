@@ -51,6 +51,7 @@ export 'models/error_response.dart';
 export 'models/accept_stick_event.dart';
 export 'models/end_room_event.dart';
 export 'models/event_request.dart';
+export 'models/force_pass_stick_event.dart';
 export 'models/pass_stick_event.dart';
 export 'models/reorder_event.dart';
 export 'models/start_room_event.dart';
