@@ -168,4 +168,24 @@ extension KeeperControl on Session {
       rethrow;
     }
   }
+
+  Future<void> forcePassTotem() async {
+    try {
+      final roomState = await ref.read(
+        forcePassTotemProvider(
+          options.eventSlug,
+          state.roomState.version,
+        ).future,
+      );
+      _onRoomChanges(roomState);
+      logger.i('Force passed totem successfully');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error force passing totem',
+      );
+      rethrow;
+    }
+  }
 }

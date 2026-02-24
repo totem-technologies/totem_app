@@ -84,6 +84,7 @@ const eventsType = <Type, Object?>{
   EventRequestEventSealedAcceptStickEvent: 'accept_stick',
   EventRequestEventSealedEndRoomEvent: 'end_room',
   EventRequestEventSealedPassStickEvent: 'pass_stick',
+  EventRequestEventSealedForcePassStickEvent: 'force_pass_stick',
   EventRequestEventSealedReorderEvent: 'reorder',
   EventRequestEventSealedStartRoomEvent: 'start_room',
 };
@@ -103,9 +104,7 @@ Future<RoomState> passTotem(Ref ref, String sessionSlug, int lastSeenVersion) {
     ),
     operationName: 'pass totem',
     retryOnNetworkError: true,
-  ).timeout(
-    _timeoutDuration,
-    onTimeout: () => throw AppNetworkException.timeout(),
+    timeout: _timeoutDuration,
   );
 }
 
@@ -128,9 +127,31 @@ Future<RoomState> acceptTotem(
     ),
     operationName: 'accept totem',
     retryOnNetworkError: true,
-  ).timeout(
-    _timeoutDuration,
-    onTimeout: () => throw AppNetworkException.timeout(),
+    timeout: _timeoutDuration,
+  );
+}
+
+@riverpod
+Future<RoomState> forcePassTotem(
+  Ref ref,
+  String sessionSlug,
+  int lastSeenVersion,
+) {
+  final apiService = ref.read(mobileApiServiceProvider);
+  return RepositoryUtils.handleApiCall<RoomState>(
+    apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
+      sessionSlug: sessionSlug,
+      body: EventRequest(
+        event: EventRequestEventSealedForcePassStickEvent(
+          type:
+              eventsType[EventRequestEventSealedForcePassStickEvent]! as String,
+        ),
+        lastSeenVersion: lastSeenVersion,
+      ),
+    ),
+    operationName: 'force pass totem',
+    retryOnNetworkError: true,
+    timeout: _timeoutDuration,
   );
 }
 

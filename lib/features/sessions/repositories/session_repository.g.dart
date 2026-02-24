@@ -368,7 +368,7 @@ final class PassTotemProvider
   }
 }
 
-String _$passTotemHash() => r'b3f93b344d6ef973954505150e45d473b29994b5';
+String _$passTotemHash() => r'7a8087ee13bcc7685488949bfecf87dcc79099d3';
 
 final class PassTotemFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
@@ -442,7 +442,7 @@ final class AcceptTotemProvider
   }
 }
 
-String _$acceptTotemHash() => r'04cdc38631b5fbadf4379575d47a7e8fa96acae7';
+String _$acceptTotemHash() => r'76ffcd8e89590b76c6ef7eb2138763cf969240ce';
 
 final class AcceptTotemFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
@@ -463,6 +463,83 @@ final class AcceptTotemFamily extends $Family
 
   @override
   String toString() => r'acceptTotemProvider';
+}
+
+@ProviderFor(forcePassTotem)
+final forcePassTotemProvider = ForcePassTotemFamily._();
+
+final class ForcePassTotemProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<RoomState>,
+          RoomState,
+          FutureOr<RoomState>
+        >
+    with $FutureModifier<RoomState>, $FutureProvider<RoomState> {
+  ForcePassTotemProvider._({
+    required ForcePassTotemFamily super.from,
+    required (String, int) super.argument,
+  }) : super(
+         retry: null,
+         name: r'forcePassTotemProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$forcePassTotemHash();
+
+  @override
+  String toString() {
+    return r'forcePassTotemProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<RoomState> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<RoomState> create(Ref ref) {
+    final argument = this.argument as (String, int);
+    return forcePassTotem(ref, argument.$1, argument.$2);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ForcePassTotemProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$forcePassTotemHash() => r'f9ed7f21071cdbde3b9d58839d1402787a2ddf4f';
+
+final class ForcePassTotemFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
+  ForcePassTotemFamily._()
+    : super(
+        retry: null,
+        name: r'forcePassTotemProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  ForcePassTotemProvider call(String sessionSlug, int lastSeenVersion) =>
+      ForcePassTotemProvider._(
+        argument: (sessionSlug, lastSeenVersion),
+        from: this,
+      );
+
+  @override
+  String toString() => r'forcePassTotemProvider';
 }
 
 @ProviderFor(reorderParticipants)
