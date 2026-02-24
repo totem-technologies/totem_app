@@ -24,7 +24,7 @@ swagger_parser:
 
   schemes:
     # - schema_url: https://www.totem.org/api/mobile/openapi.json
-    - schema_url: https://totem.kbl.io/api/mobile/openapi.json
-    # - schema_url: http://localhost:8000/api/mobile/openapi.json # For development purposes
+    # - schema_url: https://totem.kbl.io/api/mobile/openapi.json
+    - schema_url: http://localhost:8000/api/mobile/openapi.json # For development purposes
       name: totem_mobile_api
       root_client_name: MobileTotemApi

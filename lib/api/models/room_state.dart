@@ -27,6 +27,7 @@ class RoomState {
     required this.statusDetail,
     required this.talkingOrder,
     required this.keeper,
+    this.bannedParticipants = const [],
     this.currentSpeaker,
     this.nextSpeaker,
   });
@@ -49,6 +50,8 @@ class RoomState {
   @JsonKey(name: 'talking_order')
   final List<String> talkingOrder;
   final String keeper;
+  @JsonKey(name: 'banned_participants')
+  final List<String> bannedParticipants;
 
   Map<String, Object?> toJson() => _$RoomStateToJson(this);
 }

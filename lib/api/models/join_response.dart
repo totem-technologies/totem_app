@@ -11,12 +11,15 @@ part 'join_response.g.dart';
 class JoinResponse {
   const JoinResponse({
     required this.token,
+    required this.isAlreadyPresent,
   });
 
   factory JoinResponse.fromJson(Map<String, Object?> json) =>
       _$JoinResponseFromJson(json);
 
   final String token;
+  @JsonKey(name: 'is_already_present')
+  final bool isAlreadyPresent;
 
   Map<String, Object?> toJson() => _$JoinResponseToJson(this);
 }
