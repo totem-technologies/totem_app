@@ -71,10 +71,36 @@ extension KeeperControl on Session {
     await context?.disconnect();
   }
 
+  Future<void> removeParticipant(String participantSlug) async {
+    try {
+      await ref
+          .read(
+            removeParticipantProvider(
+              options.eventSlug,
+              participantSlug,
+            ).future,
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
+      logger.i('Removed participant $participantSlug successfully');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error removing participant $participantSlug',
+      );
+      rethrow;
+    }
+  }
+
   Future<bool> startSession() async {
     if (!isKeeper()) return false;
     try {
-      final roomState = await ref
+      await ref
           .read(
             startSessionProvider(
               _options!.eventSlug,
@@ -87,7 +113,6 @@ extension KeeperControl on Session {
               throw AppNetworkException.timeout();
             },
           );
-      _onRoomChanges(roomState);
       return true;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -124,6 +149,32 @@ extension KeeperControl on Session {
         message: 'Error ending session',
       );
       return false;
+    }
+  }
+
+  Future<void> muteParticipant(String participantSlug) async {
+    try {
+      await ref
+          .read(
+            muteParticipantProvider(
+              options.eventSlug,
+              participantSlug,
+            ).future,
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
+      logger.i('Muted participant $participantSlug successfully');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error muting participant $participantSlug',
+      );
+      rethrow;
     }
   }
 

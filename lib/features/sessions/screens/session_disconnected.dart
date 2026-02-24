@@ -136,7 +136,9 @@ class _SessionDisconnectedScreenState
     final recommended = ref.watch(getRecommendedSessionsProvider());
     final sessionReason = ref.watch(
       currentSessionStateProvider.select((s) {
-        if (s?.roomState.status == RoomStatus.ended &&
+        if (s?.removed ?? false) {
+          return _SessionDisconnectedReason.removed;
+        } else if (s?.roomState.status == RoomStatus.ended &&
             s?.roomState.statusDetail
                 is RoomStateStatusDetailSealedEndedDetail) {
           final detail =
@@ -231,7 +233,7 @@ class _SessionDisconnectedScreenState
                 },
                 textAlign: TextAlign.center,
               ),
-              if (sessionReason == _SessionDisconnectedReason.keeperEnded) ...[
+              if (sessionReason == _SessionDisconnectedReason.keeperEnded)
                 _SessionFeedbackWidget(
                   state: _thumbState,
                   onThumbUpPressed: () async {
@@ -262,7 +264,6 @@ class _SessionDisconnectedScreenState
                     );
                   },
                 ),
-              ],
 
               if (nextEvents.isNotEmpty) ...[
                 Text(

@@ -13,8 +13,9 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
-import 'package:totem_app/features/sessions/repositories/session_repository.dart';
+import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
+import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -266,6 +267,7 @@ class ParticipantControlButton extends ConsumerWidget {
       context: context,
       builder: (context) {
         final user = ref.watch(userProfileProvider(participant.identity));
+        final currentSession = ref.watch(currentSessionProvider);
         return ConfirmationDialog(
           iconWidget: user
               .whenData((user) => UserAvatar.fromUserSchema(user, radius: 40))
@@ -274,12 +276,7 @@ class ParticipantControlButton extends ConsumerWidget {
           title: 'Mute ${participant.name}',
           content: 'They can unmute themselves anytime.',
           onConfirm: () async {
-            await ref.read(
-              muteParticipantProvider(
-                session.slug,
-                participant.identity,
-              ).future,
-            );
+            await currentSession?.muteParticipant(participant.identity);
             if (!context.mounted) return;
             Navigator.of(context).pop();
           },
@@ -294,6 +291,7 @@ class ParticipantControlButton extends ConsumerWidget {
       context: context,
       builder: (context) {
         final user = ref.watch(userProfileProvider(participant.identity));
+        final currentSession = ref.watch(currentSessionProvider);
         return ConfirmationDialog(
           iconWidget: user
               .whenData((user) => UserAvatar.fromUserSchema(user, radius: 40))
@@ -303,12 +301,7 @@ class ParticipantControlButton extends ConsumerWidget {
               'Are you sure you want to remove '
               '${participant.name}?',
           onConfirm: () async {
-            await ref.read(
-              removeParticipantProvider(
-                session.slug,
-                participant.identity,
-              ).future,
-            );
+            await currentSession?.removeParticipant(participant.identity);
             if (!context.mounted) return;
             Navigator.of(context).pop();
           },

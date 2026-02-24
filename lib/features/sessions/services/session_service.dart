@@ -37,7 +37,7 @@ part 'session_service.g.dart';
 enum SessionCommunicationTopics {
   emoji('lk-emoji-topic'),
   chat('lk-chat-topic'),
-  lifecycle('lk-lifecycle-topic');
+  participantRemoved('lk-participant-removed-topic');
 
   const SessionCommunicationTopics(this.topic);
   final String topic;
@@ -101,12 +101,23 @@ class SessionRoomState {
     this.connectionState = RoomConnectionState.connecting,
     this.hasKeeperDisconnected = false,
     this.participants = const [],
+    this.removed = false,
   });
 
+  /// The current connection state of the room.
   final RoomConnectionState connectionState;
+
+  /// The current state of the room, as published by the backend and LiveKit metadata.
   final RoomState roomState;
+
+  /// Whether the keeper has disconnected from the session.
   final bool hasKeeperDisconnected;
+
+  /// The participants in the session.
   final List<Participant> participants;
+
+  /// Whether the local participant was removed from the session.
+  final bool removed;
 
   bool isMyTurn(RoomContext room) {
     return roomState.currentSpeaker != null &&
@@ -127,6 +138,7 @@ class SessionRoomState {
     RoomState? roomState,
     bool? hasKeeperDisconnected,
     List<Participant>? participants,
+    bool? removed,
   }) {
     return SessionRoomState(
       connectionState: connectionState ?? this.connectionState,
@@ -134,6 +146,7 @@ class SessionRoomState {
       hasKeeperDisconnected:
           hasKeeperDisconnected ?? this.hasKeeperDisconnected,
       participants: participants ?? this.participants,
+      removed: removed ?? this.removed,
     );
   }
 
@@ -143,6 +156,7 @@ class SessionRoomState {
         'connectionState: $connectionState, '
         'sessionState: $roomState, '
         'hasKeeperDisconnected: $hasKeeperDisconnected, '
+        'removed: $removed'
         ')';
   }
 
@@ -369,7 +383,10 @@ class Session extends _$Session {
           false,
     );
     // context.room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
-    state = state.copyWith(connectionState: RoomConnectionState.connected);
+    state = state.copyWith(
+      connectionState: RoomConnectionState.connected,
+      removed: false,
+    );
 
     _userSpeakerPreference = context?.room.speakerOn ?? true;
     options.onConnected();
@@ -448,7 +465,6 @@ class Session extends _$Session {
     }
   }
 
-  Map<String, AppLifecycleState> userStates = {};
   void _onDataReceived(DataReceivedEvent event) {
     if (event.topic == null || event.participant == null) return;
     final data = const Utf8Decoder().convert(event.data);
@@ -472,14 +488,31 @@ class Session extends _$Session {
           message: 'Error decoding chat message',
         );
       }
-    } else if (event.topic == SessionCommunicationTopics.lifecycle.topic) {
+    } else if (event.topic ==
+        SessionCommunicationTopics.participantRemoved.topic) {
       logger.d(
-        'Received lifecycle event from ${event.participant!.identity}: $data',
+        'Received participant removed event from ${event.participant!.identity}: $data',
       );
-      userStates[event.participant!.identity] =
-          AppLifecycleState.values.firstWhereOrNull((e) => e.name == data) ??
-          AppLifecycleState.resumed;
-      ref.notifyListeners();
+      if (event.participant!.identity != state.roomState.keeper) {
+        logger.d(
+          'Participant removed event is not from the keeper, ignoring.',
+        );
+        return;
+      }
+      try {
+        final removedIdentity = data;
+        if (removedIdentity == context?.room.localParticipant?.identity) {
+          logger.d('Received participant removed event for local participant.');
+          state = state.copyWith(removed: true);
+          context?.disconnect();
+        }
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Error decoding participant removed event',
+        );
+      }
     }
   }
 
