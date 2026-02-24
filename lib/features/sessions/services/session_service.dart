@@ -192,7 +192,6 @@ class Session extends _$Session {
   String? _lastMetadata;
   SessionDetailSchema? event;
 
-  bool _hasKeeperEverJoined = false;
   Timer? _notificationTimer;
   List<VoidCallback> closeKeeperLeftNotification = [];
 
@@ -308,9 +307,6 @@ class Session extends _$Session {
     );
   }
 
-  static const keeperNotJoinedTimeout = Duration(minutes: 5);
-  bool get hasKeeperEverJoined => _hasKeeperEverJoined;
-
   /// Whether the keeper is currently in the session.
   bool get hasKeeper => state.participants.any((p) => isKeeper(p.identity));
 
@@ -329,7 +325,6 @@ class Session extends _$Session {
       );
 
       final hasKeeper = sortedParticipants.any((p) => isKeeper(p.identity));
-      if (!_hasKeeperEverJoined && hasKeeper) _hasKeeperEverJoined = true;
       if (state.hasKeeperDisconnected && hasKeeper) {
         _onKeeperConnected();
       }
@@ -438,27 +433,6 @@ class Session extends _$Session {
         );
       }
     }
-
-    // TODO(bdlukaa): This is very error prone.
-    // If the following flow happens, the user will be disconnected even if the keeper joins later:
-    //    1. Keeper joins the session.
-    //    2. User joins the session late, after the keeper.
-    //    3. User leaves the room.
-    //    4. Keeper leaves the room.
-    //    5. User joins the room again, but the keeper is not there.
-    //    6. After 10 seconds, the user is disconnected because the keeper "never joined".
-    //
-    // This should be controlled by the backend instead.
-    // final startedAt = event?.start;
-    // if (startedAt != null &&
-    //     !_hasKeeperEverJoined &&
-    //     DateTime.now().isAfter(
-    //       startedAt.add(Session.keeperNotJoinedTimeout),
-    //     )) {
-    //   reason = SessionEndedReason.keeperNotJoined;
-    //   context.disconnect();
-    //   return;
-    // }
 
     if (state.roomState.status == RoomStatus.ended) {
       _onSessionEnd();
