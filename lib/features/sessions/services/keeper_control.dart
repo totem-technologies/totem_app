@@ -32,10 +32,10 @@ extension KeeperControl on Session {
   }
 
   void closeKeeperLeftNotifications() {
-    for (final close in closeKeeperLeftNotification) {
+    for (final close in closeKeeperLeftNotificationCallbacks) {
       close.call();
     }
-    closeKeeperLeftNotification.clear();
+    closeKeeperLeftNotificationCallbacks.clear();
   }
 
   void _onKeeperDisconnected() {
@@ -48,7 +48,7 @@ extension KeeperControl on Session {
     );
 
     closeKeeperLeftNotifications();
-    closeKeeperLeftNotification.add(options.onKeeperLeaveRoom(this));
+    closeKeeperLeftNotificationCallbacks.add(options.onKeeperLeaveRoom(this));
 
     state = state.copyWith(hasKeeperDisconnected: true);
   }

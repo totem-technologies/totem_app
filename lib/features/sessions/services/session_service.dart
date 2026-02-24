@@ -183,9 +183,13 @@ class SessionRoomState {
 
 @riverpod
 class Session extends _$Session {
+  /// The [RoomContext] of the current session, which holds the LiveKit room and related information.
   RoomContext? context;
   EventsListener<RoomEvent>? _listener;
-  Timer? _timer;
+
+  /// The sync timer periodically checks for changes in the room state
+  /// and participants list, to keep the UI up to date.
+  Timer? _syncTimer;
   static const syncTimerDuration = Duration(seconds: 20);
 
   SessionOptions? _options;
@@ -193,7 +197,11 @@ class Session extends _$Session {
   SessionDetailSchema? event;
 
   Timer? _notificationTimer;
-  List<VoidCallback> closeKeeperLeftNotification = [];
+
+  /// A list of callbacks that close the "keeper left" notification,
+  /// so that they can be called when the keeper comes back or the
+  /// user leaves the session.
+  List<VoidCallback> closeKeeperLeftNotificationCallbacks = [];
 
   StreamSubscription<void>? _becomingNoisySubscription;
   StreamSubscription<audio.AudioDevicesChangedEvent>?
@@ -211,8 +219,11 @@ class Session extends _$Session {
         .watch(eventProvider(options.eventSlug))
         .whenData((event) => this.event = event);
 
-    _timer?.cancel();
-    _timer = Timer.periodic(Session.syncTimerDuration, (_) => _onRoomChanges());
+    _syncTimer?.cancel();
+    _syncTimer = Timer.periodic(
+      Session.syncTimerDuration,
+      (_) => _onRoomChanges(),
+    );
 
     context = RoomContext(
       url: AppConfig.liveKitUrl,
@@ -531,8 +542,8 @@ class Session extends _$Session {
       WakelockPlus.disable();
     } catch (_) {}
 
-    _timer?.cancel();
-    _timer = null;
+    _syncTimer?.cancel();
+    _syncTimer = null;
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
