@@ -781,6 +781,166 @@ final class EndSessionFamily extends $Family
   String toString() => r'endSessionProvider';
 }
 
+@ProviderFor(banParticipant)
+final banParticipantProvider = BanParticipantFamily._();
+
+final class BanParticipantProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<RoomState>,
+          RoomState,
+          FutureOr<RoomState>
+        >
+    with $FutureModifier<RoomState>, $FutureProvider<RoomState> {
+  BanParticipantProvider._({
+    required BanParticipantFamily super.from,
+    required (String, String, int) super.argument,
+  }) : super(
+         retry: null,
+         name: r'banParticipantProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$banParticipantHash();
+
+  @override
+  String toString() {
+    return r'banParticipantProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<RoomState> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<RoomState> create(Ref ref) {
+    final argument = this.argument as (String, String, int);
+    return banParticipant(ref, argument.$1, argument.$2, argument.$3);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is BanParticipantProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$banParticipantHash() => r'520c40fb1de14ee9706e4bf9651f41c5d69c314f';
+
+final class BanParticipantFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, String, int)> {
+  BanParticipantFamily._()
+    : super(
+        retry: null,
+        name: r'banParticipantProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  BanParticipantProvider call(
+    String sessionSlug,
+    String participantSlug,
+    int lastSeenVersion,
+  ) => BanParticipantProvider._(
+    argument: (sessionSlug, participantSlug, lastSeenVersion),
+    from: this,
+  );
+
+  @override
+  String toString() => r'banParticipantProvider';
+}
+
+@ProviderFor(unbanParticipant)
+final unbanParticipantProvider = UnbanParticipantFamily._();
+
+final class UnbanParticipantProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<RoomState>,
+          RoomState,
+          FutureOr<RoomState>
+        >
+    with $FutureModifier<RoomState>, $FutureProvider<RoomState> {
+  UnbanParticipantProvider._({
+    required UnbanParticipantFamily super.from,
+    required (String, String, int) super.argument,
+  }) : super(
+         retry: null,
+         name: r'unbanParticipantProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$unbanParticipantHash();
+
+  @override
+  String toString() {
+    return r'unbanParticipantProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<RoomState> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<RoomState> create(Ref ref) {
+    final argument = this.argument as (String, String, int);
+    return unbanParticipant(ref, argument.$1, argument.$2, argument.$3);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is UnbanParticipantProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$unbanParticipantHash() => r'aed7bd54448a4324d179d526219a845a307892e2';
+
+final class UnbanParticipantFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, String, int)> {
+  UnbanParticipantFamily._()
+    : super(
+        retry: null,
+        name: r'unbanParticipantProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  UnbanParticipantProvider call(
+    String sessionSlug,
+    String participantSlug,
+    int lastSeenVersion,
+  ) => UnbanParticipantProvider._(
+    argument: (sessionSlug, participantSlug, lastSeenVersion),
+    from: this,
+  );
+
+  @override
+  String toString() => r'unbanParticipantProvider';
+}
+
 @ProviderFor(sessionFeedback)
 final sessionFeedbackProvider = SessionFeedbackFamily._();
 

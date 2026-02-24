@@ -82,11 +82,13 @@ Future<void> muteEveryone(
 
 const eventsType = <Type, Object?>{
   EventRequestEventSealedAcceptStickEvent: 'accept_stick',
+  EventRequestEventSealedBanParticipantEvent: 'ban_participant',
   EventRequestEventSealedEndRoomEvent: 'end_room',
-  EventRequestEventSealedPassStickEvent: 'pass_stick',
   EventRequestEventSealedForcePassStickEvent: 'force_pass_stick',
+  EventRequestEventSealedPassStickEvent: 'pass_stick',
   EventRequestEventSealedReorderEvent: 'reorder',
   EventRequestEventSealedStartRoomEvent: 'start_room',
+  EventRequestEventSealedUnbanParticipantEvent: 'unban_participant',
 };
 
 @riverpod
@@ -223,6 +225,57 @@ Future<RoomState> endSession(
       ),
     ),
     operationName: 'end session',
+    retryOnNetworkError: true,
+  );
+}
+
+@riverpod
+Future<RoomState> banParticipant(
+  Ref ref,
+  String sessionSlug,
+  String participantSlug,
+  int lastSeenVersion,
+) {
+  final apiService = ref.read(mobileApiServiceProvider);
+  return RepositoryUtils.handleApiCall<RoomState>(
+    apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
+      sessionSlug: sessionSlug,
+      body: EventRequest(
+        event: EventRequestEventSealedBanParticipantEvent(
+          type:
+              eventsType[EventRequestEventSealedBanParticipantEvent]! as String,
+          participantSlug: participantSlug,
+        ),
+        lastSeenVersion: lastSeenVersion,
+      ),
+    ),
+    operationName: 'ban participant',
+    retryOnNetworkError: true,
+  );
+}
+
+@riverpod
+Future<RoomState> unbanParticipant(
+  Ref ref,
+  String sessionSlug,
+  String participantSlug,
+  int lastSeenVersion,
+) {
+  final apiService = ref.read(mobileApiServiceProvider);
+  return RepositoryUtils.handleApiCall<RoomState>(
+    apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
+      sessionSlug: sessionSlug,
+      body: EventRequest(
+        event: EventRequestEventSealedUnbanParticipantEvent(
+          type:
+              eventsType[EventRequestEventSealedUnbanParticipantEvent]!
+                  as String,
+          participantSlug: participantSlug,
+        ),
+        lastSeenVersion: lastSeenVersion,
+      ),
+    ),
+    operationName: 'unban participant',
     retryOnNetworkError: true,
   );
 }

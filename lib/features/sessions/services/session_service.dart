@@ -478,12 +478,16 @@ class Session extends _$Session {
       logger.d(
         'Received participant removed event from ${event.participant!.identity}: $data',
       );
-      if (event.participant!.identity != state.roomState.keeper) {
-        logger.d(
-          'Participant removed event is not from the keeper, ignoring.',
-        );
-        return;
-      }
+      // final json = jsonDecode(data) as Map<String, dynamic>;
+      // final identity = json['identity'] as String?;
+      // final reason = json['reason'] as String?;
+      // if (event.participant!.identity != state.roomState.keeper) {
+      //   logger.d(
+      //     'Participant removed event is not from the keeper, ignoring.',
+      //   );
+      //   return;
+      // }
+
       try {
         final removedIdentity = data;
         if (removedIdentity == context?.room.localParticipant?.identity) {

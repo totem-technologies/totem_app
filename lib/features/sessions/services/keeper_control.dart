@@ -152,6 +152,60 @@ extension KeeperControl on Session {
     }
   }
 
+  Future<void> banParticipant(String participantSlug) async {
+    try {
+      await ref
+          .read(
+            banParticipantProvider(
+              options.eventSlug,
+              participantSlug,
+              state.roomState.version,
+            ).future,
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
+      logger.i('Banned participant $participantSlug successfully');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error banning participant $participantSlug',
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> unbanParticipant(String participantSlug) async {
+    try {
+      await ref
+          .read(
+            unbanParticipantProvider(
+              options.eventSlug,
+              participantSlug,
+              state.roomState.version,
+            ).future,
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
+      logger.i('Unbanned participant $participantSlug successfully');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error unbanning participant $participantSlug',
+      );
+      rethrow;
+    }
+  }
+
   Future<void> muteParticipant(String participantSlug) async {
     try {
       await ref
