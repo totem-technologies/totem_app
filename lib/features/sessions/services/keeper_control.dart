@@ -68,7 +68,6 @@ extension KeeperControl on Session {
 
     closeKeeperLeftNotifications();
 
-    reason = SessionDisconnectedReason.keeperLeft;
     await context?.disconnect();
   }
 
