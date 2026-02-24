@@ -164,10 +164,9 @@ extension KeeperControl on Session {
           )
           .timeout(
             const Duration(seconds: 20),
-            onTimeout: () {
-              throw AppNetworkException.timeout();
-            },
+            onTimeout: () => throw AppNetworkException.timeout(),
           );
+
       logger.i('Banned participant $participantSlug successfully');
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -191,9 +190,7 @@ extension KeeperControl on Session {
           )
           .timeout(
             const Duration(seconds: 20),
-            onTimeout: () {
-              throw AppNetworkException.timeout();
-            },
+            onTimeout: () => throw AppNetworkException.timeout(),
           );
       logger.i('Unbanned participant $participantSlug successfully');
     } catch (error, stackTrace) {

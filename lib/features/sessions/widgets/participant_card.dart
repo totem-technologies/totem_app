@@ -259,6 +259,22 @@ class ParticipantControlButton extends ConsumerWidget {
           ],
         ),
       ),
+      PopupMenuItem<void>(
+        onTap: () => _onBanParticipant(context, ref),
+        textStyle: _menuTextStyle,
+        child: const Row(
+          spacing: 8,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TotemIcon(
+              TotemIcons.removePerson,
+              size: 20,
+              color: Colors.white,
+            ),
+            Text('Ban', style: _menuTextStyle),
+          ],
+        ),
+      ),
     ];
   }
 
@@ -302,6 +318,30 @@ class ParticipantControlButton extends ConsumerWidget {
               '${participant.name}?',
           onConfirm: () async {
             await currentSession?.removeParticipant(participant.identity);
+            if (!context.mounted) return;
+            Navigator.of(context).pop();
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _onBanParticipant(BuildContext context, WidgetRef ref) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        final user = ref.watch(userProfileProvider(participant.identity));
+        final currentSession = ref.watch(currentSessionProvider);
+        return ConfirmationDialog(
+          iconWidget: user
+              .whenData((user) => UserAvatar.fromUserSchema(user, radius: 40))
+              .value,
+          confirmButtonText: 'Ban',
+          content:
+              'Are you sure you want to ban '
+              '${participant.name}? They will not be able to rejoin the session.',
+          onConfirm: () async {
+            await currentSession?.banParticipant(participant.identity);
             if (!context.mounted) return;
             Navigator.of(context).pop();
           },
