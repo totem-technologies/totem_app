@@ -6,6 +6,7 @@ import 'package:totem_app/features/keeper/repositories/keeper_repository.dart';
 import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/html.dart';
+import 'package:totem_app/shared/routing.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -13,7 +14,6 @@ import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/link.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class KeeperProfileScreen extends ConsumerWidget {
   const KeeperProfileScreen({
@@ -184,10 +184,10 @@ class KeeperProfileScreen extends ConsumerWidget {
                     data: keeper.bioHtml ?? keeper.bio,
                     style: AppTheme.compactHtmlStyle,
                     onLinkTap: (url, _, _) async {
-                      if (url != null) await launchUrl(Uri.parse(url));
+                      RoutingUtils.handleLinkTap(context, url);
                     },
                     onAnchorTap: (url, _, _) async {
-                      if (url != null) await launchUrl(Uri.parse(url));
+                      RoutingUtils.handleLinkTap(context, url);
                     },
                     extensions: [TotemImageHtmlExtension()],
                   ),

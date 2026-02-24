@@ -1,5 +1,9 @@
+import 'package:flutter/widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:totem_app/core/config/app_config.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/navigation/route_names.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class RoutingUtils {
   const RoutingUtils._();
@@ -60,6 +64,23 @@ class RoutingUtils {
       return null;
     } catch (e) {
       return null;
+    }
+  }
+
+  static void handleLinkTap(BuildContext context, String? url) async {
+    if (url == null) return;
+    try {
+      final appRoute = parseTotemDeepLink(url);
+      if (appRoute != null && context.mounted) {
+        await context.push(appRoute);
+      } else {
+        await launchUrl(
+          Uri.parse(url),
+          mode: LaunchMode.externalApplication,
+        );
+      }
+    } catch (e) {
+      ErrorHandler.logError(e, message: 'Failed to handle link tap: $url');
     }
   }
 }
