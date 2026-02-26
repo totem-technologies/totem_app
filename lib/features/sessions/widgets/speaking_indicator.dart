@@ -118,22 +118,24 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
           switchInCurve: Curves.easeInOut,
           switchOutCurve: Curves.easeInOut,
           child: emojis.isNotEmpty
-              ? Container(
-                  key: ValueKey(emojis.first),
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    emojis.first,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      textBaseline: TextBaseline.ideographic,
+              ? MediaQuery.withNoTextScaling(
+                  child: Container(
+                    key: ValueKey(emojis.first),
+                    width: 20,
+                    height: 20,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
                     ),
-                    textAlign: TextAlign.center,
+                    alignment: Alignment.center,
+                    child: Text(
+                      emojis.first,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        textBaseline: TextBaseline.ideographic,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 )
               : child,
