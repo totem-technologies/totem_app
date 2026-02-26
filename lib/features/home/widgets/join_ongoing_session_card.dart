@@ -162,11 +162,8 @@ class OngoingSessionSheet extends StatelessWidget {
             ),
             FractionallySizedBox(
               widthFactor: 0.9,
-              child: AspectRatio(
-                aspectRatio: 16 / 9,
-                child: IgnorePointer(
-                  child: SpaceCard.fromSessionDetailSchema(session),
-                ),
+              child: IgnorePointer(
+                child: SpaceCard.fromSessionDetailSchema(session),
               ),
             ),
             ElevatedButton(
