@@ -160,8 +160,8 @@ class OngoingSessionSheet extends StatelessWidget {
               style: theme.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
-            FractionallySizedBox(
-              widthFactor: 0.9,
+            Padding(
+              padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
               child: IgnorePointer(
                 child: SpaceCard.fromSessionDetailSchema(session),
               ),

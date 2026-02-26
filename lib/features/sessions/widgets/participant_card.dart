@@ -200,7 +200,7 @@ class ParticipantControlButton extends ConsumerWidget {
       elevation: 0,
       menuPadding: EdgeInsetsDirectional.zero,
       clipBehavior: Clip.hardEdge,
-      items: _buildMenuItems(context, ref),
+      items: _buildMenuItems(context),
     );
   }
 
@@ -219,13 +219,12 @@ class ParticipantControlButton extends ConsumerWidget {
 
   List<PopupMenuEntry<void>> _buildMenuItems(
     BuildContext context,
-    WidgetRef ref,
   ) {
     return [
       if (participant.hasAudio)
         PopupMenuItem<void>(
           enabled: !participant.isMuted,
-          onTap: () => _onMuteParticipant(context, ref),
+          onTap: () => _onMuteParticipant(context),
           textStyle: _menuTextStyle,
           child: Row(
             spacing: 8,
@@ -244,7 +243,7 @@ class ParticipantControlButton extends ConsumerWidget {
           ),
         ),
       PopupMenuItem<void>(
-        onTap: () => _onRemoveParticipant(context, ref),
+        onTap: () => _onRemoveParticipant(context),
         textStyle: _menuTextStyle,
         child: const Row(
           spacing: 8,
@@ -260,7 +259,7 @@ class ParticipantControlButton extends ConsumerWidget {
         ),
       ),
       PopupMenuItem<void>(
-        onTap: () => _onBanParticipant(context, ref),
+        onTap: () => _onBanParticipant(context),
         textStyle: _menuTextStyle,
         child: const Row(
           spacing: 8,
@@ -278,72 +277,93 @@ class ParticipantControlButton extends ConsumerWidget {
     ];
   }
 
-  Future<void> _onMuteParticipant(BuildContext context, WidgetRef ref) async {
+  Future<void> _onMuteParticipant(BuildContext context) async {
     await showDialog<void>(
       context: context,
+      useRootNavigator: false,
       builder: (context) {
-        final user = ref.watch(userProfileProvider(participant.identity));
-        final currentSession = ref.watch(currentSessionProvider);
-        return ConfirmationDialog(
-          iconWidget: user
-              .whenData((user) => UserAvatar.fromUserSchema(user, radius: 40))
-              .value,
-          confirmButtonText: 'Mute',
-          title: 'Mute ${participant.name}',
-          content: 'They can unmute themselves anytime.',
-          onConfirm: () async {
-            await currentSession?.muteParticipant(participant.identity);
-            if (!context.mounted) return;
-            Navigator.of(context).pop();
-          },
-          type: ConfirmationDialogType.standard,
-        );
-      },
-    );
-  }
-
-  Future<void> _onRemoveParticipant(BuildContext context, WidgetRef ref) async {
-    await showDialog<void>(
-      context: context,
-      builder: (context) {
-        final user = ref.watch(userProfileProvider(participant.identity));
-        final currentSession = ref.watch(currentSessionProvider);
-        return ConfirmationDialog(
-          iconWidget: user
-              .whenData((user) => UserAvatar.fromUserSchema(user, radius: 40))
-              .value,
-          confirmButtonText: 'Remove',
-          content:
-              'Are you sure you want to remove '
-              '${participant.name}?',
-          onConfirm: () async {
-            await currentSession?.removeParticipant(participant.identity);
-            if (!context.mounted) return;
-            Navigator.of(context).pop();
+        return Consumer(
+          builder: (context, ref, _) {
+            final user = ref.watch(userProfileProvider(participant.identity));
+            final currentSession = ref.watch(currentSessionProvider);
+            return ConfirmationDialog(
+              iconWidget: user
+                  .whenData(
+                    (user) => UserAvatar.fromUserSchema(user, radius: 40),
+                  )
+                  .value,
+              confirmButtonText: 'Mute',
+              title: 'Mute ${participant.name}',
+              content: 'They can unmute themselves anytime.',
+              onConfirm: () async {
+                await currentSession?.muteParticipant(participant.identity);
+                if (!context.mounted) return;
+                Navigator.of(context).pop();
+              },
+              type: ConfirmationDialogType.standard,
+            );
           },
         );
       },
     );
   }
 
-  Future<void> _onBanParticipant(BuildContext context, WidgetRef ref) async {
+  Future<void> _onRemoveParticipant(BuildContext context) async {
     await showDialog<void>(
       context: context,
+      useRootNavigator: false,
       builder: (context) {
-        final user = ref.watch(userProfileProvider(participant.identity));
-        final currentSession = ref.watch(currentSessionProvider);
-        return ConfirmationDialog(
-          iconWidget: user
-              .whenData((user) => UserAvatar.fromUserSchema(user, radius: 40))
-              .value,
-          confirmButtonText: 'Ban',
-          content:
-              'Are you sure you want to ban '
-              '${participant.name}? They will not be able to rejoin the session.',
-          onConfirm: () async {
-            await currentSession?.banParticipant(participant.identity);
-            if (!context.mounted) return;
-            Navigator.of(context).pop();
+        return Consumer(
+          builder: (context, ref, _) {
+            final user = ref.watch(userProfileProvider(participant.identity));
+            final currentSession = ref.watch(currentSessionProvider);
+            return ConfirmationDialog(
+              iconWidget: user
+                  .whenData(
+                    (user) => UserAvatar.fromUserSchema(user, radius: 40),
+                  )
+                  .value,
+              confirmButtonText: 'Remove',
+              content:
+                  'Are you sure you want to remove '
+                  '${participant.name}?',
+              onConfirm: () async {
+                await currentSession?.removeParticipant(participant.identity);
+                if (!context.mounted) return;
+                Navigator.of(context).pop();
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _onBanParticipant(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      useRootNavigator: false,
+      builder: (context) {
+        return Consumer(
+          builder: (context, ref, _) {
+            final user = ref.watch(userProfileProvider(participant.identity));
+            final currentSession = ref.watch(currentSessionProvider);
+            return ConfirmationDialog(
+              iconWidget: user
+                  .whenData(
+                    (user) => UserAvatar.fromUserSchema(user, radius: 40),
+                  )
+                  .value,
+              confirmButtonText: 'Ban',
+              content:
+                  'Are you sure you want to ban '
+                  '${participant.name}? They will not be able to rejoin the session.',
+              onConfirm: () async {
+                await currentSession?.banParticipant(participant.identity);
+                if (!context.mounted) return;
+                Navigator.of(context).pop();
+              },
+            );
           },
         );
       },
