@@ -1,14 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:totem_app/api/export.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
 class RoomErrorScreen extends StatelessWidget {
-  const RoomErrorScreen({this.onRetry, super.key});
+  const RoomErrorScreen({this.onRetry, this.error, super.key});
 
   final VoidCallback? onRetry;
+  final Object? error;
 
   @override
   Widget build(BuildContext context) {
+    var title = 'Something went wrong';
+    var subtitle =
+        'We couldn’t connect you to this space. '
+        'Please check your internet connection or try again.';
+
+    if (error is ErrorResponse) {
+      final code = ErrorCode.fromJson((error! as ErrorResponse).error);
+      switch (code) {
+        case ErrorCode.banned:
+          title = 'You have been banned from this space.';
+          subtitle =
+              'You can still join other spaces, but you won’t be able to access this one.';
+        case ErrorCode.roomAlreadyEnded:
+          title = 'This space has ended';
+          subtitle =
+              'This space has already ended. You can still join other spaces.';
+        case ErrorCode.notJoinable:
+          title = 'This space is not joinable';
+          subtitle =
+              'This space is not joinable. Please check if the link is correct or try again later.';
+        default:
+          break;
+      }
+    }
     final theme = Theme.of(context);
     return SafeArea(
       child: Padding(
@@ -45,12 +71,12 @@ class RoomErrorScreen extends StatelessWidget {
               color: theme.textTheme.headlineMedium?.color,
             ),
             Text(
-              'Something went wrong',
+              title,
               style: theme.textTheme.headlineMedium,
+              textAlign: TextAlign.center,
             ),
-            const Text(
-              'We couldn’t connect you to this space. '
-              'Please check your internet connection or try again.',
+            Text(
+              subtitle,
               textAlign: TextAlign.center,
             ),
             const Spacer(),
