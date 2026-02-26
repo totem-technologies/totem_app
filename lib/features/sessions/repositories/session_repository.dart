@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
@@ -11,19 +12,46 @@ part 'session_repository.g.dart';
 const _shortTimeoutDuration = Duration(seconds: 10);
 const _timeoutDuration = Duration(seconds: 15);
 
+class SessionErrorResponse extends Error {
+  SessionErrorResponse({
+    required this.code,
+    required this.message,
+  });
+
+  factory SessionErrorResponse.fromJson(Map<String, dynamic> json) {
+    return SessionErrorResponse(
+      code: ErrorCode.values.firstWhere(
+        (e) => e.name == json['code'],
+        orElse: () => ErrorCode.$unknown,
+      ),
+      message: json['message'] as String?,
+    );
+  }
+
+  final ErrorCode code;
+  final String? message;
+}
+
 @riverpod
 Future<String> sessionToken(Ref ref, String sessionSlug) async {
   final apiService = ref.read(mobileApiServiceProvider);
-  return RepositoryUtils.handleApiCall<String>(
-    apiCall: () async {
-      final response = await apiService.rooms.totemRoomsApiJoinRoom(
-        sessionSlug: sessionSlug,
-      );
-      return response.token;
-    },
-    operationName: 'get session token',
-    retryOnNetworkError: true,
-  );
+  try {
+    final response = await apiService.rooms
+        .totemRoomsApiJoinRoom(
+          sessionSlug: sessionSlug,
+        )
+        .timeout(_shortTimeoutDuration);
+    return response.token;
+  } on DioException catch (error) {
+    if (error.response?.statusCode == 403) {
+      final json = error.response?.data as Map<String, dynamic>?;
+      if (json == null) rethrow;
+      throw SessionErrorResponse.fromJson(json);
+    }
+    rethrow;
+  } catch (error) {
+    rethrow;
+  }
 }
 
 @riverpod

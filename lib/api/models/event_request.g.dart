@@ -15,6 +15,6 @@ EventRequest _$EventRequestFromJson(Map<String, dynamic> json) => EventRequest(
 
 Map<String, dynamic> _$EventRequestToJson(EventRequest instance) =>
     <String, dynamic>{
-      'event': instance.event,
+      'event': instance.event.toJson(),
       'last_seen_version': instance.lastSeenVersion,
     };
