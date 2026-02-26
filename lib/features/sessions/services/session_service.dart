@@ -451,8 +451,12 @@ class Session extends _$Session {
   }
 
   void _onDataReceived(DataReceivedEvent event) {
-    if (event.topic == null || event.participant == null) return;
+    // if (event.topic == null || event.participant == null) return;
     final data = const Utf8Decoder().convert(event.data);
+
+    print(
+      '(${context?.room.localParticipant}) Received data on topic "${event.topic}" from participant "${event.participant?.identity}": $data',
+    );
 
     if (event.topic == SessionCommunicationTopics.emoji.topic) {
       _options?.onEmojiReceived(event.participant!.identity, data);
@@ -476,21 +480,24 @@ class Session extends _$Session {
     } else if (event.topic ==
         SessionCommunicationTopics.participantRemoved.topic) {
       logger.d(
-        'Received participant removed event from ${event.participant!.identity}: $data',
+        'Received participant removed event from ${event.participant?.identity}: $data',
       );
-      // final json = jsonDecode(data) as Map<String, dynamic>;
-      // final identity = json['identity'] as String?;
+      final json = jsonDecode(data) as Map<String, dynamic>;
+      // final action = json['action'] as String?;
+      final identity = json['identity'] as String?;
       // final reason = json['reason'] as String?;
-      // if (event.participant!.identity != state.roomState.keeper) {
-      //   logger.d(
-      //     'Participant removed event is not from the keeper, ignoring.',
-      //   );
-      //   return;
-      // }
+
+      // If participant identity is null, the message comes from the server
+      if (event.participant?.identity != null &&
+          event.participant!.identity != state.roomState.keeper) {
+        logger.d(
+          'Participant removed event is not from the keeper, ignoring.',
+        );
+        return;
+      }
 
       try {
-        final removedIdentity = data;
-        if (removedIdentity == context?.room.localParticipant?.identity) {
+        if (identity == context?.room.localParticipant?.identity) {
           logger.d('Received participant removed event for local participant.');
           state = state.copyWith(removed: true);
           context?.disconnect();

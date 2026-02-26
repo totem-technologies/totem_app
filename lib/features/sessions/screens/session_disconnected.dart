@@ -216,7 +216,6 @@ class _SessionDisconnectedScreenState
                         text: 'help@totem.org',
                         style: const TextStyle(
                           color: Colors.blue,
-                          decoration: TextDecoration.underline,
                         ),
                         recognizer: TapGestureRecognizer()
                           ..onTap = () {
@@ -276,8 +275,8 @@ class _SessionDisconnectedScreenState
                 for (final nextEvent in nextEvents)
                   Flexible(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxHeight: 140,
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.textScalerOf(context).scale(140),
                       ),
                       child: SmallSpaceCard(
                         space: MobileSpaceDetailSchemaExtension.copyWith(
@@ -308,8 +307,10 @@ class _SessionDisconnectedScreenState
                       for (final event in data.take(2)) {
                         yield Flexible(
                           child: ConstrainedBox(
-                            constraints: const BoxConstraints(
-                              maxHeight: 140,
+                            constraints: BoxConstraints(
+                              maxHeight: MediaQuery.textScalerOf(
+                                context,
+                              ).scale(140),
                             ),
                             child: SmallSpaceCard.fromSessionDetailSchema(
                               event,
