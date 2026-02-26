@@ -1,7 +1,7 @@
 name: totem_app
 description: "Guided introspection groups."
 publish_to: "none"
-version: 0.0.45+44
+version: 0.0.46+45
 environment:
   sdk: ^3.9.0
 
