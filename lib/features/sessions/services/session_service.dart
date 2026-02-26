@@ -521,6 +521,7 @@ class Session extends _$Session {
   }
 
   Future<void> _onSessionEnd() async {
+    endBackgroundMode();
     context?.disconnect();
   }
 

@@ -156,7 +156,7 @@ class _BannedParticipantItemState
   }
 
   @override
-  Widget build(BuildContext context, ) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final user = ref.watch(userProfileProvider(widget.participantSlug));
 

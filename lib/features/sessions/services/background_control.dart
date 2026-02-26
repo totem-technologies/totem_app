@@ -31,6 +31,8 @@ extension BackgroundControl on Session {
     }
   }
 
+  static const _notificationPeriod = Duration(minutes: 1);
+
   Future<void> _startBackgroundService() async {
     if (await FlutterForegroundTask.isRunningService) {
       return;
@@ -46,7 +48,7 @@ extension BackgroundControl on Session {
     );
 
     _notificationTimer?.cancel();
-    _notificationTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+    _notificationTimer = Timer.periodic(_notificationPeriod, (timer) {
       if (this.event != null) _updateNotification(this.event!);
     });
   }
