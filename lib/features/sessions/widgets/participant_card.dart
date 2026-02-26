@@ -296,9 +296,16 @@ class ParticipantControlButton extends ConsumerWidget {
               title: 'Mute ${participant.name}',
               content: 'They can unmute themselves anytime.',
               onConfirm: () async {
-                await currentSession?.muteParticipant(participant.identity);
-                if (!context.mounted) return;
-                Navigator.of(context).pop();
+                try {
+                  await currentSession?.muteParticipant(participant.identity);
+                } catch (error) {
+                  if (!context.mounted) return;
+                  await ErrorHandler.handleApiError(context, error);
+                } finally {
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
+                }
               },
               type: ConfirmationDialogType.standard,
             );
@@ -328,9 +335,16 @@ class ParticipantControlButton extends ConsumerWidget {
                   'Are you sure you want to remove '
                   '${participant.name}?',
               onConfirm: () async {
-                await currentSession?.removeParticipant(participant.identity);
-                if (!context.mounted) return;
-                Navigator.of(context).pop();
+                try {
+                  await currentSession?.removeParticipant(participant.identity);
+                } catch (error) {
+                  if (!context.mounted) return;
+                  await ErrorHandler.handleApiError(context, error);
+                } finally {
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
+                }
               },
             );
           },
@@ -359,9 +373,16 @@ class ParticipantControlButton extends ConsumerWidget {
                   'Are you sure you want to ban '
                   '${participant.name}? They will not be able to rejoin the session.',
               onConfirm: () async {
-                await currentSession?.banParticipant(participant.identity);
-                if (!context.mounted) return;
-                Navigator.of(context).pop();
+                try {
+                  await currentSession?.banParticipant(participant.identity);
+                } catch (error) {
+                  if (!context.mounted) return;
+                  await ErrorHandler.handleApiError(context, error);
+                } finally {
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
+                }
               },
             );
           },

@@ -108,7 +108,7 @@ extension KeeperControl on Session {
             ).future,
           )
           .timeout(
-            const Duration(seconds: 20),
+            const Duration(seconds: 10),
             onTimeout: () {
               throw AppNetworkException.timeout();
             },
@@ -135,7 +135,7 @@ extension KeeperControl on Session {
             ).future,
           )
           .timeout(
-            const Duration(seconds: 20),
+            const Duration(seconds: 10),
             onTimeout: () {
               throw AppNetworkException.timeout();
             },

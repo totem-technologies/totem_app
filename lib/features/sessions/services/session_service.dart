@@ -292,6 +292,9 @@ class Session extends _$Session {
           _onRoomChanges();
         }
       })
+      ..on<RoomDisconnectedEvent>((event) {
+        logger.d('Disconnected from session. Reason: ${event.reason}');
+      })
       ..on<DataReceivedEvent>(_onDataReceived)
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
       ..on<ParticipantConnectedEvent>(_onParticipantConnected);
@@ -451,64 +454,74 @@ class Session extends _$Session {
   }
 
   void _onDataReceived(DataReceivedEvent event) {
-    // if (event.topic == null || event.participant == null) return;
+    if (event.topic == null) return;
     final data = const Utf8Decoder().convert(event.data);
-
-    print(
+    logger.d(
       '(${context?.room.localParticipant}) Received data on topic "${event.topic}" from participant "${event.participant?.identity}": $data',
     );
 
-    if (event.topic == SessionCommunicationTopics.emoji.topic) {
-      _options?.onEmojiReceived(event.participant!.identity, data);
-    } else if (event.topic == SessionCommunicationTopics.chat.topic) {
-      try {
-        final message = ChatMessage.fromMap(
-          jsonDecode(data) as Map<String, dynamic>,
-          event.participant,
-        );
-        _options?.onMessageReceived(
-          event.participant!.identity,
-          message.message,
-        );
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Error decoding chat message',
-        );
-      }
-    } else if (event.topic ==
-        SessionCommunicationTopics.participantRemoved.topic) {
-      logger.d(
-        'Received participant removed event from ${event.participant?.identity}: $data',
-      );
-      final json = jsonDecode(data) as Map<String, dynamic>;
-      // final action = json['action'] as String?;
-      final identity = json['identity'] as String?;
-      // final reason = json['reason'] as String?;
+    final topic = SessionCommunicationTopics.values.firstWhereOrNull(
+      (t) => t.topic == event.topic,
+    );
 
-      // If participant identity is null, the message comes from the server
-      if (event.participant?.identity != null &&
-          event.participant!.identity != state.roomState.keeper) {
-        logger.d(
-          'Participant removed event is not from the keeper, ignoring.',
-        );
-        return;
-      }
+    if (topic == null) {
+      logger.w('Received data on unknown topic "${event.topic}". Ignoring.');
+      return;
+    }
 
-      try {
-        if (identity == context?.room.localParticipant?.identity) {
-          logger.d('Received participant removed event for local participant.');
-          state = state.copyWith(removed: true);
-          context?.disconnect();
+    switch (topic) {
+      case SessionCommunicationTopics.emoji:
+        _options?.onEmojiReceived(event.participant!.identity, data);
+      case SessionCommunicationTopics.chat:
+        try {
+          final message = ChatMessage.fromMap(
+            jsonDecode(data) as Map<String, dynamic>,
+            event.participant,
+          );
+          _options?.onMessageReceived(
+            event.participant!.identity,
+            message.message,
+          );
+        } catch (error, stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Error decoding chat message',
+          );
         }
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Error decoding participant removed event',
+      case SessionCommunicationTopics.participantRemoved:
+        logger.d(
+          'Received participant removed event from ${event.participant?.identity}: $data',
         );
-      }
+        final json = jsonDecode(data) as Map<String, dynamic>;
+        // final action = json['action'] as String?;
+        final identity = json['identity'] as String?;
+        // final reason = json['reason'] as String?;
+
+        // If participant identity is null, the message comes from the server
+        if (event.participant?.identity != null &&
+            event.participant!.identity != state.roomState.keeper) {
+          logger.d(
+            'Participant removed event is not from the keeper, ignoring.',
+          );
+          return;
+        }
+
+        try {
+          if (identity == context?.room.localParticipant?.identity) {
+            logger.d(
+              'Received participant removed event for local participant.',
+            );
+            state = state.copyWith(removed: true);
+            context?.disconnect();
+          }
+        } catch (error, stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Error decoding participant removed event',
+          );
+        }
     }
   }
 
@@ -528,6 +541,7 @@ class Session extends _$Session {
   }
 
   Future<void> _onSessionEnd() async {
+    logger.d('Session has ended. Cleaning up and disconnecting.');
     endBackgroundMode();
     context?.disconnect();
   }
