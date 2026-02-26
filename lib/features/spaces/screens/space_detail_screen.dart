@@ -51,16 +51,6 @@ enum SpaceJoinCardState {
   notJoined,
 }
 
-Future<void> _handleHtmlLinkTap(String? url, BuildContext context) async {
-  if (url == null) return;
-  final appRoute = RoutingUtils.parseTotemDeepLink(url);
-  if (appRoute != null && context.mounted) {
-    await context.push(appRoute);
-  } else {
-    launchUrl(Uri.parse(url));
-  }
-}
-
 class SpaceDetailScreen extends ConsumerStatefulWidget {
   const SpaceDetailScreen({required this.slug, this.sessionSlug, super.key});
 
@@ -354,9 +344,15 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                         TotemImageHtmlExtension(),
                                       ],
                                       onLinkTap: (url, _, _) =>
-                                          _handleHtmlLinkTap(url, context),
+                                          RoutingUtils.handleLinkTap(
+                                            context,
+                                            url,
+                                          ),
                                       onAnchorTap: (url, _, _) =>
-                                          _handleHtmlLinkTap(url, context),
+                                          RoutingUtils.handleLinkTap(
+                                            context,
+                                            url,
+                                          ),
                                     ),
                                     loading: () => const SizedBox(height: 80),
                                     error: (_, _) => const SizedBox.shrink(),
@@ -1360,9 +1356,9 @@ class AboutSpaceSheet extends StatelessWidget {
                           extensions: [TotemImageHtmlExtension()],
                           shrinkWrap: true,
                           onLinkTap: (url, _, _) =>
-                              _handleHtmlLinkTap(url, context),
+                              RoutingUtils.handleLinkTap(context, url),
                           onAnchorTap: (url, _, _) =>
-                              _handleHtmlLinkTap(url, context),
+                              RoutingUtils.handleLinkTap(context, url),
                         ),
                       ],
                     ),

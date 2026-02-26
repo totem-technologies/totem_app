@@ -343,6 +343,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     if (tokenData.hasError) {
       return RoomBackground(
         child: RoomErrorScreen(
+          error: tokenData.error,
           onRetry: () =>
               ref.refresh(sessionTokenProvider(widget.sessionSlug).future),
         ),

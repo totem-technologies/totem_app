@@ -18,6 +18,11 @@ RoomState _$RoomStateFromJson(Map<String, dynamic> json) => RoomState(
       .map((e) => e as String)
       .toList(),
   keeper: json['keeper'] as String,
+  bannedParticipants:
+      (json['banned_participants'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const [],
   currentSpeaker: json['current_speaker'] as String?,
   nextSpeaker: json['next_speaker'] as String?,
 );
@@ -32,6 +37,7 @@ Map<String, dynamic> _$RoomStateToJson(RoomState instance) => <String, dynamic>{
   'next_speaker': instance.nextSpeaker,
   'talking_order': instance.talkingOrder,
   'keeper': instance.keeper,
+  'banned_participants': instance.bannedParticipants,
 };
 
 const _$RoomStatusEnumMap = {

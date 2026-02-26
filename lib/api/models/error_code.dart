@@ -16,6 +16,8 @@ enum ErrorCode {
   notCurrentSpeaker('not_current_speaker'),
   @JsonValue('not_next_speaker')
   notNextSpeaker('not_next_speaker'),
+  @JsonValue('banned')
+  banned('banned'),
   @JsonValue('invalid_transition')
   invalidTransition('invalid_transition'),
   @JsonValue('room_not_active')

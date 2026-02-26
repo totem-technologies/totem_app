@@ -32,10 +32,10 @@ extension KeeperControl on Session {
   }
 
   void closeKeeperLeftNotifications() {
-    for (final close in closeKeeperLeftNotification) {
+    for (final close in closeKeeperLeftNotificationCallbacks) {
       close.call();
     }
-    closeKeeperLeftNotification.clear();
+    closeKeeperLeftNotificationCallbacks.clear();
   }
 
   void _onKeeperDisconnected() {
@@ -48,7 +48,7 @@ extension KeeperControl on Session {
     );
 
     closeKeeperLeftNotifications();
-    closeKeeperLeftNotification.add(options.onKeeperLeaveRoom(this));
+    closeKeeperLeftNotificationCallbacks.add(options.onKeeperLeaveRoom(this));
 
     state = state.copyWith(hasKeeperDisconnected: true);
   }
@@ -68,18 +68,16 @@ extension KeeperControl on Session {
 
     closeKeeperLeftNotifications();
 
-    reason = SessionDisconnectedReason.keeperLeft;
     await context?.disconnect();
   }
 
-  Future<bool> startSession() async {
-    if (!isKeeper()) return false;
+  Future<void> removeParticipant(String participantSlug) async {
     try {
-      final roomState = await ref
+      await ref
           .read(
-            startSessionProvider(
-              _options!.eventSlug,
-              state.roomState.version,
+            removeParticipantProvider(
+              options.eventSlug,
+              participantSlug,
             ).future,
           )
           .timeout(
@@ -88,7 +86,33 @@ extension KeeperControl on Session {
               throw AppNetworkException.timeout();
             },
           );
-      _onRoomChanges(roomState);
+      logger.i('Removed participant $participantSlug successfully');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error removing participant $participantSlug',
+      );
+      rethrow;
+    }
+  }
+
+  Future<bool> startSession() async {
+    if (!isKeeper()) return false;
+    try {
+      await ref
+          .read(
+            startSessionProvider(
+              _options!.eventSlug,
+              state.roomState.version,
+            ).future,
+          )
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
       return true;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -111,7 +135,7 @@ extension KeeperControl on Session {
             ).future,
           )
           .timeout(
-            const Duration(seconds: 20),
+            const Duration(seconds: 10),
             onTimeout: () {
               throw AppNetworkException.timeout();
             },
@@ -125,6 +149,83 @@ extension KeeperControl on Session {
         message: 'Error ending session',
       );
       return false;
+    }
+  }
+
+  Future<void> banParticipant(String participantSlug) async {
+    try {
+      await ref
+          .read(
+            banParticipantProvider(
+              options.eventSlug,
+              participantSlug,
+              state.roomState.version,
+            ).future,
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () => throw AppNetworkException.timeout(),
+          );
+
+      logger.i('Banned participant $participantSlug successfully');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error banning participant $participantSlug',
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> unbanParticipant(String participantSlug) async {
+    try {
+      await ref
+          .read(
+            unbanParticipantProvider(
+              options.eventSlug,
+              participantSlug,
+              state.roomState.version,
+            ).future,
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () => throw AppNetworkException.timeout(),
+          );
+      logger.i('Unbanned participant $participantSlug successfully');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error unbanning participant $participantSlug',
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> muteParticipant(String participantSlug) async {
+    try {
+      await ref
+          .read(
+            muteParticipantProvider(
+              options.eventSlug,
+              participantSlug,
+            ).future,
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw AppNetworkException.timeout();
+            },
+          );
+      logger.i('Muted participant $participantSlug successfully');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error muting participant $participantSlug',
+      );
+      rethrow;
     }
   }
 
@@ -164,6 +265,26 @@ extension KeeperControl on Session {
         error,
         stackTrace: stackTrace,
         message: 'Error reordering participants',
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> forcePassTotem() async {
+    try {
+      final roomState = await ref.read(
+        forcePassTotemProvider(
+          options.eventSlug,
+          state.roomState.version,
+        ).future,
+      );
+      _onRoomChanges(roomState);
+      logger.i('Force passed totem successfully');
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error force passing totem',
       );
       rethrow;
     }

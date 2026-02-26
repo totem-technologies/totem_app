@@ -61,7 +61,7 @@ abstract class RoomsClient {
 
   /// Remove a participant.
   ///
-  /// Keeper removes a participant from the room.
+  /// Emits a remove event to a specific participant.
   @POST(
     '/api/mobile/protected/rooms/{session_slug}/remove/{participant_identity}',
   )

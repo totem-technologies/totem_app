@@ -18,6 +18,21 @@ Map<String, dynamic> _$EventRequestEventSealedAcceptStickEventToJson(
   EventRequestEventSealedAcceptStickEvent instance,
 ) => <String, dynamic>{'type': instance.type};
 
+EventRequestEventSealedBanParticipantEvent
+_$EventRequestEventSealedBanParticipantEventFromJson(
+  Map<String, dynamic> json,
+) => EventRequestEventSealedBanParticipantEvent(
+  type: json['type'] as String,
+  participantSlug: json['participantSlug'] as String,
+);
+
+Map<String, dynamic> _$EventRequestEventSealedBanParticipantEventToJson(
+  EventRequestEventSealedBanParticipantEvent instance,
+) => <String, dynamic>{
+  'type': instance.type,
+  'participantSlug': instance.participantSlug,
+};
+
 EventRequestEventSealedEndRoomEvent
 _$EventRequestEventSealedEndRoomEventFromJson(Map<String, dynamic> json) =>
     EventRequestEventSealedEndRoomEvent(
@@ -38,6 +53,15 @@ const _$EndReasonEnumMap = {
   EndReason.roomEmpty: 'room_empty',
   EndReason.$unknown: r'$unknown',
 };
+
+EventRequestEventSealedForcePassStickEvent
+_$EventRequestEventSealedForcePassStickEventFromJson(
+  Map<String, dynamic> json,
+) => EventRequestEventSealedForcePassStickEvent(type: json['type'] as String);
+
+Map<String, dynamic> _$EventRequestEventSealedForcePassStickEventToJson(
+  EventRequestEventSealedForcePassStickEvent instance,
+) => <String, dynamic>{'type': instance.type};
 
 EventRequestEventSealedPassStickEvent
 _$EventRequestEventSealedPassStickEventFromJson(Map<String, dynamic> json) =>
@@ -70,3 +94,18 @@ _$EventRequestEventSealedStartRoomEventFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$EventRequestEventSealedStartRoomEventToJson(
   EventRequestEventSealedStartRoomEvent instance,
 ) => <String, dynamic>{'type': instance.type};
+
+EventRequestEventSealedUnbanParticipantEvent
+_$EventRequestEventSealedUnbanParticipantEventFromJson(
+  Map<String, dynamic> json,
+) => EventRequestEventSealedUnbanParticipantEvent(
+  type: json['type'] as String,
+  participantSlug: json['participantSlug'] as String,
+);
+
+Map<String, dynamic> _$EventRequestEventSealedUnbanParticipantEventToJson(
+  EventRequestEventSealedUnbanParticipantEvent instance,
+) => <String, dynamic>{
+  'type': instance.type,
+  'participantSlug': instance.participantSlug,
+};

@@ -20,7 +20,7 @@ class CircleIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final button = InkWell(
+    final button = GestureDetector(
       onTap: onPressed,
       child: Container(
         margin: margin,

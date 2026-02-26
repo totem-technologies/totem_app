@@ -11,6 +11,7 @@ import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
+import 'package:totem_app/features/sessions/widgets/banned_participants_sheet.dart';
 import 'package:totem_app/features/sessions/widgets/participant_reorder_sheet.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/extensions.dart';
@@ -171,6 +172,16 @@ class OptionsSheet extends ConsumerWidget {
                   },
                 ),
                 OptionsSheetTile<void>(
+                  title:
+                      'Banned Participants'
+                      '${state.roomState.bannedParticipants.isNotEmpty ? ' (${state.roomState.bannedParticipants.length})' : ''}',
+                  icon: TotemIcons.removePerson,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    showBannedParticipantsSheet(context, currentSession, state);
+                  },
+                ),
+                OptionsSheetTile<void>(
                   title: 'Mute everyone',
                   icon: TotemIcons.microphoneOff,
                   type: OptionsSheetTileType.destructive,
@@ -189,18 +200,11 @@ class OptionsSheet extends ConsumerWidget {
                                 ?.name
                           : null;
                       return OptionsSheetTile<void>(
-                        title: switch (state.roomState.turnState) {
-                          TurnState.passing =>
-                            'Accept Totem for ${nextParticipantName ?? 'Next'}',
-                          TurnState.speaking =>
-                            'Pass Totem to ${nextParticipantName ?? 'Next'}',
-                          _ => 'Next Totem Action',
-                        },
+                        title:
+                            'Force pass to ${nextParticipantName ?? 'the next'}',
                         icon: TotemIcons.passToNext,
                         type: OptionsSheetTileType.destructive,
-                        onTap:
-                            state.roomState.status == RoomStatus.active &&
-                                state.roomState.turnState != TurnState.idle
+                        onTap: state.roomState.turnState != TurnState.idle
                             ? () {
                                 Navigator.of(context).pop();
                                 _onNextTotemAction(
@@ -301,35 +305,19 @@ class OptionsSheet extends ConsumerWidget {
                     .value;
             return ConfirmationDialog(
               title: null,
-              confirmButtonText: switch (state.roomState.turnState) {
-                TurnState.passing => 'Accept Totem',
-                TurnState.speaking => 'Pass Totem',
-                _ => 'Proceed',
-              },
-              content: switch (state.roomState.turnState) {
-                TurnState.passing =>
-                  'Accept the totem on behalf of '
-                      '${nextParticipantName ?? 'the next participant'}?',
-                TurnState.speaking =>
-                  'Pass the totem to '
-                      '${nextParticipantName ?? 'the next participant'}?',
-                _ =>
-                  'Proceed with the next totem action for '
-                      '${nextParticipantName ?? 'the next participant'}?',
-              },
+              confirmButtonText:
+                  'Force pass to ${nextParticipantName ?? 'the next participant'}',
+              content:
+                  'Are you sure you want to force pass the totem? '
+                  'This will end ${state.roomState.currentSpeaker != null ? "the current speaker's turn" : 'the current turn'} '
+                  'and give the totem to ${nextParticipantName ?? 'the next participant'}.',
               contentStyle: theme.textTheme.titleMedium?.copyWith(
                 color: theme.colorScheme.onSurface,
               ),
               type: ConfirmationDialogType.standard,
               onConfirm: () async {
                 try {
-                  if (state.roomState.turnState == TurnState.passing) {
-                    await session.acceptTotem();
-                    return;
-                  } else if (state.roomState.turnState == TurnState.speaking) {
-                    await session.passTotem();
-                    return;
-                  }
+                  await session.forcePassTotem();
                 } catch (error) {
                   if (context.mounted) {
                     ErrorHandler.showErrorSnackBar(

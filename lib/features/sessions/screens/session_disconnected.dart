@@ -14,7 +14,6 @@ import 'package:totem_app/features/home/repositories/home_screen_repository.dart
 import 'package:totem_app/features/profile/screens/user_feedback.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
-import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/features/spaces/widgets/space_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
@@ -22,6 +21,20 @@ import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+enum _SessionDisconnectedReason {
+  /// The session has ended normally, usually by the keeper.
+  keeperEnded,
+
+  /// The keeper left the session and didn't come back within the timeout period.
+  keeperAbsent,
+
+  /// The keeper never joined the session and it ended after the timeout period.
+  roomEmpty,
+
+  /// The user was kicked out of the session by the keeper.
+  removed,
+}
 
 class SessionDisconnectedScreen extends ConsumerStatefulWidget {
   const SessionDisconnectedScreen({required this.session, super.key});
@@ -118,10 +131,27 @@ class _SessionDisconnectedScreenState
 
   @override
   Widget build(BuildContext context) {
+    // TODO(bdlukaa): Implement a landscape version of this screen.
     final theme = Theme.of(context);
     final recommended = ref.watch(getRecommendedSessionsProvider());
     final sessionReason = ref.watch(
-      currentSessionProvider.select((s) => s?.reason),
+      currentSessionStateProvider.select((s) {
+        if (s?.removed ?? false) {
+          return _SessionDisconnectedReason.removed;
+        } else if (s?.roomState.status == RoomStatus.ended &&
+            s?.roomState.statusDetail
+                is RoomStateStatusDetailSealedEndedDetail) {
+          final detail =
+              s!.roomState.statusDetail
+                  as RoomStateStatusDetailSealedEndedDetail;
+          return switch (detail.reason) {
+            EndReason.keeperAbsent => _SessionDisconnectedReason.keeperAbsent,
+            EndReason.roomEmpty => _SessionDisconnectedReason.roomEmpty,
+            EndReason.keeperEnded ||
+            EndReason.$unknown => _SessionDisconnectedReason.keeperEnded,
+          };
+        }
+      }),
     );
 
     final nextEvents = widget.session.space.nextEvents
@@ -146,12 +176,12 @@ class _SessionDisconnectedScreenState
                 header: true,
                 child: Text(
                   switch (sessionReason) {
-                    SessionDisconnectedReason.keeperLeft ||
-                    SessionDisconnectedReason.keeperNotJoined =>
+                    _SessionDisconnectedReason.keeperAbsent =>
                       'Session will be rescheduled',
-                    SessionDisconnectedReason.removed =>
+                    _SessionDisconnectedReason.removed =>
                       'You’ve been removed from this session.',
-                    SessionDisconnectedReason.finished || _ => 'Session Ended',
+                    _SessionDisconnectedReason.keeperEnded ||
+                    _ => 'Session Ended',
                   },
                   style: theme.textTheme.headlineMedium,
                   textAlign: TextAlign.center,
@@ -159,15 +189,11 @@ class _SessionDisconnectedScreenState
               ),
               Text.rich(
                 switch (sessionReason) {
-                  SessionDisconnectedReason.keeperLeft => const TextSpan(
+                  _SessionDisconnectedReason.keeperAbsent => const TextSpan(
                     text:
                         'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
                   ),
-                  SessionDisconnectedReason.keeperNotJoined => const TextSpan(
-                    text:
-                        'The session ended as the Keeper did not join on time. We’ll notify you when it’s rescheduled.',
-                  ),
-                  SessionDisconnectedReason.removed => TextSpan(
+                  _SessionDisconnectedReason.removed => TextSpan(
                     text: 'Please take a moment to review our ',
                     children: [
                       TextSpan(
@@ -190,7 +216,6 @@ class _SessionDisconnectedScreenState
                         text: 'help@totem.org',
                         style: const TextStyle(
                           color: Colors.blue,
-                          decoration: TextDecoration.underline,
                         ),
                         recognizer: TapGestureRecognizer()
                           ..onTap = () {
@@ -200,14 +225,14 @@ class _SessionDisconnectedScreenState
                       const TextSpan(text: '.'),
                     ],
                   ),
-                  SessionDisconnectedReason.finished || _ => const TextSpan(
+                  _SessionDisconnectedReason.keeperEnded || _ => const TextSpan(
                     text:
                         'Thank you for joining!\nWe hope you found the session enjoyable.',
                   ),
                 },
                 textAlign: TextAlign.center,
               ),
-              if (sessionReason == SessionDisconnectedReason.finished) ...[
+              if (sessionReason == _SessionDisconnectedReason.keeperEnded)
                 _SessionFeedbackWidget(
                   state: _thumbState,
                   onThumbUpPressed: () async {
@@ -238,7 +263,6 @@ class _SessionDisconnectedScreenState
                     );
                   },
                 ),
-              ],
 
               if (nextEvents.isNotEmpty) ...[
                 Text(
@@ -251,8 +275,8 @@ class _SessionDisconnectedScreenState
                 for (final nextEvent in nextEvents)
                   Flexible(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxHeight: 140,
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.textScalerOf(context).scale(140),
                       ),
                       child: SmallSpaceCard(
                         space: MobileSpaceDetailSchemaExtension.copyWith(
@@ -283,8 +307,10 @@ class _SessionDisconnectedScreenState
                       for (final event in data.take(2)) {
                         yield Flexible(
                           child: ConstrainedBox(
-                            constraints: const BoxConstraints(
-                              maxHeight: 140,
+                            constraints: BoxConstraints(
+                              maxHeight: MediaQuery.textScalerOf(
+                                context,
+                              ).scale(140),
                             ),
                             child: SmallSpaceCard.fromSessionDetailSchema(
                               event,

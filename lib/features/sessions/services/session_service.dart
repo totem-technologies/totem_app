@@ -34,24 +34,10 @@ part 'keeper_control.dart';
 part 'participant_control.dart';
 part 'session_service.g.dart';
 
-enum SessionDisconnectedReason {
-  /// The session has ended normally, usually by the keeper.
-  finished,
-
-  /// The keeper left the session and didn't come back within the timeout period.
-  keeperLeft,
-
-  /// The keeper never joined the session, and the timeout period has passed.
-  keeperNotJoined,
-
-  /// The user was kicked out of the session by the keeper.
-  removed,
-}
-
 enum SessionCommunicationTopics {
   emoji('lk-emoji-topic'),
   chat('lk-chat-topic'),
-  lifecycle('lk-lifecycle-topic');
+  participantRemoved('lk-participant-removed-topic');
 
   const SessionCommunicationTopics(this.topic);
   final String topic;
@@ -115,12 +101,23 @@ class SessionRoomState {
     this.connectionState = RoomConnectionState.connecting,
     this.hasKeeperDisconnected = false,
     this.participants = const [],
+    this.removed = false,
   });
 
+  /// The current connection state of the room.
   final RoomConnectionState connectionState;
+
+  /// The current state of the room, as published by the backend and LiveKit metadata.
   final RoomState roomState;
+
+  /// Whether the keeper has disconnected from the session.
   final bool hasKeeperDisconnected;
+
+  /// The participants in the session.
   final List<Participant> participants;
+
+  /// Whether the local participant was removed from the session.
+  final bool removed;
 
   bool isMyTurn(RoomContext room) {
     return roomState.currentSpeaker != null &&
@@ -141,6 +138,7 @@ class SessionRoomState {
     RoomState? roomState,
     bool? hasKeeperDisconnected,
     List<Participant>? participants,
+    bool? removed,
   }) {
     return SessionRoomState(
       connectionState: connectionState ?? this.connectionState,
@@ -148,6 +146,7 @@ class SessionRoomState {
       hasKeeperDisconnected:
           hasKeeperDisconnected ?? this.hasKeeperDisconnected,
       participants: participants ?? this.participants,
+      removed: removed ?? this.removed,
     );
   }
 
@@ -157,6 +156,7 @@ class SessionRoomState {
         'connectionState: $connectionState, '
         'sessionState: $roomState, '
         'hasKeeperDisconnected: $hasKeeperDisconnected, '
+        'removed: $removed'
         ')';
   }
 
@@ -183,19 +183,25 @@ class SessionRoomState {
 
 @riverpod
 class Session extends _$Session {
+  /// The [RoomContext] of the current session, which holds the LiveKit room and related information.
   RoomContext? context;
   EventsListener<RoomEvent>? _listener;
-  Timer? _timer;
+
+  /// The sync timer periodically checks for changes in the room state
+  /// and participants list, to keep the UI up to date.
+  Timer? _syncTimer;
   static const syncTimerDuration = Duration(seconds: 20);
 
   SessionOptions? _options;
   String? _lastMetadata;
   SessionDetailSchema? event;
 
-  bool _hasKeeperEverJoined = false;
   Timer? _notificationTimer;
-  List<VoidCallback> closeKeeperLeftNotification = [];
-  SessionDisconnectedReason reason = SessionDisconnectedReason.finished;
+
+  /// A list of callbacks that close the "keeper left" notification,
+  /// so that they can be called when the keeper comes back or the
+  /// user leaves the session.
+  List<VoidCallback> closeKeeperLeftNotificationCallbacks = [];
 
   StreamSubscription<void>? _becomingNoisySubscription;
   StreamSubscription<audio.AudioDevicesChangedEvent>?
@@ -203,7 +209,7 @@ class Session extends _$Session {
   bool _userSpeakerPreference = true;
 
   static const defaultCameraOptions = CameraCaptureOptions(
-    params: VideoParametersPresets.h540_169,
+    params: VideoParametersPresets.h540_43,
   );
 
   @override
@@ -213,8 +219,11 @@ class Session extends _$Session {
         .watch(eventProvider(options.eventSlug))
         .whenData((event) => this.event = event);
 
-    _timer?.cancel();
-    _timer = Timer.periodic(Session.syncTimerDuration, (_) => _onRoomChanges());
+    _syncTimer?.cancel();
+    _syncTimer = Timer.periodic(
+      Session.syncTimerDuration,
+      (_) => _onRoomChanges(),
+    );
 
     context = RoomContext(
       url: AppConfig.liveKitUrl,
@@ -283,6 +292,9 @@ class Session extends _$Session {
           _onRoomChanges();
         }
       })
+      ..on<RoomDisconnectedEvent>((event) {
+        logger.d('Disconnected from session. Reason: ${event.reason}');
+      })
       ..on<DataReceivedEvent>(_onDataReceived)
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
       ..on<ParticipantConnectedEvent>(_onParticipantConnected);
@@ -309,9 +321,6 @@ class Session extends _$Session {
     );
   }
 
-  static const keeperNotJoinedTimeout = Duration(minutes: 5);
-  bool get hasKeeperEverJoined => _hasKeeperEverJoined;
-
   /// Whether the keeper is currently in the session.
   bool get hasKeeper => state.participants.any((p) => isKeeper(p.identity));
 
@@ -330,7 +339,6 @@ class Session extends _$Session {
       );
 
       final hasKeeper = sortedParticipants.any((p) => isKeeper(p.identity));
-      if (!_hasKeeperEverJoined && hasKeeper) _hasKeeperEverJoined = true;
       if (state.hasKeeperDisconnected && hasKeeper) {
         _onKeeperConnected();
       }
@@ -384,7 +392,10 @@ class Session extends _$Session {
           false,
     );
     // context.room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
-    state = state.copyWith(connectionState: RoomConnectionState.connected);
+    state = state.copyWith(
+      connectionState: RoomConnectionState.connected,
+      removed: false,
+    );
 
     _userSpeakerPreference = context?.room.speakerOn ?? true;
     options.onConnected();
@@ -437,64 +448,80 @@ class Session extends _$Session {
       }
     }
 
-    // TODO(bdlukaa): This is very error prone.
-    // If the following flow happens, the user will be disconnected even if the keeper joins later:
-    //    1. Keeper joins the session.
-    //    2. User joins the session late, after the keeper.
-    //    3. User leaves the room.
-    //    4. Keeper leaves the room.
-    //    5. User joins the room again, but the keeper is not there.
-    //    6. After 10 seconds, the user is disconnected because the keeper "never joined".
-    //
-    // This should be controlled by the backend instead.
-    // final startedAt = event?.start;
-    // if (startedAt != null &&
-    //     !_hasKeeperEverJoined &&
-    //     DateTime.now().isAfter(
-    //       startedAt.add(Session.keeperNotJoinedTimeout),
-    //     )) {
-    //   reason = SessionEndedReason.keeperNotJoined;
-    //   context.disconnect();
-    //   return;
-    // }
-
     if (state.roomState.status == RoomStatus.ended) {
       _onSessionEnd();
     }
   }
 
-  Map<String, AppLifecycleState> userStates = {};
   void _onDataReceived(DataReceivedEvent event) {
-    if (event.topic == null || event.participant == null) return;
+    if (event.topic == null) return;
     final data = const Utf8Decoder().convert(event.data);
+    logger.d(
+      '(${context?.room.localParticipant}) Received data on topic "${event.topic}" from participant "${event.participant?.identity}": $data',
+    );
 
-    if (event.topic == SessionCommunicationTopics.emoji.topic) {
-      _options?.onEmojiReceived(event.participant!.identity, data);
-    } else if (event.topic == SessionCommunicationTopics.chat.topic) {
-      try {
-        final message = ChatMessage.fromMap(
-          jsonDecode(data) as Map<String, dynamic>,
-          event.participant,
+    final topic = SessionCommunicationTopics.values.firstWhereOrNull(
+      (t) => t.topic == event.topic,
+    );
+
+    if (topic == null) {
+      logger.w('Received data on unknown topic "${event.topic}". Ignoring.');
+      return;
+    }
+
+    switch (topic) {
+      case SessionCommunicationTopics.emoji:
+        _options?.onEmojiReceived(event.participant!.identity, data);
+      case SessionCommunicationTopics.chat:
+        try {
+          final message = ChatMessage.fromMap(
+            jsonDecode(data) as Map<String, dynamic>,
+            event.participant,
+          );
+          _options?.onMessageReceived(
+            event.participant!.identity,
+            message.message,
+          );
+        } catch (error, stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Error decoding chat message',
+          );
+        }
+      case SessionCommunicationTopics.participantRemoved:
+        logger.d(
+          'Received participant removed event from ${event.participant?.identity}: $data',
         );
-        _options?.onMessageReceived(
-          event.participant!.identity,
-          message.message,
-        );
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Error decoding chat message',
-        );
-      }
-    } else if (event.topic == SessionCommunicationTopics.lifecycle.topic) {
-      logger.d(
-        'Received lifecycle event from ${event.participant!.identity}: $data',
-      );
-      userStates[event.participant!.identity] =
-          AppLifecycleState.values.firstWhereOrNull((e) => e.name == data) ??
-          AppLifecycleState.resumed;
-      ref.notifyListeners();
+        final json = jsonDecode(data) as Map<String, dynamic>;
+        // final action = json['action'] as String?;
+        final identity = json['identity'] as String?;
+        // final reason = json['reason'] as String?;
+
+        // If participant identity is null, the message comes from the server
+        if (event.participant?.identity != null &&
+            event.participant!.identity != state.roomState.keeper) {
+          logger.d(
+            'Participant removed event is not from the keeper, ignoring.',
+          );
+          return;
+        }
+
+        try {
+          if (identity == context?.room.localParticipant?.identity) {
+            logger.d(
+              'Received participant removed event for local participant.',
+            );
+            state = state.copyWith(removed: true);
+            context?.disconnect();
+          }
+        } catch (error, stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Error decoding participant removed event',
+          );
+        }
     }
   }
 
@@ -514,7 +541,8 @@ class Session extends _$Session {
   }
 
   Future<void> _onSessionEnd() async {
-    reason = SessionDisconnectedReason.finished;
+    logger.d('Session has ended. Cleaning up and disconnecting.');
+    endBackgroundMode();
     context?.disconnect();
   }
 
@@ -540,8 +568,8 @@ class Session extends _$Session {
       WakelockPlus.disable();
     } catch (_) {}
 
-    _timer?.cancel();
-    _timer = null;
+    _syncTimer?.cancel();
+    _syncTimer = null;
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
