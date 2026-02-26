@@ -97,9 +97,14 @@ class _SpeakingIndicatorState extends State<SpeakingIndicator> {
 }
 
 class SpeakingIndicatorOrEmoji extends StatelessWidget {
-  const SpeakingIndicatorOrEmoji({required this.participant, super.key});
+  const SpeakingIndicatorOrEmoji({
+    required this.participant,
+    this.backgroundColor = Colors.black54,
+    super.key,
+  });
 
   final Participant participant;
+  final Color backgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -137,15 +142,13 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
       child: Container(
         width: 20,
         height: 20,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.black54,
+          color: backgroundColor,
         ),
         padding: const EdgeInsetsDirectional.all(2),
         alignment: Alignment.center,
-        child: SpeakingIndicator(
-          participant: participant,
-        ),
+        child: SpeakingIndicator(participant: participant),
       ),
     );
   }

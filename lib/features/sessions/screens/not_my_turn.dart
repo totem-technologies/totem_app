@@ -76,15 +76,12 @@ class NotMyTurn extends ConsumerWidget {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.black54,
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 0.5,
-                              ),
                               boxShadow: kElevationToShadow[6],
                             ),
                             padding: const EdgeInsetsDirectional.all(4),
                             child: SpeakingIndicatorOrEmoji(
                               participant: activeSpeaker,
+                              backgroundColor: Colors.transparent,
                             ),
                           ),
                           if (amKeeper &&
