@@ -550,11 +550,14 @@ class OptionsSheetTile<T> extends StatelessWidget {
       },
       icon: options == null ? TotemIcons.cameraOff : TotemIcons.cameraOn,
       trailing: options != null
-          ? IconButton(
-              icon: const Icon(Icons.switch_camera_outlined),
-              onPressed: onSwitch,
+          ? IgnorePointer(
+              child: IconButton(
+                icon: const Icon(Icons.switch_camera_outlined),
+                onPressed: () {},
+              ),
             )
           : null,
+      onTap: onSwitch,
     );
   }
 
@@ -567,14 +570,17 @@ class OptionsSheetTile<T> extends StatelessWidget {
       return OptionsSheetTile<MediaDevice>(
         title: 'Speaker',
         icon: TotemIcons.speaker,
-        trailing: Switch.adaptive(
-          value: options.speakerOn ?? false,
-          onChanged: (enabled) {
-            onSwitch(
-              options.copyWith(speakerOn: enabled),
-            );
-          },
+        trailing: IgnorePointer(
+          child: Switch.adaptive(
+            value: options.speakerOn ?? false,
+            onChanged: (enabled) {},
+          ),
         ),
+        onTap: () {
+          onSwitch(
+            options.copyWith(speakerOn: !(options.speakerOn ?? false)),
+          );
+        },
       );
     } else {
       return MediaDeviceSelectButton(
