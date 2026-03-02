@@ -200,6 +200,7 @@ class NotificationsService {
         channelDescription: 'Spaces',
         icon: '@drawable/ic_notification',
         largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+        color: Color(0xFFF4DC92),
         importance: Importance.max,
         priority: Priority.high,
         styleInformation: DefaultStyleInformation(true, true),
