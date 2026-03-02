@@ -133,7 +133,7 @@ class _EmojiBarOverlayState extends State<_EmojiBarOverlay>
                 widget.onEmojiSelected(emoji);
                 _startTimer();
               },
-              emojis: const ['🫶🏼', '💖', '😢', '🔥', '👏', '🎉'],
+              emojis: const ['🫶', '💖', '😢', '🔥', '👏', '🎉'],
             ),
           ),
         ),
