@@ -480,6 +480,16 @@ class ParticipantVideo extends ConsumerStatefulWidget {
 }
 
 class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
+  TrackPublication<Track>? get videoTrack {
+    if (widget.participant is RemoteParticipant) {
+      return widget.participant.getTrackPublicationBySource(TrackSource.camera);
+    } else {
+      return widget.participant.videoTrackPublications
+          .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)
+          .firstOrNull;
+    }
+  }
+
   bool _locked = false;
   void _sendRawUpdateTrackSettings(bool isVisible, Size size) {
     if (_locked) return;
@@ -487,18 +497,15 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     try {
       _locked = true;
 
-      final videoTrack = widget.participant
-          .getTrackPublicationBySource(TrackSource.camera)
-          ?.track;
       if (videoTrack == null ||
-          videoTrack.sid == null ||
+          videoTrack?.sid == null ||
           widget.participant is! RemoteParticipant) {
         return;
       }
 
       // Construct the exact protobuf payload
       final settings = lk_rtc.UpdateTrackSettings(
-        trackSids: [videoTrack.sid!],
+        trackSids: [videoTrack!.sid],
         disabled: !isVisible,
       );
 
@@ -537,12 +544,9 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(userProfileProvider(widget.participant.identity));
+    final track = videoTrack;
 
-    final videoTrack = widget.participant.getTrackPublicationBySource(
-      TrackSource.camera,
-    );
-
-    if (videoTrack != null && videoTrack.subscribed && !videoTrack.muted) {
+    if (track != null && track.subscribed && !track.muted) {
       return IgnorePointer(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -554,8 +558,8 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
               });
             }
             return VideoTrackRenderer(
-              key: ValueKey(videoTrack.track!.sid),
-              videoTrack.track! as VideoTrack,
+              key: ValueKey(track.track!.sid),
+              track.track! as VideoTrack,
               fit: VideoViewFit.cover,
               // Use platform view for better CPU performance on iOS.
               // The [VideoTrackRenderer] widget only supports platform views for iOS.

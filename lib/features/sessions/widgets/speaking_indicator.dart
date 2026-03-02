@@ -22,7 +22,20 @@ class SpeakingIndicator extends StatefulWidget {
 }
 
 class _SpeakingIndicatorState extends State<SpeakingIndicator> {
-  EventsListener<ParticipantEvent>? _listener;
+  EventsListener<ParticipantEvent>? _participantListener;
+  EventsListener<TrackEvent>? _trackListener;
+
+  TrackPublication<Track>? get audioTrack {
+    if (widget.participant is RemoteParticipant) {
+      return widget.participant.getTrackPublicationBySource(
+        TrackSource.microphone,
+      );
+    } else {
+      return widget.participant.audioTrackPublications
+          .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)
+          .firstOrNull;
+    }
+  }
 
   @override
   void initState() {
@@ -39,48 +52,54 @@ class _SpeakingIndicatorState extends State<SpeakingIndicator> {
   }
 
   void setup() {
-    _listener?.dispose();
-    _listener = widget.participant.createListener();
-    _listener!
+    _participantListener?.dispose();
+    _participantListener = widget.participant.createListener();
+    _participantListener!
       ..on<TrackMutedEvent>(_onTrackMuted)
       ..on<TrackUnmutedEvent>(_onTrackUnmuted);
+
+    _trackListener?.dispose();
+    _trackListener = null;
+    if (audioTrack?.track != null) {
+      _trackListener = audioTrack!.track!.createListener();
+      _trackListener!.listen(_onTrackEvent);
+    }
   }
 
   void _onTrackMuted(TrackMutedEvent event) {
     if (!mounted) return;
-    if (event.publication.source == TrackSource.microphone) {
-      setState(() {});
-    }
+    if (event.publication.source == TrackSource.microphone) setState(() {});
   }
 
   void _onTrackUnmuted(TrackUnmutedEvent event) {
     if (!mounted) return;
-    if (event.publication.source == TrackSource.microphone) {
-      setState(() {});
-    }
+    if (event.publication.source == TrackSource.microphone) setState(() {});
+  }
+
+  void _onTrackEvent(TrackEvent event) {
+    if (!mounted) return;
+    setState(() {});
   }
 
   @override
   void dispose() {
-    _listener?.dispose();
+    _participantListener?.dispose();
+    _trackListener?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final audioTrack = widget.participant.getTrackPublicationBySource(
-      TrackSource.microphone,
-    );
-    if (audioTrack == null || !audioTrack.subscribed || audioTrack.muted) {
-      return TotemIcon(
-        TotemIcons.microphoneOff,
-        size: 20,
-        color: widget.foregroundColor,
-      );
-    } else {
+    // if (audioTrack == null &&
+    //     !audioTrack.subscribed &&
+    //     audioTrack.muted &&
+    //     audioTrack.track == null &&
+    //     !audioTrack.track!.isActive &&
+    //     audioTrack.track!.muted) {
+    if (audioTrack != null && audioTrack!.subscribed && !audioTrack!.muted) {
       return RepaintBoundary(
         child: SoundWaveformWidget(
-          audioTrack: audioTrack.track as AudioTrack?,
+          audioTrack: audioTrack!.track as AudioTrack?,
           participant: widget.participant,
           options: AudioVisualizerWidgetOptions(
             color: widget.foregroundColor,
@@ -91,6 +110,12 @@ class _SpeakingIndicatorState extends State<SpeakingIndicator> {
             maxHeight: 12,
           ),
         ),
+      );
+    } else {
+      return TotemIcon(
+        TotemIcons.microphoneOff,
+        size: 20,
+        color: widget.foregroundColor,
       );
     }
   }
