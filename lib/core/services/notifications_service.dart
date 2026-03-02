@@ -98,7 +98,7 @@ class NotificationsService {
       // Set up local notifications
       {
         const initializationSettings = InitializationSettings(
-          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          android: AndroidInitializationSettings('@drawable/ic_notification'),
           iOS: DarwinInitializationSettings(
             requestAlertPermission: false,
             requestBadgePermission: false,
@@ -198,6 +198,8 @@ class NotificationsService {
         'spaces',
         'Spaces',
         channelDescription: 'Spaces',
+        icon: '@drawable/ic_notification',
+        largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
         importance: Importance.max,
         priority: Priority.high,
         styleInformation: DefaultStyleInformation(true, true),
