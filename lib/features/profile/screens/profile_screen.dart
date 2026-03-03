@@ -112,7 +112,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               ProfileTile(
                 icon: const TotemIcon(TotemIcons.logout),
-                title: 'Logout',
+                title: 'Sign out',
                 onTap: () => showLogoutDialog(context),
               ),
               Text(

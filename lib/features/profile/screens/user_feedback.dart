@@ -150,7 +150,7 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
                   const SizedBox(height: 8),
 
                   Text(
-                    'We love hearing about how we can improve Totem. If you have any feedback, please let us know!',
+                    'We love hearing about how we can improve Totem. Leave any feedback you have here.',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                       height: 1.4,

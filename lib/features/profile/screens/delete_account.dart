@@ -25,7 +25,7 @@ class DeleteAccountDialog extends ConsumerWidget {
     final auth = ref.watch(authControllerProvider.notifier);
     return ConfirmationDialog(
       content:
-          'This action will permanently delete your account. '
+          'This action will permanently delete your account and sign you out. '
           'Are you sure you want to continue?',
       confirmButtonText: 'Delete account',
       onConfirm: auth.deleteAccount,
@@ -40,8 +40,8 @@ class LogoutDialog extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authControllerProvider.notifier);
     return ConfirmationDialog(
-      content: 'Are you sure you want to log out?',
-      confirmButtonText: 'Log out',
+      content: 'Are you sure you want to sign out?',
+      confirmButtonText: 'Sign out',
       onConfirm: auth.logout,
     );
   }

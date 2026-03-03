@@ -181,7 +181,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         const SizedBox(height: 16),
 
         Text(
-          "We'll send you a 6-digit PIN to your email.",
+          "We'll send a 6-digit PIN to your email.",
           style: theme.textTheme.bodySmall,
           textAlign: TextAlign.center,
         ),

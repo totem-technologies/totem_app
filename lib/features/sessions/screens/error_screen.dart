@@ -16,25 +16,25 @@ class RoomErrorScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     var title = 'Something went wrong';
     var subtitle =
-        'We couldn’t connect you to this space. '
+        "We couldn't connect you to this session. "
         'Please check your internet connection or try again.';
     var canRetry = true;
 
     if (error is SessionErrorResponse) {
       switch ((error! as SessionErrorResponse).code) {
         case ErrorCode.banned:
-          title = 'You have been banned from this space.';
+          title = 'You have been permanently removed from this session.';
           subtitle =
-              'You can still join other spaces, but you won’t be able to access this one.';
+              "You can still join other sessions, but you won't be able to access this one.";
           canRetry = false;
         case ErrorCode.roomAlreadyEnded:
-          title = 'This space has ended';
+          title = 'This session has ended';
           subtitle =
-              'This space has already ended. You can still join other spaces.';
+              'This session has already ended. You can still join other sessions.';
         case ErrorCode.notJoinable:
-          title = 'This space is not joinable';
+          title = 'This session cannot be joined';
           subtitle =
-              'This space is not joinable. Please check if the link is correct or try again later.';
+              'You cannot join the session at this time. Please try again later.';
         default:
           break;
       }

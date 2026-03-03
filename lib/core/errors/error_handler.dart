@@ -84,11 +84,11 @@ class ErrorHandler {
         error is TimeoutException) {
       return 'Oops! Something went wrong.\nPlease try again later.';
     } else if (error is AppAuthException) {
-      return 'Authentication error. Please log in again.';
+      return 'Authentication error. Please sign in again.';
     } else if (error is AppDataException ||
         error is FormatException ||
         error is PlatformException) {
-      return 'There was an issue processing your data. Please try again.';
+      return 'There was an unexpected server error. The team has been notified. Please try again.';
     } else {
       return 'Oops! Something went wrong.';
     }
@@ -177,7 +177,7 @@ class ErrorHandler {
         context,
         title: 'Authentication Error',
         message: message,
-        buttonText: 'Log In Again',
+        buttonText: 'Sign In Again',
       );
     } else
     // For network errors, we might want to offer a retry

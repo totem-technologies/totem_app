@@ -80,7 +80,7 @@ class SubscribedSpacesScreen extends ConsumerWidget {
                         ),
                         child: Text(
                           'These are the Spaces you will get notifications for '
-                          'when new sessions are coming up.',
+                          'when new sessions come up.',
                           textAlign: TextAlign.center,
                         ),
                       ),
