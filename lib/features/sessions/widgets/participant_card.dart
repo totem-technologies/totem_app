@@ -44,13 +44,15 @@ class ParticipantCard extends ConsumerWidget {
     const overlayPadding = 6.0;
     final isKeeper = session?.space.author.slug == participant.identity;
 
+    const borderRadius = 20.0;
+
     return RepaintBoundary(
       child: AspectRatio(
         aspectRatio: 16 / 21,
         child: Container(
           decoration: BoxDecoration(
             color: Colors.black,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(borderRadius),
             border: Border.all(
               color: isKeeper ? AppTheme.yellow : Colors.white,
               width: 2,
@@ -78,7 +80,7 @@ class ParticipantCard extends ConsumerWidget {
           ),
           clipBehavior: Clip.hardEdge,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(borderRadius - 2),
             clipBehavior: Clip.hardEdge,
             child: Stack(
               clipBehavior: Clip.none,

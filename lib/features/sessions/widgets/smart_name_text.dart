@@ -1,16 +1,17 @@
-import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 
 class SmartNameText extends StatelessWidget {
   const SmartNameText({
     required this.name,
     required this.style,
-    super.key,
     this.minFontSize = 10.0,
+    this.textAlign = TextAlign.center,
+    super.key,
   });
   final String name;
   final TextStyle style;
   final double minFontSize;
+  final TextAlign textAlign;
 
   @override
   Widget build(BuildContext context) {
@@ -28,12 +29,11 @@ class SmartNameText extends StatelessWidget {
 
         final textToShow = fullFits ? fullName : abbreviatedName;
 
-        return AutoSizeText(
-          textToShow,
-          textAlign: TextAlign.center,
+        return Text(
+          textToShow.trim(),
+          textAlign: textAlign,
           maxLines: 1,
-          minFontSize: minFontSize,
-          overflow: TextOverflow.fade,
+          overflow: TextOverflow.ellipsis,
           style: style,
         );
       },
