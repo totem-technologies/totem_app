@@ -43,7 +43,6 @@ class ParticipantCard extends ConsumerWidget {
 
     const overlayPadding = 6.0;
     final isKeeper = session?.space.author.slug == participant.identity;
-    const shadowColor = Color(0x80FFD000);
 
     return RepaintBoundary(
       child: AspectRatio(
@@ -53,7 +52,7 @@ class ParticipantCard extends ConsumerWidget {
             color: Colors.black,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isKeeper ? const Color(0xFFFFD000) : Colors.white,
+              color: isKeeper ? AppTheme.yellow : Colors.white,
               width: 2,
             ),
             boxShadow: isKeeper
@@ -62,17 +61,17 @@ class ParticipantCard extends ConsumerWidget {
                       offset: Offset(0, 3),
                       blurRadius: 1,
                       spreadRadius: -2,
-                      color: shadowColor,
+                      color: AppTheme.yellow,
                     ),
                     BoxShadow(
                       offset: Offset(0, 2),
                       blurRadius: 2,
-                      color: shadowColor,
+                      color: AppTheme.yellow,
                     ),
                     BoxShadow(
                       offset: Offset(0, 1),
                       blurRadius: 5,
-                      color: shadowColor,
+                      color: AppTheme.yellow,
                     ),
                   ]
                 : null,

@@ -76,6 +76,7 @@ extension DevicesControl on Session {
     }
     return context
         ?.room
+        // ignore: invalid_use_of_internal_member
         .engine
         .roomOptions
         .defaultCameraCaptureOptions
@@ -153,6 +154,7 @@ extension DevicesControl on Session {
   }
 
   String? get selectedAudioOutputDeviceId {
+    // ignore: invalid_use_of_internal_member
     return context?.room.engine.roomOptions.defaultAudioOutputOptions.deviceId;
   }
 
