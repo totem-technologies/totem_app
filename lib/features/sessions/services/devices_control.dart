@@ -168,7 +168,7 @@ extension DevicesControl on Session {
   }
 
   Future<void> enableMicrophone() async {
-    if (context?.microphoneOpened ?? false) return;
+    if (context?.isMicrophoneEnabled ?? false) return;
 
     if (context?.localParticipant != null) {
       await context?.localParticipant?.setMicrophoneEnabled(true);
@@ -181,7 +181,7 @@ extension DevicesControl on Session {
   }
 
   Future<void> disableMicrophone() async {
-    if (!(context?.microphoneOpened ?? false)) {
+    if (!(context?.isMicrophoneEnabled ?? false)) {
       return;
     }
     try {

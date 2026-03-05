@@ -385,25 +385,27 @@ class Session extends _$Session {
 
     // If the user joined in the waiting
     // If the keeper is not in the room, the participants will start unmuted.
-    context!.room.localParticipant!.setMicrophoneEnabled(
-      () {
-            if (state.roomState.status == RoomStatus.waitingRoom &&
-                !hasKeeper) {
-              // If joined in the waiting room, everyone can join unmuted.
+    final isMicrophoneEnabled =
+        () {
+          if (state.roomState.status == RoomStatus.waitingRoom && !hasKeeper) {
+            // If joined in the waiting room, everyone can join unmuted.
+            return _options?.microphoneEnabled;
+          }
+          if (state.roomState.status == RoomStatus.active) {
+            if (state.speakingNow == context!.room.localParticipant?.identity) {
+              // If it's the user's turn to speak, they can join unmuted.
               return _options?.microphoneEnabled;
             }
-            if (state.roomState.status == RoomStatus.active) {
-              if (state.speakingNow ==
-                  context!.room.localParticipant?.identity) {
-                // If it's the user's turn to speak, they can join unmuted.
-                return _options?.microphoneEnabled;
-              }
-            }
-            // In other states, only the keeper can join unmuted.
-            return isKeeper() && (_options?.microphoneEnabled ?? false);
-          }() ??
-          false,
-    );
+          }
+          // In other states, only the keeper can join unmuted.
+          return isKeeper() && (_options?.microphoneEnabled ?? false);
+        }() ??
+        false;
+    if (isMicrophoneEnabled) {
+      enableMicrophone();
+    } else {
+      disableMicrophone();
+    }
     // context.room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
     state = state.copyWith(
       connectionState: RoomConnectionState.connected,

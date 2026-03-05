@@ -555,6 +555,23 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     }
   }
 
+  EventsListener<ParticipantEvent>? _listener;
+  @override
+  void initState() {
+    super.initState();
+    _listener = widget.participant.createListener()..on(_onParticipantUpdated);
+  }
+
+  void _onParticipantUpdated(_) {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _listener?.dispose();
+    super.dispose();
+  }
+
   BoxConstraints? _lastConstraints;
 
   @override
