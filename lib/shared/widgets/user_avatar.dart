@@ -9,7 +9,7 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/shared/network.dart';
 
 class UserAvatar extends ConsumerWidget {
-  const UserAvatar({
+  const UserAvatar.custom({
     super.key,
     this.radius = 30,
     this.image,
@@ -20,7 +20,7 @@ class UserAvatar extends ConsumerWidget {
     this.borderRadius = const BorderRadius.all(Radius.circular(100)),
   });
 
-  factory UserAvatar.fromUserSchema(
+  static Widget fromUserSchema(
     PublicUserSchema? author, {
     double radius = 30,
     bool showImage = true,
@@ -30,18 +30,36 @@ class UserAvatar extends ConsumerWidget {
       Radius.circular(100),
     ),
   }) {
-    return UserAvatar(
-      image:
-          author?.profileImage != null &&
-              author?.profileAvatarType == ProfileAvatarTypeEnum.im
-          ? CachedNetworkImageProvider(getFullUrl(author!.profileImage!))
-          : null,
-      seed: author?.profileAvatarSeed,
-      radius: radius,
-      showImage: showImage,
-      onTap: onTap,
-      borderWidth: borderWidth,
-      borderRadius: borderRadius,
+    return Consumer(
+      builder: (context, ref, child) {
+        final userSlug = ref.watch(
+          authControllerProvider.select((auth) => auth.user?.slug),
+        );
+        if (author?.slug == userSlug) {
+          return UserAvatar.currentUser(
+            radius: radius,
+            showImage: showImage,
+            onTap: onTap,
+            borderWidth: borderWidth,
+            borderRadius: borderRadius,
+          );
+        }
+
+        return child!;
+      },
+      child: UserAvatar.custom(
+        image:
+            author?.profileImage != null &&
+                author?.profileAvatarType == ProfileAvatarTypeEnum.im
+            ? CachedNetworkImageProvider(getFullUrl(author!.profileImage!))
+            : null,
+        seed: author?.profileAvatarSeed,
+        radius: radius,
+        showImage: showImage,
+        onTap: onTap,
+        borderWidth: borderWidth,
+        borderRadius: borderRadius,
+      ),
     );
   }
 
@@ -60,7 +78,7 @@ class UserAvatar extends ConsumerWidget {
           authControllerProvider.select((auth) => auth.user),
         );
 
-        return UserAvatar(
+        return UserAvatar.custom(
           image:
               user?.profileImage != null &&
                   user?.profileAvatarType == ProfileAvatarTypeEnum.im

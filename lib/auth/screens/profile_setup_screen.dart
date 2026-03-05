@@ -336,7 +336,7 @@ class _ProfileTabState extends State<_ProfileTab>
             child: Stack(
               alignment: AlignmentDirectional.center,
               children: [
-                const UserAvatar(radius: 50),
+                UserAvatar.currentUser(radius: 50),
                 PositionedDirectional(
                   bottom: -10,
                   end: -10,

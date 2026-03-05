@@ -154,7 +154,7 @@ class FeaturedBlogPost extends StatelessWidget {
                       CircleAvatar(
                         radius: 18.5,
                         backgroundColor: Colors.white,
-                        child: UserAvatar(
+                        child: UserAvatar.custom(
                           image: authorImageUrl != null
                               ? CachedNetworkImageProvider(
                                   getFullUrl(authorImageUrl!),
