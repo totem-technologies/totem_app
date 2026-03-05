@@ -43,7 +43,7 @@ class TransitionCard extends StatelessWidget {
             AutoSizeText(
               switch (type) {
                 TotemCardTransitionType.pass =>
-                  'When done, press Pass to pass the Totem to the next person.',
+                  'When done, slide to pass the Totem to the next person.',
                 TotemCardTransitionType.receive =>
                   'The Totem is being passed to you.',
                 TotemCardTransitionType.start =>
