@@ -104,7 +104,9 @@ extension DevicesControl on Session {
         logger.i('Switched camera to $newPosition');
       } else {
         await context?.localParticipant?.publishVideoTrack(
-          await LocalVideoTrack.createCameraTrack(Session.defaultCameraOptions),
+          await LocalVideoTrack.createCameraTrack(
+            Session.defaultCameraCaptureOptions,
+          ),
         );
       }
     } catch (error, stackTrace) {
@@ -208,13 +210,13 @@ extension DevicesControl on Session {
     if (context?.connected ?? false) {
       await context?.localParticipant?.setCameraEnabled(
         true,
-        cameraCaptureOptions: Session.defaultCameraOptions.copyWith(
+        cameraCaptureOptions: Session.defaultCameraCaptureOptions.copyWith(
           deviceId: context?.room.selectedVideoInputDeviceId,
         ),
       );
     } else {
       context?.localVideoTrack ??= await LocalVideoTrack.createCameraTrack(
-        Session.defaultCameraOptions.copyWith(
+        Session.defaultCameraCaptureOptions.copyWith(
           deviceId: context?.room.selectedVideoInputDeviceId,
         ),
       );

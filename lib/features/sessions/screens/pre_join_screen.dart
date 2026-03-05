@@ -181,7 +181,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     }
 
     try {
-      _cameraOptions ??= Session.defaultCameraOptions;
+      _cameraOptions ??= Session.defaultCameraCaptureOptions;
       _previewVideoTrack = await LocalVideoTrack.createCameraTrack(
         _cameraOptions,
       );
@@ -294,7 +294,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       token: token,
       cameraEnabled: _isCameraOn,
       microphoneEnabled: _isMicOn,
-      cameraOptions: _cameraOptions ?? Session.defaultCameraOptions,
+      cameraOptions: _cameraOptions ?? Session.defaultCameraCaptureOptions,
       audioOptions: _audioOptions,
       audioOutputOptions: _audioOutputOptions,
       onEmojiReceived: (_, _) async {},

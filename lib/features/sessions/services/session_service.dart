@@ -220,8 +220,14 @@ class Session extends _$Session {
   _devicesChangedSubscription;
   bool _userSpeakerPreference = true;
 
-  static const defaultCameraOptions = CameraCaptureOptions(
-    params: VideoParametersPresets.h720_43,
+  static const defaultCameraCaptureOptions = CameraCaptureOptions(
+    params: VideoParameters(
+      dimensions: VideoDimensionsPresets.h720_43,
+      encoding: VideoEncoding(
+        maxBitrate: 1300 * 1000,
+        maxFramerate: 22,
+      ),
+    ),
   );
 
   @override
@@ -263,28 +269,28 @@ class Session extends _$Session {
           videoSimulcastLayers: [
             // Layer 1: "Tunnel Mode"
             // Meet will drop the framerate to 15fps before letting the video freeze
-            VideoParameters(
-              dimensions: VideoParametersPresets.h360_43.dimensions,
-              encoding: const VideoEncoding(
-                maxBitrate: 80000,
-                maxFramerate: 15,
-              ),
-            ),
+            // VideoParameters(
+            //   dimensions: VideoParametersPresets.h360_43.dimensions,
+            //   encoding: const VideoEncoding(
+            //     maxBitrate: 80000,
+            //     maxFramerate: 15,
+            //   ),
+            // ),
 
-            // // Layer 2: "Standard Grid"
+            // Layer 2: "Standard Grid"
             VideoParameters(
               dimensions: VideoParametersPresets.h540_43.dimensions,
               encoding: const VideoEncoding(
-                maxBitrate: 150000,
-                maxFramerate: 15,
+                maxBitrate: 400_000,
+                maxFramerate: 18,
               ),
             ),
 
             // Layer 3: "Active Speaker"
             VideoParameters(
-              dimensions: VideoParametersPresets.h540_43.dimensions,
+              dimensions: VideoParametersPresets.h720_43.dimensions,
               encoding: const VideoEncoding(
-                maxBitrate: 400000,
+                maxBitrate: 900_000,
                 maxFramerate: 20,
               ),
             ),

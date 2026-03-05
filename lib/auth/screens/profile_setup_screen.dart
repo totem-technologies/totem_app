@@ -634,6 +634,7 @@ class _SuggestionsTab extends ConsumerWidget {
             );
           },
           loading: () {
+            // TODO(totem): replace with shimmer effect
             return Column(
               mainAxisSize: MainAxisSize.min,
               children: [
