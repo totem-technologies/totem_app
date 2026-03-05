@@ -1,5 +1,5 @@
 // We need to access LivekitService.ref to notify listeners
-// ignore_for_file: experimental_member_use, invalid_use_of_protected_member
+// ignore_for_file: invalid_use_of_visible_for_testing_member, experimental_member_use, invalid_use_of_protected_member
 
 part of 'session_service.dart';
 
@@ -131,7 +131,7 @@ extension DevicesControl on Session {
 
   Future<void> _autoSetSpeakerphone(bool enabled) async {
     await context?.room.setSpeakerOn(enabled);
-    ref.notifyListeners();
+    state = state.copyWith(isSpeakerphoneEnabled: enabled);
   }
 
   String? get selectedAudioDeviceId => localAudioTrack?.currentOptions.deviceId;

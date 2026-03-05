@@ -58,7 +58,7 @@ final class SessionTokenProvider
   }
 }
 
-String _$sessionTokenHash() => r'c633ea66c2c3a94ca1302948d43a7bc5d9734188';
+String _$sessionTokenHash() => r'fb7d2932967737fb60fc52d9e8621f4eb538894f';
 
 final class SessionTokenFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<String>, String> {

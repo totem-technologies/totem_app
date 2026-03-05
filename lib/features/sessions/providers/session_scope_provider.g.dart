@@ -106,7 +106,7 @@ final class CurrentSessionProvider
   }
 }
 
-String _$currentSessionHash() => r'21efb5479aa019d4f0539ac3bce8577c5ab17c78';
+String _$currentSessionHash() => r'6c91a9a750d8148bd76f32e87eae6cf500681dd2';
 
 /// Convenience provider to get the current session state.
 

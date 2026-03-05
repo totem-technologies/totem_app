@@ -102,6 +102,7 @@ class SessionRoomState {
     this.hasKeeperDisconnected = false,
     this.participants = const [],
     this.removed = false,
+    this.isSpeakerphoneEnabled = false,
   });
 
   /// The current connection state of the room.
@@ -118,6 +119,9 @@ class SessionRoomState {
 
   /// Whether the local participant was removed from the session.
   final bool removed;
+
+  /// Whether the speaker is on.
+  final bool isSpeakerphoneEnabled;
 
   bool isMyTurn(RoomContext room) {
     return roomState.currentSpeaker != null &&
@@ -139,6 +143,7 @@ class SessionRoomState {
     bool? hasKeeperDisconnected,
     List<Participant>? participants,
     bool? removed,
+    bool? isSpeakerphoneEnabled,
   }) {
     return SessionRoomState(
       connectionState: connectionState ?? this.connectionState,
@@ -147,6 +152,8 @@ class SessionRoomState {
           hasKeeperDisconnected ?? this.hasKeeperDisconnected,
       participants: participants ?? this.participants,
       removed: removed ?? this.removed,
+      isSpeakerphoneEnabled:
+          isSpeakerphoneEnabled ?? this.isSpeakerphoneEnabled,
     );
   }
 
@@ -156,7 +163,8 @@ class SessionRoomState {
         'connectionState: $connectionState, '
         'sessionState: $roomState, '
         'hasKeeperDisconnected: $hasKeeperDisconnected, '
-        'removed: $removed'
+        'removed: $removed, '
+        'isSpeakerphoneEnabled: $isSpeakerphoneEnabled'
         ')';
   }
 
@@ -170,7 +178,9 @@ class SessionRoomState {
         const DeepCollectionEquality().equals(
           other.participants.map((p) => p.identity),
           participants.map((p) => p.identity),
-        );
+        ) &&
+        other.removed == removed &&
+        other.isSpeakerphoneEnabled == isSpeakerphoneEnabled;
   }
 
   @override
@@ -178,7 +188,9 @@ class SessionRoomState {
       connectionState.hashCode ^
       roomState.hashCode ^
       hasKeeperDisconnected.hashCode ^
-      const DeepCollectionEquality().hash(participants.map((p) => p.identity));
+      const DeepCollectionEquality().hash(participants.map((p) => p.identity)) ^
+      removed.hashCode ^
+      isSpeakerphoneEnabled.hashCode;
 }
 
 @riverpod
@@ -318,6 +330,7 @@ class Session extends _$Session {
         talkingOrder: [],
         version: 0,
       ),
+      isSpeakerphoneEnabled: _userSpeakerPreference,
     );
   }
 

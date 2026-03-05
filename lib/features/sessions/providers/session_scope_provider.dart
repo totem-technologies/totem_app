@@ -17,7 +17,7 @@ SessionOptions? sessionScope(Ref ref) => null;
 Session? currentSession(Ref ref) {
   final options = ref.watch(sessionScopeProvider);
   if (options == null) return null;
-  return ref.read(sessionProvider(options).notifier);
+  return ref.watch(sessionProvider(options).notifier);
 }
 
 /// Convenience provider to get the current session state.

@@ -119,12 +119,14 @@ class OptionsSheet extends ConsumerWidget {
                 ),
               OptionsSheetTile.output(
                 AudioOutputOptions(
-                  speakerOn: currentSession.isSpeakerphoneEnabled,
+                  speakerOn: state.isSpeakerphoneEnabled,
                   deviceId: currentSession.selectedAudioOutputDeviceId,
                 ),
                 (options) {
                   if (options.speakerOn != null) {
-                    currentSession.setSpeakerphone(options.speakerOn ?? false);
+                    currentSession.setSpeakerphone(
+                      options.speakerOn ?? false,
+                    );
                   }
                 },
                 currentSession.selectAudioOutputDevice,
@@ -706,7 +708,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
       iconColor: type == OptionsSheetTileType.destructive
           ? theme.colorScheme.onErrorContainer
           : null,
-      trailing: onTap != null ? const Icon(Icons.arrow_forward_ios) : trailing,
+      trailing: trailing,
     );
   }
 }
