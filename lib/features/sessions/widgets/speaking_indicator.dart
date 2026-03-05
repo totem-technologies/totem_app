@@ -56,7 +56,8 @@ class _SpeakingIndicatorState extends State<SpeakingIndicator> {
     _participantListener = widget.participant.createListener();
     _participantListener!
       ..on<TrackMutedEvent>(_onTrackMuted)
-      ..on<TrackUnmutedEvent>(_onTrackUnmuted);
+      ..on<TrackUnmutedEvent>(_onTrackUnmuted)
+      ..on<ParticipantEvent>(_onParticipantEvent);
 
     _trackListener?.dispose();
     _trackListener = null;
@@ -77,6 +78,11 @@ class _SpeakingIndicatorState extends State<SpeakingIndicator> {
   }
 
   void _onTrackEvent(TrackEvent event) {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _onParticipantEvent(ParticipantEvent event) {
     if (!mounted) return;
     setState(() {});
   }
