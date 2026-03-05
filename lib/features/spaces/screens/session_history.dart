@@ -34,7 +34,7 @@ class SessionHistoryScreen extends ConsumerWidget {
                       textAlign: TextAlign.center,
                     ),
                     const Text(
-                      'You have not joined any Spaces yet.',
+                      'You have not joined any sessions yet.',
                       textAlign: TextAlign.center,
                     ),
                     ElevatedButton(
@@ -60,7 +60,7 @@ class SessionHistoryScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    'Here are the recent sessions you have been a part of.',
+                    'Here are the recent sessions you have participated in.',
                     textAlign: TextAlign.center,
                   ),
                   for (final session in data)

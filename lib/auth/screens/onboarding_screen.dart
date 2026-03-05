@@ -22,9 +22,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final onboardingData = [
     const _OnboardingData(
       title: 'Welcome',
-      description:
-          'Totem provides online discussion groups where you can '
-          'cultivate your voice, and be a better listener.',
+      description: 'Totem is where you find your people, and share your story.',
       image: TotemAssets.onboarding1,
     ),
     const _OnboardingData(
@@ -37,8 +35,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     const _OnboardingData(
       title: 'Our Ask',
       description:
-          'We ask that you keep everything confidential, and that '
-          'you only speak from your experience.',
+          'Keep everything confidential, and speak only from your own experience.',
       image: TotemAssets.onboarding3,
     ),
   ];
@@ -177,13 +174,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     ),
                     const Spacer(),
                     Semantics(
-                      label: 'Log in button',
+                      label: 'Sign in button',
                       child: TextButton(
                         style: TextButton.styleFrom(
                           foregroundColor: AppTheme.white,
                         ),
                         onPressed: _onSkip,
-                        child: const Text('Log in'),
+                        child: const Text('Sign in'),
                       ),
                     ),
                   ],

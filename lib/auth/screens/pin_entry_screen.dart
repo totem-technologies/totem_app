@@ -140,7 +140,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
                 ),
               ),
               TextSpan(
-                text: '\nPlease enter it below to.',
+                text: '\nPlease enter it below.',
                 style: theme.textTheme.bodyMedium,
               ),
             ],

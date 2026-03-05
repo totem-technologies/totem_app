@@ -93,8 +93,8 @@ class WelcomeCard extends StatelessWidget {
         children: [
           // Main message text
           Text(
-            'Totem is a nonprofit creating online Spaces for connection and support. '
-            'We believe these gatherings can help build a more thoughtful, caring world.',
+            'Welcome to Totem! Get started by signing up for your first session. '
+            'Below are the next upcoming sessions, or use the Sessions tab to see everything.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: fontSize,

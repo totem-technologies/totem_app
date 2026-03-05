@@ -19,7 +19,7 @@ class WelcomeScreen extends StatelessWidget {
           onPressed: () {
             context.go(RouteNames.login);
           },
-          child: const Text('Get Started', textAlign: TextAlign.center),
+          child: const Text('Start Sharing', textAlign: TextAlign.center),
         ),
       ],
     );

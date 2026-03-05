@@ -210,7 +210,7 @@ class _GuidelinesTab extends StatelessWidget {
               ),
               const TextSpan(
                 text:
-                    ', and not to share other people’s information or stories.',
+                    ", and not to share other people's information or stories.",
               ),
             ],
           ),
@@ -316,15 +316,14 @@ class _ProfileTabState extends State<_ProfileTab>
         Semantics(
           header: true,
           child: Text(
-            'Let’s get to know you',
+            "Let's get to know you",
             style: theme.textTheme.headlineSmall,
             textAlign: TextAlign.center,
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          'We just to know more about you. Some final question and you’ll be '
-          'good to go.',
+          "A few final questions and you'll be good to go.",
           style: theme.textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
@@ -375,8 +374,8 @@ class _ProfileTabState extends State<_ProfileTab>
           autofillHints: const [AutofillHints.givenName],
         ),
         const InfoText(
-          'Other people will see this, but you don’t have to use your real '
-          'name. Add any pronounce is parentheses if you’d like.',
+          "Other people will see this. You don't have to use your real "
+          "name. Add any pronouns in parentheses if you'd like.",
         ),
         const SizedBox(height: 20),
         Text(
@@ -399,7 +398,7 @@ class _ProfileTabState extends State<_ProfileTab>
           onFieldSubmitted: (_) => widget.onContinue(),
         ),
         const InfoText(
-          'You must be over 13 to join. Age is for verification only, no one '
+          'You must be over 13 to join. This is only for a legal requirement, no one '
           'will see it.',
         ),
         const SizedBox(height: 20),
@@ -463,7 +462,7 @@ class _ProfileTabState extends State<_ProfileTab>
                   widget.onNewsletterConsentChanged(!widget.newsletterConsent);
                 },
                 child: Text(
-                  'I want to receive Totem Updates and Spaces Announcements.',
+                  'I want to receive updates about Totem.',
                   style: theme.textTheme.bodySmall,
                   textAlign: TextAlign.start,
                 ),
@@ -514,14 +513,14 @@ class _TopicsTab extends StatelessWidget {
         Semantics(
           header: true,
           child: Text(
-            'Which community feels like home to you?',
+            'Topics',
             style: theme.textTheme.headlineSmall,
             textAlign: TextAlign.center,
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          'Pick a few — we’ll help you connect with the right spaces.',
+          "Pick a few. We'll help you connect with the right people.",
           style: theme.textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
@@ -583,13 +582,13 @@ class _SuggestionsTab extends ConsumerWidget {
         Semantics(
           header: true,
           child: Text(
-            'Suggested Spaces',
+            'Suggested Sessions',
             style: theme.textTheme.headlineSmall,
             textAlign: TextAlign.center,
           ),
         ),
         Text(
-          'We’ve found some spaces that might be a good fit for you.',
+          "We've found some sessions that might be a good fit for you.",
           style: theme.textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
@@ -612,7 +611,7 @@ class _SuggestionsTab extends ConsumerWidget {
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: onSeeAllSpaces,
-                    child: const Text('See all'),
+                    child: const Text('See all sessions'),
                   ),
                 ),
               ],
@@ -621,13 +620,13 @@ class _SuggestionsTab extends ConsumerWidget {
           error: (error, stack) {
             return Column(
               children: [
-                const InfoText('Couldn’t load suggestions.'),
+                const InfoText("Couldn't load suggestions."),
                 const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: onSeeAllSpaces,
-                    child: const Text('See all'),
+                    child: const Text('See all sessions'),
                   ),
                 ),
               ],
@@ -644,7 +643,7 @@ class _SuggestionsTab extends ConsumerWidget {
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: onSeeAllSpaces,
-                    child: const Text('See all spaces'),
+                    child: const Text('See all sessions'),
                   ),
                 ),
               ],
