@@ -78,6 +78,13 @@
             android:name="flutterEmbedding"
             android:value="2" />
         <meta-data android:name="com.posthog.posthog.AUTO_INIT" android:value="false" />
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/totem_brand_color" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
