@@ -409,6 +409,9 @@ class LocalParticipantVideoCard extends ConsumerWidget {
     final user = ref.watch(
       authControllerProvider.select((auth) => auth.user),
     );
+
+    final isVideoTrackVisible =
+        videoTrack != null && videoTrack!.isActive && !videoTrack!.muted;
     return Container(
       alignment: Alignment.center,
       child: Container(
@@ -423,10 +426,21 @@ class LocalParticipantVideoCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(30 - 2),
           child: AspectRatio(
             aspectRatio: 16 / 21,
-            child: Builder(
-              builder: (context) {
-                if (!isCameraOn) {
-                  return Stack(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (isVideoTrackVisible)
+                  VideoTrackRenderer(
+                    videoTrack!,
+                    fit: VideoViewFit.cover,
+                    renderMode: VideoRenderMode.platformView,
+                  )
+                else
+                  const LoadingVideoPlaceholder(),
+                AnimatedOpacity(
+                  opacity: (!isCameraOn || !isVideoTrackVisible) ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 10),
+                  child: Stack(
                     children: [
                       Positioned.fill(
                         child: IgnorePointer(
@@ -453,16 +467,9 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                         ),
                       ),
                     ],
-                  );
-                } else if (videoTrack == null) {
-                  return const LoadingVideoPlaceholder();
-                }
-                return VideoTrackRenderer(
-                  videoTrack!,
-                  fit: VideoViewFit.cover,
-                  renderMode: VideoRenderMode.platformView,
-                );
-              },
+                  ),
+                ),
+              ],
             ),
           ),
         ),
