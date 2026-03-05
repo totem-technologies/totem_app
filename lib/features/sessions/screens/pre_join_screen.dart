@@ -181,18 +181,20 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     }
 
     try {
-      _cameraOptions ??= Session.defaultCameraOptions;
+      _cameraOptions ??= Session.defaultCameraCaptureOptions;
       _previewVideoTrack = await LocalVideoTrack.createCameraTrack(
         _cameraOptions,
       );
       await _previewVideoTrack!.start();
-      if (mounted) setState(() {});
     } catch (error, stackTrace) {
+      _isCameraOn = false;
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Failed to create local video track',
       );
+    } finally {
+      if (mounted) setState(() {});
     }
   }
 
@@ -292,7 +294,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       token: token,
       cameraEnabled: _isCameraOn,
       microphoneEnabled: _isMicOn,
-      cameraOptions: _cameraOptions ?? Session.defaultCameraOptions,
+      cameraOptions: _cameraOptions ?? Session.defaultCameraCaptureOptions,
       audioOptions: _audioOptions,
       audioOutputOptions: _audioOutputOptions,
       onEmojiReceived: (_, _) async {},

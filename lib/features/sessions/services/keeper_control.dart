@@ -20,7 +20,12 @@ extension KeeperControl on Session {
   Participant speakingNowParticipant() {
     return state.participants.firstWhere(
       (participant) => participant.identity == state.speakingNow,
-      orElse: () => context!.room.localParticipant!,
+      orElse: () {
+        final keeper = state.participants.firstWhereOrNull(
+          (participant) => participant.identity == state.roomState.keeper,
+        );
+        return keeper ?? context!.room.localParticipant!;
+      },
     );
   }
 

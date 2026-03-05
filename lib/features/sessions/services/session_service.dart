@@ -102,6 +102,7 @@ class SessionRoomState {
     this.hasKeeperDisconnected = false,
     this.participants = const [],
     this.removed = false,
+    this.isSpeakerphoneEnabled = false,
   });
 
   /// The current connection state of the room.
@@ -119,6 +120,9 @@ class SessionRoomState {
   /// Whether the local participant was removed from the session.
   final bool removed;
 
+  /// Whether the speaker is on.
+  final bool isSpeakerphoneEnabled;
+
   bool isMyTurn(RoomContext room) {
     return roomState.currentSpeaker != null &&
         roomState.currentSpeaker == room.localParticipant?.identity;
@@ -130,6 +134,9 @@ class SessionRoomState {
   }
 
   String get speakingNow {
+    if (roomState.currentSpeaker == null || roomState.currentSpeaker!.isEmpty) {
+      return roomState.keeper;
+    }
     return roomState.currentSpeaker ?? roomState.keeper;
   }
 
@@ -139,6 +146,7 @@ class SessionRoomState {
     bool? hasKeeperDisconnected,
     List<Participant>? participants,
     bool? removed,
+    bool? isSpeakerphoneEnabled,
   }) {
     return SessionRoomState(
       connectionState: connectionState ?? this.connectionState,
@@ -147,6 +155,8 @@ class SessionRoomState {
           hasKeeperDisconnected ?? this.hasKeeperDisconnected,
       participants: participants ?? this.participants,
       removed: removed ?? this.removed,
+      isSpeakerphoneEnabled:
+          isSpeakerphoneEnabled ?? this.isSpeakerphoneEnabled,
     );
   }
 
@@ -156,7 +166,8 @@ class SessionRoomState {
         'connectionState: $connectionState, '
         'sessionState: $roomState, '
         'hasKeeperDisconnected: $hasKeeperDisconnected, '
-        'removed: $removed'
+        'removed: $removed, '
+        'isSpeakerphoneEnabled: $isSpeakerphoneEnabled'
         ')';
   }
 
@@ -170,7 +181,9 @@ class SessionRoomState {
         const DeepCollectionEquality().equals(
           other.participants.map((p) => p.identity),
           participants.map((p) => p.identity),
-        );
+        ) &&
+        other.removed == removed &&
+        other.isSpeakerphoneEnabled == isSpeakerphoneEnabled;
   }
 
   @override
@@ -178,7 +191,9 @@ class SessionRoomState {
       connectionState.hashCode ^
       roomState.hashCode ^
       hasKeeperDisconnected.hashCode ^
-      const DeepCollectionEquality().hash(participants.map((p) => p.identity));
+      const DeepCollectionEquality().hash(participants.map((p) => p.identity)) ^
+      removed.hashCode ^
+      isSpeakerphoneEnabled.hashCode;
 }
 
 @riverpod
@@ -208,8 +223,14 @@ class Session extends _$Session {
   _devicesChangedSubscription;
   bool _userSpeakerPreference = true;
 
-  static const defaultCameraOptions = CameraCaptureOptions(
-    params: VideoParametersPresets.h540_43,
+  static const defaultCameraCaptureOptions = CameraCaptureOptions(
+    params: VideoParameters(
+      dimensions: VideoDimensionsPresets.h720_43,
+      encoding: VideoEncoding(
+        maxBitrate: 1300 * 1000,
+        maxFramerate: 22,
+      ),
+    ),
   );
 
   @override
@@ -251,28 +272,28 @@ class Session extends _$Session {
           videoSimulcastLayers: [
             // Layer 1: "Tunnel Mode"
             // Meet will drop the framerate to 15fps before letting the video freeze
-            VideoParameters(
-              dimensions: VideoParametersPresets.h360_43.dimensions,
-              encoding: const VideoEncoding(
-                maxBitrate: 80000,
-                maxFramerate: 15,
-              ),
-            ),
+            // VideoParameters(
+            //   dimensions: VideoParametersPresets.h360_43.dimensions,
+            //   encoding: const VideoEncoding(
+            //     maxBitrate: 80000,
+            //     maxFramerate: 15,
+            //   ),
+            // ),
 
-            // // Layer 2: "Standard Grid"
+            // Layer 2: "Standard Grid"
             VideoParameters(
               dimensions: VideoParametersPresets.h540_43.dimensions,
               encoding: const VideoEncoding(
-                maxBitrate: 150000,
-                maxFramerate: 15,
+                maxBitrate: 400_000,
+                maxFramerate: 18,
               ),
             ),
 
             // Layer 3: "Active Speaker"
             VideoParameters(
-              dimensions: VideoParametersPresets.h540_43.dimensions,
+              dimensions: VideoParametersPresets.h720_43.dimensions,
               encoding: const VideoEncoding(
-                maxBitrate: 400000,
+                maxBitrate: 900_000,
                 maxFramerate: 20,
               ),
             ),
@@ -318,6 +339,7 @@ class Session extends _$Session {
         talkingOrder: [],
         version: 0,
       ),
+      isSpeakerphoneEnabled: _userSpeakerPreference,
     );
   }
 
@@ -372,25 +394,27 @@ class Session extends _$Session {
 
     // If the user joined in the waiting
     // If the keeper is not in the room, the participants will start unmuted.
-    context!.room.localParticipant!.setMicrophoneEnabled(
-      () {
-            if (state.roomState.status == RoomStatus.waitingRoom &&
-                !hasKeeper) {
-              // If joined in the waiting room, everyone can join unmuted.
+    final isMicrophoneEnabled =
+        () {
+          if (state.roomState.status == RoomStatus.waitingRoom && !hasKeeper) {
+            // If joined in the waiting room, everyone can join unmuted.
+            return _options?.microphoneEnabled;
+          }
+          if (state.roomState.status == RoomStatus.active) {
+            if (state.speakingNow == context!.room.localParticipant?.identity) {
+              // If it's the user's turn to speak, they can join unmuted.
               return _options?.microphoneEnabled;
             }
-            if (state.roomState.status == RoomStatus.active) {
-              if (state.speakingNow ==
-                  context!.room.localParticipant?.identity) {
-                // If it's the user's turn to speak, they can join unmuted.
-                return _options?.microphoneEnabled;
-              }
-            }
-            // In other states, only the keeper can join unmuted.
-            return isKeeper() && (_options?.microphoneEnabled ?? false);
-          }() ??
-          false,
-    );
+          }
+          // In other states, only the keeper can join unmuted.
+          return isKeeper() && (_options?.microphoneEnabled ?? false);
+        }() ??
+        false;
+    if (isMicrophoneEnabled) {
+      enableMicrophone();
+    } else {
+      disableMicrophone();
+    }
     // context.room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
     state = state.copyWith(
       connectionState: RoomConnectionState.connected,

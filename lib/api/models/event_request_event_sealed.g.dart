@@ -84,7 +84,7 @@ Map<String, dynamic> _$EventRequestEventSealedReorderEventToJson(
   EventRequestEventSealedReorderEvent instance,
 ) => <String, dynamic>{
   'type': instance.type,
-  'talkingOrder': instance.talkingOrder,
+  'talking_order': instance.talkingOrder,
 };
 
 EventRequestEventSealedStartRoomEvent

@@ -8,7 +8,7 @@ part of 'ban_participant_event.dart';
 
 BanParticipantEvent _$BanParticipantEventFromJson(Map<String, dynamic> json) =>
     BanParticipantEvent(
-      participantSlug: json['participant_slug'] as String,
+      participantSlug: json['participantSlug'] as String,
       type: json['type'] as String? ?? 'ban_participant',
     );
 
@@ -16,5 +16,5 @@ Map<String, dynamic> _$BanParticipantEventToJson(
   BanParticipantEvent instance,
 ) => <String, dynamic>{
   'type': instance.type,
-  'participant_slug': instance.participantSlug,
+  'participantSlug': instance.participantSlug,
 };

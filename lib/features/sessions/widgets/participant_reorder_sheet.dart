@@ -58,9 +58,13 @@ class _ParticipantReorderWidgetState
     final roomParticipants = widget.state.participants
         .map((p) => p.identity)
         .toSet();
-    _localOrder = Set<String>.from(
-      widget.state.roomState.talkingOrder.where(roomParticipants.contains),
-    ).toList();
+    _localOrder = widget.state.roomState.talkingOrder.isEmpty
+        ? {widget.state.roomState.keeper, ...roomParticipants}.toList()
+        : Set<String>.from(
+            widget.state.roomState.talkingOrder.where(
+              roomParticipants.contains,
+            ),
+          ).toList();
   }
 
   @override
@@ -137,8 +141,7 @@ class _ParticipantReorderWidgetState
                         participant: participant,
                         index: index,
                         isSpeakingNow:
-                            participantIdentity ==
-                            widget.state.roomState.currentSpeaker,
+                            participantIdentity == widget.state.speakingNow,
                       );
                     },
                   ),
@@ -205,15 +208,11 @@ class _ParticipantReorderWidgetState
     final item = _localOrder.removeAt(oldIndex);
     _localOrder.insert(adjustedNewIndex, item);
 
-    // final keeperSlug = widget.event.space.author.slug;
-    // if (keeperSlug != null) {
-    //   final keeperIndex = _localOrder.indexOf(keeperSlug);
-    //   if (keeperIndex != -1 && keeperIndex != 0) {
-    //     _localOrder
-    //       ..removeAt(keeperIndex)
-    //       ..insert(0, keeperSlug);
-    //   }
-    // }
+    // ensure keeper is first always
+    _localOrder = {
+      widget.state.roomState.keeper,
+      ..._localOrder,
+    }.toList();
 
     setState(() {});
   }
@@ -266,14 +265,14 @@ class _ParticipantReorderItem extends ConsumerWidget {
     final theme = Theme.of(context);
     final user = ref.watch(userProfileProvider(participantIdentity));
 
-    final foregroundColor = isSpeakingNow
+    final foregroundColor = !isSpeakingNow
         ? theme.colorScheme.onPrimaryContainer
         : theme.colorScheme.onPrimary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: isSpeakingNow
+        color: !isSpeakingNow
             ? theme.colorScheme.primaryContainer
             : theme.colorScheme.primaryFixedDim,
         borderRadius: BorderRadius.circular(20),

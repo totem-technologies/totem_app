@@ -8,6 +8,7 @@ import 'package:totem_app/features/sessions/providers/session_scope_provider.dar
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
+import 'package:totem_app/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
@@ -25,7 +26,6 @@ class NotMyTurn extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final sessionStatus = ref.watch(roomStatusProvider);
     final amNext = ref.watch(amNextSpeakerProvider);
     final currentSession = ref.watch(currentSessionProvider)!;
@@ -35,93 +35,108 @@ class NotMyTurn extends ConsumerWidget {
     );
     final amKeeper = currentUserSlug == event.space.author.slug!;
     final activeSpeaker = currentSession.speakingNowParticipant();
+    // final isActiveSpeakerKeeper =
+    //     activeSpeaker.identity == event.space.author.slug;
 
     return RoomBackground(
       status: sessionStatus,
       child: OrientationBuilder(
         builder: (context, orientation) {
+          final theme = Theme.of(context);
           final isLandscape = orientation == Orientation.landscape;
+
+          final speakerVideoBorderRadius = isLandscape
+              ? const BorderRadiusDirectional.horizontal(
+                  end: Radius.circular(30),
+                )
+              : const BorderRadiusDirectional.vertical(
+                  bottom: Radius.circular(30),
+                );
           final speakerVideo = RepaintBoundary(
-            child: ClipRRect(
-              borderRadius: isLandscape
-                  ? const BorderRadiusDirectional.horizontal(
-                      end: Radius.circular(30),
-                    )
-                  : const BorderRadiusDirectional.vertical(
-                      bottom: Radius.circular(30),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: speakerVideoBorderRadius,
+                // boxShadow: isActiveSpeakerKeeper
+                //     ? const [
+                //         BoxShadow(
+                //           offset: Offset(0, 6),
+                //           blurRadius: 12,
+                //           spreadRadius: -2,
+                //           color: AppTheme.yellow,
+                //         ),
+                //       ]
+                //     : null,
+              ),
+              child: ClipRRect(
+                borderRadius: speakerVideoBorderRadius,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Positioned.fill(
+                      child: ParticipantVideo(
+                        key: getParticipantKey(activeSpeaker.identity),
+                        participant: activeSpeaker,
+                      ),
                     ),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Positioned.fill(child: Container(color: Colors.black)),
-                  Positioned.fill(
-                    child: ParticipantVideo(
-                      key: getParticipantKey(activeSpeaker.identity),
-                      participant: activeSpeaker,
-                    ),
-                  ),
-                  PositionedDirectional(
-                    start: 20,
-                    end: 20,
-                    bottom: 20,
-                    child: SafeArea(
-                      bottom: false,
-                      child: Row(
-                        spacing: 12,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.black54,
-                              boxShadow: kElevationToShadow[6],
-                            ),
-                            padding: const EdgeInsetsDirectional.all(4),
-                            child: SpeakingIndicatorOrEmoji(
-                              participant: activeSpeaker,
-                              backgroundColor: Colors.transparent,
-                            ),
-                          ),
-                          if (amKeeper &&
-                              currentUserSlug != activeSpeaker.identity)
+                    PositionedDirectional(
+                      start: 20,
+                      end: 20,
+                      bottom: 20,
+                      child: SafeArea(
+                        bottom: false,
+                        child: Row(
+                          spacing: 12,
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
                             Container(
                               width: 24,
                               height: 24,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Colors.black54,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 0.5,
-                                ),
                                 boxShadow: kElevationToShadow[6],
                               ),
-                              padding: const EdgeInsetsDirectional.all(3),
-                              child: ParticipantControlButton(
-                                overlayPadding: -28,
-                                session: event,
+                              padding: const EdgeInsetsDirectional.all(4),
+                              child: SpeakingIndicatorOrEmoji(
                                 participant: activeSpeaker,
                                 backgroundColor: Colors.transparent,
                               ),
                             ),
-                          Flexible(
-                            child: Text(
-                              activeSpeaker.name,
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                shadows: kElevationToShadow[6],
+                            if (amKeeper &&
+                                currentUserSlug != activeSpeaker.identity)
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.black54,
+                                  boxShadow: kElevationToShadow[6],
+                                ),
+                                padding: const EdgeInsetsDirectional.all(3),
+                                child: ParticipantControlButton(
+                                  overlayPadding: -28,
+                                  session: event,
+                                  participant: activeSpeaker,
+                                  backgroundColor: Colors.transparent,
+                                ),
                               ),
-                              textAlign: TextAlign.end,
+                            Flexible(
+                              child: SmartNameText(
+                                name: activeSpeaker.name,
+                                style: theme.textTheme.titleLarge!.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  shadows: kElevationToShadow[6],
+                                ),
+                                textAlign: TextAlign.end,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );
@@ -240,8 +255,6 @@ class NotMyTurn extends ConsumerWidget {
           } else {
             return SafeArea(
               top: false,
-              // TODO(bdlukaa): Check if this should be true.
-              // No need to avoid bottom safe area because the app is in fullscreen
               bottom: false,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -43,7 +43,8 @@ class ParticipantCard extends ConsumerWidget {
 
     const overlayPadding = 6.0;
     final isKeeper = session?.space.author.slug == participant.identity;
-    const shadowColor = Color(0x80FFD000);
+
+    const borderRadius = 20.0;
 
     return RepaintBoundary(
       child: AspectRatio(
@@ -51,9 +52,9 @@ class ParticipantCard extends ConsumerWidget {
         child: Container(
           decoration: BoxDecoration(
             color: Colors.black,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(borderRadius),
             border: Border.all(
-              color: isKeeper ? const Color(0xFFFFD000) : Colors.white,
+              color: isKeeper ? AppTheme.yellow : Colors.white,
               width: 2,
             ),
             boxShadow: isKeeper
@@ -62,24 +63,24 @@ class ParticipantCard extends ConsumerWidget {
                       offset: Offset(0, 3),
                       blurRadius: 1,
                       spreadRadius: -2,
-                      color: shadowColor,
+                      color: AppTheme.yellow,
                     ),
                     BoxShadow(
                       offset: Offset(0, 2),
                       blurRadius: 2,
-                      color: shadowColor,
+                      color: AppTheme.yellow,
                     ),
                     BoxShadow(
                       offset: Offset(0, 1),
                       blurRadius: 5,
-                      color: shadowColor,
+                      color: AppTheme.yellow,
                     ),
                   ]
                 : null,
           ),
           clipBehavior: Clip.hardEdge,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(borderRadius - 2),
             clipBehavior: Clip.hardEdge,
             child: Stack(
               clipBehavior: Clip.none,
@@ -408,6 +409,9 @@ class LocalParticipantVideoCard extends ConsumerWidget {
     final user = ref.watch(
       authControllerProvider.select((auth) => auth.user),
     );
+
+    final isVideoTrackVisible =
+        videoTrack != null && videoTrack!.isActive && !videoTrack!.muted;
     return Container(
       alignment: Alignment.center,
       child: Container(
@@ -422,10 +426,21 @@ class LocalParticipantVideoCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(30 - 2),
           child: AspectRatio(
             aspectRatio: 16 / 21,
-            child: Builder(
-              builder: (context) {
-                if (!isCameraOn) {
-                  return Stack(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (isVideoTrackVisible)
+                  VideoTrackRenderer(
+                    videoTrack!,
+                    fit: VideoViewFit.cover,
+                    renderMode: VideoRenderMode.platformView,
+                  )
+                else
+                  const LoadingVideoPlaceholder(),
+                AnimatedOpacity(
+                  opacity: (!isCameraOn || !isVideoTrackVisible) ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 10),
+                  child: Stack(
                     children: [
                       Positioned.fill(
                         child: IgnorePointer(
@@ -452,16 +467,9 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                         ),
                       ),
                     ],
-                  );
-                } else if (videoTrack == null) {
-                  return const LoadingVideoPlaceholder();
-                }
-                return VideoTrackRenderer(
-                  videoTrack!,
-                  fit: VideoViewFit.cover,
-                  renderMode: VideoRenderMode.platformView,
-                );
-              },
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -480,6 +488,24 @@ class ParticipantVideo extends ConsumerStatefulWidget {
 }
 
 class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
+  TrackPublication<Track>? get videoTrack {
+    if (widget.participant is RemoteParticipant) {
+      return widget.participant.getTrackPublicationBySource(TrackSource.camera);
+    } else if (widget.participant is LocalParticipant) {
+      return (widget.participant as LocalParticipant)
+              .getTrackPublicationBySource(TrackSource.camera) ??
+          widget.participant.videoTrackPublications
+              .where(
+                (t) => t.track != null && t.track!.isActive && !t.track!.muted,
+              )
+              .firstOrNull;
+    } else {
+      return widget.participant.videoTrackPublications
+          .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)
+          .firstOrNull;
+    }
+  }
+
   bool _locked = false;
   void _sendRawUpdateTrackSettings(bool isVisible, Size size) {
     if (_locked) return;
@@ -487,18 +513,15 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     try {
       _locked = true;
 
-      final videoTrack = widget.participant
-          .getTrackPublicationBySource(TrackSource.camera)
-          ?.track;
       if (videoTrack == null ||
-          videoTrack.sid == null ||
+          videoTrack?.sid == null ||
           widget.participant is! RemoteParticipant) {
         return;
       }
 
       // Construct the exact protobuf payload
       final settings = lk_rtc.UpdateTrackSettings(
-        trackSids: [videoTrack.sid!],
+        trackSids: [videoTrack!.sid],
         disabled: !isVisible,
       );
 
@@ -532,17 +555,31 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     }
   }
 
+  EventsListener<ParticipantEvent>? _listener;
+  @override
+  void initState() {
+    super.initState();
+    _listener = widget.participant.createListener()..on(_onParticipantUpdated);
+  }
+
+  void _onParticipantUpdated(_) {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _listener?.dispose();
+    super.dispose();
+  }
+
   BoxConstraints? _lastConstraints;
 
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(userProfileProvider(widget.participant.identity));
+    final track = videoTrack;
 
-    final videoTrack = widget.participant.getTrackPublicationBySource(
-      TrackSource.camera,
-    );
-
-    if (videoTrack != null && videoTrack.subscribed && !videoTrack.muted) {
+    if (track != null && track.subscribed && !track.muted) {
       return IgnorePointer(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -554,8 +591,8 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
               });
             }
             return VideoTrackRenderer(
-              key: ValueKey(videoTrack.track!.sid),
-              videoTrack.track! as VideoTrack,
+              key: ValueKey(track.track!.sid),
+              track.track! as VideoTrack,
               fit: VideoViewFit.cover,
               // Use platform view for better CPU performance on iOS.
               // The [VideoTrackRenderer] widget only supports platform views for iOS.

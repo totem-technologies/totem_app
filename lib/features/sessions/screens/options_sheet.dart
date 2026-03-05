@@ -119,12 +119,14 @@ class OptionsSheet extends ConsumerWidget {
                 ),
               OptionsSheetTile.output(
                 AudioOutputOptions(
-                  speakerOn: currentSession.isSpeakerphoneEnabled,
+                  speakerOn: state.isSpeakerphoneEnabled,
                   deviceId: currentSession.selectedAudioOutputDeviceId,
                 ),
                 (options) {
                   if (options.speakerOn != null) {
-                    currentSession.setSpeakerphone(options.speakerOn ?? false);
+                    currentSession.setSpeakerphone(
+                      options.speakerOn ?? false,
+                    );
                   }
                 },
                 currentSession.selectAudioOutputDevice,
@@ -470,7 +472,7 @@ class PrejoinOptionsSheet extends StatelessWidget {
               cameraOptions?.copyWith(
                     cameraPosition: cameraOptions?.cameraPosition.switched(),
                   ) ??
-                  Session.defaultCameraOptions,
+                  Session.defaultCameraCaptureOptions,
             );
             Navigator.of(context).pop();
           },
@@ -550,11 +552,14 @@ class OptionsSheetTile<T> extends StatelessWidget {
       },
       icon: options == null ? TotemIcons.cameraOff : TotemIcons.cameraOn,
       trailing: options != null
-          ? IconButton(
-              icon: const Icon(Icons.switch_camera_outlined),
-              onPressed: onSwitch,
+          ? IgnorePointer(
+              child: IconButton(
+                icon: const Icon(Icons.switch_camera_outlined),
+                onPressed: () {},
+              ),
             )
           : null,
+      onTap: onSwitch,
     );
   }
 
@@ -567,14 +572,17 @@ class OptionsSheetTile<T> extends StatelessWidget {
       return OptionsSheetTile<MediaDevice>(
         title: 'Speaker',
         icon: TotemIcons.speaker,
-        trailing: Switch.adaptive(
-          value: options.speakerOn ?? false,
-          onChanged: (enabled) {
-            onSwitch(
-              options.copyWith(speakerOn: enabled),
-            );
-          },
+        trailing: IgnorePointer(
+          child: Switch.adaptive(
+            value: options.speakerOn ?? false,
+            onChanged: (enabled) {},
+          ),
         ),
+        onTap: () {
+          onSwitch(
+            options.copyWith(speakerOn: !(options.speakerOn ?? false)),
+          );
+        },
       );
     } else {
       return MediaDeviceSelectButton(
@@ -700,7 +708,9 @@ class OptionsSheetTile<T> extends StatelessWidget {
       iconColor: type == OptionsSheetTileType.destructive
           ? theme.colorScheme.onErrorContainer
           : null,
-      trailing: onTap != null ? const Icon(Icons.arrow_forward_ios) : trailing,
+      trailing:
+          trailing ??
+          (onTap != null ? Icon(Icons.adaptive.arrow_forward) : null),
     );
   }
 }

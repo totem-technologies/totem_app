@@ -105,7 +105,10 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                       size: 24,
                       semanticsLabel: 'Processing',
                     )
-                  : Text(widget.confirmButtonText),
+                  : Text(
+                      widget.confirmButtonText,
+                      textAlign: TextAlign.center,
+                    ),
             ),
             OutlinedButton(
               onPressed: _loading ? null : () => context.pop(),

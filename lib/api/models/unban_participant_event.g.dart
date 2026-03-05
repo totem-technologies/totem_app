@@ -9,7 +9,7 @@ part of 'unban_participant_event.dart';
 UnbanParticipantEvent _$UnbanParticipantEventFromJson(
   Map<String, dynamic> json,
 ) => UnbanParticipantEvent(
-  participantSlug: json['participant_slug'] as String,
+  participantSlug: json['participantSlug'] as String,
   type: json['type'] as String? ?? 'unban_participant',
 );
 
@@ -17,5 +17,5 @@ Map<String, dynamic> _$UnbanParticipantEventToJson(
   UnbanParticipantEvent instance,
 ) => <String, dynamic>{
   'type': instance.type,
-  'participant_slug': instance.participantSlug,
+  'participantSlug': instance.participantSlug,
 };

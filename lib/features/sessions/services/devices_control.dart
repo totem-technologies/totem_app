@@ -1,5 +1,5 @@
 // We need to access LivekitService.ref to notify listeners
-// ignore_for_file: experimental_member_use, invalid_use_of_protected_member
+// ignore_for_file: invalid_use_of_visible_for_testing_member, experimental_member_use, invalid_use_of_protected_member
 
 part of 'session_service.dart';
 
@@ -76,6 +76,7 @@ extension DevicesControl on Session {
     }
     return context
         ?.room
+        // ignore: invalid_use_of_internal_member
         .engine
         .roomOptions
         .defaultCameraCaptureOptions
@@ -83,10 +84,13 @@ extension DevicesControl on Session {
   }
 
   LocalVideoTrack? get localVideoTrack {
-    return context?.localParticipant?.videoTrackPublications
-        .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)
-        .firstOrNull
-        ?.track;
+    return context?.localVideoTrack ??
+        context?.localParticipant?.videoTrackPublications
+            .where(
+              (t) => t.track != null && t.track!.isActive && !t.track!.muted,
+            )
+            .firstOrNull
+            ?.track;
   }
 
   Future<void> switchCameraPosition() async {
@@ -100,7 +104,9 @@ extension DevicesControl on Session {
         logger.i('Switched camera to $newPosition');
       } else {
         await context?.localParticipant?.publishVideoTrack(
-          await LocalVideoTrack.createCameraTrack(Session.defaultCameraOptions),
+          await LocalVideoTrack.createCameraTrack(
+            Session.defaultCameraCaptureOptions,
+          ),
         );
       }
     } catch (error, stackTrace) {
@@ -130,7 +136,7 @@ extension DevicesControl on Session {
 
   Future<void> _autoSetSpeakerphone(bool enabled) async {
     await context?.room.setSpeakerOn(enabled);
-    ref.notifyListeners();
+    state = state.copyWith(isSpeakerphoneEnabled: enabled);
   }
 
   String? get selectedAudioDeviceId => localAudioTrack?.currentOptions.deviceId;
@@ -153,6 +159,7 @@ extension DevicesControl on Session {
   }
 
   String? get selectedAudioOutputDeviceId {
+    // ignore: invalid_use_of_internal_member
     return context?.room.engine.roomOptions.defaultAudioOutputOptions.deviceId;
   }
 
@@ -163,7 +170,7 @@ extension DevicesControl on Session {
   }
 
   Future<void> enableMicrophone() async {
-    if (context?.microphoneOpened ?? false) return;
+    if (context?.isMicrophoneEnabled ?? false) return;
 
     if (context?.localParticipant != null) {
       await context?.localParticipant?.setMicrophoneEnabled(true);
@@ -176,7 +183,7 @@ extension DevicesControl on Session {
   }
 
   Future<void> disableMicrophone() async {
-    if (!(context?.microphoneOpened ?? false)) {
+    if (!(context?.isMicrophoneEnabled ?? false)) {
       return;
     }
     try {
@@ -203,13 +210,13 @@ extension DevicesControl on Session {
     if (context?.connected ?? false) {
       await context?.localParticipant?.setCameraEnabled(
         true,
-        cameraCaptureOptions: Session.defaultCameraOptions.copyWith(
+        cameraCaptureOptions: Session.defaultCameraCaptureOptions.copyWith(
           deviceId: context?.room.selectedVideoInputDeviceId,
         ),
       );
     } else {
       context?.localVideoTrack ??= await LocalVideoTrack.createCameraTrack(
-        Session.defaultCameraOptions.copyWith(
+        Session.defaultCameraCaptureOptions.copyWith(
           deviceId: context?.room.selectedVideoInputDeviceId,
         ),
       );
