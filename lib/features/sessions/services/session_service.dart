@@ -221,7 +221,7 @@ class Session extends _$Session {
   bool _userSpeakerPreference = true;
 
   static const defaultCameraOptions = CameraCaptureOptions(
-    params: VideoParametersPresets.h540_43,
+    params: VideoParametersPresets.h720_43,
   );
 
   @override

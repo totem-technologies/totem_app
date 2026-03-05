@@ -484,6 +484,14 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   TrackPublication<Track>? get videoTrack {
     if (widget.participant is RemoteParticipant) {
       return widget.participant.getTrackPublicationBySource(TrackSource.camera);
+    } else if (widget.participant is LocalParticipant) {
+      return (widget.participant as LocalParticipant)
+              .getTrackPublicationBySource(TrackSource.camera) ??
+          widget.participant.videoTrackPublications
+              .where(
+                (t) => t.track != null && t.track!.isActive && !t.track!.muted,
+              )
+              .firstOrNull;
     } else {
       return widget.participant.videoTrackPublications
           .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)
