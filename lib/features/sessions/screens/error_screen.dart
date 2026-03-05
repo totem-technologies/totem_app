@@ -23,7 +23,7 @@ class RoomErrorScreen extends StatelessWidget {
     if (error is SessionErrorResponse) {
       switch ((error! as SessionErrorResponse).code) {
         case ErrorCode.banned:
-          title = 'You have been permanently removed from this session.';
+          title = "You've been removed from this session";
           subtitle =
               "You can still join other sessions, but you won't be able to access this one.";
           canRetry = false;

@@ -88,7 +88,7 @@ class ErrorHandler {
     } else if (error is AppDataException ||
         error is FormatException ||
         error is PlatformException) {
-      return 'There was an unexpected server error. The team has been notified. Please try again.';
+      return 'Something unexpected happened. Please try again.';
     } else {
       return 'Oops! Something went wrong.';
     }

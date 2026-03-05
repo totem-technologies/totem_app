@@ -94,7 +94,7 @@ class WelcomeCard extends StatelessWidget {
           // Main message text
           Text(
             'Welcome to Totem! Get started by signing up for your first session. '
-            'Below you can find the next upcoming sessions, or use the Sessions tab to see everything.',
+            'Below are the next upcoming sessions, or use the Sessions tab to see everything.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: fontSize,
