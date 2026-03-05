@@ -18,7 +18,6 @@ class BanParticipantEvent {
       _$BanParticipantEventFromJson(json);
 
   final String type;
-  @JsonKey(name: 'participant_slug')
   final String participantSlug;
 
   Map<String, Object?> toJson() => _$BanParticipantEventToJson(this);

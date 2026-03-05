@@ -134,6 +134,9 @@ class SessionRoomState {
   }
 
   String get speakingNow {
+    if (roomState.currentSpeaker == null || roomState.currentSpeaker!.isEmpty) {
+      return roomState.keeper;
+    }
     return roomState.currentSpeaker ?? roomState.keeper;
   }
 

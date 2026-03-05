@@ -7,6 +7,8 @@ import 'package:retrofit/retrofit.dart';
 
 import '../models/event_request.dart';
 import '../models/join_response.dart';
+import '../models/reason.dart';
+import '../models/remove_participant_payload.dart';
 import '../models/room_state.dart';
 
 part 'rooms_client.g.dart';
@@ -65,8 +67,9 @@ abstract class RoomsClient {
   @POST(
     '/api/mobile/protected/rooms/{session_slug}/remove/{participant_identity}',
   )
-  Future<void> totemRoomsApiRemove({
+  Future<RemoveParticipantPayload> totemRoomsApiRemove({
     @Path('session_slug') required String sessionSlug,
     @Path('participant_identity') required String participantIdentity,
+    @Query('reason') Reason? reason = Reason.remove,
   });
 }

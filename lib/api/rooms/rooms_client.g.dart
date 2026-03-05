@@ -148,15 +148,17 @@ class _RoomsClient implements RoomsClient {
   }
 
   @override
-  Future<void> totemRoomsApiRemove({
+  Future<RemoveParticipantPayload> totemRoomsApiRemove({
     required String sessionSlug,
     required String participantIdentity,
+    Reason? reason = Reason.remove,
   }) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{r'reason': reason};
+    queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<void>(
+    final _options = _setStreamType<RemoveParticipantPayload>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -166,7 +168,15 @@ class _RoomsClient implements RoomsClient {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    await _dio.fetch<void>(_options);
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late RemoveParticipantPayload _value;
+    try {
+      _value = RemoveParticipantPayload.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
   }
 
   RequestOptions _setStreamType<T>(RequestOptions requestOptions) {
