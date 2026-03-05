@@ -708,7 +708,9 @@ class OptionsSheetTile<T> extends StatelessWidget {
       iconColor: type == OptionsSheetTileType.destructive
           ? theme.colorScheme.onErrorContainer
           : null,
-      trailing: trailing,
+      trailing:
+          trailing ??
+          (onTap != null ? Icon(Icons.adaptive.arrow_forward) : null),
     );
   }
 }

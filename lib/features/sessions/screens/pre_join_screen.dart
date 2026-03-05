@@ -186,13 +186,15 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         _cameraOptions,
       );
       await _previewVideoTrack!.start();
-      if (mounted) setState(() {});
     } catch (error, stackTrace) {
+      _isCameraOn = false;
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Failed to create local video track',
       );
+    } finally {
+      if (mounted) setState(() {});
     }
   }
 
