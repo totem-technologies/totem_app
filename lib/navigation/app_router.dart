@@ -41,7 +41,7 @@ enum HomeRoutes {
   static const HomeRoutes initialRoute = HomeRoutes.home;
 }
 
-class BottomNavScaffold extends StatelessWidget {
+class BottomNavScaffold extends ConsumerWidget {
   const BottomNavScaffold({
     required this.child,
     required this.currentPath,
@@ -53,7 +53,7 @@ class BottomNavScaffold extends StatelessWidget {
   static const double bottomNavHeight = 80;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final currentRoute = HomeRoutes.values.firstWhere(
       (route) => currentPath.startsWith(route.path),
       orElse: () => HomeRoutes.initialRoute,
@@ -74,6 +74,11 @@ class BottomNavScaffold extends StatelessWidget {
                 for (final route in HomeRoutes.values) {
                   logger.i('🛻 Checking route: ${route.path}');
                   if (index == route.index && currentRoute != route) {
+                    if (route == HomeRoutes.spaces) {
+                      ref
+                        ..invalidate(mySessionsFilterProvider)
+                        ..invalidate(selectedCategoryProvider);
+                    }
                     logger.i('🛻 Navigating to: ${route.path}');
                     context.go(route.path);
                     return;
