@@ -20,10 +20,10 @@ extension DevicesControl on Session {
     try {
       final session = await audio.AudioSession.instance;
 
-      final devices = await session.getDevices(includeOutputs: true);
-      final hasExternalOutput = devices
-          .where((d) => d.isOutput)
-          .any((d) => externalAudioOutputTypes.contains(d.type));
+      final devices = await session.getDevices(includeInputs: false);
+      final hasExternalOutput = devices.any(
+        (d) => externalAudioOutputTypes.contains(d.type),
+      );
       if (hasExternalOutput) {
         _hasExternalOutput = true;
         await _autoSetSpeakerphone(false);
