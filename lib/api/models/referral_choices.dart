@@ -23,6 +23,12 @@ enum ReferralChoices {
   newsletter('newsletter'),
   @JsonValue('dream')
   dream('dream'),
+  @JsonValue('chatgpt')
+  chatgpt('chatgpt'),
+  @JsonValue('physical_media')
+  physicalMedia('physical_media'),
+  @JsonValue('friend')
+  friend('friend'),
   @JsonValue('other')
   other('other'),
 
