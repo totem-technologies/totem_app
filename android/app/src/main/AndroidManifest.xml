@@ -51,12 +51,19 @@
             </intent-filter>
 
             <meta-data android:name="flutter_deeplinking_enabled" android:value="true" />
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="totem" />
+            </intent-filter>
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="http" android:host="totem.org" />
-                <data android:scheme="https" />
+                <data android:scheme="https" android:host="totem.org" />
+                <data android:scheme="https" android:host="www.totem.org" />
+                <data android:scheme="https" android:host="totem.kbl.io" />
             </intent-filter>
 
         </activity>
