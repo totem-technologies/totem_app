@@ -5,21 +5,37 @@ import 'package:totem_app/shared/widgets/card_screen.dart';
 extension ReferralChoicesNames on ReferralChoices {
   String get name {
     return switch (this) {
-      ReferralChoices.blog => 'Blog or Article',
-      ReferralChoices.dream => 'Dream',
+      ReferralChoices.search => 'Search Engine',
+      ReferralChoices.chatgpt => 'ChatGPT',
       ReferralChoices.keeper => 'Keeper',
-      ReferralChoices.newsletter => 'Newsletter',
-      ReferralChoices.pamphlet => 'Pamphlet',
-      ReferralChoices.search => 'Google',
       ReferralChoices.social => 'Social Media',
-      ReferralChoices.other || _ => 'Other',
+      ReferralChoices.physicalMedia => 'Physical Media',
+      ReferralChoices.blog => 'Blog or Article',
+      ReferralChoices.friend => 'A friend',
+      ReferralChoices.other => 'Other',
+      ReferralChoices.valueDefault => "I'm not sure",
+      ReferralChoices.pamphlet => 'Pamphlet',
+      ReferralChoices.newsletter => 'Newsletter',
+      ReferralChoices.dream => '✨A Dream✨',
+      ReferralChoices.$unknown || _ => 'Other',
     };
   }
 }
 
+const List<ReferralChoices> _orderedSources = [
+  ReferralChoices.search,
+  ReferralChoices.chatgpt,
+  ReferralChoices.keeper,
+  ReferralChoices.social,
+  ReferralChoices.physicalMedia,
+  ReferralChoices.blog,
+  ReferralChoices.friend,
+  ReferralChoices.other,
+];
+
 /// Modal for selecting a single referral source.
-/// This widget manages the selected choice, updates the UI to reflect it,
-/// and returns the selected one when the user clicks "Save".
+/// Returns a `(ReferralChoices, String?)` record where the second element
+/// is the write-in text when "Other" is selected.
 class ReferralSourceModal extends StatefulWidget {
   const ReferralSourceModal({super.key});
 
@@ -28,17 +44,24 @@ class ReferralSourceModal extends StatefulWidget {
 }
 
 class _ReferralSourceModalState extends State<ReferralSourceModal> {
-  /// Holds the currently selected referral source (only one allowed).
   ReferralChoices? _selectedSource;
+  final TextEditingController _otherController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _otherController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _otherController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    // Build a set of available sources, excluding 'Other'
-    final availableSources = ReferralChoices.values
-        .where((source) => source.name != ReferralChoices.other.name)
-        .toSet();
 
     return CardScreen(
       children: [
@@ -65,23 +88,42 @@ class _ReferralSourceModalState extends State<ReferralSourceModal> {
             });
           },
           child: Column(
-            children: availableSources.map((source) {
+            children: _orderedSources.map((source) {
               final isSelected = _selectedSource == source;
               return Padding(
                 padding: const EdgeInsetsDirectional.only(bottom: 10),
-                child: RadioListTile<ReferralChoices>(
-                  title: Text(source.name),
-                  value: source,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: BorderSide(
-                      color: isSelected
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.primaryContainer,
-                      width: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    RadioListTile<ReferralChoices>(
+                      title: Text(source.name),
+                      value: source,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(
+                          color: isSelected
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.primaryContainer,
+                          width: 2,
+                        ),
+                      ),
+                      visualDensity: VisualDensity.compact,
                     ),
-                  ),
-                  visualDensity: VisualDensity.compact,
+                    if (source == ReferralChoices.other && isSelected) ...[
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(start: 16),
+                        child: TextField(
+                          controller: _otherController,
+                          autofocus: true,
+                          decoration: const InputDecoration(
+                            hintText: 'Please tell us more...',
+                          ),
+                          textInputAction: TextInputAction.done,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               );
             }).toList(),
@@ -89,10 +131,14 @@ class _ReferralSourceModalState extends State<ReferralSourceModal> {
         ),
         const SizedBox(height: 24),
         ElevatedButton(
-          onPressed: _selectedSource != null
+          onPressed: _selectedSource != null &&
+                  !(_selectedSource == ReferralChoices.other &&
+                      _otherController.text.trim().isEmpty)
               ? () {
-                  // Pop and return the selected source as a ReferralChoices
-                  Navigator.of(context).pop(_selectedSource);
+                  final otherText = _selectedSource == ReferralChoices.other
+                      ? _otherController.text.trim()
+                      : null;
+                  Navigator.of(context).pop((_selectedSource!, otherText));
                 }
               : null,
           child: const Text('Save'),
