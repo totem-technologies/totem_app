@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/assets.dart';
 
@@ -80,8 +79,7 @@ class WelcomeCard extends StatelessWidget {
 
   Widget _buildTextContent(BuildContext context, {required bool isTablet}) {
     final fontSize = isTablet ? 14.0 : 16.0;
-    final bottomPadding = isTablet ? 16.0 : 24.0;
-    final buttonFontSize = isTablet ? 14.0 : 16.0;
+    final bottomPadding = isTablet ? 16.0 : 10.0;
 
     return Positioned(
       left: 20,
@@ -112,43 +110,7 @@ class WelcomeCard extends StatelessWidget {
             ),
           ),
           SizedBox(height: isTablet ? 12 : 20),
-          _buildReadMoreButton(fontSize: buttonFontSize),
         ],
-      ),
-    );
-  }
-
-  // TODO(totem): Navigate to About Us page when implemented.
-  Widget _buildReadMoreButton({double fontSize = 16}) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.mauve.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => toHome(HomeRoutes.spaces),
-          borderRadius: BorderRadius.circular(24),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-            child: Text(
-              'Explore Sessions',
-              style: TextStyle(
-                fontSize: fontSize,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-                shadows: const [
-                  Shadow(
-                    offset: Offset(0, 1),
-                    blurRadius: 2,
-                    color: Color.fromRGBO(0, 0, 0, 0.3),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
