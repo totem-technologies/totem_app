@@ -25,6 +25,10 @@ class LoadingIndicator extends StatelessWidget {
           valueColor: AlwaysStoppedAnimation<Color>(
             color ?? theme.colorScheme.primary,
           ),
+          backgroundColor: switch (theme.platform) {
+            TargetPlatform.iOS || TargetPlatform.macOS => color,
+            _ => null,
+          },
           semanticsLabel: semanticsLabel,
         ),
       ),
