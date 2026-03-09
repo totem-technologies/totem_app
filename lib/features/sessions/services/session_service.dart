@@ -10,7 +10,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage, logger;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
@@ -222,6 +221,7 @@ class Session extends _$Session {
   StreamSubscription<audio.AudioDevicesChangedEvent>?
   _devicesChangedSubscription;
   bool _userSpeakerPreference = true;
+  bool _hasExternalOutput = false;
 
   static const defaultCameraCaptureOptions = CameraCaptureOptions(
     params: VideoParameters(
@@ -421,7 +421,13 @@ class Session extends _$Session {
       removed: false,
     );
 
-    _userSpeakerPreference = context?.room.speakerOn ?? true;
+    // _userSpeakerPreference is always true: when no external audio device
+    // is connected, the app should default to speaker (not earpiece).
+    _userSpeakerPreference = true;
+    _hasExternalOutput = false;
+
+    _autoSetSpeakerphone(true);
+
     options.onConnected();
     _updateParticipantsList();
     setupDeviceChangeListener();

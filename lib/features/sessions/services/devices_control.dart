@@ -4,8 +4,6 @@
 part of 'session_service.dart';
 
 extension DevicesControl on Session {
-  static const speakerPreferenceKey = 'speaker_preference';
-
   static const externalAudioOutputTypes = <audio.AudioDeviceType>{
     audio.AudioDeviceType.wiredHeadset,
     audio.AudioDeviceType.wiredHeadphones,
@@ -22,19 +20,19 @@ extension DevicesControl on Session {
     try {
       final session = await audio.AudioSession.instance;
 
-      final devices = await session.getDevices(includeOutputs: true);
-      final hasExternalOutput = devices
-          .where((d) => d.isOutput)
-          .any((d) => externalAudioOutputTypes.contains(d.type));
+      final devices = await session.getDevices(includeInputs: false);
+      final hasExternalOutput = devices.any(
+        (d) => externalAudioOutputTypes.contains(d.type),
+      );
       if (hasExternalOutput) {
-        _autoSetSpeakerphone(false);
+        _hasExternalOutput = true;
+        await _autoSetSpeakerphone(false);
       }
 
       _becomingNoisySubscription = session.becomingNoisyEventStream.listen((_) {
-        logger.i(
-          'Headphones unplugged, restoring speaker to $_userSpeakerPreference.',
-        );
-        _autoSetSpeakerphone(_userSpeakerPreference);
+        logger.i('Headphones unplugged, restoring to speaker.');
+        _hasExternalOutput = false;
+        _autoSetSpeakerphone(true);
       });
 
       _devicesChangedSubscription = session.devicesChangedEventStream.listen((
@@ -48,13 +46,14 @@ extension DevicesControl on Session {
             .any((d) => externalAudioOutputTypes.contains(d.type));
 
         if (addedExternal) {
-          logger.i('External audio output connected, disabling speaker.');
+          logger.i('External audio output connected, routing to headphones.');
+          _hasExternalOutput = true;
+          // Remove speaker override so OS routes to the newly connected device.
           _autoSetSpeakerphone(false);
         } else if (removedExternal) {
-          logger.i(
-            'External audio output disconnected, restoring speaker to $_userSpeakerPreference.',
-          );
-          _autoSetSpeakerphone(_userSpeakerPreference);
+          logger.i('External audio output disconnected, switching to speaker.');
+          _hasExternalOutput = false;
+          _autoSetSpeakerphone(true);
         }
       });
     } catch (error, stackTrace) {
@@ -127,11 +126,12 @@ extension DevicesControl on Session {
   bool get isSpeakerphoneEnabled => context?.room.speakerOn ?? false;
 
   Future<void> setSpeakerphone(bool enabled) async {
-    _userSpeakerPreference = enabled;
+    // When external audio is connected and the user enables the speaker,
+    // this is a temporary override — don't change the base preference.
+    if (!_hasExternalOutput) {
+      _userSpeakerPreference = enabled;
+    }
     await _autoSetSpeakerphone(enabled);
-    SharedPreferences.getInstance().then(
-      (prefs) => prefs.setBool(DevicesControl.speakerPreferenceKey, enabled),
-    );
   }
 
   Future<void> _autoSetSpeakerphone(bool enabled) async {
