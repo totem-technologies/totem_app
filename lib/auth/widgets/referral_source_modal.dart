@@ -22,7 +22,7 @@ extension ReferralChoicesNames on ReferralChoices {
   }
 }
 
-const List<ReferralChoices> _orderedSources = [
+final List<ReferralChoices> _orderedSources = [
   ReferralChoices.search,
   ReferralChoices.chatgpt,
   ReferralChoices.keeper,
@@ -58,6 +58,11 @@ class _ReferralSourceModalState extends State<ReferralSourceModal> {
     _otherController.dispose();
     super.dispose();
   }
+
+  bool get _canSave =>
+      _selectedSource != null &&
+      !(_selectedSource == ReferralChoices.other &&
+          _otherController.text.trim().isEmpty);
 
   @override
   Widget build(BuildContext context) {
@@ -131,9 +136,7 @@ class _ReferralSourceModalState extends State<ReferralSourceModal> {
         ),
         const SizedBox(height: 24),
         ElevatedButton(
-          onPressed: _selectedSource != null &&
-                  !(_selectedSource == ReferralChoices.other &&
-                      _otherController.text.trim().isEmpty)
+          onPressed: _canSave
               ? () {
                   final otherText = _selectedSource == ReferralChoices.other
                       ? _otherController.text.trim()
