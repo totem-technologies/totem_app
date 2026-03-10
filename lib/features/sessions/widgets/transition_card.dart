@@ -163,7 +163,7 @@ class _SlideToActionButtonState extends State<SlideToActionButton> {
     final success = await widget.onActionCompleted();
     _isCompleted = success;
     _dragPosition = success ? maxSlideDistance : 0.0;
-    _isLoading = success && widget.keepLoadingOnSuccess ? true : false;
+    _isLoading = success && widget.keepLoadingOnSuccess;
     if (mounted) setState(() {});
   }
 
