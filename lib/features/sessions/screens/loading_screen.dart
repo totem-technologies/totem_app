@@ -1,53 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/circle_icon_button.dart';
-import 'package:totem_app/shared/widgets/loading_indicator.dart';
-
-class LoadingRoomScreen extends StatelessWidget {
-  const LoadingRoomScreen({super.key, this.actionBarKey});
-
-  final Key? actionBarKey;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return PrejoinRoomBaseScreen(
-      title: 'Connecting...',
-      video: Container(
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: theme.colorScheme.primary, width: 2),
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: const AspectRatio(
-          aspectRatio: 16 / 21,
-          child: LoadingVideoPlaceholder(),
-        ),
-      ),
-      actionBar: ActionBar(
-        key: actionBarKey,
-        children: const [
-          ActionBarButton(
-            onPressed: null,
-            child: LoadingIndicator(color: Colors.white),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class PrejoinRoomBaseScreen extends StatelessWidget {
   const PrejoinRoomBaseScreen({
     required this.title,
     required this.video,
     required this.actionBar,
+    this.joinSlider,
     this.subtitle,
     super.key,
   });
@@ -55,6 +19,7 @@ class PrejoinRoomBaseScreen extends StatelessWidget {
   final String title;
   final String? subtitle;
   final Widget video;
+  final Widget? joinSlider;
   final Widget actionBar;
 
   @override
@@ -83,7 +48,7 @@ class PrejoinRoomBaseScreen extends StatelessWidget {
                 padding: const EdgeInsetsDirectional.all(20),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  spacing: 12,
+                  spacing: 18,
                   children: [
                     Text(
                       title,
@@ -106,12 +71,21 @@ class PrejoinRoomBaseScreen extends StatelessWidget {
                       child: Container(
                         margin: const EdgeInsetsDirectional.symmetric(
                           horizontal: 40,
-                          vertical: 10,
+                          // vertical: 10,
                         ),
                         alignment: Alignment.center,
                         child: video,
                       ),
                     ),
+                    if (joinSlider != null)
+                      Padding(
+                        padding: const EdgeInsetsDirectional.symmetric(
+                          horizontal: 44,
+                        ),
+                        child: joinSlider,
+                      )
+                    else
+                      const SizedBox(),
                     actionBar,
                   ],
                 ),

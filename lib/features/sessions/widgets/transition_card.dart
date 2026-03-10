@@ -66,7 +66,7 @@ class TransitionCard extends StatelessWidget {
                   constraints: const BoxConstraints(
                     minWidth: 160,
                   ),
-                  child: _SlideToActionButton(
+                  child: SlideToActionButton(
                     text:
                         actionText ??
                         switch (type) {
@@ -86,20 +86,25 @@ class TransitionCard extends StatelessWidget {
   }
 }
 
-class _SlideToActionButton extends StatefulWidget {
-  const _SlideToActionButton({
+class SlideToActionButton extends StatefulWidget {
+  const SlideToActionButton({
     required this.text,
     required this.onActionCompleted,
+    this.keepLoadingOnSuccess = false,
+    this.backgroundColor,
+    super.key,
   });
 
   final String text;
   final OnActionPerformed onActionCompleted;
+  final bool keepLoadingOnSuccess;
+  final Color? backgroundColor;
 
   @override
-  State<_SlideToActionButton> createState() => _SlideToActionButtonState();
+  State<SlideToActionButton> createState() => _SlideToActionButtonState();
 }
 
-class _SlideToActionButtonState extends State<_SlideToActionButton> {
+class _SlideToActionButtonState extends State<SlideToActionButton> {
   var _dragPosition = 0.0;
   var _isCompleted = false;
   var _isLoading = false;
@@ -158,7 +163,7 @@ class _SlideToActionButtonState extends State<_SlideToActionButton> {
     final success = await widget.onActionCompleted();
     _isCompleted = success;
     _dragPosition = success ? maxSlideDistance : 0.0;
-    _isLoading = false;
+    _isLoading = success && widget.keepLoadingOnSuccess ? true : false;
     if (mounted) setState(() {});
   }
 
@@ -178,7 +183,8 @@ class _SlideToActionButtonState extends State<_SlideToActionButton> {
           1,
         );
 
-        final backgroundColor = theme.colorScheme.primary;
+        final backgroundColor =
+            widget.backgroundColor ?? theme.colorScheme.primary;
         final foregroundColor = theme.colorScheme.onPrimary;
 
         TextStyle? baseTextStyle;

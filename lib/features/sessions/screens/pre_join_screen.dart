@@ -19,6 +19,7 @@ import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
+import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
@@ -42,6 +43,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   SessionOptions? _sessionOptions;
   final GlobalKey actionBarKey = GlobalKey();
+  final GlobalKey loadingScreenKey = GlobalKey();
 
   @override
   void initState() {
@@ -188,8 +190,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     setState(() => _isMicOn = !_isMicOn);
   }
 
-  Widget _buildPrejoinUI(String token, SessionDetailSchema session) {
+  Widget _buildPrejoinUI() {
+    final theme = Theme.of(context);
     return PrejoinRoomBaseScreen(
+      key: loadingScreenKey,
       title: 'Welcome',
       subtitle:
           'Your session will start soon. Please check your audio and video settings before joining.',
@@ -200,6 +204,15 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           isCameraOn: _isCameraOn,
           videoTrack: _previewVideoTrack,
         ),
+      ),
+      joinSlider: SlideToActionButton(
+        text: 'Swipe to Join',
+        keepLoadingOnSuccess: true,
+        onActionCompleted: () async {
+          await _joinRoom();
+          return true;
+        },
+        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.8),
       ),
       actionBar: ActionBar(
         key: actionBarKey,
@@ -249,22 +262,19 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
               child: TotemIcon(TotemIcons.more, size: 18),
             ),
           ),
-          SizedBox(
-            width: 96,
-            child: ActionBarButton(
-              semanticsLabel: 'Join session',
-              onPressed: () => _joinRoom(token, session),
-              square: false,
-              child: const Text('Join'),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Future<void> _joinRoom(String token, SessionDetailSchema session) async {
+  Future<void> _joinRoom() async {
     if (_sessionOptions != null) return;
+
+    final token = await ref.read(
+      sessionTokenProvider(widget.sessionSlug).future,
+    );
+    await ref.read(eventProvider(widget.sessionSlug).future);
+
     _sessionOptions = SessionOptions(
       eventSlug: widget.sessionSlug,
       token: token,
@@ -312,12 +322,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     final tokenData = ref.watch(sessionTokenProvider(widget.sessionSlug));
     final sessionData = ref.watch(eventProvider(widget.sessionSlug));
 
-    // The room should not display loading screen when its provider is refreshing.
-    if ((tokenData.isLoading && !tokenData.isRefreshing) ||
-        (sessionData.isLoading && !sessionData.isRefreshing)) {
-      return LoadingRoomScreen(actionBarKey: actionBarKey);
-    }
-
     if (tokenData.hasError) {
       return RoomBackground(
         child: RoomErrorScreen(
@@ -336,18 +340,19 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       );
     }
 
-    final token = tokenData.value!;
-    final session = sessionData.value!;
-
-    if (_sessionOptions == null) {
-      return _buildPrejoinUI(token, session);
+    final isLoading =
+        (tokenData.isLoading && !tokenData.isRefreshing) ||
+        (sessionData.isLoading && !sessionData.isRefreshing);
+    if (_sessionOptions == null || isLoading) {
+      return _buildPrejoinUI();
     }
 
+    final session = sessionData.value!;
     return VideoRoomScreen(
       sessionSlug: widget.sessionSlug,
       sessionOptions: _sessionOptions!,
       session: session,
-      loadingScreen: _buildPrejoinUI(token, session),
+      loadingScreen: _buildPrejoinUI(),
       actionBarKey: actionBarKey,
     );
   }
