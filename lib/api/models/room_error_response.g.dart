@@ -31,6 +31,7 @@ const _$ErrorCodeEnumMap = {
   ErrorCode.roomNotWaiting: 'room_not_waiting',
   ErrorCode.roomAlreadyEnded: 'room_already_ended',
   ErrorCode.invalidParticipantOrder: 'invalid_participant_order',
+  ErrorCode.keeperNotInRoom: 'keeper_not_in_room',
   ErrorCode.staleVersion: 'stale_version',
   ErrorCode.notJoinable: 'not_joinable',
   ErrorCode.livekitError: 'livekit_error',
