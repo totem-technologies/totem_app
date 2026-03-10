@@ -13,14 +13,21 @@ import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Keeps track of shown sheets to avoid showing multiple times in a row.
-final _shownSheetFor = <String>{};
-
-class JoinOngoingSessionCard extends ConsumerWidget {
+class JoinOngoingSessionCard extends ConsumerStatefulWidget {
   const JoinOngoingSessionCard({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<JoinOngoingSessionCard> createState() =>
+      _JoinOngoingSessionCardState();
+}
+
+class _JoinOngoingSessionCardState
+    extends ConsumerState<JoinOngoingSessionCard> {
+  /// Keeps track of shown sheets to avoid showing multiple times in a row.
+  final _shownSheetFor = <String>{};
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
     final ongoingSessionProvider = spacesSummaryProvider.select((summaryAsync) {
