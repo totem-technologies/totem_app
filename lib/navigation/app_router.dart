@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
@@ -54,75 +55,84 @@ class BottomNavScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final currentRoute = HomeRoutes.values.firstWhere(
       (route) => currentPath.startsWith(route.path),
       orElse: () => HomeRoutes.initialRoute,
     );
 
-    return Scaffold(
-      body: OfflineIndicatorPage(child: child),
-      extendBody: true,
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const JoinOngoingSessionCard(),
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-            child: NavigationBar(
-              height: bottomNavHeight,
-              onDestinationSelected: (index) {
-                for (final route in HomeRoutes.values) {
-                  logger.i('🛻 Checking route: ${route.path}');
-                  if (index == route.index && currentRoute != route) {
-                    if (route == HomeRoutes.spaces) {
-                      ref
-                        ..invalidate(mySessionsFilterProvider)
-                        ..invalidate(selectedCategoryProvider);
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: switch (theme.brightness) {
+        Brightness.dark => SystemUiOverlayStyle.light,
+        Brightness.light => SystemUiOverlayStyle.dark,
+      },
+      child: Scaffold(
+        body: OfflineIndicatorPage(child: child),
+        extendBody: true,
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const JoinOngoingSessionCard(),
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(30),
+              ),
+              child: NavigationBar(
+                height: bottomNavHeight,
+                onDestinationSelected: (index) {
+                  for (final route in HomeRoutes.values) {
+                    logger.i('🛻 Checking route: ${route.path}');
+                    if (index == route.index && currentRoute != route) {
+                      if (route == HomeRoutes.spaces) {
+                        ref
+                          ..invalidate(mySessionsFilterProvider)
+                          ..invalidate(selectedCategoryProvider);
+                      }
+                      logger.i('🛻 Navigating to: ${route.path}');
+                      context.go(route.path);
+                      return;
                     }
-                    logger.i('🛻 Navigating to: ${route.path}');
-                    context.go(route.path);
-                    return;
                   }
-                }
-              },
-              selectedIndex: currentRoute.index,
-              destinations: const [
-                NavigationDestination(
-                  icon: TotemIcon(TotemIcons.home),
-                  selectedIcon: TotemIcon(
-                    TotemIcons.homeFilled,
-                    fillColor: false,
+                },
+                selectedIndex: currentRoute.index,
+                destinations: const [
+                  NavigationDestination(
+                    icon: TotemIcon(TotemIcons.home),
+                    selectedIcon: TotemIcon(
+                      TotemIcons.homeFilled,
+                      fillColor: false,
+                    ),
+                    label: 'Home',
                   ),
-                  label: 'Home',
-                ),
-                NavigationDestination(
-                  icon: TotemIcon(TotemIcons.spaces),
-                  selectedIcon: TotemIcon(
-                    TotemIcons.spacesFilled,
-                    fillColor: false,
+                  NavigationDestination(
+                    icon: TotemIcon(TotemIcons.spaces),
+                    selectedIcon: TotemIcon(
+                      TotemIcons.spacesFilled,
+                      fillColor: false,
+                    ),
+                    label: 'Sessions',
                   ),
-                  label: 'Sessions',
-                ),
-                NavigationDestination(
-                  icon: TotemIcon(TotemIcons.blog),
-                  selectedIcon: TotemIcon(
-                    TotemIcons.blogFilled,
-                    fillColor: false,
+                  NavigationDestination(
+                    icon: TotemIcon(TotemIcons.blog),
+                    selectedIcon: TotemIcon(
+                      TotemIcons.blogFilled,
+                      fillColor: false,
+                    ),
+                    label: 'Blog',
                   ),
-                  label: 'Blog',
-                ),
-                NavigationDestination(
-                  icon: TotemIcon(TotemIcons.profile),
-                  selectedIcon: TotemIcon(
-                    TotemIcons.profileFilled,
-                    fillColor: false,
+                  NavigationDestination(
+                    icon: TotemIcon(TotemIcons.profile),
+                    selectedIcon: TotemIcon(
+                      TotemIcons.profileFilled,
+                      fillColor: false,
+                    ),
+                    label: 'Profile',
                   ),
-                  label: 'Profile',
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
