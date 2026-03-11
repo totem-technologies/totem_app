@@ -8,18 +8,21 @@ final screenProtectionProvider = Provider<ScreenProtectionService>((ref) {
 
 class ScreenProtectionService {
   const ScreenProtectionService();
+  static bool _captureProtectionEnabled = false;
+  static bool get captureProtectionEnabled => _captureProtectionEnabled;
+
   static const _totemCaptureDomain = '@totem.org';
 
   static bool shouldAllowScreenCaptureForEmail(String? email) {
     final normalized = email?.trim().toLowerCase();
     if (normalized == null || normalized.isEmpty) {
-      // Fail-open behavior requested by product while auth data settles.
       return true;
     }
     return normalized.endsWith(_totemCaptureDomain);
   }
 
   Future<void> setCaptureProtectionEnabled(bool enabled) async {
+    if (_captureProtectionEnabled == enabled) return;
     try {
       if (enabled) {
         await ScreenProtector.preventScreenshotOn();
@@ -28,6 +31,7 @@ class ScreenProtectionService {
         await ScreenProtector.preventScreenshotOff();
         await ScreenProtector.protectDataLeakageOff();
       }
+      _captureProtectionEnabled = enabled;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,

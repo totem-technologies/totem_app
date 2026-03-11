@@ -224,7 +224,6 @@ class Session extends _$Session {
   _devicesChangedSubscription;
   bool _userSpeakerPreference = true;
   bool _hasExternalOutput = false;
-  bool _captureProtectionEnabled = false;
 
   static const defaultCameraCaptureOptions = CameraCaptureOptions(
     params: VideoParameters(
@@ -586,26 +585,25 @@ class Session extends _$Session {
 
     if (ref.mounted) {
       try {
-        ref.read(emojiReactionsProvider.notifier).clear();
+        ref.read(screenProtectionProvider).setCaptureProtectionEnabled(false);
       } catch (_) {}
       try {
-        if (event != null) {
-          ref.invalidate(spaceProvider(event!.space.slug));
-        }
+        ref.read(emojiReactionsProvider.notifier).clear();
       } catch (_) {}
+      if (event != null) {
+        try {
+          ref.invalidate(spaceProvider(event!.space.slug));
+        } catch (_) {}
+      }
       try {
         ref.invalidate(spacesSummaryProvider);
       } catch (_) {}
       try {
         ref.invalidate(sessionScopeProvider);
       } catch (_) {}
-      try {
-        ref.read(screenProtectionProvider).setCaptureProtectionEnabled(false);
-      } catch (_) {}
     }
 
     endBackgroundMode(); // This closes _notificationTimer
-    _captureProtectionEnabled = false;
 
     try {
       WakelockPlus.disable();
@@ -646,17 +644,10 @@ class Session extends _$Session {
     final email = ref.read(authControllerProvider).user?.email;
     final shouldProtect =
         !ScreenProtectionService.shouldAllowScreenCaptureForEmail(email);
-    if (_captureProtectionEnabled == shouldProtect) {
-      return;
-    }
-
-    _captureProtectionEnabled = shouldProtect;
-    unawaited(
+    if (shouldProtect) {
       ref
           .read(screenProtectionProvider)
-          .setCaptureProtectionEnabled(
-            shouldProtect,
-          ),
-    );
+          .setCaptureProtectionEnabled(shouldProtect);
+    }
   }
 }
