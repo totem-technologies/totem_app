@@ -12,15 +12,16 @@ class EventDeepLinkScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final eventAsync = ref.watch(eventProvider(eventSlug));
 
+    ref.listen(eventProvider(eventSlug), (previous, next) {
+      if (next case AsyncData(:final value)) {
+        context.go(RouteNames.spaceSession(value.space.slug, eventSlug));
+      }
+    });
+
     return eventAsync.when(
-      data: (event) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          context.go(RouteNames.spaceSession(event.space.slug, eventSlug));
-        });
-        return const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        );
-      },
+      data: (_) => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
       loading: () => const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       ),
