@@ -580,6 +580,11 @@ class Session extends _$Session {
     context?.disconnect();
   }
 
+  Future<void> leave() async {
+    await context?.disconnect();
+    _cleanUp();
+  }
+
   void _cleanUp() {
     logger.d('Disposing SessionService and closing connections.');
 
