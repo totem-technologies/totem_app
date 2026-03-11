@@ -5,17 +5,12 @@ PODS:
   - flutter_webrtc (1.2.0):
     - Flutter
     - WebRTC-SDK (= 137.7151.04)
-  - livekit_client (2.6.4):
+  - livekit_client (2.6.5):
     - Flutter
     - flutter_webrtc
     - WebRTC-SDK (= 137.7151.04)
   - permission_handler_apple (9.3.0):
     - Flutter
-  - PostHog (3.42.1)
-  - posthog_flutter (0.0.1):
-    - Flutter
-    - FlutterMacOS
-    - PostHog (< 4.0.0, >= 3.42.1)
   - screen_protector (1.5.1):
     - Flutter
     - ScreenProtectorKit (= 1.5.1)
@@ -28,12 +23,10 @@ DEPENDENCIES:
   - flutter_webrtc (from `.symlinks/plugins/flutter_webrtc/ios`)
   - livekit_client (from `.symlinks/plugins/livekit_client/ios`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
-  - posthog_flutter (from `.symlinks/plugins/posthog_flutter/ios`)
   - screen_protector (from `.symlinks/plugins/screen_protector/ios`)
 
 SPEC REPOS:
   trunk:
-    - PostHog
     - ScreenProtectorKit
     - WebRTC-SDK
 
@@ -48,8 +41,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/livekit_client/ios"
   permission_handler_apple:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
-  posthog_flutter:
-    :path: ".symlinks/plugins/posthog_flutter/ios"
   screen_protector:
     :path: ".symlinks/plugins/screen_protector/ios"
 
@@ -57,10 +48,8 @@ SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_foreground_task: a159d2c2173b33699ddb3e6c2a067045d7cebb89
   flutter_webrtc: c3e21fc0dcd9d8eb246ae4d5256fcbeb2f5ecd22
-  livekit_client: 05903af3b321aa2703c661edcac1abfb4fc7e80c
+  livekit_client: 39aec804d7ee9735d38c09cc656b78978c4854e4
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
-  PostHog: 148d2d62bac68c6da50a2325030b3fb2d6bca95b
-  posthog_flutter: dd40874245b7c978e189067a671248c587109787
   screen_protector: 18c6aca2dc5d2a832f6787a5318f97f03e9d3150
   ScreenProtectorKit: 6ceb3e0808341a9bc15d175bff40dfdd4b32da71
   WebRTC-SDK: 40d4f5ba05cadff14e4db5614aec402a633f007e
