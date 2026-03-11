@@ -644,7 +644,8 @@ class Session extends _$Session {
 
   void _applyScreenCapturePolicy() {
     final email = ref.read(authControllerProvider).user?.email;
-    final shouldProtect = !shouldAllowScreenCaptureForEmail(email);
+    final shouldProtect =
+        !ScreenProtectionService.shouldAllowScreenCaptureForEmail(email);
     if (_captureProtectionEnabled == shouldProtect) {
       return;
     }

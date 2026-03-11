@@ -6,19 +6,18 @@ final screenProtectionProvider = Provider<ScreenProtectionService>((ref) {
   return const ScreenProtectionService();
 }, name: 'Screen Protection Provider');
 
-const _totemCaptureDomain = '@totem.org';
-
-bool shouldAllowScreenCaptureForEmail(String? email) {
-  final normalized = email?.trim().toLowerCase();
-  if (normalized == null || normalized.isEmpty) {
-    // Fail-open behavior requested by product while auth data settles.
-    return true;
-  }
-  return normalized.endsWith(_totemCaptureDomain);
-}
-
 class ScreenProtectionService {
   const ScreenProtectionService();
+  static const _totemCaptureDomain = '@totem.org';
+
+  static bool shouldAllowScreenCaptureForEmail(String? email) {
+    final normalized = email?.trim().toLowerCase();
+    if (normalized == null || normalized.isEmpty) {
+      // Fail-open behavior requested by product while auth data settles.
+      return true;
+    }
+    return normalized.endsWith(_totemCaptureDomain);
+  }
 
   Future<void> setCaptureProtectionEnabled(bool enabled) async {
     try {
