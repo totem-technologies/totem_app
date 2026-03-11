@@ -18,6 +18,7 @@ import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/screen_protection_service.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
+import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/services/utils.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
@@ -595,13 +596,16 @@ class Session extends _$Session {
       try {
         ref.invalidate(spacesSummaryProvider);
       } catch (_) {}
+      try {
+        ref.invalidate(sessionScopeProvider);
+      } catch (_) {}
+      try {
+        ref.read(screenProtectionProvider).setCaptureProtectionEnabled(false);
+      } catch (_) {}
     }
 
     endBackgroundMode(); // This closes _notificationTimer
     _captureProtectionEnabled = false;
-    unawaited(
-      ref.read(screenProtectionProvider).setCaptureProtectionEnabled(false),
-    );
 
     try {
       WakelockPlus.disable();
@@ -625,7 +629,12 @@ class Session extends _$Session {
       _listener
         ?..cancelAll()
         ..dispose();
-    } catch (_) {}
+    } catch (error) {
+      ErrorHandler.logError(
+        error,
+        message: 'Error disposing LiveKit event listener',
+      );
+    }
     try {
       context
         ?..removeListener(_onRoomChanges)
