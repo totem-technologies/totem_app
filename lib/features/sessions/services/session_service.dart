@@ -15,6 +15,7 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/core/services/screen_protection_service.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
@@ -222,6 +223,7 @@ class Session extends _$Session {
   _devicesChangedSubscription;
   bool _userSpeakerPreference = true;
   bool _hasExternalOutput = false;
+  bool _captureProtectionEnabled = false;
 
   static const defaultCameraCaptureOptions = CameraCaptureOptions(
     params: VideoParameters(
@@ -322,6 +324,7 @@ class Session extends _$Session {
 
     WakelockPlus.enable();
     setupBackgroundMode();
+    _applyScreenCapturePolicy();
 
     ref.onDispose(_cleanUp);
 
@@ -427,6 +430,7 @@ class Session extends _$Session {
     _hasExternalOutput = false;
 
     _autoSetSpeakerphone(true);
+    _applyScreenCapturePolicy();
 
     options.onConnected();
     _updateParticipantsList();
@@ -594,6 +598,11 @@ class Session extends _$Session {
     }
 
     endBackgroundMode(); // This closes _notificationTimer
+    _captureProtectionEnabled = false;
+    unawaited(
+      ref.read(screenProtectionProvider).setCaptureProtectionEnabled(false),
+    );
+
     try {
       WakelockPlus.disable();
     } catch (_) {}
@@ -622,5 +631,22 @@ class Session extends _$Session {
         ?..removeListener(_onRoomChanges)
         ..dispose();
     } catch (_) {}
+  }
+
+  void _applyScreenCapturePolicy() {
+    final email = ref.read(authControllerProvider).user?.email;
+    final shouldProtect = !shouldAllowScreenCaptureForEmail(email);
+    if (_captureProtectionEnabled == shouldProtect) {
+      return;
+    }
+
+    _captureProtectionEnabled = shouldProtect;
+    unawaited(
+      ref
+          .read(screenProtectionProvider)
+          .setCaptureProtectionEnabled(
+            shouldProtect,
+          ),
+    );
   }
 }
