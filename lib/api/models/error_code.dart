@@ -28,6 +28,8 @@ enum ErrorCode {
   roomAlreadyEnded('room_already_ended'),
   @JsonValue('invalid_participant_order')
   invalidParticipantOrder('invalid_participant_order'),
+  @JsonValue('keeper_not_in_room')
+  keeperNotInRoom('keeper_not_in_room'),
   @JsonValue('stale_version')
   staleVersion('stale_version'),
   @JsonValue('not_joinable')
