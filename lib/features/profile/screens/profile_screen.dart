@@ -52,8 +52,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           spacing: 10,
                           children: [
                             UserAvatar.currentUser(
-                              onTap: () => context
-                                  .pushNamed(RouteNames.profileDetail),
+                              onTap: () =>
+                                  context.pushNamed(RouteNames.profileDetail),
                             ),
                             AutoSizeText(
                               user.name ?? 'You',
