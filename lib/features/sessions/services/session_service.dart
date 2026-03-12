@@ -15,8 +15,10 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/core/services/screen_protection_service.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
+import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/services/utils.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
@@ -322,6 +324,7 @@ class Session extends _$Session {
 
     WakelockPlus.enable();
     setupBackgroundMode();
+    _applyScreenCapturePolicy();
 
     ref.onDispose(_cleanUp);
 
@@ -427,6 +430,7 @@ class Session extends _$Session {
     _hasExternalOutput = false;
 
     _autoSetSpeakerphone(true);
+    _applyScreenCapturePolicy();
 
     options.onConnected();
     _updateParticipantsList();
@@ -576,24 +580,36 @@ class Session extends _$Session {
     context?.disconnect();
   }
 
+  Future<void> leave() async {
+    await context?.disconnect();
+    _cleanUp();
+  }
+
   void _cleanUp() {
     logger.d('Disposing SessionService and closing connections.');
 
     if (ref.mounted) {
       try {
+        ref.read(screenProtectionProvider).setCaptureProtectionEnabled(false);
+      } catch (_) {}
+      try {
         ref.read(emojiReactionsProvider.notifier).clear();
       } catch (_) {}
-      try {
-        if (event != null) {
+      if (event != null) {
+        try {
           ref.invalidate(spaceProvider(event!.space.slug));
-        }
-      } catch (_) {}
+        } catch (_) {}
+      }
       try {
         ref.invalidate(spacesSummaryProvider);
+      } catch (_) {}
+      try {
+        ref.invalidate(sessionScopeProvider);
       } catch (_) {}
     }
 
     endBackgroundMode(); // This closes _notificationTimer
+
     try {
       WakelockPlus.disable();
     } catch (_) {}
@@ -616,11 +632,25 @@ class Session extends _$Session {
       _listener
         ?..cancelAll()
         ..dispose();
-    } catch (_) {}
+    } catch (error) {
+      ErrorHandler.logError(
+        error,
+        message: 'Error disposing LiveKit event listener',
+      );
+    }
     try {
       context
         ?..removeListener(_onRoomChanges)
         ..dispose();
     } catch (_) {}
+  }
+
+  void _applyScreenCapturePolicy() {
+    final email = ref.read(authControllerProvider).user?.email;
+    final shouldProtect =
+        !ScreenProtectionService.shouldAllowScreenCaptureForEmail(email);
+    ref
+        .read(screenProtectionProvider)
+        .setCaptureProtectionEnabled(shouldProtect);
   }
 }

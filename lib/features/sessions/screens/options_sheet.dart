@@ -139,6 +139,7 @@ class OptionsSheet extends ConsumerWidget {
                   final navigator = Navigator.of(context)..pop();
                   final shouldLeave = await showLeaveDialog(context) ?? false;
                   if (shouldLeave && navigator.mounted) {
+                    currentSession.leave();
                     popOrHome(navigator.context);
                   }
                 },
