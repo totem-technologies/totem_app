@@ -46,25 +46,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: Row(
                     spacing: 10,
                     children: [
-                      GestureDetector(
-                        onTap: () =>
-                            context.pushNamed(RouteNames.profileDetail),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(minWidth: 146),
-                          child: Column(
-                            spacing: 10,
-                            children: [
-                              UserAvatar.currentUser(
-                                onTap: () => context
-                                    .pushNamed(RouteNames.profileDetail),
-                              ),
-                              AutoSizeText(
-                                user.name ?? 'You',
-                                style: theme.textTheme.headlineMedium,
-                                maxLines: 1,
-                              ),
-                            ],
-                          ),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 146),
+                        child: Column(
+                          spacing: 10,
+                          children: [
+                            UserAvatar.currentUser(
+                              onTap: () => context
+                                  .pushNamed(RouteNames.profileDetail),
+                            ),
+                            AutoSizeText(
+                              user.name ?? 'You',
+                              style: theme.textTheme.headlineMedium,
+                              maxLines: 1,
+                            ),
+                          ],
                         ),
                       ),
                       Expanded(
