@@ -101,7 +101,11 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                         return AdaptiveTextSelectionToolbar.selectableRegion(
                           selectableRegionState: selectableRegionState,
                         );
-                      } catch (_) {
+                        // Flutter throws a TypeError when the context menu
+                        // tries to position on content that has been scrolled
+                        // out of view. We catch it to avoid a crash.
+                        // ignore: avoid_catching_errors
+                      } on TypeError {
                         return const SizedBox.shrink();
                       }
                     },
