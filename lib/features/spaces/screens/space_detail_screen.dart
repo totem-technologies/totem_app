@@ -499,14 +499,42 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   bool _attending = false;
   bool _loading = false;
   bool _joined = false;
-  bool _initialized = false;
   String _currentTimeago = '';
   Timer? _timer;
   Timer? _confettiTimer;
+  String? _syncedEventSlug;
+  DateTime? _syncedEventStart;
+  bool? _syncedAttending;
 
-  void _initFromEvent(SessionDetailSchema event) {
-    if (_initialized) return;
-    _initialized = true;
+  SessionDetailSchema? get _currentEvent => widget.eventAsync?.asData?.value;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFromCurrentEvent(force: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant _SessionInfoCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncFromCurrentEvent();
+  }
+
+  void _syncFromCurrentEvent({bool force = false}) {
+    final event = _currentEvent;
+    if (event == null) return;
+
+    final shouldSync =
+        force ||
+        _syncedEventSlug != event.slug ||
+        _syncedEventStart != event.start ||
+        _syncedAttending != event.attending;
+
+    if (!shouldSync) return;
+
+    _syncedEventSlug = event.slug;
+    _syncedEventStart = event.start;
+    _syncedAttending = event.attending;
     _attending = event.attending;
     _currentTimeago = timeago.format(event.start, allowFromNow: true);
     _timer?.cancel();
@@ -552,8 +580,6 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
       locale: 'en_US',
       symbol: r'USD $',
     );
-
-    widget.eventAsync?.whenData(_initFromEvent);
 
     return Container(
       decoration: BoxDecoration(
@@ -835,8 +861,6 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   }
 
   Future<void> _refresh(SessionDetailSchema event) async {
-    _initialized =
-        false; // allow _initFromEvent to re-run with fresh start time
     // ignore: unused_result
     await ref.refresh(eventProvider(event.slug).future);
     // ignore: unused_result
