@@ -45,6 +45,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   var _audioOutputOptions = const AudioOutputOptions(speakerOn: true);
 
   SessionOptions? _sessionOptions;
+  bool _hasRequestedJoin = false;
+  bool get hasRequestedJoin => _sessionOptions != null || _hasRequestedJoin;
+
   final GlobalKey actionBarKey = GlobalKey();
   final GlobalKey loadingScreenKey = GlobalKey();
 
@@ -69,7 +72,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       _previewAudioTrack = null;
     }
     _requestLock = false;
-    if (_sessionOptions == null) {
+    if (!hasRequestedJoin) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
     super.dispose();
@@ -254,7 +257,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         children: [
           ActionBarButton(
             semanticsLabel: 'Microphone ${_isMicOn ? 'on' : 'off'}',
-            onPressed: _sessionOptions == null ? _toggleMic : null,
+            onPressed: !hasRequestedJoin ? _toggleMic : null,
             active: _isMicOn,
             child: TotemIcon(
               _isMicOn ? TotemIcons.microphoneOn : TotemIcons.microphoneOff,
@@ -262,7 +265,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           ),
           ActionBarButton(
             semanticsLabel: 'Camera ${_isCameraOn ? 'on' : 'off'}',
-            onPressed: _sessionOptions == null ? _toggleCamera : null,
+            onPressed: !hasRequestedJoin ? _toggleCamera : null,
             active: _isCameraOn,
             child: TotemIcon(
               _isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
@@ -273,7 +276,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
               context,
             ).moreButtonTooltip,
             onPressed: () async {
-              if (_sessionOptions != null) return;
+              if (hasRequestedJoin) return;
               await showPrejoinOptionsSheet(
                 context,
                 cameraOptions: _cameraOptions,
@@ -303,7 +306,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   Future<void> _joinRoom() async {
-    if (_sessionOptions != null) return;
+    if (hasRequestedJoin || _showingAlreadyPresentDialog) return;
+    _hasRequestedJoin = true;
 
     final token = (await ref.read(
       sessionTokenProvider(widget.sessionSlug).future,
@@ -363,7 +367,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       previous,
       next,
     ) async {
-      if (_showingAlreadyPresentDialog) return;
+      if (hasRequestedJoin || _showingAlreadyPresentDialog) return;
       if (next case AsyncData(:final value) when value.isAlreadyPresent) {
         _showingAlreadyPresentDialog = true;
         final join = await showAlreadyPresentDialog(context);
@@ -399,7 +403,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     final isLoading =
         (tokenData.isLoading && !tokenData.isRefreshing) ||
         (sessionData.isLoading && !sessionData.isRefreshing);
-    if (_sessionOptions == null || isLoading) {
+    if (!hasRequestedJoin || isLoading) {
       return _buildPrejoinUI();
     }
 
