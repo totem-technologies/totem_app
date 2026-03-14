@@ -19,6 +19,7 @@ import 'package:totem_app/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_details_screen.dart';
 import 'package:totem_app/features/profile/screens/profile_screen.dart';
 import 'package:totem_app/features/sessions/screens/pre_join_screen.dart';
+import 'package:totem_app/features/spaces/screens/event_deep_link_screen.dart';
 import 'package:totem_app/features/spaces/screens/session_history.dart';
 import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
 import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
@@ -363,6 +364,17 @@ GoRouter createRouter(WidgetRef ref) {
         builder: (context, state) {
           final slug = state.pathParameters['slug'] ?? '';
           return SentryDisplayWidget(child: SpaceDetailScreen(slug: slug));
+        },
+      ),
+
+      GoRoute(
+        path: RouteNames.spaceEvent(':eventSlug'),
+        name: RouteNames.spaceEvent(':eventSlug'),
+        builder: (context, state) {
+          final eventSlug = state.pathParameters['eventSlug'] ?? '';
+          return SentryDisplayWidget(
+            child: EventDeepLinkScreen(eventSlug: eventSlug),
+          );
         },
       ),
 

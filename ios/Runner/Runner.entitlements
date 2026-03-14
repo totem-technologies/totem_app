@@ -8,6 +8,8 @@
 	<key>com.apple.developer.associated-domains</key>
     <array>
     	<string>applinks:totem.org</string>
+    	<string>applinks:www.totem.org</string>
+    	<string>applinks:totem.kbl.io</string>
     </array>
 </dict>
 </plist>

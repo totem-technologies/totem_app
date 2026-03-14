@@ -48,6 +48,13 @@ class RoutingUtils {
           if (segments.length == 2) {
             return RouteNames.space(segments[1]);
           }
+          // Handle share link format: /spaces/event/{slug}
+          if (segments.length == 3 &&
+              segments[1] == 'event' &&
+              segments[2].isNotEmpty) {
+            return RouteNames.spaceEvent(segments[2]);
+          }
+          // Handle full format: /spaces/{spaceSlug}/event/{eventSlug}
           if (segments.length >= 4 &&
               segments[1].isNotEmpty &&
               segments[2] == 'event' &&
