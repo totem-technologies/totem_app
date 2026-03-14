@@ -36,6 +36,8 @@ class PreJoinScreen extends ConsumerStatefulWidget {
 class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   LocalVideoTrack? _previewVideoTrack;
   var _isCameraOn = true;
+
+  LocalAudioTrack? _previewAudioTrack;
   var _isMicOn = true;
 
   CameraCaptureOptions? _cameraOptions;
@@ -61,6 +63,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       _previewVideoTrack!.dispose();
       _previewVideoTrack = null;
     }
+    if (_previewAudioTrack != null) {
+      _previewAudioTrack!.stop();
+      _previewAudioTrack!.dispose();
+      _previewAudioTrack = null;
+    }
     _requestLock = false;
     if (_sessionOptions == null) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -76,6 +83,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       await _requestPermissions();
       await _detectHeadphones();
       _initializeLocalVideo();
+      _initializeLocalAudio();
       if (mounted) {
         SentryDisplayWidget.of(context).reportFullyDisplayed();
       }
@@ -183,12 +191,40 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     }
   }
 
+  Future<void> _initializeLocalAudio() async {
+    if (_previewAudioTrack != null) {
+      await _previewAudioTrack!.stop();
+      await _previewAudioTrack!.dispose();
+      _previewAudioTrack = null;
+    }
+
+    try {
+      _previewAudioTrack = await LocalAudioTrack.create(_audioOptions);
+      await _previewAudioTrack!.start();
+    } catch (error, stackTrace) {
+      _isMicOn = false;
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to create local audio track',
+      );
+    } finally {
+      if (mounted) setState(() {});
+    }
+  }
+
   void _toggleCamera() {
     setState(() => _isCameraOn = !_isCameraOn);
   }
 
-  void _toggleMic() {
+  void _toggleMic() async {
     setState(() => _isMicOn = !_isMicOn);
+    switch (_isMicOn) {
+      case true:
+        await _previewAudioTrack?.unmute(stopOnMute: false);
+      case false:
+        await _previewAudioTrack?.mute(stopOnMute: false);
+    }
   }
 
   Widget _buildPrejoinUI() {
@@ -199,6 +235,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         image: true,
         child: LocalParticipantVideoCard(
           isCameraOn: _isCameraOn,
+          audioTrack: _previewAudioTrack,
           videoTrack: _previewVideoTrack,
         ),
       ),

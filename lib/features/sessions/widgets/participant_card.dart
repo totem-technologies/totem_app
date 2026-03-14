@@ -396,11 +396,13 @@ class ParticipantControlButton extends ConsumerWidget {
 class LocalParticipantVideoCard extends ConsumerWidget {
   const LocalParticipantVideoCard({
     this.isCameraOn = true,
+    this.audioTrack,
     this.videoTrack,
     super.key,
   });
 
   final bool isCameraOn;
+  final AudioTrack? audioTrack;
   final VideoTrack? videoTrack;
 
   @override
@@ -409,6 +411,8 @@ class LocalParticipantVideoCard extends ConsumerWidget {
     final user = ref.watch(
       authControllerProvider.select((auth) => auth.user),
     );
+
+    const overlayPadding = 12.0;
 
     final isVideoTrackVisible =
         videoTrack != null && videoTrack!.isActive && !videoTrack!.muted;
@@ -467,6 +471,24 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                         ),
                       ),
                     ],
+                  ),
+                ),
+                PositionedDirectional(
+                  top: overlayPadding,
+                  start: overlayPadding,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black54,
+                    ),
+                    padding: const EdgeInsetsDirectional.all(2),
+                    alignment: Alignment.center,
+                    child: SpeakingIndicatorAudioTrack(
+                      audioTrack: audioTrack,
+                      barCount: 5,
+                    ),
                   ),
                 ),
               ],
