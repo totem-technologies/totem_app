@@ -25,7 +25,7 @@ class RoomBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlayStyle,
       child: OrientationBuilder(
         builder: (context, orientation) {

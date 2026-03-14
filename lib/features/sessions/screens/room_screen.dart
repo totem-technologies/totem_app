@@ -24,7 +24,6 @@ import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
-import 'package:totem_app/features/sessions/widgets/protection_overlay.dart';
 import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -384,40 +383,36 @@ class _RoomContent extends ConsumerWidget {
         }
 
         if (isMyTurn) {
-          return ProtectionOverlay(
-            child: MyTurn(
-              actionBar: _buildActionBar(
-                context,
-                session,
-                sessionState,
-                isMyTurn,
-              ),
-              getParticipantKey: getParticipantKey,
-              onPassTotem: () async {
-                try {
-                  await session.passTotem();
-                  return true;
-                } catch (error) {
-                  if (!context.mounted) return false;
-                  ErrorHandler.handleApiError(context, error);
-                  return false;
-                }
-              },
-              event: this.session,
+          return MyTurn(
+            actionBar: _buildActionBar(
+              context,
+              session,
+              sessionState,
+              isMyTurn,
             ),
+            getParticipantKey: getParticipantKey,
+            onPassTotem: () async {
+              try {
+                await session.passTotem();
+                return true;
+              } catch (error) {
+                if (!context.mounted) return false;
+                ErrorHandler.handleApiError(context, error);
+                return false;
+              }
+            },
+            event: this.session,
           );
         } else {
-          return ProtectionOverlay(
-            child: NotMyTurn(
-              actionBar: _buildActionBar(
-                context,
-                session,
-                sessionState,
-                isMyTurn,
-              ),
-              getParticipantKey: getParticipantKey,
-              event: this.session,
+          return NotMyTurn(
+            actionBar: _buildActionBar(
+              context,
+              session,
+              sessionState,
+              isMyTurn,
             ),
+            getParticipantKey: getParticipantKey,
+            event: this.session,
           );
         }
     }

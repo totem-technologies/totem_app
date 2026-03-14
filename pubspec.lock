@@ -213,10 +213,10 @@ packages:
     dependency: transitive
     description:
       name: chat_bubbles
-      sha256: "821e13d3d3b32d6bb31f98e91f6c1fc525c9e59af4b9f64a6e513933fe0de922"
+      sha256: c6a9b02e5fe1e6f42ee8d9588cfb121fcb1729b23fd168f0db54be0d78cf9ccb
       url: "https://pub.dev"
     source: hosted
-    version: "1.8.0"
+    version: "1.9.0"
   checked_yaml:
     dependency: transitive
     description:
@@ -522,10 +522,10 @@ packages:
     dependency: transitive
     description:
       name: flutter_background
-      sha256: "8dad66e3102da2b4046cc3adcf70625578809827170bd78e36e5890c074287d2"
+      sha256: ee47be26beddc59875158a93eeaaad0c0b5f3b21afbdad3de73a2903be824f0e
       url: "https://pub.dev"
     source: hosted
-    version: "1.3.0+1"
+    version: "1.3.1"
   flutter_boring_avatars:
     dependency: "direct main"
     description:
@@ -647,10 +647,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_riverpod
-      sha256: e2026c72738a925a60db30258ff1f29974e40716749f3c9850aabf34ffc1a14c
+      sha256: "4e166be88e1dbbaa34a280bdb744aeae73b7ef25fdf8db7a3bb776760a3648e2"
       url: "https://pub.dev"
     source: hosted
-    version: "3.2.1"
+    version: "3.3.1"
   flutter_secure_storage:
     dependency: "direct main"
     description:
@@ -703,10 +703,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_svg
-      sha256: "87fbd7c534435b6c5d9d98b01e1fd527812b82e68ddd8bd35fc45ed0fa8f0a95"
+      sha256: "1ded017b39c8e15c8948ea855070a5ff8ff8b3d5e83f3446e02d6bb12add7ad9"
       url: "https://pub.dev"
     source: hosted
-    version: "2.2.3"
+    version: "2.2.4"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -782,10 +782,10 @@ packages:
     dependency: transitive
     description:
       name: hooks
-      sha256: "7a08a0d684cb3b8fb604b78455d5d352f502b68079f7b80b831c62220ab0a4f6"
+      sha256: e79ed1e8e1929bc6ecb6ec85f0cb519c887aa5b423705ded0d0f2d9226def388
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.1"
+    version: "1.0.2"
   hotreloader:
     dependency: transitive
     description:
@@ -1019,10 +1019,10 @@ packages:
     dependency: "direct main"
     description:
       name: livekit_client
-      sha256: "51d97a4501e385e53c140b8367a52316af5b466e71e6d800c8826065b6061521"
+      sha256: "35cbf59d8d0909083db3ee02bc53f5397085ff34c48e33af6f1fcd20862d91a2"
       url: "https://pub.dev"
     source: hosted
-    version: "2.6.4"
+    version: "2.6.5"
   livekit_components:
     dependency: "direct main"
     description:
@@ -1115,10 +1115,10 @@ packages:
     dependency: transitive
     description:
       name: native_toolchain_c
-      sha256: "89e83885ba09da5fdf2cdacc8002a712ca238c28b7f717910b34bcd27b0d03ac"
+      sha256: "92b2ca62c8bd2b8d2f267cdfccf9bfbdb7322f778f8f91b3ce5b5cda23a3899f"
       url: "https://pub.dev"
     source: hosted
-    version: "0.17.4"
+    version: "0.17.5"
   nested:
     dependency: transitive
     description:
@@ -1355,10 +1355,10 @@ packages:
     dependency: "direct main"
     description:
       name: posthog_flutter
-      sha256: "3835633510fe4e6882814082ad46cfb050e1f03b70f09c512b4537f5818fd6ab"
+      sha256: "04f95017238189fdc57146591a5a665398165dc7add86304345bbc2a7175194f"
       url: "https://pub.dev"
     source: hosted
-    version: "5.17.0"
+    version: "5.19.0"
   process:
     dependency: transitive
     description:
@@ -1471,6 +1471,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.28.0"
+  screen_protector:
+    dependency: "direct main"
+    description:
+      name: screen_protector
+      sha256: "7f53d7a0c238a62dc970841fd13053f2b79f14b7f8d2c82a11fef65b066f42cd"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.5.1"
   sdp_transform:
     dependency: transitive
     description:
@@ -1680,10 +1688,10 @@ packages:
     dependency: transitive
     description:
       name: sqflite_android
-      sha256: ecd684501ebc2ae9a83536e8b15731642b9570dc8623e0073d227d0ee2bfea88
+      sha256: "881e28efdcc9950fd8e9bb42713dcf1103e62a2e7168f23c9338d82db13dec40"
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.2+2"
+    version: "2.4.2+3"
   sqflite_common:
     dependency: transitive
     description:
@@ -1920,10 +1928,10 @@ packages:
     dependency: transitive
     description:
       name: vector_graphics
-      sha256: a4f059dc26fc8295b5921376600a194c4ec7d55e72f2fe4c7d2831e103d461e6
+      sha256: "7076216a10d5c390315fbe536a30f1254c341e7543e6c4c8a815e591307772b1"
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.19"
+    version: "1.1.20"
   vector_graphics_codec:
     dependency: transitive
     description:

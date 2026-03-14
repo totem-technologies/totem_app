@@ -45,6 +45,7 @@ extension KeeperControl on Session {
 
   void _onKeeperDisconnected() {
     if (state.roomState.status != RoomStatus.active) return;
+    disableMicrophone();
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = Timer(
