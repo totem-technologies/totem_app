@@ -131,9 +131,13 @@ class _SessionDisconnectedScreenState
     super.dispose();
   }
 
-  void refresh() {
+  void refreshHome() {
+    ref.invalidate(spacesSummaryProvider);
+  }
+
+  void cleanup() {
     ref
-      ..invalidate(spacesSummaryProvider)
+      ..invalidate(sessionTokenProvider(widget.session.slug))
       ..invalidate(eventProvider(widget.session.slug));
   }
 
@@ -309,7 +313,7 @@ class _SessionDisconnectedScreenState
                           nextEvents: [nextEvent],
                         ),
                         onTap: () {
-                          refresh();
+                          refreshHome();
                           return context.pushReplacement(
                             RouteNames.spaceSession(
                               widget.session.space.slug,
@@ -340,7 +344,7 @@ class _SessionDisconnectedScreenState
                             child: SmallSpaceCard.fromSessionDetailSchema(
                               event,
                               onTap: () {
-                                refresh();
+                                refreshHome();
                                 return context.pushReplacement(
                                   RouteNames.space(event.space.slug),
                                 );
@@ -356,7 +360,7 @@ class _SessionDisconnectedScreenState
                 ),
               ElevatedButton(
                 onPressed: () {
-                  refresh();
+                  refreshHome();
                   toHome(HomeRoutes.initialRoute);
                 },
                 child: const Text('Explore More'),
