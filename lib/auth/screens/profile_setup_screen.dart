@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/api/models/referral_choices.dart';
+import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/widgets/referral_source_modal.dart';
 import 'package:totem_app/auth/widgets/suggested_space_card_widget.dart';
@@ -142,7 +143,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             selectedTopics: _selectedTopics,
             isLoading: _isLoading,
             onSeeAllSpaces: () {
-              context.go(RouteNames.home);
+              context.go(RouteNames.spaces);
             },
           ),
         ],
@@ -576,6 +577,27 @@ class _SuggestionsTab extends ConsumerWidget {
     final topicsKey = (selectedTopics.toList()..sort()).join('|');
     final recommended = ref.watch(getRecommendedSessionsProvider(topicsKey));
 
+    ref.listen<AsyncValue<List<SessionDetailSchema>>>(
+      getRecommendedSessionsProvider(topicsKey),
+      (_, next) {
+        next.whenData((sessions) {
+          if (sessions.isEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) onSeeAllSpaces();
+            });
+          }
+        });
+      },
+    );
+
+    ref.read(getRecommendedSessionsProvider(topicsKey)).whenData((sessions) {
+      if (sessions.isEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) onSeeAllSpaces();
+        });
+      }
+    });
+
     return CardScreen(
       isLoading: isLoading,
       children: [
@@ -595,11 +617,7 @@ class _SuggestionsTab extends ConsumerWidget {
         const SizedBox(height: 20),
         recommended.when(
           data: (sessions) {
-            if (sessions.isEmpty) {
-              return const InfoText(
-                'No suggestions yet. Try selecting a few topics.',
-              );
-            }
+            if (sessions.isEmpty) return const SizedBox.shrink();
             return Column(
               children: [
                 for (final session in sessions) ...[
@@ -638,6 +656,12 @@ class _SuggestionsTab extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const CircularProgressIndicator.adaptive(strokeWidth: 1.5),
+                const SizedBox(height: 12),
+                Text(
+                  "We're looking for sessions for you",
+                  style: theme.textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
