@@ -73,4 +73,34 @@ extension SessionStateExtension on RoomState {
     if (currentIndex == talkingOrder.length - 1) return talkingOrder.first;
     return talkingOrder[currentIndex + 1];
   }
+
+  /// Walk the talking order starting after [after], wrapping around.
+  String? nextInOrder({required String after}) {
+    if (!talkingOrder.contains(after)) return null;
+
+    final start = talkingOrder.indexOf(after) + 1;
+    final rotated = [
+      ...talkingOrder.sublist(start),
+      ...talkingOrder.sublist(0, start),
+    ];
+
+    for (final slug in rotated) {
+      return slug;
+    }
+
+    return null;
+  }
+
+  String? get nextParticipantForcePassIdentity {
+    if (nextSpeaker == null) return null;
+    switch (turnState) {
+      case TurnState.idle:
+      case TurnState.$unknown:
+        return null;
+      case TurnState.speaking:
+        return nextSpeaker;
+      case TurnState.passing:
+        return nextInOrder(after: nextSpeaker!);
+    }
+  }
 }
