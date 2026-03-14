@@ -192,12 +192,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   Widget _buildPrejoinUI() {
-    final theme = Theme.of(context);
     return PrejoinRoomBaseScreen(
       key: loadingScreenKey,
-      title: 'Welcome',
-      subtitle:
-          'Your session will start soon. Please check your audio and video settings before joining.',
       video: Semantics(
         label: 'Your video preview, camera ${_isCameraOn ? 'on' : 'off'}',
         image: true,
@@ -206,14 +202,15 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           videoTrack: _previewVideoTrack,
         ),
       ),
-      joinSlider: SlideToActionButton(
-        text: 'Swipe to Join',
-        keepLoadingOnSuccess: true,
-        onActionCompleted: () async {
+
+      joinSlider: TransitionCard(
+        margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
+        type: TotemCardTransitionType.join,
+        keepActionLoadingOnSuccess: true,
+        onActionPressed: () async {
           await _joinRoom();
           return true;
         },
-        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.8),
       ),
       actionBar: ActionBar(
         key: actionBarKey,

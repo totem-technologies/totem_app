@@ -8,16 +8,12 @@ import 'package:totem_app/shared/widgets/circle_icon_button.dart';
 
 class PrejoinRoomBaseScreen extends StatelessWidget {
   const PrejoinRoomBaseScreen({
-    required this.title,
     required this.video,
     required this.actionBar,
     this.joinSlider,
-    this.subtitle,
     super.key,
   });
 
-  final String title;
-  final String? subtitle;
   final Widget video;
   final Widget? joinSlider;
   final Widget actionBar;
@@ -27,7 +23,6 @@ class PrejoinRoomBaseScreen extends StatelessWidget {
     return RoomBackground(
       child: Builder(
         builder: (context) {
-          final theme = Theme.of(context);
           return SafeArea(
             child: Scaffold(
               appBar: AppBar(
@@ -50,23 +45,6 @@ class PrejoinRoomBaseScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   spacing: 18,
                   children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 28,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    Padding(
-                      padding: const EdgeInsetsDirectional.symmetric(
-                        horizontal: 20,
-                      ),
-                      child: Text(
-                        subtitle ?? '\n',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
                     Expanded(
                       child: Container(
                         margin: const EdgeInsetsDirectional.symmetric(
@@ -77,15 +55,8 @@ class PrejoinRoomBaseScreen extends StatelessWidget {
                         child: video,
                       ),
                     ),
-                    if (joinSlider != null)
-                      Padding(
-                        padding: const EdgeInsetsDirectional.symmetric(
-                          horizontal: 44,
-                        ),
-                        child: joinSlider,
-                      )
-                    else
-                      const SizedBox(),
+                    // SizedBox needed to maintain padding with and without it.
+                    joinSlider ?? const SizedBox(),
                     actionBar,
                   ],
                 ),
