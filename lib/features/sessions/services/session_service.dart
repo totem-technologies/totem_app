@@ -104,6 +104,7 @@ class SessionRoomState {
     this.participants = const [],
     this.removed = false,
     this.isSpeakerphoneEnabled = false,
+    this.disconnectReason,
   });
 
   /// The current connection state of the room.
@@ -123,6 +124,9 @@ class SessionRoomState {
 
   /// Whether the speaker is on.
   final bool isSpeakerphoneEnabled;
+
+  /// Why LiveKit disconnected this participant, when available.
+  final DisconnectReason? disconnectReason;
 
   bool isMyTurn(RoomContext room) {
     return roomState.currentSpeaker != null &&
@@ -148,6 +152,8 @@ class SessionRoomState {
     List<Participant>? participants,
     bool? removed,
     bool? isSpeakerphoneEnabled,
+    DisconnectReason? disconnectReason,
+    bool clearDisconnectReason = false,
   }) {
     return SessionRoomState(
       connectionState: connectionState ?? this.connectionState,
@@ -158,6 +164,9 @@ class SessionRoomState {
       removed: removed ?? this.removed,
       isSpeakerphoneEnabled:
           isSpeakerphoneEnabled ?? this.isSpeakerphoneEnabled,
+      disconnectReason: clearDisconnectReason
+          ? null
+          : disconnectReason ?? this.disconnectReason,
     );
   }
 
@@ -168,6 +177,7 @@ class SessionRoomState {
         'sessionState: $roomState, '
         'hasKeeperDisconnected: $hasKeeperDisconnected, '
         'removed: $removed, '
+        'disconnectReason: $disconnectReason, '
         'isSpeakerphoneEnabled: $isSpeakerphoneEnabled'
         ')';
   }
@@ -184,6 +194,7 @@ class SessionRoomState {
           participants.map((p) => p.identity),
         ) &&
         other.removed == removed &&
+        other.disconnectReason == disconnectReason &&
         other.isSpeakerphoneEnabled == isSpeakerphoneEnabled;
   }
 
@@ -194,6 +205,7 @@ class SessionRoomState {
       hasKeeperDisconnected.hashCode ^
       const DeepCollectionEquality().hash(participants.map((p) => p.identity)) ^
       removed.hashCode ^
+      disconnectReason.hashCode ^
       isSpeakerphoneEnabled.hashCode;
 }
 
@@ -317,6 +329,9 @@ class Session extends _$Session {
       })
       ..on<RoomDisconnectedEvent>((event) {
         logger.d('Disconnected from session. Reason: ${event.reason}');
+        if (event.reason != null) {
+          state = state.copyWith(disconnectReason: event.reason);
+        }
       })
       ..on<DataReceivedEvent>(_onDataReceived)
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
@@ -422,6 +437,7 @@ class Session extends _$Session {
     state = state.copyWith(
       connectionState: RoomConnectionState.connected,
       removed: false,
+      clearDisconnectReason: true,
     );
 
     // _userSpeakerPreference is always true: when no external audio device

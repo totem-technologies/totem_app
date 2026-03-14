@@ -8,6 +8,7 @@ import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:in_app_review/in_app_review.dart';
+import 'package:livekit_client/livekit_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/api/export.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
@@ -23,6 +24,9 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 enum _SessionDisconnectedReason {
+  /// The same account joined from another device and replaced this device.
+  movedToAnotherDevice,
+
   /// The session has ended normally, usually by the keeper.
   keeperEnded,
 
@@ -37,9 +41,14 @@ enum _SessionDisconnectedReason {
 }
 
 class SessionDisconnectedScreen extends ConsumerStatefulWidget {
-  const SessionDisconnectedScreen({required this.session, super.key});
+  const SessionDisconnectedScreen({
+    required this.session,
+    this.disconnectReason,
+    super.key,
+  });
 
   final SessionDetailSchema session;
+  final DisconnectReason? disconnectReason;
 
   @override
   ConsumerState<SessionDisconnectedScreen> createState() =>
@@ -122,9 +131,12 @@ class _SessionDisconnectedScreenState
     super.dispose();
   }
 
-  void refresh() {
+  void refreshHome() {
+    ref.invalidate(spacesSummaryProvider);
+  }
+
+  void cleanup() {
     ref
-      ..invalidate(spacesSummaryProvider)
       ..invalidate(sessionTokenProvider(widget.session.slug))
       ..invalidate(eventProvider(widget.session.slug));
   }
@@ -134,25 +146,34 @@ class _SessionDisconnectedScreenState
     // TODO(bdlukaa): Implement a landscape version of this screen.
     final theme = Theme.of(context);
     final recommended = ref.watch(getRecommendedSessionsProvider());
-    final sessionReason = ref.watch(
-      currentSessionStateProvider.select((s) {
-        if (s?.removed ?? false) {
-          return _SessionDisconnectedReason.removed;
-        } else if (s?.roomState.status == RoomStatus.ended &&
-            s?.roomState.statusDetail
-                is RoomStateStatusDetailSealedEndedDetail) {
-          final detail =
-              s!.roomState.statusDetail
-                  as RoomStateStatusDetailSealedEndedDetail;
-          return switch (detail.reason) {
-            EndReason.keeperAbsent => _SessionDisconnectedReason.keeperAbsent,
-            EndReason.roomEmpty => _SessionDisconnectedReason.roomEmpty,
-            EndReason.keeperEnded ||
-            EndReason.$unknown => _SessionDisconnectedReason.keeperEnded,
-          };
-        }
-      }),
-    );
+    final sessionState = ref.watch(currentSessionStateProvider);
+    final disconnectReason =
+        widget.disconnectReason ?? sessionState?.disconnectReason;
+    final sessionReason = () {
+      if (disconnectReason == DisconnectReason.duplicateIdentity) {
+        return _SessionDisconnectedReason.movedToAnotherDevice;
+      }
+
+      if (sessionState?.removed ?? false) {
+        return _SessionDisconnectedReason.removed;
+      }
+
+      if (sessionState?.roomState.status == RoomStatus.ended &&
+          sessionState?.roomState.statusDetail
+              is RoomStateStatusDetailSealedEndedDetail) {
+        final detail =
+            sessionState!.roomState.statusDetail
+                as RoomStateStatusDetailSealedEndedDetail;
+        return switch (detail.reason) {
+          EndReason.keeperAbsent => _SessionDisconnectedReason.keeperAbsent,
+          EndReason.roomEmpty => _SessionDisconnectedReason.roomEmpty,
+          EndReason.keeperEnded ||
+          EndReason.$unknown => _SessionDisconnectedReason.keeperEnded,
+        };
+      }
+
+      return _SessionDisconnectedReason.keeperEnded;
+    }();
 
     final nextEvents = widget.session.space.nextEvents
         .where((e) => e.slug != widget.session.slug)
@@ -178,10 +199,12 @@ class _SessionDisconnectedScreenState
                   switch (sessionReason) {
                     _SessionDisconnectedReason.keeperAbsent =>
                       'Session will be rescheduled',
+                    _SessionDisconnectedReason.movedToAnotherDevice =>
+                      'Session moved to another device',
                     _SessionDisconnectedReason.removed =>
-                      'You’ve been removed from this session.',
-                    _SessionDisconnectedReason.keeperEnded ||
-                    _ => 'Session Ended',
+                      "You've been removed from this session.",
+                    _SessionDisconnectedReason.roomEmpty ||
+                    _SessionDisconnectedReason.keeperEnded => 'Session Ended',
                   },
                   style: theme.textTheme.headlineMedium,
                   textAlign: TextAlign.center,
@@ -193,6 +216,11 @@ class _SessionDisconnectedScreenState
                     text:
                         'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
                   ),
+                  _SessionDisconnectedReason.movedToAnotherDevice =>
+                    const TextSpan(
+                      text:
+                          'This account joined the same session on another device. Continue there or rejoin from this device.',
+                    ),
                   _SessionDisconnectedReason.removed => TextSpan(
                     text: 'Please take a moment to review our ',
                     children: [
@@ -225,7 +253,8 @@ class _SessionDisconnectedScreenState
                       const TextSpan(text: '.'),
                     ],
                   ),
-                  _SessionDisconnectedReason.keeperEnded || _ => const TextSpan(
+                  _SessionDisconnectedReason.keeperEnded ||
+                  _SessionDisconnectedReason.roomEmpty => const TextSpan(
                     text:
                         'Thank you for joining!\nWe hope you found the session enjoyable.',
                   ),
@@ -284,7 +313,7 @@ class _SessionDisconnectedScreenState
                           nextEvents: [nextEvent],
                         ),
                         onTap: () {
-                          refresh();
+                          refreshHome();
                           return context.pushReplacement(
                             RouteNames.spaceSession(
                               widget.session.space.slug,
@@ -315,7 +344,7 @@ class _SessionDisconnectedScreenState
                             child: SmallSpaceCard.fromSessionDetailSchema(
                               event,
                               onTap: () {
-                                refresh();
+                                refreshHome();
                                 return context.pushReplacement(
                                   RouteNames.space(event.space.slug),
                                 );
@@ -331,7 +360,7 @@ class _SessionDisconnectedScreenState
                 ),
               ElevatedButton(
                 onPressed: () {
-                  refresh();
+                  refreshHome();
                   toHome(HomeRoutes.initialRoute);
                 },
                 child: const Text('Explore More'),

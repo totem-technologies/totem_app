@@ -13,8 +13,13 @@ part of 'session_repository.dart';
 final sessionTokenProvider = SessionTokenFamily._();
 
 final class SessionTokenProvider
-    extends $FunctionalProvider<AsyncValue<String>, String, FutureOr<String>>
-    with $FutureModifier<String>, $FutureProvider<String> {
+    extends
+        $FunctionalProvider<
+          AsyncValue<JoinResponse>,
+          JoinResponse,
+          FutureOr<JoinResponse>
+        >
+    with $FutureModifier<JoinResponse>, $FutureProvider<JoinResponse> {
   SessionTokenProvider._({
     required SessionTokenFamily super.from,
     required String super.argument,
@@ -38,11 +43,12 @@ final class SessionTokenProvider
 
   @$internal
   @override
-  $FutureProviderElement<String> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $FutureProviderElement<JoinResponse> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<String> create(Ref ref) {
+  FutureOr<JoinResponse> create(Ref ref) {
     final argument = this.argument as String;
     return sessionToken(ref, argument);
   }
@@ -58,10 +64,10 @@ final class SessionTokenProvider
   }
 }
 
-String _$sessionTokenHash() => r'fb7d2932967737fb60fc52d9e8621f4eb538894f';
+String _$sessionTokenHash() => r'a204b8f7d00e337ed25602183184307c838c5c79';
 
 final class SessionTokenFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<String>, String> {
+    with $FunctionalFamilyOverride<FutureOr<JoinResponse>, String> {
   SessionTokenFamily._()
     : super(
         retry: null,

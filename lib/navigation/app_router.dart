@@ -154,7 +154,7 @@ void popOrHome([BuildContext? context]) {
 }
 
 final shellNavigatorKey = GlobalKey<StatefulNavigationShellState>();
-void toHome(HomeRoutes route) {
+void toHome(HomeRoutes route) async {
   if (shellNavigatorKey.currentState != null) {
     shellNavigatorKey.currentState?.goBranch(route.index);
   } else if (navigatorKey.currentState != null) {

@@ -196,7 +196,8 @@ class OptionsSheet extends ConsumerWidget {
                 if (state.roomState.status == RoomStatus.active)
                   Builder(
                     builder: (context) {
-                      final next = state.roomState.nextParticipantIdentity;
+                      final next =
+                          state.roomState.nextParticipantForcePassIdentity;
                       final nextParticipantName = next != null
                           ? state.participants
                                 .firstWhereOrNull((p) => p.identity == next)
@@ -239,9 +240,12 @@ class OptionsSheet extends ConsumerWidget {
                   ),
                 ),
                 OptionsSheetTile<void>(
-                  title:
-                      'Session Status: '
-                      '${state.roomState.status.name.uppercaseFirst()}',
+                  title: switch (state.roomState.status) {
+                    RoomStatus.waitingRoom => 'Session Status: Waiting Room',
+                    RoomStatus.active => 'Session Status: Active',
+                    RoomStatus.ended => 'Session Status: Ended',
+                    RoomStatus.$unknown => 'Session Status: Unknown',
+                  },
                   icon: TotemIcons.checkboxOutlined,
                 ),
                 OptionsSheetTile<void>(
@@ -560,7 +564,10 @@ class OptionsSheetTile<T> extends StatelessWidget {
               ),
             )
           : null,
-      onTap: onSwitch,
+      onTap: switch (options?.cameraPosition) {
+        null => null,
+        _ => onSwitch,
+      },
     );
   }
 
