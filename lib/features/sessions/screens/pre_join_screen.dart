@@ -4,11 +4,11 @@ import 'package:audio_session/audio_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
@@ -22,6 +22,7 @@ import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 
 class PreJoinScreen extends ConsumerStatefulWidget {
   const PreJoinScreen({required this.sessionSlug, super.key});
@@ -270,9 +271,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   Future<void> _joinRoom() async {
     if (_sessionOptions != null) return;
 
-    final token = await ref.read(
+    final token = (await ref.read(
       sessionTokenProvider(widget.sessionSlug).future,
-    );
+    )).token;
     await ref.read(eventProvider(widget.sessionSlug).future);
 
     _sessionOptions = SessionOptions(
@@ -317,10 +318,31 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     }
   }
 
+  bool _showingAlreadyPresentDialog = false;
+
   @override
   Widget build(BuildContext context) {
     final tokenData = ref.watch(sessionTokenProvider(widget.sessionSlug));
     final sessionData = ref.watch(eventProvider(widget.sessionSlug));
+
+    ref.listen(sessionTokenProvider(widget.sessionSlug), (
+      previous,
+      next,
+    ) async {
+      if (_showingAlreadyPresentDialog) return;
+      if (next case AsyncData(:final value) when value.isAlreadyPresent) {
+        _showingAlreadyPresentDialog = true;
+        final join = await showAlreadyPresentDialog(context);
+        _showingAlreadyPresentDialog = false;
+        if (join) {
+          _joinRoom();
+        } else {
+          if (context.mounted) {
+            context.pop();
+          }
+        }
+      }
+    });
 
     if (tokenData.hasError) {
       return RoomBackground(
@@ -355,5 +377,36 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       loadingScreen: _buildPrejoinUI(),
       actionBarKey: actionBarKey,
     );
+  }
+}
+
+/// Shows a dialog when the user tries to join a session they are already
+/// in on another device, asking if they want to leave the other session
+/// and join on this device instead.
+///
+/// Returns true if the user chooses to leave the other session and join
+/// on this device, false otherwise.
+Future<bool> showAlreadyPresentDialog(BuildContext context) async {
+  try {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return ConfirmationDialog(
+              title: "You're Already in This Session",
+              content:
+                  'You are already in this session on another device. Do you want to leave the other session and join on this device?',
+              icon: TotemIcons.questionMarkCircle,
+              iconSize: 60,
+              confirmButtonText: 'Join Here',
+              onConfirm: () async {
+                Navigator.of(context).pop(true);
+              },
+              type: ConfirmationDialogType.standard,
+            );
+          },
+        ) ??
+        false;
+  } catch (_) {
+    return false;
   }
 }
