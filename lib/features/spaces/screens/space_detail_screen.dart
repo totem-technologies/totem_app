@@ -12,8 +12,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import 'package:totem_app/api/export.dart';
+
 import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
@@ -644,8 +645,9 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     setState(() => _loading = true);
     try {
       final api = ref.read(mobileApiServiceProvider);
-      final response = await api.spaces
-          .totemSpacesMobileApiMobileApiRsvpConfirm(eventSlug: event.slug);
+      final response = (await api.spaces.totemSpacesMobileApiRsvpConfirm(
+        eventSlug: event.slug,
+      )).dataOrThrow;
       if (response.attending) {
         if (mounted) setState(() => _attending = true);
         await _attendingPopup(event);
@@ -774,9 +776,9 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     setState(() => _loading = true);
     try {
       final api = ref.read(mobileApiServiceProvider);
-      final response = await api.spaces.totemSpacesMobileApiMobileApiRsvpCancel(
+      final response = (await api.spaces.totemSpacesMobileApiRsvpCancel(
         eventSlug: event.slug,
-      );
+      )).dataOrThrow;
       if (mounted) {
         setState(() => _loading = false);
       }

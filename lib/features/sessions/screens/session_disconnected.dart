@@ -10,7 +10,8 @@ import 'package:go_router/go_router.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:totem_app/api/export.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/profile/screens/user_feedback.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
@@ -153,16 +154,13 @@ class _SessionDisconnectedScreenState
       }
 
       if (sessionState?.roomState.status == RoomStatus.ended &&
-          sessionState?.roomState.statusDetail
-              is RoomStateStatusDetailSealedEndedDetail) {
+          sessionState?.roomState.statusDetail is RoomStateStatusDetailEnded) {
         final detail =
-            sessionState!.roomState.statusDetail
-                as RoomStateStatusDetailSealedEndedDetail;
-        return switch (detail.reason) {
+            sessionState!.roomState.statusDetail as RoomStateStatusDetailEnded;
+        return switch (detail.endedDetail.reason) {
           EndReason.keeperAbsent => _SessionDisconnectedReason.keeperAbsent,
           EndReason.roomEmpty => _SessionDisconnectedReason.roomEmpty,
-          EndReason.keeperEnded ||
-          EndReason.$unknown => _SessionDisconnectedReason.keeperEnded,
+          EndReason.keeperEnded || _ => _SessionDisconnectedReason.keeperEnded,
         };
       }
 

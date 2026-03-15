@@ -1,9 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:totem_app/api/mobile_totem_api.dart';
-import 'package:totem_app/api/models/summary_spaces_schema.dart';
-import 'package:totem_app/api/spaces/spaces_client.dart';
 import 'package:totem_app/core/services/cache_service.dart';
 
 class MockSpacesClient extends Mock implements SpacesClient {}

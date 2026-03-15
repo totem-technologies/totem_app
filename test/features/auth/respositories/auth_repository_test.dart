@@ -4,13 +4,14 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:totem_app/api/export.dart';
+
 import 'package:totem_app/auth/repositories/auth_repository.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 
 import '../../../setup.dart';
 
-class MockMobileTotemApi extends Mock implements MobileTotemApi {}
+class MockMobileTotemApi extends Mock implements TotemMobileApi {}
 
 class MockUsersClient extends Mock implements UsersClient {}
 
@@ -69,7 +70,7 @@ void main() {
     mockFallbackClient = MockFallbackClient();
 
     when(() => mockMobileTotemApi.users).thenReturn(mockUsersClient);
-    when(() => mockMobileTotemApi.fallback).thenReturn(mockFallbackClient);
+    when(() => mockMobileTotemApi.$default).thenReturn(mockFallbackClient);
 
     authRepository = AuthRepository(apiService: mockMobileTotemApi);
 
@@ -90,7 +91,7 @@ void main() {
 
   group('AuthRepository Tests', () {
     group('requestPin', () {
-      test('should call apiService.fallback.requestPin successfully', () async {
+      test('should call apiService.$default.requestPin successfully', () async {
         when(
           () => mockFallbackClient.totemApiAuthRequestPin(
             body: any(named: 'body'),
@@ -174,7 +175,7 @@ void main() {
 
     group('verifyPin', () {
       test(
-        'should call apiService.fallback.validatePin successfully',
+        'should call apiService.$default.validatePin successfully',
         () async {
           when(
             () => mockFallbackClient.totemApiAuthValidatePin(
@@ -219,7 +220,7 @@ void main() {
     });
 
     group('logout', () {
-      test('should call apiService.fallback.logout successfully', () async {
+      test('should call apiService.$default.logout successfully', () async {
         when(
           () => mockFallbackClient.totemApiAuthLogout(
             body: any(named: 'body'),
@@ -412,7 +413,7 @@ void main() {
     });
 
     group('onboardStatus', () {
-      test('should call apiService.fallback.getOnboard successfully', () async {
+      test('should call apiService.$default.getOnboard successfully', () async {
         when(
           () => mockFallbackClient.totemOnboardMobileApiOnboardGet(),
         ).thenAnswer((_) async => testOnboardSchema);
@@ -449,7 +450,7 @@ void main() {
 
     group('completeOnboarding', () {
       test(
-        'should call apiService.fallback.postOnboard successfully',
+        'should call apiService.$default.postOnboard successfully',
         () async {
           when(
             () => mockFallbackClient.totemOnboardMobileApiOnboardPost(
@@ -537,7 +538,7 @@ void main() {
 
     group('updateFcmToken', () {
       test(
-        'should call apiService.fallback.registerFcmToken successfully',
+        'should call apiService.$default.registerFcmToken successfully',
         () async {
           when(
             () => mockFallbackClient.totemApiMobileApiRegisterFcmToken(
@@ -580,7 +581,7 @@ void main() {
 
     group('unregisterFcmToken', () {
       test(
-        'should call apiService.fallback.unregisterFcmToken successfully',
+        'should call apiService.$default.unregisterFcmToken successfully',
         () async {
           when(
             () => mockFallbackClient.totemApiMobileApiUnregisterFcmToken(

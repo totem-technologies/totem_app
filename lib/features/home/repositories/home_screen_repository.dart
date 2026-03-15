@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/api/models/summary_spaces_schema.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/core/services/cache_service.dart';
@@ -18,8 +18,8 @@ Future<SummarySpacesSchema> spacesSummary(Ref ref) async {
 
   try {
     final summary = await RepositoryUtils.handleApiCall<SummarySpacesSchema>(
-      apiCall: () => mobileApiService.spaces
-          .totemSpacesMobileApiMobileApiGetSpacesSummary(),
+      apiCall: () =>
+          mobileApiService.spaces.totemSpacesMobileApiGetSpacesSummary(),
       operationName: 'get spaces summary',
     );
 

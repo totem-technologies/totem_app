@@ -1,11 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:totem_app/api/mobile_totem_api.dart';
-import 'package:totem_app/api/models/keeper_profile_schema.dart';
-import 'package:totem_app/api/models/profile_avatar_type_enum.dart';
-import 'package:totem_app/api/models/public_user_schema.dart';
-import 'package:totem_app/api/users/users_client.dart';
 
 class MockUsersClient extends Mock implements UsersClient {}
 

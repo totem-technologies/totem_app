@@ -32,14 +32,10 @@ dependencies:
   cached_network_image: ^3.4.1
   connectivity_plus: ^7.0.0
   uuid: ^4.5.1
-  # degenerate_runtime:
-  #   git:
-  #     url: https://github.com/blopker/degenerate.git
-  #     path: packages/degenerate_runtime
-  # degenerate_dio:
-  #   git:
-  #     url: https://github.com/blopker/degenerate.git
-  #     path: packages/degenerate_dio
+  degenerate_dio:
+    git:
+      url: https://github.com/blopker/degenerate.git
+      path: packages/degenerate_dio
 
   # Messaging
   firebase_core: ^4.0.0
@@ -97,6 +93,8 @@ dev_dependencies:
   retrofit_generator: ^10.2.1
   json_serializable: ^6.11.0
   build_runner: ^2.10.5
+
+  # dart run degenerate -i openapi.json -o lib/core/api --verbose; dart format .
   degenerate:
     git:
       url: https://github.com/blopker/degenerate.git
@@ -108,6 +106,11 @@ dev_dependencies:
 dependency_overrides:
   flutter_webrtc: 1.3.0
   livekit_client: ^2.6.5
+
+  degenerate_runtime:
+      git:
+        url: https://github.com/blopker/degenerate.git
+        path: packages/degenerate_runtime
 
 flutter:
   default-flavor: production

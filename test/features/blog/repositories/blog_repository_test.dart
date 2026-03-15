@@ -1,11 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:totem_app/api/blog/blog_client.dart';
-import 'package:totem_app/api/mobile_totem_api.dart';
-import 'package:totem_app/api/models/blog_post_list_schema.dart';
-import 'package:totem_app/api/models/blog_post_schema.dart';
-import 'package:totem_app/api/models/paged_blog_post_list_schema.dart';
 
 class MockBlogClient extends Mock implements BlogClient {}
 

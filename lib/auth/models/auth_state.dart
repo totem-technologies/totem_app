@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:totem_app/api/models/user_schema.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 
 enum AuthStatus {
   initial,

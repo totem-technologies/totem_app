@@ -10,8 +10,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage, logger;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/api/export.dart';
+
 import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
@@ -25,8 +26,6 @@ import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/logger.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-export 'package:totem_app/api/models/session_state.dart';
-export 'package:totem_app/api/models/session_status.dart';
 export 'package:totem_app/features/sessions/services/utils.dart';
 
 part 'background_control.dart';
@@ -351,8 +350,8 @@ class Session extends _$Session {
         status: RoomStatus.waitingRoom,
         turnState: TurnState.idle,
         sessionSlug: options.eventSlug,
-        statusDetail: const RoomStateStatusDetailSealedWaitingRoomDetail(
-          type: 'waiting_room',
+        statusDetail: const RoomStateStatusDetailWaitingRoom(
+          WaitingRoomDetail(),
         ),
         talkingOrder: [],
         version: 0,

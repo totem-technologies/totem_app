@@ -370,6 +370,24 @@ packages:
       url: "https://github.com/blopker/degenerate.git"
     source: git
     version: "0.1.0"
+  degenerate_dio:
+    dependency: "direct main"
+    description:
+      path: "packages/degenerate_dio"
+      ref: HEAD
+      resolved-ref: "8731a3e58955152fa31220cc8b5f45492a1a6d32"
+      url: "https://github.com/blopker/degenerate.git"
+    source: git
+    version: "0.1.0"
+  degenerate_runtime:
+    dependency: "direct overridden"
+    description:
+      path: "packages/degenerate_runtime"
+      ref: HEAD
+      resolved-ref: "8731a3e58955152fa31220cc8b5f45492a1a6d32"
+      url: "https://github.com/blopker/degenerate.git"
+    source: git
+    version: "0.1.0"
   device_info_plus:
     dependency: transitive
     description:

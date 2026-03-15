@@ -1,5 +1,6 @@
 import 'package:livekit_client/livekit_client.dart';
-import 'package:totem_app/api/export.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+
 import 'package:totem_app/features/sessions/services/session_service.dart';
 
 List<Participant> participantsSorting({
@@ -91,7 +92,6 @@ extension SessionStateExtension on RoomState {
     if (nextSpeaker == null) return null;
     switch (turnState) {
       case TurnState.idle:
-      case TurnState.$unknown:
         return null;
       case TurnState.speaking:
         return nextSpeaker;
