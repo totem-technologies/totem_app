@@ -98,5 +98,6 @@ extension SessionStateExtension on RoomState {
       case TurnState.passing:
         return nextInOrder(after: nextSpeaker!);
     }
+    return null;
   }
 }

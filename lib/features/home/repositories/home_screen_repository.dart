@@ -41,3 +41,47 @@ Future<SummarySpacesSchema> spacesSummary(Ref ref) async {
     }
   }
 }
+
+@riverpod
+Future<bool> rsvpConfirm(Ref ref, String eventSlug) async {
+  final mobileApiService = ref.read(mobileApiServiceProvider);
+
+  try {
+    final session = await RepositoryUtils.handleApiCall<SessionDetailSchema>(
+      apiCall: () => mobileApiService.spaces.totemSpacesMobileApiRsvpConfirm(
+        eventSlug: eventSlug,
+      ),
+      operationName: 'confirm RSVP for $eventSlug',
+    );
+    return session.attending;
+  } catch (e, stackTrace) {
+    ErrorHandler.logError(
+      e,
+      stackTrace: stackTrace,
+      message: 'Failed to confirm RSVP for $eventSlug',
+    );
+    return false;
+  }
+}
+
+@riverpod
+Future<bool> rsvpCancel(Ref ref, String eventSlug) async {
+  final mobileApiService = ref.read(mobileApiServiceProvider);
+
+  try {
+    final session = await RepositoryUtils.handleApiCall<SessionDetailSchema>(
+      apiCall: () => mobileApiService.spaces.totemSpacesMobileApiRsvpCancel(
+        eventSlug: eventSlug,
+      ),
+      operationName: 'cancel RSVP for $eventSlug',
+    );
+    return session.attending;
+  } catch (e, stackTrace) {
+    ErrorHandler.logError(
+      e,
+      stackTrace: stackTrace,
+      message: 'Failed to cancel RSVP for $eventSlug',
+    );
+    return false;
+  }
+}

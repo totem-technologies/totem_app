@@ -150,7 +150,7 @@ Future<List<SessionDetailSchema>> listSessionsHistory(Ref ref) async {
 @riverpod
 Future<List<SessionDetailSchema>> getRecommendedSessions(
   Ref ref, [
-  // TODO: check this
+  // TODO(bdlukaa): Check topics key
   String? topicsKey,
 ]) {
   final mobileApiService = ref.read(mobileApiServiceProvider);
