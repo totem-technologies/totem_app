@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/core/services/repository_utils.dart';
@@ -154,7 +153,7 @@ Future<RoomState> forcePassTotem(
     apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
       sessionSlug: sessionSlug,
       body: EventRequest(
-        event: const EventRequestEventPassStick(PassStickEvent()),
+        event: const EventRequestEventForcePassStick(ForcePassStickEvent()),
         lastSeenVersion: lastSeenVersion,
       ),
     ),
