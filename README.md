@@ -19,26 +19,6 @@ This client targets both **iOS** and **Android**, using **Flutter** and **Riverp
 
 ---
 
-## 🚀 Features
-
-- 📅 View and explore available Totem Circles
-<!-- - 🔐 Secure authentication and onboarding -->
-- 💬 Join guided group sessions (with in-app video coming soon!)
-  <!-- - 🧘 Personalized user profile and avatar -->
-  <!-- - 🔔 Push notification integration -->
-  <!-- - 🧪 CI/CD with GitHub Actions -->
-
----
-
-## 🛠 Tech Stack
-
-- **Flutter** 3.29+
-- **Riverpod** for state management
-- **json_serializable** + **Retrofit** for [typed API modeling](./swagger_parser.yaml)
-- **GitHub Actions** for CI/CD
-
----
-
 ## 📦 Installation
 
 Make sure you have [Flutter installed](https://docs.flutter.dev/get-started/install) and configured.
@@ -130,18 +110,6 @@ lib/
 ├── shared/          # Reusable widgets
 └── main.dart        # Entry point, app root
 ```
-
-### 📐 Architecture
-
-We follow a **feature-first modular structure**, powered by Riverpod for state management.
-API communication is handled using Retrofit + json_serializable with code generation.
-
-For example:
-
-- Logic lives in `controllers/`
-- API integration in `repositories/`
-- UI in `screens/`
-- State is exposed via Riverpod providers
 
 ### 🔔 Notifications
 
