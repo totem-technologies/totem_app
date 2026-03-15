@@ -33,7 +33,7 @@ class SessionErrorResponse extends Error {
 }
 
 @riverpod
-Future<String> sessionToken(Ref ref, String sessionSlug) async {
+Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) async {
   final apiService = ref.read(mobileApiServiceProvider);
   try {
     final response = await apiService.rooms
@@ -41,7 +41,7 @@ Future<String> sessionToken(Ref ref, String sessionSlug) async {
           sessionSlug: sessionSlug,
         )
         .timeout(_shortTimeoutDuration);
-    return response.token;
+    return response;
   } on DioException catch (error) {
     if (error.response?.statusCode == 403) {
       final json = error.response?.data as Map<String, dynamic>?;

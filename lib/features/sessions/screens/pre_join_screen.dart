@@ -4,11 +4,11 @@ import 'package:audio_session/audio_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
@@ -19,8 +19,10 @@ import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
+import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 
 class PreJoinScreen extends ConsumerStatefulWidget {
   const PreJoinScreen({required this.sessionSlug, super.key});
@@ -34,6 +36,8 @@ class PreJoinScreen extends ConsumerStatefulWidget {
 class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   LocalVideoTrack? _previewVideoTrack;
   var _isCameraOn = true;
+
+  LocalAudioTrack? _previewAudioTrack;
   var _isMicOn = true;
 
   CameraCaptureOptions? _cameraOptions;
@@ -41,7 +45,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   var _audioOutputOptions = const AudioOutputOptions(speakerOn: true);
 
   SessionOptions? _sessionOptions;
+  bool _hasRequestedJoin = false;
+  bool get hasRequestedJoin => _sessionOptions != null || _hasRequestedJoin;
+
   final GlobalKey actionBarKey = GlobalKey();
+  final GlobalKey loadingScreenKey = GlobalKey();
 
   @override
   void initState() {
@@ -58,8 +66,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       _previewVideoTrack!.dispose();
       _previewVideoTrack = null;
     }
+    if (_previewAudioTrack != null) {
+      _previewAudioTrack!.stop();
+      _previewAudioTrack!.dispose();
+      _previewAudioTrack = null;
+    }
     _requestLock = false;
-    if (_sessionOptions == null) {
+    if (!hasRequestedJoin) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
     super.dispose();
@@ -73,6 +86,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       await _requestPermissions();
       await _detectHeadphones();
       _initializeLocalVideo();
+      _initializeLocalAudio();
       if (mounted) {
         SentryDisplayWidget.of(context).reportFullyDisplayed();
       }
@@ -180,33 +194,70 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     }
   }
 
+  Future<void> _initializeLocalAudio() async {
+    if (_previewAudioTrack != null) {
+      await _previewAudioTrack!.stop();
+      await _previewAudioTrack!.dispose();
+      _previewAudioTrack = null;
+    }
+
+    try {
+      _previewAudioTrack = await LocalAudioTrack.create(_audioOptions);
+      await _previewAudioTrack!.start();
+    } catch (error, stackTrace) {
+      _isMicOn = false;
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to create local audio track',
+      );
+    } finally {
+      if (mounted) setState(() {});
+    }
+  }
+
   void _toggleCamera() {
     setState(() => _isCameraOn = !_isCameraOn);
   }
 
-  void _toggleMic() {
+  void _toggleMic() async {
     setState(() => _isMicOn = !_isMicOn);
+    switch (_isMicOn) {
+      case true:
+        await _previewAudioTrack?.unmute(stopOnMute: false);
+      case false:
+        await _previewAudioTrack?.mute(stopOnMute: false);
+    }
   }
 
-  Widget _buildPrejoinUI(String token, SessionDetailSchema session) {
+  Widget _buildPrejoinUI() {
     return PrejoinRoomBaseScreen(
-      title: 'Welcome',
-      subtitle:
-          'Your session will start soon. Please check your audio and video settings before joining.',
+      key: loadingScreenKey,
       video: Semantics(
         label: 'Your video preview, camera ${_isCameraOn ? 'on' : 'off'}',
         image: true,
         child: LocalParticipantVideoCard(
           isCameraOn: _isCameraOn,
+          audioTrack: _previewAudioTrack,
           videoTrack: _previewVideoTrack,
         ),
+      ),
+
+      joinSlider: TransitionCard(
+        margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
+        type: TotemCardTransitionType.join,
+        keepActionLoadingOnSuccess: true,
+        onActionPressed: () async {
+          await _joinRoom();
+          return true;
+        },
       ),
       actionBar: ActionBar(
         key: actionBarKey,
         children: [
           ActionBarButton(
             semanticsLabel: 'Microphone ${_isMicOn ? 'on' : 'off'}',
-            onPressed: _sessionOptions == null ? _toggleMic : null,
+            onPressed: !hasRequestedJoin ? _toggleMic : null,
             active: _isMicOn,
             child: TotemIcon(
               _isMicOn ? TotemIcons.microphoneOn : TotemIcons.microphoneOff,
@@ -214,7 +265,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           ),
           ActionBarButton(
             semanticsLabel: 'Camera ${_isCameraOn ? 'on' : 'off'}',
-            onPressed: _sessionOptions == null ? _toggleCamera : null,
+            onPressed: !hasRequestedJoin ? _toggleCamera : null,
             active: _isCameraOn,
             child: TotemIcon(
               _isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
@@ -225,7 +276,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
               context,
             ).moreButtonTooltip,
             onPressed: () async {
-              if (_sessionOptions != null) return;
+              if (hasRequestedJoin) return;
               await showPrejoinOptionsSheet(
                 context,
                 cameraOptions: _cameraOptions,
@@ -249,22 +300,20 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
               child: TotemIcon(TotemIcons.more, size: 18),
             ),
           ),
-          SizedBox(
-            width: 96,
-            child: ActionBarButton(
-              semanticsLabel: 'Join session',
-              onPressed: () => _joinRoom(token, session),
-              square: false,
-              child: const Text('Join'),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Future<void> _joinRoom(String token, SessionDetailSchema session) async {
-    if (_sessionOptions != null) return;
+  Future<void> _joinRoom() async {
+    if (hasRequestedJoin || _showingAlreadyPresentDialog) return;
+    _hasRequestedJoin = true;
+
+    final token = (await ref.read(
+      sessionTokenProvider(widget.sessionSlug).future,
+    )).token;
+    await ref.read(eventProvider(widget.sessionSlug).future);
+
     _sessionOptions = SessionOptions(
       eventSlug: widget.sessionSlug,
       token: token,
@@ -307,16 +356,31 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     }
   }
 
+  bool _showingAlreadyPresentDialog = false;
+
   @override
   Widget build(BuildContext context) {
     final tokenData = ref.watch(sessionTokenProvider(widget.sessionSlug));
     final sessionData = ref.watch(eventProvider(widget.sessionSlug));
 
-    // The room should not display loading screen when its provider is refreshing.
-    if ((tokenData.isLoading && !tokenData.isRefreshing) ||
-        (sessionData.isLoading && !sessionData.isRefreshing)) {
-      return LoadingRoomScreen(actionBarKey: actionBarKey);
-    }
+    ref.listen(sessionTokenProvider(widget.sessionSlug), (
+      previous,
+      next,
+    ) async {
+      if (hasRequestedJoin || _showingAlreadyPresentDialog) return;
+      if (next case AsyncData(:final value) when value.isAlreadyPresent) {
+        _showingAlreadyPresentDialog = true;
+        final join = await showAlreadyPresentDialog(context);
+        _showingAlreadyPresentDialog = false;
+        if (join) {
+          _joinRoom();
+        } else {
+          if (context.mounted) {
+            context.pop();
+          }
+        }
+      }
+    });
 
     if (tokenData.hasError) {
       return RoomBackground(
@@ -336,19 +400,51 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       );
     }
 
-    final token = tokenData.value!;
-    final session = sessionData.value!;
-
-    if (_sessionOptions == null) {
-      return _buildPrejoinUI(token, session);
+    final isLoading =
+        (tokenData.isLoading && !tokenData.isRefreshing) ||
+        (sessionData.isLoading && !sessionData.isRefreshing);
+    if (!hasRequestedJoin || isLoading) {
+      return _buildPrejoinUI();
     }
 
+    final session = sessionData.value!;
     return VideoRoomScreen(
       sessionSlug: widget.sessionSlug,
       sessionOptions: _sessionOptions!,
       session: session,
-      loadingScreen: _buildPrejoinUI(token, session),
+      loadingScreen: _buildPrejoinUI(),
       actionBarKey: actionBarKey,
     );
+  }
+}
+
+/// Shows a dialog when the user tries to join a session they are already
+/// in on another device, asking if they want to leave the other session
+/// and join on this device instead.
+///
+/// Returns true if the user chooses to leave the other session and join
+/// on this device, false otherwise.
+Future<bool> showAlreadyPresentDialog(BuildContext context) async {
+  try {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return ConfirmationDialog(
+              title: "You're Already in This Session",
+              content:
+                  'You are already in this session on another device. Do you want to leave the other session and join on this device?',
+              icon: TotemIcons.questionMarkCircle,
+              iconSize: 60,
+              confirmButtonText: 'Join Here',
+              onConfirm: () async {
+                Navigator.of(context).pop(true);
+              },
+              type: ConfirmationDialogType.standard,
+            );
+          },
+        ) ??
+        false;
+  } catch (_) {
+    return false;
   }
 }

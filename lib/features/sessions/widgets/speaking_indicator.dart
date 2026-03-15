@@ -5,6 +5,53 @@ import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.d
 import 'package:totem_app/features/sessions/widgets/audio_visualizer.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
+class SpeakingIndicatorAudioTrack extends StatelessWidget {
+  const SpeakingIndicatorAudioTrack({
+    required this.audioTrack,
+    this.participant,
+    this.foregroundColor = Colors.white,
+    this.barCount = 3,
+    super.key,
+  });
+
+  final AudioTrack? audioTrack;
+  final Participant? participant;
+
+  final Color? foregroundColor;
+  final int barCount;
+
+  @override
+  Widget build(BuildContext context) {
+    if (audioTrack != null &&
+        !audioTrack!.muted /* && audioTrack!.subscribed */ ) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          return RepaintBoundary(
+            child: SoundWaveformWidget(
+              audioTrack: audioTrack,
+              participant: participant,
+              options: AudioVisualizerWidgetOptions(
+                color: foregroundColor,
+                barCount: barCount,
+                barMinOpacity: 0.8,
+                spacing: 3,
+                minHeight: constraints.maxHeight * 0.2,
+                maxHeight: constraints.maxHeight,
+              ),
+            ),
+          );
+        },
+      );
+    } else {
+      return TotemIcon(
+        TotemIcons.microphoneOff,
+        size: 20,
+        color: foregroundColor,
+      );
+    }
+  }
+}
+
 class SpeakingIndicator extends StatefulWidget {
   const SpeakingIndicator({
     required this.participant,
@@ -96,34 +143,12 @@ class _SpeakingIndicatorState extends State<SpeakingIndicator> {
 
   @override
   Widget build(BuildContext context) {
-    // if (audioTrack == null &&
-    //     !audioTrack.subscribed &&
-    //     audioTrack.muted &&
-    //     audioTrack.track == null &&
-    //     !audioTrack.track!.isActive &&
-    //     audioTrack.track!.muted) {
-    if (audioTrack != null && audioTrack!.subscribed && !audioTrack!.muted) {
-      return RepaintBoundary(
-        child: SoundWaveformWidget(
-          audioTrack: audioTrack!.track as AudioTrack?,
-          participant: widget.participant,
-          options: AudioVisualizerWidgetOptions(
-            color: widget.foregroundColor,
-            barCount: widget.barCount,
-            barMinOpacity: 0.8,
-            spacing: 3,
-            minHeight: 4,
-            maxHeight: 12,
-          ),
-        ),
-      );
-    } else {
-      return TotemIcon(
-        TotemIcons.microphoneOff,
-        size: 20,
-        color: widget.foregroundColor,
-      );
-    }
+    return SpeakingIndicatorAudioTrack(
+      audioTrack: audioTrack?.track as AudioTrack?,
+      participant: widget.participant,
+      foregroundColor: widget.foregroundColor,
+      barCount: widget.barCount,
+    );
   }
 }
 

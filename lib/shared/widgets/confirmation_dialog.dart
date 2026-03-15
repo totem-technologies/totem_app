@@ -17,12 +17,14 @@ class ConfirmationDialog extends StatefulWidget {
     this.title = 'Are you sure?',
     this.icon,
     this.iconWidget,
+    this.iconSize = 90,
     this.type = ConfirmationDialogType.destructive,
     super.key,
   });
 
   final TotemIconData? icon;
   final Widget? iconWidget;
+  final double iconSize;
   final String? title;
   final String content;
   final TextStyle? contentStyle;
@@ -40,28 +42,47 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final iconSize = MediaQuery.textScalerOf(context).scale(widget.iconSize);
     return PopScope(
       canPop: !_loading,
       child: AlertDialog(
-        title: widget.title != null
-            ? Semantics(
-                header: true,
-                namesRoute: true,
-                child: Text(widget.title!, textAlign: TextAlign.center),
-              )
-            : null,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: 20,
           children: [
-            if (widget.icon != null)
-              TotemIcon(widget.icon!, size: 90, color: Colors.red)
-            else if (widget.iconWidget != null)
-              SizedBox.square(
-                dimension: 90,
-                child: Center(child: widget.iconWidget),
-              ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 10,
+              children: [
+                if (widget.icon != null)
+                  TotemIcon(
+                    widget.icon!,
+                    size: iconSize,
+                    color: switch (widget.type) {
+                      ConfirmationDialogType.destructive => Colors.red,
+                      ConfirmationDialogType.standard =>
+                        theme.colorScheme.primary,
+                    },
+                  )
+                else if (widget.iconWidget != null)
+                  SizedBox.square(
+                    dimension: iconSize,
+                    child: Center(child: widget.iconWidget),
+                  ),
+                if (widget.title != null)
+                  Semantics(
+                    header: true,
+                    namesRoute: true,
+                    child: Text(
+                      widget.title!,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.titleLarge,
+                    ),
+                  ),
+              ],
+            ),
             Text(
               widget.content,
               textAlign: TextAlign.center,
@@ -112,7 +133,7 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
             ),
             OutlinedButton(
               onPressed: _loading ? null : () => context.pop(),
-              child: const Text('Cancel'),
+              child: const Text('Cancel', textAlign: TextAlign.center),
             ),
           ],
         ),
