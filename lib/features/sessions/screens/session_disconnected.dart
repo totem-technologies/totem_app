@@ -131,14 +131,8 @@ class _SessionDisconnectedScreenState
     super.dispose();
   }
 
-  void refreshHome() {
+  void _refreshHome() {
     ref.invalidate(spacesSummaryProvider);
-  }
-
-  void cleanup() {
-    ref
-      ..invalidate(sessionTokenProvider(widget.session.slug))
-      ..invalidate(eventProvider(widget.session.slug));
   }
 
   @override
@@ -313,7 +307,7 @@ class _SessionDisconnectedScreenState
                           nextEvents: [nextEvent],
                         ),
                         onTap: () {
-                          refreshHome();
+                          _refreshHome();
                           return context.pushReplacement(
                             RouteNames.spaceSession(
                               widget.session.space.slug,
@@ -344,7 +338,7 @@ class _SessionDisconnectedScreenState
                             child: SmallSpaceCard.fromSessionDetailSchema(
                               event,
                               onTap: () {
-                                refreshHome();
+                                _refreshHome();
                                 return context.pushReplacement(
                                   RouteNames.space(event.space.slug),
                                 );
@@ -360,7 +354,7 @@ class _SessionDisconnectedScreenState
                 ),
               ElevatedButton(
                 onPressed: () {
-                  refreshHome();
+                  _refreshHome();
                   toHome(HomeRoutes.initialRoute);
                 },
                 child: const Text('Explore More'),
@@ -372,6 +366,8 @@ class _SessionDisconnectedScreenState
     );
   }
 
+  /// Displays the in-app review prompt after the user has liked 5 sessions,
+  /// if the platform supports itand the prompt hasn't been shown before.
   Future<void> _incrementSessionLikedCount() async {
     final prefs = await SharedPreferences.getInstance();
     final alreadyRequested =

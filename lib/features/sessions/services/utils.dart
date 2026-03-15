@@ -3,7 +3,7 @@ import 'package:totem_app/api/export.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 
 List<Participant> participantsSorting({
-  required List<Participant> originalParticiapnts,
+  required List<Participant> originalParticipants,
   required SessionRoomState state,
 
   String? speakingNow,
@@ -11,10 +11,10 @@ List<Participant> participantsSorting({
   /// Whether to show the track of the participant who is currently speaking.
   bool showSpeakingNow = false,
 }) {
-  final speakingNowIndentity = speakingNow ?? state.speakingNow;
-  final participants = originalParticiapnts.where((participant) {
+  final speakingNowIdentity = speakingNow ?? state.speakingNow;
+  final participants = originalParticipants.where((participant) {
     // Only show tracks from participants other than the speaking now
-    if (participant.identity == speakingNowIndentity) {
+    if (participant.identity == speakingNowIdentity) {
       return showSpeakingNow;
     }
     return true;
@@ -84,11 +84,7 @@ extension SessionStateExtension on RoomState {
       ...talkingOrder.sublist(0, start),
     ];
 
-    for (final slug in rotated) {
-      return slug;
-    }
-
-    return null;
+    return rotated.firstOrNull;
   }
 
   String? get nextParticipantForcePassIdentity {

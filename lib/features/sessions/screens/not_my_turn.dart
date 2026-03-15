@@ -312,7 +312,7 @@ class _NotMyTurnGrid extends ConsumerWidget {
     final sessionState = ref.watch(currentSessionStateProvider)!;
 
     final sortedParticipants = participantsSorting(
-      originalParticiapnts: participants,
+      originalParticipants: participants,
       state: sessionState,
       speakingNow: speakingNow,
     );

@@ -121,7 +121,7 @@ class _MyTurnGrid extends ConsumerWidget {
     final sessionState = ref.watch(currentSessionStateProvider)!;
 
     final sortedParticipants = participantsSorting(
-      originalParticiapnts: participants,
+      originalParticipants: participants,
       state: sessionState,
     );
     final itemCount = sortedParticipants.length;

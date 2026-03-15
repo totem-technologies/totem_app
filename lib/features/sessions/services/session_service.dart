@@ -373,7 +373,7 @@ class Session extends _$Session {
       ];
 
       final sortedParticipants = participantsSorting(
-        originalParticiapnts: participants,
+        originalParticipants: participants,
         state: state,
         showSpeakingNow: true,
       );
