@@ -361,6 +361,15 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.12"
+  degenerate:
+    dependency: "direct dev"
+    description:
+      path: "."
+      ref: HEAD
+      resolved-ref: "8731a3e58955152fa31220cc8b5f45492a1a6d32"
+      url: "https://github.com/blopker/degenerate.git"
+    source: git
+    version: "0.1.0"
   device_info_plus:
     dependency: transitive
     description:
@@ -2101,5 +2110,5 @@ packages:
     source: hosted
     version: "2.2.4"
 sdks:
-  dart: ">=3.11.0 <4.0.0"
+  dart: ">=3.11.1 <4.0.0"
   flutter: ">=3.38.4"
