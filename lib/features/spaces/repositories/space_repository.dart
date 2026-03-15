@@ -149,13 +149,15 @@ Future<List<SessionDetailSchema>> listSessionsHistory(Ref ref) async {
 @riverpod
 Future<List<SessionDetailSchema>> getRecommendedSessions(
   Ref ref, [
-  // TODO(bdlukaa): Check topics key
   String? topicsKey,
 ]) {
   final mobileApiService = ref.read(mobileApiServiceProvider);
+  final List<String>? body = topicsKey == null || topicsKey.isEmpty
+      ? null
+      : topicsKey.split('|').toList();
   return RepositoryUtils.handleApiCall<List<SessionDetailSchema>>(
-    apiCall: () =>
-        mobileApiService.spaces.totemSpacesMobileApiGetRecommendedSpaces(),
+    apiCall: () => mobileApiService.spaces
+        .totemSpacesMobileApiGetRecommendedSpaces(body: body),
     operationName: 'get recommended sessions',
     maxRetries: 0,
     timeout: const Duration(seconds: 5),
