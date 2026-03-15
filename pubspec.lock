@@ -361,6 +361,33 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.12"
+  degenerate:
+    dependency: "direct dev"
+    description:
+      path: "."
+      ref: HEAD
+      resolved-ref: "44146293a08c47c90489d0fbe3af659ebbc75380"
+      url: "https://github.com/blopker/degenerate.git"
+    source: git
+    version: "0.1.0"
+  degenerate_dio:
+    dependency: "direct main"
+    description:
+      path: "packages/degenerate_dio"
+      ref: HEAD
+      resolved-ref: "44146293a08c47c90489d0fbe3af659ebbc75380"
+      url: "https://github.com/blopker/degenerate.git"
+    source: git
+    version: "0.1.0"
+  degenerate_runtime:
+    dependency: "direct overridden"
+    description:
+      path: "packages/degenerate_runtime"
+      ref: HEAD
+      resolved-ref: "44146293a08c47c90489d0fbe3af659ebbc75380"
+      url: "https://github.com/blopker/degenerate.git"
+    source: git
+    version: "0.1.0"
   device_info_plus:
     dependency: transitive
     description:
@@ -786,14 +813,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.2"
-  hotreloader:
-    dependency: transitive
-    description:
-      name: hotreloader
-      sha256: bc167a1163807b03bada490bfe2df25b0d744df359227880220a5cbd04e5734b
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.3.0"
   html:
     dependency: transitive
     description:
@@ -952,21 +971,13 @@ packages:
     source: hosted
     version: "0.7.2"
   json_annotation:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: json_annotation
       sha256: cb09e7dac6210041fad964ed7fbee004f14258b4eca4040f72d1234062ace4c8
       url: "https://pub.dev"
     source: hosted
     version: "4.11.0"
-  json_serializable:
-    dependency: "direct dev"
-    description:
-      name: json_serializable
-      sha256: "44729f5c45748e6748f6b9a57ab8f7e4336edc8ae41fc295070e3814e616a6c0"
-      url: "https://pub.dev"
-    source: hosted
-    version: "6.13.0"
   leak_tracker:
     dependency: transitive
     description:
@@ -991,14 +1002,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.2"
-  lean_builder:
-    dependency: transitive
-    description:
-      name: lean_builder
-      sha256: "6af3cfbf34400eb14b89fe20111e5981e7083362f00ea10b9ed2a6e833250d76"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.6"
   lints:
     dependency: transitive
     description:
@@ -1355,10 +1358,10 @@ packages:
     dependency: "direct main"
     description:
       name: posthog_flutter
-      sha256: "04f95017238189fdc57146591a5a665398165dc7add86304345bbc2a7175194f"
+      sha256: "470eb55c5265e61bdcac7d720fa9de1306746a6086fe59dc06d2254d794705ed"
       url: "https://pub.dev"
     source: hosted
-    version: "5.19.0"
+    version: "5.20.0"
   process:
     dependency: transitive
     description:
@@ -1407,22 +1410,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.1"
-  retrofit:
-    dependency: "direct main"
-    description:
-      name: retrofit
-      sha256: "0f629ed26b2c48c66fe54bd548313c6fdf7955be18bff37e08a46dd3f97f8eaf"
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.9.2"
-  retrofit_generator:
-    dependency: "direct dev"
-    description:
-      name: retrofit_generator
-      sha256: "2381d86c7291b55bf1d3b30d12054a74c417ba97321afbd73cb25be0e6fa401f"
-      url: "https://pub.dev"
-    source: hosted
-    version: "10.2.3"
   riverpod:
     dependency: transitive
     description:
@@ -1640,18 +1627,10 @@ packages:
     dependency: transitive
     description:
       name: source_gen
-      sha256: "1d562a3c1f713904ebbed50d2760217fd8a51ca170ac4b05b0db490699dbac17"
+      sha256: adc962c96fffb2de1728ef396a995aaedcafbe635abdca13d2a987ce17e57751
       url: "https://pub.dev"
     source: hosted
-    version: "4.2.0"
-  source_helper:
-    dependency: transitive
-    description:
-      name: source_helper
-      sha256: "4a85e90b50694e652075cbe4575665539d253e6ec10e46e76b45368ab5e3caae"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.3.10"
+    version: "4.2.1"
   source_map_stack_trace:
     dependency: transitive
     description:
@@ -1756,14 +1735,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
-  swagger_parser:
-    dependency: "direct dev"
-    description:
-      name: swagger_parser
-      sha256: "14e70fd2208eef73ba69d3ad3ff0b8faf0e4d42bc27be6a491646a2288593f85"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.43.0"
   sync_http:
     dependency: transitive
     description:
@@ -1976,26 +1947,26 @@ packages:
     dependency: "direct main"
     description:
       name: wakelock_plus
-      sha256: "9296d40c9adbedaba95d1e704f4e0b434be446e2792948d0e4aa977048104228"
+      sha256: "8b12256f616346910c519a35606fb69b1fe0737c06b6a447c6df43888b097f39"
       url: "https://pub.dev"
     source: hosted
-    version: "1.4.0"
+    version: "1.5.1"
   wakelock_plus_platform_interface:
     dependency: transitive
     description:
       name: wakelock_plus_platform_interface
-      sha256: "036deb14cd62f558ca3b73006d52ce049fabcdcb2eddfe0bf0fe4e8a943b5cf2"
+      sha256: "24b84143787220a403491c2e5de0877fbbb87baf3f0b18a2a988973863db4b03"
       url: "https://pub.dev"
     source: hosted
-    version: "1.3.0"
+    version: "1.4.0"
   watcher:
     dependency: transitive
     description:
       name: watcher
-      sha256: "592ab6e2892f67760543fb712ff0177f4ec76c031f02f5b4ff8d3fc5eb9fb61a"
+      sha256: "1398c9f081a753f9226febe8900fce8f7d0a67163334e1c94a2438339d79d635"
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.4"
+    version: "1.2.1"
   web:
     dependency: transitive
     description:
@@ -2076,14 +2047,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.6.1"
-  xxh3:
-    dependency: transitive
-    description:
-      name: xxh3
-      sha256: "399a0438f5d426785723c99da6b16e136f4953fb1e9db0bf270bd41dd4619916"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.2.0"
   yaml:
     dependency: transitive
     description:
@@ -2101,5 +2064,5 @@ packages:
     source: hosted
     version: "2.2.4"
 sdks:
-  dart: ">=3.11.0 <4.0.0"
+  dart: ">=3.11.1 <4.0.0"
   flutter: ">=3.38.4"

@@ -1,10 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
-import 'package:totem_app/api/models/session_detail_schema.dart';
-import 'package:totem_app/api/models/space_schema.dart';
-import 'package:totem_app/api/models/summary_spaces_schema.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/consts.dart';
 import 'package:totem_app/core/services/secure_storage.dart';
 import 'package:totem_app/shared/logger.dart';

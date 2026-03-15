@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/shared/logger.dart';
@@ -24,7 +25,7 @@ class RepositoryUtils {
   /// Throws [AppNetworkException] for network errors.
   /// Throws [AppDataException] for data/validation errors.
   static Future<T> handleApiCall<T>({
-    required Future<T> Function() apiCall,
+    required Future<ApiResult<T, dynamic>> Function() apiCall,
     required String operationName,
     bool retryOnNetworkError = false,
     int maxRetries = 1,
@@ -35,7 +36,11 @@ class RepositoryUtils {
     for (int attempt = 0; attempt < totalAttempts; attempt++) {
       try {
         final future = apiCall();
-        return await (timeout != null ? future.timeout(timeout) : future);
+        final result = await (timeout != null
+            ? future.timeout(timeout)
+            : future);
+
+        return result.dataOrThrow;
       } catch (error, stackTrace) {
         if (error is AppAuthException) {
           rethrow;

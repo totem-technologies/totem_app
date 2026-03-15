@@ -48,7 +48,6 @@ app.*.map.json
 /android/app/release
 
 # Firebase
-openapi.json
 **/google-services.json
 **/firebase_options.dart
 **/firebase.json
