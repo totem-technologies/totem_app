@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' hide Session;
 import 'package:livekit_components/livekit_components.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';

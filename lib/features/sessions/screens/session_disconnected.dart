@@ -11,7 +11,6 @@ import 'package:in_app_review/in_app_review.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/profile/screens/user_feedback.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';

@@ -10,10 +10,7 @@ import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/utils.dart';
 
 class SuggestedSpaceCard extends StatelessWidget {
-  const SuggestedSpaceCard({
-    required this.session,
-    super.key,
-  });
+  const SuggestedSpaceCard({required this.session, super.key});
 
   final SessionDetailSchema session;
 
