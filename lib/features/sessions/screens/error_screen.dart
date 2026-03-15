@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-
-import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/circle_icon_button.dart';
@@ -21,8 +19,8 @@ class RoomErrorScreen extends StatelessWidget {
         'Please check your internet connection or try again.';
     var canRetry = true;
 
-    if (error is SessionErrorResponse) {
-      switch ((error! as SessionErrorResponse).code) {
+    if (error is RoomErrorResponse) {
+      switch ((error! as RoomErrorResponse).code) {
         case ErrorCode.banned:
           title = "You've been removed from this session";
           subtitle =
