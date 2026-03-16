@@ -27,13 +27,13 @@ final class MobileSpaceDetailSchema {
     return MobileSpaceDetailSchema(
       slug: json['slug'] as String,
       title: json['title'] as String,
-      imageLink: json['image_link'] as String,
+      imageLink: json['image_link'] as String?,
       shortDescription: json['short_description'] as String,
       content: json['content'] as String,
       author: PublicUserSchema.fromJson(json['author'] as Map<String, dynamic>),
-      category: json['category'] as String,
+      category: json['category'] as String?,
       subscribers: (json['subscribers'] as num).toInt(),
-      recurring: json['recurring'] as String,
+      recurring: json['recurring'] as String?,
       price: (json['price'] as num).toInt(),
       nextEvents: (json['next_events'] as List<dynamic>)
           .map((e) => NextSessionSchema.fromJson(e as Map<String, dynamic>))

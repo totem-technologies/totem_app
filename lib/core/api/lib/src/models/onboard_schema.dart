@@ -98,7 +98,7 @@ final class OnboardSchema {
           : null,
       hopes: json['hopes'] as String?,
       referralOther: json.containsKey('referral_other')
-          ? json['referral_other'] as String
+          ? json['referral_other'] as String?
           : '',
     );
   }
