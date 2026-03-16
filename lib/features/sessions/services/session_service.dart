@@ -240,7 +240,7 @@ class Session extends _$Session {
       dimensions: VideoDimensionsPresets.h720_43,
       encoding: VideoEncoding(
         maxBitrate: 1300 * 1000,
-        maxFramerate: 22,
+        maxFramerate: 20,
       ),
     ),
   );

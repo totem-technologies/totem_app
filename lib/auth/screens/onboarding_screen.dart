@@ -142,52 +142,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               },
             ),
 
-            /// Fixed Top Container (logo, skip button, gradient)
-            Container(
-              constraints: const BoxConstraints(minHeight: 150),
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppTheme.slate,
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-              child: SafeArea(
-                minimum: const EdgeInsets.symmetric(horizontal: 20),
-                bottom: false,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IgnorePointer(
-                      child: SvgPicture.asset(
-                        'assets/logo/logo-black.svg',
-                        colorFilter: const ColorFilter.mode(
-                          AppTheme.white,
-                          BlendMode.srcIn,
-                        ),
-                        width: 100,
-                      ),
-                    ),
-                    const Spacer(),
-                    Semantics(
-                      label: 'Sign in button',
-                      child: TextButton(
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.white,
-                        ),
-                        onPressed: _onSkip,
-                        child: const Text('Sign in'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
             Align(
               alignment: Alignment.bottomCenter,
               child: Container(
@@ -376,6 +330,52 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       const SizedBox(height: 20),
                     ],
                   ),
+                ),
+              ),
+            ),
+
+            /// Fixed Top Container (logo, skip button, gradient)
+            Container(
+              constraints: const BoxConstraints(minHeight: 150),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppTheme.slate.withValues(alpha: 0.6),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: SafeArea(
+                minimum: const EdgeInsets.symmetric(horizontal: 20),
+                bottom: false,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IgnorePointer(
+                      child: SvgPicture.asset(
+                        'assets/logo/logo-black.svg',
+                        colorFilter: const ColorFilter.mode(
+                          AppTheme.white,
+                          BlendMode.srcIn,
+                        ),
+                        width: 100,
+                      ),
+                    ),
+                    const Spacer(),
+                    Semantics(
+                      label: 'Sign in button',
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.white,
+                        ),
+                        onPressed: _onSkip,
+                        child: const Text('Sign in'),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

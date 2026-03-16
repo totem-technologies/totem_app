@@ -588,9 +588,12 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     if (mounted) setState(() {});
   }
 
+  Timer? _resizeDebounce;
+
   @override
   void dispose() {
     _listener?.dispose();
+    _resizeDebounce?.cancel();
     super.dispose();
   }
 
@@ -608,8 +611,12 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
             if (_lastConstraints != constraints) {
               _lastConstraints = constraints;
               final size = Size(constraints.maxWidth, constraints.maxHeight);
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _sendRawUpdateTrackSettings(true, size);
+
+              _resizeDebounce?.cancel();
+              _resizeDebounce = Timer(const Duration(milliseconds: 250), () {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) _sendRawUpdateTrackSettings(true, size);
+                });
               });
             }
             return VideoTrackRenderer(
