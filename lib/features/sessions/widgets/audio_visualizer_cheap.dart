@@ -7,6 +7,11 @@
 // CPU usage and improves battery life, especially on lower-end devices. The visualizer
 // is less accurate as it does not reflect the actual audio frequencies, but it still
 // provides a nice visual indication of when a participant is speaking.
+//
+// This will likely not be used because, in our implementation, usually one person is
+// speaking at a time, and the performance improvement is not significant enough to
+// justify the loss of accuracy. However, it can be a good fallback option for devices
+// that struggle with the native FFT-based visualizer.
 
 import 'dart:async';
 import 'dart:math' as math;

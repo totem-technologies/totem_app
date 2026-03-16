@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
-import 'package:totem_app/features/sessions/widgets/audio_visualizer_cheap.dart';
+import 'package:totem_app/features/sessions/widgets/audio_visualizer.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
 class SpeakingIndicatorAudioTrack extends StatelessWidget {

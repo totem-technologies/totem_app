@@ -273,53 +273,45 @@ class Session extends _$Session {
         defaultAudioOutputOptions: options.audioOutputOptions,
 
         dynacast: true,
-        defaultVideoPublishOptions: const VideoPublishOptions(
+        defaultVideoPublishOptions: VideoPublishOptions(
           // https://docs.livekit.io/transport/media/advanced/#video-codec-support
           // https://livekit.io/webrtc/codecs-guide
           // https://github.com/flutter-webrtc/flutter-webrtc/issues/252
           videoCodec: 'h265',
-          backupVideoCodec: BackupVideoCodec(
+          backupVideoCodec: const BackupVideoCodec(
             codec: 'vp8',
             simulcast: true,
           ),
-          // We do not need simulcast on when using h265, as it provides better video
-          // quality at lower bitrates compared to vp8.
-          //
-          // We by default enabled simulcast with vp8 as a backup codec, because some
-          //Android devices do not support h265 hardware encoding.
-          //
-          // However, enabling simulcast with h265 is causing over heating in some devices
-          // (especially iOS), likely due to the high CPU usage of h265 encoding.
-          simulcast: false,
-          // videoSimulcastLayers: [
-          //   // Layer 1: "Tunnel Mode"
-          //   // Meet will drop the framerate to 15fps before letting the video freeze
-          //   // VideoParameters(
-          //   //   dimensions: VideoParametersPresets.h360_43.dimensions,
-          //   //   encoding: const VideoEncoding(
-          //   //     maxBitrate: 80000,
-          //   //     maxFramerate: 15,
-          //   //   ),
-          //   // ),
+          simulcast: true,
+          videoSimulcastLayers: [
+            // Layer 1: "Tunnel Mode"
+            // Meet will drop the framerate to 15fps before letting the video freeze
+            // VideoParameters(
+            //   dimensions: VideoParametersPresets.h360_43.dimensions,
+            //   encoding: const VideoEncoding(
+            //     maxBitrate: 80000,
+            //     maxFramerate: 15,
+            //   ),
+            // ),
 
-          //   // Layer 2: "Standard Grid"
-          //   VideoParameters(
-          //     dimensions: VideoParametersPresets.h540_43.dimensions,
-          //     encoding: const VideoEncoding(
-          //       maxBitrate: 400_000,
-          //       maxFramerate: 18,
-          //     ),
-          //   ),
+            // Layer 2: "Standard Grid"
+            VideoParameters(
+              dimensions: VideoParametersPresets.h540_43.dimensions,
+              encoding: const VideoEncoding(
+                maxBitrate: 400_000,
+                maxFramerate: 18,
+              ),
+            ),
 
-          //   // Layer 3: "Active Speaker"
-          //   VideoParameters(
-          //     dimensions: VideoParametersPresets.h720_43.dimensions,
-          //     encoding: const VideoEncoding(
-          //       maxBitrate: 900_000,
-          //       maxFramerate: 20,
-          //     ),
-          //   ),
-          // ],
+            // Layer 3: "Active Speaker"
+            VideoParameters(
+              dimensions: VideoParametersPresets.h720_43.dimensions,
+              encoding: const VideoEncoding(
+                maxBitrate: 900_000,
+                maxFramerate: 20,
+              ),
+            ),
+          ],
         ),
         // defaultAudioPublishOptions: const AudioPublishOptions(),
 
