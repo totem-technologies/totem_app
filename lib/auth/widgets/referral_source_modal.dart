@@ -68,7 +68,6 @@ class _ReferralSourceModalState extends State<ReferralSourceModal> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-
     return CardScreen(
       children: [
         Semantics(

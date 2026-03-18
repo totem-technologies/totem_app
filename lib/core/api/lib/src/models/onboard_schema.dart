@@ -45,7 +45,9 @@ final class ReferralChoices {
 
   static const ReferralChoices chatgpt = ReferralChoices._('chatgpt');
 
-  static const ReferralChoices physicalMedia = ReferralChoices._('physical_media');
+  static const ReferralChoices physicalMedia = ReferralChoices._(
+    'physical_media',
+  );
 
   static const ReferralChoices friend = ReferralChoices._('friend');
 
