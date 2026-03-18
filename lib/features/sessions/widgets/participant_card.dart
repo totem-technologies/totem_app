@@ -8,8 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart';
 import 'package:livekit_client/src/core/signal_client.dart';
 import 'package:livekit_client/src/proto/livekit_rtc.pb.dart' as lk_rtc;
-import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
@@ -396,11 +396,13 @@ class ParticipantControlButton extends ConsumerWidget {
 class LocalParticipantVideoCard extends ConsumerWidget {
   const LocalParticipantVideoCard({
     this.isCameraOn = true,
+    this.audioTrack,
     this.videoTrack,
     super.key,
   });
 
   final bool isCameraOn;
+  final AudioTrack? audioTrack;
   final VideoTrack? videoTrack;
 
   @override
@@ -409,6 +411,8 @@ class LocalParticipantVideoCard extends ConsumerWidget {
     final user = ref.watch(
       authControllerProvider.select((auth) => auth.user),
     );
+
+    const overlayPadding = 12.0;
 
     final isVideoTrackVisible =
         videoTrack != null && videoTrack!.isActive && !videoTrack!.muted;
@@ -467,6 +471,24 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                         ),
                       ),
                     ],
+                  ),
+                ),
+                PositionedDirectional(
+                  top: overlayPadding,
+                  start: overlayPadding,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black54,
+                    ),
+                    padding: const EdgeInsetsDirectional.all(2),
+                    alignment: Alignment.center,
+                    child: SpeakingIndicatorAudioTrack(
+                      audioTrack: audioTrack,
+                      barCount: 5,
+                    ),
                   ),
                 ),
               ],
@@ -566,9 +588,12 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     if (mounted) setState(() {});
   }
 
+  Timer? _resizeDebounce;
+
   @override
   void dispose() {
     _listener?.dispose();
+    _resizeDebounce?.cancel();
     super.dispose();
   }
 
@@ -586,8 +611,12 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
             if (_lastConstraints != constraints) {
               _lastConstraints = constraints;
               final size = Size(constraints.maxWidth, constraints.maxHeight);
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _sendRawUpdateTrackSettings(true, size);
+
+              _resizeDebounce?.cancel();
+              _resizeDebounce = Timer(const Duration(milliseconds: 250), () {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) _sendRawUpdateTrackSettings(true, size);
+                });
               });
             }
             return VideoTrackRenderer(

@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_app/api/models/public_user_schema.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/home/models/upcoming_session_data.dart';
 import 'package:totem_app/navigation/route_names.dart';

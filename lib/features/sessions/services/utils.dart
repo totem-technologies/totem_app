@@ -1,9 +1,9 @@
 import 'package:livekit_client/livekit_client.dart';
-import 'package:totem_app/api/export.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 
 List<Participant> participantsSorting({
-  required List<Participant> originalParticiapnts,
+  required List<Participant> originalParticipants,
   required SessionRoomState state,
 
   String? speakingNow,
@@ -11,10 +11,10 @@ List<Participant> participantsSorting({
   /// Whether to show the track of the participant who is currently speaking.
   bool showSpeakingNow = false,
 }) {
-  final speakingNowIndentity = speakingNow ?? state.speakingNow;
-  final participants = originalParticiapnts.where((participant) {
+  final speakingNowIdentity = speakingNow ?? state.speakingNow;
+  final participants = originalParticipants.where((participant) {
     // Only show tracks from participants other than the speaking now
-    if (participant.identity == speakingNowIndentity) {
+    if (participant.identity == speakingNowIdentity) {
       return showSpeakingNow;
     }
     return true;
@@ -72,5 +72,31 @@ extension SessionStateExtension on RoomState {
     if (currentIndex == -1) return null;
     if (currentIndex == talkingOrder.length - 1) return talkingOrder.first;
     return talkingOrder[currentIndex + 1];
+  }
+
+  /// Walk the talking order starting after [after], wrapping around.
+  String? nextInOrder({required String after}) {
+    if (!talkingOrder.contains(after)) return null;
+
+    final start = talkingOrder.indexOf(after) + 1;
+    final rotated = [
+      ...talkingOrder.sublist(start),
+      ...talkingOrder.sublist(0, start),
+    ];
+
+    return rotated.firstOrNull;
+  }
+
+  String? get nextParticipantForcePassIdentity {
+    if (nextSpeaker == null) return null;
+    switch (turnState) {
+      case TurnState.idle:
+        return null;
+      case TurnState.speaking:
+        return nextSpeaker;
+      case TurnState.passing:
+        return nextInOrder(after: nextSpeaker!);
+    }
+    return null;
   }
 }

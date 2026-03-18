@@ -96,6 +96,19 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                   onRefresh: () =>
                       ref.refresh(blogPostProvider(widget.slug).future),
                   child: SelectionArea(
+                    contextMenuBuilder: (context, selectableRegionState) {
+                      try {
+                        return AdaptiveTextSelectionToolbar.selectableRegion(
+                          selectableRegionState: selectableRegionState,
+                        );
+                        // Flutter throws a TypeError when the context menu
+                        // tries to position on content that has been scrolled
+                        // out of view. We catch it to avoid a crash.
+                        // ignore: avoid_catching_errors
+                      } on TypeError {
+                        return const SizedBox.shrink();
+                      }
+                    },
                     child: ListView(
                       padding: const EdgeInsetsDirectional.symmetric(
                         horizontal: 20,
@@ -110,52 +123,57 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 17,
-                              backgroundColor: Colors.white,
-                              child: UserAvatar.fromUserSchema(
-                                blog.author,
-                                radius: 15,
+                        SelectionContainer.disabled(
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 17,
+                                backgroundColor: Colors.white,
+                                child: UserAvatar.fromUserSchema(
+                                  blog.author,
+                                  radius: 15,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    blog.author?.name ?? 'Unknown Author',
-                                    style: theme.textTheme.bodyLarge?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  if (blog.datePublished != null)
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
                                     Text(
-                                      DateFormat(
-                                        'MMM d, yyyy',
-                                      ).format(blog.datePublished!),
-                                      style: theme.textTheme.bodyMedium,
+                                      blog.author?.name ?? 'Unknown Author',
+                                      style: theme.textTheme.bodyLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                     ),
-                                ],
+                                    if (blog.datePublished != null)
+                                      Text(
+                                        DateFormat(
+                                          'MMM d, yyyy',
+                                        ).format(blog.datePublished!),
+                                        style: theme.textTheme.bodyMedium,
+                                      ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            Chip(
-                              label: Text('${blog.readTime} min read'),
-                              backgroundColor: Colors.grey.shade200,
-                            ),
-                          ],
+                              Chip(
+                                label: Text('${blog.readTime} min read'),
+                                backgroundColor: Colors.grey.shade200,
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 20),
                         if (blog.headerImageUrl != null)
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: CachedNetworkImage(
-                              imageUrl: blog.headerImageUrl!,
-                              fit: BoxFit.cover,
-                              memCacheWidth: ((screenWidth - 40) * pixelRatio)
-                                  .round(),
+                          SelectionContainer.disabled(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: CachedNetworkImage(
+                                imageUrl: blog.headerImageUrl!,
+                                fit: BoxFit.cover,
+                                memCacheWidth: ((screenWidth - 40) * pixelRatio)
+                                    .round(),
+                              ),
                             ),
                           ),
                         Html(
@@ -169,30 +187,38 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                           style: AppTheme.htmlStyle,
                           extensions: [TotemImageHtmlExtension()],
                         ),
-                        if (blog.author?.slug != null) ...[
-                          Padding(
-                            padding: const EdgeInsetsDirectional.symmetric(
-                              vertical: 20,
+                        if (blog.author?.slug != null)
+                          SelectionContainer.disabled(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding:
+                                      const EdgeInsetsDirectional.symmetric(
+                                        vertical: 20,
+                                      ),
+                                  child: Text(
+                                    'Meet the author',
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                  ),
+                                ),
+                                MeetUserCard(
+                                  user: blog.author!,
+                                  margin: EdgeInsetsDirectional.zero,
+                                ),
+                                const SizedBox(height: 20),
+                                KeeperSpaces(
+                                  title: authorSpacesText,
+                                  keeperSlug: blog.author!.slug!,
+                                  horizontalPadding: EdgeInsetsDirectional.zero,
+                                ),
+                                const SizedBox(height: 14),
+                              ],
                             ),
-                            child: Text(
-                              'Meet the author',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
                           ),
-                          MeetUserCard(
-                            user: blog.author!,
-                            margin: EdgeInsetsDirectional.zero,
-                          ),
-                          const SizedBox(height: 20),
-                          KeeperSpaces(
-                            title: authorSpacesText,
-                            keeperSlug: blog.author!.slug!,
-                            horizontalPadding: EdgeInsetsDirectional.zero,
-                          ),
-                          const SizedBox(height: 14),
-                        ],
                       ],
                     ),
                   ),

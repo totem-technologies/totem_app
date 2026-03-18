@@ -5,8 +5,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' hide Session;
-import 'package:livekit_components/livekit_components.dart';
-import 'package:totem_app/api/export.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
@@ -79,7 +78,7 @@ class OptionsSheet extends ConsumerWidget {
             ),
             shrinkWrap: true,
             physics: const ClampingScrollPhysics(),
-            children: [
+            children: <Widget>[
               OptionsSheetTile.camera(
                 currentSession.localVideoTrack?.currentOptions
                     as CameraCaptureOptions?,
@@ -88,35 +87,35 @@ class OptionsSheet extends ConsumerWidget {
                   Navigator.of(context).pop();
                 },
               ),
-              if (lkPlatformIsDesktop())
-                MediaDeviceSelectButton(
-                  builder: (context, roomCtx, deviceCtx) {
-                    final audioInputs = deviceCtx.audioInputs;
-                    final selected =
-                        deviceCtx.audioInputs?.firstWhereOrNull(
-                          (e) {
-                            return e.deviceId ==
-                                    (roomCtx
-                                            .localAudioTrack
-                                            ?.currentOptions
-                                            .deviceId ??
-                                        currentSession.selectedAudioDeviceId) &&
-                                e.label.isNotEmpty;
-                          },
-                        ) ??
-                        deviceCtx.audioInputs?.firstOrNull;
-                    return OptionsSheetTile.fromMediaDevice(
-                      device: selected,
-                      options: audioInputs ?? [],
-                      onOptionChanged: (value) {
-                        if (value != null) {
-                          currentSession.selectAudioDevice(value);
-                        }
-                      },
-                      icon: TotemIcons.microphoneOn,
-                    );
-                  },
-                ),
+              // if (lkPlatformIsDesktop())
+              //   MediaDeviceSelectButton(
+              //     builder: (context, roomCtx, deviceCtx) {
+              //       final audioInputs = deviceCtx.audioInputs;
+              //       final selected =
+              //           deviceCtx.audioInputs?.firstWhereOrNull(
+              //             (e) {
+              //               return e.deviceId ==
+              //                       (roomCtx
+              //                               .localAudioTrack
+              //                               ?.currentOptions
+              //                               .deviceId ??
+              //                           currentSession.selectedAudioDeviceId) &&
+              //                   e.label.isNotEmpty;
+              //             },
+              //           ) ??
+              //           deviceCtx.audioInputs?.firstOrNull;
+              //       return OptionsSheetTile.fromMediaDevice(
+              //         device: selected,
+              //         options: audioInputs ?? [],
+              //         onOptionChanged: (value) {
+              //           if (value != null) {
+              //             currentSession.selectAudioDevice(value);
+              //           }
+              //         },
+              //         icon: TotemIcons.microphoneOn,
+              //       );
+              //     },
+              //   ),
               OptionsSheetTile.output(
                 AudioOutputOptions(
                   speakerOn: state.isSpeakerphoneEnabled,
@@ -139,6 +138,7 @@ class OptionsSheet extends ConsumerWidget {
                   final navigator = Navigator.of(context)..pop();
                   final shouldLeave = await showLeaveDialog(context) ?? false;
                   if (shouldLeave && navigator.mounted) {
+                    currentSession.leave();
                     popOrHome(navigator.context);
                   }
                 },
@@ -195,7 +195,8 @@ class OptionsSheet extends ConsumerWidget {
                 if (state.roomState.status == RoomStatus.active)
                   Builder(
                     builder: (context) {
-                      final next = state.roomState.nextParticipantIdentity;
+                      final next =
+                          state.roomState.nextParticipantForcePassIdentity;
                       final nextParticipantName = next != null
                           ? state.participants
                                 .firstWhereOrNull((p) => p.identity == next)
@@ -238,15 +239,18 @@ class OptionsSheet extends ConsumerWidget {
                   ),
                 ),
                 OptionsSheetTile<void>(
-                  title:
-                      'Session Status: '
-                      '${state.roomState.status.name.uppercaseFirst()}',
+                  title: switch (state.roomState.status) {
+                    RoomStatus.waitingRoom => 'Session Status: Waiting Room',
+                    RoomStatus.active => 'Session Status: Active',
+                    RoomStatus.ended => 'Session Status: Ended',
+                    _ => 'Session Status: Unknown',
+                  },
                   icon: TotemIcons.checkboxOutlined,
                 ),
                 OptionsSheetTile<void>(
                   title:
                       'Totem Status: '
-                      '${state.roomState.turnState.name.uppercaseFirst()}',
+                      '${state.roomState.turnState.value.uppercaseFirst()}',
                   icon: TotemIcons.feedback,
                 ),
                 Builder(
@@ -559,7 +563,10 @@ class OptionsSheetTile<T> extends StatelessWidget {
               ),
             )
           : null,
-      onTap: onSwitch,
+      onTap: switch (options?.cameraPosition) {
+        null => null,
+        _ => onSwitch,
+      },
     );
   }
 
@@ -585,32 +592,34 @@ class OptionsSheetTile<T> extends StatelessWidget {
         },
       );
     } else {
-      return MediaDeviceSelectButton(
-        builder: (context, roomCtx, deviceCtx) {
-          final audioOutputs = deviceCtx.audioOutputs?.where((
-            device,
-          ) {
-            return device.label.isNotEmpty && device.label != 'Earpiece';
-          });
-          final selected =
-              deviceCtx.audioOutputs?.firstWhereOrNull(
-                (e) {
-                  return e.deviceId == options.deviceId && e.label.isNotEmpty;
-                },
-              ) ??
-              deviceCtx.audioOutputs?.firstOrNull;
-          return OptionsSheetTile.fromMediaDevice(
-            device: selected,
-            options: audioOutputs ?? [],
-            onOptionChanged: (value) {
-              if (value != null) {
-                onDeviceSelect(value);
-              }
-            },
-            icon: TotemIcons.speaker,
-          );
-        },
-      );
+      // TODO(bdlukaa): Implement audio output selection for desktop platforms.
+      return const SizedBox.shrink();
+      // return MediaDeviceSelectButton(
+      //   builder: (context, roomCtx, deviceCtx) {
+      //     final audioOutputs = deviceCtx.audioOutputs?.where((
+      //       device,
+      //     ) {
+      //       return device.label.isNotEmpty && device.label != 'Earpiece';
+      //     });
+      //     final selected =
+      //         deviceCtx.audioOutputs?.firstWhereOrNull(
+      //           (e) {
+      //             return e.deviceId == options.deviceId && e.label.isNotEmpty;
+      //           },
+      //         ) ??
+      //         deviceCtx.audioOutputs?.firstOrNull;
+      //     return OptionsSheetTile.fromMediaDevice(
+      //       device: selected,
+      //       options: audioOutputs ?? [],
+      //       onOptionChanged: (value) {
+      //         if (value != null) {
+      //           onDeviceSelect(value);
+      //         }
+      //       },
+      //       icon: TotemIcons.speaker,
+      //     );
+      //   },
+      // );
     }
   }
 

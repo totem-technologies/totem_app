@@ -48,7 +48,6 @@ app.*.map.json
 /android/app/release
 
 # Firebase
-openapi.json
 **/google-services.json
 **/firebase_options.dart
 **/firebase.json
@@ -65,3 +64,5 @@ ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
 ios/Runner.xcworkspace/xcshareddata/swiftpm/
 
 *.secrets
+
+review-*.md

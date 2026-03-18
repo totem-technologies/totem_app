@@ -2,7 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' show Participant;
-import 'package:totem_app/api/models/session_detail_schema.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/shared/totem_icons.dart';

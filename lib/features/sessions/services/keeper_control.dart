@@ -24,7 +24,7 @@ extension KeeperControl on Session {
         final keeper = state.participants.firstWhereOrNull(
           (participant) => participant.identity == state.roomState.keeper,
         );
-        return keeper ?? context!.room.localParticipant!;
+        return keeper ?? room!.localParticipant!;
       },
     );
   }
@@ -45,6 +45,7 @@ extension KeeperControl on Session {
 
   void _onKeeperDisconnected() {
     if (state.roomState.status != RoomStatus.active) return;
+    disableMicrophone();
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = Timer(
@@ -73,7 +74,7 @@ extension KeeperControl on Session {
 
     closeKeeperLeftNotifications();
 
-    await context?.disconnect();
+    await room?.disconnect();
   }
 
   Future<void> removeParticipant(String participantSlug) async {

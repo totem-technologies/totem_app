@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:totem_app/api/models/session_detail_schema.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/date.dart';
@@ -10,10 +10,7 @@ import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/utils.dart';
 
 class SuggestedSpaceCard extends StatelessWidget {
-  const SuggestedSpaceCard({
-    required this.session,
-    super.key,
-  });
+  const SuggestedSpaceCard({required this.session, super.key});
 
   final SessionDetailSchema session;
 

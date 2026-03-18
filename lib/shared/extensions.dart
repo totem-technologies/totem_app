@@ -1,8 +1,4 @@
-import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
-import 'package:totem_app/api/models/next_session_schema.dart';
-import 'package:totem_app/api/models/public_user_schema.dart';
-import 'package:totem_app/api/models/session_detail_schema.dart';
-import 'package:totem_app/api/models/user_schema.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 
 extension ListExtension<T> on List<T> {
   List<T> reversedIf(bool condition) {

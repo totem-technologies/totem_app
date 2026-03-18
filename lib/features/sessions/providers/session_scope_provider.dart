@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/api/export.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 
 part 'session_scope_provider.g.dart';
@@ -72,8 +72,8 @@ List<Participant> sessionParticipants(Ref ref) {
 bool isMyTurn(Ref ref) {
   final currentSession = ref.watch(currentSessionProvider);
   final state = ref.watch(currentSessionStateProvider);
-  if (currentSession?.context == null || state == null) return false;
-  return state.isMyTurn(currentSession!.context!);
+  if (currentSession?.room == null || state == null) return false;
+  return state.isMyTurn(currentSession!.room!);
 }
 
 /// Whether the current user is next to speak.
@@ -81,6 +81,6 @@ bool isMyTurn(Ref ref) {
 bool amNextSpeaker(Ref ref) {
   final currentSession = ref.watch(currentSessionProvider);
   final state = ref.watch(currentSessionStateProvider);
-  if (currentSession?.context == null || state == null) return false;
-  return state.amNext(currentSession!.context!);
+  if (currentSession?.room == null || state == null) return false;
+  return state.amNext(currentSession!.room!);
 }

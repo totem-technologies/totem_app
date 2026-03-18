@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/api/models/summary_spaces_schema.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/core/services/cache_service.dart';
@@ -18,8 +18,8 @@ Future<SummarySpacesSchema> spacesSummary(Ref ref) async {
 
   try {
     final summary = await RepositoryUtils.handleApiCall<SummarySpacesSchema>(
-      apiCall: () => mobileApiService.spaces
-          .totemSpacesMobileApiMobileApiGetSpacesSummary(),
+      apiCall: () =>
+          mobileApiService.spaces.totemSpacesMobileApiGetSpacesSummary(),
       operationName: 'get spaces summary',
     );
 
@@ -39,5 +39,49 @@ Future<SummarySpacesSchema> spacesSummary(Ref ref) async {
     } else {
       rethrow;
     }
+  }
+}
+
+@riverpod
+Future<bool> rsvpConfirm(Ref ref, String eventSlug) async {
+  final mobileApiService = ref.read(mobileApiServiceProvider);
+
+  try {
+    final session = await RepositoryUtils.handleApiCall<SessionDetailSchema>(
+      apiCall: () => mobileApiService.spaces.totemSpacesMobileApiRsvpConfirm(
+        eventSlug: eventSlug,
+      ),
+      operationName: 'confirm RSVP for $eventSlug',
+    );
+    return session.attending;
+  } catch (e, stackTrace) {
+    ErrorHandler.logError(
+      e,
+      stackTrace: stackTrace,
+      message: 'Failed to confirm RSVP for $eventSlug',
+    );
+    return false;
+  }
+}
+
+@riverpod
+Future<bool> rsvpCancel(Ref ref, String eventSlug) async {
+  final mobileApiService = ref.read(mobileApiServiceProvider);
+
+  try {
+    final session = await RepositoryUtils.handleApiCall<SessionDetailSchema>(
+      apiCall: () => mobileApiService.spaces.totemSpacesMobileApiRsvpCancel(
+        eventSlug: eventSlug,
+      ),
+      operationName: 'cancel RSVP for $eventSlug',
+    );
+    return session.attending;
+  } catch (e, stackTrace) {
+    ErrorHandler.logError(
+      e,
+      stackTrace: stackTrace,
+      message: 'Failed to cancel RSVP for $eventSlug',
+    );
+    return false;
   }
 }

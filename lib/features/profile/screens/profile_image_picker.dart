@@ -5,8 +5,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:totem_app/api/models/profile_avatar_type_enum.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/shared/network.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -116,7 +116,6 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                   behavior: HitTestBehavior.opaque,
                   onTap: () async {
                     switch (_state) {
-                      case ProfileAvatarTypeEnum.$unknown:
                       case ProfileAvatarTypeEnum.td:
                         _randomizeTieDyeSeed();
                       case ProfileAvatarTypeEnum.im:

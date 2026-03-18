@@ -8,6 +8,7 @@ import 'package:totem_app/api/models/session_detail_schema.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/widgets/referral_source_modal.dart';
 import 'package:totem_app/auth/widgets/suggested_space_card_widget.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';

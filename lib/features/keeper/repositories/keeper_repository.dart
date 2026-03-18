@@ -1,5 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/api/export.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/core/services/repository_utils.dart';
 

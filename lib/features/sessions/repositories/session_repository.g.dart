@@ -13,8 +13,13 @@ part of 'session_repository.dart';
 final sessionTokenProvider = SessionTokenFamily._();
 
 final class SessionTokenProvider
-    extends $FunctionalProvider<AsyncValue<String>, String, FutureOr<String>>
-    with $FutureModifier<String>, $FutureProvider<String> {
+    extends
+        $FunctionalProvider<
+          AsyncValue<JoinResponse>,
+          JoinResponse,
+          FutureOr<JoinResponse>
+        >
+    with $FutureModifier<JoinResponse>, $FutureProvider<JoinResponse> {
   SessionTokenProvider._({
     required SessionTokenFamily super.from,
     required String super.argument,
@@ -38,11 +43,12 @@ final class SessionTokenProvider
 
   @$internal
   @override
-  $FutureProviderElement<String> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $FutureProviderElement<JoinResponse> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<String> create(Ref ref) {
+  FutureOr<JoinResponse> create(Ref ref) {
     final argument = this.argument as String;
     return sessionToken(ref, argument);
   }
@@ -58,10 +64,10 @@ final class SessionTokenProvider
   }
 }
 
-String _$sessionTokenHash() => r'fb7d2932967737fb60fc52d9e8621f4eb538894f';
+String _$sessionTokenHash() => r'a56fb863d18225c617546568e78e379fabaa1c7f';
 
 final class SessionTokenFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<String>, String> {
+    with $FunctionalFamilyOverride<FutureOr<JoinResponse>, String> {
   SessionTokenFamily._()
     : super(
         retry: null,
@@ -368,7 +374,7 @@ final class PassTotemProvider
   }
 }
 
-String _$passTotemHash() => r'7a8087ee13bcc7685488949bfecf87dcc79099d3';
+String _$passTotemHash() => r'a269f554c88089b345cc8950a24f8fb383b75c2a';
 
 final class PassTotemFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
@@ -442,7 +448,7 @@ final class AcceptTotemProvider
   }
 }
 
-String _$acceptTotemHash() => r'76ffcd8e89590b76c6ef7eb2138763cf969240ce';
+String _$acceptTotemHash() => r'a42dab5885d2d618608399aace2abe2e39599127';
 
 final class AcceptTotemFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
@@ -519,7 +525,7 @@ final class ForcePassTotemProvider
   }
 }
 
-String _$forcePassTotemHash() => r'f9ed7f21071cdbde3b9d58839d1402787a2ddf4f';
+String _$forcePassTotemHash() => r'cc45e059cba099286fad43daea430be7a7f7bca4';
 
 final class ForcePassTotemFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
@@ -597,7 +603,7 @@ final class ReorderParticipantsProvider
 }
 
 String _$reorderParticipantsHash() =>
-    r'35eb4f6994ea06d5993f440395813f066104f584';
+    r'6d18a35a8f74dde5d55069a15a2a4065e764ffb5';
 
 final class ReorderParticipantsFamily extends $Family
     with
@@ -681,7 +687,7 @@ final class StartSessionProvider
   }
 }
 
-String _$startSessionHash() => r'1a2efa9ea5c37de37a7802877fc0b784859cc2d1';
+String _$startSessionHash() => r'3e5cf6a4ad5c0113e3677f22aaab64e3ce99e8ff';
 
 final class StartSessionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
@@ -758,7 +764,7 @@ final class EndSessionProvider
   }
 }
 
-String _$endSessionHash() => r'e6b4ae8793c35687cef97ff994cf7cd92550ddf6';
+String _$endSessionHash() => r'32dc792a5ecce382021036e3eb7737a6db8837af';
 
 final class EndSessionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
@@ -835,7 +841,7 @@ final class BanParticipantProvider
   }
 }
 
-String _$banParticipantHash() => r'520c40fb1de14ee9706e4bf9651f41c5d69c314f';
+String _$banParticipantHash() => r'5ef016ab602c346c720922498dfe5830bb382e28';
 
 final class BanParticipantFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, String, int)> {
@@ -915,7 +921,7 @@ final class UnbanParticipantProvider
   }
 }
 
-String _$unbanParticipantHash() => r'aed7bd54448a4324d179d526219a845a307892e2';
+String _$unbanParticipantHash() => r'c11957da27f8554b5417ef93d97f809c60ad882d';
 
 final class UnbanParticipantFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, String, int)> {
@@ -990,7 +996,7 @@ final class SessionFeedbackProvider
   }
 }
 
-String _$sessionFeedbackHash() => r'18524a4ffebbbb0ae3aa6211d8b9d9681b0f743a';
+String _$sessionFeedbackHash() => r'8807e946ec9f45977c0a87b09f8f314d233b1379';
 
 final class SessionFeedbackFamily extends $Family
     with

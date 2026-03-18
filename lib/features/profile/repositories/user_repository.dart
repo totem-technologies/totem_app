@@ -1,6 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/api/models/feedback_schema.dart';
-import 'package:totem_app/api/models/public_user_schema.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/core/services/repository_utils.dart';
 
