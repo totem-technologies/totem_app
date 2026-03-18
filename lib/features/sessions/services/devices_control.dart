@@ -66,30 +66,28 @@ extension DevicesControl on Session {
   }
 
   String? get selectedCameraDeviceId {
-    final userTrack = context?.localParticipant
+    final userTrack = room?.localParticipant
         ?.getTrackPublications()
         .firstWhereOrNull((track) => track.kind == TrackType.VIDEO)
         ?.track;
     if (userTrack?.currentOptions is CameraCaptureOptions) {
       return (userTrack!.currentOptions as CameraCaptureOptions).deviceId;
     }
-    return context
-        ?.room
+    return room
         // ignore: invalid_use_of_internal_member
-        .engine
+        ?.engine
         .roomOptions
         .defaultCameraCaptureOptions
         .deviceId;
   }
 
   LocalVideoTrack? get localVideoTrack {
-    return context?.localVideoTrack ??
-        context?.localParticipant?.videoTrackPublications
-            .where(
-              (t) => t.track != null && t.track!.isActive && !t.track!.muted,
-            )
-            .firstOrNull
-            ?.track;
+    return room?.localParticipant?.videoTrackPublications
+        .where(
+          (t) => t.track != null && t.track!.isActive && !t.track!.muted,
+        )
+        .firstOrNull
+        ?.track;
   }
 
   Future<void> switchCameraPosition() async {
@@ -102,7 +100,7 @@ extension DevicesControl on Session {
         await track.setCameraPosition(newPosition);
         logger.i('Switched camera to $newPosition');
       } else {
-        await context?.localParticipant?.publishVideoTrack(
+        await room?.localParticipant?.publishVideoTrack(
           await LocalVideoTrack.createCameraTrack(
             Session.defaultCameraCaptureOptions,
           ),
@@ -120,10 +118,10 @@ extension DevicesControl on Session {
   }
 
   LocalAudioTrack? get localAudioTrack {
-    return context?.localParticipant?.audioTrackPublications.firstOrNull?.track;
+    return room?.localParticipant?.audioTrackPublications.firstOrNull?.track;
   }
 
-  bool get isSpeakerphoneEnabled => context?.room.speakerOn ?? false;
+  bool get isSpeakerphoneEnabled => room?.speakerOn ?? false;
 
   Future<void> setSpeakerphone(bool enabled) async {
     // When external audio is connected and the user enables the speaker,
@@ -135,7 +133,7 @@ extension DevicesControl on Session {
   }
 
   Future<void> _autoSetSpeakerphone(bool enabled) async {
-    await context?.room.setSpeakerOn(enabled);
+    await room?.setSpeakerOn(enabled);
     state = state.copyWith(isSpeakerphoneEnabled: enabled);
   }
 
@@ -146,7 +144,7 @@ extension DevicesControl on Session {
     if (track != null) {
       track.setDeviceId(device.deviceId);
     } else {
-      await context?.localParticipant?.publishAudioTrack(
+      await room?.localParticipant?.publishAudioTrack(
         await LocalAudioTrack.create(
           AudioCaptureOptions(deviceId: device.deviceId),
         ),
@@ -154,46 +152,39 @@ extension DevicesControl on Session {
     }
 
     // See https://github.com/livekit/client-sdk-flutter/issues/959
-    await context?.room.setAudioInputDevice(device);
+    await room?.setAudioInputDevice(device);
     ref.notifyListeners();
   }
 
   String? get selectedAudioOutputDeviceId {
     // ignore: invalid_use_of_internal_member
-    return context?.room.engine.roomOptions.defaultAudioOutputOptions.deviceId;
+    return room?.engine.roomOptions.defaultAudioOutputOptions.deviceId;
   }
 
   Future<void> selectAudioOutputDevice(MediaDevice device) async {
     // See https://github.com/livekit/client-sdk-flutter/issues/858
-    await context?.room.setAudioOutputDevice(device);
+    await room?.setAudioOutputDevice(device);
     ref.notifyListeners();
   }
 
+  bool get isMicrophoneEnabled =>
+      room?.localParticipant?.isMicrophoneEnabled() ?? false;
   Future<void> enableMicrophone() async {
-    if (context?.isMicrophoneEnabled ?? false) return;
+    if (room?.localParticipant?.isMicrophoneEnabled() ?? false) return;
     if (state.roomState.status == RoomStatus.active && !hasKeeper) return;
 
-    if (context?.localParticipant != null) {
-      await context?.localParticipant?.setMicrophoneEnabled(true);
-    } else {
-      context?.localAudioTrack ??= await LocalAudioTrack.create(
-        AudioCaptureOptions(deviceId: context?.room.selectedAudioInputDeviceId),
-      );
+    if (room?.localParticipant != null) {
+      await room?.localParticipant?.setMicrophoneEnabled(true);
     }
     ref.notifyListeners();
   }
 
   Future<void> disableMicrophone() async {
-    if (!(context?.isMicrophoneEnabled ?? false)) {
+    if (!(room?.localParticipant?.isMicrophoneEnabled() ?? false)) {
       return;
     }
     try {
-      if (context?.connected ?? false) {
-        await context?.localParticipant?.setMicrophoneEnabled(false);
-      } else {
-        await context?.localAudioTrack?.dispose();
-        context?.localAudioTrack = null;
-      }
+      await room?.localParticipant?.setMicrophoneEnabled(false);
       ref.notifyListeners();
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -204,38 +195,28 @@ extension DevicesControl on Session {
     }
   }
 
+  bool get isCameraEnabled =>
+      room?.localParticipant?.isCameraEnabled() ?? false;
   Future<void> enableCamera() async {
-    if (context?.cameraOpened ?? false) {
+    if (room?.localParticipant?.isCameraEnabled() ?? false) {
       return;
     }
-    if (context?.connected ?? false) {
-      await context?.localParticipant?.setCameraEnabled(
-        true,
-        cameraCaptureOptions: Session.defaultCameraCaptureOptions.copyWith(
-          deviceId: context?.room.selectedVideoInputDeviceId,
-        ),
-      );
-    } else {
-      context?.localVideoTrack ??= await LocalVideoTrack.createCameraTrack(
-        Session.defaultCameraCaptureOptions.copyWith(
-          deviceId: context?.room.selectedVideoInputDeviceId,
-        ),
-      );
-    }
+    await room?.localParticipant?.setCameraEnabled(
+      true,
+      cameraCaptureOptions: Session.defaultCameraCaptureOptions.copyWith(
+        deviceId: room?.selectedVideoInputDeviceId,
+      ),
+    );
 
     ref.notifyListeners();
   }
 
   Future<void> disableCamera() async {
-    if (!(context?.cameraOpened ?? false)) {
+    if (!(room?.localParticipant?.isCameraEnabled() ?? false)) {
       return;
     }
-    if (context?.connected ?? false) {
-      await context?.localParticipant?.setCameraEnabled(false);
-    } else {
-      await context?.localVideoTrack?.dispose();
-      context?.localVideoTrack = null;
-    }
+    await room?.localParticipant?.setCameraEnabled(false);
+
     ref.notifyListeners();
   }
 }

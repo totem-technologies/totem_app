@@ -8,7 +8,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage, logger;
-import 'package:livekit_components/livekit_components.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
@@ -103,6 +102,7 @@ class SessionRoomState {
     this.removed = false,
     this.isSpeakerphoneEnabled = false,
     this.disconnectReason,
+    this.messages = const [],
   });
 
   /// The current connection state of the room.
@@ -126,12 +126,14 @@ class SessionRoomState {
   /// Why LiveKit disconnected this participant, when available.
   final DisconnectReason? disconnectReason;
 
-  bool isMyTurn(RoomContext room) {
+  final List<ChatMessage> messages;
+
+  bool isMyTurn(Room room) {
     return roomState.currentSpeaker != null &&
         roomState.currentSpeaker == room.localParticipant?.identity;
   }
 
-  bool amNext(RoomContext room) {
+  bool amNext(Room room) {
     return roomState.nextSpeaker != null &&
         roomState.nextSpeaker == room.localParticipant?.identity;
   }
@@ -152,6 +154,7 @@ class SessionRoomState {
     bool? isSpeakerphoneEnabled,
     DisconnectReason? disconnectReason,
     bool clearDisconnectReason = false,
+    List<ChatMessage>? messages,
   }) {
     return SessionRoomState(
       connectionState: connectionState ?? this.connectionState,
@@ -165,6 +168,7 @@ class SessionRoomState {
       disconnectReason: clearDisconnectReason
           ? null
           : disconnectReason ?? this.disconnectReason,
+      messages: messages ?? this.messages,
     );
   }
 
@@ -176,7 +180,8 @@ class SessionRoomState {
         'hasKeeperDisconnected: $hasKeeperDisconnected, '
         'removed: $removed, '
         'disconnectReason: $disconnectReason, '
-        'isSpeakerphoneEnabled: $isSpeakerphoneEnabled'
+        'isSpeakerphoneEnabled: $isSpeakerphoneEnabled, '
+        'messages: $messages'
         ')';
   }
 
@@ -193,7 +198,11 @@ class SessionRoomState {
         ) &&
         other.removed == removed &&
         other.disconnectReason == disconnectReason &&
-        other.isSpeakerphoneEnabled == isSpeakerphoneEnabled;
+        other.isSpeakerphoneEnabled == isSpeakerphoneEnabled &&
+        const DeepCollectionEquality().equals(
+          other.messages.map((m) => m.id),
+          messages.map((m) => m.id),
+        );
   }
 
   @override
@@ -204,13 +213,14 @@ class SessionRoomState {
       const DeepCollectionEquality().hash(participants.map((p) => p.identity)) ^
       removed.hashCode ^
       disconnectReason.hashCode ^
-      isSpeakerphoneEnabled.hashCode;
+      isSpeakerphoneEnabled.hashCode ^
+      const DeepCollectionEquality().hash(messages.map((m) => m.id));
 }
 
 @riverpod
 class Session extends _$Session {
-  /// The [RoomContext] of the current session, which holds the LiveKit room and related information.
-  RoomContext? context;
+  /// The [Room] of the current session, which holds the LiveKit room and related information.
+  Room? room;
   EventsListener<RoomEvent>? _listener;
 
   /// The sync timer periodically checks for changes in the room state
@@ -258,13 +268,7 @@ class Session extends _$Session {
       (_) => _onRoomChanges(),
     );
 
-    context = RoomContext(
-      url: AppConfig.liveKitUrl,
-      token: options.token,
-      connect: true,
-      onConnected: _onConnected,
-      onDisconnected: _onDisconnected,
-      onError: _onError,
+    room = Room(
       roomOptions: RoomOptions(
         defaultCameraCaptureOptions: options.cameraOptions,
         defaultAudioCaptureOptions: options.audioOptions,
@@ -318,18 +322,32 @@ class Session extends _$Session {
       ),
     );
 
-    _listener = context?.room.createListener();
+    room!.prepareConnection(AppConfig.liveKitUrl, options.token);
+
+    // TODO(bdlukaa): Connect should only be done after the user explicitly clicks the "Join Session"
+    // button on the waiting room screen, to avoid joining the LiveKit room before it's needed. This
+    // will require some refactoring of the code, as currently the connection is established in the
+    // build method of the Session provider. One possible approach is to move the connection logic
+    // to a separate method that is called when the user clicks the "Join Session" button, and keep
+    // track of whether the connection has been established in the state.
+    connect();
+
+    _listener = room!.createListener();
     _listener
       ?..on((_) {
         if (ref.mounted) {
           _onRoomChanges();
         }
       })
+      ..on<RoomConnectedEvent>((_) {
+        _onConnected();
+      })
       ..on<RoomDisconnectedEvent>((event) {
         logger.d('Disconnected from session. Reason: ${event.reason}');
         if (event.reason != null) {
           state = state.copyWith(disconnectReason: event.reason);
         }
+        _onDisconnected();
       })
       ..on<DataReceivedEvent>(_onDataReceived)
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
@@ -365,9 +383,10 @@ class Session extends _$Session {
   void _updateParticipantsList() {
     try {
       final participants = <Participant>[
-        if (context?.room != null) ...context!.room.remoteParticipants.values,
-        if (context?.room.localParticipant != null)
-          context!.room.localParticipant!,
+        if (room != null) ...[
+          ...room!.remoteParticipants.values,
+          if (room!.localParticipant != null) room!.localParticipant!,
+        ],
       ];
 
       final sortedParticipants = participantsSorting(
@@ -392,19 +411,19 @@ class Session extends _$Session {
   }
 
   void _onConnected() {
-    if (context?.room.localParticipant == null) {
+    if (room?.localParticipant == null) {
       logger.i('Local participant is null on connected.');
       return;
     }
 
     logger.i(
       'Connected to LiveKit room as '
-      '"${context!.room.localParticipant!.identity}".',
+      '"${room!.localParticipant!.identity}".',
     );
 
     _onRoomChanges();
 
-    context!.room.localParticipant?.setCameraEnabled(
+    room!.localParticipant?.setCameraEnabled(
       _options?.cameraEnabled ?? false,
     );
 
@@ -417,7 +436,7 @@ class Session extends _$Session {
             return _options?.microphoneEnabled;
           }
           if (state.roomState.status == RoomStatus.active) {
-            if (state.speakingNow == context!.room.localParticipant?.identity) {
+            if (state.speakingNow == room!.localParticipant?.identity) {
               // If it's the user's turn to speak, they can join unmuted.
               return _options?.microphoneEnabled;
             }
@@ -468,7 +487,7 @@ class Session extends _$Session {
     if (newSessionState != null) {
       state = state.copyWith(roomState: newSessionState);
     } else {
-      final metadata = context?.room.metadata;
+      final metadata = room?.metadata;
       if (metadata == null || metadata.isEmpty) return;
 
       try {
@@ -505,7 +524,7 @@ class Session extends _$Session {
     if (event.topic == null) return;
     final data = const Utf8Decoder().convert(event.data);
     logger.d(
-      '(${context?.room.localParticipant}) Received data on topic "${event.topic}" from participant "${event.participant?.identity}": $data',
+      '(${room?.localParticipant}) Received data on topic "${event.topic}" from participant "${event.participant?.identity}": $data',
     );
 
     final topic = SessionCommunicationTopics.values.firstWhereOrNull(
@@ -530,6 +549,7 @@ class Session extends _$Session {
             event.participant!.identity,
             message.message,
           );
+          state = state.copyWith(messages: [...state.messages, message]);
         } catch (error, stackTrace) {
           ErrorHandler.logError(
             error,
@@ -556,12 +576,12 @@ class Session extends _$Session {
         }
 
         try {
-          if (identity == context?.room.localParticipant?.identity) {
+          if (identity == room?.localParticipant?.identity) {
             logger.d(
               'Received participant removed event for local participant.',
             );
             state = state.copyWith(removed: true);
-            context?.disconnect();
+            room?.disconnect();
           }
         } catch (error, stackTrace) {
           ErrorHandler.logError(
@@ -591,11 +611,24 @@ class Session extends _$Session {
   Future<void> _onSessionEnd() async {
     logger.d('Session has ended. Cleaning up and disconnecting.');
     endBackgroundMode();
-    context?.disconnect();
+    await leave();
+  }
+
+  Future<void> connect() async {
+    try {
+      await room!.connect(AppConfig.liveKitUrl, options.token);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error connecting to LiveKit room',
+      );
+      _onError(error is LiveKitException ? error : null);
+    }
   }
 
   Future<void> leave() async {
-    await context?.disconnect();
+    await room?.disconnect();
     _cleanUp();
   }
 
@@ -653,7 +686,7 @@ class Session extends _$Session {
       );
     }
     try {
-      context
+      room
         ?..removeListener(_onRoomChanges)
         ..dispose();
     } catch (_) {}

@@ -27,7 +27,7 @@ final class NextSessionSchema {
       slug: json['slug'] as String,
       start: DateTime.parse(json['start'] as String),
       link: json['link'] as String,
-      title: json['title'] as String,
+      title: json['title'] as String?,
       seatsLeft: (json['seats_left'] as num).toInt(),
       duration: (json['duration'] as num).toInt(),
       meetingProvider: MeetingProviderEnum.fromJson(

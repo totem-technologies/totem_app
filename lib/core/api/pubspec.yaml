@@ -8,8 +8,4 @@ environment:
 
 dependencies:
   collection: ^1.18.0
-  # degenerate_runtime: ^0.1.0
-  degenerate_runtime:
-    git:
-      url: https://github.com/blopker/degenerate.git
-      path: packages/degenerate_runtime
+  degenerate_runtime: ^0.1.0

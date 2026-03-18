@@ -6,8 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
-import 'package:livekit_components/livekit_components.dart'
-    hide RoomConnectionState;
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
@@ -305,50 +303,42 @@ class _RoomContent extends ConsumerWidget {
       },
       child: RoomBackground(
         status: roomStatus,
-        child: LivekitRoom(
-          roomContext: currentSession.context!,
-          builder: (ctx, _) {
-            // Use a navigator for modal sheets and dialogs inside the room
-            return Navigator(
-              key: navigatorKey,
-              clipBehavior: Clip.none,
-              onDidRemovePage: (page) => {},
-              pages: [
-                MaterialPage(
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: RepaintBoundary(
-                          child: _buildBody(
-                            ctx,
-                            currentSession,
-                            sessionState,
-                            connectionState,
-                            roomStatus,
-                            turnState,
-                            isMyTurn,
-                            amNext,
-                          ),
-                        ),
+        child: Navigator(
+          key: navigatorKey,
+          clipBehavior: Clip.none,
+          onDidRemovePage: (page) => {},
+          pages: [
+            MaterialPage(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: RepaintBoundary(
+                      child: _buildBody(
+                        currentSession,
+                        sessionState,
+                        connectionState,
+                        roomStatus,
+                        turnState,
+                        isMyTurn,
+                        amNext,
                       ),
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: Overlay(key: EmojiReactions.emojiOverlayKey),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
-            );
-          },
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Overlay(key: EmojiReactions.emojiOverlayKey),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildBody(
-    BuildContext context,
     Session session,
     SessionRoomState sessionState,
     RoomConnectionState connectionState,
@@ -359,7 +349,7 @@ class _RoomContent extends ConsumerWidget {
   ) {
     switch (connectionState) {
       case RoomConnectionState.error:
-        return RoomErrorScreen(onRetry: session.context?.connect);
+        return RoomErrorScreen(onRetry: session.connect);
       case RoomConnectionState.connecting:
         return loadingScreen;
       case RoomConnectionState.disconnected:
@@ -375,14 +365,13 @@ class _RoomContent extends ConsumerWidget {
           );
         }
 
-        if (session.context?.localParticipant == null) {
+        if (session.room?.localParticipant == null) {
           return loadingScreen;
         }
 
         if (turnState == TurnState.passing && amNext) {
           return ReceiveTotemScreen(
             actionBar: _buildActionBar(
-              context,
               session,
               sessionState,
               isMyTurn,
@@ -392,30 +381,32 @@ class _RoomContent extends ConsumerWidget {
         }
 
         if (isMyTurn) {
-          return MyTurn(
-            actionBar: _buildActionBar(
-              context,
-              session,
-              sessionState,
-              isMyTurn,
-            ),
-            getParticipantKey: getParticipantKey,
-            onPassTotem: () async {
-              try {
-                await session.passTotem();
-                return true;
-              } catch (error) {
-                if (!context.mounted) return false;
-                ErrorHandler.handleApiError(context, error);
-                return false;
-              }
+          return Builder(
+            builder: (context) {
+              return MyTurn(
+                actionBar: _buildActionBar(
+                  session,
+                  sessionState,
+                  isMyTurn,
+                ),
+                getParticipantKey: getParticipantKey,
+                onPassTotem: () async {
+                  try {
+                    await session.passTotem();
+                    return true;
+                  } catch (error) {
+                    if (!context.mounted) return false;
+                    ErrorHandler.handleApiError(context, error);
+                    return false;
+                  }
+                },
+                event: this.session,
+              );
             },
-            event: this.session,
           );
         } else {
           return NotMyTurn(
             actionBar: _buildActionBar(
-              context,
               session,
               sessionState,
               isMyTurn,
@@ -428,15 +419,13 @@ class _RoomContent extends ConsumerWidget {
   }
 
   Widget _buildActionBar(
-    BuildContext context,
     Session session,
     SessionRoomState sessionState,
     bool isMyTurn,
   ) {
     return Builder(
       builder: (context) {
-        final room = session.context!;
-        final user = room.localParticipant!;
+        final user = session.room!.localParticipant!;
 
         final isUserTileVisible =
             getParticipantKey(user.identity).currentContext != null;
@@ -446,10 +435,10 @@ class _RoomContent extends ConsumerWidget {
           children: [
             ActionBarButton(
               semanticsLabel:
-                  'Microphone ${room.microphoneOpened ? 'on' : 'off'}',
-              active: room.microphoneOpened,
+                  'Microphone ${session.isMicrophoneEnabled ? 'on' : 'off'}',
+              active: session.isMicrophoneEnabled,
               onPressed: () async {
-                if (room.microphoneOpened) {
+                if (session.isMicrophoneEnabled) {
                   await session.disableMicrophone();
                 } else {
                   await session.enableMicrophone();
@@ -457,30 +446,33 @@ class _RoomContent extends ConsumerWidget {
               },
               // if the user tile is not visible, display the speaking indicator
               // when the microphone is opened
-              child: !isUserTileVisible && room.microphoneOpened
+              child: !isUserTileVisible && session.isMicrophoneEnabled
                   ? SpeakingIndicator(
                       participant: user,
                       foregroundColor: Colors.black,
                       barCount: 5,
                     )
                   : TotemIcon(
-                      room.microphoneOpened
+                      session.isMicrophoneEnabled
                           ? TotemIcons.microphoneOn
                           : TotemIcons.microphoneOff,
                     ),
             ),
             ActionBarButton(
-              semanticsLabel: 'Camera ${room.cameraOpened ? 'on' : 'off'}',
-              active: room.cameraOpened,
+              semanticsLabel:
+                  'Camera ${session.isCameraEnabled ? 'on' : 'off'}',
+              active: session.isCameraEnabled,
               onPressed: () async {
-                if (room.cameraOpened) {
+                if (session.isCameraEnabled) {
                   await session.disableCamera();
                 } else {
                   await session.enableCamera();
                 }
               },
               child: TotemIcon(
-                room.cameraOpened ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+                session.isCameraEnabled
+                    ? TotemIcons.cameraOn
+                    : TotemIcons.cameraOff,
               ),
             ),
             if (!isMyTurn)
@@ -511,7 +503,7 @@ class _RoomContent extends ConsumerWidget {
               onPressed: () async {
                 setHasPendingChatMessages(false);
                 setChatSheetOpen(true);
-                await showSessionChatSheet(context, this.session);
+                await showSessionChatSheet(context);
                 setChatSheetOpen(false);
               },
               child: Stack(
