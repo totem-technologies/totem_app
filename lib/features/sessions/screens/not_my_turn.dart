@@ -4,6 +4,7 @@ import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
@@ -11,6 +12,7 @@ import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
+import 'package:totem_app/shared/totem_icons.dart';
 
 class NotMyTurn extends ConsumerWidget {
   const NotMyTurn({
@@ -28,15 +30,14 @@ class NotMyTurn extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionStatus = ref.watch(roomStatusProvider);
     final amNext = ref.watch(amNextSpeakerProvider);
+    final session = ref.watch(currentSessionStateProvider)!;
     final currentSession = ref.watch(currentSessionProvider)!;
 
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );
     final amKeeper = currentUserSlug == event.space.author.slug!;
-    final activeSpeaker = currentSession.speakingNowParticipant();
-    // final isActiveSpeakerKeeper =
-    //     activeSpeaker.identity == event.space.author.slug;
+    final activeSpeaker = session.featuredParticipant();
 
     return RoomBackground(
       status: sessionStatus,
@@ -72,38 +73,55 @@ class NotMyTurn extends ConsumerWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Positioned.fill(
-                      child: ParticipantVideo(
-                        key: getParticipantKey(activeSpeaker.identity),
-                        participant: activeSpeaker,
+                    if (session.roomState.status == RoomStatus.waitingRoom &&
+                        !session.hasKeeper)
+                      const Positioned.fill(
+                        child: ColoredBox(
+                          color: AppTheme.slate,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            spacing: 20,
+                            children: [
+                              TotemIcon(
+                                TotemIcons.clockCircle,
+                                size: 70,
+                                color: Colors.white,
+                              ),
+                              Text(
+                                'Waiting room',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              Text(
+                                'Please wait for your Keeper to arrive and begin the session.',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else if (activeSpeaker != null)
+                      Positioned.fill(
+                        child: ParticipantVideo(
+                          key: getParticipantKey(activeSpeaker.identity),
+                          participant: activeSpeaker,
+                        ),
+                      )
+                    else
+                      const Positioned.fill(
+                        child: ColoredBox(color: Colors.black54),
                       ),
-                    ),
-                    PositionedDirectional(
-                      start: 20,
-                      end: 20,
-                      bottom: 20,
-                      child: SafeArea(
-                        bottom: false,
-                        child: Row(
-                          spacing: 12,
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.black54,
-                                boxShadow: kElevationToShadow[6],
-                              ),
-                              padding: const EdgeInsetsDirectional.all(4),
-                              child: SpeakingIndicatorOrEmoji(
-                                participant: activeSpeaker,
-                                backgroundColor: Colors.transparent,
-                              ),
-                            ),
-                            if (amKeeper &&
-                                currentUserSlug != activeSpeaker.identity)
+                    if (activeSpeaker != null)
+                      PositionedDirectional(
+                        start: 20,
+                        end: 20,
+                        bottom: 20,
+                        child: SafeArea(
+                          bottom: false,
+                          child: Row(
+                            spacing: 12,
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
                               Container(
                                 width: 24,
                                 height: 24,
@@ -112,41 +130,57 @@ class NotMyTurn extends ConsumerWidget {
                                   color: Colors.black54,
                                   boxShadow: kElevationToShadow[6],
                                 ),
-                                padding: const EdgeInsetsDirectional.all(3),
-                                child: ParticipantControlButton(
-                                  overlayPadding: -28,
-                                  session: event,
+                                padding: const EdgeInsetsDirectional.all(4),
+                                child: SpeakingIndicatorOrEmoji(
                                   participant: activeSpeaker,
                                   backgroundColor: Colors.transparent,
                                 ),
                               ),
-                            Flexible(
-                              child: SmartNameText(
-                                name: activeSpeaker.name,
-                                style: theme.textTheme.titleLarge!.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  shadows: kElevationToShadow[6],
+                              if (amKeeper &&
+                                  currentUserSlug != activeSpeaker.identity)
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.black54,
+                                    boxShadow: kElevationToShadow[6],
+                                  ),
+                                  padding: const EdgeInsetsDirectional.all(3),
+                                  child: ParticipantControlButton(
+                                    overlayPadding: -28,
+                                    session: event,
+                                    participant: activeSpeaker,
+                                    backgroundColor: Colors.transparent,
+                                  ),
                                 ),
-                                textAlign: TextAlign.end,
+                              Flexible(
+                                child: SmartNameText(
+                                  name: activeSpeaker.name,
+                                  style: theme.textTheme.titleLarge!.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    shadows: kElevationToShadow[6],
+                                  ),
+                                  textAlign: TextAlign.end,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
             ),
           );
 
-          final nextUp = currentSession.speakingNextParticipant();
+          final nextUp = session.speakingNextParticipant();
           final nextUpText = () {
             if (sessionStatus == RoomStatus.waitingRoom) {
               return Text(
                 () {
-                  if (!currentSession.hasKeeper) {
+                  if (!session.hasKeeper) {
                     return 'Waiting for the Keeper to join...';
                   }
                   return 'The session is about to start...';
@@ -154,7 +188,7 @@ class NotMyTurn extends ConsumerWidget {
                 style: theme.textTheme.bodyLarge,
               );
             } else if (sessionStatus == RoomStatus.active) {
-              if (!currentSession.hasKeeper) {
+              if (!session.hasKeeper) {
                 return Text(
                   'The session has been paused...',
                   style: theme.textTheme.bodyLarge,
@@ -191,13 +225,13 @@ class NotMyTurn extends ConsumerWidget {
           final participantGrid = _NotMyTurnGrid(
             getParticipantKey: getParticipantKey,
             event: event,
-            speakingNow: activeSpeaker.identity,
+            speakingNow: activeSpeaker?.identity,
             isLandscape: isLandscape,
           );
 
           final Widget? startCard =
               sessionStatus == RoomStatus.waitingRoom &&
-                  currentSession.isKeeper()
+                  currentSession.isCurrentUserKeeper()
               ? TransitionCard(
                   type: TotemCardTransitionType.start,
                   onActionPressed: currentSession.startSession,
@@ -302,7 +336,7 @@ class _NotMyTurnGrid extends ConsumerWidget {
 
   final GlobalKey Function(String) getParticipantKey;
   final SessionDetailSchema event;
-  final String speakingNow;
+  final String? speakingNow;
   final double gap;
   final bool isLandscape;
 

@@ -151,17 +151,26 @@ class SessionRoomState {
     return roomState.keeper == userSlug;
   }
 
-  Participant? speakingNowParticipant() {
+  /// Returns the participant that is featured right now.
+  ///
+  /// If no participants, return null.
+  ///
+  /// If in the waiting room and the keeper is not present, return null.
+  ///
+  /// If [speakingNow] is present, return the corresponding participant.
+  ///
+  /// Otherwise, return the keeper participant if present, or null if not.
+  Participant? featuredParticipant() {
     if (participants.isEmpty) return null;
-    return participants.firstWhere(
-      (participant) => participant.identity == speakingNow,
-      orElse: () {
-        final keeper = participants.firstWhereOrNull(
+    if (roomState.status == RoomStatus.waitingRoom && !hasKeeper) {
+      return null;
+    }
+    return participants.firstWhereOrNull(
+          (participant) => participant.identity == speakingNow,
+        ) ??
+        participants.firstWhereOrNull(
           (participant) => participant.identity == roomState.keeper,
         );
-        return keeper ?? participants.first;
-      },
-    );
   }
 
   Participant? speakingNextParticipant() {
