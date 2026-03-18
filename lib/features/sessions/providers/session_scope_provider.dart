@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
@@ -6,6 +7,18 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 
 part 'session_scope_provider.g.dart';
+
+class SessionParticipantKeys {
+  final Map<String, GlobalKey> _participantKeys = {};
+
+  GlobalKey getKey(String identity) {
+    return _participantKeys.putIfAbsent(identity, GlobalKey.new);
+  }
+}
+
+final sessionParticipantKeysProvider = Provider<SessionParticipantKeys>((ref) {
+  return SessionParticipantKeys();
+});
 
 /// Provider that will be overridden at room scope.
 /// Returns the current session options for the active room.

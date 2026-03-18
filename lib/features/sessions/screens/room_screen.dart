@@ -126,11 +126,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     }
   }
 
-  Map<String, GlobalKey> participantKeys = {};
-  GlobalKey getParticipantKey(String identity) {
-    return participantKeys.putIfAbsent(identity, GlobalKey.new);
-  }
-
   var _showEmojiPicker = false;
   void _onEmojiReceived(String userIdentity, String emoji) {
     if (!mounted) return;
@@ -195,7 +190,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         loadingScreen: widget.loadingScreen,
         actionBarKey: widget.actionBarKey,
         navigatorKey: _navigatorKey,
-        getParticipantKey: getParticipantKey,
         showEmojiPicker: _showEmojiPicker,
         setShowEmojiPicker: (value) {
           if (!mounted) return;
@@ -223,7 +217,6 @@ class _RoomContent extends ConsumerWidget {
     required this.loadingScreen,
     required this.actionBarKey,
     required this.navigatorKey,
-    required this.getParticipantKey,
     required this.showEmojiPicker,
     required this.setShowEmojiPicker,
     required this.chatSheetOpen,
@@ -237,7 +230,6 @@ class _RoomContent extends ConsumerWidget {
   final Widget loadingScreen;
   final GlobalKey actionBarKey;
   final GlobalKey<NavigatorState> navigatorKey;
-  final GlobalKey Function(String) getParticipantKey;
   final bool showEmojiPicker;
   final void Function(bool) setShowEmojiPicker;
   final bool chatSheetOpen;
@@ -314,6 +306,7 @@ class _RoomContent extends ConsumerWidget {
                   Positioned.fill(
                     child: RepaintBoundary(
                       child: _buildBody(
+                        ref,
                         currentSession,
                         sessionState,
                         connectionState,
@@ -339,6 +332,7 @@ class _RoomContent extends ConsumerWidget {
   }
 
   Widget _buildBody(
+    WidgetRef ref,
     Session session,
     SessionRoomState sessionState,
     RoomConnectionState connectionState,
@@ -372,6 +366,7 @@ class _RoomContent extends ConsumerWidget {
         if (turnState == TurnState.passing && amNext) {
           return ReceiveTotemScreen(
             actionBar: _buildActionBar(
+              ref,
               session,
               sessionState,
               isMyTurn,
@@ -385,11 +380,11 @@ class _RoomContent extends ConsumerWidget {
             builder: (context) {
               return MyTurn(
                 actionBar: _buildActionBar(
+                  ref,
                   session,
                   sessionState,
                   isMyTurn,
                 ),
-                getParticipantKey: getParticipantKey,
                 onPassTotem: () async {
                   try {
                     await session.passTotem();
@@ -407,11 +402,11 @@ class _RoomContent extends ConsumerWidget {
         } else {
           return NotMyTurn(
             actionBar: _buildActionBar(
+              ref,
               session,
               sessionState,
               isMyTurn,
             ),
-            getParticipantKey: getParticipantKey,
             event: this.session,
           );
         }
@@ -419,16 +414,18 @@ class _RoomContent extends ConsumerWidget {
   }
 
   Widget _buildActionBar(
+    WidgetRef ref,
     Session session,
     SessionRoomState sessionState,
     bool isMyTurn,
   ) {
     return Builder(
       builder: (context) {
+        final participantKeys = ref.watch(sessionParticipantKeysProvider);
         final user = session.room!.localParticipant!;
 
         final isUserTileVisible =
-            getParticipantKey(user.identity).currentContext != null;
+            participantKeys.getKey(user.identity).currentContext != null;
 
         return ActionBar(
           key: actionBarKey,

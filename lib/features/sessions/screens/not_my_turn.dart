@@ -11,13 +11,11 @@ import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
 class NotMyTurn extends ConsumerWidget {
   const NotMyTurn({
-    required this.getParticipantKey,
     required this.actionBar,
     required this.event,
     super.key,
   });
 
-  final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
   final SessionDetailSchema event;
 
@@ -85,7 +83,6 @@ class NotMyTurn extends ConsumerWidget {
           }();
 
           final participantGrid = _NotMyTurnGrid(
-            getParticipantKey: getParticipantKey,
             event: event,
             speakingNow: activeSpeaker?.identity,
             isLandscape: isLandscape,
@@ -189,14 +186,12 @@ class NotMyTurn extends ConsumerWidget {
 
 class _NotMyTurnGrid extends ConsumerWidget {
   const _NotMyTurnGrid({
-    required this.getParticipantKey,
     required this.event,
     required this.speakingNow,
     this.gap = 10,
     this.isLandscape = false,
   });
 
-  final GlobalKey Function(String) getParticipantKey;
   final SessionDetailSchema event;
   final String? speakingNow;
   final double gap;
@@ -204,6 +199,7 @@ class _NotMyTurnGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final participantKeys = ref.watch(sessionParticipantKeysProvider);
     final participants = ref.watch(sessionParticipantsProvider);
     final sessionState = ref.watch(currentSessionStateProvider)!;
 
@@ -258,7 +254,7 @@ class _NotMyTurnGrid extends ConsumerWidget {
                     final participant = sortedParticipants[itemIndex];
                     return Expanded(
                       child: ParticipantCard(
-                        key: getParticipantKey(participant.identity),
+                        key: participantKeys.getKey(participant.identity),
                         participant: participant,
                         session: event,
                         participantIdentity: participant.identity,

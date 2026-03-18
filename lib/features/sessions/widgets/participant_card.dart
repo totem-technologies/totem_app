@@ -31,6 +31,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );
+    final participantKeys = ref.watch(sessionParticipantKeysProvider);
     final session = ref.watch(currentSessionStateProvider)!;
     final activeSpeaker = session.featuredParticipant();
     final amKeeper = session.isKeeper(currentUserSlug);
@@ -97,8 +98,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
             else ...[
               Positioned.fill(
                 child: ParticipantVideo(
-                  // TODO(bdlukaa): Move participants keys to provider
-                  // key: getParticipantKey(activeSpeaker.identity),
+                  key: participantKeys.getKey(activeSpeaker.identity),
                   participant: activeSpeaker,
                 ),
               ),

@@ -13,14 +13,12 @@ import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
 class MyTurn extends ConsumerWidget {
   const MyTurn({
-    required this.getParticipantKey,
     required this.actionBar,
     required this.onPassTotem,
     required this.event,
     super.key,
   });
 
-  final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
   final OnActionPerformed onPassTotem;
   final SessionDetailSchema event;
@@ -39,7 +37,6 @@ class MyTurn extends ConsumerWidget {
             final isLandscape = orientation == Orientation.landscape;
             final participantGrid = _MyTurnGrid(
               isLandscape: isLandscape,
-              getParticipantKey: getParticipantKey,
               event: event,
             );
 
@@ -103,20 +100,19 @@ class MyTurn extends ConsumerWidget {
 class _MyTurnGrid extends ConsumerWidget {
   const _MyTurnGrid({
     required this.isLandscape,
-    required this.getParticipantKey,
     required this.event,
     this.maxPerLineCount = 10,
     this.gap = 6,
   });
 
   final bool isLandscape;
-  final GlobalKey Function(String) getParticipantKey;
   final SessionDetailSchema event;
   final int maxPerLineCount;
   final double gap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final participantKeys = ref.watch(sessionParticipantKeysProvider);
     final participants = ref.watch(sessionParticipantsProvider);
     final sessionState = ref.watch(currentSessionStateProvider)!;
 
@@ -182,7 +178,7 @@ class _MyTurnGrid extends ConsumerWidget {
                       final participant = sortedParticipants[itemIndex];
                       return Expanded(
                         child: ParticipantCard(
-                          key: getParticipantKey(participant.identity),
+                          key: participantKeys.getKey(participant.identity),
                           participant: participant,
                           session: event,
                           participantIdentity: participant.identity,
