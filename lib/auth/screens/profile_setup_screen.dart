@@ -617,7 +617,23 @@ class _SuggestionsTab extends ConsumerWidget {
         const SizedBox(height: 20),
         recommended.when(
           data: (sessions) {
-            if (sessions.isEmpty) return const SizedBox.shrink();
+            if (sessions.isEmpty) {
+              return Column(
+                children: [
+                  const InfoText(
+                    'No suggestions yet. Try selecting a few topics.',
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: onSeeAllSpaces,
+                      child: const Text('Go to Home'),
+                    ),
+                  ),
+                ],
+              );
+            }
             return Column(
               children: [
                 for (final session in sessions) ...[
