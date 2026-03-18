@@ -6,6 +6,7 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
+import 'package:totem_app/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
@@ -88,14 +89,18 @@ class NotMyTurn extends ConsumerWidget {
             isLandscape: isLandscape,
           );
 
-          final Widget? startCard =
-              sessionStatus == RoomStatus.waitingRoom &&
-                  currentSession.isCurrentUserKeeper()
-              ? TransitionCard(
+          final Widget? marquee = () {
+            if (sessionStatus == RoomStatus.waitingRoom) {
+              if (!currentSession.isCurrentUserKeeper()) {
+                return TransitionCard(
                   type: TotemCardTransitionType.start,
                   onActionPressed: currentSession.startSession,
-                )
-              : null;
+                );
+              } else {
+                return const GroundingMarquee();
+              }
+            }
+          }();
 
           if (isLandscape) {
             final isLTR = Directionality.of(context) == TextDirection.ltr;
@@ -134,7 +139,7 @@ class NotMyTurn extends ConsumerWidget {
                                   child: participantGrid,
                                 ),
                               ),
-                              ?startCard,
+                              ?marquee,
                               Center(child: actionBar),
                             ],
                           ),
@@ -172,7 +177,7 @@ class NotMyTurn extends ConsumerWidget {
                       child: participantGrid,
                     ),
                   ),
-                  ?startCard,
+                  ?marquee,
                   Center(child: actionBar),
                 ],
               ),
