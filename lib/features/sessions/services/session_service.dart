@@ -145,6 +145,32 @@ class SessionRoomState {
     return roomState.currentSpeaker ?? roomState.keeper;
   }
 
+  bool get hasKeeper => participants.any((p) => isKeeper(p.identity));
+
+  bool isKeeper(String userSlug) {
+    return roomState.keeper == userSlug;
+  }
+
+  Participant? speakingNowParticipant() {
+    if (participants.isEmpty) return null;
+    return participants.firstWhere(
+      (participant) => participant.identity == speakingNow,
+      orElse: () {
+        final keeper = participants.firstWhereOrNull(
+          (participant) => participant.identity == roomState.keeper,
+        );
+        return keeper ?? participants.first;
+      },
+    );
+  }
+
+  Participant? speakingNextParticipant() {
+    if (roomState.nextSpeaker == null) return null;
+    return participants.firstWhereOrNull((participant) {
+      return participant.identity == roomState.nextSpeaker;
+    });
+  }
+
   SessionRoomState copyWith({
     RoomConnectionState? connectionState,
     RoomState? roomState,
@@ -377,9 +403,6 @@ class Session extends _$Session {
     );
   }
 
-  /// Whether the keeper is currently in the session.
-  bool get hasKeeper => state.participants.any((p) => isKeeper(p.identity));
-
   void _updateParticipantsList() {
     try {
       final participants = <Participant>[
@@ -395,7 +418,9 @@ class Session extends _$Session {
         showSpeakingNow: true,
       );
 
-      final hasKeeper = sortedParticipants.any((p) => isKeeper(p.identity));
+      final hasKeeper = sortedParticipants.any(
+        (p) => state.isKeeper(p.identity),
+      );
       if (state.hasKeeperDisconnected && hasKeeper) {
         _onKeeperConnected();
       }
@@ -431,7 +456,8 @@ class Session extends _$Session {
     // If the keeper is not in the room, the participants will start unmuted.
     final isMicrophoneEnabled =
         () {
-          if (state.roomState.status == RoomStatus.waitingRoom && !hasKeeper) {
+          if (state.roomState.status == RoomStatus.waitingRoom &&
+              !state.hasKeeper) {
             // If joined in the waiting room, everyone can join unmuted.
             return _options?.microphoneEnabled;
           }
@@ -442,7 +468,8 @@ class Session extends _$Session {
             }
           }
           // In other states, only the keeper can join unmuted.
-          return isKeeper() && (_options?.microphoneEnabled ?? false);
+          return isCurrentUserKeeper() &&
+              (_options?.microphoneEnabled ?? false);
         }() ??
         false;
     if (isMicrophoneEnabled) {
@@ -597,13 +624,13 @@ class Session extends _$Session {
   Timer? _keeperDisconnectedTimer;
 
   void _onParticipantDisconnected(ParticipantDisconnectedEvent event) {
-    if (isKeeper(event.participant.identity)) {
+    if (state.isKeeper(event.participant.identity)) {
       _onKeeperDisconnected();
     }
   }
 
   void _onParticipantConnected(ParticipantConnectedEvent event) {
-    if (isKeeper(event.participant.identity)) {
+    if (state.isKeeper(event.participant.identity)) {
       _onKeeperConnected();
     }
   }

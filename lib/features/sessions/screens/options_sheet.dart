@@ -63,7 +63,7 @@ class OptionsSheet extends ConsumerWidget {
     final currentSession = ref.watch(currentSessionProvider)!;
     final state = ref.watch(currentSessionStateProvider)!;
 
-    final isKeeper = currentSession.isKeeper();
+    final isKeeper = currentSession.isCurrentUserKeeper();
 
     return Column(
       mainAxisSize: MainAxisSize.min,

@@ -4,36 +4,12 @@
 part of 'session_service.dart';
 
 extension KeeperControl on Session {
-  bool isKeeper([String? userSlug]) {
-    String? slug = userSlug;
-    if (slug == null) {
-      final currentUserSlug = ref.read(
-        authControllerProvider.select((auth) => auth.user?.slug),
-      );
-      slug = currentUserSlug;
-    }
-
-    return state.roomState.keeper == slug;
-  }
-
-  /// Get the participant who is currently speaking.
-  Participant speakingNowParticipant() {
-    return state.participants.firstWhere(
-      (participant) => participant.identity == state.speakingNow,
-      orElse: () {
-        final keeper = state.participants.firstWhereOrNull(
-          (participant) => participant.identity == state.roomState.keeper,
-        );
-        return keeper ?? room!.localParticipant!;
-      },
+  bool isCurrentUserKeeper() {
+    final currentUserSlug = ref.read(
+      authControllerProvider.select((auth) => auth.user?.slug),
     );
-  }
-
-  Participant? speakingNextParticipant() {
-    if (state.roomState.nextSpeaker == null) return null;
-    return state.participants.firstWhereOrNull((participant) {
-      return participant.identity == state.roomState.nextSpeaker;
-    });
+    if (currentUserSlug == null) return false;
+    return state.isKeeper(currentUserSlug);
   }
 
   void closeKeeperLeftNotifications() {
@@ -104,7 +80,7 @@ extension KeeperControl on Session {
   }
 
   Future<bool> startSession() async {
-    if (!isKeeper()) return false;
+    if (!isCurrentUserKeeper()) return false;
     try {
       await ref
           .read(
@@ -131,7 +107,7 @@ extension KeeperControl on Session {
   }
 
   Future<bool> endSession() async {
-    if (!isKeeper()) return false;
+    if (!isCurrentUserKeeper()) return false;
     try {
       final roomState = await ref
           .read(
