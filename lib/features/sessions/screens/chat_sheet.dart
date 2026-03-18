@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -13,46 +11,6 @@ import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
-
-class ChatMessage {
-  const ChatMessage({
-    required this.message,
-    required this.timestamp,
-    required this.id,
-    required this.sender,
-    this.participant,
-  });
-
-  factory ChatMessage.fromMap(
-    Map<String, dynamic> map,
-    Participant? participant,
-  ) {
-    return ChatMessage(
-      message: map['message'] as String,
-      timestamp: map['timestamp'] as int,
-      id: map['id'] as String,
-      participant: participant,
-      sender: false,
-    );
-  }
-
-  final String message;
-  final int timestamp;
-  final String id;
-  final bool sender;
-
-  final Participant? participant;
-
-  Map<String, dynamic> toMap() {
-    return {
-      'message': message,
-      'timestamp': timestamp,
-      'id': id,
-    };
-  }
-
-  String toJson() => const JsonEncoder().convert(toMap());
-}
 
 Future<void> showSessionChatSheet(BuildContext context) {
   return showModalBottomSheet(

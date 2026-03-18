@@ -19,7 +19,6 @@ import 'package:totem_app/features/home/repositories/home_screen_repository.dart
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
-import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/services/utils.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/logger.dart';
@@ -181,7 +180,7 @@ class SessionRoomState {
         'hasKeeperDisconnected: $hasKeeperDisconnected, '
         'removed: $removed, '
         'disconnectReason: $disconnectReason, '
-        'isSpeakerphoneEnabled: $isSpeakerphoneEnabled'
+        'isSpeakerphoneEnabled: $isSpeakerphoneEnabled, '
         'messages: $messages'
         ')';
   }
@@ -323,6 +322,14 @@ class Session extends _$Session {
       ),
     );
 
+    room!.prepareConnection(AppConfig.liveKitUrl, options.token);
+
+    // TODO(bdlukaa): Connect should only be done after the user explicitly clicks the "Join Session"
+    // button on the waiting room screen, to avoid joining the LiveKit room before it's needed. This
+    // will require some refactoring of the code, as currently the connection is established in the
+    // build method of the Session provider. One possible approach is to move the connection logic
+    // to a separate method that is called when the user clicks the "Join Session" button, and keep
+    // track of whether the connection has been established in the state.
     connect();
 
     _listener = room!.createListener();
@@ -376,8 +383,10 @@ class Session extends _$Session {
   void _updateParticipantsList() {
     try {
       final participants = <Participant>[
-        if (room != null) ...room!.remoteParticipants.values,
-        if (room!.localParticipant != null) room!.localParticipant!,
+        if (room != null) ...[
+          ...room!.remoteParticipants.values,
+          if (room!.localParticipant != null) room!.localParticipant!,
+        ],
       ];
 
       final sortedParticipants = participantsSorting(
@@ -602,16 +611,12 @@ class Session extends _$Session {
   Future<void> _onSessionEnd() async {
     logger.d('Session has ended. Cleaning up and disconnecting.');
     endBackgroundMode();
-    room?.disconnect();
+    await leave();
   }
 
-  void connect() {
+  Future<void> connect() async {
     try {
-      room!.prepareConnection(AppConfig.liveKitUrl, options.token);
-      room!.connect(
-        AppConfig.liveKitUrl,
-        options.token,
-      );
+      await room!.connect(AppConfig.liveKitUrl, options.token);
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,

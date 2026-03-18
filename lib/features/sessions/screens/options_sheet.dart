@@ -592,9 +592,8 @@ class OptionsSheetTile<T> extends StatelessWidget {
         },
       );
     } else {
-      throw UnimplementedError(
-        'Audio output selection is only implemented for mobile',
-      );
+      // TODO(bdlukaa): Implement audio output selection for desktop platforms.
+      return const SizedBox.shrink();
       // return MediaDeviceSelectButton(
       //   builder: (context, roomCtx, deviceCtx) {
       //     final audioOutputs = deviceCtx.audioOutputs?.where((
