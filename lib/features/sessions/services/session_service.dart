@@ -147,7 +147,7 @@ class SessionRoomState {
 
   bool get hasKeeper => participants.any((p) => isKeeper(p.identity));
 
-  bool isKeeper(String userSlug) {
+  bool isKeeper(String? userSlug) {
     return roomState.keeper == userSlug;
   }
 

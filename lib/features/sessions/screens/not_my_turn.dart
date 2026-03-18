@@ -2,17 +2,12 @@
 
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
-import 'package:totem_app/features/sessions/widgets/smart_name_text.dart';
-import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
-import 'package:totem_app/shared/totem_icons.dart';
 
 class NotMyTurn extends ConsumerWidget {
   const NotMyTurn({
@@ -33,10 +28,6 @@ class NotMyTurn extends ConsumerWidget {
     final session = ref.watch(currentSessionStateProvider)!;
     final currentSession = ref.watch(currentSessionProvider)!;
 
-    final currentUserSlug = ref.watch(
-      authControllerProvider.select((auth) => auth.user?.slug),
-    );
-    final amKeeper = currentUserSlug == event.space.author.slug!;
     final activeSpeaker = session.featuredParticipant();
 
     return RoomBackground(
@@ -45,135 +36,6 @@ class NotMyTurn extends ConsumerWidget {
         builder: (context, orientation) {
           final theme = Theme.of(context);
           final isLandscape = orientation == Orientation.landscape;
-
-          final speakerVideoBorderRadius = isLandscape
-              ? const BorderRadiusDirectional.horizontal(
-                  end: Radius.circular(30),
-                )
-              : const BorderRadiusDirectional.vertical(
-                  bottom: Radius.circular(30),
-                );
-          final speakerVideo = RepaintBoundary(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: speakerVideoBorderRadius,
-                // boxShadow: isActiveSpeakerKeeper
-                //     ? const [
-                //         BoxShadow(
-                //           offset: Offset(0, 6),
-                //           blurRadius: 12,
-                //           spreadRadius: -2,
-                //           color: AppTheme.yellow,
-                //         ),
-                //       ]
-                //     : null,
-              ),
-              child: ClipRRect(
-                borderRadius: speakerVideoBorderRadius,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (session.roomState.status == RoomStatus.waitingRoom &&
-                        !session.hasKeeper)
-                      const Positioned.fill(
-                        child: ColoredBox(
-                          color: AppTheme.slate,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            spacing: 20,
-                            children: [
-                              TotemIcon(
-                                TotemIcons.clockCircle,
-                                size: 70,
-                                color: Colors.white,
-                              ),
-                              Text(
-                                'Waiting room',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                              Text(
-                                'Please wait for your Keeper to arrive and begin the session.',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    else if (activeSpeaker != null)
-                      Positioned.fill(
-                        child: ParticipantVideo(
-                          key: getParticipantKey(activeSpeaker.identity),
-                          participant: activeSpeaker,
-                        ),
-                      )
-                    else
-                      const Positioned.fill(
-                        child: ColoredBox(color: Colors.black54),
-                      ),
-                    if (activeSpeaker != null)
-                      PositionedDirectional(
-                        start: 20,
-                        end: 20,
-                        bottom: 20,
-                        child: SafeArea(
-                          bottom: false,
-                          child: Row(
-                            spacing: 12,
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Container(
-                                width: 24,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.black54,
-                                  boxShadow: kElevationToShadow[6],
-                                ),
-                                padding: const EdgeInsetsDirectional.all(4),
-                                child: SpeakingIndicatorOrEmoji(
-                                  participant: activeSpeaker,
-                                  backgroundColor: Colors.transparent,
-                                ),
-                              ),
-                              if (amKeeper &&
-                                  currentUserSlug != activeSpeaker.identity)
-                                Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.black54,
-                                    boxShadow: kElevationToShadow[6],
-                                  ),
-                                  padding: const EdgeInsetsDirectional.all(3),
-                                  child: ParticipantControlButton(
-                                    overlayPadding: -28,
-                                    session: event,
-                                    participant: activeSpeaker,
-                                    backgroundColor: Colors.transparent,
-                                  ),
-                                ),
-                              Flexible(
-                                child: SmartNameText(
-                                  name: activeSpeaker.name,
-                                  style: theme.textTheme.titleLarge!.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    shadows: kElevationToShadow[6],
-                                  ),
-                                  textAlign: TextAlign.end,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          );
 
           final nextUp = session.speakingNextParticipant();
           final nextUpText = () {
@@ -248,7 +110,7 @@ class NotMyTurn extends ConsumerWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(flex: 2, child: speakerVideo),
+                  const Expanded(flex: 2, child: FeaturedParticipantCard()),
                   Expanded(
                     flex: 3,
                     child: SafeArea(
@@ -296,7 +158,7 @@ class NotMyTurn extends ConsumerWidget {
                 children: [
                   SizedBox(
                     height: MediaQuery.heightOf(context) * 0.475,
-                    child: speakerVideo,
+                    child: const FeaturedParticipantCard(),
                   ),
                   Padding(
                     padding: const EdgeInsetsDirectional.symmetric(
