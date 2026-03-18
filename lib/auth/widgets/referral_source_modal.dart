@@ -30,7 +30,7 @@ final List<ReferralChoices> _orderedSources = [
   ReferralChoices.physicalMedia,
   ReferralChoices.blog,
   ReferralChoices.friend,
-  ReferralChoices.other,
+  ReferralChoices.$other,
 ];
 
 /// Modal for selecting a single referral source.
@@ -61,7 +61,7 @@ class _ReferralSourceModalState extends State<ReferralSourceModal> {
 
   bool get _canSave =>
       _selectedSource != null &&
-      !(_selectedSource == ReferralChoices.other &&
+      !(_selectedSource == ReferralChoices.$other &&
           _otherController.text.trim().isEmpty);
 
   @override
@@ -115,7 +115,7 @@ class _ReferralSourceModalState extends State<ReferralSourceModal> {
                       ),
                       visualDensity: VisualDensity.compact,
                     ),
-                    if (source == ReferralChoices.other && isSelected) ...[
+                    if (source == ReferralChoices.$other && isSelected) ...[
                       const SizedBox(height: 8),
                       Padding(
                         padding: const EdgeInsetsDirectional.only(start: 16),
@@ -139,7 +139,7 @@ class _ReferralSourceModalState extends State<ReferralSourceModal> {
         ElevatedButton(
           onPressed: _canSave
               ? () {
-                  final otherText = _selectedSource == ReferralChoices.other
+                  final otherText = _selectedSource == ReferralChoices.$other
                       ? _otherController.text.trim()
                       : null;
                   Navigator.of(context).pop((_selectedSource!, otherText));
