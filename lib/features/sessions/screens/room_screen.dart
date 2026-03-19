@@ -31,16 +31,12 @@ import 'package:totem_app/shared/widgets/popups.dart';
 class VideoRoomScreen extends ConsumerStatefulWidget {
   const VideoRoomScreen({
     required this.sessionSlug,
-    required this.sessionOptions,
-    required this.session,
     required this.loadingScreen,
     required this.actionBarKey,
     super.key,
   });
 
   final String sessionSlug;
-  final SessionOptions sessionOptions;
-  final SessionDetailSchema session;
   final Widget loadingScreen;
   final GlobalKey actionBarKey;
 
@@ -49,42 +45,19 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
 }
 
 class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
-  final _navigatorKey = GlobalKey<NavigatorState>();
-  SessionOptions? _cachedSessionOptions;
+  VoidCallback? _closeKeeperLeftNotification;
 
   @override
   void initState() {
     super.initState();
-    _buildSessionOptions();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _listenToBatteryChanges();
   }
 
   @override
-  void didUpdateWidget(covariant VideoRoomScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _buildSessionOptions();
-  }
-
-  SessionOptions _buildSessionOptions() {
-    return _cachedSessionOptions = SessionOptions(
-      eventSlug: widget.sessionOptions.eventSlug,
-      token: widget.sessionOptions.token,
-      cameraEnabled: widget.sessionOptions.cameraEnabled,
-      microphoneEnabled: widget.sessionOptions.microphoneEnabled,
-      cameraOptions: widget.sessionOptions.cameraOptions,
-      audioOptions: widget.sessionOptions.audioOptions,
-      audioOutputOptions: widget.sessionOptions.audioOutputOptions,
-      onConnected: widget.sessionOptions.onConnected,
-      onEmojiReceived: _onEmojiReceived,
-      onMessageReceived: _onChatMessageReceived,
-      onLivekitError: _onLivekitError,
-      onKeeperLeaveRoom: _onKeeperLeft,
-    );
-  }
-
-  @override
   void dispose() {
+    _closeKeeperLeftNotification?.call();
+    _closeKeeperLeftNotification = null;
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _batterySubscription?.cancel();
     super.dispose();
@@ -127,25 +100,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   }
 
   var _showEmojiPicker = false;
-  void _onEmojiReceived(String userIdentity, String emoji) {
-    if (!mounted) return;
-    ref
-        .read(emojiReactionsProvider.notifier)
-        .addReaction(context, userIdentity, emoji);
-  }
 
   bool _chatSheetOpen = false;
   bool _hasPendingChatMessages = false;
-  void _onChatMessageReceived(String userIdentity, String message) {
-    if (!mounted || _chatSheetOpen) return;
-    setState(() => _hasPendingChatMessages = !_chatSheetOpen);
-    showNotificationPopup(
-      context,
-      icon: TotemIcons.chat,
-      title: 'New message',
-      message: message,
-    );
-  }
 
   void _onLivekitError(LiveKitException error) {
     if (error is ConnectException ||
@@ -167,79 +124,70 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     }
   }
 
-  VoidCallback _onKeeperLeft(Session room) {
-    return showPermanentNotificationPopup(
-      context,
-      icon: TotemIcons.community,
-      title: 'The session has been paused.',
-      message: 'The keeper will be right back.',
-    );
+  void _setKeeperDisconnectedNotification(bool hasKeeperDisconnected) {
+    if (!mounted) return;
+    if (hasKeeperDisconnected) {
+      _closeKeeperLeftNotification?.call();
+      _closeKeeperLeftNotification = showPermanentNotificationPopup(
+        context,
+        icon: TotemIcons.community,
+        title: 'The session has been paused.',
+        message: 'The keeper will be right back.',
+      );
+      return;
+    }
+
+    _closeKeeperLeftNotification?.call();
+    _closeKeeperLeftNotification = null;
   }
 
   @override
   Widget build(BuildContext context) {
-    return ProviderScope(
-      overrides: [
-        sessionScopeProvider.overrideWith((ref) {
-          final options = _cachedSessionOptions ?? _buildSessionOptions();
-          return options;
-        }),
-      ],
-      child: _RoomContent(
-        session: widget.session,
-        loadingScreen: widget.loadingScreen,
-        actionBarKey: widget.actionBarKey,
-        navigatorKey: _navigatorKey,
-        showEmojiPicker: _showEmojiPicker,
-        setShowEmojiPicker: (value) {
-          if (!mounted) return;
-          setState(() => _showEmojiPicker = value);
+    ref
+      ..listen(
+        emojiReactionsProvider,
+        (previous, next) {
+          for (final reaction in next.where(
+            (reaction) => !reaction.displayed,
+          )) {
+            ref
+                .read(emojiReactionsProvider.notifier)
+                .displayReaction(context, reaction);
+          }
         },
-        chatSheetOpen: _chatSheetOpen,
-        setChatSheetOpen: (value) {
-          if (!mounted) return;
-          setState(() => _chatSheetOpen = value);
+      )
+      ..listen(
+        currentSessionStateProvider.select(
+          (s) => (s == null || s.messages.isEmpty) ? null : s.messages.last,
+        ),
+        (previous, next) {
+          if (next == null || identical(previous, next)) return;
+          if (!mounted || _chatSheetOpen) return;
+          setState(() => _hasPendingChatMessages = !_chatSheetOpen);
+          showNotificationPopup(
+            context,
+            icon: TotemIcons.chat,
+            title: 'New message',
+            message: next.message,
+          );
         },
-        hasPendingChatMessages: _hasPendingChatMessages,
-        setHasPendingChatMessages: (value) {
-          if (!mounted) return;
-          setState(() => _hasPendingChatMessages = value);
+      )
+      ..listen(
+        currentSessionStateProvider.select((s) => s?.livekitError),
+        (previous, next) {
+          if (next == null) return;
+          if (previous?.toString() == next.toString()) return;
+          _onLivekitError(next);
         },
-        onEmojiReceived: _onEmojiReceived,
-      ),
-    );
-  }
-}
+      )
+      ..listen(
+        currentSessionStateProvider.select((s) => s?.hasKeeperDisconnected),
+        (previous, next) {
+          if (next == null || previous == next) return;
+          _setKeeperDisconnectedNotification(next);
+        },
+      );
 
-class _RoomContent extends ConsumerWidget {
-  const _RoomContent({
-    required this.session,
-    required this.loadingScreen,
-    required this.actionBarKey,
-    required this.navigatorKey,
-    required this.showEmojiPicker,
-    required this.setShowEmojiPicker,
-    required this.chatSheetOpen,
-    required this.setChatSheetOpen,
-    required this.hasPendingChatMessages,
-    required this.setHasPendingChatMessages,
-    required this.onEmojiReceived,
-  });
-
-  final SessionDetailSchema session;
-  final Widget loadingScreen;
-  final GlobalKey actionBarKey;
-  final GlobalKey<NavigatorState> navigatorKey;
-  final bool showEmojiPicker;
-  final void Function(bool) setShowEmojiPicker;
-  final bool chatSheetOpen;
-  final void Function(bool) setChatSheetOpen;
-  final bool hasPendingChatMessages;
-  final void Function(bool) setHasPendingChatMessages;
-  final void Function(String, String) onEmojiReceived;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
     final currentSession = ref.watch(currentSessionProvider);
     final connectionState = ref.watch(connectionStateProvider);
     final roomStatus = ref.watch(roomStatusProvider);
@@ -248,17 +196,19 @@ class _RoomContent extends ConsumerWidget {
     final isMyTurn = ref.watch(isMyTurnProvider);
     final amNext = ref.watch(amNextSpeakerProvider);
 
-    if (currentSession == null || sessionState == null) {
-      return loadingScreen;
+    if (currentSession == null ||
+        sessionState == null ||
+        currentSession.event == null) {
+      return widget.loadingScreen;
     }
 
-    if (session.ended ||
+    if (currentSession.event!.ended ||
         (currentSession.event?.ended ?? false) ||
         roomStatus == RoomStatus.ended) {
       return RoomBackground(
         status: roomStatus,
         child: SessionDisconnectedScreen(
-          session: session,
+          session: currentSession.event!,
           disconnectReason: sessionState.disconnectReason,
         ),
       );
@@ -345,22 +295,22 @@ class _RoomContent extends ConsumerWidget {
       case RoomConnectionState.error:
         return RoomErrorScreen(onRetry: session.connect);
       case RoomConnectionState.connecting:
-        return loadingScreen;
+        return widget.loadingScreen;
       case RoomConnectionState.disconnected:
         return SessionDisconnectedScreen(
-          session: this.session,
+          session: session.event!,
           disconnectReason: sessionState.disconnectReason,
         );
       case RoomConnectionState.connected:
         if (roomStatus == RoomStatus.ended) {
           return SessionDisconnectedScreen(
-            session: this.session,
+            session: session.event!,
             disconnectReason: sessionState.disconnectReason,
           );
         }
 
         if (session.room?.localParticipant == null) {
-          return loadingScreen;
+          return widget.loadingScreen;
         }
 
         if (turnState == TurnState.passing && amNext) {
@@ -395,7 +345,7 @@ class _RoomContent extends ConsumerWidget {
                     return false;
                   }
                 },
-                event: this.session,
+                event: session.event!,
               );
             },
           );
@@ -407,7 +357,7 @@ class _RoomContent extends ConsumerWidget {
               sessionState,
               isMyTurn,
             ),
-            event: this.session,
+            event: session.event!,
           );
         }
     }
@@ -428,7 +378,7 @@ class _RoomContent extends ConsumerWidget {
             participantKeys.getKey(user.identity).currentContext != null;
 
         return ActionBar(
-          key: actionBarKey,
+          key: widget.actionBarKey,
           children: [
             ActionBarButton(
               semanticsLabel:
@@ -478,17 +428,18 @@ class _RoomContent extends ConsumerWidget {
                   return ActionBarButton(
                     semanticsLabel: 'Send reaction',
                     semanticsHint: 'Open emoji selection overlay',
-                    active: showEmojiPicker,
+                    active: _showEmojiPicker,
                     onPressed: () async {
-                      setShowEmojiPicker(true);
+                      if (!mounted) return;
+                      setState(() => _showEmojiPicker = true);
                       await showEmojiBar(
                         button,
                         onEmojiSelected: (emoji) {
                           session.sendReaction(emoji);
-                          onEmojiReceived(user.identity, emoji);
                         },
                       );
-                      setShowEmojiPicker(false);
+                      if (!mounted) return;
+                      setState(() => _showEmojiPicker = false);
                     },
                     child: const TotemIcon(TotemIcons.reaction),
                   );
@@ -496,18 +447,22 @@ class _RoomContent extends ConsumerWidget {
               ),
             ActionBarButton(
               semanticsLabel: 'Chat',
-              active: chatSheetOpen,
+              active: _chatSheetOpen,
               onPressed: () async {
-                setHasPendingChatMessages(false);
-                setChatSheetOpen(true);
+                if (!mounted) return;
+                setState(() {
+                  _hasPendingChatMessages = false;
+                  _chatSheetOpen = true;
+                });
                 await showSessionChatSheet(context);
-                setChatSheetOpen(false);
+                if (!mounted) return;
+                setState(() => _chatSheetOpen = false);
               },
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
                   const TotemIcon(TotemIcons.chat),
-                  if (hasPendingChatMessages)
+                  if (_hasPendingChatMessages)
                     Container(
                       height: 4,
                       width: 4,
@@ -526,8 +481,11 @@ class _RoomContent extends ConsumerWidget {
               ),
               child: IconButton(
                 padding: EdgeInsetsDirectional.zero,
-                onPressed: () =>
-                    showOptionsSheet(context, sessionState, this.session),
+                onPressed: () => showOptionsSheet(
+                  context,
+                  sessionState,
+                  session.event!,
+                ),
                 icon: const TotemIcon(
                   TotemIcons.more,
                   color: Colors.white,

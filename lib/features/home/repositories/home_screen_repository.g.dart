@@ -99,7 +99,7 @@ final class RsvpConfirmProvider
   }
 }
 
-String _$rsvpConfirmHash() => r'd626308d00219ad86cc1834fcfb48475cd18f62a';
+String _$rsvpConfirmHash() => r'fb237d2276a63cfab6db226e1ab8a10140d5d0b3';
 
 final class RsvpConfirmFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
@@ -168,7 +168,7 @@ final class RsvpCancelProvider
   }
 }
 
-String _$rsvpCancelHash() => r'917653b9c255846bdd3091588948a56230a82ee6';
+String _$rsvpCancelHash() => r'8773896033498298fa5314621a6f5160e1e3edf5';
 
 final class RsvpCancelFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {

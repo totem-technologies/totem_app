@@ -64,7 +64,7 @@ final class SessionTokenProvider
   }
 }
 
-String _$sessionTokenHash() => r'a56fb863d18225c617546568e78e379fabaa1c7f';
+String _$sessionTokenHash() => r'a4a4f055cffb447c1aa6acefd76c72b864762c33';
 
 final class SessionTokenFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<JoinResponse>, String> {
@@ -525,7 +525,7 @@ final class ForcePassTotemProvider
   }
 }
 
-String _$forcePassTotemHash() => r'cc45e059cba099286fad43daea430be7a7f7bca4';
+String _$forcePassTotemHash() => r'098b856a7a64d41a32bceb2e652aef8af45b17dc';
 
 final class ForcePassTotemFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {

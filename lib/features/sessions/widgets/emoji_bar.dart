@@ -191,7 +191,7 @@ class EmojiBar extends StatelessWidget {
   }
 }
 
-Future<void> displayReaction(
+Future<void> presentEmojiReaction(
   BuildContext context,
   String emoji, {
   GlobalKey<OverlayState>? overlayKey,

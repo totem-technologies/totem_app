@@ -12,13 +12,6 @@ extension KeeperControl on Session {
     return state.isKeeper(currentUserSlug);
   }
 
-  void closeKeeperLeftNotifications() {
-    for (final close in closeKeeperLeftNotificationCallbacks) {
-      close.call();
-    }
-    closeKeeperLeftNotificationCallbacks.clear();
-  }
-
   void _onKeeperDisconnected() {
     if (state.roomState.status != RoomStatus.active) return;
     disableMicrophone();
@@ -29,9 +22,6 @@ extension KeeperControl on Session {
       _onKeeperDisconnectedTimeout,
     );
 
-    closeKeeperLeftNotifications();
-    closeKeeperLeftNotificationCallbacks.add(options.onKeeperLeaveRoom(this));
-
     state = state.copyWith(hasKeeperDisconnected: true);
   }
 
@@ -39,16 +29,12 @@ extension KeeperControl on Session {
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
 
-    closeKeeperLeftNotifications();
-
     state = state.copyWith(hasKeeperDisconnected: false);
   }
 
   Future<void> _onKeeperDisconnectedTimeout() async {
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
-
-    closeKeeperLeftNotifications();
 
     await room?.disconnect();
   }

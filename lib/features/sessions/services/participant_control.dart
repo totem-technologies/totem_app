@@ -101,6 +101,12 @@ extension ParticipantControl on Session {
   /// Send an emoji to other participants.
   /// This operation is fire-and-forget and doesn't throw errors.
   Future<void> sendReaction(String emoji) async {
+    ref
+        .read(emojiReactionsProvider.notifier)
+        .emitIncomingReaction(
+          room?.localParticipant?.identity ?? 'unknown',
+          emoji,
+        );
     try {
       await room?.localParticipant
           ?.publishData(
