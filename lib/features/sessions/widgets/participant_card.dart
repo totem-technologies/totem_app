@@ -32,7 +32,12 @@ class FeaturedParticipantCard extends ConsumerWidget {
       authControllerProvider.select((auth) => auth.user?.slug),
     );
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
-    final session = ref.watch(currentSessionStateProvider)!;
+    final session = ref.watch(currentSessionStateProvider);
+
+    if (session == null) {
+      return const SizedBox.shrink();
+    }
+
     final activeSpeaker = session.featuredParticipant();
     final amKeeper = session.isKeeper(currentUserSlug);
 

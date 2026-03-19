@@ -91,7 +91,7 @@ class NotMyTurn extends ConsumerWidget {
 
           final Widget? marquee = () {
             if (sessionStatus == RoomStatus.waitingRoom) {
-              if (!currentSession.isCurrentUserKeeper()) {
+              if (currentSession.isCurrentUserKeeper()) {
                 return TransitionCard(
                   type: TotemCardTransitionType.start,
                   onActionPressed: currentSession.startSession,

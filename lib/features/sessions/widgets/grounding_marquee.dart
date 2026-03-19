@@ -22,7 +22,8 @@ class _GroundingMarqueeState extends State<GroundingMarquee>
     'It’s always acceptable to pass.',
   ];
 
-  static const _tipDelay = Duration(milliseconds: 2500);
+  static const _tipDuration = Duration(milliseconds: 2500);
+  static const _tipDelay = Duration(seconds: 3);
   static const _fadeDuration = Duration(milliseconds: 350);
 
   late final AnimationController _fadeController;
@@ -43,7 +44,7 @@ class _GroundingMarqueeState extends State<GroundingMarquee>
   Future<void> _startTipsLoop() async {
     while (mounted) {
       await _fadeController.forward(from: 0);
-      await Future<void>.delayed(_tipDelay);
+      await Future<void>.delayed(_tipDuration);
       if (!mounted) return;
 
       await _fadeController.reverse();
