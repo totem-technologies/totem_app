@@ -10,8 +10,10 @@ import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
+import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/popups.dart';
 
-class MyTurn extends ConsumerWidget {
+class MyTurn extends ConsumerStatefulWidget {
   const MyTurn({
     required this.actionBar,
     required this.onPassTotem,
@@ -24,10 +26,36 @@ class MyTurn extends ConsumerWidget {
   final SessionDetailSchema event;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyTurn> createState() => _MyTurnState();
+}
+
+class _MyTurnState extends ConsumerState<MyTurn> {
+  bool _hasShownSelfViewHiddenNotice = false;
+
+  void _showSelfViewHiddenNotice() {
+    if (_hasShownSelfViewHiddenNotice || !mounted) return;
+    _hasShownSelfViewHiddenNotice = true;
+
+    showNotificationPopup(
+      context,
+      icon: TotemIcons.info,
+      title: 'Your self-view is hidden',
+      message:
+          'As you share, your self-view is hidden. This is intentional, so you can settle in and speak freely.',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final roomStatus = ref.watch(roomStatusProvider);
     final turnState = ref.watch(turnStateProvider);
     final session = ref.watch(currentSessionStateProvider);
+
+    if (!_hasShownSelfViewHiddenNotice && turnState == TurnState.speaking) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showSelfViewHiddenNotice();
+      });
+    }
 
     return RoomBackground(
       status: roomStatus,
@@ -37,7 +65,7 @@ class MyTurn extends ConsumerWidget {
             final isLandscape = orientation == Orientation.landscape;
             final participantGrid = _MyTurnGrid(
               isLandscape: isLandscape,
-              event: event,
+              event: widget.event,
             );
 
             final nextUp = session?.speakingNextParticipant();
@@ -46,7 +74,7 @@ class MyTurn extends ConsumerWidget {
                 : TotemCardTransitionType.pass;
             final passCard = TransitionCard(
               type: transitionType,
-              onActionPressed: onPassTotem,
+              onActionPressed: widget.onPassTotem,
               actionText:
                   nextUp != null &&
                       transitionType == TotemCardTransitionType.pass
@@ -71,7 +99,7 @@ class MyTurn extends ConsumerWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               passCard,
-                              actionBar,
+                              widget.actionBar,
                             ],
                           ),
                         ),
@@ -86,7 +114,7 @@ class MyTurn extends ConsumerWidget {
                 children: [
                   Expanded(child: participantGrid),
                   passCard,
-                  actionBar,
+                  widget.actionBar,
                 ],
               );
             }
