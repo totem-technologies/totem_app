@@ -45,6 +45,8 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
 }
 
 class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
+  final _roomNavigatorKey = GlobalKey<NavigatorState>();
+
   VoidCallback? _closeKeeperLeftNotification;
 
   @override
@@ -221,7 +223,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
         // Checks if there is any other route above the first route.
         //   This route would be a modal sheet or a dialog.
-        final navigator = navigatorKey.currentState;
+        final navigator = _roomNavigatorKey.currentState;
         if (navigator?.canPop() ?? false) {
           navigator!.pop();
           return;
@@ -246,7 +248,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       child: RoomBackground(
         status: roomStatus,
         child: Navigator(
-          key: navigatorKey,
+          key: _roomNavigatorKey,
           clipBehavior: Clip.none,
           onDidRemovePage: (page) => {},
           pages: [
@@ -383,7 +385,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             ActionBarButton(
               semanticsLabel:
                   'Microphone ${session.isMicrophoneEnabled ? 'on' : 'off'}',
-              active: session.isMicrophoneEnabled,
+              active: !isUserTileVisible && session.isMicrophoneEnabled,
               onPressed: () async {
                 if (session.isMicrophoneEnabled) {
                   await session.disableMicrophone();
