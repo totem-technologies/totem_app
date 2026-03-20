@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
+import 'package:totem_app/shared/totem_icons.dart';
 
 class ActionBarButton extends StatelessWidget {
   const ActionBarButton({
@@ -92,6 +96,241 @@ class ActionBar extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+typedef ActionBarButtonToggleCallback =
+    Future<void> Function(bool shouldEnable);
+
+class ActionBarMicButton extends StatefulWidget {
+  const ActionBarMicButton({
+    required this.participant,
+    required this.onToggle,
+    this.showSpeakingIndicator = true,
+    this.indicatorColor = Colors.black,
+    this.indicatorBarCount = 5,
+    super.key,
+  });
+
+  final LocalParticipant participant;
+  final ActionBarButtonToggleCallback onToggle;
+  final bool showSpeakingIndicator;
+  final Color indicatorColor;
+  final int indicatorBarCount;
+
+  @override
+  State<ActionBarMicButton> createState() => _ActionBarMicButtonState();
+}
+
+class _ActionBarMicButtonState extends State<ActionBarMicButton> {
+  EventsListener<ParticipantEvent>? _participantListener;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _bindListener();
+  }
+
+  @override
+  void didUpdateWidget(covariant ActionBarMicButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.participant.sid != widget.participant.sid) {
+      _bindListener();
+    }
+  }
+
+  void _bindListener() {
+    _participantListener?.dispose();
+    _participantListener = widget.participant.createListener()
+      ..on<ParticipantEvent>((_) {
+        if (mounted) setState(() {});
+      });
+  }
+
+  @override
+  void dispose() {
+    _participantListener?.dispose();
+    super.dispose();
+  }
+
+  TrackPublication<Track>? get _audioPublication {
+    return widget.participant.getTrackPublicationBySource(
+      TrackSource.microphone,
+    );
+  }
+
+  bool get _isMicrophoneEnabled {
+    final publication = _audioPublication;
+    if (publication == null) return false;
+
+    final track = publication.track;
+    final isMuted = track?.muted ?? publication.muted;
+    final isActive = track?.isActive ?? true;
+    return isActive && !isMuted;
+  }
+
+  Future<void> _toggleMicrophone() async {
+    if (_busy) return;
+
+    setState(() => _busy = true);
+    try {
+      await widget.onToggle(!_isMicrophoneEnabled);
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = _isMicrophoneEnabled;
+
+    return ActionBarButton(
+      semanticsLabel: 'Microphone ${isEnabled ? 'on' : 'off'}',
+      active: isEnabled,
+      onPressed: _busy ? null : _toggleMicrophone,
+      child: isEnabled && widget.showSpeakingIndicator
+          ? SpeakingIndicator(
+              participant: widget.participant,
+              foregroundColor: widget.indicatorColor,
+              barCount: widget.indicatorBarCount,
+            )
+          : TotemIcon(
+              isEnabled ? TotemIcons.microphoneOn : TotemIcons.microphoneOff,
+            ),
+    );
+  }
+}
+
+class ActionBarCameraButton extends StatefulWidget {
+  const ActionBarCameraButton({
+    required this.participant,
+    required this.onToggle,
+    super.key,
+  });
+
+  final LocalParticipant participant;
+  final ActionBarButtonToggleCallback onToggle;
+
+  @override
+  State<ActionBarCameraButton> createState() => _ActionBarCameraButtonState();
+}
+
+class _ActionBarCameraButtonState extends State<ActionBarCameraButton> {
+  EventsListener<ParticipantEvent>? _participantListener;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _bindListener();
+  }
+
+  @override
+  void didUpdateWidget(covariant ActionBarCameraButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.participant.sid != widget.participant.sid) {
+      _bindListener();
+    }
+  }
+
+  void _bindListener() {
+    _participantListener?.dispose();
+    _participantListener = widget.participant.createListener()
+      ..on<ParticipantEvent>((_) {
+        if (mounted) setState(() {});
+      });
+  }
+
+  @override
+  void dispose() {
+    _participantListener?.dispose();
+    super.dispose();
+  }
+
+  TrackPublication<Track>? get _cameraPublication {
+    return widget.participant.getTrackPublicationBySource(TrackSource.camera);
+  }
+
+  bool get _isCameraEnabled {
+    final publication = _cameraPublication;
+    if (publication == null) return false;
+
+    final track = publication.track;
+    final isMuted = track?.muted ?? publication.muted;
+    final isActive = track?.isActive ?? true;
+    return isActive && !isMuted;
+  }
+
+  Future<void> _toggleCamera() async {
+    if (_busy) return;
+
+    setState(() => _busy = true);
+    try {
+      await widget.onToggle(!_isCameraEnabled);
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = _isCameraEnabled;
+
+    return ActionBarButton(
+      semanticsLabel: 'Camera ${isEnabled ? 'on' : 'off'}',
+      active: isEnabled,
+      onPressed: _busy ? null : _toggleCamera,
+      child: TotemIcon(
+        isEnabled ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+      ),
+    );
+  }
+}
+
+class ActionBarEmojiButton extends StatefulWidget {
+  const ActionBarEmojiButton({required this.onEmojiSelected, super.key});
+
+  final ValueChanged<String> onEmojiSelected;
+
+  @override
+  State<ActionBarEmojiButton> createState() => _ActionBarEmojiButtonState();
+}
+
+class _ActionBarEmojiButtonState extends State<ActionBarEmojiButton> {
+  var _isOpen = false;
+
+  Future<void> _openPicker(BuildContext buttonContext) async {
+    if (_isOpen) return;
+
+    setState(() => _isOpen = true);
+    try {
+      await showEmojiBar(
+        buttonContext,
+        onEmojiSelected: widget.onEmojiSelected,
+      );
+    } finally {
+      if (mounted) setState(() => _isOpen = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Builder(
+      builder: (buttonContext) {
+        return ActionBarButton(
+          semanticsLabel: 'Send reaction',
+          semanticsHint: 'Open emoji selection overlay',
+          active: _isOpen,
+          onPressed: () => _openPicker(buttonContext),
+          child: const TotemIcon(TotemIcons.reaction),
+        );
+      },
     );
   }
 }

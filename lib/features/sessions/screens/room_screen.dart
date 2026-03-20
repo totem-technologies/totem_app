@@ -21,8 +21,6 @@ import 'package:totem_app/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
-import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
-import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
@@ -100,8 +98,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       // Battery monitoring not available
     }
   }
-
-  var _showEmojiPicker = false;
 
   bool _chatSheetOpen = false;
   bool _hasPendingChatMessages = false;
@@ -382,69 +378,33 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         return ActionBar(
           key: widget.actionBarKey,
           children: [
-            ActionBarButton(
-              semanticsLabel:
-                  'Microphone ${session.isMicrophoneEnabled ? 'on' : 'off'}',
-              active: !isUserTileVisible && session.isMicrophoneEnabled,
-              onPressed: () async {
-                if (session.isMicrophoneEnabled) {
-                  await session.disableMicrophone();
-                } else {
+            ActionBarMicButton(
+              participant: user,
+              showSpeakingIndicator: !isUserTileVisible,
+              indicatorColor: Colors.black,
+              indicatorBarCount: 5,
+              onToggle: (shouldEnable) async {
+                if (shouldEnable) {
                   await session.enableMicrophone();
-                }
-              },
-              // if the user tile is not visible, display the speaking indicator
-              // when the microphone is opened
-              child: !isUserTileVisible && session.isMicrophoneEnabled
-                  ? SpeakingIndicator(
-                      participant: user,
-                      foregroundColor: Colors.black,
-                      barCount: 5,
-                    )
-                  : TotemIcon(
-                      session.isMicrophoneEnabled
-                          ? TotemIcons.microphoneOn
-                          : TotemIcons.microphoneOff,
-                    ),
-            ),
-            ActionBarButton(
-              semanticsLabel:
-                  'Camera ${session.isCameraEnabled ? 'on' : 'off'}',
-              active: session.isCameraEnabled,
-              onPressed: () async {
-                if (session.isCameraEnabled) {
-                  await session.disableCamera();
                 } else {
-                  await session.enableCamera();
+                  await session.disableMicrophone();
                 }
               },
-              child: TotemIcon(
-                session.isCameraEnabled
-                    ? TotemIcons.cameraOn
-                    : TotemIcons.cameraOff,
-              ),
+            ),
+            ActionBarCameraButton(
+              participant: user,
+              onToggle: (shouldEnable) async {
+                if (shouldEnable) {
+                  await session.enableCamera();
+                } else {
+                  await session.disableCamera();
+                }
+              },
             ),
             if (!isMyTurn)
-              Builder(
-                builder: (button) {
-                  return ActionBarButton(
-                    semanticsLabel: 'Send reaction',
-                    semanticsHint: 'Open emoji selection overlay',
-                    active: _showEmojiPicker,
-                    onPressed: () async {
-                      if (!mounted) return;
-                      setState(() => _showEmojiPicker = true);
-                      await showEmojiBar(
-                        button,
-                        onEmojiSelected: (emoji) {
-                          session.sendReaction(emoji);
-                        },
-                      );
-                      if (!mounted) return;
-                      setState(() => _showEmojiPicker = false);
-                    },
-                    child: const TotemIcon(TotemIcons.reaction),
-                  );
+              ActionBarEmojiButton(
+                onEmojiSelected: (emoji) {
+                  session.sendReaction(emoji);
                 },
               ),
             ActionBarButton(
