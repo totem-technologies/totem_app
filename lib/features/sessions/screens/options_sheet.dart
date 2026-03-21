@@ -63,7 +63,7 @@ class OptionsSheet extends ConsumerWidget {
     final currentSession = ref.watch(currentSessionProvider)!;
     final state = ref.watch(currentSessionStateProvider)!;
 
-    final isKeeper = currentSession.isKeeper();
+    final isKeeper = currentSession.isCurrentUserKeeper();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -416,11 +416,9 @@ class OptionsSheet extends ConsumerWidget {
 
 Future<void> showPrejoinOptionsSheet(
   BuildContext context, {
-  required CameraCaptureOptions? cameraOptions,
-  required AudioCaptureOptions audioOptions,
+  required CameraCaptureOptions cameraOptions,
   required AudioOutputOptions audioOutputOptions,
   required ValueChanged<CameraCaptureOptions> onCameraChanged,
-  required ValueChanged<AudioCaptureOptions> onAudioChanged,
   required ValueChanged<AudioOutputOptions> onAudioOutputChanged,
 }) {
   return showModalBottomSheet<void>(
@@ -429,10 +427,8 @@ Future<void> showPrejoinOptionsSheet(
     builder: (context) {
       return PrejoinOptionsSheet(
         onCameraChanged: onCameraChanged,
-        onAudioChanged: onAudioChanged,
         onAudioOutputChanged: onAudioOutputChanged,
         cameraOptions: cameraOptions,
-        audioOptions: audioOptions,
         audioOutputOptions: audioOutputOptions,
       );
     },
@@ -442,20 +438,16 @@ Future<void> showPrejoinOptionsSheet(
 class PrejoinOptionsSheet extends StatelessWidget {
   const PrejoinOptionsSheet({
     required this.cameraOptions,
-    required this.audioOptions,
     required this.audioOutputOptions,
     required this.onCameraChanged,
-    required this.onAudioChanged,
     required this.onAudioOutputChanged,
     super.key,
   });
 
-  final CameraCaptureOptions? cameraOptions;
-  final AudioCaptureOptions audioOptions;
+  final CameraCaptureOptions cameraOptions;
   final AudioOutputOptions audioOutputOptions;
 
   final ValueChanged<CameraCaptureOptions> onCameraChanged;
-  final ValueChanged<AudioCaptureOptions> onAudioChanged;
   final ValueChanged<AudioOutputOptions> onAudioOutputChanged;
 
   @override
@@ -473,10 +465,9 @@ class PrejoinOptionsSheet extends StatelessWidget {
           cameraOptions,
           () {
             onCameraChanged(
-              cameraOptions?.copyWith(
-                    cameraPosition: cameraOptions?.cameraPosition.switched(),
-                  ) ??
-                  Session.defaultCameraCaptureOptions,
+              cameraOptions.copyWith(
+                cameraPosition: cameraOptions.cameraPosition.switched(),
+              ),
             );
             Navigator.of(context).pop();
           },

@@ -41,11 +41,6 @@ enum SessionCommunicationTopics {
   final String topic;
 }
 
-typedef OnEmojiReceived = void Function(String userIdentity, String emoji);
-typedef OnMessageReceived = void Function(String userIdentity, String message);
-typedef OnLivekitError = void Function(LiveKitException error);
-typedef OnKeeperLeaveRoom = VoidCallback Function(Session room);
-
 @immutable
 class SessionOptions {
   const SessionOptions({
@@ -53,13 +48,7 @@ class SessionOptions {
     required this.token,
     required this.cameraEnabled,
     required this.microphoneEnabled,
-    required this.onEmojiReceived,
-    required this.onMessageReceived,
-    required this.onLivekitError,
-    required this.onKeeperLeaveRoom,
-    required this.onConnected,
     required this.cameraOptions,
-    required this.audioOptions,
     required this.audioOutputOptions,
   });
 
@@ -68,14 +57,7 @@ class SessionOptions {
   final bool cameraEnabled;
   final bool microphoneEnabled;
 
-  final OnEmojiReceived onEmojiReceived;
-  final OnMessageReceived onMessageReceived;
-  final OnLivekitError onLivekitError;
-  final OnKeeperLeaveRoom onKeeperLeaveRoom;
-  final VoidCallback onConnected;
-
   final CameraCaptureOptions cameraOptions;
-  final AudioCaptureOptions audioOptions;
   final AudioOutputOptions audioOutputOptions;
 
   @override
@@ -103,6 +85,7 @@ class SessionRoomState {
     this.isSpeakerphoneEnabled = false,
     this.disconnectReason,
     this.messages = const [],
+    this.livekitError,
   });
 
   /// The current connection state of the room.
@@ -126,7 +109,12 @@ class SessionRoomState {
   /// Why LiveKit disconnected this participant, when available.
   final DisconnectReason? disconnectReason;
 
+  /// The chat messages in the session.
   final List<ChatMessage> messages;
+
+  /// The latest LiveKit error that occurred in the session, if any.
+  /// This is used to display error messages to the user when LiveKit errors occur.
+  final LiveKitException? livekitError;
 
   bool isMyTurn(Room room) {
     return roomState.currentSpeaker != null &&
@@ -145,6 +133,41 @@ class SessionRoomState {
     return roomState.currentSpeaker ?? roomState.keeper;
   }
 
+  bool get hasKeeper => participants.any((p) => isKeeper(p.identity));
+
+  bool isKeeper(String? userSlug) {
+    return roomState.keeper == userSlug;
+  }
+
+  /// Returns the participant that is featured right now.
+  ///
+  /// If no participants, return null.
+  ///
+  /// If in the waiting room and the keeper is not present, return null.
+  ///
+  /// If [speakingNow] is present, return the corresponding participant.
+  ///
+  /// Otherwise, return the keeper participant if present, or null if not.
+  Participant? featuredParticipant() {
+    if (participants.isEmpty) return null;
+    if (roomState.status == RoomStatus.waitingRoom && !hasKeeper) {
+      return null;
+    }
+    return participants.firstWhereOrNull(
+          (participant) => participant.identity == speakingNow,
+        ) ??
+        participants.firstWhereOrNull(
+          (participant) => participant.identity == roomState.keeper,
+        );
+  }
+
+  Participant? speakingNextParticipant() {
+    if (roomState.nextSpeaker == null) return null;
+    return participants.firstWhereOrNull((participant) {
+      return participant.identity == roomState.nextSpeaker;
+    });
+  }
+
   SessionRoomState copyWith({
     RoomConnectionState? connectionState,
     RoomState? roomState,
@@ -155,6 +178,8 @@ class SessionRoomState {
     DisconnectReason? disconnectReason,
     bool clearDisconnectReason = false,
     List<ChatMessage>? messages,
+    LiveKitException? livekitError,
+    bool clearLivekitError = false,
   }) {
     return SessionRoomState(
       connectionState: connectionState ?? this.connectionState,
@@ -169,6 +194,9 @@ class SessionRoomState {
           ? null
           : disconnectReason ?? this.disconnectReason,
       messages: messages ?? this.messages,
+      livekitError: clearLivekitError
+          ? null
+          : livekitError ?? this.livekitError,
     );
   }
 
@@ -199,6 +227,7 @@ class SessionRoomState {
         other.removed == removed &&
         other.disconnectReason == disconnectReason &&
         other.isSpeakerphoneEnabled == isSpeakerphoneEnabled &&
+        other.livekitError?.toString() == livekitError?.toString() &&
         const DeepCollectionEquality().equals(
           other.messages.map((m) => m.id),
           messages.map((m) => m.id),
@@ -214,6 +243,7 @@ class SessionRoomState {
       removed.hashCode ^
       disconnectReason.hashCode ^
       isSpeakerphoneEnabled.hashCode ^
+      livekitError.toString().hashCode ^
       const DeepCollectionEquality().hash(messages.map((m) => m.id));
 }
 
@@ -233,11 +263,6 @@ class Session extends _$Session {
   SessionDetailSchema? event;
 
   Timer? _notificationTimer;
-
-  /// A list of callbacks that close the "keeper left" notification,
-  /// so that they can be called when the keeper comes back or the
-  /// user leaves the session.
-  List<VoidCallback> closeKeeperLeftNotificationCallbacks = [];
 
   StreamSubscription<void>? _becomingNoisySubscription;
   StreamSubscription<audio.AudioDevicesChangedEvent>?
@@ -271,7 +296,7 @@ class Session extends _$Session {
     room = Room(
       roomOptions: RoomOptions(
         defaultCameraCaptureOptions: options.cameraOptions,
-        defaultAudioCaptureOptions: options.audioOptions,
+        defaultAudioCaptureOptions: const AudioCaptureOptions(),
         defaultAudioOutputOptions: options.audioOutputOptions,
 
         dynacast: true,
@@ -377,9 +402,6 @@ class Session extends _$Session {
     );
   }
 
-  /// Whether the keeper is currently in the session.
-  bool get hasKeeper => state.participants.any((p) => isKeeper(p.identity));
-
   void _updateParticipantsList() {
     try {
       final participants = <Participant>[
@@ -395,7 +417,9 @@ class Session extends _$Session {
         showSpeakingNow: true,
       );
 
-      final hasKeeper = sortedParticipants.any((p) => isKeeper(p.identity));
+      final hasKeeper = sortedParticipants.any(
+        (p) => state.isKeeper(p.identity),
+      );
       if (state.hasKeeperDisconnected && hasKeeper) {
         _onKeeperConnected();
       }
@@ -431,7 +455,8 @@ class Session extends _$Session {
     // If the keeper is not in the room, the participants will start unmuted.
     final isMicrophoneEnabled =
         () {
-          if (state.roomState.status == RoomStatus.waitingRoom && !hasKeeper) {
+          if (state.roomState.status == RoomStatus.waitingRoom &&
+              !state.hasKeeper) {
             // If joined in the waiting room, everyone can join unmuted.
             return _options?.microphoneEnabled;
           }
@@ -442,7 +467,8 @@ class Session extends _$Session {
             }
           }
           // In other states, only the keeper can join unmuted.
-          return isKeeper() && (_options?.microphoneEnabled ?? false);
+          return isCurrentUserKeeper() &&
+              (_options?.microphoneEnabled ?? false);
         }() ??
         false;
     if (isMicrophoneEnabled) {
@@ -455,6 +481,7 @@ class Session extends _$Session {
       connectionState: RoomConnectionState.connected,
       removed: false,
       clearDisconnectReason: true,
+      clearLivekitError: true,
     );
 
     // _userSpeakerPreference is always true: when no external audio device
@@ -465,7 +492,6 @@ class Session extends _$Session {
     _autoSetSpeakerphone(true);
     _applyScreenCapturePolicy();
 
-    options.onConnected();
     _updateParticipantsList();
     setupDeviceChangeListener();
   }
@@ -478,8 +504,10 @@ class Session extends _$Session {
   void _onError(LiveKitException? error) {
     if (error == null) return;
     ErrorHandler.handleLivekitError(error);
-    state = state.copyWith(connectionState: RoomConnectionState.error);
-    _options?.onLivekitError(error);
+    state = state.copyWith(
+      connectionState: RoomConnectionState.error,
+      livekitError: error,
+    );
   }
 
   void _onRoomChanges([RoomState? newSessionState]) {
@@ -538,16 +566,16 @@ class Session extends _$Session {
 
     switch (topic) {
       case SessionCommunicationTopics.emoji:
-        _options?.onEmojiReceived(event.participant!.identity, data);
+        final participant = event.participant;
+        if (participant == null) return;
+        ref
+            .read(emojiReactionsProvider.notifier)
+            .emitIncomingReaction(participant.identity, data);
       case SessionCommunicationTopics.chat:
         try {
           final message = ChatMessage.fromMap(
             jsonDecode(data) as Map<String, dynamic>,
             event.participant,
-          );
-          _options?.onMessageReceived(
-            event.participant!.identity,
-            message.message,
           );
           state = state.copyWith(messages: [...state.messages, message]);
         } catch (error, stackTrace) {
@@ -597,13 +625,13 @@ class Session extends _$Session {
   Timer? _keeperDisconnectedTimer;
 
   void _onParticipantDisconnected(ParticipantDisconnectedEvent event) {
-    if (isKeeper(event.participant.identity)) {
+    if (state.isKeeper(event.participant.identity)) {
       _onKeeperDisconnected();
     }
   }
 
   void _onParticipantConnected(ParticipantConnectedEvent event) {
-    if (isKeeper(event.participant.identity)) {
+    if (state.isKeeper(event.participant.identity)) {
       _onKeeperConnected();
     }
   }
@@ -672,8 +700,6 @@ class Session extends _$Session {
 
     _devicesChangedSubscription?.cancel();
     _devicesChangedSubscription = null;
-
-    closeKeeperLeftNotifications();
 
     try {
       _listener

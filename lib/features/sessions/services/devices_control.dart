@@ -171,7 +171,7 @@ extension DevicesControl on Session {
       room?.localParticipant?.isMicrophoneEnabled() ?? false;
   Future<void> enableMicrophone() async {
     if (room?.localParticipant?.isMicrophoneEnabled() ?? false) return;
-    if (state.roomState.status == RoomStatus.active && !hasKeeper) return;
+    if (state.roomState.status == RoomStatus.active && !state.hasKeeper) return;
 
     if (room?.localParticipant != null) {
       await room?.localParticipant?.setMicrophoneEnabled(true);

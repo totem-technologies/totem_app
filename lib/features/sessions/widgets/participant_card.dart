@@ -20,7 +20,192 @@ import 'package:totem_app/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
+import 'package:totem_app/shared/widgets/totem_icon.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
+
+class FeaturedParticipantCard extends ConsumerWidget {
+  const FeaturedParticipantCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUserSlug = ref.watch(
+      authControllerProvider.select((auth) => auth.user?.slug),
+    );
+    final participantKeys = ref.watch(sessionParticipantKeysProvider);
+    final session = ref.watch(currentSessionStateProvider);
+
+    if (session == null) {
+      return const SizedBox.shrink();
+    }
+
+    final activeSpeaker = session.featuredParticipant();
+    final amKeeper = session.isKeeper(currentUserSlug);
+
+    final theme = Theme.of(context);
+    final speakerVideoBorderRadius = switch (MediaQuery.orientationOf(
+      context,
+    )) {
+      Orientation.landscape => const BorderRadiusDirectional.horizontal(
+        end: Radius.circular(30),
+      ),
+      Orientation.portrait => const BorderRadiusDirectional.vertical(
+        bottom: Radius.circular(30),
+      ),
+    };
+    return RepaintBoundary(
+      child: ClipRRect(
+        borderRadius: speakerVideoBorderRadius,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (session.roomState.status == RoomStatus.waitingRoom &&
+                !session.hasKeeper)
+              Positioned.fill(
+                child: Container(
+                  color: AppTheme.slate,
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 60,
+                    vertical: 20,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    spacing: 20,
+                    children: [
+                      const TotemIcon(
+                        TotemIcons.clockCircle,
+                        size: 70,
+                        color: Colors.white,
+                      ),
+                      Text(
+                        'Waiting room',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      Text(
+                        'Please wait for your Keeper to arrive and begin the session.',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (activeSpeaker == null)
+              const Positioned.fill(
+                child: ColoredBox(color: Colors.black54),
+              )
+            else ...[
+              Positioned.fill(
+                child: ParticipantVideo(
+                  key: participantKeys.getKey(activeSpeaker.identity),
+                  participant: activeSpeaker,
+                ),
+              ),
+              PositionedDirectional(
+                start: 20,
+                end: 20,
+                bottom: 20,
+                child: SafeArea(
+                  bottom: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Row(
+                        spacing: 12,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.black54,
+                              boxShadow: kElevationToShadow[6],
+                            ),
+                            padding: const EdgeInsetsDirectional.all(4),
+                            child: SpeakingIndicatorOrEmoji(
+                              participant: activeSpeaker,
+                              backgroundColor: Colors.transparent,
+                            ),
+                          ),
+                          if (amKeeper &&
+                              currentUserSlug != activeSpeaker.identity)
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.black54,
+                                boxShadow: kElevationToShadow[6],
+                              ),
+                              padding: const EdgeInsetsDirectional.all(3),
+                              child: ParticipantControlButton(
+                                overlayPadding: -28,
+                                participant: activeSpeaker,
+                                backgroundColor: Colors.transparent,
+                              ),
+                            ),
+                          Flexible(
+                            child: SmartNameText(
+                              name: activeSpeaker.name,
+                              style: theme.textTheme.titleLarge!.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                shadows: kElevationToShadow[6],
+                              ),
+                              textAlign: TextAlign.end,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (session.isKeeper(activeSpeaker.identity))
+                        Container(
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(42),
+                            color: Colors.white.withValues(alpha: 0.3),
+                            boxShadow: kElevationToShadow[6],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            spacing: 5,
+                            children: [
+                              const TotemIconLogo(
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                              Text(
+                                'Keeper',
+                                style: theme.textTheme.bodySmall!.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class ParticipantCard extends ConsumerWidget {
   const ParticipantCard({
@@ -39,10 +224,11 @@ class ParticipantCard extends ConsumerWidget {
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );
-    final currentUserIsKeeper = currentUserSlug == session?.space.author.slug!;
+    final session = ref.watch(currentSessionStateProvider);
+    final currentUserIsKeeper = session?.isKeeper(currentUserSlug) ?? false;
 
-    const overlayPadding = 6.0;
-    final isKeeper = session?.space.author.slug == participant.identity;
+    const overlayPadding = 10.0;
+    final isKeeper = session?.isKeeper(participant.identity) ?? false;
 
     const borderRadius = 20.0;
 
@@ -102,7 +288,25 @@ class ParticipantCard extends ConsumerWidget {
                     child: ParticipantControlButton(
                       participant: participant,
                       overlayPadding: overlayPadding,
-                      session: session!,
+                    ),
+                  )
+                else if (isKeeper)
+                  PositionedDirectional(
+                    top: overlayPadding,
+                    end: overlayPadding,
+                    child: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black54,
+                        boxShadow: kElevationToShadow[6],
+                      ),
+                      padding: const EdgeInsetsDirectional.all(4),
+                      child: const TotemIconLogo(
+                        color: AppTheme.white,
+                        size: 16,
+                      ),
                     ),
                   ),
                 PositionedDirectional(
@@ -137,14 +341,12 @@ class ParticipantControlButton extends ConsumerWidget {
   const ParticipantControlButton({
     required this.participant,
     required this.overlayPadding,
-    required this.session,
     this.backgroundColor = Colors.black54,
     super.key,
   });
 
   final Participant participant;
   final double overlayPadding;
-  final SessionDetailSchema session;
 
   final Color backgroundColor;
 

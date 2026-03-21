@@ -2,25 +2,21 @@
 
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
+import 'package:totem_app/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
-import 'package:totem_app/features/sessions/widgets/smart_name_text.dart';
-import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
 class NotMyTurn extends ConsumerWidget {
   const NotMyTurn({
-    required this.getParticipantKey,
     required this.actionBar,
     required this.event,
     super.key,
   });
 
-  final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
   final SessionDetailSchema event;
 
@@ -28,15 +24,10 @@ class NotMyTurn extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionStatus = ref.watch(roomStatusProvider);
     final amNext = ref.watch(amNextSpeakerProvider);
+    final session = ref.watch(currentSessionStateProvider)!;
     final currentSession = ref.watch(currentSessionProvider)!;
 
-    final currentUserSlug = ref.watch(
-      authControllerProvider.select((auth) => auth.user?.slug),
-    );
-    final amKeeper = currentUserSlug == event.space.author.slug!;
-    final activeSpeaker = currentSession.speakingNowParticipant();
-    // final isActiveSpeakerKeeper =
-    //     activeSpeaker.identity == event.space.author.slug;
+    final activeSpeaker = session.featuredParticipant();
 
     return RoomBackground(
       status: sessionStatus,
@@ -45,108 +36,12 @@ class NotMyTurn extends ConsumerWidget {
           final theme = Theme.of(context);
           final isLandscape = orientation == Orientation.landscape;
 
-          final speakerVideoBorderRadius = isLandscape
-              ? const BorderRadiusDirectional.horizontal(
-                  end: Radius.circular(30),
-                )
-              : const BorderRadiusDirectional.vertical(
-                  bottom: Radius.circular(30),
-                );
-          final speakerVideo = RepaintBoundary(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: speakerVideoBorderRadius,
-                // boxShadow: isActiveSpeakerKeeper
-                //     ? const [
-                //         BoxShadow(
-                //           offset: Offset(0, 6),
-                //           blurRadius: 12,
-                //           spreadRadius: -2,
-                //           color: AppTheme.yellow,
-                //         ),
-                //       ]
-                //     : null,
-              ),
-              child: ClipRRect(
-                borderRadius: speakerVideoBorderRadius,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Positioned.fill(
-                      child: ParticipantVideo(
-                        key: getParticipantKey(activeSpeaker.identity),
-                        participant: activeSpeaker,
-                      ),
-                    ),
-                    PositionedDirectional(
-                      start: 20,
-                      end: 20,
-                      bottom: 20,
-                      child: SafeArea(
-                        bottom: false,
-                        child: Row(
-                          spacing: 12,
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.black54,
-                                boxShadow: kElevationToShadow[6],
-                              ),
-                              padding: const EdgeInsetsDirectional.all(4),
-                              child: SpeakingIndicatorOrEmoji(
-                                participant: activeSpeaker,
-                                backgroundColor: Colors.transparent,
-                              ),
-                            ),
-                            if (amKeeper &&
-                                currentUserSlug != activeSpeaker.identity)
-                              Container(
-                                width: 24,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.black54,
-                                  boxShadow: kElevationToShadow[6],
-                                ),
-                                padding: const EdgeInsetsDirectional.all(3),
-                                child: ParticipantControlButton(
-                                  overlayPadding: -28,
-                                  session: event,
-                                  participant: activeSpeaker,
-                                  backgroundColor: Colors.transparent,
-                                ),
-                              ),
-                            Flexible(
-                              child: SmartNameText(
-                                name: activeSpeaker.name,
-                                style: theme.textTheme.titleLarge!.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  shadows: kElevationToShadow[6],
-                                ),
-                                textAlign: TextAlign.end,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-
-          final nextUp = currentSession.speakingNextParticipant();
+          final nextUp = session.speakingNextParticipant();
           final nextUpText = () {
             if (sessionStatus == RoomStatus.waitingRoom) {
               return Text(
                 () {
-                  if (!currentSession.hasKeeper) {
+                  if (!session.hasKeeper) {
                     return 'Waiting for the Keeper to join...';
                   }
                   return 'The session is about to start...';
@@ -154,7 +49,7 @@ class NotMyTurn extends ConsumerWidget {
                 style: theme.textTheme.bodyLarge,
               );
             } else if (sessionStatus == RoomStatus.active) {
-              if (!currentSession.hasKeeper) {
+              if (!session.hasKeeper) {
                 return Text(
                   'The session has been paused...',
                   style: theme.textTheme.bodyLarge,
@@ -189,20 +84,23 @@ class NotMyTurn extends ConsumerWidget {
           }();
 
           final participantGrid = _NotMyTurnGrid(
-            getParticipantKey: getParticipantKey,
             event: event,
-            speakingNow: activeSpeaker.identity,
+            speakingNow: activeSpeaker?.identity,
             isLandscape: isLandscape,
           );
 
-          final Widget? startCard =
-              sessionStatus == RoomStatus.waitingRoom &&
-                  currentSession.isKeeper()
-              ? TransitionCard(
+          final Widget? marquee = () {
+            if (sessionStatus == RoomStatus.waitingRoom) {
+              if (currentSession.isCurrentUserKeeper()) {
+                return TransitionCard(
                   type: TotemCardTransitionType.start,
                   onActionPressed: currentSession.startSession,
-                )
-              : null;
+                );
+              } else {
+                return const GroundingMarquee();
+              }
+            }
+          }();
 
           if (isLandscape) {
             final isLTR = Directionality.of(context) == TextDirection.ltr;
@@ -214,7 +112,7 @@ class NotMyTurn extends ConsumerWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(flex: 2, child: speakerVideo),
+                  const Expanded(flex: 2, child: FeaturedParticipantCard()),
                   Expanded(
                     flex: 3,
                     child: SafeArea(
@@ -241,7 +139,7 @@ class NotMyTurn extends ConsumerWidget {
                                   child: participantGrid,
                                 ),
                               ),
-                              ?startCard,
+                              ?marquee,
                               Center(child: actionBar),
                             ],
                           ),
@@ -262,7 +160,7 @@ class NotMyTurn extends ConsumerWidget {
                 children: [
                   SizedBox(
                     height: MediaQuery.heightOf(context) * 0.475,
-                    child: speakerVideo,
+                    child: const FeaturedParticipantCard(),
                   ),
                   Padding(
                     padding: const EdgeInsetsDirectional.symmetric(
@@ -279,7 +177,7 @@ class NotMyTurn extends ConsumerWidget {
                       child: participantGrid,
                     ),
                   ),
-                  ?startCard,
+                  ?marquee,
                   Center(child: actionBar),
                 ],
               ),
@@ -293,21 +191,20 @@ class NotMyTurn extends ConsumerWidget {
 
 class _NotMyTurnGrid extends ConsumerWidget {
   const _NotMyTurnGrid({
-    required this.getParticipantKey,
     required this.event,
     required this.speakingNow,
     this.gap = 10,
     this.isLandscape = false,
   });
 
-  final GlobalKey Function(String) getParticipantKey;
   final SessionDetailSchema event;
-  final String speakingNow;
+  final String? speakingNow;
   final double gap;
   final bool isLandscape;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final participantKeys = ref.watch(sessionParticipantKeysProvider);
     final participants = ref.watch(sessionParticipantsProvider);
     final sessionState = ref.watch(currentSessionStateProvider)!;
 
@@ -362,7 +259,7 @@ class _NotMyTurnGrid extends ConsumerWidget {
                     final participant = sortedParticipants[itemIndex];
                     return Expanded(
                       child: ParticipantCard(
-                        key: getParticipantKey(participant.identity),
+                        key: participantKeys.getKey(participant.identity),
                         participant: participant,
                         session: event,
                         participantIdentity: participant.identity,

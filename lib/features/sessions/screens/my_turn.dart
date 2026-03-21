@@ -10,26 +10,52 @@ import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
+import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/popups.dart';
 
-class MyTurn extends ConsumerWidget {
+class MyTurn extends ConsumerStatefulWidget {
   const MyTurn({
-    required this.getParticipantKey,
     required this.actionBar,
     required this.onPassTotem,
     required this.event,
     super.key,
   });
 
-  final GlobalKey Function(String) getParticipantKey;
   final Widget actionBar;
   final OnActionPerformed onPassTotem;
   final SessionDetailSchema event;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyTurn> createState() => _MyTurnState();
+}
+
+class _MyTurnState extends ConsumerState<MyTurn> {
+  bool _hasShownSelfViewHiddenNotice = false;
+
+  void _showSelfViewHiddenNotice() {
+    if (_hasShownSelfViewHiddenNotice || !mounted) return;
+    _hasShownSelfViewHiddenNotice = true;
+
+    showNotificationPopup(
+      context,
+      icon: TotemIcons.info,
+      title: 'Your self-view is hidden',
+      message:
+          'As you share, your self-view is hidden. This is intentional, so you can settle in and speak freely.',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final roomStatus = ref.watch(roomStatusProvider);
     final turnState = ref.watch(turnStateProvider);
-    final currentSession = ref.watch(currentSessionProvider);
+    final session = ref.watch(currentSessionStateProvider);
+
+    if (!_hasShownSelfViewHiddenNotice && turnState == TurnState.speaking) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showSelfViewHiddenNotice();
+      });
+    }
 
     return RoomBackground(
       status: roomStatus,
@@ -39,17 +65,16 @@ class MyTurn extends ConsumerWidget {
             final isLandscape = orientation == Orientation.landscape;
             final participantGrid = _MyTurnGrid(
               isLandscape: isLandscape,
-              getParticipantKey: getParticipantKey,
-              event: event,
+              event: widget.event,
             );
 
-            final nextUp = currentSession?.speakingNextParticipant();
+            final nextUp = session?.speakingNextParticipant();
             final transitionType = turnState == TurnState.passing
                 ? TotemCardTransitionType.waitingReceive
                 : TotemCardTransitionType.pass;
             final passCard = TransitionCard(
               type: transitionType,
-              onActionPressed: onPassTotem,
+              onActionPressed: widget.onPassTotem,
               actionText:
                   nextUp != null &&
                       transitionType == TotemCardTransitionType.pass
@@ -74,7 +99,7 @@ class MyTurn extends ConsumerWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               passCard,
-                              actionBar,
+                              widget.actionBar,
                             ],
                           ),
                         ),
@@ -89,7 +114,7 @@ class MyTurn extends ConsumerWidget {
                 children: [
                   Expanded(child: participantGrid),
                   passCard,
-                  actionBar,
+                  widget.actionBar,
                 ],
               );
             }
@@ -103,20 +128,19 @@ class MyTurn extends ConsumerWidget {
 class _MyTurnGrid extends ConsumerWidget {
   const _MyTurnGrid({
     required this.isLandscape,
-    required this.getParticipantKey,
     required this.event,
     this.maxPerLineCount = 10,
     this.gap = 6,
   });
 
   final bool isLandscape;
-  final GlobalKey Function(String) getParticipantKey;
   final SessionDetailSchema event;
   final int maxPerLineCount;
   final double gap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final participantKeys = ref.watch(sessionParticipantKeysProvider);
     final participants = ref.watch(sessionParticipantsProvider);
     final sessionState = ref.watch(currentSessionStateProvider)!;
 
@@ -182,7 +206,7 @@ class _MyTurnGrid extends ConsumerWidget {
                       final participant = sortedParticipants[itemIndex];
                       return Expanded(
                         child: ParticipantCard(
-                          key: getParticipantKey(participant.identity),
+                          key: participantKeys.getKey(participant.identity),
                           participant: participant,
                           session: event,
                           participantIdentity: participant.identity,

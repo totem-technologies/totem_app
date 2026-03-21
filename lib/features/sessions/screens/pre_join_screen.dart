@@ -10,6 +10,7 @@ import 'package:livekit_client/livekit_client.dart'
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
@@ -40,13 +41,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   LocalAudioTrack? _previewAudioTrack;
   var _isMicOn = true;
 
-  CameraCaptureOptions? _cameraOptions;
-  var _audioOptions = const AudioCaptureOptions();
+  CameraCaptureOptions _cameraOptions = Session.defaultCameraCaptureOptions;
   var _audioOutputOptions = const AudioOutputOptions(speakerOn: true);
 
   SessionOptions? _sessionOptions;
   bool _hasRequestedJoin = false;
   bool get hasRequestedJoin => _sessionOptions != null || _hasRequestedJoin;
+  bool _hasHandledConnectedState = false;
 
   final GlobalKey actionBarKey = GlobalKey();
   final GlobalKey loadingScreenKey = GlobalKey();
@@ -177,7 +178,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     }
 
     try {
-      _cameraOptions ??= Session.defaultCameraCaptureOptions;
       _previewVideoTrack = await LocalVideoTrack.createCameraTrack(
         _cameraOptions,
       );
@@ -202,7 +202,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     }
 
     try {
-      _previewAudioTrack = await LocalAudioTrack.create(_audioOptions);
+      _previewAudioTrack = await LocalAudioTrack.create();
       await _previewAudioTrack!.start();
     } catch (error, stackTrace) {
       _isMicOn = false;
@@ -280,16 +280,12 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
               await showPrejoinOptionsSheet(
                 context,
                 cameraOptions: _cameraOptions,
-                audioOptions: _audioOptions,
                 audioOutputOptions: _audioOutputOptions,
                 onCameraChanged: (options) async {
                   setState(() {
                     _cameraOptions = options;
                   });
                   await _initializeLocalVideo();
-                },
-                onAudioChanged: (options) {
-                  setState(() => _audioOptions = options);
                 },
                 onAudioOutputChanged: (options) {
                   setState(() => _audioOutputOptions = options);
@@ -319,23 +315,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       token: token,
       cameraEnabled: _isCameraOn,
       microphoneEnabled: _isMicOn,
-      cameraOptions: _cameraOptions ?? Session.defaultCameraCaptureOptions,
-      audioOptions: _audioOptions,
+      cameraOptions: _cameraOptions,
       audioOutputOptions: _audioOutputOptions,
-      onEmojiReceived: (_, _) async {},
-      onMessageReceived: (_, _) {},
-      onLivekitError: (_) {},
-      onKeeperLeaveRoom: (_) => () {},
-      onConnected: _onRoomConnected,
     );
+    _hasHandledConnectedState = false;
     if (mounted) {
       setState(() {});
     }
-  }
-
-  void _onRoomConnected() {
-    _disposePreviewTrack();
-    SentryDisplayWidget.of(context).reportFullyDisplayed();
   }
 
   Future<void> _disposePreviewTrack() async {
@@ -354,6 +340,23 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         _previewVideoTrack = null;
       }
     }
+    if (_previewAudioTrack != null) {
+      try {
+        await _previewAudioTrack!.stop();
+      } catch (e) {
+        ErrorHandler.logError(e, message: 'Failed to stop preview audio track');
+      }
+      try {
+        await _previewAudioTrack!.dispose();
+      } catch (e) {
+        ErrorHandler.logError(
+          e,
+          message: 'Failed to dispose preview audio track',
+        );
+      } finally {
+        _previewAudioTrack = null;
+      }
+    }
   }
 
   bool _showingAlreadyPresentDialog = false;
@@ -362,6 +365,20 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   Widget build(BuildContext context) {
     final tokenData = ref.watch(sessionTokenProvider(widget.sessionSlug));
     final sessionData = ref.watch(eventProvider(widget.sessionSlug));
+
+    if (_sessionOptions != null) {
+      ref.listen(
+        sessionProvider(_sessionOptions!).select((s) => s.connectionState),
+        (previous, next) {
+          if (_hasHandledConnectedState) return;
+          if (next != RoomConnectionState.connected) return;
+
+          _hasHandledConnectedState = true;
+          _disposePreviewTrack();
+          SentryDisplayWidget.of(context).reportFullyDisplayed();
+        },
+      );
+    }
 
     ref.listen(sessionTokenProvider(widget.sessionSlug), (
       previous,
@@ -407,13 +424,15 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       return _buildPrejoinUI();
     }
 
-    final session = sessionData.value!;
-    return VideoRoomScreen(
-      sessionSlug: widget.sessionSlug,
-      sessionOptions: _sessionOptions!,
-      session: session,
-      loadingScreen: _buildPrejoinUI(),
-      actionBarKey: actionBarKey,
+    return ProviderScope(
+      overrides: [
+        sessionScopeProvider.overrideWith((ref) => _sessionOptions!),
+      ],
+      child: VideoRoomScreen(
+        sessionSlug: widget.sessionSlug,
+        loadingScreen: _buildPrejoinUI(),
+        actionBarKey: actionBarKey,
+      ),
     );
   }
 }

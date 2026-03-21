@@ -49,7 +49,7 @@ extension ParticipantControl on Session {
   /// This fails silently if it's not the user's turn.
   /// Throws an exception if the operation fails.
   Future<void> passTotem() async {
-    if (!isKeeper() && !state.isMyTurn(room!)) return;
+    if (!isCurrentUserKeeper() && !state.isMyTurn(room!)) return;
     disableMicrophone();
     try {
       final roomState = await ref.read(
@@ -75,7 +75,7 @@ extension ParticipantControl on Session {
   /// This fails silently if it's not the user's turn.
   /// Throws an exception if the operation fails.
   Future<void> acceptTotem() async {
-    if (!isKeeper() && !state.amNext(room!)) {
+    if (!isCurrentUserKeeper() && !state.amNext(room!)) {
       throw StateError("Not the user's turn to accept the totem");
     }
     try {
@@ -101,6 +101,12 @@ extension ParticipantControl on Session {
   /// Send an emoji to other participants.
   /// This operation is fire-and-forget and doesn't throw errors.
   Future<void> sendReaction(String emoji) async {
+    ref
+        .read(emojiReactionsProvider.notifier)
+        .emitIncomingReaction(
+          room?.localParticipant?.identity ?? 'unknown',
+          emoji,
+        );
     try {
       await room?.localParticipant
           ?.publishData(
