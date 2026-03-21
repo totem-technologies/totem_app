@@ -637,10 +637,12 @@ class LocalParticipantVideoCard extends ConsumerWidget {
               fit: StackFit.expand,
               children: [
                 if (isVideoTrackVisible)
-                  VideoTrackRenderer(
-                    videoTrack!,
-                    fit: VideoViewFit.cover,
-                    renderMode: VideoRenderMode.platformView,
+                  IgnorePointer(
+                    child: VideoTrackRenderer(
+                      videoTrack!,
+                      fit: VideoViewFit.cover,
+                      renderMode: VideoRenderMode.platformView,
+                    ),
                   )
                 else
                   const LoadingVideoPlaceholder(),
@@ -680,18 +682,16 @@ class LocalParticipantVideoCard extends ConsumerWidget {
                   top: overlayPadding,
                   start: overlayPadding,
                   child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.black54,
+                      boxShadow: kElevationToShadow[6],
                     ),
-                    padding: const EdgeInsetsDirectional.all(2),
+                    padding: const EdgeInsetsDirectional.all(4),
                     alignment: Alignment.center,
-                    child: SpeakingIndicatorAudioTrack(
-                      audioTrack: audioTrack,
-                      barCount: 5,
-                    ),
+                    child: SpeakingIndicatorAudioTrack(audioTrack: audioTrack),
                   ),
                 ),
               ],
