@@ -311,8 +311,7 @@ class OptionsSheet extends ConsumerWidget {
                     .value;
             return ConfirmationDialog(
               title: null,
-              confirmButtonText:
-                  'Force pass to ${nextParticipantName ?? 'the next participant'}',
+              confirmButtonText: 'Force pass',
               content:
                   'Are you sure you want to force pass the totem? '
                   'This will end ${state.roomState.currentSpeaker != null ? "the current speaker's turn" : 'the current turn'} '

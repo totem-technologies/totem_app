@@ -227,7 +227,7 @@ class SessionRoomState {
         other.removed == removed &&
         other.disconnectReason == disconnectReason &&
         other.isSpeakerphoneEnabled == isSpeakerphoneEnabled &&
-        other.livekitError?.toString() == livekitError?.toString() &&
+        other.livekitError?.message == livekitError?.message &&
         const DeepCollectionEquality().equals(
           other.messages.map((m) => m.id),
           messages.map((m) => m.id),
@@ -243,7 +243,7 @@ class SessionRoomState {
       removed.hashCode ^
       disconnectReason.hashCode ^
       isSpeakerphoneEnabled.hashCode ^
-      livekitError.toString().hashCode ^
+      (livekitError?.message).hashCode ^
       const DeepCollectionEquality().hash(messages.map((m) => m.id));
 }
 
