@@ -4,6 +4,7 @@
 part of 'session_service.dart';
 
 extension KeeperControl on Session {
+  /// Whether the current authenticated user is the keeper.
   bool isCurrentUserKeeper() {
     final currentUserSlug = ref.read(
       authControllerProvider.select((auth) => auth.user?.slug),
@@ -40,6 +41,7 @@ extension KeeperControl on Session {
   }
 
   Future<void> removeParticipant(String participantSlug) async {
+    if (!isCurrentUserKeeper()) return;
     try {
       await ref
           .read(
@@ -121,6 +123,7 @@ extension KeeperControl on Session {
   }
 
   Future<void> banParticipant(String participantSlug) async {
+    if (!isCurrentUserKeeper()) return;
     try {
       await ref
           .read(
@@ -147,6 +150,8 @@ extension KeeperControl on Session {
   }
 
   Future<void> unbanParticipant(String participantSlug) async {
+    if (!isCurrentUserKeeper()) return;
+
     try {
       await ref
           .read(
@@ -172,6 +177,7 @@ extension KeeperControl on Session {
   }
 
   Future<void> muteParticipant(String participantSlug) async {
+    if (!isCurrentUserKeeper()) return;
     try {
       await ref
           .read(
@@ -198,6 +204,7 @@ extension KeeperControl on Session {
   }
 
   Future<void> muteEveryone() async {
+    if (!isCurrentUserKeeper()) return;
     try {
       await ref
           .read(muteEveryoneProvider(_options!.eventSlug).future)
@@ -218,6 +225,7 @@ extension KeeperControl on Session {
   }
 
   Future<void> reorder(List<String> newOrder) async {
+    if (!isCurrentUserKeeper()) return;
     try {
       final roomState = await ref.read(
         reorderParticipantsProvider(
@@ -239,6 +247,7 @@ extension KeeperControl on Session {
   }
 
   Future<void> forcePassTotem() async {
+    if (!isCurrentUserKeeper()) return;
     try {
       final roomState = await ref.read(
         forcePassTotemProvider(
