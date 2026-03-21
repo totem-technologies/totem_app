@@ -311,30 +311,19 @@ class Session extends _$Session {
           ),
           simulcast: true,
           videoSimulcastLayers: [
-            // Layer 1: "Tunnel Mode"
-            // Meet will drop the framerate to 15fps before letting the video freeze
-            // VideoParameters(
-            //   dimensions: VideoParametersPresets.h360_43.dimensions,
-            //   encoding: const VideoEncoding(
-            //     maxBitrate: 80000,
-            //     maxFramerate: 15,
-            //   ),
-            // ),
-
-            // Layer 2: "Standard Grid"
+            // Low Layer
             VideoParameters(
               dimensions: VideoParametersPresets.h540_43.dimensions,
               encoding: const VideoEncoding(
                 maxBitrate: 400_000,
-                maxFramerate: 18,
+                maxFramerate: 20,
               ),
             ),
-
-            // Layer 3: "Active Speaker"
+            // High Layer
             VideoParameters(
               dimensions: VideoParametersPresets.h720_43.dimensions,
               encoding: const VideoEncoding(
-                maxBitrate: 900_000,
+                maxBitrate: 1_500_000,
                 maxFramerate: 20,
               ),
             ),

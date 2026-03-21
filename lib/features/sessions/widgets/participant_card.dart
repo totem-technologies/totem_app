@@ -1,13 +1,9 @@
-// ignore_for_file: implementation_imports
-
 import 'dart:async';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart';
-import 'package:livekit_client/src/core/signal_client.dart';
-import 'package:livekit_client/src/proto/livekit_rtc.pb.dart' as lk_rtc;
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -18,6 +14,7 @@ import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
+import 'package:totem_app/shared/logger.dart' as app_logger;
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
@@ -105,6 +102,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
                 child: ParticipantVideo(
                   key: participantKeys.getKey(activeSpeaker.identity),
                   participant: activeSpeaker,
+                  preferredVideoQuality: VideoQuality.HIGH,
                 ),
               ),
               PositionedDirectional(
@@ -272,7 +270,10 @@ class ParticipantCard extends ConsumerWidget {
               clipBehavior: Clip.none,
               children: [
                 Positioned.fill(
-                  child: ParticipantVideo(participant: participant),
+                  child: ParticipantVideo(
+                    participant: participant,
+                    preferredVideoQuality: VideoQuality.MEDIUM,
+                  ),
                 ),
                 PositionedDirectional(
                   top: overlayPadding,
@@ -703,9 +704,14 @@ class LocalParticipantVideoCard extends ConsumerWidget {
 }
 
 class ParticipantVideo extends ConsumerStatefulWidget {
-  const ParticipantVideo({required this.participant, super.key});
+  const ParticipantVideo({
+    required this.participant,
+    this.preferredVideoQuality = VideoQuality.MEDIUM,
+    super.key,
+  });
 
   final Participant<TrackPublication<Track>> participant;
+  final VideoQuality preferredVideoQuality;
 
   @override
   ConsumerState<ParticipantVideo> createState() => _ParticipantVideoState();
@@ -730,76 +736,65 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     }
   }
 
-  bool _locked = false;
-  void _sendRawUpdateTrackSettings(bool isVisible, Size size) {
-    if (_locked) return;
+  EventsListener<ParticipantEvent>? _listener;
+  VideoQuality? _lastAppliedQuality;
+  String? _lastAppliedTrackSid;
+
+  Future<void> _applyPreferredRemoteQuality() async {
+    final publication = videoTrack;
+    if (publication == null) return;
+    if (publication is! RemoteTrackPublication<RemoteTrack>) return;
+
+    final desired = widget.preferredVideoQuality;
+    final sameTrack = _lastAppliedTrackSid == publication.sid;
+    final sameQuality = _lastAppliedQuality == desired;
+    if (sameTrack && sameQuality) return;
 
     try {
-      _locked = true;
-
-      if (videoTrack == null ||
-          videoTrack?.sid == null ||
-          widget.participant is! RemoteParticipant) {
-        return;
-      }
-
-      // Construct the exact protobuf payload
-      final settings = lk_rtc.UpdateTrackSettings(
-        trackSids: [videoTrack!.sid],
-        disabled: !isVisible,
-      );
-
-      if (isVisible) {
-        settings
-          ..width = size.width.round()
-          ..height = size.height.round();
-      }
-
-      // This is a workaround to send the raw UpdateTrackSettings signal to LiveKit server.
-      // The official API does not provide a way to send the raw signal, so we have to access
-      // the internal SignalClient directly.
-      //
-      // We use this to improve the performance of video decoding.
-      //
-      // https://docs.livekit.io/transport/media/subscribe/#adaptive-stream
-      //
-      // ignore: invalid_use_of_internal_member
-      widget.participant.room.engine.signalClient.sendUpdateTrackSettings(
-        settings,
-      );
-
-      logger.info(
-        'Sent raw UpdateTrackSettings(${widget.participant.name}): disabled=${settings.disabled}, '
-        'width=${settings.width}, height=${settings.height}',
+      final previousQuality = _lastAppliedQuality;
+      await publication.setVideoQuality(desired);
+      _lastAppliedTrackSid = publication.sid;
+      _lastAppliedQuality = desired;
+      app_logger.logger.i(
+        'Participant video quality changed '
+        '(identity=${widget.participant.identity}, sid=${publication.sid}): '
+        '${previousQuality?.name ?? 'unset'} -> ${publication.videoQuality.name}',
       );
     } catch (error, stackTrace) {
-      ErrorHandler.logError(error, stackTrace: stackTrace);
-    } finally {
-      _locked = false;
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to set remote video quality',
+      );
     }
   }
 
-  EventsListener<ParticipantEvent>? _listener;
   @override
   void initState() {
     super.initState();
     _listener = widget.participant.createListener()..on(_onParticipantUpdated);
+    scheduleMicrotask(_applyPreferredRemoteQuality);
   }
 
   void _onParticipantUpdated(_) {
+    scheduleMicrotask(_applyPreferredRemoteQuality);
     if (mounted) setState(() {});
   }
 
-  Timer? _resizeDebounce;
+  @override
+  void didUpdateWidget(covariant ParticipantVideo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.preferredVideoQuality != widget.preferredVideoQuality ||
+        oldWidget.participant.identity != widget.participant.identity) {
+      scheduleMicrotask(_applyPreferredRemoteQuality);
+    }
+  }
 
   @override
   void dispose() {
     _listener?.dispose();
-    _resizeDebounce?.cancel();
     super.dispose();
   }
-
-  BoxConstraints? _lastConstraints;
 
   @override
   Widget build(BuildContext context) {
@@ -808,30 +803,15 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
     if (track != null && track.subscribed && !track.muted) {
       return IgnorePointer(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            if (_lastConstraints != constraints) {
-              _lastConstraints = constraints;
-              final size = Size(constraints.maxWidth, constraints.maxHeight);
-
-              _resizeDebounce?.cancel();
-              _resizeDebounce = Timer(const Duration(milliseconds: 250), () {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) _sendRawUpdateTrackSettings(true, size);
-                });
-              });
-            }
-            return VideoTrackRenderer(
-              key: ValueKey(track.track!.sid),
-              track.track! as VideoTrack,
-              fit: VideoViewFit.cover,
-              // Use platform view for better CPU performance on iOS.
-              // The [VideoTrackRenderer] widget only supports platform views for iOS.
-              // On Android, it will still use the default texture rendering.
-              // https://github.com/livekit/client-sdk-flutter/issues/364
-              renderMode: VideoRenderMode.platformView,
-            );
-          },
+        child: VideoTrackRenderer(
+          key: ValueKey(track.track!.sid),
+          track.track! as VideoTrack,
+          fit: VideoViewFit.cover,
+          // Use platform view for better CPU performance on iOS.
+          // The [VideoTrackRenderer] widget only supports platform views for iOS.
+          // On Android, it will still use the default texture rendering.
+          // https://github.com/livekit/client-sdk-flutter/issues/364
+          renderMode: VideoRenderMode.platformView,
         ),
       );
     } else {
