@@ -737,8 +737,38 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   }
 
   EventsListener<ParticipantEvent>? _listener;
+  EventsListener<TrackEvent>? _trackListener;
   VideoQuality? _lastAppliedQuality;
   String? _lastAppliedTrackSid;
+  String? _listenedTrackSid;
+
+  void _setupListeners() {
+    _listener?.dispose();
+    _listener = widget.participant.createListener()
+      ..on<TrackMutedEvent>(_onTrackMuted)
+      ..on<TrackUnmutedEvent>(_onTrackUnmuted)
+      ..on<ParticipantEvent>(_onParticipantUpdated);
+
+    _bindTrackListener();
+  }
+
+  void _bindTrackListener() {
+    final publication = videoTrack;
+    final trackSid = publication?.sid;
+    final track = publication?.track;
+
+    if (_listenedTrackSid == trackSid && _trackListener != null) {
+      return;
+    }
+
+    _trackListener?.dispose();
+    _trackListener = null;
+    _listenedTrackSid = trackSid;
+
+    if (track != null) {
+      _trackListener = track.createListener()..listen(_onTrackEvent);
+    }
+  }
 
   Future<void> _applyPreferredRemoteQuality() async {
     final publication = videoTrack;
@@ -772,11 +802,41 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   @override
   void initState() {
     super.initState();
-    _listener = widget.participant.createListener()..on(_onParticipantUpdated);
+    _setupListeners();
     scheduleMicrotask(_applyPreferredRemoteQuality);
   }
 
-  void _onParticipantUpdated(_) {
+  void _onTrackMuted(TrackMutedEvent event) {
+    if (event.publication.source != TrackSource.camera) return;
+    if (!mounted) return;
+    _bindTrackListener();
+    setState(() {});
+  }
+
+  void _onTrackUnmuted(TrackUnmutedEvent event) {
+    if (event.publication.source != TrackSource.camera) return;
+    if (!mounted) return;
+    _bindTrackListener();
+    setState(() {});
+  }
+
+  // Whether the track is inactive due to poor network conditions.
+  bool _isTrackInactive = false;
+  void _onTrackEvent(TrackEvent event) {
+    if (event is VideoReceiverStatsEvent) {
+      final bitrate = event.currentBitrate;
+      if (bitrate == 0) {
+        _isTrackInactive = true;
+      } else if (_isTrackInactive) {
+        _isTrackInactive = false;
+      }
+    }
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _onParticipantUpdated(ParticipantEvent _) {
+    _bindTrackListener();
     scheduleMicrotask(_applyPreferredRemoteQuality);
     if (mounted) setState(() {});
   }
@@ -784,8 +844,12 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   @override
   void didUpdateWidget(covariant ParticipantVideo oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.participant.sid != widget.participant.sid) {
+      _setupListeners();
+    }
     if (oldWidget.preferredVideoQuality != widget.preferredVideoQuality ||
-        oldWidget.participant.identity != widget.participant.identity) {
+        oldWidget.participant.identity != widget.participant.identity ||
+        oldWidget.participant.sid != widget.participant.sid) {
       scheduleMicrotask(_applyPreferredRemoteQuality);
     }
   }
@@ -793,6 +857,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   @override
   void dispose() {
     _listener?.dispose();
+    _trackListener?.dispose();
     super.dispose();
   }
 
@@ -801,7 +866,10 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     final user = ref.watch(userProfileProvider(widget.participant.identity));
     final track = videoTrack;
 
-    if (track != null && track.subscribed && !track.muted) {
+    if (track != null &&
+        track.subscribed &&
+        !track.muted &&
+        !_isTrackInactive) {
       return IgnorePointer(
         child: VideoTrackRenderer(
           key: ValueKey(track.track!.sid),
