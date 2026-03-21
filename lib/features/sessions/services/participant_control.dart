@@ -49,8 +49,12 @@ extension ParticipantControl on Session {
   /// This fails silently if it's not the user's turn.
   /// Throws an exception if the operation fails.
   Future<void> passTotem() async {
-    if (!state.isMyTurn(room!)) return;
-    if (!state.hasKeeper) return;
+    if (!state.isMyTurn(room!)) {
+      throw StateError("Not the user's turn to pass the totem");
+    }
+    if (!state.hasKeeper) {
+      throw StateError('No keeper in the session to pass the totem');
+    }
 
     disableMicrophone();
     try {
@@ -81,7 +85,9 @@ extension ParticipantControl on Session {
       throw StateError("Not the user's turn to accept the totem");
     }
 
-    if (!state.hasKeeper) return;
+    if (!state.hasKeeper) {
+      throw StateError('No keeper in the session to accept the totem');
+    }
 
     try {
       final roomState = await ref.read(
@@ -106,7 +112,10 @@ extension ParticipantControl on Session {
   /// Send an emoji to other participants.
   /// This operation is fire-and-forget and doesn't throw errors.
   Future<void> sendReaction(String emoji) async {
-    if (!state.hasKeeper) return;
+    if (!state.hasKeeper) {
+      logger.w('Attempted to send reaction without a keeper, ignoring');
+      return;
+    }
 
     ref
         .read(emojiReactionsProvider.notifier)
@@ -141,7 +150,12 @@ extension ParticipantControl on Session {
   /// Send a chat message to other participants.
   /// This operation is fire-and-forget and doesn't throw errors.
   Future<void> sendMessage(String text) async {
-    if (!state.hasKeeper) return;
+    if (!isCurrentUserKeeper()) {
+      logger.w(
+        'Attempted to send chat message without being the keeper, ignoring',
+      );
+      return;
+    }
 
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final message = ChatMessage(
