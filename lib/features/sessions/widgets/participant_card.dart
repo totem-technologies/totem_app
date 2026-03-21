@@ -296,8 +296,8 @@ class ParticipantCard extends ConsumerWidget {
                     top: overlayPadding,
                     end: overlayPadding,
                     child: Container(
-                      width: 24,
-                      height: 24,
+                      width: 20,
+                      height: 20,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.black54,
@@ -362,8 +362,8 @@ class ParticipantControlButton extends ConsumerWidget {
     return GestureDetector(
       onTapUp: (details) => _showParticipantMenu(context, ref, details),
       child: Container(
-        width: 20,
-        height: 20,
+        width: 24,
+        height: 24,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: backgroundColor,
