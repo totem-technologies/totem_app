@@ -244,7 +244,6 @@ class NotificationPopup extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
-                  spacing: 2,
                   children: [
                     AutoSizeText(
                       title,

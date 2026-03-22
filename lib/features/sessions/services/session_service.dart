@@ -312,6 +312,14 @@ class Session extends _$Session {
           simulcast: true,
           videoSimulcastLayers: [
             // Low Layer
+            // VideoParameters(
+            //   dimensions: VideoParametersPresets.h360_43.dimensions,
+            //   encoding: const VideoEncoding(
+            //     maxBitrate: 180_000,
+            //     maxFramerate: 15,
+            //   ),
+            // ),
+            // Mid Layer
             VideoParameters(
               dimensions: VideoParametersPresets.h540_43.dimensions,
               encoding: const VideoEncoding(
@@ -332,7 +340,7 @@ class Session extends _$Session {
         // defaultAudioPublishOptions: const AudioPublishOptions(),
 
         /// https://docs.livekit.io/home/client/tracks/subscribe/#adaptive-stream
-        adaptiveStream: false,
+        adaptiveStream: true,
       ),
     );
 

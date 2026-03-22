@@ -129,7 +129,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     if (hasKeeperDisconnected) {
       _closeKeeperLeftNotification = showPermanentNotificationPopup(
         context,
-        icon: TotemIcons.community,
+        icon: TotemIcons.pause,
         title: 'The session has been paused.',
         message: 'The keeper will be right back.',
       );
