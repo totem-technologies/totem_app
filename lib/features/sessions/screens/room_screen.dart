@@ -44,6 +44,7 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
 
 class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   final _roomNavigatorKey = GlobalKey<NavigatorState>();
+  final _notificationController = PopupController();
 
   VoidCallback? _closeKeeperLeftNotification;
 
@@ -56,6 +57,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   @override
   void dispose() {
+    _notificationController.dismissAll();
     _closeKeeperLeftNotification?.call();
     _closeKeeperLeftNotification = null;
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -86,6 +88,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                   icon: TotemIcons.person,
                   title: 'Your battery is running low',
                   message: 'You might want to plug in.',
+                  controller: _notificationController,
                 );
               }
             }
@@ -117,6 +120,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           icon: TotemIcons.errorOutlined,
           title: 'Something went wrong',
           message: 'Check your connection and try again.',
+          controller: _notificationController,
         );
       }
     }
@@ -132,6 +136,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         icon: TotemIcons.pause,
         title: 'The session has been paused.',
         message: 'The keeper will be right back.',
+        controller: _notificationController,
       );
     }
   }
@@ -164,6 +169,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             icon: TotemIcons.chat,
             title: 'New message',
             message: next.message,
+            controller: _notificationController,
           );
         },
       )
