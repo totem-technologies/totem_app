@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -14,7 +14,7 @@ import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
-import 'package:totem_app/shared/logger.dart' as app_logger;
+import 'package:totem_app/shared/logger.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
@@ -785,7 +785,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
       await publication.setVideoQuality(desired);
       _lastAppliedTrackSid = publication.sid;
       _lastAppliedQuality = desired;
-      app_logger.logger.i(
+      logger.i(
         'Participant video quality changed '
         '(identity=${widget.participant.identity}, sid=${publication.sid}): '
         '${previousQuality?.name ?? 'unset'} -> ${publication.videoQuality.name}',
@@ -825,14 +825,13 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   void _onTrackEvent(TrackEvent event) {
     if (event is VideoReceiverStatsEvent) {
       final bitrate = event.currentBitrate;
-      if (bitrate == 0) {
+      if (bitrate < 10) {
         _isTrackInactive = true;
       } else if (_isTrackInactive) {
         _isTrackInactive = false;
       }
     }
-    if (!mounted) return;
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   void _onParticipantUpdated(ParticipantEvent _) {

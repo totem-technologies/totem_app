@@ -46,7 +46,6 @@ class ChatMessage {
 extension ParticipantControl on Session {
   /// Pass the totem to the next participant in the speaking order.
   ///
-  /// This fails silently if it's not the user's turn.
   /// Throws an exception if the operation fails.
   Future<void> passTotem() async {
     if (!state.isMyTurn(room!)) {
@@ -148,6 +147,9 @@ extension ParticipantControl on Session {
   }
 
   /// Send a chat message to other participants.
+  ///
+  /// Only the keeper can send chat messages, and this method will fail silently if the user is not the keeper.
+  ///
   /// This operation is fire-and-forget and doesn't throw errors.
   Future<void> sendMessage(String text) async {
     if (!isCurrentUserKeeper()) {
