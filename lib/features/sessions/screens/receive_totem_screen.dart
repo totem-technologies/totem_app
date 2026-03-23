@@ -34,7 +34,14 @@ class ReceiveTotemScreen extends ConsumerWidget {
           builder: (context, orientation) {
             final isLandscape = orientation == Orientation.landscape;
 
-            const titleWidget = SizedBox(height: 0);
+            final titleWidget = Padding(
+              padding: const EdgeInsetsDirectional.symmetric(horizontal: 50),
+              child: Text(
+                'The totem is being passed to you.',
+                style: theme.textTheme.titleLarge,
+                textAlign: TextAlign.center,
+              ),
+            );
 
             final videoCard = Padding(
               padding: const EdgeInsetsDirectional.all(20),

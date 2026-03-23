@@ -88,11 +88,7 @@ Future<RoomState> passTotem(
     apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
       sessionSlug: sessionSlug,
       body: EventRequest(
-        event: EventRequestEventPassStick(
-          PassStickEvent(
-            prompt: roundMessage,
-          ),
-        ),
+        event: EventRequestEventPassStick(PassStickEvent(prompt: roundMessage)),
         lastSeenVersion: lastSeenVersion,
       ),
     ),
