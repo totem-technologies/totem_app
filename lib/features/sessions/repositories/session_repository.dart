@@ -77,13 +77,22 @@ Future<void> muteEveryone(
 }
 
 @riverpod
-Future<RoomState> passTotem(Ref ref, String sessionSlug, int lastSeenVersion) {
+Future<RoomState> passTotem(
+  Ref ref,
+  String sessionSlug,
+  int lastSeenVersion, {
+  String? roundMessage,
+}) {
   final apiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<RoomState>(
     apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
       sessionSlug: sessionSlug,
       body: EventRequest(
-        event: const EventRequestEventPassStick(PassStickEvent()),
+        event: EventRequestEventPassStick(
+          PassStickEvent(
+            prompt: roundMessage,
+          ),
+        ),
         lastSeenVersion: lastSeenVersion,
       ),
     ),

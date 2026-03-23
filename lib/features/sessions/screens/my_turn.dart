@@ -22,7 +22,7 @@ class MyTurn extends ConsumerStatefulWidget {
   });
 
   final Widget actionBar;
-  final OnActionPerformed onPassTotem;
+  final Future<bool> Function(String? roundMessage) onPassTotem;
   final SessionDetailSchema event;
 
   @override
@@ -30,6 +30,8 @@ class MyTurn extends ConsumerStatefulWidget {
 }
 
 class _MyTurnState extends ConsumerState<MyTurn> {
+  final roundMessageController = TextEditingController();
+
   bool _hasShownSelfViewHiddenNotice = false;
 
   void _showSelfViewHiddenNotice() {
@@ -46,10 +48,18 @@ class _MyTurnState extends ConsumerState<MyTurn> {
   }
 
   @override
+  void dispose() {
+    roundMessageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final roomStatus = ref.watch(roomStatusProvider);
     final turnState = ref.watch(turnStateProvider);
-    final session = ref.watch(currentSessionStateProvider);
+    final state = ref.watch(currentSessionProvider);
+    final sessionState = ref.watch(currentSessionStateProvider);
 
     if (!_hasShownSelfViewHiddenNotice && turnState == TurnState.speaking) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -68,19 +78,66 @@ class _MyTurnState extends ConsumerState<MyTurn> {
               event: widget.event,
             );
 
-            final nextUp = session?.speakingNextParticipant();
+            final nextUp = sessionState?.speakingNextParticipant();
             final transitionType = turnState == TurnState.passing
                 ? TotemCardTransitionType.waitingReceive
                 : TotemCardTransitionType.pass;
-            final passCard = TransitionCard(
+            final keeperPassCard = TransitionCardContainer(
+              children: [
+                TextField(
+                  controller: roundMessageController,
+                  decoration: const InputDecoration(
+                    hintText: 'Your prompt for this round',
+                  ),
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 14,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minWidth: 160,
+                    ),
+                    child: ActionSlider(
+                      text:
+                          'Slide to pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
+                              .trim(),
+                      onActionCompleted: () {
+                        final roundMessage = roundMessageController.text.trim();
+                        return widget.onPassTotem(
+                          roundMessage.isEmpty ? null : roundMessage,
+                        );
+                      },
+                      keepLoadingOnSuccess: true,
+                    ),
+                  ),
+                ),
+              ],
+            );
+            final normalPassCard = TransitionCard(
               type: transitionType,
-              onActionPressed: widget.onPassTotem,
+              onActionPressed: () => widget.onPassTotem(null),
               actionText:
                   nextUp != null &&
                       transitionType == TotemCardTransitionType.pass
                   ? 'Pass to ${nextUp.name}'
                   : null,
             );
+            Widget passCard;
+            switch (transitionType) {
+              case TotemCardTransitionType.pass:
+                if (state?.isCurrentUserKeeper() ?? false) {
+                  passCard = keeperPassCard;
+                } else {
+                  passCard = normalPassCard;
+                }
+              case TotemCardTransitionType.waitingReceive:
+              default:
+                passCard = normalPassCard;
+            }
             if (isLandscape) {
               return Column(
                 spacing: 16,

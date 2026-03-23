@@ -47,12 +47,17 @@ extension ParticipantControl on Session {
   /// Pass the totem to the next participant in the speaking order.
   ///
   /// Throws an exception if the operation fails.
-  Future<void> passTotem() async {
+  Future<void> passTotem({String? roundMessage}) async {
     if (!state.isMyTurn(room!)) {
       throw StateError("Not the user's turn to pass the totem");
     }
     if (!state.hasKeeper) {
       throw StateError('No keeper in the session to pass the totem');
+    }
+    if (roundMessage != null && !isCurrentUserKeeper()) {
+      throw StateError(
+        'Only the keeper can include a round message when passing the totem',
+      );
     }
 
     disableMicrophone();
@@ -61,6 +66,7 @@ extension ParticipantControl on Session {
         passTotemProvider(
           options.eventSlug,
           state.roomState.version,
+          roundMessage: roundMessage,
         ).future,
       );
       _onRoomChanges(roomState);

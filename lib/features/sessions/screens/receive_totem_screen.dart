@@ -53,38 +53,41 @@ class ReceiveTotemScreen extends ConsumerWidget {
                 children: [
                   if (sessionState?.roomState.roundMessage != null)
                     Text(
-                      sessionState!.roomState.roundMessage!,
-                      style: theme.textTheme.headlineSmall?.copyWith(
+                      '"${sessionState!.roomState.roundMessage!}"',
+                      style: theme.textTheme.bodyLarge?.copyWith(
                         fontStyle: FontStyle.italic,
                       ),
                       textAlign: TextAlign.center,
                     ),
-                  SlideToActionButton(
-                    text: 'Slide to Receive',
-                    onActionCompleted: () async {
-                      try {
-                        await onAcceptTotem();
-                        return true;
-                      } catch (error, stackTrace) {
-                        ErrorHandler.logError(
-                          error,
-                          stackTrace: stackTrace,
-                          message: 'Accept Totem failed',
-                        );
-                        if (context.mounted) {
-                          showErrorPopup(
-                            context,
-                            icon: TotemIcons.errorOutlined,
-                            title: 'Something went wrong',
-                            message:
-                                'We were unable to accept the totem. Please try again.',
+                  SizedBox(
+                    height: 60,
+                    child: ActionSlider(
+                      text: 'Slide to Receive',
+                      onActionCompleted: () async {
+                        try {
+                          await onAcceptTotem();
+                          return true;
+                        } catch (error, stackTrace) {
+                          ErrorHandler.logError(
+                            error,
+                            stackTrace: stackTrace,
+                            message: 'Accept Totem failed',
                           );
-                        }
+                          if (context.mounted) {
+                            showErrorPopup(
+                              context,
+                              icon: TotemIcons.errorOutlined,
+                              title: 'Something went wrong',
+                              message:
+                                  'We were unable to accept the totem. Please try again.',
+                            );
+                          }
 
-                        return false;
-                      }
-                    },
-                    keepLoadingOnSuccess: true,
+                          return false;
+                        }
+                      },
+                      keepLoadingOnSuccess: true,
+                    ),
                   ),
                 ],
               ),
