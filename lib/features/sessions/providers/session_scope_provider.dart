@@ -53,6 +53,15 @@ RoomConnectionState connectionState(Ref ref) {
       RoomConnectionState.connecting;
 }
 
+/// The high-level lifecycle phase for the current session.
+@Riverpod(dependencies: [currentSessionState])
+SessionPhase sessionPhase(Ref ref) {
+  return ref.watch(
+        currentSessionStateProvider.select((s) => s?.phase),
+      ) ??
+      SessionPhase.connecting;
+}
+
 /// The current session status (waiting, started, ended).
 @Riverpod(dependencies: [currentSessionState])
 RoomStatus roomStatus(Ref ref) {

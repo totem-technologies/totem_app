@@ -23,14 +23,14 @@ extension KeeperControl on Session {
       _onKeeperDisconnectedTimeout,
     );
 
-    state = state.copyWith(hasKeeperDisconnected: true);
+    _dispatch(const _KeeperDisconnectedChanged(true));
   }
 
   void _onKeeperConnected() {
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
 
-    state = state.copyWith(hasKeeperDisconnected: false);
+    _dispatch(const _KeeperDisconnectedChanged(false));
   }
 
   Future<void> _onKeeperDisconnectedTimeout() async {

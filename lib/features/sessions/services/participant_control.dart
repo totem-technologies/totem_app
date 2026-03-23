@@ -174,7 +174,7 @@ extension ParticipantControl on Session {
       participant: room?.localParticipant,
     );
     try {
-      state = state.copyWith(messages: [...state.messages, message]);
+      _dispatch(_ChatMessageAdded(message));
       await room?.localParticipant
           ?.publishData(
             const Utf8Encoder().convert(message.toJson()),

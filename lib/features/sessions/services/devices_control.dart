@@ -134,7 +134,7 @@ extension DevicesControl on Session {
 
   Future<void> _autoSetSpeakerphone(bool enabled) async {
     await room?.setSpeakerOn(enabled);
-    state = state.copyWith(isSpeakerphoneEnabled: enabled);
+    _dispatch(_SpeakerphoneChanged(enabled));
   }
 
   String? get selectedAudioDeviceId => localAudioTrack?.currentOptions.deviceId;
