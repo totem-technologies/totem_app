@@ -16,6 +16,7 @@ class RouteNames {
   static const spaces = '/spaces';
   static const spaceDetail = '/spaces/session/';
   static String space(String slug) => '/spaces/$slug';
+  static String spaceEvent(String eventSlug) => '/spaces/event/$eventSlug';
   static String spaceSession(String spaceSlug, String sessionSlug) =>
       '/spaces/$spaceSlug/session/$sessionSlug';
 
