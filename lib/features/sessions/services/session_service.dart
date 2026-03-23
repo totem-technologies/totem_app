@@ -50,7 +50,6 @@ class SessionOptions {
     required this.microphoneEnabled,
     required this.cameraOptions,
     required this.audioOutputOptions,
-    this.autoConnect = true,
   });
 
   final String eventSlug;
@@ -61,21 +60,16 @@ class SessionOptions {
   final CameraCaptureOptions cameraOptions;
   final AudioOutputOptions audioOutputOptions;
 
-  /// When true, session connects during provider build.
-  /// Set to false to connect explicitly via [Session.join].
-  final bool autoConnect;
-
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is SessionOptions &&
         other.eventSlug == eventSlug &&
-        other.token == token &&
-        other.autoConnect == autoConnect;
+        other.token == token;
   }
 
   @override
-  int get hashCode => eventSlug.hashCode ^ token.hashCode ^ autoConnect.hashCode;
+  int get hashCode => eventSlug.hashCode ^ token.hashCode;
 }
 
 enum RoomConnectionState { connecting, connected, disconnected, error }
@@ -281,7 +275,7 @@ class SessionRoomState {
   @override
   String toString() {
     return 'SessionRoomState('
-      'phase: $phase, '
+        'phase: $phase, '
         'connectionState: $connectionState, '
         'sessionState: $roomState, '
         'hasKeeperDisconnected: $hasKeeperDisconnected, '
@@ -297,7 +291,7 @@ class SessionRoomState {
     if (identical(this, other)) return true;
     return other is SessionRoomState &&
         other.connectionState == connectionState &&
-      other.phase == phase &&
+        other.phase == phase &&
         other.roomState == roomState &&
         other.hasKeeperDisconnected == hasKeeperDisconnected &&
         const DeepCollectionEquality().equals(
@@ -340,6 +334,8 @@ class Session extends _$Session {
   static const syncTimerDuration = Duration(seconds: 20);
 
   SessionOptions? _options;
+  bool? _cameraEnabledOverride;
+  bool? _microphoneEnabledOverride;
   String? _lastMetadata;
   SessionDetailSchema? event;
 
@@ -372,7 +368,8 @@ class Session extends _$Session {
               : null,
           clearDisconnectReason:
               event.connectionState == RoomConnectionState.connected,
-          clearLivekitError: event.connectionState == RoomConnectionState.connected,
+          clearLivekitError:
+              event.connectionState == RoomConnectionState.connected,
         );
       case _RoomStateChanged():
         final isEnded = event.roomState.status == RoomStatus.ended;
@@ -471,10 +468,6 @@ class Session extends _$Session {
 
     room!.prepareConnection(AppConfig.liveKitUrl, options.token);
 
-    if (options.autoConnect) {
-      connect();
-    }
-
     _listener = room!.createListener();
     _listener
       ?..on((_) {
@@ -565,9 +558,9 @@ class Session extends _$Session {
 
     _onRoomChanges();
 
-    room!.localParticipant?.setCameraEnabled(
-      _options?.cameraEnabled ?? false,
-    );
+    final cameraEnabled =
+        _cameraEnabledOverride ?? (_options?.cameraEnabled ?? false);
+    room!.localParticipant?.setCameraEnabled(cameraEnabled);
 
     // If the user joined in the waiting
     // If the keeper is not in the room, the participants will start unmuted.
@@ -576,17 +569,19 @@ class Session extends _$Session {
           if (state.roomState.status == RoomStatus.waitingRoom &&
               !state.hasKeeper) {
             // If joined in the waiting room, everyone can join unmuted.
-            return _options?.microphoneEnabled;
+            return _microphoneEnabledOverride ?? _options?.microphoneEnabled;
           }
           if (state.roomState.status == RoomStatus.active) {
             if (state.speakingNow == room!.localParticipant?.identity) {
               // If it's the user's turn to speak, they can join unmuted.
-              return _options?.microphoneEnabled;
+              return _microphoneEnabledOverride ?? _options?.microphoneEnabled;
             }
           }
           // In other states, only the keeper can join unmuted.
           return isCurrentUserKeeper() &&
-              (_options?.microphoneEnabled ?? false);
+              (_microphoneEnabledOverride ??
+                  _options?.microphoneEnabled ??
+                  false);
         }() ??
         false;
     if (isMicrophoneEnabled) {
@@ -762,6 +757,14 @@ class Session extends _$Session {
     logger.d('Session has ended. Cleaning up and disconnecting.');
     endBackgroundMode();
     await leave();
+  }
+
+  void configureJoinPreferences({
+    required bool cameraEnabled,
+    required bool microphoneEnabled,
+  }) {
+    _cameraEnabledOverride = cameraEnabled;
+    _microphoneEnabledOverride = microphoneEnabled;
   }
 
   Future<void> join() async {

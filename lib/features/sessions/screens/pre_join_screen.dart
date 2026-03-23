@@ -46,7 +46,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   SessionOptions? _sessionOptions;
   bool _hasRequestedJoin = false;
-  bool get hasRequestedJoin => _sessionOptions != null || _hasRequestedJoin;
+  bool get hasRequestedJoin => _hasRequestedJoin;
   bool _hasHandledConnectedState = false;
 
   final GlobalKey actionBarKey = GlobalKey();
@@ -304,20 +304,22 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   Future<void> _joinRoom() async {
     if (hasRequestedJoin || _showingAlreadyPresentDialog) return;
     _hasRequestedJoin = true;
+    final options = _sessionOptions;
+    if (options == null) {
+      _hasRequestedJoin = false;
+      if (mounted) {
+        setState(() {});
+      }
+      return;
+    }
 
-    final token = (await ref.read(
-      sessionTokenProvider(widget.sessionSlug).future,
-    )).token;
     await ref.read(eventProvider(widget.sessionSlug).future);
-
-    _sessionOptions = SessionOptions(
-      eventSlug: widget.sessionSlug,
-      token: token,
-      cameraEnabled: _isCameraOn,
-      microphoneEnabled: _isMicOn,
-      cameraOptions: _cameraOptions,
-      audioOutputOptions: _audioOutputOptions,
-    );
+    final session = ref.read(sessionProvider(options).notifier)
+      ..configureJoinPreferences(
+        cameraEnabled: _isCameraOn,
+        microphoneEnabled: _isMicOn,
+      );
+    await session.join();
     _hasHandledConnectedState = false;
     if (mounted) {
       setState(() {});
@@ -384,6 +386,22 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       previous,
       next,
     ) async {
+      if (next case AsyncData(:final value)) {
+        if (_sessionOptions == null) {
+          _sessionOptions = SessionOptions(
+            eventSlug: widget.sessionSlug,
+            token: value.token,
+            cameraEnabled: _isCameraOn,
+            microphoneEnabled: _isMicOn,
+            cameraOptions: _cameraOptions,
+            audioOutputOptions: _audioOutputOptions,
+          );
+          if (mounted) {
+            setState(() {});
+          }
+        }
+      }
+
       if (hasRequestedJoin || _showingAlreadyPresentDialog) return;
       if (next case AsyncData(:final value) when value.isAlreadyPresent) {
         _showingAlreadyPresentDialog = true;
@@ -420,6 +438,14 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     final isLoading =
         (tokenData.isLoading && !tokenData.isRefreshing) ||
         (sessionData.isLoading && !sessionData.isRefreshing);
+
+    if (_sessionOptions != null) {
+      ref.listen(
+        sessionProvider(_sessionOptions!).select((s) => s.connectionState),
+        (_, __) {},
+      );
+    }
+
     if (!hasRequestedJoin || isLoading) {
       return _buildPrejoinUI();
     }
