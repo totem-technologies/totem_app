@@ -52,7 +52,7 @@ class _CardScreenState extends State<CardScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return AnnotatedRegion(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: PopScope<void>(
         canPop: !widget.isLoading,

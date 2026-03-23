@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:totem_app/api/models/referral_choices.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/shared/widgets/card_screen.dart';
 
 extension ReferralChoicesNames on ReferralChoices {
@@ -12,7 +12,7 @@ extension ReferralChoicesNames on ReferralChoices {
       ReferralChoices.pamphlet => 'Pamphlet',
       ReferralChoices.search => 'Google',
       ReferralChoices.social => 'Social Media',
-      ReferralChoices.other || _ => 'Other',
+      ReferralChoices.$other || ReferralChoices.$default || _ => 'Other',
     };
   }
 }
@@ -37,7 +37,12 @@ class _ReferralSourceModalState extends State<ReferralSourceModal> {
 
     // Build a set of available sources, excluding 'Other'
     final availableSources = ReferralChoices.values
-        .where((source) => source.name != ReferralChoices.other.name)
+        .where(
+          (source) => ![
+            ReferralChoices.$default,
+            ReferralChoices.$other,
+          ].contains(source),
+        )
         .toSet();
 
     return CardScreen(

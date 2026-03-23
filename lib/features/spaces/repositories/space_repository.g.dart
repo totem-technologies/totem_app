@@ -48,7 +48,7 @@ final class ListSpacesProvider
   }
 }
 
-String _$listSpacesHash() => r'52839e638c666de89cea3ceb580963c21158e9a4';
+String _$listSpacesHash() => r'10ff8c2c47041101fc01d7d025874f6015a76caa';
 
 @ProviderFor(event)
 final eventProvider = EventFamily._();
@@ -107,7 +107,7 @@ final class EventProvider
   }
 }
 
-String _$eventHash() => r'0ea277c03d82ba2345a1eda0083aed2c986c0361';
+String _$eventHash() => r'dc596973c073c226019ee9719164666f9e29a8b5';
 
 final class EventFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<SessionDetailSchema>, String> {
@@ -184,7 +184,7 @@ final class SpaceProvider
   }
 }
 
-String _$spaceHash() => r'394b182b744ce4d7965958be4dcabea9a802af82';
+String _$spaceHash() => r'7e631cd876c777b87d50bd7b5a0a0855165a6220';
 
 final class SpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<MobileSpaceDetailSchema>, String> {
@@ -244,7 +244,7 @@ final class ListSubscribedSpacesProvider
 }
 
 String _$listSubscribedSpacesHash() =>
-    r'b255592a1c17a3ae339f0c798caf67e690f736fd';
+    r'625a24a2e0dcd5bcecb4e3049889178d917f1ce2';
 
 @ProviderFor(subscribeToSpace)
 final subscribeToSpaceProvider = SubscribeToSpaceFamily._();
@@ -295,7 +295,7 @@ final class SubscribeToSpaceProvider
   }
 }
 
-String _$subscribeToSpaceHash() => r'217bb3e64c2ea5de2df8015e354a5a41779459a1';
+String _$subscribeToSpaceHash() => r'4715fdbb0e1680a01552a9472b10ac5084162855';
 
 final class SubscribeToSpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
@@ -365,7 +365,7 @@ final class UnsubscribeFromSpaceProvider
 }
 
 String _$unsubscribeFromSpaceHash() =>
-    r'd76f0421640f7cc09c6e995a469894c0a79df94e';
+    r'5c0ca20e0b805aab81c09ffbd16bd22b4ff8bcf2';
 
 final class UnsubscribeFromSpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
@@ -443,7 +443,7 @@ final class ListSpacesByKeeperProvider
 }
 
 String _$listSpacesByKeeperHash() =>
-    r'97c825d79107257f896da14d0270b4e32a55b310';
+    r'b823cdb9adb242b3534a5b2e0ee9f7beb3cbb2b0';
 
 final class ListSpacesByKeeperFamily extends $Family
     with
@@ -507,7 +507,7 @@ final class ListSessionsHistoryProvider
 }
 
 String _$listSessionsHistoryHash() =>
-    r'd7e32c110bf14f63f1ebbe145db8b4517cd40d1f';
+    r'd6a9c8a7b4564bf13ff35192db97e19193b8da9d';
 
 @ProviderFor(getRecommendedSessions)
 final getRecommendedSessionsProvider = GetRecommendedSessionsFamily._();
@@ -568,7 +568,7 @@ final class GetRecommendedSessionsProvider
 }
 
 String _$getRecommendedSessionsHash() =>
-    r'a78680298aabdee1126861e66aa8fc8288c83f86';
+    r'4f5b64877b76b70465e2e66f8f6b0a4c780ff85f';
 
 final class GetRecommendedSessionsFamily extends $Family
     with

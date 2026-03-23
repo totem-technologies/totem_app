@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:totem_app/shared/assets.dart';
 
 class TotemIconLogo extends StatelessWidget {
-  const TotemIconLogo({super.key, this.size});
+  const TotemIconLogo({super.key, this.size, this.color});
+
   final double? size;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -10,25 +13,33 @@ class TotemIconLogo extends StatelessWidget {
     return SizedBox.square(
       dimension: size,
       child: Image.asset(
-        'assets/logo/logo-square-black-512.png',
+        TotemAssets.logoLarge,
         width: size,
         height: size,
+        color: color,
       ),
     );
   }
 }
 
 class TotemLogo extends StatelessWidget {
-  const TotemLogo({super.key, this.size});
+  const TotemLogo({
+    super.key,
+    this.size,
+    this.color,
+  });
+
   final double? size;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: size,
       child: Image.asset(
-        'assets/logo/logo-black-small.png',
+        TotemAssets.logoSmall,
         fit: BoxFit.contain,
+        color: color,
       ),
     );
   }

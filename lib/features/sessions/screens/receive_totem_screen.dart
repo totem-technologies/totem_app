@@ -38,8 +38,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
               padding: const EdgeInsetsDirectional.all(20),
               child: LocalParticipantVideoCard(
                 isCameraOn:
-                    currentSession?.context!.room.localParticipant!
-                        .isCameraEnabled() ??
+                    currentSession?.room?.localParticipant!.isCameraEnabled() ??
                     true,
                 videoTrack: currentSession?.localVideoTrack,
               ),

@@ -446,7 +446,7 @@ final class IsMyTurnProvider extends $FunctionalProvider<bool, bool, bool>
   }
 }
 
-String _$isMyTurnHash() => r'8f85cd9f22c0c5d3c523b274e1c14a1b78c697cd';
+String _$isMyTurnHash() => r'503507e6413231eeca020a5b684a3ab8484dc5b8';
 
 /// Whether the current user is next to speak.
 
@@ -503,4 +503,4 @@ final class AmNextSpeakerProvider extends $FunctionalProvider<bool, bool, bool>
   }
 }
 
-String _$amNextSpeakerHash() => r'fb905a9f9f144169dd486b4e243e86bd11c986b7';
+String _$amNextSpeakerHash() => r'fac9121165d1dc018fb2fc96eadf53038b0a264b';

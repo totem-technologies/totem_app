@@ -6,26 +6,30 @@ import 'package:flutter/material.dart';
 
 typedef OnActionPerformed = Future<bool> Function();
 
-enum TotemCardTransitionType { pass, receive, start, waitingReceive }
+enum TotemCardTransitionType { join, pass, receive, start, waitingReceive }
 
 class TransitionCard extends StatelessWidget {
   const TransitionCard({
     required this.type,
     required this.onActionPressed,
     this.actionText,
+    this.keepActionLoadingOnSuccess = false,
+    this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
     super.key,
   });
 
   final TotemCardTransitionType type;
   final OnActionPerformed onActionPressed;
+  final bool keepActionLoadingOnSuccess;
 
+  final EdgeInsetsGeometry margin;
   final String? actionText;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Card(
-      margin: const EdgeInsetsDirectional.symmetric(horizontal: 30),
+      margin: margin,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(25),
       ),
@@ -40,25 +44,45 @@ class TransitionCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           spacing: 15,
           children: [
-            AutoSizeText(
-              switch (type) {
-                TotemCardTransitionType.pass =>
-                  'When done, slide to pass the Totem to the next person.',
-                TotemCardTransitionType.receive =>
-                  'The Totem is being passed to you.',
-                TotemCardTransitionType.start =>
-                  'Bring participants out of the waiting room and begin '
-                      'the conversation.',
-                TotemCardTransitionType.waitingReceive =>
-                  'Waiting the receiver to accept...\n'
-                      'It is still your turn',
-              },
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: Colors.black,
+            if (type == TotemCardTransitionType.join)
+              Column(
+                spacing: 10,
+                children: [
+                  Text(
+                    'Welcome',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 28,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const Text(
+                    'Your session will start soon. Please check your audio and video before joining.',
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              )
+            else
+              AutoSizeText(
+                switch (type) {
+                  TotemCardTransitionType.join => 'Swipe to join the session.',
+                  TotemCardTransitionType.pass =>
+                    'When done, slide to pass the Totem to the next person.',
+                  TotemCardTransitionType.receive =>
+                    'The Totem is being passed to you.',
+                  TotemCardTransitionType.start =>
+                    'Bring participants out of the waiting room and begin '
+                        'the conversation.',
+                  TotemCardTransitionType.waitingReceive =>
+                    'Waiting the receiver to accept...\n'
+                        'It is still your turn',
+                },
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-            ),
             if (type != TotemCardTransitionType.waitingReceive)
               Padding(
                 padding: const EdgeInsetsDirectional.symmetric(horizontal: 14),
@@ -66,16 +90,21 @@ class TransitionCard extends StatelessWidget {
                   constraints: const BoxConstraints(
                     minWidth: 160,
                   ),
-                  child: _SlideToActionButton(
+                  child: SlideToActionButton(
                     text:
                         actionText ??
                         switch (type) {
+                          TotemCardTransitionType.join => 'Swipe to Join',
                           TotemCardTransitionType.pass => 'Pass',
                           TotemCardTransitionType.receive => 'Receive',
                           TotemCardTransitionType.start => 'Start Session',
-                          _ => '',
+                          TotemCardTransitionType.waitingReceive =>
+                            throw UnsupportedError(
+                              'This should never be reached',
+                            ),
                         },
                     onActionCompleted: onActionPressed,
+                    keepLoadingOnSuccess: keepActionLoadingOnSuccess,
                   ),
                 ),
               ),
@@ -86,20 +115,25 @@ class TransitionCard extends StatelessWidget {
   }
 }
 
-class _SlideToActionButton extends StatefulWidget {
-  const _SlideToActionButton({
+class SlideToActionButton extends StatefulWidget {
+  const SlideToActionButton({
     required this.text,
     required this.onActionCompleted,
+    this.keepLoadingOnSuccess = false,
+    this.backgroundColor,
+    super.key,
   });
 
   final String text;
   final OnActionPerformed onActionCompleted;
+  final bool keepLoadingOnSuccess;
+  final Color? backgroundColor;
 
   @override
-  State<_SlideToActionButton> createState() => _SlideToActionButtonState();
+  State<SlideToActionButton> createState() => _SlideToActionButtonState();
 }
 
-class _SlideToActionButtonState extends State<_SlideToActionButton> {
+class _SlideToActionButtonState extends State<SlideToActionButton> {
   var _dragPosition = 0.0;
   var _isCompleted = false;
   var _isLoading = false;
@@ -158,7 +192,7 @@ class _SlideToActionButtonState extends State<_SlideToActionButton> {
     final success = await widget.onActionCompleted();
     _isCompleted = success;
     _dragPosition = success ? maxSlideDistance : 0.0;
-    _isLoading = false;
+    _isLoading = success && widget.keepLoadingOnSuccess;
     if (mounted) setState(() {});
   }
 
@@ -178,7 +212,8 @@ class _SlideToActionButtonState extends State<_SlideToActionButton> {
           1,
         );
 
-        final backgroundColor = theme.colorScheme.primary;
+        final backgroundColor =
+            widget.backgroundColor ?? theme.colorScheme.primary;
         final foregroundColor = theme.colorScheme.onPrimary;
 
         TextStyle? baseTextStyle;

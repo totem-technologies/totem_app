@@ -4,56 +4,24 @@
 part of 'session_service.dart';
 
 extension KeeperControl on Session {
-  bool isKeeper([String? userSlug]) {
-    String? slug = userSlug;
-    if (slug == null) {
-      final currentUserSlug = ref.read(
-        authControllerProvider.select((auth) => auth.user?.slug),
-      );
-      slug = currentUserSlug;
-    }
-
-    return state.roomState.keeper == slug;
-  }
-
-  /// Get the participant who is currently speaking.
-  Participant speakingNowParticipant() {
-    return state.participants.firstWhere(
-      (participant) => participant.identity == state.speakingNow,
-      orElse: () {
-        final keeper = state.participants.firstWhereOrNull(
-          (participant) => participant.identity == state.roomState.keeper,
-        );
-        return keeper ?? context!.room.localParticipant!;
-      },
+  /// Whether the current authenticated user is the keeper.
+  bool isCurrentUserKeeper() {
+    final currentUserSlug = ref.read(
+      authControllerProvider.select((auth) => auth.user?.slug),
     );
-  }
-
-  Participant? speakingNextParticipant() {
-    if (state.roomState.nextSpeaker == null) return null;
-    return state.participants.firstWhereOrNull((participant) {
-      return participant.identity == state.roomState.nextSpeaker;
-    });
-  }
-
-  void closeKeeperLeftNotifications() {
-    for (final close in closeKeeperLeftNotificationCallbacks) {
-      close.call();
-    }
-    closeKeeperLeftNotificationCallbacks.clear();
+    if (currentUserSlug == null) return false;
+    return state.isKeeper(currentUserSlug);
   }
 
   void _onKeeperDisconnected() {
     if (state.roomState.status != RoomStatus.active) return;
+    disableMicrophone();
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = Timer(
       Session.keeperDisconnectionTimeout,
       _onKeeperDisconnectedTimeout,
     );
-
-    closeKeeperLeftNotifications();
-    closeKeeperLeftNotificationCallbacks.add(options.onKeeperLeaveRoom(this));
 
     state = state.copyWith(hasKeeperDisconnected: true);
   }
@@ -62,8 +30,6 @@ extension KeeperControl on Session {
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
 
-    closeKeeperLeftNotifications();
-
     state = state.copyWith(hasKeeperDisconnected: false);
   }
 
@@ -71,12 +37,11 @@ extension KeeperControl on Session {
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
 
-    closeKeeperLeftNotifications();
-
-    await context?.disconnect();
+    await room?.disconnect();
   }
 
   Future<void> removeParticipant(String participantSlug) async {
+    if (!isCurrentUserKeeper()) return;
     try {
       await ref
           .read(
@@ -103,7 +68,7 @@ extension KeeperControl on Session {
   }
 
   Future<bool> startSession() async {
-    if (!isKeeper()) return false;
+    if (!isCurrentUserKeeper()) return false;
     try {
       await ref
           .read(
@@ -130,7 +95,7 @@ extension KeeperControl on Session {
   }
 
   Future<bool> endSession() async {
-    if (!isKeeper()) return false;
+    if (!isCurrentUserKeeper()) return false;
     try {
       final roomState = await ref
           .read(
@@ -158,6 +123,7 @@ extension KeeperControl on Session {
   }
 
   Future<void> banParticipant(String participantSlug) async {
+    if (!isCurrentUserKeeper()) return;
     try {
       await ref
           .read(
@@ -184,6 +150,8 @@ extension KeeperControl on Session {
   }
 
   Future<void> unbanParticipant(String participantSlug) async {
+    if (!isCurrentUserKeeper()) return;
+
     try {
       await ref
           .read(
@@ -209,6 +177,7 @@ extension KeeperControl on Session {
   }
 
   Future<void> muteParticipant(String participantSlug) async {
+    if (!isCurrentUserKeeper()) return;
     try {
       await ref
           .read(
@@ -235,6 +204,7 @@ extension KeeperControl on Session {
   }
 
   Future<void> muteEveryone() async {
+    if (!isCurrentUserKeeper()) return;
     try {
       await ref
           .read(muteEveryoneProvider(_options!.eventSlug).future)
@@ -255,6 +225,7 @@ extension KeeperControl on Session {
   }
 
   Future<void> reorder(List<String> newOrder) async {
+    if (!isCurrentUserKeeper()) return;
     try {
       final roomState = await ref.read(
         reorderParticipantsProvider(
@@ -276,6 +247,7 @@ extension KeeperControl on Session {
   }
 
   Future<void> forcePassTotem() async {
+    if (!isCurrentUserKeeper()) return;
     try {
       final roomState = await ref.read(
         forcePassTotemProvider(

@@ -1,54 +1,22 @@
-import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/api/export.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/core/services/repository_utils.dart';
-
-export 'package:totem_app/api/models/session_feedback_schema.dart';
 
 part 'session_repository.g.dart';
 
 const _shortTimeoutDuration = Duration(seconds: 10);
 const _timeoutDuration = Duration(seconds: 15);
 
-class SessionErrorResponse extends Error {
-  SessionErrorResponse({
-    required this.code,
-    required this.message,
-  });
-
-  factory SessionErrorResponse.fromJson(Map<String, dynamic> json) {
-    return SessionErrorResponse(
-      code: ErrorCode.values.firstWhere(
-        (e) => e.name == json['code'],
-        orElse: () => ErrorCode.$unknown,
-      ),
-      message: json['message'] as String?,
-    );
-  }
-
-  final ErrorCode code;
-  final String? message;
-}
-
 @riverpod
-Future<String> sessionToken(Ref ref, String sessionSlug) async {
+Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) async {
   final apiService = ref.read(mobileApiServiceProvider);
   try {
     final response = await apiService.rooms
-        .totemRoomsApiJoinRoom(
-          sessionSlug: sessionSlug,
-        )
+        .totemRoomsApiJoinRoom(sessionSlug: sessionSlug)
         .timeout(_shortTimeoutDuration);
-    return response.token;
-  } on DioException catch (error) {
-    if (error.response?.statusCode == 403) {
-      final json = error.response?.data as Map<String, dynamic>?;
-      if (json == null) rethrow;
-      throw SessionErrorResponse.fromJson(json);
-    }
-    rethrow;
+    return response.dataOrThrow;
   } catch (error) {
     rethrow;
   }
@@ -108,17 +76,6 @@ Future<void> muteEveryone(
   );
 }
 
-const eventsType = <Type, Object?>{
-  EventRequestEventSealedAcceptStickEvent: 'accept_stick',
-  EventRequestEventSealedBanParticipantEvent: 'ban_participant',
-  EventRequestEventSealedEndRoomEvent: 'end_room',
-  EventRequestEventSealedForcePassStickEvent: 'force_pass_stick',
-  EventRequestEventSealedPassStickEvent: 'pass_stick',
-  EventRequestEventSealedReorderEvent: 'reorder',
-  EventRequestEventSealedStartRoomEvent: 'start_room',
-  EventRequestEventSealedUnbanParticipantEvent: 'unban_participant',
-};
-
 @riverpod
 Future<RoomState> passTotem(Ref ref, String sessionSlug, int lastSeenVersion) {
   final apiService = ref.read(mobileApiServiceProvider);
@@ -126,9 +83,7 @@ Future<RoomState> passTotem(Ref ref, String sessionSlug, int lastSeenVersion) {
     apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
       sessionSlug: sessionSlug,
       body: EventRequest(
-        event: EventRequestEventSealedPassStickEvent(
-          type: eventsType[EventRequestEventSealedPassStickEvent]! as String,
-        ),
+        event: const EventRequestEventPassStick(PassStickEvent()),
         lastSeenVersion: lastSeenVersion,
       ),
     ),
@@ -149,9 +104,7 @@ Future<RoomState> acceptTotem(
     apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
       sessionSlug: sessionSlug,
       body: EventRequest(
-        event: EventRequestEventSealedAcceptStickEvent(
-          type: eventsType[EventRequestEventSealedAcceptStickEvent]! as String,
-        ),
+        event: const EventRequestEventAcceptStick(AcceptStickEvent()),
         lastSeenVersion: lastSeenVersion,
       ),
     ),
@@ -172,10 +125,7 @@ Future<RoomState> forcePassTotem(
     apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
       sessionSlug: sessionSlug,
       body: EventRequest(
-        event: EventRequestEventSealedForcePassStickEvent(
-          type:
-              eventsType[EventRequestEventSealedForcePassStickEvent]! as String,
-        ),
+        event: const EventRequestEventForcePassStick(ForcePassStickEvent()),
         lastSeenVersion: lastSeenVersion,
       ),
     ),
@@ -197,10 +147,7 @@ Future<RoomState> reorderParticipants(
     apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
       sessionSlug: sessionSlug,
       body: EventRequest(
-        event: EventRequestEventSealedReorderEvent(
-          type: eventsType[EventRequestEventSealedReorderEvent]! as String,
-          talkingOrder: order,
-        ),
+        event: EventRequestEventReorder(ReorderEvent(talkingOrder: order)),
         lastSeenVersion: lastSeenVersion,
       ),
     ),
@@ -223,9 +170,7 @@ Future<RoomState> startSession(
     apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
       sessionSlug: sessionSlug,
       body: EventRequest(
-        event: EventRequestEventSealedStartRoomEvent(
-          type: eventsType[EventRequestEventSealedStartRoomEvent]! as String,
-        ),
+        event: const EventRequestEventStartRoom(StartRoomEvent()),
         lastSeenVersion: lastSeenVersion,
       ),
     ),
@@ -245,9 +190,8 @@ Future<RoomState> endSession(
     apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
       sessionSlug: sessionSlug,
       body: EventRequest(
-        event: EventRequestEventSealedEndRoomEvent(
-          type: eventsType[EventRequestEventSealedEndRoomEvent]! as String,
-          reason: EndReason.keeperEnded,
+        event: const EventRequestEventEndRoom(
+          EndRoomEvent(reason: EndReason.keeperEnded),
         ),
         lastSeenVersion: lastSeenVersion,
       ),
@@ -269,10 +213,8 @@ Future<RoomState> banParticipant(
     apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
       sessionSlug: sessionSlug,
       body: EventRequest(
-        event: EventRequestEventSealedBanParticipantEvent(
-          type:
-              eventsType[EventRequestEventSealedBanParticipantEvent]! as String,
-          participantSlug: participantSlug,
+        event: EventRequestEventBanParticipant(
+          BanParticipantEvent(participantSlug: participantSlug),
         ),
         lastSeenVersion: lastSeenVersion,
       ),
@@ -294,11 +236,8 @@ Future<RoomState> unbanParticipant(
     apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
       sessionSlug: sessionSlug,
       body: EventRequest(
-        event: EventRequestEventSealedUnbanParticipantEvent(
-          type:
-              eventsType[EventRequestEventSealedUnbanParticipantEvent]!
-                  as String,
-          participantSlug: participantSlug,
+        event: EventRequestEventUnbanParticipant(
+          UnbanParticipantEvent(participantSlug: participantSlug),
         ),
         lastSeenVersion: lastSeenVersion,
       ),
@@ -317,14 +256,13 @@ Future<void> sessionFeedback(
 ]) {
   final apiService = ref.read(mobileApiServiceProvider);
   return RepositoryUtils.handleApiCall<void>(
-    apiCall: () =>
-        apiService.spaces.totemSpacesMobileApiMobileApiPostSessionFeedback(
-          eventSlug: sessionSlug,
-          body: SessionFeedbackSchema(
-            feedback: feedback,
-            message: message,
-          ),
-        ),
+    apiCall: () => apiService.spaces.totemSpacesMobileApiPostSessionFeedback(
+      eventSlug: sessionSlug,
+      body: SessionFeedbackSchema(
+        feedback: feedback,
+        message: message,
+      ),
+    ),
     operationName: 'end session',
     retryOnNetworkError: true,
   );

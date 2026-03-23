@@ -13,7 +13,7 @@ part of 'emoji_reactions_provider.dart';
 final emojiReactionsProvider = EmojiReactionsProvider._();
 
 final class EmojiReactionsProvider
-    extends $NotifierProvider<EmojiReactions, List<MapEntry<String, String>>> {
+    extends $NotifierProvider<EmojiReactions, List<SessionEmojiReaction>> {
   EmojiReactionsProvider._()
     : super(
         from: null,
@@ -33,38 +33,32 @@ final class EmojiReactionsProvider
   EmojiReactions create() => EmojiReactions();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(List<MapEntry<String, String>> value) {
+  Override overrideWithValue(List<SessionEmojiReaction> value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<List<MapEntry<String, String>>>(
-        value,
-      ),
+      providerOverride: $SyncValueProvider<List<SessionEmojiReaction>>(value),
     );
   }
 }
 
-String _$emojiReactionsHash() => r'92755343d72085ab861a5bb4e41cfea546ec74bd';
+String _$emojiReactionsHash() => r'4130450dce34275a1ca52235b4baab65c308d3ee';
 
-abstract class _$EmojiReactions
-    extends $Notifier<List<MapEntry<String, String>>> {
-  List<MapEntry<String, String>> build();
+abstract class _$EmojiReactions extends $Notifier<List<SessionEmojiReaction>> {
+  List<SessionEmojiReaction> build();
   @$mustCallSuper
   @override
   void runBuild() {
     final ref =
         this.ref
-            as $Ref<
-              List<MapEntry<String, String>>,
-              List<MapEntry<String, String>>
-            >;
+            as $Ref<List<SessionEmojiReaction>, List<SessionEmojiReaction>>;
     final element =
         ref.element
             as $ClassProviderElement<
               AnyNotifier<
-                List<MapEntry<String, String>>,
-                List<MapEntry<String, String>>
+                List<SessionEmojiReaction>,
+                List<SessionEmojiReaction>
               >,
-              List<MapEntry<String, String>>,
+              List<SessionEmojiReaction>,
               Object?,
               Object?
             >;

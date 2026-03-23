@@ -2,12 +2,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_app/api/models/mobile_space_detail_schema.dart';
-import 'package:totem_app/api/models/next_session_schema.dart';
-import 'package:totem_app/api/models/session_detail_schema.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/core/services/api_service.dart';
 import 'package:totem_app/features/home/models/upcoming_session_data.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/home/widgets/session_metadata.dart';
@@ -371,15 +368,13 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
     setState(() => _loading = true);
 
     try {
-      final mobileApiService = ref.read(mobileApiServiceProvider);
-      final response = await mobileApiService.spaces
-          .totemSpacesMobileApiMobileApiRsvpConfirm(
-            eventSlug: widget.data.sessionSlug,
-          );
+      final attending = await ref.read(
+        rsvpConfirmProvider(widget.data.sessionSlug).future,
+      );
 
       if (!mounted) return;
 
-      if (response.attending) {
+      if (attending) {
         setState(() {
           _optimisticAttending = true;
           _loading = false;

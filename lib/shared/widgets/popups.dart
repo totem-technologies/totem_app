@@ -6,12 +6,15 @@ import 'package:flutter/semantics.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
+const _defaultPopupAnimationDuration = Duration(milliseconds: 380);
+const _defaultPopupDuration = Duration(milliseconds: 2800);
+
 class AnimatedPopup extends StatefulWidget {
   const AnimatedPopup({
     required this.onDismissed,
     required this.popup,
-    this.animationDuration = const Duration(milliseconds: 400),
-    this.duration = const Duration(seconds: 4),
+    this.animationDuration = _defaultPopupAnimationDuration,
+    this.duration = _defaultPopupDuration,
     super.key,
   });
   final VoidCallback onDismissed;
@@ -28,6 +31,8 @@ class AnimatedPopupState extends State<AnimatedPopup>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _offsetAnimation;
+  Timer? _autoDismissTimer;
+  bool _isDismissing = false;
 
   @override
   void initState() {
@@ -44,26 +49,29 @@ class AnimatedPopupState extends State<AnimatedPopup>
         ).animate(
           CurvedAnimation(
             parent: _controller,
-            curve: Curves.easeOut,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
           ),
         );
 
     _controller.forward();
 
     if (widget.duration > Duration.zero) {
-      Future.delayed(widget.duration, dismiss);
+      _autoDismissTimer = Timer(widget.duration, dismiss);
     }
   }
 
   Future<void> dismiss() async {
-    if (mounted) {
-      await _controller.reverse();
-      widget.onDismissed();
-    }
+    if (!mounted || _isDismissing) return;
+
+    _isDismissing = true;
+    await _controller.reverse();
+    widget.onDismissed();
   }
 
   @override
   void dispose() {
+    _autoDismissTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -77,14 +85,48 @@ class AnimatedPopupState extends State<AnimatedPopup>
   }
 }
 
-void showPopup(
+class PopupController {
+  final Set<VoidCallback> _activeDismissers = <VoidCallback>{};
+
+  void _register(VoidCallback dismiss) {
+    _activeDismissers.add(dismiss);
+  }
+
+  void _unregister(VoidCallback dismiss) {
+    _activeDismissers.remove(dismiss);
+  }
+
+  void dismissAll() {
+    final dismissers = List<VoidCallback>.from(_activeDismissers);
+    for (final dismiss in dismissers) {
+      dismiss();
+    }
+  }
+}
+
+VoidCallback showPopup(
   BuildContext context, {
   required WidgetBuilder builder,
+  PopupController? controller,
+  Duration animationDuration = _defaultPopupAnimationDuration,
+  Duration duration = _defaultPopupDuration,
 }) {
   final key = GlobalKey<AnimatedPopupState>();
   final overlay = Overlay.of(context);
 
+  var removed = false;
   late OverlayEntry popup;
+  late VoidCallback dismiss;
+
+  void removePopup() {
+    if (removed) return;
+    removed = true;
+    controller?._unregister(dismiss);
+    if (popup.mounted) {
+      popup.remove();
+    }
+  }
+
   popup = OverlayEntry(
     builder: (context) => Positioned(
       left: 0,
@@ -93,18 +135,31 @@ void showPopup(
         color: Colors.transparent,
         child: AnimatedPopup(
           key: key,
-          onDismissed: () {
-            if (popup.mounted) {
-              popup.remove();
-            }
-          },
+          animationDuration: animationDuration,
+          duration: duration,
+          onDismissed: removePopup,
           popup: Builder(builder: builder),
         ),
       ),
     ),
   );
 
+  dismiss = () {
+    if (removed) return;
+
+    final state = key.currentState;
+    if (state != null) {
+      unawaited(state.dismiss());
+      return;
+    }
+
+    removePopup();
+  };
+
   overlay.insert(popup);
+
+  controller?._register(dismiss);
+  return dismiss;
 }
 
 void showNotificationPopup(
@@ -112,14 +167,16 @@ void showNotificationPopup(
   required TotemIconData icon,
   required String title,
   required String message,
+  PopupController? controller,
 }) {
   SemanticsService.sendAnnouncement(
     View.of(context),
     'New message: $message',
     TextDirection.ltr,
   );
-  return showPopup(
+  showPopup(
     context,
+    controller: controller,
     builder: (context) {
       return NotificationPopup(
         icon: icon,
@@ -133,36 +190,14 @@ void showNotificationPopup(
 VoidCallback showDismissiblePopup(
   BuildContext context, {
   required WidgetBuilder builder,
+  PopupController? controller,
 }) {
-  final key = GlobalKey<AnimatedPopupState>();
-  final overlay = Overlay.of(context);
-
-  late OverlayEntry popup;
-  popup = OverlayEntry(
-    builder: (context) => Positioned(
-      left: 0,
-      right: 0,
-      child: Material(
-        color: Colors.transparent,
-        child: AnimatedPopup(
-          key: key,
-          duration: Duration.zero,
-          onDismissed: () {
-            if (popup.mounted) {
-              popup.remove();
-            }
-          },
-          popup: Builder(builder: builder),
-        ),
-      ),
-    ),
+  return showPopup(
+    context,
+    controller: controller,
+    duration: Duration.zero,
+    builder: builder,
   );
-
-  overlay.insert(popup);
-
-  return () {
-    key.currentState?.dismiss();
-  };
 }
 
 VoidCallback showPermanentNotificationPopup(
@@ -170,6 +205,7 @@ VoidCallback showPermanentNotificationPopup(
   required TotemIconData icon,
   required String title,
   required String message,
+  required PopupController controller,
 }) {
   SemanticsService.sendAnnouncement(
     View.of(context),
@@ -178,6 +214,7 @@ VoidCallback showPermanentNotificationPopup(
   );
   return showDismissiblePopup(
     context,
+    controller: controller,
     builder: (context) {
       return NotificationPopup(
         icon: icon,
@@ -244,7 +281,6 @@ class NotificationPopup extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
-                  spacing: 2,
                   children: [
                     AutoSizeText(
                       title,
