@@ -24,7 +24,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final sessionStatus = ref.watch(roomStatusProvider);
     final session = ref.watch(currentSessionProvider);
-    final sessionState = ref.watch(currentSessionStateProvider);
+    final roundMessage = ref.watch(roundMessageProvider);
 
     return RoomBackground(
       status: sessionStatus,
@@ -58,9 +58,9 @@ class ReceiveTotemScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 spacing: 20,
                 children: [
-                  if (sessionState?.roomState.roundMessage != null)
+                  if (roundMessage != null)
                     Text(
-                      '"${sessionState!.roomState.roundMessage!}"',
+                      '"$roundMessage"',
                       style: theme.textTheme.bodyLarge?.copyWith(
                         fontStyle: FontStyle.italic,
                       ),

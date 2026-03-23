@@ -46,9 +46,9 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
-    final state = ref.watch(currentSessionStateProvider)!;
     final session = ref.watch(currentSessionProvider)!;
-    final isKeeper = session.event?.space.author.slug == user?.slug;
+    final sessionEvent = ref.watch(currentSessionEventProvider);
+    final isKeeper = ref.watch(isCurrentUserKeeperProvider);
 
     const fastMessages = [
       'Welcome! 🙏',
@@ -59,7 +59,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
       'Take your time',
     ];
 
-    final messages = state.messages;
+    final messages = ref.watch(sessionMessagesProvider);
 
     return DraggableScrollableSheet(
       maxChildSize: 0.9,
@@ -161,7 +161,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                             return OtherChatBubble(
                               showAvatar: showAvatar,
                               message: msg,
-                              session: session.event,
+                              session: sessionEvent,
                             );
                           }
                         },

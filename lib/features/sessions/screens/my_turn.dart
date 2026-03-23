@@ -58,8 +58,8 @@ class _MyTurnState extends ConsumerState<MyTurn> {
     final theme = Theme.of(context);
     final roomStatus = ref.watch(roomStatusProvider);
     final turnState = ref.watch(turnStateProvider);
-    final state = ref.watch(currentSessionProvider);
-    final sessionState = ref.watch(currentSessionStateProvider);
+    final isKeeper = ref.watch(isCurrentUserKeeperProvider);
+    final nextUp = ref.watch(speakingNextParticipantProvider);
 
     if (!_hasShownSelfViewHiddenNotice && turnState == TurnState.speaking) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -78,7 +78,6 @@ class _MyTurnState extends ConsumerState<MyTurn> {
               event: widget.event,
             );
 
-            final nextUp = sessionState?.speakingNextParticipant();
             final transitionType = turnState == TurnState.passing
                 ? TotemCardTransitionType.waitingReceive
                 : TotemCardTransitionType.pass;
@@ -95,7 +94,7 @@ class _MyTurnState extends ConsumerState<MyTurn> {
             Widget passCard;
             switch (transitionType) {
               case TotemCardTransitionType.pass:
-                if (state?.isCurrentUserKeeper() ?? false) {
+                if (isKeeper) {
                   passCard = TransitionCardContainer(
                     children: [
                       TextField(

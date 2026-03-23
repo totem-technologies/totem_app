@@ -157,9 +157,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         },
       )
       ..listen(
-        currentSessionStateProvider.select(
-          (s) => (s == null || s.messages.isEmpty) ? null : s.messages.last,
-        ),
+        lastSessionMessageProvider,
         (previous, next) {
           if (next == null || identical(previous, next)) return;
           if (!mounted || _chatSheetOpen) return;
@@ -174,7 +172,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         },
       )
       ..listen(
-        currentSessionStateProvider.select((s) => s?.livekitError),
+        sessionLivekitErrorProvider,
         (previous, next) {
           if (next == null) return;
           if (previous?.toString() == next.toString()) return;
@@ -182,35 +180,32 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         },
       )
       ..listen(
-        currentSessionStateProvider.select((s) => s?.hasKeeperDisconnected),
+        hasKeeperDisconnectedProvider,
         (previous, next) {
-          if (next == null || previous == next) return;
+          if (previous == next) return;
           _setKeeperDisconnectedNotification(next);
         },
       );
 
     final currentSession = ref.watch(currentSessionProvider);
+    final currentSessionEvent = ref.watch(currentSessionEventProvider);
     final connectionState = ref.watch(connectionStateProvider);
     final roomStatus = ref.watch(roomStatusProvider);
-    final sessionState = ref.watch(currentSessionStateProvider);
+    final disconnectReason = ref.watch(disconnectReasonProvider);
     final turnState = ref.watch(turnStateProvider);
     final isMyTurn = ref.watch(isMyTurnProvider);
     final amNext = ref.watch(amNextSpeakerProvider);
 
-    if (currentSession == null ||
-        sessionState == null ||
-        currentSession.event == null) {
+    if (currentSession == null || currentSessionEvent == null) {
       return widget.loadingScreen;
     }
 
-    if (currentSession.event!.ended ||
-        (currentSession.event?.ended ?? false) ||
-        roomStatus == RoomStatus.ended) {
+    if (currentSessionEvent.ended || roomStatus == RoomStatus.ended) {
       return RoomBackground(
         status: roomStatus,
         child: SessionDisconnectedScreen(
-          session: currentSession.event!,
-          disconnectReason: sessionState.disconnectReason,
+          session: currentSessionEvent,
+          disconnectReason: disconnectReason,
         ),
       );
     }
@@ -259,7 +254,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                       child: _buildBody(
                         ref,
                         currentSession,
-                        sessionState,
+                        currentSessionEvent,
+                        disconnectReason,
                         connectionState,
                         roomStatus,
                         turnState,
@@ -285,7 +281,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   Widget _buildBody(
     WidgetRef ref,
     Session session,
-    SessionRoomState sessionState,
+    SessionDetailSchema sessionEvent,
+    DisconnectReason? disconnectReason,
     RoomConnectionState connectionState,
     RoomStatus roomStatus,
     TurnState turnState,
@@ -299,14 +296,14 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         return widget.loadingScreen;
       case RoomConnectionState.disconnected:
         return SessionDisconnectedScreen(
-          session: session.event!,
-          disconnectReason: sessionState.disconnectReason,
+          session: sessionEvent,
+          disconnectReason: disconnectReason,
         );
       case RoomConnectionState.connected:
         if (roomStatus == RoomStatus.ended) {
           return SessionDisconnectedScreen(
-            session: session.event!,
-            disconnectReason: sessionState.disconnectReason,
+            session: sessionEvent,
+            disconnectReason: disconnectReason,
           );
         }
 
@@ -319,7 +316,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             actionBar: _buildActionBar(
               ref,
               session,
-              sessionState,
               isMyTurn,
             ),
             onAcceptTotem: session.acceptTotem,
@@ -333,7 +329,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 actionBar: _buildActionBar(
                   ref,
                   session,
-                  sessionState,
                   isMyTurn,
                 ),
                 onPassTotem: (roundMessage) async {
@@ -355,7 +350,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             actionBar: _buildActionBar(
               ref,
               session,
-              sessionState,
               isMyTurn,
             ),
             event: session.event!,
@@ -367,7 +361,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   Widget _buildActionBar(
     WidgetRef ref,
     Session session,
-    SessionRoomState sessionState,
     bool isMyTurn,
   ) {
     return Builder(
@@ -448,7 +441,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 padding: EdgeInsetsDirectional.zero,
                 onPressed: () => showOptionsSheet(
                   context,
-                  sessionState,
+                  ref.read(currentSessionStateProvider)!,
                   session.event!,
                 ),
                 icon: const TotemIcon(

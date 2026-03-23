@@ -17,7 +17,8 @@ import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/screen_protection_service.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
-import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_app/features/sessions/providers/session_scope_provider.dart'
+    show sessionScopeProvider;
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/services/utils.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
