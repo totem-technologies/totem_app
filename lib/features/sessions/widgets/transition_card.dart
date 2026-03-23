@@ -228,7 +228,7 @@ class _SlideToActionButtonState extends State<SlideToActionButton> {
           onPanUpdate: (details) => _onPanUpdate(details, maxSlideDistance),
           onPanEnd: (details) => _onPanEnd(details, maxSlideDistance),
           child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
+            constraints: const BoxConstraints(minHeight: 58),
             decoration: BoxDecoration(
               color: backgroundColor,
               borderRadius: BorderRadius.circular(25),

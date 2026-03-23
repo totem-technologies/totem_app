@@ -21,8 +21,10 @@ class ReceiveTotemScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final sessionStatus = ref.watch(roomStatusProvider);
-    final currentSession = ref.watch(currentSessionProvider);
+    final session = ref.watch(currentSessionProvider);
+    final sessionState = ref.watch(currentSessionStateProvider);
 
     return RoomBackground(
       status: sessionStatus,
@@ -38,37 +40,54 @@ class ReceiveTotemScreen extends ConsumerWidget {
               padding: const EdgeInsetsDirectional.all(20),
               child: LocalParticipantVideoCard(
                 isCameraOn:
-                    currentSession?.room?.localParticipant!.isCameraEnabled() ??
-                    true,
-                videoTrack: currentSession?.localVideoTrack,
+                    session?.room?.localParticipant!.isCameraEnabled() ?? true,
+                videoTrack: session?.localVideoTrack,
               ),
             );
 
-            final passReceiveCard = TransitionCard(
-              type: TotemCardTransitionType.receive,
-              onActionPressed: () async {
-                try {
-                  await onAcceptTotem();
-                  return true;
-                } catch (error, stackTrace) {
-                  ErrorHandler.logError(
-                    error,
-                    stackTrace: stackTrace,
-                    message: 'Accept Totem failed',
-                  );
-                  if (context.mounted) {
-                    showErrorPopup(
-                      context,
-                      icon: TotemIcons.errorOutlined,
-                      title: 'Something went wrong',
-                      message:
-                          'We were unable to accept the totem. Please try again.',
-                    );
-                  }
+            final receiveSlider = Padding(
+              padding: const EdgeInsetsDirectional.symmetric(horizontal: 30),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 20,
+                children: [
+                  if (sessionState?.roomState.roundMessage != null)
+                    Text(
+                      sessionState!.roomState.roundMessage!,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontStyle: FontStyle.italic,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  SlideToActionButton(
+                    text: 'Slide to Receive',
+                    onActionCompleted: () async {
+                      try {
+                        await onAcceptTotem();
+                        return true;
+                      } catch (error, stackTrace) {
+                        ErrorHandler.logError(
+                          error,
+                          stackTrace: stackTrace,
+                          message: 'Accept Totem failed',
+                        );
+                        if (context.mounted) {
+                          showErrorPopup(
+                            context,
+                            icon: TotemIcons.errorOutlined,
+                            title: 'Something went wrong',
+                            message:
+                                'We were unable to accept the totem. Please try again.',
+                          );
+                        }
 
-                  return false;
-                }
-              },
+                        return false;
+                      }
+                    },
+                    keepLoadingOnSuccess: true,
+                  ),
+                ],
+              ),
             );
 
             if (isLandscape) {
@@ -83,7 +102,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         titleWidget,
-                        passReceiveCard,
+                        receiveSlider,
                         actionBar,
                       ],
                     ),
@@ -98,7 +117,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
                   Expanded(
                     child: videoCard,
                   ),
-                  passReceiveCard,
+                  receiveSlider,
                   actionBar,
                 ],
               );
