@@ -82,36 +82,7 @@ class _MyTurnState extends ConsumerState<MyTurn> {
             final transitionType = turnState == TurnState.passing
                 ? TotemCardTransitionType.waitingReceive
                 : TotemCardTransitionType.pass;
-            final keeperPassCard = TransitionCardContainer(
-              children: [
-                TextField(
-                  controller: roundMessageController,
-                  decoration: const InputDecoration(
-                    hintText: 'Your prompt for this round',
-                  ),
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minWidth: 160,
-                  ),
-                  child: ActionSlider(
-                    text:
-                        'Slide to pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
-                            .trim(),
-                    onActionCompleted: () {
-                      final roundMessage = roundMessageController.text.trim();
-                      return widget.onPassTotem(
-                        roundMessage.isEmpty ? null : roundMessage,
-                      );
-                    },
-                    keepLoadingOnSuccess: true,
-                  ),
-                ),
-              ],
-            );
+
             final normalPassCard = TransitionCard(
               type: transitionType,
               onActionPressed: () => widget.onPassTotem(null),
@@ -125,7 +96,37 @@ class _MyTurnState extends ConsumerState<MyTurn> {
             switch (transitionType) {
               case TotemCardTransitionType.pass:
                 if (state?.isCurrentUserKeeper() ?? false) {
-                  passCard = keeperPassCard;
+                  passCard = TransitionCardContainer(
+                    children: [
+                      TextField(
+                        controller: roundMessageController,
+                        decoration: const InputDecoration(
+                          hintText: 'Your prompt for this round',
+                        ),
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minWidth: 160,
+                        ),
+                        child: ActionSlider(
+                          text:
+                              'Slide to pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
+                                  .trim(),
+                          onActionCompleted: () {
+                            final roundMessage = roundMessageController.text
+                                .trim();
+                            return widget.onPassTotem(
+                              roundMessage.isEmpty ? null : roundMessage,
+                            );
+                          },
+                          keepLoadingOnSuccess: true,
+                        ),
+                      ),
+                    ],
+                  );
                 } else {
                   passCard = normalPassCard;
                 }
