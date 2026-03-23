@@ -63,6 +63,7 @@ class TransitionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return TransitionCardContainer(
+      margin: margin,
       children: [
         if (type == TotemCardTransitionType.join)
           Column(

@@ -93,26 +93,21 @@ class _MyTurnState extends ConsumerState<MyTurn> {
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: 14,
+                ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minWidth: 160,
                   ),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minWidth: 160,
-                    ),
-                    child: ActionSlider(
-                      text:
-                          'Slide to pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
-                              .trim(),
-                      onActionCompleted: () {
-                        final roundMessage = roundMessageController.text.trim();
-                        return widget.onPassTotem(
-                          roundMessage.isEmpty ? null : roundMessage,
-                        );
-                      },
-                      keepLoadingOnSuccess: true,
-                    ),
+                  child: ActionSlider(
+                    text:
+                        'Slide to pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
+                            .trim(),
+                    onActionCompleted: () {
+                      final roundMessage = roundMessageController.text.trim();
+                      return widget.onPassTotem(
+                        roundMessage.isEmpty ? null : roundMessage,
+                      );
+                    },
+                    keepLoadingOnSuccess: true,
                   ),
                 ),
               ],
@@ -138,6 +133,18 @@ class _MyTurnState extends ConsumerState<MyTurn> {
               default:
                 passCard = normalPassCard;
             }
+            final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+            final restingBottom = switch (isLandscape) {
+              true => 180,
+              false => 80,
+            };
+
+            // Calculate how far up we need to visually push the card.
+            // If the keyboard is lower than the resting position, offset is 0 (it doesn't move).
+            // If the keyboard is higher, push it up by the difference.
+            final double yOffset = keyboardInset > 0
+                ? -math.max(0.0, (keyboardInset + 16) - restingBottom)
+                : 0.0;
             if (isLandscape) {
               return Column(
                 spacing: 16,
@@ -146,16 +153,17 @@ class _MyTurnState extends ConsumerState<MyTurn> {
                     child: Row(
                       spacing: 16,
                       children: [
-                        Expanded(
-                          child: participantGrid,
-                        ),
+                        Expanded(child: participantGrid),
                         Flexible(
                           child: Column(
                             spacing: 16,
                             mainAxisAlignment: MainAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              passCard,
+                              Transform.translate(
+                                offset: Offset(0, yOffset),
+                                child: passCard,
+                              ),
                               widget.actionBar,
                             ],
                           ),
@@ -170,7 +178,10 @@ class _MyTurnState extends ConsumerState<MyTurn> {
                 spacing: 20,
                 children: [
                   Expanded(child: participantGrid),
-                  passCard,
+                  Transform.translate(
+                    offset: Offset(0, yOffset),
+                    child: passCard,
+                  ),
                   widget.actionBar,
                 ],
               );
