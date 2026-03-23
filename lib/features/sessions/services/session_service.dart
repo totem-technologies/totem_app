@@ -394,6 +394,7 @@ class Session extends _$Session {
         ),
         talkingOrder: [],
         version: 0,
+        roundNumber: 0,
       ),
       isSpeakerphoneEnabled: _userSpeakerPreference,
     );

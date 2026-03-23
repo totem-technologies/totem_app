@@ -333,7 +333,7 @@ final class PassTotemProvider
     with $FutureModifier<RoomState>, $FutureProvider<RoomState> {
   PassTotemProvider._({
     required PassTotemFamily super.from,
-    required (String, int) super.argument,
+    required (String, int, {String? roundMessage}) super.argument,
   }) : super(
          retry: null,
          name: r'passTotemProvider',
@@ -359,8 +359,13 @@ final class PassTotemProvider
 
   @override
   FutureOr<RoomState> create(Ref ref) {
-    final argument = this.argument as (String, int);
-    return passTotem(ref, argument.$1, argument.$2);
+    final argument = this.argument as (String, int, {String? roundMessage});
+    return passTotem(
+      ref,
+      argument.$1,
+      argument.$2,
+      roundMessage: argument.roundMessage,
+    );
   }
 
   @override
@@ -374,10 +379,14 @@ final class PassTotemProvider
   }
 }
 
-String _$passTotemHash() => r'a269f554c88089b345cc8950a24f8fb383b75c2a';
+String _$passTotemHash() => r'bec56778c53c2830efd5b2cff3a7ea2de7d1866e';
 
 final class PassTotemFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<RoomState>,
+          (String, int, {String? roundMessage})
+        > {
   PassTotemFamily._()
     : super(
         retry: null,
@@ -387,8 +396,14 @@ final class PassTotemFamily extends $Family
         isAutoDispose: true,
       );
 
-  PassTotemProvider call(String sessionSlug, int lastSeenVersion) =>
-      PassTotemProvider._(argument: (sessionSlug, lastSeenVersion), from: this);
+  PassTotemProvider call(
+    String sessionSlug,
+    int lastSeenVersion, {
+    String? roundMessage,
+  }) => PassTotemProvider._(
+    argument: (sessionSlug, lastSeenVersion, roundMessage: roundMessage),
+    from: this,
+  );
 
   @override
   String toString() => r'passTotemProvider';

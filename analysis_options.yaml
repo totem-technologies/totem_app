@@ -14,6 +14,7 @@ linter:
     sort_pub_dependencies: false
     document_ignores: false
     avoid_redundant_argument_values: false
+    prefer_int_literals: false
 
     # Safety and Best Practices
     avoid_print: true

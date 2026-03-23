@@ -41,7 +41,7 @@ final class EmojiReactionsProvider
   }
 }
 
-String _$emojiReactionsHash() => r'4130450dce34275a1ca52235b4baab65c308d3ee';
+String _$emojiReactionsHash() => r'614f6cd2963b4cc9659411beb2216368a6d7e558';
 
 abstract class _$EmojiReactions extends $Notifier<List<SessionEmojiReaction>> {
   List<SessionEmojiReaction> build();
@@ -123,7 +123,7 @@ final class ParticipantEmojisProvider
   }
 }
 
-String _$participantEmojisHash() => r'f67001409d251a100e6f7a0689111567b3f699d9';
+String _$participantEmojisHash() => r'0d53201459e39eb86879e4d0d0cdc1bd01a5e352';
 
 final class ParticipantEmojisFamily extends $Family
     with $FunctionalFamilyOverride<List<String>, String> {

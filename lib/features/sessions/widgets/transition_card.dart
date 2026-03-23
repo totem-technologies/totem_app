@@ -8,6 +8,40 @@ typedef OnActionPerformed = Future<bool> Function();
 
 enum TotemCardTransitionType { join, pass, receive, start, waitingReceive }
 
+class TransitionCardContainer extends StatelessWidget {
+  const TransitionCardContainer({
+    required this.children,
+    this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
+    super.key,
+  });
+
+  final EdgeInsetsGeometry margin;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: margin,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.only(
+          top: 12,
+          start: 16,
+          end: 16,
+          bottom: 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 15,
+          children: children,
+        ),
+      ),
+    );
+  }
+}
+
 class TransitionCard extends StatelessWidget {
   const TransitionCard({
     required this.type,
@@ -28,95 +62,80 @@ class TransitionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
+    return TransitionCardContainer(
       margin: margin,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(25),
-      ),
-      child: Padding(
-        padding: const EdgeInsetsDirectional.only(
-          top: 12,
-          start: 16,
-          end: 16,
-          bottom: 16,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 15,
-          children: [
-            if (type == TotemCardTransitionType.join)
-              Column(
-                spacing: 10,
-                children: [
-                  Text(
-                    'Welcome',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 28,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const Text(
-                    'Your session will start soon. Please check your audio and video before joining.',
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              )
-            else
-              AutoSizeText(
-                switch (type) {
-                  TotemCardTransitionType.join => 'Swipe to join the session.',
-                  TotemCardTransitionType.pass =>
-                    'When done, slide to pass the Totem to the next person.',
-                  TotemCardTransitionType.receive =>
-                    'The Totem is being passed to you.',
-                  TotemCardTransitionType.start =>
-                    'Bring participants out of the waiting room and begin '
-                        'the conversation.',
-                  TotemCardTransitionType.waitingReceive =>
-                    'Waiting the receiver to accept...\n'
-                        'It is still your turn',
-                },
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: Colors.black,
+      children: [
+        if (type == TotemCardTransitionType.join)
+          Column(
+            spacing: 10,
+            children: [
+              Text(
+                'Welcome',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 28,
                 ),
                 textAlign: TextAlign.center,
-                maxLines: 2,
               ),
-            if (type != TotemCardTransitionType.waitingReceive)
-              Padding(
-                padding: const EdgeInsetsDirectional.symmetric(horizontal: 14),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minWidth: 160,
-                  ),
-                  child: SlideToActionButton(
-                    text:
-                        actionText ??
-                        switch (type) {
-                          TotemCardTransitionType.join => 'Swipe to Join',
-                          TotemCardTransitionType.pass => 'Pass',
-                          TotemCardTransitionType.receive => 'Receive',
-                          TotemCardTransitionType.start => 'Start Session',
-                          TotemCardTransitionType.waitingReceive =>
-                            throw UnsupportedError(
-                              'This should never be reached',
-                            ),
-                        },
-                    onActionCompleted: onActionPressed,
-                    keepLoadingOnSuccess: keepActionLoadingOnSuccess,
-                  ),
-                ),
+              const Text(
+                'Your session will start soon. Please check your audio and video before joining.',
+                textAlign: TextAlign.center,
               ),
-          ],
-        ),
-      ),
+            ],
+          )
+        else
+          AutoSizeText(
+            switch (type) {
+              TotemCardTransitionType.join => 'Swipe to join the session.',
+              TotemCardTransitionType.pass =>
+                'When done, slide to pass the Totem to the next person.',
+              TotemCardTransitionType.receive =>
+                'The Totem is being passed to you.',
+              TotemCardTransitionType.start =>
+                'Bring participants out of the waiting room and begin '
+                    'the conversation.',
+              TotemCardTransitionType.waitingReceive =>
+                'Waiting the receiver to accept...\n'
+                    'It is still your turn',
+            },
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: Colors.black,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+          ),
+        if (type != TotemCardTransitionType.waitingReceive)
+          Padding(
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 14),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minWidth: 160,
+              ),
+              child: ActionSlider(
+                text:
+                    actionText ??
+                    switch (type) {
+                      TotemCardTransitionType.join => 'Swipe to Join',
+                      TotemCardTransitionType.pass => 'Pass',
+                      TotemCardTransitionType.receive => 'Receive',
+                      TotemCardTransitionType.start => 'Start Session',
+                      TotemCardTransitionType.waitingReceive =>
+                        throw UnsupportedError(
+                          'This should never be reached',
+                        ),
+                    },
+                onActionCompleted: onActionPressed,
+                keepLoadingOnSuccess: keepActionLoadingOnSuccess,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
 
-class SlideToActionButton extends StatefulWidget {
-  const SlideToActionButton({
+class ActionSlider extends StatefulWidget {
+  const ActionSlider({
     required this.text,
     required this.onActionCompleted,
     this.keepLoadingOnSuccess = false,
@@ -130,10 +149,10 @@ class SlideToActionButton extends StatefulWidget {
   final Color? backgroundColor;
 
   @override
-  State<SlideToActionButton> createState() => _SlideToActionButtonState();
+  State<ActionSlider> createState() => _ActionSliderState();
 }
 
-class _SlideToActionButtonState extends State<SlideToActionButton> {
+class _ActionSliderState extends State<ActionSlider> {
   var _dragPosition = 0.0;
   var _isCompleted = false;
   var _isLoading = false;
@@ -228,7 +247,7 @@ class _SlideToActionButtonState extends State<SlideToActionButton> {
           onPanUpdate: (details) => _onPanUpdate(details, maxSlideDistance),
           onPanEnd: (details) => _onPanEnd(details, maxSlideDistance),
           child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
+            constraints: const BoxConstraints(minHeight: 50),
             decoration: BoxDecoration(
               color: backgroundColor,
               borderRadius: BorderRadius.circular(25),

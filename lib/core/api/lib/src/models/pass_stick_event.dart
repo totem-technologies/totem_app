@@ -5,41 +5,50 @@
 //  OpenAPI spec version: 3.1.0
 
 final class PassStickEvent {
-  const PassStickEvent({this.type = 'pass_stick'});
+  const PassStickEvent({this.type = 'pass_stick', this.prompt});
 
   factory PassStickEvent.fromJson(Map<String, dynamic> json) {
     return PassStickEvent(
       type: json.containsKey('type') ? json['type'] as String : 'pass_stick',
+      prompt: json['prompt'] as String?,
     );
   }
 
   final String type;
 
+  final String? prompt;
+
   Map<String, dynamic> toJson() {
-    return {'type': type};
+    return {'type': type, 'prompt': ?prompt};
   }
 
   static bool canParse(Map<String, dynamic> json) {
     return true;
   }
 
-  PassStickEvent copyWith({String Function()? type}) {
-    return PassStickEvent(type: type != null ? type() : this.type);
+  PassStickEvent copyWith({
+    String Function()? type,
+    String? Function()? prompt,
+  }) {
+    return PassStickEvent(
+      type: type != null ? type() : this.type,
+      prompt: prompt != null ? prompt() : this.prompt,
+    );
   }
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        other is PassStickEvent && type == other.type;
+        other is PassStickEvent && type == other.type && prompt == other.prompt;
   }
 
   @override
   int get hashCode {
-    return type.hashCode;
+    return Object.hash(type, prompt);
   }
 
   @override
   String toString() {
-    return 'PassStickEvent(type: $type)';
+    return 'PassStickEvent(type: $type, prompt: $prompt)';
   }
 }

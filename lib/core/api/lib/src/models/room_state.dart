@@ -121,6 +121,8 @@ final class RoomState {
     required this.talkingOrder,
     required this.keeper,
     this.bannedParticipants = const [],
+    required this.roundNumber,
+    this.roundMessage,
   });
 
   factory RoomState.fromJson(Map<String, dynamic> json) {
@@ -143,6 +145,8 @@ final class RoomState {
                 .map((e) => e as String)
                 .toList()
           : const [],
+      roundNumber: (json['round_number'] as num).toInt(),
+      roundMessage: json['round_message'] as String?,
     );
   }
 
@@ -166,6 +170,10 @@ final class RoomState {
 
   final List<String> bannedParticipants;
 
+  final int roundNumber;
+
+  final String? roundMessage;
+
   Map<String, dynamic> toJson() {
     return {
       'session_slug': sessionSlug,
@@ -178,6 +186,8 @@ final class RoomState {
       'talking_order': talkingOrder,
       'keeper': keeper,
       'banned_participants': bannedParticipants,
+      'round_number': roundNumber,
+      'round_message': ?roundMessage,
     };
   }
 
@@ -191,7 +201,9 @@ final class RoomState {
         json.containsKey('status_detail') &&
         json.containsKey('talking_order') &&
         json.containsKey('keeper') &&
-        json['keeper'] is String;
+        json['keeper'] is String &&
+        json.containsKey('round_number') &&
+        json['round_number'] is num;
   }
 
   RoomState copyWith({
@@ -205,6 +217,8 @@ final class RoomState {
     List<String>? talkingOrder,
     String? keeper,
     List<String> Function()? bannedParticipants,
+    int? roundNumber,
+    String? Function()? roundMessage,
   }) {
     return RoomState(
       sessionSlug: sessionSlug ?? this.sessionSlug,
@@ -221,6 +235,8 @@ final class RoomState {
       bannedParticipants: bannedParticipants != null
           ? bannedParticipants()
           : this.bannedParticipants,
+      roundNumber: roundNumber ?? this.roundNumber,
+      roundMessage: roundMessage != null ? roundMessage() : this.roundMessage,
     );
   }
 
@@ -243,7 +259,9 @@ final class RoomState {
             const ListEquality<dynamic>().equals(
               bannedParticipants,
               other.bannedParticipants,
-            );
+            ) &&
+            roundNumber == other.roundNumber &&
+            roundMessage == other.roundMessage;
   }
 
   @override
@@ -259,11 +277,13 @@ final class RoomState {
       Object.hashAll(talkingOrder),
       keeper,
       Object.hashAll(bannedParticipants),
+      roundNumber,
+      roundMessage,
     );
   }
 
   @override
   String toString() {
-    return 'RoomState(sessionSlug: $sessionSlug, version: $version, status: $status, turnState: $turnState, statusDetail: $statusDetail, currentSpeaker: $currentSpeaker, nextSpeaker: $nextSpeaker, talkingOrder: $talkingOrder, keeper: $keeper, bannedParticipants: $bannedParticipants)';
+    return 'RoomState(sessionSlug: $sessionSlug, version: $version, status: $status, turnState: $turnState, statusDetail: $statusDetail, currentSpeaker: $currentSpeaker, nextSpeaker: $nextSpeaker, talkingOrder: $talkingOrder, keeper: $keeper, bannedParticipants: $bannedParticipants, roundNumber: $roundNumber, roundMessage: $roundMessage)';
   }
 }

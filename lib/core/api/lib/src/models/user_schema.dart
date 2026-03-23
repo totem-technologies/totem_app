@@ -45,7 +45,6 @@ final class UserSchema {
 
   final String? slug;
 
-  /// Designates whether the user can log into this admin site.
   final bool isStaff;
 
   final String? apiKey;

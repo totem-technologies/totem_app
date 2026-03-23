@@ -336,9 +336,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                   sessionState,
                   isMyTurn,
                 ),
-                onPassTotem: () async {
+                onPassTotem: (roundMessage) async {
                   try {
-                    await session.passTotem();
+                    await session.passTotem(roundMessage: roundMessage);
                     return true;
                   } catch (error) {
                     if (!context.mounted) return false;
