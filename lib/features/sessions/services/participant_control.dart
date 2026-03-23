@@ -46,10 +46,15 @@ class ChatMessage {
 extension ParticipantControl on Session {
   /// Pass the totem to the next participant in the speaking order.
   ///
-  /// This fails silently if it's not the user's turn.
   /// Throws an exception if the operation fails.
   Future<void> passTotem() async {
-    if (!isCurrentUserKeeper() && !state.isMyTurn(room!)) return;
+    if (!state.isMyTurn(room!)) {
+      throw StateError("Not the user's turn to pass the totem");
+    }
+    if (!state.hasKeeper) {
+      throw StateError('No keeper in the session to pass the totem');
+    }
+
     disableMicrophone();
     try {
       final roomState = await ref.read(
@@ -75,9 +80,14 @@ extension ParticipantControl on Session {
   /// This fails silently if it's not the user's turn.
   /// Throws an exception if the operation fails.
   Future<void> acceptTotem() async {
-    if (!isCurrentUserKeeper() && !state.amNext(room!)) {
+    if (!state.amNext(room!)) {
       throw StateError("Not the user's turn to accept the totem");
     }
+
+    if (!state.hasKeeper) {
+      throw StateError('No keeper in the session to accept the totem');
+    }
+
     try {
       final roomState = await ref.read(
         acceptTotemProvider(
@@ -101,6 +111,11 @@ extension ParticipantControl on Session {
   /// Send an emoji to other participants.
   /// This operation is fire-and-forget and doesn't throw errors.
   Future<void> sendReaction(String emoji) async {
+    if (!state.hasKeeper) {
+      logger.w('Attempted to send reaction without a keeper, ignoring');
+      return;
+    }
+
     ref
         .read(emojiReactionsProvider.notifier)
         .emitIncomingReaction(
@@ -132,8 +147,18 @@ extension ParticipantControl on Session {
   }
 
   /// Send a chat message to other participants.
+  ///
+  /// Only the keeper can send chat messages, and this method will fail silently if the user is not the keeper.
+  ///
   /// This operation is fire-and-forget and doesn't throw errors.
   Future<void> sendMessage(String text) async {
+    if (!isCurrentUserKeeper()) {
+      logger.w(
+        'Attempted to send chat message without being the keeper, ignoring',
+      );
+      return;
+    }
+
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final message = ChatMessage(
       message: text,

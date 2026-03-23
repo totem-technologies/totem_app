@@ -78,7 +78,10 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                     child: Text(
                       widget.title!,
                       textAlign: TextAlign.center,
-                      style: theme.textTheme.titleLarge,
+                      style:
+                          (theme.dialogTheme.titleTextStyle ??
+                                  theme.textTheme.titleLarge)
+                              ?.copyWith(color: theme.colorScheme.onSurface),
                     ),
                   ),
               ],

@@ -227,7 +227,7 @@ class SessionRoomState {
         other.removed == removed &&
         other.disconnectReason == disconnectReason &&
         other.isSpeakerphoneEnabled == isSpeakerphoneEnabled &&
-        other.livekitError?.toString() == livekitError?.toString() &&
+        other.livekitError?.message == livekitError?.message &&
         const DeepCollectionEquality().equals(
           other.messages.map((m) => m.id),
           messages.map((m) => m.id),
@@ -243,7 +243,7 @@ class SessionRoomState {
       removed.hashCode ^
       disconnectReason.hashCode ^
       isSpeakerphoneEnabled.hashCode ^
-      livekitError.toString().hashCode ^
+      (livekitError?.message).hashCode ^
       const DeepCollectionEquality().hash(messages.map((m) => m.id));
 }
 
@@ -311,30 +311,27 @@ class Session extends _$Session {
           ),
           simulcast: true,
           videoSimulcastLayers: [
-            // Layer 1: "Tunnel Mode"
-            // Meet will drop the framerate to 15fps before letting the video freeze
+            // Low Layer
             // VideoParameters(
             //   dimensions: VideoParametersPresets.h360_43.dimensions,
             //   encoding: const VideoEncoding(
-            //     maxBitrate: 80000,
+            //     maxBitrate: 180_000,
             //     maxFramerate: 15,
             //   ),
             // ),
-
-            // Layer 2: "Standard Grid"
+            // Mid Layer
             VideoParameters(
               dimensions: VideoParametersPresets.h540_43.dimensions,
               encoding: const VideoEncoding(
                 maxBitrate: 400_000,
-                maxFramerate: 18,
+                maxFramerate: 20,
               ),
             ),
-
-            // Layer 3: "Active Speaker"
+            // High Layer
             VideoParameters(
               dimensions: VideoParametersPresets.h720_43.dimensions,
               encoding: const VideoEncoding(
-                maxBitrate: 900_000,
+                maxBitrate: 1_500_000,
                 maxFramerate: 20,
               ),
             ),
@@ -343,7 +340,7 @@ class Session extends _$Session {
         // defaultAudioPublishOptions: const AudioPublishOptions(),
 
         /// https://docs.livekit.io/home/client/tracks/subscribe/#adaptive-stream
-        adaptiveStream: false,
+        adaptiveStream: true,
       ),
     );
 

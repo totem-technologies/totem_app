@@ -240,9 +240,12 @@ void showErrorPopup(
   required TotemIconData icon,
   required String title,
   required String message,
+  PopupController? controller,
 }) {
-  return showPopup(
+  showPopup(
     context,
+    controller: controller,
+    duration: const Duration(seconds: 5),
     builder: (context) {
       return NotificationPopup(
         icon: icon,

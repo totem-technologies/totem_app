@@ -551,6 +551,12 @@ class TotemIcons {
 <path d="M12.5002 7.29167C13.0755 7.29167 13.5418 7.75804 13.5418 8.33333C13.5418 8.90863 13.0755 9.375 12.5002 9.375C11.9249 9.375 11.4585 8.90863 11.4585 8.33333C11.4585 7.75804 11.9249 7.29167 12.5002 7.29167Z" fill="white"/>
 </svg>
 ''';
+
+  static const pause = '''
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+  <path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"/>
+</svg>
+''';
 }
 
 typedef TotemIconData = String;
