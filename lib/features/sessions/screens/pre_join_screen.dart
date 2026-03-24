@@ -41,7 +41,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   LocalAudioTrack? _previewAudioTrack;
   var _isMicOn = true;
 
-  CameraCaptureOptions _cameraOptions = Session.defaultCameraCaptureOptions;
+  CameraCaptureOptions _cameraOptions = SessionController.defaultCameraCaptureOptions;
   var _audioOutputOptions = const AudioOutputOptions(speakerOn: true);
 
   SessionOptions? _sessionOptions;
@@ -314,7 +314,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     }
 
     await ref.read(eventProvider(widget.sessionSlug).future);
-    final session = ref.read(sessionProvider(options).notifier)
+    final session = ref.read(sessionControllerProvider(options).notifier)
       ..configureJoinPreferences(
         cameraEnabled: _isCameraOn,
         microphoneEnabled: _isMicOn,

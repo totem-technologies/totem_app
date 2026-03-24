@@ -27,10 +27,10 @@ SessionOptions? sessionScope(Ref ref) => null;
 
 /// Convenience provider to get the current session notifier.
 @Riverpod(dependencies: [sessionScope])
-Session? currentSession(Ref ref) {
+SessionController? currentSession(Ref ref) {
   final options = ref.watch(sessionScopeProvider);
   if (options == null) return null;
-  return ref.watch(sessionProvider(options).notifier);
+  return ref.watch(sessionControllerProvider(options).notifier);
 }
 
 /// Convenience provider to get the current session state.

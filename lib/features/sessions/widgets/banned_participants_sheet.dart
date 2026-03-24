@@ -8,7 +8,7 @@ import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 Future<void> showBannedParticipantsSheet(
   BuildContext context,
-  Session session,
+  SessionController session,
   SessionRoomState state,
 ) {
   return showModalBottomSheet(
@@ -31,7 +31,7 @@ class BannedParticipantsSheet extends ConsumerWidget {
     super.key,
   });
 
-  final Session session;
+  final SessionController session;
   final SessionRoomState state;
 
   @override
@@ -117,7 +117,7 @@ class _BannedParticipantItem extends ConsumerStatefulWidget {
   });
 
   final String participantSlug;
-  final Session session;
+  final SessionController session;
 
   @override
   ConsumerState<_BannedParticipantItem> createState() =>

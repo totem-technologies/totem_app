@@ -66,8 +66,13 @@ final currentSessionProvider = CurrentSessionProvider._();
 /// Convenience provider to get the current session notifier.
 
 final class CurrentSessionProvider
-    extends $FunctionalProvider<Session?, Session?, Session?>
-    with $Provider<Session?> {
+    extends
+        $FunctionalProvider<
+          SessionController?,
+          SessionController?,
+          SessionController?
+        >
+    with $Provider<SessionController?> {
   /// Convenience provider to get the current session notifier.
   CurrentSessionProvider._()
     : super(
@@ -89,24 +94,25 @@ final class CurrentSessionProvider
 
   @$internal
   @override
-  $ProviderElement<Session?> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
+  $ProviderElement<SessionController?> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
 
   @override
-  Session? create(Ref ref) {
+  SessionController? create(Ref ref) {
     return currentSession(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(Session? value) {
+  Override overrideWithValue(SessionController? value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<Session?>(value),
+      providerOverride: $SyncValueProvider<SessionController?>(value),
     );
   }
 }
 
-String _$currentSessionHash() => r'6c91a9a750d8148bd76f32e87eae6cf500681dd2';
+String _$currentSessionHash() => r'c8ae210045352ef458adf80cc2f978b4059535cb';
 
 /// Convenience provider to get the current session state.
 

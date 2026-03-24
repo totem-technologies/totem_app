@@ -1,6 +1,6 @@
 part of 'session_service.dart';
 
-extension BackgroundControl on Session {
+extension BackgroundControl on SessionController {
   Future<void> setupBackgroundMode() async {
     try {
       await requestPermissions();

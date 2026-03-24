@@ -449,7 +449,7 @@ class SessionRoomState {
 }
 
 @riverpod
-class Session extends _$Session {
+class SessionController extends _$SessionController {
   /// The [Room] of the current session, which holds the LiveKit room and related information.
   Room? room;
   EventsListener<RoomEvent>? _listener;
@@ -580,92 +580,6 @@ class Session extends _$Session {
         .watch(eventProvider(options.eventSlug))
         .whenData((event) => this.event = event);
 
-    _syncTimer?.cancel();
-    _syncTimer = Timer.periodic(
-      Session.syncTimerDuration,
-      (_) => _onRoomChanges(),
-    );
-
-    room = Room(
-      roomOptions: RoomOptions(
-        defaultCameraCaptureOptions: options.cameraOptions,
-        defaultAudioCaptureOptions: const AudioCaptureOptions(),
-        defaultAudioOutputOptions: options.audioOutputOptions,
-
-        dynacast: true,
-        defaultVideoPublishOptions: VideoPublishOptions(
-          // https://docs.livekit.io/transport/media/advanced/#video-codec-support
-          // https://livekit.io/webrtc/codecs-guide
-          // https://github.com/flutter-webrtc/flutter-webrtc/issues/252
-          videoCodec: 'h265',
-          backupVideoCodec: const BackupVideoCodec(
-            codec: 'vp8',
-            simulcast: true,
-          ),
-          simulcast: true,
-          videoSimulcastLayers: [
-            // Low Layer
-            // VideoParameters(
-            //   dimensions: VideoParametersPresets.h360_43.dimensions,
-            //   encoding: const VideoEncoding(
-            //     maxBitrate: 180_000,
-            //     maxFramerate: 15,
-            //   ),
-            // ),
-            // Mid Layer
-            VideoParameters(
-              dimensions: VideoParametersPresets.h540_43.dimensions,
-              encoding: const VideoEncoding(
-                maxBitrate: 400_000,
-                maxFramerate: 20,
-              ),
-            ),
-            // High Layer
-            VideoParameters(
-              dimensions: VideoParametersPresets.h720_43.dimensions,
-              encoding: const VideoEncoding(
-                maxBitrate: 1_500_000,
-                maxFramerate: 20,
-              ),
-            ),
-          ],
-        ),
-        // defaultAudioPublishOptions: const AudioPublishOptions(),
-
-        /// https://docs.livekit.io/home/client/tracks/subscribe/#adaptive-stream
-        adaptiveStream: true,
-      ),
-    );
-
-    room!.prepareConnection(AppConfig.liveKitUrl, options.token);
-
-    _listener = room!.createListener();
-    _listener
-      ?..on((_) {
-        if (ref.mounted) {
-          _onRoomChanges();
-        }
-      })
-      ..on<RoomConnectedEvent>((_) {
-        _onConnected();
-      })
-      ..on<RoomDisconnectedEvent>((event) {
-        logger.d('Disconnected from session. Reason: ${event.reason}');
-        if (event.reason != null) {
-          _dispatch(
-            _SessionErrorChanged(RoomDisconnectionError(event.reason!)),
-          );
-        }
-        _onDisconnected();
-      })
-      ..on<DataReceivedEvent>(_onDataReceived)
-      ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
-      ..on<ParticipantConnectedEvent>(_onParticipantConnected);
-
-    WakelockPlus.enable();
-    setupBackgroundMode();
-    _applyScreenCapturePolicy();
-
     ref.onDispose(_cleanUp);
 
     final initialRoomState = RoomState(
@@ -684,9 +598,9 @@ class Session extends _$Session {
     );
 
     return SessionRoomState(
-      connection: ConnectionState(
-        phase: SessionPhase.connecting,
-        state: RoomConnectionState.connecting,
+      connection: const ConnectionState(
+        phase: SessionPhase.idle,
+        state: RoomConnectionState.disconnected,
       ),
       participants: const ParticipantsState(),
       chat: const ChatState(),
@@ -952,18 +866,88 @@ class Session extends _$Session {
   }
 
   Future<void> join() async {
-    if (room == null) return;
-    if (state.connectionState == RoomConnectionState.connected) return;
-    await connect();
-  }
+    if (room != null) {
+      if (state.connectionState == RoomConnectionState.connected) return;
+    }
 
-  Future<void> connect() async {
     _dispatch(
       const _ConnectionChanged(
         RoomConnectionState.connecting,
         SessionPhase.connecting,
       ),
     );
+
+    final options = _options;
+    if (options == null) return;
+
+    room ??= Room(
+      roomOptions: RoomOptions(
+        defaultCameraCaptureOptions: options.cameraOptions,
+        defaultAudioCaptureOptions: const AudioCaptureOptions(),
+        defaultAudioOutputOptions: options.audioOutputOptions,
+        dynacast: true,
+        defaultVideoPublishOptions: VideoPublishOptions(
+          videoCodec: 'h265',
+          backupVideoCodec: const BackupVideoCodec(
+            codec: 'vp8',
+            simulcast: true,
+          ),
+          simulcast: true,
+          videoSimulcastLayers: [
+            VideoParameters(
+              dimensions: VideoParametersPresets.h540_43.dimensions,
+              encoding: const VideoEncoding(
+                maxBitrate: 400_000,
+                maxFramerate: 20,
+              ),
+            ),
+            VideoParameters(
+              dimensions: VideoParametersPresets.h720_43.dimensions,
+              encoding: const VideoEncoding(
+                maxBitrate: 1_500_000,
+                maxFramerate: 20,
+              ),
+            ),
+          ],
+        ),
+        adaptiveStream: true,
+      ),
+    );
+
+    await room!.prepareConnection(AppConfig.liveKitUrl, options.token);
+
+    _listener ??= room!.createListener()
+      ..on((_) {
+        if (ref.mounted) {
+          _onRoomChanges();
+        }
+      })
+      ..on<RoomConnectedEvent>((_) {
+        _onConnected();
+      })
+      ..on<RoomDisconnectedEvent>((event) {
+        logger.d('Disconnected from session. Reason: ${event.reason}');
+        if (event.reason != null) {
+          _dispatch(
+            _SessionErrorChanged(RoomDisconnectionError(event.reason!)),
+          );
+        }
+        _onDisconnected();
+      })
+      ..on<DataReceivedEvent>(_onDataReceived)
+      ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
+      ..on<ParticipantConnectedEvent>(_onParticipantConnected);
+
+    WakelockPlus.enable();
+    setupBackgroundMode();
+    _applyScreenCapturePolicy();
+
+    _syncTimer?.cancel();
+    _syncTimer = Timer.periodic(
+      SessionController.syncTimerDuration,
+      (_) => _onRoomChanges(),
+    );
+
     try {
       await room!.connect(AppConfig.liveKitUrl, options.token);
     } catch (error, stackTrace) {
@@ -1047,4 +1031,9 @@ class Session extends _$Session {
         .read(screenProtectionProvider)
         .setCaptureProtectionEnabled(shouldProtect);
   }
+}
+
+@Riverpod(keepAlive: true)
+SessionRoomState session(Ref ref, SessionOptions options) {
+  return ref.watch(sessionControllerProvider(options));
 }

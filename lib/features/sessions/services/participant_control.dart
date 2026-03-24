@@ -43,7 +43,7 @@ class ChatMessage {
   String toJson() => const JsonEncoder().convert(toMap());
 }
 
-extension ParticipantControl on Session {
+extension ParticipantControl on SessionController {
   /// Pass the totem to the next participant in the speaking order.
   ///
   /// Throws an exception if the operation fails.

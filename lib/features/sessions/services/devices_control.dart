@@ -3,7 +3,7 @@
 
 part of 'session_service.dart';
 
-extension DevicesControl on Session {
+extension DevicesControl on SessionController {
   static const externalAudioOutputTypes = <audio.AudioDeviceType>{
     audio.AudioDeviceType.wiredHeadset,
     audio.AudioDeviceType.wiredHeadphones,
@@ -102,7 +102,7 @@ extension DevicesControl on Session {
       } else {
         await room?.localParticipant?.publishVideoTrack(
           await LocalVideoTrack.createCameraTrack(
-            Session.defaultCameraCaptureOptions,
+            SessionController.defaultCameraCaptureOptions,
           ),
         );
       }
@@ -203,7 +203,7 @@ extension DevicesControl on Session {
     }
     await room?.localParticipant?.setCameraEnabled(
       true,
-      cameraCaptureOptions: Session.defaultCameraCaptureOptions.copyWith(
+      cameraCaptureOptions: SessionController.defaultCameraCaptureOptions.copyWith(
         deviceId: room?.selectedVideoInputDeviceId,
       ),
     );

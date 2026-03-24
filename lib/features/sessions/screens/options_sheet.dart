@@ -287,11 +287,11 @@ class OptionsSheet extends ConsumerWidget {
     );
   }
 
-  Future<void> _onMuteEveryone(Session session) => session.muteEveryone();
+  Future<void> _onMuteEveryone(SessionController session) => session.muteEveryone();
 
   Future<void> _onNextTotemAction(
     BuildContext context,
-    Session session,
+    SessionController session,
     SessionRoomState state,
   ) async {
     if (state.roomState.nextParticipantIdentity == null) return;
@@ -349,7 +349,7 @@ class OptionsSheet extends ConsumerWidget {
     );
   }
 
-  Future<void> _onStartSession(BuildContext context, Session session) async {
+  Future<void> _onStartSession(BuildContext context, SessionController session) async {
     return showDialog<void>(
       context: context,
       builder: (context) {
@@ -384,7 +384,7 @@ class OptionsSheet extends ConsumerWidget {
     );
   }
 
-  Future<void> _onEndSession(BuildContext context, Session session) async {
+  Future<void> _onEndSession(BuildContext context, SessionController session) async {
     return showDialog<void>(
       context: context,
       builder: (context) {

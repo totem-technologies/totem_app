@@ -12,7 +12,7 @@ import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 Future<void> showParticipantReorderWidget(
   BuildContext context,
-  Session session,
+  SessionController session,
   SessionRoomState state,
   SessionDetailSchema event,
 ) {
@@ -38,7 +38,7 @@ class ParticipantReorderWidget extends ConsumerStatefulWidget {
     super.key,
   });
 
-  final Session session;
+  final SessionController session;
   final SessionRoomState state;
   final SessionDetailSchema event;
 

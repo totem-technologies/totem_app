@@ -3,7 +3,7 @@
 
 part of 'session_service.dart';
 
-extension KeeperControl on Session {
+extension KeeperControl on SessionController {
   /// Whether the current authenticated user is the keeper.
   bool isCurrentUserKeeper() {
     final currentUserSlug = ref.read(
@@ -19,7 +19,7 @@ extension KeeperControl on Session {
 
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = Timer(
-      Session.keeperDisconnectionTimeout,
+      SessionController.keeperDisconnectionTimeout,
       _onKeeperDisconnectedTimeout,
     );
 

@@ -280,7 +280,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   Widget _buildBody(
     WidgetRef ref,
-    Session session,
+    SessionController session,
     SessionDetailSchema sessionEvent,
     DisconnectReason? disconnectReason,
     RoomConnectionState connectionState,
@@ -291,7 +291,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   ) {
     switch (connectionState) {
       case RoomConnectionState.error:
-        return RoomErrorScreen(onRetry: session.connect);
+        return RoomErrorScreen(onRetry: session.join);
       case RoomConnectionState.connecting:
         return widget.loadingScreen;
       case RoomConnectionState.disconnected:
@@ -360,7 +360,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   Widget _buildActionBar(
     WidgetRef ref,
-    Session session,
+    SessionController session,
     bool isMyTurn,
   ) {
     return Builder(
