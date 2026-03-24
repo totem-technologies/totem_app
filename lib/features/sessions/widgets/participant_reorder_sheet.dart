@@ -55,7 +55,7 @@ class _ParticipantReorderWidgetState
   @override
   void initState() {
     super.initState();
-    final roomParticipants = widget.state.participants
+    final roomParticipants = widget.state.participantsList
         .map((p) => p.identity)
         .toSet();
     _localOrder = widget.state.roomState.talkingOrder.isEmpty
@@ -130,7 +130,7 @@ class _ParticipantReorderWidgetState
                     itemBuilder: (context, index) {
                       final participantIdentity = participants[index];
 
-                      final participant = widget.state.participants
+                      final participant = widget.state.participantsList
                           .firstWhereOrNull(
                             (p) => p.identity == participantIdentity,
                           );

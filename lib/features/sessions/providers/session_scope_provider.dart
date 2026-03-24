@@ -48,7 +48,7 @@ SessionRoomState? currentSessionState(Ref ref) {
 @Riverpod(dependencies: [currentSessionState])
 RoomConnectionState connectionState(Ref ref) {
   return ref.watch(
-        currentSessionStateProvider.select((s) => s?.connectionState),
+        currentSessionStateProvider.select((s) => s?.connection.state),
       ) ??
       RoomConnectionState.connecting;
 }
@@ -57,9 +57,17 @@ RoomConnectionState connectionState(Ref ref) {
 @Riverpod(dependencies: [currentSessionState])
 SessionPhase sessionPhase(Ref ref) {
   return ref.watch(
-        currentSessionStateProvider.select((s) => s?.phase),
+        currentSessionStateProvider.select((s) => s?.connection.phase),
       ) ??
       SessionPhase.connecting;
+}
+
+/// The current session error, if any.
+@Riverpod(dependencies: [currentSessionState])
+RoomError? sessionError(Ref ref) {
+  return ref.watch(
+    currentSessionStateProvider.select((s) => s?.connection.error),
+  );
 }
 
 /// The current session status (waiting, started, ended).
@@ -84,32 +92,38 @@ TurnState turnState(Ref ref) {
 @Riverpod(dependencies: [currentSessionState])
 List<Participant> sessionParticipants(Ref ref) {
   return ref.watch(
-        currentSessionStateProvider.select((s) => s?.participants),
+        currentSessionStateProvider.select((s) => s?.participants.participants),
       ) ??
       [];
 }
 
-/// Current room-level disconnect reason, if any.
-@Riverpod(dependencies: [currentSessionState])
-DisconnectReason? disconnectReason(Ref ref) {
-  return ref.watch(
-    currentSessionStateProvider.select((s) => s?.disconnectReason),
-  );
+/// Current session error as a LiveKitError, if applicable.
+@Riverpod(dependencies: [sessionError])
+LiveKitException? sessionLivekitError(Ref ref) {
+  final error = ref.watch(sessionErrorProvider);
+  if (error is RoomLiveKitError) {
+    return error.exception;
+  }
+  return null;
 }
 
-/// Latest LiveKit error for the current session.
-@Riverpod(dependencies: [currentSessionState])
-LiveKitException? sessionLivekitError(Ref ref) {
-  return ref.watch(
-    currentSessionStateProvider.select((s) => s?.livekitError),
-  );
+/// Current session error as a DisconnectionError, if applicable.
+@Riverpod(dependencies: [sessionError])
+DisconnectReason? disconnectionReason(Ref ref) {
+  final error = ref.watch(sessionErrorProvider);
+  if (error is RoomDisconnectionError) {
+    return error.reason;
+  }
+  return null;
 }
 
 /// Whether the keeper is currently disconnected.
 @Riverpod(dependencies: [currentSessionState])
 bool hasKeeperDisconnected(Ref ref) {
   return ref.watch(
-        currentSessionStateProvider.select((s) => s?.hasKeeperDisconnected),
+        currentSessionStateProvider.select(
+          (s) => s?.participants.hasKeeperDisconnected,
+        ),
       ) ??
       false;
 }
@@ -118,7 +132,7 @@ bool hasKeeperDisconnected(Ref ref) {
 @Riverpod(dependencies: [currentSessionState])
 List<ChatMessage> sessionMessages(Ref ref) {
   return ref.watch(
-        currentSessionStateProvider.select((s) => s?.messages),
+        currentSessionStateProvider.select((s) => s?.chat.messages),
       ) ??
       const [];
 }

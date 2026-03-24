@@ -5,7 +5,9 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' hide Session;
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart'
+    as mobile_api
+    show RoomStatus, SessionDetailSchema, TurnState;
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
@@ -36,7 +38,7 @@ Future<bool?> showLeaveDialog(BuildContext context) {
 Future<void> showOptionsSheet(
   BuildContext context,
   SessionRoomState state,
-  SessionDetailSchema session,
+  mobile_api.SessionDetailSchema session,
 ) {
   return showModalBottomSheet(
     context: context,
@@ -55,7 +57,7 @@ Future<void> showOptionsSheet(
 class OptionsSheet extends ConsumerWidget {
   const OptionsSheet({required this.session, super.key});
 
-  final SessionDetailSchema session;
+  final mobile_api.SessionDetailSchema session;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -151,7 +153,7 @@ class OptionsSheet extends ConsumerWidget {
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
-                if (state.roomState.status == RoomStatus.waitingRoom)
+                if (state.roomState.status == mobile_api.RoomStatus.waitingRoom)
                   OptionsSheetTile<void>(
                     title: 'Start session',
                     icon: TotemIcons.feedback,
@@ -192,13 +194,13 @@ class OptionsSheet extends ConsumerWidget {
                     _onMuteEveryone(currentSession);
                   },
                 ),
-                if (state.roomState.status == RoomStatus.active)
+                if (state.roomState.status == mobile_api.RoomStatus.active)
                   Builder(
                     builder: (context) {
                       final next =
                           state.roomState.nextParticipantForcePassIdentity;
                       final nextParticipantName = next != null
-                          ? state.participants
+                          ? state.participantsList
                                 .firstWhereOrNull((p) => p.identity == next)
                                 ?.name
                           : null;
@@ -207,7 +209,9 @@ class OptionsSheet extends ConsumerWidget {
                             'Force pass to ${nextParticipantName ?? 'the next'}',
                         icon: TotemIcons.passToNext,
                         type: OptionsSheetTileType.destructive,
-                        onTap: state.roomState.turnState != TurnState.idle
+                        onTap:
+                            state.roomState.turnState !=
+                                mobile_api.TurnState.idle
                             ? () {
                                 Navigator.of(context).pop();
                                 _onNextTotemAction(
@@ -220,12 +224,13 @@ class OptionsSheet extends ConsumerWidget {
                       );
                     },
                   ),
-                if (state.roomState.status != RoomStatus.ended)
+                if (state.roomState.status != mobile_api.RoomStatus.ended)
                   OptionsSheetTile<void>(
                     title: 'End Session',
                     icon: TotemIcons.cameraOff,
                     type: OptionsSheetTileType.destructive,
-                    onTap: state.roomState.status == RoomStatus.active
+                    onTap:
+                        state.roomState.status == mobile_api.RoomStatus.active
                         ? () {
                             Navigator.of(context).pop();
                             _onEndSession(context, currentSession);
@@ -240,9 +245,10 @@ class OptionsSheet extends ConsumerWidget {
                 ),
                 OptionsSheetTile<void>(
                   title: switch (state.roomState.status) {
-                    RoomStatus.waitingRoom => 'Session Status: Waiting Room',
-                    RoomStatus.active => 'Session Status: Active',
-                    RoomStatus.ended => 'Session Status: Ended',
+                    mobile_api.RoomStatus.waitingRoom =>
+                      'Session Status: Waiting Room',
+                    mobile_api.RoomStatus.active => 'Session Status: Active',
+                    mobile_api.RoomStatus.ended => 'Session Status: Ended',
                     _ => 'Session Status: Unknown',
                   },
                   icon: TotemIcons.checkboxOutlined,
@@ -257,7 +263,7 @@ class OptionsSheet extends ConsumerWidget {
                   builder: (context) {
                     final String? userName =
                         state.roomState.currentSpeaker != null
-                        ? state.participants
+                        ? state.participantsList
                               .firstWhereOrNull(
                                 (p) =>
                                     p.identity ==
@@ -300,7 +306,7 @@ class OptionsSheet extends ConsumerWidget {
         return Consumer(
           builder: (context, ref, child) {
             final nextParticipantName =
-                state.participants
+                state.participantsList
                     .firstWhereOrNull(
                       (p) => p.identity == nextParticipantIdentity,
                     )

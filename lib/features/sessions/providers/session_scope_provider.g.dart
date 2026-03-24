@@ -222,7 +222,7 @@ final class ConnectionStateProvider
   }
 }
 
-String _$connectionStateHash() => r'fcc0d972a83bcfa6c64f4639f186b568549b94b7';
+String _$connectionStateHash() => r'e7120f187e1bb2c3ff534cf045c17ee3b355e6a3';
 
 /// The high-level lifecycle phase for the current session.
 
@@ -275,7 +275,60 @@ final class SessionPhaseProvider
   }
 }
 
-String _$sessionPhaseHash() => r'8c50b0941ae6d1af50a9f867bd73d34a2532adf8';
+String _$sessionPhaseHash() => r'c4c9982f96bd35dbe119ce4d10c5398ec24a4426';
+
+/// The current session error, if any.
+
+@ProviderFor(sessionError)
+final sessionErrorProvider = SessionErrorProvider._();
+
+/// The current session error, if any.
+
+final class SessionErrorProvider
+    extends $FunctionalProvider<RoomError?, RoomError?, RoomError?>
+    with $Provider<RoomError?> {
+  /// The current session error, if any.
+  SessionErrorProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sessionErrorProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          SessionErrorProvider.$allTransitiveDependencies0,
+          SessionErrorProvider.$allTransitiveDependencies1,
+        ],
+      );
+
+  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionStateProvider.$allTransitiveDependencies0;
+
+  @override
+  String debugGetCreateSourceHash() => _$sessionErrorHash();
+
+  @$internal
+  @override
+  $ProviderElement<RoomError?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  RoomError? create(Ref ref) {
+    return sessionError(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(RoomError? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<RoomError?>(value),
+    );
+  }
+}
+
+String _$sessionErrorHash() => r'5375e24cbec1705f70990ddbcb121016e09701b5';
 
 /// The current session status (waiting, started, ended).
 
@@ -442,73 +495,14 @@ final class SessionParticipantsProvider
 }
 
 String _$sessionParticipantsHash() =>
-    r'8a215684dad4d3634ab710d3c5fe0726af4df440';
+    r'10990e4bffa481e16748e63e0e77394db35a87cd';
 
-/// Current room-level disconnect reason, if any.
-
-@ProviderFor(disconnectReason)
-final disconnectReasonProvider = DisconnectReasonProvider._();
-
-/// Current room-level disconnect reason, if any.
-
-final class DisconnectReasonProvider
-    extends
-        $FunctionalProvider<
-          DisconnectReason?,
-          DisconnectReason?,
-          DisconnectReason?
-        >
-    with $Provider<DisconnectReason?> {
-  /// Current room-level disconnect reason, if any.
-  DisconnectReasonProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'disconnectReasonProvider',
-        isAutoDispose: true,
-        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
-        $allTransitiveDependencies: <ProviderOrFamily>[
-          DisconnectReasonProvider.$allTransitiveDependencies0,
-          DisconnectReasonProvider.$allTransitiveDependencies1,
-        ],
-      );
-
-  static final $allTransitiveDependencies0 = currentSessionStateProvider;
-  static final $allTransitiveDependencies1 =
-      CurrentSessionStateProvider.$allTransitiveDependencies0;
-
-  @override
-  String debugGetCreateSourceHash() => _$disconnectReasonHash();
-
-  @$internal
-  @override
-  $ProviderElement<DisconnectReason?> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  DisconnectReason? create(Ref ref) {
-    return disconnectReason(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(DisconnectReason? value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<DisconnectReason?>(value),
-    );
-  }
-}
-
-String _$disconnectReasonHash() => r'a5f7e96c26ae17dbf53828e31a4ff4abcd52c7c9';
-
-/// Latest LiveKit error for the current session.
+/// Current session error as a LiveKitError, if applicable.
 
 @ProviderFor(sessionLivekitError)
 final sessionLivekitErrorProvider = SessionLivekitErrorProvider._();
 
-/// Latest LiveKit error for the current session.
+/// Current session error as a LiveKitError, if applicable.
 
 final class SessionLivekitErrorProvider
     extends
@@ -518,7 +512,7 @@ final class SessionLivekitErrorProvider
           LiveKitException?
         >
     with $Provider<LiveKitException?> {
-  /// Latest LiveKit error for the current session.
+  /// Current session error as a LiveKitError, if applicable.
   SessionLivekitErrorProvider._()
     : super(
         from: null,
@@ -526,16 +520,19 @@ final class SessionLivekitErrorProvider
         retry: null,
         name: r'sessionLivekitErrorProvider',
         isAutoDispose: true,
-        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
+        dependencies: <ProviderOrFamily>[sessionErrorProvider],
         $allTransitiveDependencies: <ProviderOrFamily>[
           SessionLivekitErrorProvider.$allTransitiveDependencies0,
           SessionLivekitErrorProvider.$allTransitiveDependencies1,
+          SessionLivekitErrorProvider.$allTransitiveDependencies2,
         ],
       );
 
-  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies0 = sessionErrorProvider;
   static final $allTransitiveDependencies1 =
-      CurrentSessionStateProvider.$allTransitiveDependencies0;
+      SessionErrorProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 =
+      SessionErrorProvider.$allTransitiveDependencies1;
 
   @override
   String debugGetCreateSourceHash() => _$sessionLivekitErrorHash();
@@ -561,7 +558,70 @@ final class SessionLivekitErrorProvider
 }
 
 String _$sessionLivekitErrorHash() =>
-    r'30c88b011d5775e9d9db164db30f1a5032d21b2c';
+    r'db1f3228dbf9496c005a98d72ee1a2f3602dc3da';
+
+/// Current session error as a DisconnectionError, if applicable.
+
+@ProviderFor(disconnectionReason)
+final disconnectionReasonProvider = DisconnectionReasonProvider._();
+
+/// Current session error as a DisconnectionError, if applicable.
+
+final class DisconnectionReasonProvider
+    extends
+        $FunctionalProvider<
+          DisconnectReason?,
+          DisconnectReason?,
+          DisconnectReason?
+        >
+    with $Provider<DisconnectReason?> {
+  /// Current session error as a DisconnectionError, if applicable.
+  DisconnectionReasonProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'disconnectionReasonProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[sessionErrorProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          DisconnectionReasonProvider.$allTransitiveDependencies0,
+          DisconnectionReasonProvider.$allTransitiveDependencies1,
+          DisconnectionReasonProvider.$allTransitiveDependencies2,
+        ],
+      );
+
+  static final $allTransitiveDependencies0 = sessionErrorProvider;
+  static final $allTransitiveDependencies1 =
+      SessionErrorProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 =
+      SessionErrorProvider.$allTransitiveDependencies1;
+
+  @override
+  String debugGetCreateSourceHash() => _$disconnectionReasonHash();
+
+  @$internal
+  @override
+  $ProviderElement<DisconnectReason?> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  DisconnectReason? create(Ref ref) {
+    return disconnectionReason(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DisconnectReason? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DisconnectReason?>(value),
+    );
+  }
+}
+
+String _$disconnectionReasonHash() =>
+    r'7101bc468c99e2f90e436d6c68716a3fee19cdcb';
 
 /// Whether the keeper is currently disconnected.
 
@@ -615,7 +675,7 @@ final class HasKeeperDisconnectedProvider
 }
 
 String _$hasKeeperDisconnectedHash() =>
-    r'ab92ee1817dd918389a13a3f0941260316d5d5c7';
+    r'c20d31da8e1761c56e8c9468346a7d5673aaa22b';
 
 /// All chat messages for the current session.
 
@@ -674,7 +734,7 @@ final class SessionMessagesProvider
   }
 }
 
-String _$sessionMessagesHash() => r'146b865c8350f64e90a86bad3ef51f0672c85fff';
+String _$sessionMessagesHash() => r'a1a4a2f82da8c165d00852e6afcd1421da168f3e';
 
 /// Last chat message if available.
 

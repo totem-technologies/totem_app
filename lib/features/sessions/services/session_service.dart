@@ -42,6 +42,185 @@ enum SessionCommunicationTopics {
   final String topic;
 }
 
+// ============= Domain Errors =============
+
+sealed class RoomError {
+  const RoomError();
+}
+
+class RoomLiveKitError extends RoomError {
+  const RoomLiveKitError(this.exception);
+  final LiveKitException exception;
+
+  @override
+  String toString() => 'RoomLiveKitError: ${exception.message}';
+}
+
+class RoomDisconnectionError extends RoomError {
+  const RoomDisconnectionError(this.reason);
+  final DisconnectReason reason;
+
+  @override
+  String toString() => 'RoomDisconnectionError: ${reason.name}';
+}
+
+class RoomTimeoutError extends RoomError {
+  const RoomTimeoutError(this.phase);
+  final SessionPhase phase;
+
+  @override
+  String toString() => 'RoomTimeoutError in phase: ${phase.name}';
+}
+
+// ============= Nested Domain State =============
+
+@immutable
+class ConnectionState {
+  const ConnectionState({
+    required this.phase,
+    required this.state,
+    this.error,
+  });
+
+  final SessionPhase phase;
+  final RoomConnectionState state;
+  final RoomError? error;
+
+  ConnectionState copyWith({
+    SessionPhase? phase,
+    RoomConnectionState? state,
+    RoomError? error,
+    bool clearError = false,
+  }) {
+    return ConnectionState(
+      phase: phase ?? this.phase,
+      state: state ?? this.state,
+      error: clearError ? null : error ?? this.error,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ConnectionState &&
+        other.phase == phase &&
+        other.state == state &&
+        other.error?.toString() == error?.toString();
+  }
+
+  @override
+  int get hashCode =>
+      phase.hashCode ^ state.hashCode ^ error.toString().hashCode;
+}
+
+@immutable
+class ParticipantsState {
+  const ParticipantsState({
+    this.participants = const [],
+    this.hasKeeperDisconnected = false,
+    this.removed = false,
+  });
+
+  final List<Participant> participants;
+  final bool hasKeeperDisconnected;
+  final bool removed;
+
+  ParticipantsState copyWith({
+    List<Participant>? participants,
+    bool? hasKeeperDisconnected,
+    bool? removed,
+  }) {
+    return ParticipantsState(
+      participants: participants ?? this.participants,
+      hasKeeperDisconnected:
+          hasKeeperDisconnected ?? this.hasKeeperDisconnected,
+      removed: removed ?? this.removed,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ParticipantsState &&
+        const DeepCollectionEquality().equals(
+          other.participants.map((p) => p.identity),
+          participants.map((p) => p.identity),
+        ) &&
+        other.hasKeeperDisconnected == hasKeeperDisconnected &&
+        other.removed == removed;
+  }
+
+  @override
+  int get hashCode =>
+      const DeepCollectionEquality().hash(participants.map((p) => p.identity)) ^
+      hasKeeperDisconnected.hashCode ^
+      removed.hashCode;
+}
+
+@immutable
+class ChatState {
+  const ChatState({
+    this.messages = const [],
+  });
+
+  final List<ChatMessage> messages;
+
+  ChatState copyWith({
+    List<ChatMessage>? messages,
+  }) {
+    return ChatState(
+      messages: messages ?? this.messages,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ChatState &&
+        const DeepCollectionEquality().equals(
+          other.messages.map((m) => m.id),
+          messages.map((m) => m.id),
+        );
+  }
+
+  @override
+  int get hashCode =>
+      const DeepCollectionEquality().hash(messages.map((m) => m.id));
+}
+
+@immutable
+class SessionTurnState {
+  const SessionTurnState({
+    required this.roomState,
+    this.isSpeakerphoneEnabled = false,
+  });
+
+  final RoomState roomState;
+  final bool isSpeakerphoneEnabled;
+
+  SessionTurnState copyWith({
+    RoomState? roomState,
+    bool? isSpeakerphoneEnabled,
+  }) {
+    return SessionTurnState(
+      roomState: roomState ?? this.roomState,
+      isSpeakerphoneEnabled:
+          isSpeakerphoneEnabled ?? this.isSpeakerphoneEnabled,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is SessionTurnState &&
+        other.roomState == roomState &&
+        other.isSpeakerphoneEnabled == isSpeakerphoneEnabled;
+  }
+
+  @override
+  int get hashCode => roomState.hashCode ^ isSpeakerphoneEnabled.hashCode;
+}
+
 @immutable
 class SessionOptions {
   const SessionOptions({
@@ -129,6 +308,12 @@ class _DisconnectReasonChanged extends _SessionEvent {
   final DisconnectReason? disconnectReason;
 }
 
+class _SessionErrorChanged extends _SessionEvent {
+  const _SessionErrorChanged(this.error);
+
+  final RoomError? error;
+}
+
 class _LiveKitErrorChanged extends _SessionEvent {
   const _LiveKitErrorChanged(this.livekitError);
 
@@ -144,146 +329,104 @@ class _ChatMessageAdded extends _SessionEvent {
 @immutable
 class SessionRoomState {
   const SessionRoomState({
-    required this.roomState,
-    this.phase = SessionPhase.connecting,
-    this.connectionState = RoomConnectionState.connecting,
-    this.hasKeeperDisconnected = false,
-    this.participants = const [],
-    this.removed = false,
-    this.isSpeakerphoneEnabled = false,
-    this.disconnectReason,
-    this.messages = const [],
-    this.livekitError,
+    required this.connection,
+    required this.participants,
+    required this.chat,
+    required this.turn,
   });
 
-  /// The current connection state of the room.
-  final RoomConnectionState connectionState;
+  /// Connection state including phase and any errors.
+  final ConnectionState connection;
 
-  /// High-level lifecycle phase for the session state machine.
-  final SessionPhase phase;
+  /// Participants in the session with keeper status.
+  final ParticipantsState participants;
 
-  /// The current state of the room, as published by the backend and LiveKit metadata.
-  final RoomState roomState;
+  /// Chat messages and related state.
+  final ChatState chat;
 
-  /// Whether the keeper has disconnected from the session.
-  final bool hasKeeperDisconnected;
+  /// Turn order state and audio output settings.
+  final SessionTurnState turn;
 
-  /// The participants in the session.
-  final List<Participant> participants;
+  // ===== Compatibility getters =====
+  // Keep previous public API surface while migrating callers incrementally.
+  SessionPhase get phase => connection.phase;
+  RoomConnectionState get connectionState => connection.state;
+  RoomState get roomState => turn.roomState;
+  bool get hasKeeperDisconnected => participants.hasKeeperDisconnected;
+  List<Participant> get participantsList => participants.participants;
+  bool get removed => participants.removed;
+  bool get isSpeakerphoneEnabled => turn.isSpeakerphoneEnabled;
+  List<ChatMessage> get messages => chat.messages;
+  DisconnectReason? get disconnectReason {
+    final error = connection.error;
+    if (error is RoomDisconnectionError) return error.reason;
+    return null;
+  }
 
-  /// Whether the local participant was removed from the session.
-  final bool removed;
+  LiveKitException? get livekitError {
+    final error = connection.error;
+    if (error is RoomLiveKitError) return error.exception;
+    return null;
+  }
 
-  /// Whether the speaker is on.
-  final bool isSpeakerphoneEnabled;
-
-  /// Why LiveKit disconnected this participant, when available.
-  final DisconnectReason? disconnectReason;
-
-  /// The chat messages in the session.
-  final List<ChatMessage> messages;
-
-  /// The latest LiveKit error that occurred in the session, if any.
-  /// This is used to display error messages to the user when LiveKit errors occur.
-  final LiveKitException? livekitError;
+  // ===== Domain methods =====
 
   bool isMyTurn(Room room) {
-    return roomState.currentSpeaker != null &&
-        roomState.currentSpeaker == room.localParticipant?.identity;
+    return turn.roomState.currentSpeaker != null &&
+        turn.roomState.currentSpeaker == room.localParticipant?.identity;
   }
 
   bool amNext(Room room) {
-    return roomState.nextSpeaker != null &&
-        roomState.nextSpeaker == room.localParticipant?.identity;
+    return turn.roomState.nextSpeaker != null &&
+        turn.roomState.nextSpeaker == room.localParticipant?.identity;
   }
 
   String get speakingNow {
-    if (roomState.currentSpeaker == null || roomState.currentSpeaker!.isEmpty) {
-      return roomState.keeper;
+    if (turn.roomState.currentSpeaker == null ||
+        turn.roomState.currentSpeaker!.isEmpty) {
+      return turn.roomState.keeper;
     }
-    return roomState.currentSpeaker ?? roomState.keeper;
+    return turn.roomState.currentSpeaker ?? turn.roomState.keeper;
   }
 
-  bool get hasKeeper => participants.any((p) => isKeeper(p.identity));
+  bool get hasKeeper =>
+      participants.participants.any((p) => isKeeper(p.identity));
 
   bool isKeeper(String? userSlug) {
-    return roomState.keeper == userSlug;
+    return turn.roomState.keeper == userSlug;
   }
 
-  /// Returns the participant that is featured right now.
-  ///
-  /// If no participants, return null.
-  ///
-  /// If in the waiting room and the keeper is not present, return null.
-  ///
-  /// If [speakingNow] is present, return the corresponding participant.
-  ///
-  /// Otherwise, return the keeper participant if present, or null if not.
   Participant? featuredParticipant() {
-    if (participants.isEmpty) return null;
-    if (roomState.status == RoomStatus.waitingRoom && !hasKeeper) {
+    if (participants.participants.isEmpty) return null;
+    if (turn.roomState.status == RoomStatus.waitingRoom && !hasKeeper) {
       return null;
     }
-    return participants.firstWhereOrNull(
+    return participants.participants.firstWhereOrNull(
           (participant) => participant.identity == speakingNow,
         ) ??
-        participants.firstWhereOrNull(
-          (participant) => participant.identity == roomState.keeper,
+        participants.participants.firstWhereOrNull(
+          (participant) => participant.identity == turn.roomState.keeper,
         );
   }
 
   Participant? speakingNextParticipant() {
-    if (roomState.nextSpeaker == null) return null;
-    return participants.firstWhereOrNull((participant) {
-      return participant.identity == roomState.nextSpeaker;
+    if (turn.roomState.nextSpeaker == null) return null;
+    return participants.participants.firstWhereOrNull((participant) {
+      return participant.identity == turn.roomState.nextSpeaker;
     });
-  }
-
-  SessionRoomState copyWith({
-    RoomConnectionState? connectionState,
-    SessionPhase? phase,
-    RoomState? roomState,
-    bool? hasKeeperDisconnected,
-    List<Participant>? participants,
-    bool? removed,
-    bool? isSpeakerphoneEnabled,
-    DisconnectReason? disconnectReason,
-    bool clearDisconnectReason = false,
-    List<ChatMessage>? messages,
-    LiveKitException? livekitError,
-    bool clearLivekitError = false,
-  }) {
-    return SessionRoomState(
-      connectionState: connectionState ?? this.connectionState,
-      phase: phase ?? this.phase,
-      roomState: roomState ?? this.roomState,
-      hasKeeperDisconnected:
-          hasKeeperDisconnected ?? this.hasKeeperDisconnected,
-      participants: participants ?? this.participants,
-      removed: removed ?? this.removed,
-      isSpeakerphoneEnabled:
-          isSpeakerphoneEnabled ?? this.isSpeakerphoneEnabled,
-      disconnectReason: clearDisconnectReason
-          ? null
-          : disconnectReason ?? this.disconnectReason,
-      messages: messages ?? this.messages,
-      livekitError: clearLivekitError
-          ? null
-          : livekitError ?? this.livekitError,
-    );
   }
 
   @override
   String toString() {
     return 'SessionRoomState('
-        'phase: $phase, '
-        'connectionState: $connectionState, '
-        'sessionState: $roomState, '
-        'hasKeeperDisconnected: $hasKeeperDisconnected, '
-        'removed: $removed, '
-        'disconnectReason: $disconnectReason, '
-        'isSpeakerphoneEnabled: $isSpeakerphoneEnabled, '
-        'messages: $messages'
+        'phase: ${connection.phase}, '
+        'connectionState: ${connection.state}, '
+        'roomState: ${turn.roomState}, '
+        'error: ${connection.error}, '
+        'participants: ${participants.participants.length}, '
+        'removed: ${participants.removed}, '
+        'isSpeakerphoneEnabled: ${turn.isSpeakerphoneEnabled}, '
+        'messages: ${chat.messages.length}'
         ')';
   }
 
@@ -291,36 +434,18 @@ class SessionRoomState {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is SessionRoomState &&
-        other.connectionState == connectionState &&
-        other.phase == phase &&
-        other.roomState == roomState &&
-        other.hasKeeperDisconnected == hasKeeperDisconnected &&
-        const DeepCollectionEquality().equals(
-          other.participants.map((p) => p.identity),
-          participants.map((p) => p.identity),
-        ) &&
-        other.removed == removed &&
-        other.disconnectReason == disconnectReason &&
-        other.isSpeakerphoneEnabled == isSpeakerphoneEnabled &&
-        other.livekitError?.message == livekitError?.message &&
-        const DeepCollectionEquality().equals(
-          other.messages.map((m) => m.id),
-          messages.map((m) => m.id),
-        );
+        other.connection == connection &&
+        other.participants == participants &&
+        other.chat == chat &&
+        other.turn == turn;
   }
 
   @override
   int get hashCode =>
-      connectionState.hashCode ^
-      phase.hashCode ^
-      roomState.hashCode ^
-      hasKeeperDisconnected.hashCode ^
-      const DeepCollectionEquality().hash(participants.map((p) => p.identity)) ^
-      removed.hashCode ^
-      disconnectReason.hashCode ^
-      isSpeakerphoneEnabled.hashCode ^
-      (livekitError?.message).hashCode ^
-      const DeepCollectionEquality().hash(messages.map((m) => m.id));
+      connection.hashCode ^
+      participants.hashCode ^
+      chat.hashCode ^
+      turn.hashCode;
 }
 
 @riverpod
@@ -361,45 +486,90 @@ class Session extends _$Session {
   void _dispatch(_SessionEvent event) {
     switch (event) {
       case _ConnectionChanged():
-        state = state.copyWith(
-          connectionState: event.connectionState,
-          phase: event.phase,
-          removed: event.connectionState == RoomConnectionState.connected
-              ? false
-              : null,
-          clearDisconnectReason:
-              event.connectionState == RoomConnectionState.connected,
-          clearLivekitError:
-              event.connectionState == RoomConnectionState.connected,
+        state = SessionRoomState(
+          connection: state.connection.copyWith(
+            state: event.connectionState,
+            phase: event.phase,
+            clearError: event.connectionState == RoomConnectionState.connected,
+          ),
+          participants: event.connectionState == RoomConnectionState.connected
+              ? state.participants.copyWith(removed: false)
+              : state.participants,
+          chat: state.chat,
+          turn: state.turn,
         );
       case _RoomStateChanged():
         final isEnded = event.roomState.status == RoomStatus.ended;
-        state = state.copyWith(
-          roomState: event.roomState,
-          phase: isEnded ? SessionPhase.ended : null,
+        state = SessionRoomState(
+          connection: state.connection.copyWith(
+            phase: isEnded ? SessionPhase.ended : null,
+          ),
+          participants: state.participants,
+          chat: state.chat,
+          turn: state.turn.copyWith(roomState: event.roomState),
         );
       case _ParticipantsChanged():
-        state = state.copyWith(participants: event.participants);
+        state = SessionRoomState(
+          connection: state.connection,
+          participants: state.participants.copyWith(
+            participants: event.participants,
+          ),
+          chat: state.chat,
+          turn: state.turn,
+        );
       case _KeeperDisconnectedChanged():
-        state = state.copyWith(
-          hasKeeperDisconnected: event.hasKeeperDisconnected,
+        state = SessionRoomState(
+          connection: state.connection,
+          participants: state.participants.copyWith(
+            hasKeeperDisconnected: event.hasKeeperDisconnected,
+          ),
+          chat: state.chat,
+          turn: state.turn,
         );
       case _ParticipantRemoved():
-        state = state.copyWith(removed: true);
+        state = SessionRoomState(
+          connection: state.connection,
+          participants: state.participants.copyWith(removed: true),
+          chat: state.chat,
+          turn: state.turn,
+        );
       case _SpeakerphoneChanged():
-        state = state.copyWith(
-          isSpeakerphoneEnabled: event.isSpeakerphoneEnabled,
+        state = SessionRoomState(
+          connection: state.connection,
+          participants: state.participants,
+          chat: state.chat,
+          turn: state.turn.copyWith(
+            isSpeakerphoneEnabled: event.isSpeakerphoneEnabled,
+          ),
         );
       case _DisconnectReasonChanged():
-        state = state.copyWith(disconnectReason: event.disconnectReason);
-      case _LiveKitErrorChanged():
-        state = state.copyWith(
-          connectionState: RoomConnectionState.error,
-          phase: SessionPhase.error,
-          livekitError: event.livekitError,
+        // Handled through _SessionErrorChanged now, but kept for future use
+        break;
+      case _SessionErrorChanged():
+        state = SessionRoomState(
+          connection: state.connection.copyWith(
+            error: event.error,
+            state: event.error is RoomLiveKitError
+                ? RoomConnectionState.error
+                : state.connection.state,
+            phase: event.error is RoomLiveKitError ? SessionPhase.error : null,
+          ),
+          participants: state.participants,
+          chat: state.chat,
+          turn: state.turn,
         );
+      case _LiveKitErrorChanged():
+        // This event type is no longer used; maintained for backward compat
+        break;
       case _ChatMessageAdded():
-        state = state.copyWith(messages: [...state.messages, event.message]);
+        state = SessionRoomState(
+          connection: state.connection,
+          participants: state.participants,
+          chat: state.chat.copyWith(
+            messages: [...state.chat.messages, event.message],
+          ),
+          turn: state.turn,
+        );
     }
   }
 
@@ -481,7 +651,11 @@ class Session extends _$Session {
       })
       ..on<RoomDisconnectedEvent>((event) {
         logger.d('Disconnected from session. Reason: ${event.reason}');
-        _dispatch(_DisconnectReasonChanged(event.reason));
+        if (event.reason != null) {
+          _dispatch(
+            _SessionErrorChanged(RoomDisconnectionError(event.reason!)),
+          );
+        }
         _onDisconnected();
       })
       ..on<DataReceivedEvent>(_onDataReceived)
@@ -494,23 +668,32 @@ class Session extends _$Session {
 
     ref.onDispose(_cleanUp);
 
-    return SessionRoomState(
-      roomState: RoomState(
-        keeper: event?.space.author.slug ?? '',
-        nextSpeaker: '',
-        currentSpeaker: '',
-        status: RoomStatus.waitingRoom,
-        turnState: TurnState.idle,
-        sessionSlug: options.eventSlug,
-        statusDetail: const RoomStateStatusDetailWaitingRoom(
-          WaitingRoomDetail(),
-        ),
-        talkingOrder: [],
-        version: 0,
-        roundNumber: 0,
+    final initialRoomState = RoomState(
+      keeper: event?.space.author.slug ?? '',
+      nextSpeaker: '',
+      currentSpeaker: '',
+      status: RoomStatus.waitingRoom,
+      turnState: TurnState.idle,
+      sessionSlug: options.eventSlug,
+      statusDetail: const RoomStateStatusDetailWaitingRoom(
+        WaitingRoomDetail(),
       ),
-      phase: SessionPhase.connecting,
-      isSpeakerphoneEnabled: _userSpeakerPreference,
+      talkingOrder: [],
+      version: 0,
+      roundNumber: 0,
+    );
+
+    return SessionRoomState(
+      connection: ConnectionState(
+        phase: SessionPhase.connecting,
+        state: RoomConnectionState.connecting,
+      ),
+      participants: const ParticipantsState(),
+      chat: const ChatState(),
+      turn: SessionTurnState(
+        roomState: initialRoomState,
+        isSpeakerphoneEnabled: _userSpeakerPreference,
+      ),
     );
   }
 
@@ -623,7 +806,7 @@ class Session extends _$Session {
   void _onError(LiveKitException? error) {
     if (error == null) return;
     ErrorHandler.handleLivekitError(error);
-    _dispatch(_LiveKitErrorChanged(error));
+    _dispatch(_SessionErrorChanged(RoomLiveKitError(error)));
   }
 
   void _onRoomChanges([RoomState? newSessionState]) {

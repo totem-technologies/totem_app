@@ -191,7 +191,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     final currentSessionEvent = ref.watch(currentSessionEventProvider);
     final connectionState = ref.watch(connectionStateProvider);
     final roomStatus = ref.watch(roomStatusProvider);
-    final disconnectReason = ref.watch(disconnectReasonProvider);
+    final disconnectReason = ref.watch(disconnectionReasonProvider);
     final turnState = ref.watch(turnStateProvider);
     final isMyTurn = ref.watch(isMyTurnProvider);
     final amNext = ref.watch(amNextSpeakerProvider);
