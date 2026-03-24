@@ -1,4 +1,4 @@
-part of 'session_service.dart';
+part of 'session_controller.dart';
 
 extension BackgroundControl on SessionController {
   Future<void> setupBackgroundMode() async {

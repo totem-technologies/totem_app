@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'session_service.dart';
+part of 'session_controller.dart';
 
 // **************************************************************************
 // RiverpodGenerator

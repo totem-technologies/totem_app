@@ -1,7 +1,7 @@
 // We need to access LivekitService.ref to notify listeners
 // ignore_for_file: invalid_use_of_visible_for_testing_member, experimental_member_use, invalid_use_of_protected_member
 
-part of 'session_service.dart';
+part of 'session_controller.dart';
 
 extension DevicesControl on SessionController {
   static const externalAudioOutputTypes = <audio.AudioDeviceType>{
@@ -203,9 +203,10 @@ extension DevicesControl on SessionController {
     }
     await room?.localParticipant?.setCameraEnabled(
       true,
-      cameraCaptureOptions: SessionController.defaultCameraCaptureOptions.copyWith(
-        deviceId: room?.selectedVideoInputDeviceId,
-      ),
+      cameraCaptureOptions: SessionController.defaultCameraCaptureOptions
+          .copyWith(
+            deviceId: room?.selectedVideoInputDeviceId,
+          ),
     );
 
     ref.notifyListeners();

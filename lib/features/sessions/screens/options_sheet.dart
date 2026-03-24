@@ -10,8 +10,8 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart'
     show RoomStatus, SessionDetailSchema, TurnState;
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
+import 'package:totem_app/features/sessions/controllers/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/banned_participants_sheet.dart';
 import 'package:totem_app/features/sessions/widgets/participant_reorder_sheet.dart';
 import 'package:totem_app/navigation/app_router.dart';
@@ -287,7 +287,8 @@ class OptionsSheet extends ConsumerWidget {
     );
   }
 
-  Future<void> _onMuteEveryone(SessionController session) => session.muteEveryone();
+  Future<void> _onMuteEveryone(SessionController session) =>
+      session.muteEveryone();
 
   Future<void> _onNextTotemAction(
     BuildContext context,
@@ -349,7 +350,10 @@ class OptionsSheet extends ConsumerWidget {
     );
   }
 
-  Future<void> _onStartSession(BuildContext context, SessionController session) async {
+  Future<void> _onStartSession(
+    BuildContext context,
+    SessionController session,
+  ) async {
     return showDialog<void>(
       context: context,
       builder: (context) {
@@ -384,7 +388,10 @@ class OptionsSheet extends ConsumerWidget {
     );
   }
 
-  Future<void> _onEndSession(BuildContext context, SessionController session) async {
+  Future<void> _onEndSession(
+    BuildContext context,
+    SessionController session,
+  ) async {
     return showDialog<void>(
       context: context,
       builder: (context) {

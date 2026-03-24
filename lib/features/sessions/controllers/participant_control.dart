@@ -1,7 +1,7 @@
 // We need to access SessionService.ref to notify listeners
 // ignore_for_file: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
 
-part of 'session_service.dart';
+part of 'session_controller.dart';
 
 class ChatMessage {
   const ChatMessage({

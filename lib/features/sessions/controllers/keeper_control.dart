@@ -1,7 +1,7 @@
 // We need to access LivekitService.ref to notify listeners
 // ignore_for_file: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
 
-part of 'session_service.dart';
+part of 'session_controller.dart';
 
 extension KeeperControl on SessionController {
   /// Whether the current authenticated user is the keeper.

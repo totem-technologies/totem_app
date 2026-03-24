@@ -16,22 +16,22 @@ import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/screen_protection_service.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
+import 'package:totem_app/features/sessions/controllers/utils.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart'
     show sessionScopeProvider;
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
-import 'package:totem_app/features/sessions/services/utils.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/logger.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-export 'package:totem_app/features/sessions/services/utils.dart';
+export 'package:totem_app/features/sessions/controllers/utils.dart';
 
 part 'background_control.dart';
 part 'devices_control.dart';
 part 'keeper_control.dart';
 part 'participant_control.dart';
-part 'session_service.g.dart';
+part 'session_controller.g.dart';
 
 enum SessionCommunicationTopics {
   emoji('lk-emoji-topic'),
