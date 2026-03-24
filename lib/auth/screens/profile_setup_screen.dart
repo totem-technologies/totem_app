@@ -576,27 +576,6 @@ class _SuggestionsTab extends ConsumerWidget {
     final topicsKey = (selectedTopics.toList()..sort()).join('|');
     final recommended = ref.watch(getRecommendedSessionsProvider(topicsKey));
 
-    ref.listen<AsyncValue<List<SessionDetailSchema>>>(
-      getRecommendedSessionsProvider(topicsKey),
-      (_, next) {
-        next.whenData((sessions) {
-          if (sessions.isEmpty) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (context.mounted) onSeeAllSpaces();
-            });
-          }
-        });
-      },
-    );
-
-    ref.read(getRecommendedSessionsProvider(topicsKey)).whenData((sessions) {
-      if (sessions.isEmpty) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (context.mounted) onSeeAllSpaces();
-        });
-      }
-    });
-
     return CardScreen(
       isLoading: isLoading,
       children: [
