@@ -14,8 +14,8 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/core/services/screen_protection_service.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
+import 'package:totem_app/features/sessions/controllers/session_infra_controller.dart';
 import 'package:totem_app/features/sessions/controllers/utils.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart'
@@ -23,7 +23,6 @@ import 'package:totem_app/features/sessions/providers/session_scope_provider.dar
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/logger.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
 
 export 'package:totem_app/features/sessions/controllers/utils.dart';
 
@@ -701,7 +700,6 @@ class SessionController extends _$SessionController {
     _hasExternalOutput = false;
 
     _autoSetSpeakerphone(true);
-    _applyScreenCapturePolicy();
 
     _updateParticipantsList();
     setupDeviceChangeListener();
@@ -853,7 +851,6 @@ class SessionController extends _$SessionController {
 
   Future<void> _onSessionEnd() async {
     logger.d('Session has ended. Cleaning up and disconnecting.');
-    endBackgroundMode();
     await leave();
   }
 
@@ -938,9 +935,9 @@ class SessionController extends _$SessionController {
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
       ..on<ParticipantConnectedEvent>(_onParticipantConnected);
 
-    WakelockPlus.enable();
-    setupBackgroundMode();
-    _applyScreenCapturePolicy();
+    await ref
+      .read(sessionInfraControllerProvider(options))
+      .activate(event: event);
 
     _syncTimer?.cancel();
     _syncTimer = Timer.periodic(
@@ -968,10 +965,14 @@ class SessionController extends _$SessionController {
   void _cleanUp() {
     logger.d('Disposing SessionService and closing connections.');
 
+    final options = _options;
+    if (options != null && ref.mounted) {
+      unawaited(
+        ref.read(sessionInfraControllerProvider(options)).deactivate(),
+      );
+    }
+
     if (ref.mounted) {
-      try {
-        ref.read(screenProtectionProvider).setCaptureProtectionEnabled(false);
-      } catch (_) {}
       try {
         ref.read(emojiReactionsProvider.notifier).clear();
       } catch (_) {}
@@ -987,12 +988,6 @@ class SessionController extends _$SessionController {
         ref.invalidate(sessionScopeProvider);
       } catch (_) {}
     }
-
-    endBackgroundMode(); // This closes _notificationTimer
-
-    try {
-      WakelockPlus.disable();
-    } catch (_) {}
 
     _syncTimer?.cancel();
     _syncTimer = null;
@@ -1023,14 +1018,6 @@ class SessionController extends _$SessionController {
     } catch (_) {}
   }
 
-  void _applyScreenCapturePolicy() {
-    final email = ref.read(authControllerProvider).user?.email;
-    final shouldProtect =
-        !ScreenProtectionService.shouldAllowScreenCaptureForEmail(email);
-    ref
-        .read(screenProtectionProvider)
-        .setCaptureProtectionEnabled(shouldProtect);
-  }
 }
 
 @Riverpod(keepAlive: true)
