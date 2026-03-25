@@ -12,6 +12,7 @@ import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
+import 'package:totem_app/features/sessions/controllers/session_chat_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_connection_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_device_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_infra_controller.dart';
@@ -463,6 +464,7 @@ class SessionController extends _$SessionController {
   String? _lastMetadata;
   SessionDetailSchema? event;
   SessionDeviceController? _deviceController;
+  SessionChatController? _chatController;
 
   static const defaultCameraCaptureOptions = CameraCaptureOptions(
     params: VideoParameters(
@@ -506,6 +508,18 @@ class SessionController extends _$SessionController {
       onDataReceived: _onDataReceived,
       onParticipantDisconnected: _onParticipantDisconnected,
       onParticipantConnected: _onParticipantConnected,
+    );
+  }
+
+  SessionChatController get _chat {
+    return _chatController ??= SessionChatController(
+      ref: ref,
+      currentRoom: () => room,
+      hasKeeper: () => state.hasKeeper,
+      isCurrentUserKeeper: isCurrentUserKeeper,
+      onChatMessage: (message) {
+        _dispatch(_ChatMessageAdded(message));
+      },
     );
   }
 
@@ -793,10 +807,13 @@ class SessionController extends _$SessionController {
       '(${room?.localParticipant}) Received data on topic "${event.topic}" from participant "${event.participant?.identity}": $data',
     );
 
+    if (_chat.handleDataReceived(event)) {
+      return;
+    }
+
     final topic = SessionCommunicationTopics.values.firstWhereOrNull(
       (t) => t.topic == event.topic,
     );
-
     if (topic == null) {
       logger.w('Received data on unknown topic "${event.topic}". Ignoring.');
       return;
@@ -804,25 +821,8 @@ class SessionController extends _$SessionController {
 
     switch (topic) {
       case SessionCommunicationTopics.emoji:
-        final participant = event.participant;
-        if (participant == null) return;
-        ref
-            .read(emojiReactionsProvider.notifier)
-            .emitIncomingReaction(participant.identity, data);
       case SessionCommunicationTopics.chat:
-        try {
-          final message = ChatMessage.fromMap(
-            jsonDecode(data) as Map<String, dynamic>,
-            event.participant,
-          );
-          _dispatch(_ChatMessageAdded(message));
-        } catch (error, stackTrace) {
-          ErrorHandler.logError(
-            error,
-            stackTrace: stackTrace,
-            message: 'Error decoding chat message',
-          );
-        }
+        break;
       case SessionCommunicationTopics.participantRemoved:
         logger.d(
           'Received participant removed event from ${event.participant?.identity}: $data',
@@ -1003,6 +1003,8 @@ class SessionController extends _$SessionController {
 
     unawaited(_devices.dispose());
     _deviceController = null;
+
+    _chatController = null;
 
     unawaited(_connection.dispose());
     _connectionController = null;

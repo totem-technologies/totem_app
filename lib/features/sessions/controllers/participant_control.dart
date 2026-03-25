@@ -116,86 +116,12 @@ extension ParticipantControl on SessionController {
 
   /// Send an emoji to other participants.
   /// This operation is fire-and-forget and doesn't throw errors.
-  Future<void> sendReaction(String emoji) async {
-    if (!state.hasKeeper) {
-      logger.w('Attempted to send reaction without a keeper, ignoring');
-      return;
-    }
-
-    ref
-        .read(emojiReactionsProvider.notifier)
-        .emitIncomingReaction(
-          room?.localParticipant?.identity ?? 'unknown',
-          emoji,
-        );
-    try {
-      await room?.localParticipant
-          ?.publishData(
-            const Utf8Encoder().convert(emoji),
-            topic: SessionCommunicationTopics.emoji.topic,
-          )
-          .timeout(
-            const Duration(seconds: 5),
-            onTimeout: () {
-              ErrorHandler.logError(
-                TimeoutException('Sending emoji timed out'),
-                message: 'Warning: Sending emoji timed out',
-              );
-            },
-          );
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error sending emoji',
-      );
-    }
-  }
+  Future<void> sendReaction(String emoji) => _chat.sendReaction(emoji);
 
   /// Send a chat message to other participants.
   ///
   /// Only the keeper can send chat messages, and this method will fail silently if the user is not the keeper.
   ///
   /// This operation is fire-and-forget and doesn't throw errors.
-  Future<void> sendMessage(String text) async {
-    if (!isCurrentUserKeeper()) {
-      logger.w(
-        'Attempted to send chat message without being the keeper, ignoring',
-      );
-      return;
-    }
-
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final message = ChatMessage(
-      message: text,
-      timestamp: timestamp,
-      id: timestamp.toString(),
-      sender: true,
-      participant: room?.localParticipant,
-    );
-    try {
-      _dispatch(_ChatMessageAdded(message));
-      await room?.localParticipant
-          ?.publishData(
-            const Utf8Encoder().convert(message.toJson()),
-            topic: SessionCommunicationTopics.chat.topic,
-          )
-          .timeout(
-            const Duration(seconds: 5),
-            onTimeout: () {
-              ErrorHandler.logError(
-                TimeoutException('Sending chat message timed out'),
-                message: 'Warning: Sending chat message timed out',
-              );
-            },
-          );
-    } catch (error, stackTrace) {
-      // TODO(bdlukaa): Mark message as failed.
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error sending chat message',
-      );
-    }
-  }
+  Future<void> sendMessage(String text) => _chat.sendMessage(text);
 }
