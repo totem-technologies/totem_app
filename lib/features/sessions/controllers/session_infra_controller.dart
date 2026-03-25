@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
@@ -11,10 +11,15 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'session_controller.dart';
 
-class SessionInfraController {
-  SessionInfraController(this.ref);
+part 'session_infra_controller.g.dart';
 
-  final Ref ref;
+@riverpod
+class SessionInfraController extends _$SessionInfraController {
+  @override
+  void build(SessionOptions options) {
+    ref.onDispose(dispose);
+  }
+
   Timer? _notificationTimer;
   bool _wakelockEnabled = false;
   bool _backgroundModeEnabled = false;
@@ -211,10 +216,3 @@ class SessionInfraController {
     }
   }
 }
-
-final sessionInfraControllerProvider = Provider.autoDispose
-    .family<SessionInfraController, SessionOptions>((ref, _) {
-      final controller = SessionInfraController(ref);
-      ref.onDispose(controller.dispose);
-      return controller;
-    });

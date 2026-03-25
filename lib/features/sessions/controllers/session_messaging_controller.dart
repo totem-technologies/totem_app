@@ -1,34 +1,27 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' hide logger, ChatMessage;
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/session_controller.dart';
-import 'package:totem_app/features/sessions/controllers/session_types.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/shared/logger.dart';
 
-class SessionMessagingController {
-  SessionMessagingController({
-    required this.ref,
-    required this.currentRoom,
-    required this.currentKeeperIdentity,
-    required this.hasKeeper,
-    required this.isCurrentUserKeeper,
-    required this.onChatMessage,
-    required this.onLocalParticipantRemoved,
-    required this.disconnect,
-  });
+part 'session_messaging_controller.g.dart';
 
-  final Ref ref;
-  final CurrentRoomGetter currentRoom;
-  final CurrentKeeperIdentityGetter currentKeeperIdentity;
-  final BoolGetter hasKeeper;
-  final BoolGetter isCurrentUserKeeper;
-  final MessageCallback<ChatMessage> onChatMessage;
-  final VoidCallback onLocalParticipantRemoved;
-  final AsyncCallback disconnect;
+@Riverpod(keepAlive: true)
+class SessionMessagingController extends _$SessionMessagingController {
+  late SessionController _session;
+
+  @override
+  void build(SessionController session) {
+    _session = session;
+  }
+
+  SessionRoomState get _state => _session.state;
+
+  Room? get _room => _session.room;
 
   bool handleDataReceived(DataReceivedEvent event) {
     if (event.topic == SessionCommunicationTopics.emoji.topic) {
@@ -48,7 +41,7 @@ class SessionMessagingController {
           jsonDecode(data) as Map<String, dynamic>,
           event.participant,
         );
-        onChatMessage(message);
+        _session.addChatMessage(message);
       } catch (error, stackTrace) {
         ErrorHandler.logError(
           error,
@@ -71,17 +64,17 @@ class SessionMessagingController {
 
         // If participant identity is null, message is server-originated.
         if (event.participant?.identity != null &&
-            event.participant!.identity != currentKeeperIdentity()) {
+            event.participant!.identity != _state.roomState.keeper) {
           logger.d(
             'Participant removed event is not from the keeper, ignoring.',
           );
           return true;
         }
 
-        if (identity == currentRoom()?.localParticipant?.identity) {
+        if (identity == _room?.localParticipant?.identity) {
           logger.d('Received participant removed event for local participant.');
-          onLocalParticipantRemoved();
-          unawaited(disconnect());
+          _session.markParticipantRemoved();
+          unawaited(_session.disconnectFromRoom());
         }
       } catch (error, stackTrace) {
         ErrorHandler.logError(
@@ -97,12 +90,12 @@ class SessionMessagingController {
   }
 
   Future<void> sendReaction(String emoji) async {
-    if (!hasKeeper()) {
+    if (!_state.hasKeeper) {
       logger.w('Attempted to send reaction without a keeper, ignoring');
       return;
     }
 
-    final room = currentRoom();
+    final room = _room;
     ref
         .read(emojiReactionsProvider.notifier)
         .emitIncomingReaction(
@@ -135,14 +128,14 @@ class SessionMessagingController {
   }
 
   Future<void> sendMessage(String text) async {
-    if (!isCurrentUserKeeper()) {
+    if (!_session.isCurrentUserKeeper()) {
       logger.w(
         'Attempted to send chat message without being the keeper, ignoring',
       );
       return;
     }
 
-    final room = currentRoom();
+    final room = _room;
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final message = ChatMessage(
       message: text,
@@ -153,7 +146,7 @@ class SessionMessagingController {
     );
 
     try {
-      onChatMessage(message);
+      _session.addChatMessage(message);
       await room?.localParticipant
           ?.publishData(
             const Utf8Encoder().convert(message.toJson()),

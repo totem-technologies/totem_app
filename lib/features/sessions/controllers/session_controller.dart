@@ -518,36 +518,23 @@ class SessionController extends _$SessionController {
   }
 
   SessionMessagingController get _messaging {
-    return _messagingController ??= SessionMessagingController(
-      ref: ref,
-      currentRoom: () => room,
-      currentKeeperIdentity: () => state.roomState.keeper,
-      hasKeeper: () => state.hasKeeper,
-      isCurrentUserKeeper: isCurrentUserKeeper,
-      onChatMessage: (message) {
-        _dispatch(_ChatMessageAdded(message));
-      },
-      onLocalParticipantRemoved: () {
-        _dispatch(const _ParticipantRemoved());
-      },
-      disconnect: _connection.disconnect,
-    );
+    if (_messagingController != null) {
+      return _messagingController!;
+    }
+
+    _messagingController =
+        ref.read(sessionMessagingControllerProvider(this).notifier);
+    return _messagingController!;
   }
 
   SessionKeeperController get _keeper {
-    return _keeperController ??= SessionKeeperController(
-      ref: ref,
-      currentRoom: () => room,
-      isMyTurn: (room) => state.isMyTurn(room),
-      amNext: (room) => state.amNext(room),
-      hasKeeper: () => state.hasKeeper,
-      roomVersion: () => state.roomState.version,
-      eventSlug: () => options.eventSlug,
-      isCurrentUserKeeper: isCurrentUserKeeper,
-      enableMicrophone: _devices.enableMicrophone,
-      disableMicrophone: _devices.disableMicrophone,
-      onRoomState: _onRoomChanges,
-    );
+    if (_keeperController != null) {
+      return _keeperController!;
+    }
+
+    _keeperController =
+        ref.read(sessionKeeperControllerProvider(this).notifier);
+    return _keeperController!;
   }
 
   SessionKeeperPresenceController get _keeperPresence {
@@ -578,6 +565,22 @@ class SessionController extends _$SessionController {
 
   void _onKeeperConnected() {
     _keeperPresence.onKeeperConnected();
+  }
+
+  void addChatMessage(ChatMessage message) {
+    _dispatch(_ChatMessageAdded(message));
+  }
+
+  void markParticipantRemoved() {
+    _dispatch(const _ParticipantRemoved());
+  }
+
+  void applyRoomState(RoomState roomState) {
+    _onRoomChanges(roomState);
+  }
+
+  Future<void> disconnectFromRoom() {
+    return _connection.disconnect();
   }
 
   void _dispatch(_SessionEvent event) {
@@ -826,7 +829,7 @@ class SessionController extends _$SessionController {
     );
 
     await ref
-        .read(sessionInfraControllerProvider(options))
+        .read(sessionInfraControllerProvider(options).notifier)
         .activate(event: event);
 
     _syncTimer?.cancel();
@@ -861,7 +864,7 @@ class SessionController extends _$SessionController {
     final options = _options;
     if (options != null && ref.mounted) {
       unawaited(
-        ref.read(sessionInfraControllerProvider(options)).deactivate(),
+        ref.read(sessionInfraControllerProvider(options).notifier).deactivate(),
       );
     }
 

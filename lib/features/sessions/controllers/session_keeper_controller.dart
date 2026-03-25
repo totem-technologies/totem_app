@@ -1,36 +1,28 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/features/sessions/controllers/session_types.dart';
+import 'package:totem_app/features/sessions/controllers/session_controller.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/shared/logger.dart';
 
-class SessionKeeperController {
-  SessionKeeperController({
-    required this.ref,
-    required this.currentRoom,
-    required this.isMyTurn,
-    required this.amNext,
-    required this.hasKeeper,
-    required this.roomVersion,
-    required this.eventSlug,
-    required this.isCurrentUserKeeper,
-    required this.enableMicrophone,
-    required this.disableMicrophone,
-    required this.onRoomState,
-  });
+part 'session_keeper_controller.g.dart';
 
-  final Ref ref;
-  final CurrentRoomGetter currentRoom;
-  final RoomPredicate isMyTurn;
-  final RoomPredicate amNext;
-  final BoolGetter hasKeeper;
-  final IntGetter roomVersion;
-  final StringGetter eventSlug;
-  final BoolGetter isCurrentUserKeeper;
-  final AsyncCallback enableMicrophone;
-  final AsyncCallback disableMicrophone;
-  final RoomStateCallback onRoomState;
+@Riverpod(keepAlive: true)
+class SessionKeeperController extends _$SessionKeeperController {
+  late SessionController _session;
+
+  @override
+  void build(SessionController session) {
+    _session = session;
+  }
+
+  SessionRoomState get _state => _session.state;
+
+  bool get _isCurrentUserKeeper => _session.isCurrentUserKeeper();
+
+  String get _eventSlug => _session.options.eventSlug;
+
+  int get _roomVersion => _state.roomState.version;
 
   Future<T> _run<T>({
     required Future<T> Function() action,
@@ -57,94 +49,94 @@ class SessionKeeperController {
   }
 
   Future<void> passTotem({String? roundMessage}) async {
-    final room = currentRoom();
-    if (room == null || !isMyTurn(room)) {
+    final room = _session.room;
+    if (room == null || !_state.isMyTurn(room)) {
       throw StateError("Not the user's turn to pass the totem");
     }
-    if (!hasKeeper()) {
+    if (!_state.hasKeeper) {
       throw StateError('No keeper in the session to pass the totem');
     }
-    if (roundMessage != null && !isCurrentUserKeeper()) {
+    if (roundMessage != null && !_isCurrentUserKeeper) {
       throw StateError(
         'Only the keeper can include a round message when passing the totem',
       );
     }
 
-    await disableMicrophone();
+    await _session.devices.disableMicrophone();
     final roomState = await _run(
       action: () => ref.read(
         passTotemProvider(
-          eventSlug(),
-          roomVersion(),
+          _eventSlug,
+          _roomVersion,
           roundMessage: roundMessage,
         ).future,
       ),
       errorMessage: 'Error passing totem',
     );
-    onRoomState(roomState);
+    _session.applyRoomState(roomState);
     logger.i('Passed totem successfully');
   }
 
   Future<void> acceptTotem() async {
-    final room = currentRoom();
-    if (room == null || !amNext(room)) {
+    final room = _session.room;
+    if (room == null || !_state.amNext(room)) {
       throw StateError("Not the user's turn to accept the totem");
     }
-    if (!hasKeeper()) {
+    if (!_state.hasKeeper) {
       throw StateError('No keeper in the session to accept the totem');
     }
 
     final roomState = await _run(
       action: () => ref.read(
         acceptTotemProvider(
-          eventSlug(),
-          roomVersion(),
+          _eventSlug,
+          _roomVersion,
         ).future,
       ),
       errorMessage: 'Error accepting totem',
     );
-    onRoomState(roomState);
-    await enableMicrophone();
+    _session.applyRoomState(roomState);
+    await _session.devices.enableMicrophone();
     logger.i('Accepted totem successfully');
   }
 
   Future<void> reorder(List<String> newOrder) async {
-    if (!isCurrentUserKeeper()) return;
+    if (!_isCurrentUserKeeper) return;
     final roomState = await _run(
       action: () => ref.read(
         reorderParticipantsProvider(
-          eventSlug(),
+          _eventSlug,
           newOrder,
-          roomVersion(),
+          _roomVersion,
         ).future,
       ),
       errorMessage: 'Error reordering participants',
     );
-    onRoomState(roomState);
+    _session.applyRoomState(roomState);
     logger.i('Reordered participants successfully');
   }
 
   Future<void> forcePassTotem() async {
-    if (!isCurrentUserKeeper()) return;
+    if (!_isCurrentUserKeeper) return;
     final roomState = await _run(
       action: () => ref.read(
         forcePassTotemProvider(
-          eventSlug(),
-          roomVersion(),
+          _eventSlug,
+          _roomVersion,
         ).future,
       ),
       errorMessage: 'Error force passing totem',
     );
-    onRoomState(roomState);
+    _session.applyRoomState(roomState);
     logger.i('Force passed totem successfully');
   }
 
   Future<void> removeParticipant(String participantSlug) async {
-    if (!isCurrentUserKeeper()) return;
+    if (!_isCurrentUserKeeper) return;
     await _run<void>(
       action: () => ref.read(
         removeParticipantProvider(
-          eventSlug(),
+          _eventSlug,
           participantSlug,
         ).future,
       ),
@@ -155,13 +147,13 @@ class SessionKeeperController {
   }
 
   Future<bool> startSession() async {
-    if (!isCurrentUserKeeper()) return false;
+    if (!_isCurrentUserKeeper) return false;
     try {
       await _run<void>(
         action: () => ref.read(
           startSessionProvider(
-            eventSlug(),
-            roomVersion(),
+            _eventSlug,
+            _roomVersion,
           ).future,
         ),
         errorMessage: 'Error starting session',
@@ -174,19 +166,19 @@ class SessionKeeperController {
   }
 
   Future<bool> endSession() async {
-    if (!isCurrentUserKeeper()) return false;
+    if (!_isCurrentUserKeeper) return false;
     try {
       final roomState = await _run(
         action: () => ref.read(
           endSessionProvider(
-            eventSlug(),
-            roomVersion(),
+            _eventSlug,
+            _roomVersion,
           ).future,
         ),
         errorMessage: 'Error ending session',
         timeout: const Duration(seconds: 10),
       );
-      onRoomState(roomState);
+      _session.applyRoomState(roomState);
       return true;
     } catch (_) {
       return false;
@@ -194,13 +186,13 @@ class SessionKeeperController {
   }
 
   Future<void> banParticipant(String participantSlug) async {
-    if (!isCurrentUserKeeper()) return;
+    if (!_isCurrentUserKeeper) return;
     await _run<void>(
       action: () => ref.read(
         banParticipantProvider(
-          eventSlug(),
+          _eventSlug,
           participantSlug,
-          roomVersion(),
+          _roomVersion,
         ).future,
       ),
       errorMessage: 'Error banning participant $participantSlug',
@@ -210,14 +202,14 @@ class SessionKeeperController {
   }
 
   Future<void> unbanParticipant(String participantSlug) async {
-    if (!isCurrentUserKeeper()) return;
+    if (!_isCurrentUserKeeper) return;
 
     await _run<void>(
       action: () => ref.read(
         unbanParticipantProvider(
-          eventSlug(),
+          _eventSlug,
           participantSlug,
-          roomVersion(),
+          _roomVersion,
         ).future,
       ),
       errorMessage: 'Error unbanning participant $participantSlug',
@@ -227,11 +219,11 @@ class SessionKeeperController {
   }
 
   Future<void> muteParticipant(String participantSlug) async {
-    if (!isCurrentUserKeeper()) return;
+    if (!_isCurrentUserKeeper) return;
     await _run<void>(
       action: () => ref.read(
         muteParticipantProvider(
-          eventSlug(),
+          _eventSlug,
           participantSlug,
         ).future,
       ),
@@ -242,9 +234,9 @@ class SessionKeeperController {
   }
 
   Future<void> muteEveryone() async {
-    if (!isCurrentUserKeeper()) return;
+    if (!_isCurrentUserKeeper) return;
     await _run<void>(
-      action: () => ref.read(muteEveryoneProvider(eventSlug()).future),
+      action: () => ref.read(muteEveryoneProvider(_eventSlug).future),
       errorMessage: 'Error muting everyone',
       timeout: const Duration(seconds: 20),
     );
