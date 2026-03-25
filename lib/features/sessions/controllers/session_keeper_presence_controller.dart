@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_app/features/sessions/controllers/session_types.dart';
 
 class SessionKeeperPresenceController {
   SessionKeeperPresenceController({
@@ -9,9 +10,9 @@ class SessionKeeperPresenceController {
     required this.disconnect,
   });
 
-  final Future<void> Function() disableMicrophone;
-  final void Function(bool hasKeeperDisconnected) markKeeperDisconnected;
-  final Future<void> Function() disconnect;
+  final AsyncCallback disableMicrophone;
+  final BoolCallback markKeeperDisconnected;
+  final AsyncCallback disconnect;
 
   static const disconnectionTimeout = Duration(minutes: 3);
   Timer? _keeperDisconnectedTimer;

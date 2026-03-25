@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' hide logger, ChatMessage;
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/session_types.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/shared/logger.dart';
 
@@ -18,10 +19,10 @@ class SessionChatController {
   });
 
   final Ref ref;
-  final Room? Function() currentRoom;
-  final bool Function() hasKeeper;
-  final bool Function() isCurrentUserKeeper;
-  final void Function(ChatMessage message) onChatMessage;
+  final CurrentRoomGetter currentRoom;
+  final BoolGetter hasKeeper;
+  final BoolGetter isCurrentUserKeeper;
+  final MessageCallback<ChatMessage> onChatMessage;
 
   bool handleDataReceived(DataReceivedEvent event) {
     if (event.topic == SessionCommunicationTopics.emoji.topic) {

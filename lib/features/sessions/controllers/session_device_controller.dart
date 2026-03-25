@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/features/sessions/controllers/session_types.dart';
 import 'package:totem_app/shared/logger.dart';
 
 class SessionDeviceController {
@@ -21,10 +22,10 @@ class SessionDeviceController {
   });
 
   final Ref ref;
-  final Room? Function() currentRoom;
-  final RoomState Function() currentRoomState;
-  final bool Function() hasKeeper;
-  final void Function(bool enabled) onSpeakerphoneChanged;
+  final CurrentRoomGetter currentRoom;
+  final RoomStateGetter currentRoomState;
+  final BoolGetter hasKeeper;
+  final BoolCallback onSpeakerphoneChanged;
   final CameraCaptureOptions defaultCameraCaptureOptions;
 
   StreamSubscription<void>? _becomingNoisySubscription;

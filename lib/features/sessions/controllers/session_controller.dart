@@ -19,6 +19,7 @@ import 'package:totem_app/features/sessions/controllers/session_keeper_presence_
 import 'package:totem_app/features/sessions/controllers/session_moderation_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_participant_events_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_totem_controller.dart';
+import 'package:totem_app/features/sessions/controllers/session_types.dart';
 import 'package:totem_app/features/sessions/controllers/utils.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart'
@@ -28,8 +29,8 @@ import 'package:totem_app/shared/logger.dart';
 
 export 'package:totem_app/features/sessions/controllers/utils.dart';
 
-part 'session_controller.g.dart';
 part 'session_chat_message.dart';
+part 'session_controller.g.dart';
 part 'session_join_policy.dart';
 part 'session_room_sync.dart';
 part 'session_state_reducer.dart';

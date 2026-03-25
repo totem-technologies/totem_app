@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/features/sessions/controllers/session_types.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/shared/logger.dart';
 
@@ -15,10 +15,10 @@ class SessionModerationController {
   });
 
   final Ref ref;
-  final String Function() eventSlug;
-  final int Function() roomVersion;
-  final bool Function() isCurrentUserKeeper;
-  final void Function(RoomState roomState) onRoomState;
+  final StringGetter eventSlug;
+  final IntGetter roomVersion;
+  final BoolGetter isCurrentUserKeeper;
+  final RoomStateCallback onRoomState;
 
   Future<void> removeParticipant(String participantSlug) async {
     if (!isCurrentUserKeeper()) return;

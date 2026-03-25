@@ -9,9 +9,9 @@ class SessionJoinPolicy {
     required bool? cameraEnabledOverride,
     required bool? microphoneEnabledOverride,
     required SessionOptions? sessionOptions,
-    required bool Function() isCurrentUserKeeper,
-    required Future<void> Function() enableMicrophone,
-    required Future<void> Function() disableMicrophone,
+    required BoolGetter isCurrentUserKeeper,
+    required AsyncCallback enableMicrophone,
+    required AsyncCallback disableMicrophone,
   }) async {
     final cameraEnabled =
         cameraEnabledOverride ?? (sessionOptions?.cameraEnabled ?? false);

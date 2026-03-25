@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart' hide logger;
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/features/sessions/controllers/session_types.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/shared/logger.dart';
 
@@ -21,16 +20,16 @@ class SessionTotemController {
   });
 
   final Ref ref;
-  final Room? Function() currentRoom;
-  final bool Function(Room room) isMyTurn;
-  final bool Function(Room room) amNext;
-  final bool Function() hasKeeper;
-  final int Function() roomVersion;
-  final String Function() eventSlug;
-  final bool Function() isCurrentUserKeeper;
-  final Future<void> Function() enableMicrophone;
-  final Future<void> Function() disableMicrophone;
-  final void Function(RoomState roomState) onRoomState;
+  final CurrentRoomGetter currentRoom;
+  final RoomPredicate isMyTurn;
+  final RoomPredicate amNext;
+  final BoolGetter hasKeeper;
+  final IntGetter roomVersion;
+  final StringGetter eventSlug;
+  final BoolGetter isCurrentUserKeeper;
+  final AsyncCallback enableMicrophone;
+  final AsyncCallback disableMicrophone;
+  final RoomStateCallback onRoomState;
 
   Future<void> passTotem({String? roundMessage}) async {
     final room = currentRoom();

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/session_types.dart';
 import 'package:totem_app/shared/logger.dart';
 
 class SessionParticipantEventsController {
@@ -14,10 +15,10 @@ class SessionParticipantEventsController {
     required this.disconnect,
   });
 
-  final Room? Function() currentRoom;
-  final String Function() currentKeeperIdentity;
-  final void Function() onLocalParticipantRemoved;
-  final Future<void> Function() disconnect;
+  final CurrentRoomGetter currentRoom;
+  final CurrentKeeperIdentityGetter currentKeeperIdentity;
+  final VoidCallback onLocalParticipantRemoved;
+  final AsyncCallback disconnect;
 
   bool handleDataReceived(DataReceivedEvent event) {
     if (event.topic != SessionCommunicationTopics.participantRemoved.topic) {

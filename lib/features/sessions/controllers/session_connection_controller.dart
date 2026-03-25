@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:livekit_client/livekit_client.dart' hide logger;
+import 'package:totem_app/features/sessions/controllers/session_types.dart';
 
 class SessionConnectionController {
   SessionConnectionController({
@@ -12,13 +13,12 @@ class SessionConnectionController {
     required this.onParticipantConnected,
   });
 
-  final void Function() onRoomEvent;
-  final void Function() onConnected;
-  final void Function(DisconnectReason? reason) onDisconnected;
-  final void Function(DataReceivedEvent event) onDataReceived;
-  final void Function(ParticipantDisconnectedEvent event)
-  onParticipantDisconnected;
-  final void Function(ParticipantConnectedEvent event) onParticipantConnected;
+  final VoidCallback onRoomEvent;
+  final VoidCallback onConnected;
+  final DisconnectReasonCallback onDisconnected;
+  final DataReceivedEventCallback onDataReceived;
+  final ParticipantDisconnectedEventCallback onParticipantDisconnected;
+  final ParticipantConnectedEventCallback onParticipantConnected;
 
   Room? room;
   EventsListener<RoomEvent>? _listener;
