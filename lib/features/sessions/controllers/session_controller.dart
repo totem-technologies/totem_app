@@ -15,6 +15,7 @@ import 'package:totem_app/features/sessions/controllers/session_chat_controller.
 import 'package:totem_app/features/sessions/controllers/session_connection_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_device_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_infra_controller.dart';
+import 'package:totem_app/features/sessions/controllers/session_keeper_presence_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_moderation_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_participant_events_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_totem_controller.dart';
@@ -30,6 +31,9 @@ export 'package:totem_app/features/sessions/controllers/utils.dart';
 part 'devices_control.dart';
 part 'keeper_control.dart';
 part 'participant_control.dart';
+part 'session_join_policy.dart';
+part 'session_room_sync.dart';
+part 'session_state_reducer.dart';
 part 'session_controller.g.dart';
 
 enum SessionCommunicationTopics {
@@ -469,6 +473,9 @@ class SessionController extends _$SessionController {
   SessionParticipantEventsController? _participantEventsController;
   SessionTotemController? _totemController;
   SessionModerationController? _moderationController;
+  SessionKeeperPresenceController? _keeperPresenceController;
+  static const SessionJoinPolicy _joinPolicy = SessionJoinPolicy();
+  static const SessionRoomSync _roomSync = SessionRoomSync();
 
   static const defaultCameraCaptureOptions = CameraCaptureOptions(
     params: VideoParameters(
@@ -564,94 +571,18 @@ class SessionController extends _$SessionController {
     );
   }
 
+  SessionKeeperPresenceController get _keeperPresence {
+    return _keeperPresenceController ??= SessionKeeperPresenceController(
+      disableMicrophone: disableMicrophone,
+      markKeeperDisconnected: (hasKeeperDisconnected) {
+        _dispatch(_KeeperDisconnectedChanged(hasKeeperDisconnected));
+      },
+      disconnect: _connection.disconnect,
+    );
+  }
+
   void _dispatch(_SessionEvent event) {
-    switch (event) {
-      case _ConnectionChanged():
-        state = SessionRoomState(
-          connection: state.connection.copyWith(
-            state: event.connectionState,
-            phase: event.phase,
-            clearError: event.connectionState == RoomConnectionState.connected,
-          ),
-          participants: event.connectionState == RoomConnectionState.connected
-              ? state.participants.copyWith(removed: false)
-              : state.participants,
-          chat: state.chat,
-          turn: state.turn,
-        );
-      case _RoomStateChanged():
-        final isEnded = event.roomState.status == RoomStatus.ended;
-        state = SessionRoomState(
-          connection: state.connection.copyWith(
-            phase: isEnded ? SessionPhase.ended : null,
-          ),
-          participants: state.participants,
-          chat: state.chat,
-          turn: state.turn.copyWith(roomState: event.roomState),
-        );
-      case _ParticipantsChanged():
-        state = SessionRoomState(
-          connection: state.connection,
-          participants: state.participants.copyWith(
-            participants: event.participants,
-          ),
-          chat: state.chat,
-          turn: state.turn,
-        );
-      case _KeeperDisconnectedChanged():
-        state = SessionRoomState(
-          connection: state.connection,
-          participants: state.participants.copyWith(
-            hasKeeperDisconnected: event.hasKeeperDisconnected,
-          ),
-          chat: state.chat,
-          turn: state.turn,
-        );
-      case _ParticipantRemoved():
-        state = SessionRoomState(
-          connection: state.connection,
-          participants: state.participants.copyWith(removed: true),
-          chat: state.chat,
-          turn: state.turn,
-        );
-      case _SpeakerphoneChanged():
-        state = SessionRoomState(
-          connection: state.connection,
-          participants: state.participants,
-          chat: state.chat,
-          turn: state.turn.copyWith(
-            isSpeakerphoneEnabled: event.isSpeakerphoneEnabled,
-          ),
-        );
-      case _DisconnectReasonChanged():
-        // Handled through _SessionErrorChanged now, but kept for future use
-        break;
-      case _SessionErrorChanged():
-        state = SessionRoomState(
-          connection: state.connection.copyWith(
-            error: event.error,
-            state: event.error is RoomLiveKitError
-                ? RoomConnectionState.error
-                : state.connection.state,
-            phase: event.error is RoomLiveKitError ? SessionPhase.error : null,
-          ),
-          participants: state.participants,
-          chat: state.chat,
-          turn: state.turn,
-        );
-      case _LiveKitErrorChanged():
-        // This event type is no longer used; maintained for backward compat
-        break;
-      case _ChatMessageAdded():
-        state = SessionRoomState(
-          connection: state.connection,
-          participants: state.participants,
-          chat: state.chat.copyWith(
-            messages: [...state.chat.messages, event.message],
-          ),
-          turn: state.turn,
-        );
-    }
+    state = _reduceState(state, event);
   }
 
   @override
@@ -694,17 +625,9 @@ class SessionController extends _$SessionController {
 
   void _updateParticipantsList() {
     try {
-      final participants = <Participant>[
-        if (room != null) ...[
-          ...room!.remoteParticipants.values,
-          if (room!.localParticipant != null) room!.localParticipant!,
-        ],
-      ];
-
-      final sortedParticipants = participantsSorting(
-        originalParticipants: participants,
+      final sortedParticipants = _roomSync.sortedParticipants(
+        room: room,
         state: state,
-        showSpeakingNow: true,
       );
 
       final hasKeeper = sortedParticipants.any(
@@ -737,37 +660,16 @@ class SessionController extends _$SessionController {
 
     _onRoomChanges();
 
-    final cameraEnabled =
-        _cameraEnabledOverride ?? (_options?.cameraEnabled ?? false);
-    room!.localParticipant?.setCameraEnabled(cameraEnabled);
-
-    // If the user joined in the waiting
-    // If the keeper is not in the room, the participants will start unmuted.
-    final isMicrophoneEnabled =
-        () {
-          if (state.roomState.status == RoomStatus.waitingRoom &&
-              !state.hasKeeper) {
-            // If joined in the waiting room, everyone can join unmuted.
-            return _microphoneEnabledOverride ?? _options?.microphoneEnabled;
-          }
-          if (state.roomState.status == RoomStatus.active) {
-            if (state.speakingNow == room!.localParticipant?.identity) {
-              // If it's the user's turn to speak, they can join unmuted.
-              return _microphoneEnabledOverride ?? _options?.microphoneEnabled;
-            }
-          }
-          // In other states, only the keeper can join unmuted.
-          return isCurrentUserKeeper() &&
-              (_microphoneEnabledOverride ??
-                  _options?.microphoneEnabled ??
-                  false);
-        }() ??
-        false;
-    if (isMicrophoneEnabled) {
-      enableMicrophone();
-    } else {
-      disableMicrophone();
-    }
+    _joinPolicy.apply(
+      room: room!,
+      state: state,
+      cameraEnabledOverride: _cameraEnabledOverride,
+      microphoneEnabledOverride: _microphoneEnabledOverride,
+      sessionOptions: _options,
+      isCurrentUserKeeper: isCurrentUserKeeper,
+      enableMicrophone: enableMicrophone,
+      disableMicrophone: disableMicrophone,
+    );
     // context.room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
     _dispatch(
       const _ConnectionChanged(
@@ -806,33 +708,13 @@ class SessionController extends _$SessionController {
     if (newSessionState != null) {
       _dispatch(_RoomStateChanged(newSessionState));
     } else {
-      final metadata = room?.metadata;
-      if (metadata == null || metadata.isEmpty) return;
-
-      try {
-        if (_lastMetadata == null) {
-          _lastMetadata = metadata;
-          _dispatch(
-            _RoomStateChanged(
-              RoomState.fromJson(
-                jsonDecode(metadata) as Map<String, dynamic>,
-              ),
-            ),
-          );
-        } else if (metadata != _lastMetadata) {
-          final newState = RoomState.fromJson(
-            jsonDecode(metadata) as Map<String, dynamic>,
-          );
-
-          _dispatch(_RoomStateChanged(newState));
-          _lastMetadata = metadata;
-        }
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Error decoding session metadata',
-        );
+      final metadataResult = _roomSync.resolveMetadataState(
+        metadata: room?.metadata,
+        lastMetadata: _lastMetadata,
+      );
+      _lastMetadata = metadataResult.lastMetadata;
+      if (metadataResult.roomState != null) {
+        _dispatch(_RoomStateChanged(metadataResult.roomState!));
       }
     }
 
@@ -870,9 +752,6 @@ class SessionController extends _$SessionController {
         break;
     }
   }
-
-  static const keeperDisconnectionTimeout = Duration(minutes: 3);
-  Timer? _keeperDisconnectedTimer;
 
   void _onParticipantDisconnected(ParticipantDisconnectedEvent event) {
     if (state.isKeeper(event.participant.identity)) {
@@ -1010,8 +889,8 @@ class SessionController extends _$SessionController {
     _syncTimer?.cancel();
     _syncTimer = null;
 
-    _keeperDisconnectedTimer?.cancel();
-    _keeperDisconnectedTimer = null;
+    _keeperPresence.dispose();
+    _keeperPresenceController = null;
 
     unawaited(_devices.dispose());
     _deviceController = null;

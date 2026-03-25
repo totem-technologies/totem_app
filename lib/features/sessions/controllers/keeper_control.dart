@@ -14,30 +14,11 @@ extension KeeperControl on SessionController {
   }
 
   void _onKeeperDisconnected() {
-    if (state.roomState.status != RoomStatus.active) return;
-    disableMicrophone();
-
-    _keeperDisconnectedTimer?.cancel();
-    _keeperDisconnectedTimer = Timer(
-      SessionController.keeperDisconnectionTimeout,
-      _onKeeperDisconnectedTimeout,
-    );
-
-    _dispatch(const _KeeperDisconnectedChanged(true));
+    _keeperPresence.onKeeperDisconnected(state.roomState.status);
   }
 
   void _onKeeperConnected() {
-    _keeperDisconnectedTimer?.cancel();
-    _keeperDisconnectedTimer = null;
-
-    _dispatch(const _KeeperDisconnectedChanged(false));
-  }
-
-  Future<void> _onKeeperDisconnectedTimeout() async {
-    _keeperDisconnectedTimer?.cancel();
-    _keeperDisconnectedTimer = null;
-
-    await room?.disconnect();
+    _keeperPresence.onKeeperConnected();
   }
 
   Future<void> removeParticipant(String participantSlug) async {
