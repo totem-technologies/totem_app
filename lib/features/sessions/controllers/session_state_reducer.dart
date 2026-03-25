@@ -81,7 +81,7 @@ class SessionStateReducer {
         );
       case LiveKitErrorChanged():
         return current;
-      case ChatMessageAdded():
+      case SessionChatMessageAdded():
         return SessionRoomState(
           connection: current.connection,
           participants: current.participants,

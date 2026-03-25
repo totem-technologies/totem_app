@@ -103,7 +103,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   }
 
   bool _chatSheetOpen = false;
-  bool _hasPendingChatMessages = false;
+  bool _hasPendingSessionChatMessages = false;
 
   void _onLivekitError(LiveKitException error) {
     if (error is ConnectException ||
@@ -161,7 +161,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         (previous, next) {
           if (next == null || identical(previous, next)) return;
           if (!mounted || _chatSheetOpen) return;
-          setState(() => _hasPendingChatMessages = !_chatSheetOpen);
+          setState(() => _hasPendingSessionChatMessages = !_chatSheetOpen);
           showNotificationPopup(
             context,
             icon: TotemIcons.chat,
@@ -409,7 +409,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               onPressed: () async {
                 if (!mounted) return;
                 setState(() {
-                  _hasPendingChatMessages = false;
+                  _hasPendingSessionChatMessages = false;
                   _chatSheetOpen = true;
                 });
                 await showSessionChatSheet(context);
@@ -420,7 +420,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 clipBehavior: Clip.none,
                 children: [
                   const TotemIcon(TotemIcons.chat),
-                  if (_hasPendingChatMessages)
+                  if (_hasPendingSessionChatMessages)
                     Container(
                       height: 4,
                       width: 4,

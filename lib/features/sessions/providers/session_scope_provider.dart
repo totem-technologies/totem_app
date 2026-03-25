@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
-    hide ChatMessage, Session, SessionOptions;
+    hide Session, SessionOptions;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/session_messaging_controller.dart';
 
 part 'session_scope_provider.g.dart';
 
@@ -130,7 +131,7 @@ bool hasKeeperDisconnected(Ref ref) {
 
 /// All chat messages for the current session.
 @Riverpod(dependencies: [currentSessionState])
-List<ChatMessage> sessionMessages(Ref ref) {
+List<SessionChatMessage> sessionMessages(Ref ref) {
   return ref.watch(
         currentSessionStateProvider.select((s) => s?.chat.messages),
       ) ??
@@ -139,7 +140,7 @@ List<ChatMessage> sessionMessages(Ref ref) {
 
 /// Last chat message if available.
 @Riverpod(dependencies: [sessionMessages])
-ChatMessage? lastSessionMessage(Ref ref) {
+SessionChatMessage? lastSessionMessage(Ref ref) {
   final messages = ref.watch(sessionMessagesProvider);
   return messages.isEmpty ? null : messages.last;
 }

@@ -6,7 +6,7 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/keeper/screens/keeper_profile_screen.dart';
-import 'package:totem_app/features/sessions/controllers/session_chat_message.dart';
+import 'package:totem_app/features/sessions/controllers/session_messaging_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
@@ -269,7 +269,7 @@ class OtherChatBubble extends StatelessWidget {
   });
 
   final bool showAvatar;
-  final ChatMessage message;
+  final SessionChatMessage message;
   final SessionDetailSchema? session;
 
   @override
@@ -322,7 +322,7 @@ class MyChatBubble extends StatelessWidget {
     super.key,
   });
 
-  final ChatMessage message;
+  final SessionChatMessage message;
 
   @override
   Widget build(BuildContext context) {

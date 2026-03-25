@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:livekit_client/livekit_client.dart' hide ChatMessage, logger;
+import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/session_controller.dart';
@@ -17,6 +17,45 @@ enum SessionCommunicationTopics {
 
   const SessionCommunicationTopics(this.topic);
   final String topic;
+}
+
+class SessionChatMessage {
+  const SessionChatMessage({
+    required this.message,
+    required this.timestamp,
+    required this.id,
+    required this.sender,
+    this.participant,
+  });
+
+  factory SessionChatMessage.fromMap(
+    Map<String, dynamic> map,
+    Participant? participant,
+  ) {
+    return SessionChatMessage(
+      message: map['message'] as String,
+      timestamp: map['timestamp'] as int,
+      id: map['id'] as String,
+      participant: participant,
+      sender: false,
+    );
+  }
+
+  final String message;
+  final int timestamp;
+  final String id;
+  final bool sender;
+  final Participant? participant;
+
+  Map<String, dynamic> toMap() {
+    return {
+      'message': message,
+      'timestamp': timestamp,
+      'id': id,
+    };
+  }
+
+  String toJson() => const JsonEncoder().convert(toMap());
 }
 
 @Riverpod(keepAlive: true)
@@ -46,11 +85,11 @@ class SessionMessagingController extends _$SessionMessagingController {
     if (event.topic == SessionCommunicationTopics.chat.topic) {
       final data = const Utf8Decoder().convert(event.data);
       try {
-        final message = ChatMessage.fromMap(
+        final message = SessionChatMessage.fromMap(
           jsonDecode(data) as Map<String, dynamic>,
           event.participant,
         );
-        _session.addChatMessage(message);
+        _session.addSessionChatMessage(message);
       } catch (error, stackTrace) {
         ErrorHandler.logError(
           error,
@@ -146,7 +185,7 @@ class SessionMessagingController extends _$SessionMessagingController {
 
     final room = _room;
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final message = ChatMessage(
+    final message = SessionChatMessage(
       message: text,
       timestamp: timestamp,
       id: timestamp.toString(),
@@ -155,7 +194,7 @@ class SessionMessagingController extends _$SessionMessagingController {
     );
 
     try {
-      _session.addChatMessage(message);
+      _session.addSessionChatMessage(message);
       await room?.localParticipant
           ?.publishData(
             const Utf8Encoder().convert(message.toJson()),

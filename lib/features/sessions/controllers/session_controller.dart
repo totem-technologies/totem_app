@@ -1,34 +1,43 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
-    hide ChatMessage, ConnectionState, SessionOptions, logger;
+    hide ConnectionState, SessionOptions, logger;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
-import 'package:totem_app/features/sessions/controllers/session_chat_message.dart';
 import 'package:totem_app/features/sessions/controllers/session_device_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_infra_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_keeper_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_messaging_controller.dart';
-import 'package:totem_app/features/sessions/controllers/session_room_sync.dart';
 import 'package:totem_app/features/sessions/controllers/session_state.dart';
 import 'package:totem_app/features/sessions/controllers/session_state_events.dart';
 import 'package:totem_app/features/sessions/controllers/session_state_reducer.dart';
+import 'package:totem_app/features/sessions/controllers/utils.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart'
     show sessionScopeProvider;
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/logger.dart';
 
-export 'package:totem_app/features/sessions/controllers/session_chat_message.dart';
 export 'package:totem_app/features/sessions/controllers/session_state.dart';
 export 'package:totem_app/features/sessions/controllers/utils.dart';
 
 part 'session_controller.g.dart';
+
+class _SessionRoomMetadataResult {
+  const _SessionRoomMetadataResult({
+    required this.roomState,
+    required this.lastMetadata,
+  });
+
+  final RoomState? roomState;
+  final String? lastMetadata;
+}
 
 @riverpod
 class SessionController extends _$SessionController {
@@ -46,7 +55,6 @@ class SessionController extends _$SessionController {
   bool? _microphoneEnabledOverride;
   String? _lastMetadata;
   SessionDetailSchema? event;
-  static const SessionRoomSync _roomSync = SessionRoomSync();
   static const SessionStateReducer _stateReducer = SessionStateReducer();
 
   static const defaultCameraCaptureOptions = CameraCaptureOptions(
@@ -95,8 +103,8 @@ class SessionController extends _$SessionController {
     _dispatch(SpeakerphoneChanged(enabled));
   }
 
-  void addChatMessage(ChatMessage message) {
-    _dispatch(ChatMessageAdded(message));
+  void addSessionChatMessage(SessionChatMessage message) {
+    _dispatch(SessionChatMessageAdded(message));
   }
 
   void markParticipantRemoved() {
@@ -155,10 +163,7 @@ class SessionController extends _$SessionController {
 
   void _updateParticipantsList() {
     try {
-      final sortedParticipants = _roomSync.sortedParticipants(
-        room: room,
-        state: state,
-      );
+      final sortedParticipants = _sortedParticipants();
 
       final hasKeeper = sortedParticipants.any(
         (p) => state.isKeeper(p.identity),
@@ -229,7 +234,7 @@ class SessionController extends _$SessionController {
     if (newSessionState != null) {
       _dispatch(RoomStateChanged(newSessionState));
     } else {
-      final metadataResult = _roomSync.resolveMetadataState(
+      final metadataResult = _resolveMetadataState(
         metadata: room?.metadata,
         lastMetadata: _lastMetadata,
       );
@@ -466,6 +471,64 @@ class SessionController extends _$SessionController {
     } else {
       await devices.disableMicrophone();
     }
+  }
+
+  List<Participant> _sortedParticipants() {
+    final participants = <Participant>[
+      if (room != null) ...[
+        ...room!.remoteParticipants.values,
+        if (room!.localParticipant != null) room!.localParticipant!,
+      ],
+    ];
+
+    return participantsSorting(
+      originalParticipants: participants,
+      state: state,
+      showSpeakingNow: true,
+    );
+  }
+
+  _SessionRoomMetadataResult _resolveMetadataState({
+    required String? metadata,
+    required String? lastMetadata,
+  }) {
+    if (metadata == null || metadata.isEmpty) {
+      return _SessionRoomMetadataResult(
+        roomState: null,
+        lastMetadata: lastMetadata,
+      );
+    }
+
+    try {
+      if (lastMetadata == null) {
+        return _SessionRoomMetadataResult(
+          roomState: RoomState.fromJson(
+            jsonDecode(metadata) as Map<String, dynamic>,
+          ),
+          lastMetadata: metadata,
+        );
+      }
+
+      if (metadata != lastMetadata) {
+        return _SessionRoomMetadataResult(
+          roomState: RoomState.fromJson(
+            jsonDecode(metadata) as Map<String, dynamic>,
+          ),
+          lastMetadata: metadata,
+        );
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error decoding session metadata',
+      );
+    }
+
+    return _SessionRoomMetadataResult(
+      roomState: null,
+      lastMetadata: lastMetadata,
+    );
   }
 }
 

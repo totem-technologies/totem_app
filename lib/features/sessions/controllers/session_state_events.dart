@@ -1,6 +1,6 @@
-import 'package:livekit_client/livekit_client.dart' hide ChatMessage, logger;
+import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/features/sessions/controllers/session_chat_message.dart';
+import 'package:totem_app/features/sessions/controllers/session_messaging_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_state.dart';
 
 sealed class SessionEvent {
@@ -60,8 +60,8 @@ class LiveKitErrorChanged extends SessionEvent {
   final LiveKitException? livekitError;
 }
 
-class ChatMessageAdded extends SessionEvent {
-  const ChatMessageAdded(this.message);
+class SessionChatMessageAdded extends SessionEvent {
+  const SessionChatMessageAdded(this.message);
 
-  final ChatMessage message;
+  final SessionChatMessage message;
 }

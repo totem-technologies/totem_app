@@ -1,9 +1,9 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:livekit_client/livekit_client.dart'
-  hide ChatMessage, ConnectionState, SessionOptions, logger;
+    hide ConnectionState, SessionOptions, logger;
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/features/sessions/controllers/session_chat_message.dart';
+import 'package:totem_app/features/sessions/controllers/session_messaging_controller.dart';
 
 enum RoomConnectionState { connecting, connected, disconnected, error }
 
@@ -133,10 +133,10 @@ class ChatState {
     this.messages = const [],
   });
 
-  final List<ChatMessage> messages;
+  final List<SessionChatMessage> messages;
 
   ChatState copyWith({
-    List<ChatMessage>? messages,
+    List<SessionChatMessage>? messages,
   }) {
     return ChatState(
       messages: messages ?? this.messages,
@@ -243,7 +243,7 @@ class SessionRoomState {
   List<Participant> get participantsList => participants.participants;
   bool get removed => participants.removed;
   bool get isSpeakerphoneEnabled => turn.isSpeakerphoneEnabled;
-  List<ChatMessage> get messages => chat.messages;
+  List<SessionChatMessage> get messages => chat.messages;
 
   DisconnectReason? get disconnectReason {
     final error = connection.error;

@@ -693,11 +693,11 @@ final sessionMessagesProvider = SessionMessagesProvider._();
 final class SessionMessagesProvider
     extends
         $FunctionalProvider<
-          List<ChatMessage>,
-          List<ChatMessage>,
-          List<ChatMessage>
+          List<SessionChatMessage>,
+          List<SessionChatMessage>,
+          List<SessionChatMessage>
         >
-    with $Provider<List<ChatMessage>> {
+    with $Provider<List<SessionChatMessage>> {
   /// All chat messages for the current session.
   SessionMessagesProvider._()
     : super(
@@ -722,20 +722,20 @@ final class SessionMessagesProvider
 
   @$internal
   @override
-  $ProviderElement<List<ChatMessage>> $createElement(
+  $ProviderElement<List<SessionChatMessage>> $createElement(
     $ProviderPointer pointer,
   ) => $ProviderElement(pointer);
 
   @override
-  List<ChatMessage> create(Ref ref) {
+  List<SessionChatMessage> create(Ref ref) {
     return sessionMessages(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(List<ChatMessage> value) {
+  Override overrideWithValue(List<SessionChatMessage> value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<List<ChatMessage>>(value),
+      providerOverride: $SyncValueProvider<List<SessionChatMessage>>(value),
     );
   }
 }
@@ -750,8 +750,13 @@ final lastSessionMessageProvider = LastSessionMessageProvider._();
 /// Last chat message if available.
 
 final class LastSessionMessageProvider
-    extends $FunctionalProvider<ChatMessage?, ChatMessage?, ChatMessage?>
-    with $Provider<ChatMessage?> {
+    extends
+        $FunctionalProvider<
+          SessionChatMessage?,
+          SessionChatMessage?,
+          SessionChatMessage?
+        >
+    with $Provider<SessionChatMessage?> {
   /// Last chat message if available.
   LastSessionMessageProvider._()
     : super(
@@ -779,19 +784,20 @@ final class LastSessionMessageProvider
 
   @$internal
   @override
-  $ProviderElement<ChatMessage?> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
+  $ProviderElement<SessionChatMessage?> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
 
   @override
-  ChatMessage? create(Ref ref) {
+  SessionChatMessage? create(Ref ref) {
     return lastSessionMessage(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(ChatMessage? value) {
+  Override overrideWithValue(SessionChatMessage? value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<ChatMessage?>(value),
+      providerOverride: $SyncValueProvider<SessionChatMessage?>(value),
     );
   }
 }
