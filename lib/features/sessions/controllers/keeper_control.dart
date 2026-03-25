@@ -41,187 +41,31 @@ extension KeeperControl on SessionController {
   }
 
   Future<void> removeParticipant(String participantSlug) async {
-    if (!isCurrentUserKeeper()) return;
-    try {
-      await ref
-          .read(
-            removeParticipantProvider(
-              options.eventSlug,
-              participantSlug,
-            ).future,
-          )
-          .timeout(
-            const Duration(seconds: 20),
-            onTimeout: () {
-              throw AppNetworkException.timeout();
-            },
-          );
-      logger.i('Removed participant $participantSlug successfully');
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error removing participant $participantSlug',
-      );
-      rethrow;
-    }
+    await _moderation.removeParticipant(participantSlug);
   }
 
   Future<bool> startSession() async {
-    if (!isCurrentUserKeeper()) return false;
-    try {
-      await ref
-          .read(
-            startSessionProvider(
-              _options!.eventSlug,
-              state.roomState.version,
-            ).future,
-          )
-          .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              throw AppNetworkException.timeout();
-            },
-          );
-      return true;
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error starting session',
-      );
-      return false;
-    }
+    return _moderation.startSession();
   }
 
   Future<bool> endSession() async {
-    if (!isCurrentUserKeeper()) return false;
-    try {
-      final roomState = await ref
-          .read(
-            endSessionProvider(
-              _options!.eventSlug,
-              state.roomState.version,
-            ).future,
-          )
-          .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              throw AppNetworkException.timeout();
-            },
-          );
-      _onRoomChanges(roomState);
-      return true;
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error ending session',
-      );
-      return false;
-    }
+    return _moderation.endSession();
   }
 
   Future<void> banParticipant(String participantSlug) async {
-    if (!isCurrentUserKeeper()) return;
-    try {
-      await ref
-          .read(
-            banParticipantProvider(
-              options.eventSlug,
-              participantSlug,
-              state.roomState.version,
-            ).future,
-          )
-          .timeout(
-            const Duration(seconds: 20),
-            onTimeout: () => throw AppNetworkException.timeout(),
-          );
-
-      logger.i('Banned participant $participantSlug successfully');
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error banning participant $participantSlug',
-      );
-      rethrow;
-    }
+    await _moderation.banParticipant(participantSlug);
   }
 
   Future<void> unbanParticipant(String participantSlug) async {
-    if (!isCurrentUserKeeper()) return;
-
-    try {
-      await ref
-          .read(
-            unbanParticipantProvider(
-              options.eventSlug,
-              participantSlug,
-              state.roomState.version,
-            ).future,
-          )
-          .timeout(
-            const Duration(seconds: 20),
-            onTimeout: () => throw AppNetworkException.timeout(),
-          );
-      logger.i('Unbanned participant $participantSlug successfully');
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error unbanning participant $participantSlug',
-      );
-      rethrow;
-    }
+    await _moderation.unbanParticipant(participantSlug);
   }
 
   Future<void> muteParticipant(String participantSlug) async {
-    if (!isCurrentUserKeeper()) return;
-    try {
-      await ref
-          .read(
-            muteParticipantProvider(
-              options.eventSlug,
-              participantSlug,
-            ).future,
-          )
-          .timeout(
-            const Duration(seconds: 20),
-            onTimeout: () {
-              throw AppNetworkException.timeout();
-            },
-          );
-      logger.i('Muted participant $participantSlug successfully');
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error muting participant $participantSlug',
-      );
-      rethrow;
-    }
+    await _moderation.muteParticipant(participantSlug);
   }
 
   Future<void> muteEveryone() async {
-    if (!isCurrentUserKeeper()) return;
-    try {
-      await ref
-          .read(muteEveryoneProvider(_options!.eventSlug).future)
-          .timeout(
-            const Duration(seconds: 20),
-            onTimeout: () {
-              throw AppNetworkException.timeout();
-            },
-          );
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error muting everyone',
-      );
-      rethrow;
-    }
+    await _moderation.muteEveryone();
   }
 
   Future<void> reorder(List<String> newOrder) async {

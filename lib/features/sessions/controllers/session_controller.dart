@@ -9,20 +9,19 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/app_config.dart';
-import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/sessions/controllers/session_chat_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_connection_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_device_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_infra_controller.dart';
+import 'package:totem_app/features/sessions/controllers/session_moderation_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_participant_events_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_totem_controller.dart';
 import 'package:totem_app/features/sessions/controllers/utils.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart'
     show sessionScopeProvider;
-import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/logger.dart';
 
@@ -469,6 +468,7 @@ class SessionController extends _$SessionController {
   SessionChatController? _chatController;
   SessionParticipantEventsController? _participantEventsController;
   SessionTotemController? _totemController;
+  SessionModerationController? _moderationController;
 
   static const defaultCameraCaptureOptions = CameraCaptureOptions(
     params: VideoParameters(
@@ -550,6 +550,16 @@ class SessionController extends _$SessionController {
       isCurrentUserKeeper: isCurrentUserKeeper,
       enableMicrophone: enableMicrophone,
       disableMicrophone: disableMicrophone,
+      onRoomState: _onRoomChanges,
+    );
+  }
+
+  SessionModerationController get _moderation {
+    return _moderationController ??= SessionModerationController(
+      ref: ref,
+      eventSlug: () => options.eventSlug,
+      roomVersion: () => state.roomState.version,
+      isCurrentUserKeeper: isCurrentUserKeeper,
       onRoomState: _onRoomChanges,
     );
   }
@@ -1009,6 +1019,7 @@ class SessionController extends _$SessionController {
     _chatController = null;
     _participantEventsController = null;
     _totemController = null;
+    _moderationController = null;
 
     unawaited(_connection.dispose());
     _connectionController = null;
