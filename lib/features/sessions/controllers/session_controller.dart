@@ -11,11 +11,9 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
-import 'package:totem_app/features/sessions/controllers/session_connection_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_device_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_infra_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_keeper_controller.dart';
-import 'package:totem_app/features/sessions/controllers/session_keeper_presence_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_messaging_controller.dart';
 import 'package:totem_app/features/sessions/controllers/utils.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
@@ -28,15 +26,6 @@ export 'package:totem_app/features/sessions/controllers/utils.dart';
 
 part 'session_controller.g.dart';
 part 'session_room_sync.dart';
-
-enum SessionCommunicationTopics {
-  emoji('lk-emoji-topic'),
-  chat('lk-chat-topic'),
-  participantRemoved('lk-participant-removed-topic');
-
-  const SessionCommunicationTopics(this.topic);
-  final String topic;
-}
 
 // ============= Domain Errors =============
 
@@ -446,10 +435,9 @@ class SessionRoomState {
 
 @riverpod
 class SessionController extends _$SessionController {
-  /// The [Room] of the current session, which holds the LiveKit room and related information.
-  SessionConnectionController? _connectionController;
-
-  Room? get room => _connectionController?.room;
+  Room? _room;
+  Room? get room => _room;
+  EventsListener<RoomEvent>? _listener;
 
   /// The sync timer periodically checks for changes in the room state
   /// and participants list, to keep the UI up to date.
@@ -461,8 +449,6 @@ class SessionController extends _$SessionController {
   bool? _microphoneEnabledOverride;
   String? _lastMetadata;
   SessionDetailSchema? event;
-  SessionDeviceController? _deviceController;
-  SessionKeeperPresenceController? _keeperPresenceController;
   static const SessionRoomSync _roomSync = SessionRoomSync();
 
   static const defaultCameraCaptureOptions = CameraCaptureOptions(
@@ -475,62 +461,17 @@ class SessionController extends _$SessionController {
     ),
   );
 
-  SessionDeviceController get _devices {
-    return _deviceController ??= SessionDeviceController(
-      ref: ref,
-      currentRoom: () => room,
-      currentRoomState: () => state.roomState,
-      hasKeeper: () => state.hasKeeper,
-      onSpeakerphoneChanged: (enabled) {
-        _dispatch(_SpeakerphoneChanged(enabled));
-      },
-      defaultCameraCaptureOptions:
-          SessionController.defaultCameraCaptureOptions,
-    );
+  SessionDeviceController get devices {
+    return ref.read(sessionDeviceControllerProvider(this).notifier);
   }
 
-  SessionConnectionController get _connection {
-    return _connectionController ??= SessionConnectionController(
-      onRoomEvent: () {
-        if (ref.mounted) {
-          _onRoomChanges();
-        }
-      },
-      onConnected: _onConnected,
-      onDisconnected: (reason) {
-        logger.d('Disconnected from session. Reason: $reason');
-        if (reason != null) {
-          _dispatch(_SessionErrorChanged(RoomDisconnectionError(reason)));
-        }
-        _onDisconnected();
-      },
-      onDataReceived: _messaging.handleDataReceived,
-      onParticipantDisconnected: _onParticipantDisconnected,
-      onParticipantConnected: _onParticipantConnected,
-    );
-  }
-
-  SessionMessagingController get _messaging {
+  SessionMessagingController get messaging {
     return ref.read(sessionMessagingControllerProvider(this).notifier);
   }
 
-  SessionKeeperController get _keeper {
+  SessionKeeperController get keeper {
     return ref.read(sessionKeeperControllerProvider(this).notifier);
   }
-
-  SessionKeeperPresenceController get _keeperPresence {
-    return _keeperPresenceController ??= SessionKeeperPresenceController(
-      disableMicrophone: _devices.disableMicrophone,
-      markKeeperDisconnected: (hasKeeperDisconnected) {
-        _dispatch(_KeeperDisconnectedChanged(hasKeeperDisconnected));
-      },
-      disconnect: _connection.disconnect,
-    );
-  }
-
-  SessionDeviceController get devices => _devices;
-  SessionMessagingController get messaging => _messaging;
-  SessionKeeperController get keeper => _keeper;
 
   bool isCurrentUserKeeper() {
     final currentUserSlug = ref.read(
@@ -541,11 +482,19 @@ class SessionController extends _$SessionController {
   }
 
   void _onKeeperDisconnected() {
-    _keeperPresence.onKeeperDisconnected(state.roomState.status);
+    keeper.onKeeperDisconnected(state.roomState.status);
   }
 
   void _onKeeperConnected() {
-    _keeperPresence.onKeeperConnected();
+    keeper.onKeeperConnected();
+  }
+
+  void setKeeperDisconnected(bool hasKeeperDisconnected) {
+    _dispatch(_KeeperDisconnectedChanged(hasKeeperDisconnected));
+  }
+
+  void onSpeakerphoneChanged(bool enabled) {
+    _dispatch(_SpeakerphoneChanged(enabled));
   }
 
   void addChatMessage(ChatMessage message) {
@@ -561,7 +510,7 @@ class SessionController extends _$SessionController {
   }
 
   Future<void> disconnectFromRoom() {
-    return _connection.disconnect();
+    return _disconnect();
   }
 
   void _dispatch(_SessionEvent event) {
@@ -601,7 +550,7 @@ class SessionController extends _$SessionController {
       chat: const ChatState(),
       turn: SessionTurnState(
         roomState: initialRoomState,
-        isSpeakerphoneEnabled: _devices.userSpeakerPreference,
+        isSpeakerphoneEnabled: devices.userSpeakerPreference,
       ),
     );
   }
@@ -643,16 +592,7 @@ class SessionController extends _$SessionController {
 
     _onRoomChanges();
 
-    _connection.apply(
-      room: room!,
-      state: state,
-      cameraEnabledOverride: _cameraEnabledOverride,
-      microphoneEnabledOverride: _microphoneEnabledOverride,
-      sessionOptions: _options,
-      isCurrentUserKeeper: isCurrentUserKeeper,
-      enableMicrophone: _devices.enableMicrophone,
-      disableMicrophone: _devices.disableMicrophone,
-    );
+    unawaited(_applyJoinMediaState());
     // context.room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
     _dispatch(
       const _ConnectionChanged(
@@ -663,11 +603,11 @@ class SessionController extends _$SessionController {
 
     // _userSpeakerPreference is always true: when no external audio device
     // is connected, the app should default to speaker (not earpiece).
-    _devices.resetSpeakerRoutingDefaults();
-    unawaited(_devices.setSpeakerphone(true));
+    devices.resetSpeakerRoutingDefaults();
+    unawaited(devices.setSpeakerphone(true));
 
     _updateParticipantsList();
-    _devices.setupDeviceChangeListener();
+    devices.setupDeviceChangeListener();
   }
 
   void _onDisconnected() {
@@ -746,7 +686,7 @@ class SessionController extends _$SessionController {
     final options = _options;
     if (options == null) return;
 
-    await _connection.initialize(
+    await _initializeConnection(
       roomOptions: RoomOptions(
         defaultCameraCaptureOptions: options.cameraOptions,
         defaultAudioCaptureOptions: const AudioCaptureOptions(),
@@ -793,7 +733,7 @@ class SessionController extends _$SessionController {
     );
 
     try {
-      await _connection.connect(
+      await _connect(
         url: AppConfig.liveKitUrl,
         token: options.token,
       );
@@ -808,7 +748,7 @@ class SessionController extends _$SessionController {
   }
 
   Future<void> leave() async {
-    await _connection.disconnect();
+    await _disconnect();
     _cleanUp();
   }
 
@@ -842,14 +782,92 @@ class SessionController extends _$SessionController {
     _syncTimer?.cancel();
     _syncTimer = null;
 
-    _keeperPresence.dispose();
-    _keeperPresenceController = null;
+    keeper.disposePresenceTracking();
 
-    unawaited(_devices.dispose());
-    _deviceController = null;
+    unawaited(devices.dispose());
+    unawaited(_disposeConnection());
+  }
 
-    unawaited(_connection.dispose());
-    _connectionController = null;
+  Future<Room> _initializeConnection({
+    required RoomOptions roomOptions,
+    required String url,
+    required String token,
+  }) async {
+    _room ??= Room(roomOptions: roomOptions);
+    await _room!.prepareConnection(url, token);
+
+    _listener ??= _room!.createListener()
+      ..on((_) {
+        if (ref.mounted) {
+          _onRoomChanges();
+        }
+      })
+      ..on<RoomConnectedEvent>((_) => _onConnected())
+      ..on<RoomDisconnectedEvent>((event) {
+        logger.d('Disconnected from session. Reason: ${event.reason}');
+        if (event.reason != null) {
+          _dispatch(
+            _SessionErrorChanged(RoomDisconnectionError(event.reason!)),
+          );
+        }
+        _onDisconnected();
+      })
+      ..on<DataReceivedEvent>(messaging.handleDataReceived)
+      ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
+      ..on<ParticipantConnectedEvent>(_onParticipantConnected);
+
+    return _room!;
+  }
+
+  Future<void> _connect({required String url, required String token}) async {
+    await _room?.connect(url, token);
+  }
+
+  Future<void> _disconnect() async {
+    await _room?.disconnect();
+  }
+
+  Future<void> _disposeConnection() async {
+    try {
+      _listener
+        ?..cancelAll()
+        ..dispose();
+    } catch (_) {}
+    _listener = null;
+
+    try {
+      _room?.dispose();
+    } catch (_) {}
+    _room = null;
+  }
+
+  Future<void> _applyJoinMediaState() async {
+    final currentRoom = room;
+    final options = _options;
+    if (currentRoom == null) return;
+
+    final cameraEnabled =
+        _cameraEnabledOverride ?? (options?.cameraEnabled ?? false);
+    currentRoom.localParticipant?.setCameraEnabled(cameraEnabled);
+
+    final shouldEnableMicrophone = () {
+      if (state.roomState.status == RoomStatus.waitingRoom &&
+          !state.hasKeeper) {
+        return _microphoneEnabledOverride ?? options?.microphoneEnabled;
+      }
+      if (state.roomState.status == RoomStatus.active &&
+          state.speakingNow == currentRoom.localParticipant?.identity) {
+        return _microphoneEnabledOverride ?? options?.microphoneEnabled;
+      }
+      return isCurrentUserKeeper() &&
+          (_microphoneEnabledOverride ?? options?.microphoneEnabled ?? false);
+    }();
+
+    if (shouldEnableMicrophone ?? false) {
+      await devices.enableMicrophone();
+    } else {
+      await devices.disableMicrophone();
+    }
   }
 }
 

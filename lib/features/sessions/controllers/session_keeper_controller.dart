@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/session_controller.dart';
@@ -9,7 +12,10 @@ part 'session_keeper_controller.g.dart';
 
 @Riverpod(keepAlive: true)
 class SessionKeeperController extends _$SessionKeeperController {
+  static const keeperDisconnectionTimeout = Duration(minutes: 3);
+
   late SessionController _session;
+  Timer? _keeperDisconnectedTimer;
 
   @override
   void build(SessionController session) {
@@ -23,6 +29,38 @@ class SessionKeeperController extends _$SessionKeeperController {
   String get _eventSlug => _session.options.eventSlug;
 
   int get _roomVersion => _state.roomState.version;
+
+  void onKeeperDisconnected(RoomStatus status) {
+    if (status != RoomStatus.active) return;
+
+    unawaited(_session.devices.disableMicrophone());
+
+    _keeperDisconnectedTimer?.cancel();
+    _keeperDisconnectedTimer = Timer(keeperDisconnectionTimeout, () {
+      unawaited(onKeeperDisconnectedTimeout());
+    });
+
+    _session.setKeeperDisconnected(true);
+  }
+
+  void onKeeperConnected() {
+    _keeperDisconnectedTimer?.cancel();
+    _keeperDisconnectedTimer = null;
+
+    _session.setKeeperDisconnected(false);
+  }
+
+  Future<void> onKeeperDisconnectedTimeout() async {
+    _keeperDisconnectedTimer?.cancel();
+    _keeperDisconnectedTimer = null;
+
+    await _session.disconnectFromRoom();
+  }
+
+  void disposePresenceTracking() {
+    _keeperDisconnectedTimer?.cancel();
+    _keeperDisconnectedTimer = null;
+  }
 
   Future<T> _run<T>({
     required Future<T> Function() action,

@@ -10,6 +10,15 @@ import 'package:totem_app/shared/logger.dart';
 
 part 'session_messaging_controller.g.dart';
 
+enum SessionCommunicationTopics {
+  emoji('lk-emoji-topic'),
+  chat('lk-chat-topic'),
+  participantRemoved('lk-participant-removed-topic');
+
+  const SessionCommunicationTopics(this.topic);
+  final String topic;
+}
+
 class ChatMessage {
   const ChatMessage({
     required this.message,
