@@ -1,11 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
-import 'package:audio_session/audio_session.dart' as audio;
 import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' hide ChatMessage, logger;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -15,6 +12,7 @@ import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
+import 'package:totem_app/features/sessions/controllers/session_device_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_infra_controller.dart';
 import 'package:totem_app/features/sessions/controllers/utils.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
@@ -26,7 +24,6 @@ import 'package:totem_app/shared/logger.dart';
 
 export 'package:totem_app/features/sessions/controllers/utils.dart';
 
-part 'background_control.dart';
 part 'devices_control.dart';
 part 'keeper_control.dart';
 part 'participant_control.dart';
@@ -463,14 +460,7 @@ class SessionController extends _$SessionController {
   bool? _microphoneEnabledOverride;
   String? _lastMetadata;
   SessionDetailSchema? event;
-
-  Timer? _notificationTimer;
-
-  StreamSubscription<void>? _becomingNoisySubscription;
-  StreamSubscription<audio.AudioDevicesChangedEvent>?
-  _devicesChangedSubscription;
-  bool _userSpeakerPreference = true;
-  bool _hasExternalOutput = false;
+  SessionDeviceController? _deviceController;
 
   static const defaultCameraCaptureOptions = CameraCaptureOptions(
     params: VideoParameters(
@@ -481,6 +471,20 @@ class SessionController extends _$SessionController {
       ),
     ),
   );
+
+  SessionDeviceController get _devices {
+    return _deviceController ??= SessionDeviceController(
+      ref: ref,
+      currentRoom: () => room,
+      currentRoomState: () => state.roomState,
+      hasKeeper: () => state.hasKeeper,
+      onSpeakerphoneChanged: (enabled) {
+        _dispatch(_SpeakerphoneChanged(enabled));
+      },
+      defaultCameraCaptureOptions:
+          SessionController.defaultCameraCaptureOptions,
+    );
+  }
 
   void _dispatch(_SessionEvent event) {
     switch (event) {
@@ -605,7 +609,7 @@ class SessionController extends _$SessionController {
       chat: const ChatState(),
       turn: SessionTurnState(
         roomState: initialRoomState,
-        isSpeakerphoneEnabled: _userSpeakerPreference,
+        isSpeakerphoneEnabled: _devices.userSpeakerPreference,
       ),
     );
   }
@@ -696,13 +700,11 @@ class SessionController extends _$SessionController {
 
     // _userSpeakerPreference is always true: when no external audio device
     // is connected, the app should default to speaker (not earpiece).
-    _userSpeakerPreference = true;
-    _hasExternalOutput = false;
-
-    _autoSetSpeakerphone(true);
+    _devices.resetSpeakerRoutingDefaults();
+    unawaited(_devices.setSpeakerphone(true));
 
     _updateParticipantsList();
-    setupDeviceChangeListener();
+    _devices.setupDeviceChangeListener();
   }
 
   void _onDisconnected() {
@@ -936,8 +938,8 @@ class SessionController extends _$SessionController {
       ..on<ParticipantConnectedEvent>(_onParticipantConnected);
 
     await ref
-      .read(sessionInfraControllerProvider(options))
-      .activate(event: event);
+        .read(sessionInfraControllerProvider(options))
+        .activate(event: event);
 
     _syncTimer?.cancel();
     _syncTimer = Timer.periodic(
@@ -995,11 +997,8 @@ class SessionController extends _$SessionController {
     _keeperDisconnectedTimer?.cancel();
     _keeperDisconnectedTimer = null;
 
-    _becomingNoisySubscription?.cancel();
-    _becomingNoisySubscription = null;
-
-    _devicesChangedSubscription?.cancel();
-    _devicesChangedSubscription = null;
+    unawaited(_devices.dispose());
+    _deviceController = null;
 
     try {
       _listener
@@ -1017,7 +1016,6 @@ class SessionController extends _$SessionController {
         ..dispose();
     } catch (_) {}
   }
-
 }
 
 @Riverpod(keepAlive: true)

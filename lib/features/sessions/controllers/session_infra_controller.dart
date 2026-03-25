@@ -179,7 +179,7 @@ class SessionInfraController {
       ref
           .read(screenProtectionProvider)
           .setCaptureProtectionEnabled(shouldProtect);
-        _screenProtectionEnabled = shouldProtect;
+      _screenProtectionEnabled = shouldProtect;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -204,7 +204,9 @@ class SessionInfraController {
 
   void dispose() {
     _notificationTimer?.cancel();
-    if (_backgroundModeEnabled || _wakelockEnabled || _screenProtectionEnabled) {
+    if (_backgroundModeEnabled ||
+        _wakelockEnabled ||
+        _screenProtectionEnabled) {
       unawaited(deactivate());
     }
   }
