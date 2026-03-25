@@ -17,7 +17,6 @@ import 'package:totem_app/features/sessions/controllers/session_infra_controller
 import 'package:totem_app/features/sessions/controllers/session_keeper_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_keeper_presence_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_messaging_controller.dart';
-import 'package:totem_app/features/sessions/controllers/session_types.dart';
 import 'package:totem_app/features/sessions/controllers/utils.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart'
@@ -27,11 +26,8 @@ import 'package:totem_app/shared/logger.dart';
 
 export 'package:totem_app/features/sessions/controllers/utils.dart';
 
-part 'session_chat_message.dart';
 part 'session_controller.g.dart';
-part 'session_join_policy.dart';
 part 'session_room_sync.dart';
-part 'session_state_reducer.dart';
 
 enum SessionCommunicationTopics {
   emoji('lk-emoji-topic'),
@@ -466,10 +462,7 @@ class SessionController extends _$SessionController {
   String? _lastMetadata;
   SessionDetailSchema? event;
   SessionDeviceController? _deviceController;
-  SessionMessagingController? _messagingController;
-  SessionKeeperController? _keeperController;
   SessionKeeperPresenceController? _keeperPresenceController;
-  static const SessionJoinPolicy _joinPolicy = SessionJoinPolicy();
   static const SessionRoomSync _roomSync = SessionRoomSync();
 
   static const defaultCameraCaptureOptions = CameraCaptureOptions(
@@ -511,30 +504,18 @@ class SessionController extends _$SessionController {
         }
         _onDisconnected();
       },
-      onDataReceived: _onDataReceived,
+      onDataReceived: _messaging.handleDataReceived,
       onParticipantDisconnected: _onParticipantDisconnected,
       onParticipantConnected: _onParticipantConnected,
     );
   }
 
   SessionMessagingController get _messaging {
-    if (_messagingController != null) {
-      return _messagingController!;
-    }
-
-    _messagingController =
-        ref.read(sessionMessagingControllerProvider(this).notifier);
-    return _messagingController!;
+    return ref.read(sessionMessagingControllerProvider(this).notifier);
   }
 
   SessionKeeperController get _keeper {
-    if (_keeperController != null) {
-      return _keeperController!;
-    }
-
-    _keeperController =
-        ref.read(sessionKeeperControllerProvider(this).notifier);
-    return _keeperController!;
+    return ref.read(sessionKeeperControllerProvider(this).notifier);
   }
 
   SessionKeeperPresenceController get _keeperPresence {
@@ -584,7 +565,7 @@ class SessionController extends _$SessionController {
   }
 
   void _dispatch(_SessionEvent event) {
-    state = _reduceState(state, event);
+    state = _roomSync.reduceState(state, event);
   }
 
   @override
@@ -662,7 +643,7 @@ class SessionController extends _$SessionController {
 
     _onRoomChanges();
 
-    _joinPolicy.apply(
+    _connection.apply(
       room: room!,
       state: state,
       cameraEnabledOverride: _cameraEnabledOverride,
@@ -722,33 +703,6 @@ class SessionController extends _$SessionController {
 
     if (state.roomState.status == RoomStatus.ended) {
       _onSessionEnd();
-    }
-  }
-
-  void _onDataReceived(DataReceivedEvent event) {
-    if (event.topic == null) return;
-    final data = const Utf8Decoder().convert(event.data);
-    logger.d(
-      '(${room?.localParticipant}) Received data on topic "${event.topic}" from participant "${event.participant?.identity}": $data',
-    );
-
-    if (_messaging.handleDataReceived(event)) {
-      return;
-    }
-
-    final topic = SessionCommunicationTopics.values.firstWhereOrNull(
-      (t) => t.topic == event.topic,
-    );
-    if (topic == null) {
-      logger.w('Received data on unknown topic "${event.topic}". Ignoring.');
-      return;
-    }
-
-    switch (topic) {
-      case SessionCommunicationTopics.emoji:
-      case SessionCommunicationTopics.chat:
-      case SessionCommunicationTopics.participantRemoved:
-        break;
     }
   }
 
@@ -893,9 +847,6 @@ class SessionController extends _$SessionController {
 
     unawaited(_devices.dispose());
     _deviceController = null;
-
-    _messagingController = null;
-    _keeperController = null;
 
     unawaited(_connection.dispose());
     _connectionController = null;
