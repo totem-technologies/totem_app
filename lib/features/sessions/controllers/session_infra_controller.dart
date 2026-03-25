@@ -62,7 +62,7 @@ class SessionInfraController {
 
   Future<void> _setupBackgroundMode(SessionDetailSchema? event) async {
     try {
-      await _requestPermissions();
+      await requestPermissions();
       FlutterForegroundTask.init(
         androidNotificationOptions: AndroidNotificationOptions(
           channelId: 'totem_session',
@@ -151,7 +151,7 @@ class SessionInfraController {
     }
   }
 
-  Future<bool> _requestPermissions() async {
+  static Future<bool> requestPermissions() async {
     var notificationPermission =
         await FlutterForegroundTask.checkNotificationPermission();
     if (notificationPermission != NotificationPermission.granted) {

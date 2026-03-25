@@ -12,6 +12,7 @@ import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
+import 'package:totem_app/features/sessions/controllers/session_connection_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_device_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_infra_controller.dart';
 import 'package:totem_app/features/sessions/controllers/utils.dart';
@@ -447,8 +448,9 @@ class SessionRoomState {
 @riverpod
 class SessionController extends _$SessionController {
   /// The [Room] of the current session, which holds the LiveKit room and related information.
-  Room? room;
-  EventsListener<RoomEvent>? _listener;
+  SessionConnectionController? _connectionController;
+
+  Room? get room => _connectionController?.room;
 
   /// The sync timer periodically checks for changes in the room state
   /// and participants list, to keep the UI up to date.
@@ -483,6 +485,27 @@ class SessionController extends _$SessionController {
       },
       defaultCameraCaptureOptions:
           SessionController.defaultCameraCaptureOptions,
+    );
+  }
+
+  SessionConnectionController get _connection {
+    return _connectionController ??= SessionConnectionController(
+      onRoomEvent: () {
+        if (ref.mounted) {
+          _onRoomChanges();
+        }
+      },
+      onConnected: _onConnected,
+      onDisconnected: (reason) {
+        logger.d('Disconnected from session. Reason: $reason');
+        if (reason != null) {
+          _dispatch(_SessionErrorChanged(RoomDisconnectionError(reason)));
+        }
+        _onDisconnected();
+      },
+      onDataReceived: _onDataReceived,
+      onParticipantDisconnected: _onParticipantDisconnected,
+      onParticipantConnected: _onParticipantConnected,
     );
   }
 
@@ -824,7 +847,7 @@ class SessionController extends _$SessionController {
               'Received participant removed event for local participant.',
             );
             _dispatch(const _ParticipantRemoved());
-            room?.disconnect();
+            unawaited(_connection.disconnect());
           }
         } catch (error, stackTrace) {
           ErrorHandler.logError(
@@ -879,7 +902,7 @@ class SessionController extends _$SessionController {
     final options = _options;
     if (options == null) return;
 
-    room ??= Room(
+    await _connection.initialize(
       roomOptions: RoomOptions(
         defaultCameraCaptureOptions: options.cameraOptions,
         defaultAudioCaptureOptions: const AudioCaptureOptions(),
@@ -911,31 +934,9 @@ class SessionController extends _$SessionController {
         ),
         adaptiveStream: true,
       ),
+      url: AppConfig.liveKitUrl,
+      token: options.token,
     );
-
-    await room!.prepareConnection(AppConfig.liveKitUrl, options.token);
-
-    _listener ??= room!.createListener()
-      ..on((_) {
-        if (ref.mounted) {
-          _onRoomChanges();
-        }
-      })
-      ..on<RoomConnectedEvent>((_) {
-        _onConnected();
-      })
-      ..on<RoomDisconnectedEvent>((event) {
-        logger.d('Disconnected from session. Reason: ${event.reason}');
-        if (event.reason != null) {
-          _dispatch(
-            _SessionErrorChanged(RoomDisconnectionError(event.reason!)),
-          );
-        }
-        _onDisconnected();
-      })
-      ..on<DataReceivedEvent>(_onDataReceived)
-      ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
-      ..on<ParticipantConnectedEvent>(_onParticipantConnected);
 
     await ref
         .read(sessionInfraControllerProvider(options))
@@ -948,7 +949,10 @@ class SessionController extends _$SessionController {
     );
 
     try {
-      await room!.connect(AppConfig.liveKitUrl, options.token);
+      await _connection.connect(
+        url: AppConfig.liveKitUrl,
+        token: options.token,
+      );
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -960,7 +964,7 @@ class SessionController extends _$SessionController {
   }
 
   Future<void> leave() async {
-    await room?.disconnect();
+    await _connection.disconnect();
     _cleanUp();
   }
 
@@ -1000,21 +1004,8 @@ class SessionController extends _$SessionController {
     unawaited(_devices.dispose());
     _deviceController = null;
 
-    try {
-      _listener
-        ?..cancelAll()
-        ..dispose();
-    } catch (error) {
-      ErrorHandler.logError(
-        error,
-        message: 'Error disposing LiveKit event listener',
-      );
-    }
-    try {
-      room
-        ?..removeListener(_onRoomChanges)
-        ..dispose();
-    } catch (_) {}
+    unawaited(_connection.dispose());
+    _connectionController = null;
   }
 }
 
