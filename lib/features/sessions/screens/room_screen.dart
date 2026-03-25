@@ -318,7 +318,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               session,
               isMyTurn,
             ),
-            onAcceptTotem: session.acceptTotem,
+            onAcceptTotem: session.totem.acceptTotem,
           );
         }
 
@@ -333,7 +333,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 ),
                 onPassTotem: (roundMessage) async {
                   try {
-                    await session.passTotem(roundMessage: roundMessage);
+                    await session.totem.passTotem(roundMessage: roundMessage);
                     return true;
                   } catch (error) {
                     if (!context.mounted) return false;
@@ -381,9 +381,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               indicatorBarCount: 5,
               onToggle: (shouldEnable) async {
                 if (shouldEnable) {
-                  await session.enableMicrophone();
+                  await session.devices.enableMicrophone();
                 } else {
-                  await session.disableMicrophone();
+                  await session.devices.disableMicrophone();
                 }
               },
             ),
@@ -391,16 +391,16 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               participant: user,
               onToggle: (shouldEnable) async {
                 if (shouldEnable) {
-                  await session.enableCamera();
+                  await session.devices.enableCamera();
                 } else {
-                  await session.disableCamera();
+                  await session.devices.disableCamera();
                 }
               },
             ),
             if (!isMyTurn)
               ActionBarEmojiButton(
                 onEmojiSelected: (emoji) {
-                  session.sendReaction(emoji);
+                  session.chat.sendReaction(emoji);
                 },
               ),
             ActionBarButton(

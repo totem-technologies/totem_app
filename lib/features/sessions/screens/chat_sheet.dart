@@ -82,7 +82,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
         void send() {
           final message = _messageController.text.trim();
           if (message.isNotEmpty) {
-            session.sendMessage(message);
+            session.chat.sendMessage(message);
             _messageController.clear();
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (scrollController.hasClients) {
@@ -197,7 +197,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                             final label = fastMessages[index];
                             return _QuickMessageChip(
                               label: label,
-                              onSend: () => session.sendMessage(label),
+                              onSend: () => session.chat.sendMessage(label),
                             );
                           },
                           separatorBuilder: (_, _) => const SizedBox(width: 8),

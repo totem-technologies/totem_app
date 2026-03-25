@@ -94,7 +94,7 @@ class NotMyTurn extends ConsumerWidget {
               if (isCurrentUserKeeper) {
                 return TransitionCard(
                   type: TotemCardTransitionType.start,
-                  onActionPressed: currentSession.startSession,
+                  onActionPressed: currentSession.moderation.startSession,
                 );
               } else {
                 return const GroundingMarquee();

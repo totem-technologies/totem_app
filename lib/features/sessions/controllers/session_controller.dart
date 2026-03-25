@@ -28,13 +28,11 @@ import 'package:totem_app/shared/logger.dart';
 
 export 'package:totem_app/features/sessions/controllers/utils.dart';
 
-part 'devices_control.dart';
-part 'keeper_control.dart';
-part 'participant_control.dart';
+part 'session_controller.g.dart';
+part 'session_chat_message.dart';
 part 'session_join_policy.dart';
 part 'session_room_sync.dart';
 part 'session_state_reducer.dart';
-part 'session_controller.g.dart';
 
 enum SessionCommunicationTopics {
   emoji('lk-emoji-topic'),
@@ -555,8 +553,8 @@ class SessionController extends _$SessionController {
       roomVersion: () => state.roomState.version,
       eventSlug: () => options.eventSlug,
       isCurrentUserKeeper: isCurrentUserKeeper,
-      enableMicrophone: enableMicrophone,
-      disableMicrophone: disableMicrophone,
+      enableMicrophone: _devices.enableMicrophone,
+      disableMicrophone: _devices.disableMicrophone,
       onRoomState: _onRoomChanges,
     );
   }
@@ -573,12 +571,33 @@ class SessionController extends _$SessionController {
 
   SessionKeeperPresenceController get _keeperPresence {
     return _keeperPresenceController ??= SessionKeeperPresenceController(
-      disableMicrophone: disableMicrophone,
+      disableMicrophone: _devices.disableMicrophone,
       markKeeperDisconnected: (hasKeeperDisconnected) {
         _dispatch(_KeeperDisconnectedChanged(hasKeeperDisconnected));
       },
       disconnect: _connection.disconnect,
     );
+  }
+
+  SessionDeviceController get devices => _devices;
+  SessionChatController get chat => _chat;
+  SessionTotemController get totem => _totem;
+  SessionModerationController get moderation => _moderation;
+
+  bool isCurrentUserKeeper() {
+    final currentUserSlug = ref.read(
+      authControllerProvider.select((auth) => auth.user?.slug),
+    );
+    if (currentUserSlug == null) return false;
+    return state.isKeeper(currentUserSlug);
+  }
+
+  void _onKeeperDisconnected() {
+    _keeperPresence.onKeeperDisconnected(state.roomState.status);
+  }
+
+  void _onKeeperConnected() {
+    _keeperPresence.onKeeperConnected();
   }
 
   void _dispatch(_SessionEvent event) {
@@ -667,8 +686,8 @@ class SessionController extends _$SessionController {
       microphoneEnabledOverride: _microphoneEnabledOverride,
       sessionOptions: _options,
       isCurrentUserKeeper: isCurrentUserKeeper,
-      enableMicrophone: enableMicrophone,
-      disableMicrophone: disableMicrophone,
+      enableMicrophone: _devices.enableMicrophone,
+      disableMicrophone: _devices.disableMicrophone,
     );
     // context.room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
     _dispatch(
