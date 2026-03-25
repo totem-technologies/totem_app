@@ -132,7 +132,7 @@ class _BannedParticipantItemState
     if (_loading) return;
     setState(() => _loading = true);
     try {
-      await widget.session.moderation.unbanParticipant(widget.participantSlug);
+      await widget.session.keeper.unbanParticipant(widget.participantSlug);
       if (mounted && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

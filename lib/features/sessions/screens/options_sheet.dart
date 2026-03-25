@@ -288,7 +288,7 @@ class OptionsSheet extends ConsumerWidget {
   }
 
   Future<void> _onMuteEveryone(SessionController session) =>
-      session.moderation.muteEveryone();
+      session.keeper.muteEveryone();
 
   Future<void> _onNextTotemAction(
     BuildContext context,
@@ -329,7 +329,7 @@ class OptionsSheet extends ConsumerWidget {
               type: ConfirmationDialogType.standard,
               onConfirm: () async {
                 try {
-                  await session.totem.forcePassTotem();
+                  await session.keeper.forcePassTotem();
                 } catch (error) {
                   if (context.mounted) {
                     ErrorHandler.showErrorSnackBar(
@@ -364,7 +364,7 @@ class OptionsSheet extends ConsumerWidget {
           type: ConfirmationDialogType.standard,
           onConfirm: () async {
             try {
-              await session.moderation.startSession();
+              await session.keeper.startSession();
               if (!context.mounted) return;
               Navigator.of(context).pop();
             } catch (error) {
@@ -375,7 +375,7 @@ class OptionsSheet extends ConsumerWidget {
                 error,
                 onRetry: () async {
                   try {
-                    await session.moderation.startSession();
+                    await session.keeper.startSession();
                   } catch (e) {
                     // Error already handled by handleApiError
                   }
@@ -401,7 +401,7 @@ class OptionsSheet extends ConsumerWidget {
           confirmButtonText: 'End Session',
           onConfirm: () async {
             try {
-              await session.moderation.endSession();
+              await session.keeper.endSession();
               if (!context.mounted) return;
               Navigator.of(context).pop();
             } catch (error) {
@@ -412,7 +412,7 @@ class OptionsSheet extends ConsumerWidget {
                 error,
                 onRetry: () async {
                   try {
-                    await session.moderation.endSession();
+                    await session.keeper.endSession();
                   } catch (e) {
                     // Error already handled by handleApiError
                   }

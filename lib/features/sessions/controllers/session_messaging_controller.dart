@@ -9,20 +9,26 @@ import 'package:totem_app/features/sessions/controllers/session_types.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/shared/logger.dart';
 
-class SessionChatController {
-  SessionChatController({
+class SessionMessagingController {
+  SessionMessagingController({
     required this.ref,
     required this.currentRoom,
+    required this.currentKeeperIdentity,
     required this.hasKeeper,
     required this.isCurrentUserKeeper,
     required this.onChatMessage,
+    required this.onLocalParticipantRemoved,
+    required this.disconnect,
   });
 
   final Ref ref;
   final CurrentRoomGetter currentRoom;
+  final CurrentKeeperIdentityGetter currentKeeperIdentity;
   final BoolGetter hasKeeper;
   final BoolGetter isCurrentUserKeeper;
   final MessageCallback<ChatMessage> onChatMessage;
+  final VoidCallback onLocalParticipantRemoved;
+  final AsyncCallback disconnect;
 
   bool handleDataReceived(DataReceivedEvent event) {
     if (event.topic == SessionCommunicationTopics.emoji.topic) {
@@ -48,6 +54,40 @@ class SessionChatController {
           error,
           stackTrace: stackTrace,
           message: 'Error decoding chat message',
+        );
+      }
+      return true;
+    }
+
+    if (event.topic == SessionCommunicationTopics.participantRemoved.topic) {
+      final data = const Utf8Decoder().convert(event.data);
+      logger.d(
+        'Received participant removed event from ${event.participant?.identity}: $data',
+      );
+
+      try {
+        final json = jsonDecode(data) as Map<String, dynamic>;
+        final identity = json['identity'] as String?;
+
+        // If participant identity is null, message is server-originated.
+        if (event.participant?.identity != null &&
+            event.participant!.identity != currentKeeperIdentity()) {
+          logger.d(
+            'Participant removed event is not from the keeper, ignoring.',
+          );
+          return true;
+        }
+
+        if (identity == currentRoom()?.localParticipant?.identity) {
+          logger.d('Received participant removed event for local participant.');
+          onLocalParticipantRemoved();
+          unawaited(disconnect());
+        }
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Error decoding participant removed event',
         );
       }
       return true;

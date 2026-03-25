@@ -11,14 +11,12 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
-import 'package:totem_app/features/sessions/controllers/session_chat_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_connection_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_device_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_infra_controller.dart';
+import 'package:totem_app/features/sessions/controllers/session_keeper_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_keeper_presence_controller.dart';
-import 'package:totem_app/features/sessions/controllers/session_moderation_controller.dart';
-import 'package:totem_app/features/sessions/controllers/session_participant_events_controller.dart';
-import 'package:totem_app/features/sessions/controllers/session_totem_controller.dart';
+import 'package:totem_app/features/sessions/controllers/session_messaging_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_types.dart';
 import 'package:totem_app/features/sessions/controllers/utils.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
@@ -468,10 +466,8 @@ class SessionController extends _$SessionController {
   String? _lastMetadata;
   SessionDetailSchema? event;
   SessionDeviceController? _deviceController;
-  SessionChatController? _chatController;
-  SessionParticipantEventsController? _participantEventsController;
-  SessionTotemController? _totemController;
-  SessionModerationController? _moderationController;
+  SessionMessagingController? _messagingController;
+  SessionKeeperController? _keeperController;
   SessionKeeperPresenceController? _keeperPresenceController;
   static const SessionJoinPolicy _joinPolicy = SessionJoinPolicy();
   static const SessionRoomSync _roomSync = SessionRoomSync();
@@ -521,22 +517,16 @@ class SessionController extends _$SessionController {
     );
   }
 
-  SessionChatController get _chat {
-    return _chatController ??= SessionChatController(
+  SessionMessagingController get _messaging {
+    return _messagingController ??= SessionMessagingController(
       ref: ref,
       currentRoom: () => room,
+      currentKeeperIdentity: () => state.roomState.keeper,
       hasKeeper: () => state.hasKeeper,
       isCurrentUserKeeper: isCurrentUserKeeper,
       onChatMessage: (message) {
         _dispatch(_ChatMessageAdded(message));
       },
-    );
-  }
-
-  SessionParticipantEventsController get _participantEvents {
-    return _participantEventsController ??= SessionParticipantEventsController(
-      currentRoom: () => room,
-      currentKeeperIdentity: () => state.roomState.keeper,
       onLocalParticipantRemoved: () {
         _dispatch(const _ParticipantRemoved());
       },
@@ -544,8 +534,8 @@ class SessionController extends _$SessionController {
     );
   }
 
-  SessionTotemController get _totem {
-    return _totemController ??= SessionTotemController(
+  SessionKeeperController get _keeper {
+    return _keeperController ??= SessionKeeperController(
       ref: ref,
       currentRoom: () => room,
       isMyTurn: (room) => state.isMyTurn(room),
@@ -556,16 +546,6 @@ class SessionController extends _$SessionController {
       isCurrentUserKeeper: isCurrentUserKeeper,
       enableMicrophone: _devices.enableMicrophone,
       disableMicrophone: _devices.disableMicrophone,
-      onRoomState: _onRoomChanges,
-    );
-  }
-
-  SessionModerationController get _moderation {
-    return _moderationController ??= SessionModerationController(
-      ref: ref,
-      eventSlug: () => options.eventSlug,
-      roomVersion: () => state.roomState.version,
-      isCurrentUserKeeper: isCurrentUserKeeper,
       onRoomState: _onRoomChanges,
     );
   }
@@ -581,9 +561,8 @@ class SessionController extends _$SessionController {
   }
 
   SessionDeviceController get devices => _devices;
-  SessionChatController get chat => _chat;
-  SessionTotemController get totem => _totem;
-  SessionModerationController get moderation => _moderation;
+  SessionMessagingController get messaging => _messaging;
+  SessionKeeperController get keeper => _keeper;
 
   bool isCurrentUserKeeper() {
     final currentUserSlug = ref.read(
@@ -750,10 +729,7 @@ class SessionController extends _$SessionController {
       '(${room?.localParticipant}) Received data on topic "${event.topic}" from participant "${event.participant?.identity}": $data',
     );
 
-    if (_chat.handleDataReceived(event)) {
-      return;
-    }
-    if (_participantEvents.handleDataReceived(event)) {
+    if (_messaging.handleDataReceived(event)) {
       return;
     }
 
@@ -915,10 +891,8 @@ class SessionController extends _$SessionController {
     unawaited(_devices.dispose());
     _deviceController = null;
 
-    _chatController = null;
-    _participantEventsController = null;
-    _totemController = null;
-    _moderationController = null;
+    _messagingController = null;
+    _keeperController = null;
 
     unawaited(_connection.dispose());
     _connectionController = null;

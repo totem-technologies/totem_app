@@ -318,7 +318,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               session,
               isMyTurn,
             ),
-            onAcceptTotem: session.totem.acceptTotem,
+            onAcceptTotem: session.keeper.acceptTotem,
           );
         }
 
@@ -333,7 +333,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 ),
                 onPassTotem: (roundMessage) async {
                   try {
-                    await session.totem.passTotem(roundMessage: roundMessage);
+                    await session.keeper.passTotem(roundMessage: roundMessage);
                     return true;
                   } catch (error) {
                     if (!context.mounted) return false;
@@ -400,7 +400,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             if (!isMyTurn)
               ActionBarEmojiButton(
                 onEmojiSelected: (emoji) {
-                  session.chat.sendReaction(emoji);
+                  session.messaging.sendReaction(emoji);
                 },
               ),
             ActionBarButton(

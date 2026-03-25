@@ -223,7 +223,7 @@ class _ParticipantReorderWidgetState
     List<String> newOrder,
   ) async {
     try {
-      await widget.session.reorder(newOrder);
+      await widget.session.keeper.reorder(newOrder);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

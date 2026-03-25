@@ -500,7 +500,7 @@ class ParticipantControlButton extends ConsumerWidget {
               content: 'They can unmute themselves anytime.',
               onConfirm: () async {
                 try {
-                  await currentSession?.moderation.muteParticipant(
+                  await currentSession?.keeper.muteParticipant(
                     participant.identity,
                   );
                 } catch (error) {
@@ -541,7 +541,7 @@ class ParticipantControlButton extends ConsumerWidget {
                   '${participant.name}?',
               onConfirm: () async {
                 try {
-                  await currentSession?.moderation.removeParticipant(
+                  await currentSession?.keeper.removeParticipant(
                     participant.identity,
                   );
                 } catch (error) {
@@ -581,7 +581,7 @@ class ParticipantControlButton extends ConsumerWidget {
                   '${participant.name}? They will not be able to rejoin the session.',
               onConfirm: () async {
                 try {
-                  await currentSession?.moderation.banParticipant(
+                  await currentSession?.keeper.banParticipant(
                     participant.identity,
                   );
                 } catch (error) {
