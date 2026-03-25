@@ -16,6 +16,7 @@ import 'package:totem_app/features/sessions/controllers/session_chat_controller.
 import 'package:totem_app/features/sessions/controllers/session_connection_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_device_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_infra_controller.dart';
+import 'package:totem_app/features/sessions/controllers/session_participant_events_controller.dart';
 import 'package:totem_app/features/sessions/controllers/utils.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart'
@@ -465,6 +466,7 @@ class SessionController extends _$SessionController {
   SessionDetailSchema? event;
   SessionDeviceController? _deviceController;
   SessionChatController? _chatController;
+  SessionParticipantEventsController? _participantEventsController;
 
   static const defaultCameraCaptureOptions = CameraCaptureOptions(
     params: VideoParameters(
@@ -520,6 +522,17 @@ class SessionController extends _$SessionController {
       onChatMessage: (message) {
         _dispatch(_ChatMessageAdded(message));
       },
+    );
+  }
+
+  SessionParticipantEventsController get _participantEvents {
+    return _participantEventsController ??= SessionParticipantEventsController(
+      currentRoom: () => room,
+      currentKeeperIdentity: () => state.roomState.keeper,
+      onLocalParticipantRemoved: () {
+        _dispatch(const _ParticipantRemoved());
+      },
+      disconnect: _connection.disconnect,
     );
   }
 
@@ -810,6 +823,9 @@ class SessionController extends _$SessionController {
     if (_chat.handleDataReceived(event)) {
       return;
     }
+    if (_participantEvents.handleDataReceived(event)) {
+      return;
+    }
 
     final topic = SessionCommunicationTopics.values.firstWhereOrNull(
       (t) => t.topic == event.topic,
@@ -822,40 +838,8 @@ class SessionController extends _$SessionController {
     switch (topic) {
       case SessionCommunicationTopics.emoji:
       case SessionCommunicationTopics.chat:
-        break;
       case SessionCommunicationTopics.participantRemoved:
-        logger.d(
-          'Received participant removed event from ${event.participant?.identity}: $data',
-        );
-        final json = jsonDecode(data) as Map<String, dynamic>;
-        // final action = json['action'] as String?;
-        final identity = json['identity'] as String?;
-        // final reason = json['reason'] as String?;
-
-        // If participant identity is null, the message comes from the server
-        if (event.participant?.identity != null &&
-            event.participant!.identity != state.roomState.keeper) {
-          logger.d(
-            'Participant removed event is not from the keeper, ignoring.',
-          );
-          return;
-        }
-
-        try {
-          if (identity == room?.localParticipant?.identity) {
-            logger.d(
-              'Received participant removed event for local participant.',
-            );
-            _dispatch(const _ParticipantRemoved());
-            unawaited(_connection.disconnect());
-          }
-        } catch (error, stackTrace) {
-          ErrorHandler.logError(
-            error,
-            stackTrace: stackTrace,
-            message: 'Error decoding participant removed event',
-          );
-        }
+        break;
     }
   }
 
@@ -1005,6 +989,7 @@ class SessionController extends _$SessionController {
     _deviceController = null;
 
     _chatController = null;
+    _participantEventsController = null;
 
     unawaited(_connection.dispose());
     _connectionController = null;
