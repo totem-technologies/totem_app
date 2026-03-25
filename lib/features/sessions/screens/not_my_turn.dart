@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/features/sessions/controllers/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/grounding_marquee.dart';

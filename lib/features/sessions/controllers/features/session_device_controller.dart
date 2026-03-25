@@ -8,7 +8,7 @@ import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/features/sessions/controllers/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/shared/logger.dart';
 
 part 'session_device_controller.g.dart';

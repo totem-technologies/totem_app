@@ -4,7 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/features/sessions/controllers/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/shared/logger.dart';
 
@@ -23,8 +23,6 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   SessionRoomState get _state => _session.state;
-
-  bool get _isCurrentUserKeeper => _session.isCurrentUserKeeper();
 
   String get _eventSlug => _session.options.eventSlug;
 
@@ -94,7 +92,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     if (!_state.hasKeeper) {
       throw StateError('No keeper in the session to pass the totem');
     }
-    if (roundMessage != null && !_isCurrentUserKeeper) {
+    if (roundMessage != null && !_session.isCurrentUserKeeper()) {
       throw StateError(
         'Only the keeper can include a round message when passing the totem',
       );
@@ -139,7 +137,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<void> reorder(List<String> newOrder) async {
-    if (!_isCurrentUserKeeper) return;
+    if (!_session.isCurrentUserKeeper()) return;
     final roomState = await _run(
       action: () => ref.read(
         reorderParticipantsProvider(
@@ -155,7 +153,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<void> forcePassTotem() async {
-    if (!_isCurrentUserKeeper) return;
+    if (!_session.isCurrentUserKeeper()) return;
     final roomState = await _run(
       action: () => ref.read(
         forcePassTotemProvider(
@@ -170,7 +168,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<void> removeParticipant(String participantSlug) async {
-    if (!_isCurrentUserKeeper) return;
+    if (!_session.isCurrentUserKeeper()) return;
     await _run<void>(
       action: () => ref.read(
         removeParticipantProvider(
@@ -185,7 +183,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<bool> startSession() async {
-    if (!_isCurrentUserKeeper) return false;
+    if (!_session.isCurrentUserKeeper()) return false;
     try {
       await _run<void>(
         action: () => ref.read(
@@ -204,7 +202,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<bool> endSession() async {
-    if (!_isCurrentUserKeeper) return false;
+    if (!_session.isCurrentUserKeeper()) return false;
     try {
       final roomState = await _run(
         action: () => ref.read(
@@ -224,7 +222,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<void> banParticipant(String participantSlug) async {
-    if (!_isCurrentUserKeeper) return;
+    if (!_session.isCurrentUserKeeper()) return;
     await _run<void>(
       action: () => ref.read(
         banParticipantProvider(
@@ -240,7 +238,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<void> unbanParticipant(String participantSlug) async {
-    if (!_isCurrentUserKeeper) return;
+    if (!_session.isCurrentUserKeeper()) return;
 
     await _run<void>(
       action: () => ref.read(
@@ -257,7 +255,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<void> muteParticipant(String participantSlug) async {
-    if (!_isCurrentUserKeeper) return;
+    if (!_session.isCurrentUserKeeper()) return;
     await _run<void>(
       action: () => ref.read(
         muteParticipantProvider(
@@ -272,7 +270,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<void> muteEveryone() async {
-    if (!_isCurrentUserKeeper) return;
+    if (!_session.isCurrentUserKeeper()) return;
     await _run<void>(
       action: () => ref.read(muteEveryoneProvider(_eventSlug).future),
       errorMessage: 'Error muting everyone',

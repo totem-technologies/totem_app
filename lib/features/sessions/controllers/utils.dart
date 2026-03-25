@@ -1,6 +1,6 @@
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/features/sessions/controllers/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 
 List<Participant> participantsSorting({
   required List<Participant> originalParticipants,

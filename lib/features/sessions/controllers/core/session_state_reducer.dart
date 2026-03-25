@@ -1,6 +1,6 @@
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/features/sessions/controllers/session_state.dart';
-import 'package:totem_app/features/sessions/controllers/session_state_events.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_state.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_state_events.dart';
 
 class SessionStateReducer {
   const SessionStateReducer();

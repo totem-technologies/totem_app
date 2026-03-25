@@ -9,7 +9,7 @@ import 'package:livekit_client/livekit_client.dart'
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/features/sessions/controllers/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
