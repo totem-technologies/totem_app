@@ -47,72 +47,14 @@ extension ParticipantControl on SessionController {
   /// Pass the totem to the next participant in the speaking order.
   ///
   /// Throws an exception if the operation fails.
-  Future<void> passTotem({String? roundMessage}) async {
-    if (!state.isMyTurn(room!)) {
-      throw StateError("Not the user's turn to pass the totem");
-    }
-    if (!state.hasKeeper) {
-      throw StateError('No keeper in the session to pass the totem');
-    }
-    if (roundMessage != null && !isCurrentUserKeeper()) {
-      throw StateError(
-        'Only the keeper can include a round message when passing the totem',
-      );
-    }
-
-    disableMicrophone();
-    try {
-      final roomState = await ref.read(
-        passTotemProvider(
-          options.eventSlug,
-          state.roomState.version,
-          roundMessage: roundMessage,
-        ).future,
-      );
-      _onRoomChanges(roomState);
-      logger.i('Passed totem successfully');
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error passing totem',
-      );
-      rethrow;
-    }
-  }
+  Future<void> passTotem({String? roundMessage}) =>
+      _totem.passTotem(roundMessage: roundMessage);
 
   /// Accept the totem when it's passed to the user.
   ///
   /// This fails silently if it's not the user's turn.
   /// Throws an exception if the operation fails.
-  Future<void> acceptTotem() async {
-    if (!state.amNext(room!)) {
-      throw StateError("Not the user's turn to accept the totem");
-    }
-
-    if (!state.hasKeeper) {
-      throw StateError('No keeper in the session to accept the totem');
-    }
-
-    try {
-      final roomState = await ref.read(
-        acceptTotemProvider(
-          options.eventSlug,
-          state.roomState.version,
-        ).future,
-      );
-      _onRoomChanges(roomState);
-      enableMicrophone();
-      logger.i('Accepted totem successfully');
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error accepting totem',
-      );
-      rethrow;
-    }
-  }
+  Future<void> acceptTotem() => _totem.acceptTotem();
 
   /// Send an emoji to other participants.
   /// This operation is fire-and-forget and doesn't throw errors.

@@ -225,45 +225,10 @@ extension KeeperControl on SessionController {
   }
 
   Future<void> reorder(List<String> newOrder) async {
-    if (!isCurrentUserKeeper()) return;
-    try {
-      final roomState = await ref.read(
-        reorderParticipantsProvider(
-          options.eventSlug,
-          newOrder,
-          state.roomState.version,
-        ).future,
-      );
-      _onRoomChanges(roomState);
-      logger.i('Reordered participants successfully');
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error reordering participants',
-      );
-      rethrow;
-    }
+    await _totem.reorder(newOrder);
   }
 
   Future<void> forcePassTotem() async {
-    if (!isCurrentUserKeeper()) return;
-    try {
-      final roomState = await ref.read(
-        forcePassTotemProvider(
-          options.eventSlug,
-          state.roomState.version,
-        ).future,
-      );
-      _onRoomChanges(roomState);
-      logger.i('Force passed totem successfully');
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error force passing totem',
-      );
-      rethrow;
-    }
+    await _totem.forcePassTotem();
   }
 }

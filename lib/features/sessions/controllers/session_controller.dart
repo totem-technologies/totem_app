@@ -17,6 +17,7 @@ import 'package:totem_app/features/sessions/controllers/session_connection_contr
 import 'package:totem_app/features/sessions/controllers/session_device_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_infra_controller.dart';
 import 'package:totem_app/features/sessions/controllers/session_participant_events_controller.dart';
+import 'package:totem_app/features/sessions/controllers/session_totem_controller.dart';
 import 'package:totem_app/features/sessions/controllers/utils.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart'
@@ -467,6 +468,7 @@ class SessionController extends _$SessionController {
   SessionDeviceController? _deviceController;
   SessionChatController? _chatController;
   SessionParticipantEventsController? _participantEventsController;
+  SessionTotemController? _totemController;
 
   static const defaultCameraCaptureOptions = CameraCaptureOptions(
     params: VideoParameters(
@@ -533,6 +535,22 @@ class SessionController extends _$SessionController {
         _dispatch(const _ParticipantRemoved());
       },
       disconnect: _connection.disconnect,
+    );
+  }
+
+  SessionTotemController get _totem {
+    return _totemController ??= SessionTotemController(
+      ref: ref,
+      currentRoom: () => room,
+      isMyTurn: (room) => state.isMyTurn(room),
+      amNext: (room) => state.amNext(room),
+      hasKeeper: () => state.hasKeeper,
+      roomVersion: () => state.roomState.version,
+      eventSlug: () => options.eventSlug,
+      isCurrentUserKeeper: isCurrentUserKeeper,
+      enableMicrophone: enableMicrophone,
+      disableMicrophone: disableMicrophone,
+      onRoomState: _onRoomChanges,
     );
   }
 
@@ -990,6 +1008,7 @@ class SessionController extends _$SessionController {
 
     _chatController = null;
     _participantEventsController = null;
+    _totemController = null;
 
     unawaited(_connection.dispose());
     _connectionController = null;
