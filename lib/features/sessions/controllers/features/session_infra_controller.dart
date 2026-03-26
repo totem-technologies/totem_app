@@ -26,15 +26,15 @@ class SessionInfraController extends _$SessionInfraController {
   static const _notificationPeriod = Duration(minutes: 1);
 
   Future<void> activate({SessionDetailSchema? event}) async {
-    await _enableWakelock();
-    await _setupBackgroundMode(event);
     _applyScreenCapturePolicy();
+    _setupBackgroundMode(event);
+    _enableWakelock();
   }
 
   Future<void> deactivate() async {
-    await _endBackgroundMode();
-    await _disableWakelock();
     _disableScreenProtection();
+    _endBackgroundMode();
+    _disableWakelock();
   }
 
   Future<void> _enableWakelock() async {

@@ -9,6 +9,7 @@ import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
@@ -255,6 +256,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           await _joinRoom();
           return _hasRequestedJoin;
         },
+        isSliderLoading: _isLoading,
       ),
       actionBar: ActionBar(
         key: actionBarKey,
@@ -305,22 +307,54 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     );
   }
 
-  Future<void> _joinRoom() async {
-    if (_showingAlreadyPresentDialog) return;
+  Future<void> _handleToken(
+    JoinResponse response, {
+    bool shouldShowAlreadyPresentDialog = true,
+  }) async {
+    _sessionOptions = SessionOptions(
+      eventSlug: widget.sessionSlug,
+      token: response.token,
+      cameraEnabled: _isCameraOn,
+      microphoneEnabled: _isMicOn,
+      cameraOptions: _cameraOptions,
+      audioOutputOptions: _audioOutputOptions,
+    );
+    if (mounted) setState(() {});
 
-    _hasRequestedJoin = true;
-    final options = _sessionOptions;
-    if (options == null) {
-      if (mounted) {
-        setState(() {});
+    if (hasRequestedJoin || !mounted) return;
+    if (response.isAlreadyPresent &&
+        shouldShowAlreadyPresentDialog &&
+        !_showingAlreadyPresentDialog) {
+      _showingAlreadyPresentDialog = true;
+      final join = await showAlreadyPresentDialog(context);
+      _showingAlreadyPresentDialog = false;
+      if (join) {
+        await _joinRoom(showAlreadyPresentDialog: false);
+      } else {
+        if (mounted) context.pop();
       }
-      return;
     }
+  }
 
-    if (_isJoining) return;
-    _isJoining = true;
+  bool? _isLoading;
 
+  Future<void> _joinRoom({bool showAlreadyPresentDialog = true}) async {
     try {
+      final response = await ref.read(
+        sessionTokenProvider(widget.sessionSlug).future,
+      );
+      await _handleToken(
+        response,
+        shouldShowAlreadyPresentDialog: showAlreadyPresentDialog,
+      );
+
+      if (hasRequestedJoin || _showingAlreadyPresentDialog) return;
+      _hasRequestedJoin = true;
+
+      final options = _sessionOptions!;
+
+      setState(() => _isLoading = true);
+
       await ref.read(eventProvider(widget.sessionSlug).future);
       final session = ref.read(sessionControllerProvider(options).notifier)
         ..configureJoinPreferences(
@@ -328,12 +362,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           microphoneEnabled: _isMicOn,
         );
       await session.join();
-      _hasHandledConnectedState = false;
+      _hasHandledConnectedState = _isLoading = false;
+    } catch (_) {
+    } finally {
+      _isLoading = false;
       if (mounted) {
         setState(() {});
       }
-    } finally {
-      _isJoining = false;
     }
   }
 
@@ -373,12 +408,20 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   bool _showingAlreadyPresentDialog = false;
-  bool _isJoining = false;
 
   @override
   Widget build(BuildContext context) {
     final tokenData = ref.watch(sessionTokenProvider(widget.sessionSlug));
     final sessionData = ref.watch(eventProvider(widget.sessionSlug));
+
+    ref.listen(
+      sessionTokenProvider(widget.sessionSlug),
+      (previous, next) async {
+        if (next case AsyncData(:final value)) {
+          _handleToken(value);
+        }
+      },
+    );
 
     if (_sessionOptions != null) {
       ref.listen(
@@ -393,45 +436,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         },
       );
     }
-
-    ref.listen(sessionTokenProvider(widget.sessionSlug), (
-      previous,
-      next,
-    ) async {
-      if (next case AsyncData(:final value)) {
-        if (_sessionOptions == null) {
-          _sessionOptions = SessionOptions(
-            eventSlug: widget.sessionSlug,
-            token: value.token,
-            cameraEnabled: _isCameraOn,
-            microphoneEnabled: _isMicOn,
-            cameraOptions: _cameraOptions,
-            audioOutputOptions: _audioOutputOptions,
-          );
-          if (mounted) {
-            setState(() {});
-          }
-
-          if (_hasRequestedJoin) {
-            _joinRoom();
-          }
-        }
-      }
-
-      if (hasRequestedJoin || _showingAlreadyPresentDialog) return;
-      if (next case AsyncData(:final value) when value.isAlreadyPresent) {
-        _showingAlreadyPresentDialog = true;
-        final join = await showAlreadyPresentDialog(context);
-        _showingAlreadyPresentDialog = false;
-        if (join) {
-          _joinRoom();
-        } else {
-          if (context.mounted) {
-            context.pop();
-          }
-        }
-      }
-    });
 
     if (tokenData.hasError) {
       return RoomBackground(
