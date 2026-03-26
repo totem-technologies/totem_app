@@ -376,15 +376,18 @@ class SessionController extends _$SessionController {
       try {
         ref.invalidate(sessionScopeProvider);
       } catch (_) {}
+      try {
+        keeper.disposePresenceTracking();
+      } catch (_) {}
+      try {
+        devices.dispose();
+      } catch (_) {}
     }
 
     _syncTimer?.cancel();
     _syncTimer = null;
 
-    keeper.disposePresenceTracking();
-
-    unawaited(devices.dispose());
-    unawaited(_disposeConnection());
+    _disposeConnection();
   }
 
   Future<Room> _initializeConnection({

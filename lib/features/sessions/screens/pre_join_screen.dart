@@ -459,13 +459,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         (tokenData.isLoading && !tokenData.isRefreshing) ||
         (sessionData.isLoading && !sessionData.isRefreshing);
 
-    if (_sessionOptions != null) {
-      ref.listen(
-        sessionProvider(_sessionOptions!).select((s) => s.connectionState),
-        (_, _) {},
-      );
-    }
-
     if (!hasRequestedJoin || isLoading) {
       return _buildPrejoinUI();
     }

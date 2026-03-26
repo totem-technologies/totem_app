@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 
 void main() {
+  // TODO(test): implement tests for SessionDeviceController
   group('SessionDeviceController', () {
     test('externalAudioOutputTypes includes common audio output devices', () {
       // Verify that common external audio device types are recognized
