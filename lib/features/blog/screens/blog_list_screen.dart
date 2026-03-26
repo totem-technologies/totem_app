@@ -30,47 +30,31 @@ class BlogListScreen extends ConsumerWidget {
 
           return LayoutBuilder(
             builder: (context, constraints) {
-              return Container(
-                constraints: BoxConstraints(
-                  maxHeight: constraints.maxHeight,
-                ),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: AlignmentDirectional.topEnd,
-                    end: AlignmentDirectional.bottomStart,
-                    stops: [0.6, 1],
-                    colors: [
-                      Color(0xffFCEFE4),
-                      Color(0xff435DD0),
-                    ],
+              return CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: FeaturedBlogPost.fromBlogPostSchema(
+                      data.items.first,
+                    ),
                   ),
-                ),
-                child: CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: FeaturedBlogPost.fromBlogPostSchema(
-                        data.items.first,
+                  SliverSafeArea(
+                    top: false,
+                    sliver: SliverPadding(
+                      padding: const EdgeInsetsDirectional.only(
+                        top: 20,
+                        bottom: 20,
+                      ),
+                      sliver: SliverFixedExtentList.builder(
+                        itemExtent: BlogPostCard.cardHeight + 10,
+                        itemCount: data.items.sublist(1).length,
+                        itemBuilder: (context, index) =>
+                            BlogPostCard.fromBlogPostSchema(
+                              data.items[index + 1],
+                            ),
                       ),
                     ),
-                    SliverSafeArea(
-                      top: false,
-                      sliver: SliverPadding(
-                        padding: const EdgeInsetsDirectional.only(
-                          top: 20,
-                          bottom: 20,
-                        ),
-                        sliver: SliverFixedExtentList.builder(
-                          itemExtent: BlogPostCard.cardHeight + 10,
-                          itemCount: data.items.sublist(1).length,
-                          itemBuilder: (context, index) =>
-                              BlogPostCard.fromBlogPostSchema(
-                                data.items[index + 1],
-                              ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               );
             },
           );
