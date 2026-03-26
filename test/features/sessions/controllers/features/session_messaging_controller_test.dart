@@ -5,9 +5,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:riverpod/riverpod.dart';
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_messaging_controller.dart';
+import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 
 import '../mocks.dart';
 
@@ -126,9 +125,7 @@ void main() {
             sessionMessagingControllerProvider(mockSession).notifier,
           );
 
-          final removedData = {
-            'identity': 'local-user-id',
-          };
+          final removedData = {'identity': 'user-1'};
 
           final removedEvent = DataReceivedEvent(
             data: utf8.encode(jsonEncode(removedData)),
@@ -151,7 +148,7 @@ void main() {
           );
 
           final removedData2 = {
-            'identity': 'local-user-id',
+            'identity': 'user-2',
           };
 
           final removedEvent2 = DataReceivedEvent(
@@ -186,52 +183,27 @@ void main() {
     });
 
     group('Send Reaction', () {
-      test('sendReaction completes without error when keeper exists', () async {
-        final mockSession = FakeSessionController();
-        final container = ProviderContainer();
-        final controller = container.read(
-          sessionMessagingControllerProvider(mockSession).notifier,
-        );
+      test(
+        'sendReaction updates emojiReactionsProvider when keeper exists',
+        () async {
+          final mockSession = FakeSessionController();
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
 
-        // Should not throw
-        await controller.sendReaction('👍');
-      });
+          final controller = container.read(
+            sessionMessagingControllerProvider(mockSession).notifier,
+          );
 
-      test('sendReaction logs warning when no keeper', () async {
-        final mockSession = FakeSessionController();
-        mockSession.mockState = const SessionRoomState(
-          connection: ConnectionState(
-            phase: SessionPhase.connected,
-            state: RoomConnectionState.connected,
-          ),
-          participants: ParticipantsState(),
-          chat: ChatState(),
-          turn: SessionTurnState(
-            roomState: RoomState(
-              keeper: '', // No keeper
-              nextSpeaker: null,
-              currentSpeaker: null,
-              status: RoomStatus.active,
-              turnState: TurnState.idle,
-              sessionSlug: 'test-session',
-              statusDetail: RoomStateStatusDetailWaitingRoom(
-                WaitingRoomDetail(),
-              ),
-              talkingOrder: [],
-              version: 1,
-              roundNumber: 1,
-            ),
-          ),
-        );
+          final before = container.read(emojiReactionsProvider);
+          expect(before, isEmpty);
 
-        final container = ProviderContainer();
-        final controller = container.read(
-          sessionMessagingControllerProvider(mockSession).notifier,
-        );
+          await controller.sendReaction('👍');
 
-        // Should not throw, but returns early
-        await controller.sendReaction('👍');
-      });
+          final after = container.read(emojiReactionsProvider);
+          expect(after, hasLength(1));
+          expect(after.first.emoji, equals('👍'));
+        },
+      );
     });
 
     group('Send Message', () {
@@ -263,7 +235,6 @@ void main() {
           sessionMessagingControllerProvider(mockSession).notifier,
         );
 
-        // Should not throw, but returns early
         await controller.sendMessage('Hello');
 
         expect(mockSession.addedChatMessages, isEmpty);

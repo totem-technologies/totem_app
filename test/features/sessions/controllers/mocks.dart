@@ -1,13 +1,25 @@
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
+import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 
+@GenerateNiceMocks([MockSpec<Participant>()])
+import 'mocks.mocks.dart';
+
 class MockSessionController extends Mock implements SessionController {}
 
 class MockSessionDeviceController extends Mock
     implements SessionDeviceController {}
+
+class MockLocalParticipant extends MockParticipant {
+  MockLocalParticipant(this.id);
+  final String id;
+
+  @override
+  String get identity => id;
+}
 
 RoomState _createRoomState({RoomStatus status = RoomStatus.waitingRoom}) {
   return RoomState(
@@ -32,7 +44,13 @@ SessionRoomState _createSessionState({
       phase: SessionPhase.connected,
       state: RoomConnectionState.connected,
     ),
-    participants: const ParticipantsState(),
+    participants: ParticipantsState(
+      participants: [
+        MockLocalParticipant('user-1'),
+        MockLocalParticipant('user-2'),
+        MockLocalParticipant('keeper-1'),
+      ],
+    ),
     chat: const ChatState(),
     turn: SessionTurnState(roomState: _createRoomState(status: roomStatus)),
   );
