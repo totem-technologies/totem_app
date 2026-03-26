@@ -10,7 +10,6 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
-import 'package:totem_app/features/sessions/controllers/core/session_chat_message.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_state_events.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_state_reducer.dart';
@@ -25,8 +24,9 @@ import 'package:totem_app/features/sessions/providers/session_scope_provider.dar
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/logger.dart';
 
-export 'package:totem_app/features/sessions/controllers/core/session_chat_message.dart';
 export 'package:totem_app/features/sessions/controllers/core/session_state.dart';
+export 'package:totem_app/features/sessions/controllers/features/session_messaging_controller.dart'
+    show SessionChatMessage;
 export 'package:totem_app/features/sessions/controllers/utils.dart';
 
 part 'session_controller.g.dart';

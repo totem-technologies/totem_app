@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/features/sessions/controllers/core/session_chat_message.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_state_events.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_state_reducer.dart';
+import 'package:totem_app/features/sessions/controllers/features/session_messaging_controller.dart';
 
 RoomState _roomState({RoomStatus status = RoomStatus.waitingRoom}) {
   return RoomState(

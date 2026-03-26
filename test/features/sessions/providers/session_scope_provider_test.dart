@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/features/sessions/controllers/core/session_chat_message.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_state.dart';
+import 'package:totem_app/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 
 RoomState _roomState({
