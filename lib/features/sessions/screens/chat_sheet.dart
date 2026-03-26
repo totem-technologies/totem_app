@@ -6,8 +6,8 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/keeper/screens/keeper_profile_screen.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
@@ -46,9 +46,9 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
-    final state = ref.watch(currentSessionStateProvider)!;
     final session = ref.watch(currentSessionProvider)!;
-    final isKeeper = session.event?.space.author.slug == user?.slug;
+    final sessionEvent = ref.watch(currentSessionEventProvider);
+    final isKeeper = ref.watch(isCurrentUserKeeperProvider);
 
     const fastMessages = [
       'Welcome! 🙏',
@@ -59,7 +59,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
       'Take your time',
     ];
 
-    final messages = state.messages;
+    final messages = ref.watch(sessionMessagesProvider);
 
     return DraggableScrollableSheet(
       maxChildSize: 0.9,
@@ -82,7 +82,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
         void send() {
           final message = _messageController.text.trim();
           if (message.isNotEmpty) {
-            session.sendMessage(message);
+            session.messaging.sendMessage(message);
             _messageController.clear();
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (scrollController.hasClients) {
@@ -161,7 +161,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                             return OtherChatBubble(
                               showAvatar: showAvatar,
                               message: msg,
-                              session: session.event,
+                              session: sessionEvent,
                             );
                           }
                         },
@@ -197,7 +197,8 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                             final label = fastMessages[index];
                             return _QuickMessageChip(
                               label: label,
-                              onSend: () => session.sendMessage(label),
+                              onSend: () =>
+                                  session.messaging.sendMessage(label),
                             );
                           },
                           separatorBuilder: (_, _) => const SizedBox(width: 8),
@@ -268,7 +269,7 @@ class OtherChatBubble extends StatelessWidget {
   });
 
   final bool showAvatar;
-  final ChatMessage message;
+  final SessionChatMessage message;
   final SessionDetailSchema? session;
 
   @override
@@ -321,7 +322,7 @@ class MyChatBubble extends StatelessWidget {
     super.key,
   });
 
-  final ChatMessage message;
+  final SessionChatMessage message;
 
   @override
   Widget build(BuildContext context) {

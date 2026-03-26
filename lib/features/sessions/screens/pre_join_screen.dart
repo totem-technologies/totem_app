@@ -9,14 +9,17 @@ import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_app/features/sessions/controllers/features/session_infra_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/screens/options_sheet.dart';
 import 'package:totem_app/features/sessions/screens/room_screen.dart';
-import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
@@ -41,12 +44,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   LocalAudioTrack? _previewAudioTrack;
   var _isMicOn = true;
 
-  CameraCaptureOptions _cameraOptions = Session.defaultCameraCaptureOptions;
+  CameraCaptureOptions _cameraOptions =
+      SessionController.defaultCameraCaptureOptions;
   var _audioOutputOptions = const AudioOutputOptions(speakerOn: true);
 
   SessionOptions? _sessionOptions;
   bool _hasRequestedJoin = false;
-  bool get hasRequestedJoin => _sessionOptions != null || _hasRequestedJoin;
+  bool get hasRequestedJoin => _hasRequestedJoin;
   bool _hasHandledConnectedState = false;
 
   final GlobalKey actionBarKey = GlobalKey();
@@ -99,7 +103,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       final session = await AudioSession.instance;
       final devices = await session.getDevices(includeInputs: false);
       final hasExternalOutput = devices.any(
-        (d) => DevicesControl.externalAudioOutputTypes.contains(d.type),
+        (d) =>
+            SessionDeviceController.externalAudioOutputTypes.contains(d.type),
       );
       final speakerOn = !hasExternalOutput;
 
@@ -166,7 +171,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         );
       }
 
-      await BackgroundControl.requestPermissions();
+      await SessionInfraController.requestPermissions();
     } finally {
       _requestLock = false;
     }
@@ -249,8 +254,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         keepActionLoadingOnSuccess: true,
         onActionPressed: () async {
           await _joinRoom();
-          return true;
+          return _hasRequestedJoin;
         },
+        isSliderLoading: _isLoading,
       ),
       actionBar: ActionBar(
         key: actionBarKey,
@@ -301,26 +307,68 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     );
   }
 
-  Future<void> _joinRoom() async {
-    if (hasRequestedJoin || _showingAlreadyPresentDialog) return;
-    _hasRequestedJoin = true;
-
-    final token = (await ref.read(
-      sessionTokenProvider(widget.sessionSlug).future,
-    )).token;
-    await ref.read(eventProvider(widget.sessionSlug).future);
-
+  Future<void> _handleToken(
+    JoinResponse response, {
+    bool shouldShowAlreadyPresentDialog = true,
+  }) async {
     _sessionOptions = SessionOptions(
       eventSlug: widget.sessionSlug,
-      token: token,
+      token: response.token,
       cameraEnabled: _isCameraOn,
       microphoneEnabled: _isMicOn,
       cameraOptions: _cameraOptions,
       audioOutputOptions: _audioOutputOptions,
     );
-    _hasHandledConnectedState = false;
-    if (mounted) {
-      setState(() {});
+    if (mounted) setState(() {});
+
+    if (hasRequestedJoin || !mounted) return;
+    if (response.isAlreadyPresent &&
+        shouldShowAlreadyPresentDialog &&
+        !_showingAlreadyPresentDialog) {
+      _showingAlreadyPresentDialog = true;
+      final join = await showAlreadyPresentDialog(context);
+      _showingAlreadyPresentDialog = false;
+      if (join) {
+        await _joinRoom(showAlreadyPresentDialog: false);
+      } else {
+        if (mounted) context.pop();
+      }
+    }
+  }
+
+  bool? _isLoading;
+
+  Future<void> _joinRoom({bool showAlreadyPresentDialog = true}) async {
+    try {
+      final response = await ref.read(
+        sessionTokenProvider(widget.sessionSlug).future,
+      );
+      await _handleToken(
+        response,
+        shouldShowAlreadyPresentDialog: showAlreadyPresentDialog,
+      );
+
+      if (hasRequestedJoin || _showingAlreadyPresentDialog) return;
+      _hasRequestedJoin = true;
+
+      final options = _sessionOptions!;
+
+      setState(() => _isLoading = true);
+
+      await ref.read(eventProvider(widget.sessionSlug).future);
+      final session = ref.read(sessionControllerProvider(options).notifier)
+        ..configureJoinPreferences(
+          cameraEnabled: _isCameraOn,
+          microphoneEnabled: _isMicOn,
+        );
+      await session.join();
+      _hasHandledConnectedState = _isLoading = false;
+    } catch (_) {
+    } finally {
+      _isLoading = false;
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -366,6 +414,15 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     final tokenData = ref.watch(sessionTokenProvider(widget.sessionSlug));
     final sessionData = ref.watch(eventProvider(widget.sessionSlug));
 
+    ref.listen(
+      sessionTokenProvider(widget.sessionSlug),
+      (previous, next) async {
+        if (next case AsyncData(:final value)) {
+          _handleToken(value);
+        }
+      },
+    );
+
     if (_sessionOptions != null) {
       ref.listen(
         sessionProvider(_sessionOptions!).select((s) => s.connectionState),
@@ -379,25 +436,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         },
       );
     }
-
-    ref.listen(sessionTokenProvider(widget.sessionSlug), (
-      previous,
-      next,
-    ) async {
-      if (hasRequestedJoin || _showingAlreadyPresentDialog) return;
-      if (next case AsyncData(:final value) when value.isAlreadyPresent) {
-        _showingAlreadyPresentDialog = true;
-        final join = await showAlreadyPresentDialog(context);
-        _showingAlreadyPresentDialog = false;
-        if (join) {
-          _joinRoom();
-        } else {
-          if (context.mounted) {
-            context.pop();
-          }
-        }
-      }
-    });
 
     if (tokenData.hasError) {
       return RoomBackground(
@@ -420,6 +458,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     final isLoading =
         (tokenData.isLoading && !tokenData.isRefreshing) ||
         (sessionData.isLoading && !sessionData.isRefreshing);
+
     if (!hasRequestedJoin || isLoading) {
       return _buildPrejoinUI();
     }

@@ -9,6 +9,7 @@ import 'package:livekit_client/livekit_client.dart'
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
@@ -18,7 +19,6 @@ import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
 import 'package:totem_app/features/sessions/screens/options_sheet.dart';
 import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_disconnected.dart';
-import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/navigation/app_router.dart';
@@ -103,7 +103,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   }
 
   bool _chatSheetOpen = false;
-  bool _hasPendingChatMessages = false;
+  bool _hasPendingSessionChatMessages = false;
 
   void _onLivekitError(LiveKitException error) {
     if (error is ConnectException ||
@@ -157,13 +157,11 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         },
       )
       ..listen(
-        currentSessionStateProvider.select(
-          (s) => (s == null || s.messages.isEmpty) ? null : s.messages.last,
-        ),
+        lastSessionMessageProvider,
         (previous, next) {
           if (next == null || identical(previous, next)) return;
           if (!mounted || _chatSheetOpen) return;
-          setState(() => _hasPendingChatMessages = !_chatSheetOpen);
+          setState(() => _hasPendingSessionChatMessages = !_chatSheetOpen);
           showNotificationPopup(
             context,
             icon: TotemIcons.chat,
@@ -174,7 +172,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         },
       )
       ..listen(
-        currentSessionStateProvider.select((s) => s?.livekitError),
+        sessionLivekitErrorProvider,
         (previous, next) {
           if (next == null) return;
           if (previous?.toString() == next.toString()) return;
@@ -182,35 +180,32 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         },
       )
       ..listen(
-        currentSessionStateProvider.select((s) => s?.hasKeeperDisconnected),
+        hasKeeperDisconnectedProvider,
         (previous, next) {
-          if (next == null || previous == next) return;
+          if (previous == next) return;
           _setKeeperDisconnectedNotification(next);
         },
       );
 
     final currentSession = ref.watch(currentSessionProvider);
+    final currentSessionEvent = ref.watch(currentSessionEventProvider);
     final connectionState = ref.watch(connectionStateProvider);
     final roomStatus = ref.watch(roomStatusProvider);
-    final sessionState = ref.watch(currentSessionStateProvider);
+    final disconnectReason = ref.watch(disconnectionReasonProvider);
     final turnState = ref.watch(turnStateProvider);
     final isMyTurn = ref.watch(isMyTurnProvider);
     final amNext = ref.watch(amNextSpeakerProvider);
 
-    if (currentSession == null ||
-        sessionState == null ||
-        currentSession.event == null) {
+    if (currentSession == null || currentSessionEvent == null) {
       return widget.loadingScreen;
     }
 
-    if (currentSession.event!.ended ||
-        (currentSession.event?.ended ?? false) ||
-        roomStatus == RoomStatus.ended) {
+    if (currentSessionEvent.ended || roomStatus == RoomStatus.ended) {
       return RoomBackground(
         status: roomStatus,
         child: SessionDisconnectedScreen(
-          session: currentSession.event!,
-          disconnectReason: sessionState.disconnectReason,
+          session: currentSessionEvent,
+          disconnectReason: disconnectReason,
         ),
       );
     }
@@ -259,7 +254,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                       child: _buildBody(
                         ref,
                         currentSession,
-                        sessionState,
+                        currentSessionEvent,
+                        disconnectReason,
                         connectionState,
                         roomStatus,
                         turnState,
@@ -284,8 +280,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   Widget _buildBody(
     WidgetRef ref,
-    Session session,
-    SessionRoomState sessionState,
+    SessionController session,
+    SessionDetailSchema sessionEvent,
+    DisconnectReason? disconnectReason,
     RoomConnectionState connectionState,
     RoomStatus roomStatus,
     TurnState turnState,
@@ -294,19 +291,19 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   ) {
     switch (connectionState) {
       case RoomConnectionState.error:
-        return RoomErrorScreen(onRetry: session.connect);
+        return RoomErrorScreen(onRetry: session.join);
       case RoomConnectionState.connecting:
         return widget.loadingScreen;
       case RoomConnectionState.disconnected:
         return SessionDisconnectedScreen(
-          session: session.event!,
-          disconnectReason: sessionState.disconnectReason,
+          session: sessionEvent,
+          disconnectReason: disconnectReason,
         );
       case RoomConnectionState.connected:
         if (roomStatus == RoomStatus.ended) {
           return SessionDisconnectedScreen(
-            session: session.event!,
-            disconnectReason: sessionState.disconnectReason,
+            session: sessionEvent,
+            disconnectReason: disconnectReason,
           );
         }
 
@@ -319,10 +316,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             actionBar: _buildActionBar(
               ref,
               session,
-              sessionState,
               isMyTurn,
             ),
-            onAcceptTotem: session.acceptTotem,
+            onAcceptTotem: session.keeper.acceptTotem,
           );
         }
 
@@ -333,12 +329,11 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 actionBar: _buildActionBar(
                   ref,
                   session,
-                  sessionState,
                   isMyTurn,
                 ),
                 onPassTotem: (roundMessage) async {
                   try {
-                    await session.passTotem(roundMessage: roundMessage);
+                    await session.keeper.passTotem(roundMessage: roundMessage);
                     return true;
                   } catch (error) {
                     if (!context.mounted) return false;
@@ -355,7 +350,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
             actionBar: _buildActionBar(
               ref,
               session,
-              sessionState,
               isMyTurn,
             ),
             event: session.event!,
@@ -366,8 +360,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   Widget _buildActionBar(
     WidgetRef ref,
-    Session session,
-    SessionRoomState sessionState,
+    SessionController session,
     bool isMyTurn,
   ) {
     return Builder(
@@ -388,9 +381,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               indicatorBarCount: 5,
               onToggle: (shouldEnable) async {
                 if (shouldEnable) {
-                  await session.enableMicrophone();
+                  await session.devices.enableMicrophone();
                 } else {
-                  await session.disableMicrophone();
+                  await session.devices.disableMicrophone();
                 }
               },
             ),
@@ -398,16 +391,16 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               participant: user,
               onToggle: (shouldEnable) async {
                 if (shouldEnable) {
-                  await session.enableCamera();
+                  await session.devices.enableCamera();
                 } else {
-                  await session.disableCamera();
+                  await session.devices.disableCamera();
                 }
               },
             ),
             if (!isMyTurn)
               ActionBarEmojiButton(
                 onEmojiSelected: (emoji) {
-                  session.sendReaction(emoji);
+                  session.messaging.sendReaction(emoji);
                 },
               ),
             ActionBarButton(
@@ -416,7 +409,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
               onPressed: () async {
                 if (!mounted) return;
                 setState(() {
-                  _hasPendingChatMessages = false;
+                  _hasPendingSessionChatMessages = false;
                   _chatSheetOpen = true;
                 });
                 await showSessionChatSheet(context);
@@ -427,7 +420,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 clipBehavior: Clip.none,
                 children: [
                   const TotemIcon(TotemIcons.chat),
-                  if (_hasPendingChatMessages)
+                  if (_hasPendingSessionChatMessages)
                     Container(
                       height: 4,
                       width: 4,
@@ -448,7 +441,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 padding: EdgeInsetsDirectional.zero,
                 onPressed: () => showOptionsSheet(
                   context,
-                  sessionState,
+                  ref.read(currentSessionStateProvider)!,
                   session.event!,
                 ),
                 icon: const TotemIcon(

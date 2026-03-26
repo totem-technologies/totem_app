@@ -48,6 +48,7 @@ class TransitionCard extends StatelessWidget {
     required this.onActionPressed,
     this.actionText,
     this.keepActionLoadingOnSuccess = false,
+    this.isSliderLoading,
     this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
     super.key,
   });
@@ -55,6 +56,7 @@ class TransitionCard extends StatelessWidget {
   final TotemCardTransitionType type;
   final OnActionPerformed onActionPressed;
   final bool keepActionLoadingOnSuccess;
+  final bool? isSliderLoading;
 
   final EdgeInsetsGeometry margin;
   final String? actionText;
@@ -126,6 +128,7 @@ class TransitionCard extends StatelessWidget {
                     },
                 onActionCompleted: onActionPressed,
                 keepLoadingOnSuccess: keepActionLoadingOnSuccess,
+                isLoading: isSliderLoading,
               ),
             ),
           ),
@@ -139,6 +142,7 @@ class ActionSlider extends StatefulWidget {
     required this.text,
     required this.onActionCompleted,
     this.keepLoadingOnSuccess = false,
+    this.isLoading,
     this.backgroundColor,
     super.key,
   });
@@ -146,6 +150,7 @@ class ActionSlider extends StatefulWidget {
   final String text;
   final OnActionPerformed onActionCompleted;
   final bool keepLoadingOnSuccess;
+  final bool? isLoading;
   final Color? backgroundColor;
 
   @override
@@ -156,6 +161,7 @@ class _ActionSliderState extends State<ActionSlider> {
   var _dragPosition = 0.0;
   var _isCompleted = false;
   var _isLoading = false;
+  double maxSlideDistance = 0.0;
 
   Future<void> _onPanUpdate(
     DragUpdateDetails details,
@@ -216,6 +222,18 @@ class _ActionSliderState extends State<ActionSlider> {
   }
 
   @override
+  void didUpdateWidget(ActionSlider oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isLoading != widget.isLoading) {
+      _isLoading = widget.isLoading ?? false;
+      if (_isLoading) {
+        _dragPosition = maxSlideDistance;
+        _isCompleted = false;
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -224,12 +242,14 @@ class _ActionSliderState extends State<ActionSlider> {
         final trackWidth = constraints.maxWidth;
         const thumbSize = 48.0;
         const padding = 6.0;
-        final maxSlideDistance = trackWidth - thumbSize - (padding * 2);
-        final progress = clampDouble(
-          math.min(_dragPosition / maxSlideDistance, 1),
-          0,
-          1,
-        );
+        maxSlideDistance = trackWidth - thumbSize - (padding * 2);
+        final progress = widget.isLoading == true
+            ? 1
+            : clampDouble(
+                math.min(_dragPosition / maxSlideDistance, 1),
+                0,
+                1,
+              );
 
         final backgroundColor =
             widget.backgroundColor ?? theme.colorScheme.primary;
@@ -292,7 +312,7 @@ class _ActionSliderState extends State<ActionSlider> {
                         ),
                       ],
                     ),
-                    child: _isLoading
+                    child: widget.isLoading == true || _isLoading
                         ? Center(
                             child: Container(
                               width: 24,

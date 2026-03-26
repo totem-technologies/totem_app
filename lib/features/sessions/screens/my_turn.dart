@@ -5,8 +5,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
@@ -34,6 +34,7 @@ class _MyTurnState extends ConsumerState<MyTurn> {
 
   bool _hasShownSelfViewHiddenNotice = false;
 
+  // TODO(bdlukaa): This message should be shown once per session, not every time the user receives the totem.
   void _showSelfViewHiddenNotice() {
     if (_hasShownSelfViewHiddenNotice || !mounted) return;
     _hasShownSelfViewHiddenNotice = true;
@@ -58,8 +59,8 @@ class _MyTurnState extends ConsumerState<MyTurn> {
     final theme = Theme.of(context);
     final roomStatus = ref.watch(roomStatusProvider);
     final turnState = ref.watch(turnStateProvider);
-    final state = ref.watch(currentSessionProvider);
-    final sessionState = ref.watch(currentSessionStateProvider);
+    final isKeeper = ref.watch(isCurrentUserKeeperProvider);
+    final nextUp = ref.watch(speakingNextParticipantProvider);
 
     if (!_hasShownSelfViewHiddenNotice && turnState == TurnState.speaking) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -78,7 +79,6 @@ class _MyTurnState extends ConsumerState<MyTurn> {
               event: widget.event,
             );
 
-            final nextUp = sessionState?.speakingNextParticipant();
             final transitionType = turnState == TurnState.passing
                 ? TotemCardTransitionType.waitingReceive
                 : TotemCardTransitionType.pass;
@@ -95,7 +95,7 @@ class _MyTurnState extends ConsumerState<MyTurn> {
             Widget passCard;
             switch (transitionType) {
               case TotemCardTransitionType.pass:
-                if (state?.isCurrentUserKeeper() ?? false) {
+                if (isKeeper) {
                   passCard = TransitionCardContainer(
                     children: [
                       TextField(

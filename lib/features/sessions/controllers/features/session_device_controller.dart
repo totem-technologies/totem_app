@@ -1,9 +1,31 @@
-// We need to access LivekitService.ref to notify listeners
-// ignore_for_file: invalid_use_of_visible_for_testing_member, experimental_member_use, invalid_use_of_protected_member
+// ignore_for_file: experimental_member_use
 
-part of 'session_service.dart';
+import 'dart:async';
 
-extension DevicesControl on Session {
+import 'package:audio_session/audio_session.dart' as audio;
+import 'package:collection/collection.dart';
+import 'package:livekit_client/livekit_client.dart' hide logger;
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_app/shared/logger.dart';
+
+part 'session_device_controller.g.dart';
+
+@Riverpod(keepAlive: true)
+class SessionDeviceController extends _$SessionDeviceController {
+  @override
+  void build(SessionController session) {}
+
+  Room? get _room => this.session.room;
+
+  StreamSubscription<void>? _becomingNoisySubscription;
+  StreamSubscription<audio.AudioDevicesChangedEvent>?
+  _devicesChangedSubscription;
+  bool _userSpeakerPreference = true;
+  bool _hasExternalOutput = false;
+
   static const externalAudioOutputTypes = <audio.AudioDeviceType>{
     audio.AudioDeviceType.wiredHeadset,
     audio.AudioDeviceType.wiredHeadphones,
@@ -15,6 +37,13 @@ extension DevicesControl on Session {
     audio.AudioDeviceType.usbAudio,
     audio.AudioDeviceType.carAudio,
   };
+
+  bool get userSpeakerPreference => _userSpeakerPreference;
+
+  void resetSpeakerRoutingDefaults() {
+    _userSpeakerPreference = true;
+    _hasExternalOutput = false;
+  }
 
   Future<void> setupDeviceChangeListener() async {
     try {
@@ -32,7 +61,7 @@ extension DevicesControl on Session {
       _becomingNoisySubscription = session.becomingNoisyEventStream.listen((_) {
         logger.i('Headphones unplugged, restoring to speaker.');
         _hasExternalOutput = false;
-        _autoSetSpeakerphone(true);
+        unawaited(_autoSetSpeakerphone(true));
       });
 
       _devicesChangedSubscription = session.devicesChangedEventStream.listen((
@@ -49,11 +78,11 @@ extension DevicesControl on Session {
           logger.i('External audio output connected, routing to headphones.');
           _hasExternalOutput = true;
           // Remove speaker override so OS routes to the newly connected device.
-          _autoSetSpeakerphone(false);
+          unawaited(_autoSetSpeakerphone(false));
         } else if (removedExternal) {
           logger.i('External audio output disconnected, switching to speaker.');
           _hasExternalOutput = false;
-          _autoSetSpeakerphone(true);
+          unawaited(_autoSetSpeakerphone(true));
         }
       });
     } catch (error, stackTrace) {
@@ -66,6 +95,7 @@ extension DevicesControl on Session {
   }
 
   String? get selectedCameraDeviceId {
+    final room = _room;
     final userTrack = room?.localParticipant
         ?.getTrackPublications()
         .firstWhereOrNull((track) => track.kind == TrackType.VIDEO)
@@ -82,7 +112,7 @@ extension DevicesControl on Session {
   }
 
   LocalVideoTrack? get localVideoTrack {
-    return room?.localParticipant?.videoTrackPublications
+    return _room?.localParticipant?.videoTrackPublications
         .where(
           (t) => t.track != null && t.track!.isActive && !t.track!.muted,
         )
@@ -92,6 +122,7 @@ extension DevicesControl on Session {
 
   Future<void> switchCameraPosition() async {
     try {
+      final room = _room;
       final track = localVideoTrack;
       if (track != null) {
         final newPosition = (track.currentOptions as CameraCaptureOptions)
@@ -102,7 +133,7 @@ extension DevicesControl on Session {
       } else {
         await room?.localParticipant?.publishVideoTrack(
           await LocalVideoTrack.createCameraTrack(
-            Session.defaultCameraCaptureOptions,
+            SessionController.defaultCameraCaptureOptions,
           ),
         );
       }
@@ -118,14 +149,12 @@ extension DevicesControl on Session {
   }
 
   LocalAudioTrack? get localAudioTrack {
-    return room?.localParticipant?.audioTrackPublications.firstOrNull?.track;
+    return _room?.localParticipant?.audioTrackPublications.firstOrNull?.track;
   }
 
-  bool get isSpeakerphoneEnabled => room?.speakerOn ?? false;
+  bool get isSpeakerphoneEnabled => _room?.speakerOn ?? false;
 
   Future<void> setSpeakerphone(bool enabled) async {
-    // When external audio is connected and the user enables the speaker,
-    // this is a temporary override — don't change the base preference.
     if (!_hasExternalOutput) {
       _userSpeakerPreference = enabled;
     }
@@ -133,13 +162,14 @@ extension DevicesControl on Session {
   }
 
   Future<void> _autoSetSpeakerphone(bool enabled) async {
-    await room?.setSpeakerOn(enabled);
-    state = state.copyWith(isSpeakerphoneEnabled: enabled);
+    await _room?.setSpeakerOn(enabled);
+    this.session.onSpeakerphoneChanged(enabled);
   }
 
   String? get selectedAudioDeviceId => localAudioTrack?.currentOptions.deviceId;
 
   Future<void> selectAudioDevice(MediaDevice device) async {
+    final room = _room;
     final track = localAudioTrack;
     if (track != null) {
       track.setDeviceId(device.deviceId);
@@ -157,21 +187,30 @@ extension DevicesControl on Session {
   }
 
   String? get selectedAudioOutputDeviceId {
-    // ignore: invalid_use_of_internal_member
-    return room?.engine.roomOptions.defaultAudioOutputOptions.deviceId;
+    return _room
+        // ignore: invalid_use_of_internal_member
+        ?.engine
+        .roomOptions
+        .defaultAudioOutputOptions
+        .deviceId;
   }
 
   Future<void> selectAudioOutputDevice(MediaDevice device) async {
     // See https://github.com/livekit/client-sdk-flutter/issues/858
-    await room?.setAudioOutputDevice(device);
+    await _room?.setAudioOutputDevice(device);
     ref.notifyListeners();
   }
 
   bool get isMicrophoneEnabled =>
-      room?.localParticipant?.isMicrophoneEnabled() ?? false;
+      _room?.localParticipant?.isMicrophoneEnabled() ?? false;
+
   Future<void> enableMicrophone() async {
+    final room = _room;
     if (room?.localParticipant?.isMicrophoneEnabled() ?? false) return;
-    if (state.roomState.status == RoomStatus.active && !state.hasKeeper) return;
+    if (this.session.state.roomState.status == RoomStatus.active &&
+        !this.session.state.hasKeeper) {
+      return;
+    }
 
     if (room?.localParticipant != null) {
       await room?.localParticipant?.setMicrophoneEnabled(true);
@@ -180,6 +219,7 @@ extension DevicesControl on Session {
   }
 
   Future<void> disableMicrophone() async {
+    final room = _room;
     if (!(room?.localParticipant?.isMicrophoneEnabled() ?? false)) {
       return;
     }
@@ -196,27 +236,38 @@ extension DevicesControl on Session {
   }
 
   bool get isCameraEnabled =>
-      room?.localParticipant?.isCameraEnabled() ?? false;
+      _room?.localParticipant?.isCameraEnabled() ?? false;
+
   Future<void> enableCamera() async {
+    final room = _room;
     if (room?.localParticipant?.isCameraEnabled() ?? false) {
       return;
     }
     await room?.localParticipant?.setCameraEnabled(
       true,
-      cameraCaptureOptions: Session.defaultCameraCaptureOptions.copyWith(
-        deviceId: room?.selectedVideoInputDeviceId,
-      ),
+      cameraCaptureOptions: SessionController.defaultCameraCaptureOptions
+          .copyWith(
+            deviceId: room.selectedVideoInputDeviceId,
+          ),
     );
 
     ref.notifyListeners();
   }
 
   Future<void> disableCamera() async {
+    final room = _room;
     if (!(room?.localParticipant?.isCameraEnabled() ?? false)) {
       return;
     }
     await room?.localParticipant?.setCameraEnabled(false);
 
     ref.notifyListeners();
+  }
+
+  Future<void> dispose() async {
+    await _becomingNoisySubscription?.cancel();
+    _becomingNoisySubscription = null;
+    await _devicesChangedSubscription?.cancel();
+    _devicesChangedSubscription = null;
   }
 }

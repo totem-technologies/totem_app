@@ -11,7 +11,6 @@ import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
-import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_app/shared/logger.dart';
@@ -501,7 +500,9 @@ class ParticipantControlButton extends ConsumerWidget {
               content: 'They can unmute themselves anytime.',
               onConfirm: () async {
                 try {
-                  await currentSession?.muteParticipant(participant.identity);
+                  await currentSession?.keeper.muteParticipant(
+                    participant.identity,
+                  );
                 } catch (error) {
                   if (!context.mounted) return;
                   await ErrorHandler.handleApiError(context, error);
@@ -540,7 +541,9 @@ class ParticipantControlButton extends ConsumerWidget {
                   '${participant.name}?',
               onConfirm: () async {
                 try {
-                  await currentSession?.removeParticipant(participant.identity);
+                  await currentSession?.keeper.removeParticipant(
+                    participant.identity,
+                  );
                 } catch (error) {
                   if (!context.mounted) return;
                   await ErrorHandler.handleApiError(context, error);
@@ -578,7 +581,9 @@ class ParticipantControlButton extends ConsumerWidget {
                   '${participant.name}? They will not be able to rejoin the session.',
               onConfirm: () async {
                 try {
-                  await currentSession?.banParticipant(participant.identity);
+                  await currentSession?.keeper.banParticipant(
+                    participant.identity,
+                  );
                 } catch (error) {
                   if (!context.mounted) return;
                   await ErrorHandler.handleApiError(context, error);

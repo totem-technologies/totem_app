@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/services/session_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
@@ -24,10 +24,11 @@ class NotMyTurn extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionStatus = ref.watch(roomStatusProvider);
     final amNext = ref.watch(amNextSpeakerProvider);
-    final session = ref.watch(currentSessionStateProvider)!;
     final currentSession = ref.watch(currentSessionProvider)!;
-
-    final activeSpeaker = session.featuredParticipant();
+    final activeSpeaker = ref.watch(featuredParticipantProvider);
+    final nextUp = ref.watch(speakingNextParticipantProvider);
+    final hasKeeper = ref.watch(hasKeeperProvider);
+    final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
 
     return RoomBackground(
       status: sessionStatus,
@@ -36,12 +37,11 @@ class NotMyTurn extends ConsumerWidget {
           final theme = Theme.of(context);
           final isLandscape = orientation == Orientation.landscape;
 
-          final nextUp = session.speakingNextParticipant();
           final nextUpText = () {
             if (sessionStatus == RoomStatus.waitingRoom) {
               return Text(
                 () {
-                  if (!session.hasKeeper) {
+                  if (!hasKeeper) {
                     return 'Waiting for the Keeper to join...';
                   }
                   return 'The session is about to start...';
@@ -49,7 +49,7 @@ class NotMyTurn extends ConsumerWidget {
                 style: theme.textTheme.bodyLarge,
               );
             } else if (sessionStatus == RoomStatus.active) {
-              if (!session.hasKeeper) {
+              if (!hasKeeper) {
                 return Text(
                   'The session has been paused...',
                   style: theme.textTheme.bodyLarge,
@@ -91,10 +91,10 @@ class NotMyTurn extends ConsumerWidget {
 
           final Widget? marquee = () {
             if (sessionStatus == RoomStatus.waitingRoom) {
-              if (currentSession.isCurrentUserKeeper()) {
+              if (isCurrentUserKeeper) {
                 return TransitionCard(
                   type: TotemCardTransitionType.start,
-                  onActionPressed: currentSession.startSession,
+                  onActionPressed: currentSession.keeper.startSession,
                 );
               } else {
                 return const GroundingMarquee();

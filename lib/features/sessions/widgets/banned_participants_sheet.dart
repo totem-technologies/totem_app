@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
-import 'package:totem_app/features/sessions/services/session_service.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 Future<void> showBannedParticipantsSheet(
   BuildContext context,
-  Session session,
+  SessionController session,
   SessionRoomState state,
 ) {
   return showModalBottomSheet(
@@ -31,7 +31,7 @@ class BannedParticipantsSheet extends ConsumerWidget {
     super.key,
   });
 
-  final Session session;
+  final SessionController session;
   final SessionRoomState state;
 
   @override
@@ -117,7 +117,7 @@ class _BannedParticipantItem extends ConsumerStatefulWidget {
   });
 
   final String participantSlug;
-  final Session session;
+  final SessionController session;
 
   @override
   ConsumerState<_BannedParticipantItem> createState() =>
@@ -132,7 +132,7 @@ class _BannedParticipantItemState
     if (_loading) return;
     setState(() => _loading = true);
     try {
-      await widget.session.unbanParticipant(widget.participantSlug);
+      await widget.session.keeper.unbanParticipant(widget.participantSlug);
       if (mounted && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

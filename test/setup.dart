@@ -35,3 +35,9 @@ Future<void> setupFirebase() async {
     ),
   );
 }
+
+// TODO(test): Session repository layer tests
+// TODO(test): Popups tests
+// TODO(test): UI Components tests
+//             Action Bar and Participant Card Tests
+// TODO(test): Screens Tests

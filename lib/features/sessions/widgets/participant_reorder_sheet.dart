@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' show Participant;
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
-import 'package:totem_app/features/sessions/services/session_service.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
@@ -12,7 +12,7 @@ import 'package:totem_app/shared/widgets/user_avatar.dart';
 
 Future<void> showParticipantReorderWidget(
   BuildContext context,
-  Session session,
+  SessionController session,
   SessionRoomState state,
   SessionDetailSchema event,
 ) {
@@ -38,7 +38,7 @@ class ParticipantReorderWidget extends ConsumerStatefulWidget {
     super.key,
   });
 
-  final Session session;
+  final SessionController session;
   final SessionRoomState state;
   final SessionDetailSchema event;
 
@@ -55,7 +55,7 @@ class _ParticipantReorderWidgetState
   @override
   void initState() {
     super.initState();
-    final roomParticipants = widget.state.participants
+    final roomParticipants = widget.state.participantsList
         .map((p) => p.identity)
         .toSet();
     _localOrder = widget.state.roomState.talkingOrder.isEmpty
@@ -130,7 +130,7 @@ class _ParticipantReorderWidgetState
                     itemBuilder: (context, index) {
                       final participantIdentity = participants[index];
 
-                      final participant = widget.state.participants
+                      final participant = widget.state.participantsList
                           .firstWhereOrNull(
                             (p) => p.identity == participantIdentity,
                           );
@@ -223,7 +223,7 @@ class _ParticipantReorderWidgetState
     List<String> newOrder,
   ) async {
     try {
-      await widget.session.reorder(newOrder);
+      await widget.session.keeper.reorder(newOrder);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

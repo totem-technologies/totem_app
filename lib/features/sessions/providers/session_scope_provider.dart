@@ -4,7 +4,7 @@ import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/features/sessions/services/session_service.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 
 part 'session_scope_provider.g.dart';
 
@@ -27,10 +27,10 @@ SessionOptions? sessionScope(Ref ref) => null;
 
 /// Convenience provider to get the current session notifier.
 @Riverpod(dependencies: [sessionScope])
-Session? currentSession(Ref ref) {
+SessionController? currentSession(Ref ref) {
   final options = ref.watch(sessionScopeProvider);
   if (options == null) return null;
-  return ref.watch(sessionProvider(options).notifier);
+  return ref.watch(sessionControllerProvider(options).notifier);
 }
 
 /// Convenience provider to get the current session state.
@@ -48,9 +48,26 @@ SessionRoomState? currentSessionState(Ref ref) {
 @Riverpod(dependencies: [currentSessionState])
 RoomConnectionState connectionState(Ref ref) {
   return ref.watch(
-        currentSessionStateProvider.select((s) => s?.connectionState),
+        currentSessionStateProvider.select((s) => s?.connection.state),
       ) ??
       RoomConnectionState.connecting;
+}
+
+/// The high-level lifecycle phase for the current session.
+@Riverpod(dependencies: [currentSessionState])
+SessionPhase sessionPhase(Ref ref) {
+  return ref.watch(
+        currentSessionStateProvider.select((s) => s?.connection.phase),
+      ) ??
+      SessionPhase.connecting;
+}
+
+/// The current session error, if any.
+@Riverpod(dependencies: [currentSessionState])
+RoomError? sessionError(Ref ref) {
+  return ref.watch(
+    currentSessionStateProvider.select((s) => s?.connection.error),
+  );
 }
 
 /// The current session status (waiting, started, ended).
@@ -75,9 +92,105 @@ TurnState turnState(Ref ref) {
 @Riverpod(dependencies: [currentSessionState])
 List<Participant> sessionParticipants(Ref ref) {
   return ref.watch(
-        currentSessionStateProvider.select((s) => s?.participants),
+        currentSessionStateProvider.select((s) => s?.participants.participants),
       ) ??
       [];
+}
+
+/// Current session error as a LiveKitError, if applicable.
+@Riverpod(dependencies: [sessionError])
+LiveKitException? sessionLivekitError(Ref ref) {
+  final error = ref.watch(sessionErrorProvider);
+  if (error is RoomLiveKitError) {
+    return error.exception;
+  }
+  return null;
+}
+
+/// Current session error as a DisconnectionError, if applicable.
+@Riverpod(dependencies: [sessionError])
+DisconnectReason? disconnectionReason(Ref ref) {
+  final error = ref.watch(sessionErrorProvider);
+  if (error is RoomDisconnectionError) {
+    return error.reason;
+  }
+  return null;
+}
+
+/// Whether the keeper is currently disconnected.
+@Riverpod(dependencies: [currentSessionState])
+bool hasKeeperDisconnected(Ref ref) {
+  return ref.watch(
+        currentSessionStateProvider.select(
+          (s) => s?.participants.hasKeeperDisconnected,
+        ),
+      ) ??
+      false;
+}
+
+/// All chat messages for the current session.
+@Riverpod(dependencies: [currentSessionState])
+List<SessionChatMessage> sessionMessages(Ref ref) {
+  return ref.watch(
+        currentSessionStateProvider.select((s) => s?.chat.messages),
+      ) ??
+      const [];
+}
+
+/// Last chat message if available.
+@Riverpod(dependencies: [sessionMessages])
+SessionChatMessage? lastSessionMessage(Ref ref) {
+  final messages = ref.watch(sessionMessagesProvider);
+  return messages.isEmpty ? null : messages.last;
+}
+
+/// Optional round message sent by the keeper for the active round.
+@Riverpod(dependencies: [currentSessionState])
+String? roundMessage(Ref ref) {
+  return ref.watch(
+    currentSessionStateProvider.select((s) => s?.roomState.roundMessage),
+  );
+}
+
+/// Whether the keeper participant is currently present in the room.
+@Riverpod(dependencies: [currentSessionState])
+bool hasKeeper(Ref ref) {
+  return ref.watch(
+        currentSessionStateProvider.select((s) => s?.hasKeeper),
+      ) ??
+      false;
+}
+
+/// Participant currently featured in the room layout.
+@Riverpod(dependencies: [currentSessionState])
+Participant? featuredParticipant(Ref ref) {
+  return ref.watch(
+    currentSessionStateProvider.select((s) => s?.featuredParticipant()),
+  );
+}
+
+/// Participant expected to speak next.
+@Riverpod(dependencies: [currentSessionState])
+Participant? speakingNextParticipant(Ref ref) {
+  return ref.watch(
+    currentSessionStateProvider.select((s) => s?.speakingNextParticipant()),
+  );
+}
+
+/// Active session event payload.
+@Riverpod(dependencies: [currentSession])
+SessionDetailSchema? currentSessionEvent(Ref ref) {
+  return ref.watch(
+    currentSessionProvider.select((s) => s?.event),
+  );
+}
+
+/// Whether the signed-in user is keeper for the current session.
+@Riverpod(dependencies: [currentSession])
+bool isCurrentUserKeeper(Ref ref) {
+  final session = ref.watch(currentSessionProvider);
+  if (session == null) return false;
+  return session.isCurrentUserKeeper();
 }
 
 /// Whether it's the current user's turn to speak.
