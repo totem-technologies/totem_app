@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/app_exceptions.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart'
+    hide session;
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/shared/logger.dart';
 
@@ -14,50 +16,48 @@ part 'session_keeper_controller.g.dart';
 class SessionKeeperController extends _$SessionKeeperController {
   static const keeperDisconnectionTimeout = Duration(minutes: 3);
 
-  late SessionController _session;
-  Timer? _keeperDisconnectedTimer;
+  @visibleForTesting
+  Timer? keeperDisconnectedTimer;
 
   @override
-  void build(SessionController session) {
-    _session = session;
-  }
+  void build(SessionController session) {}
 
-  SessionRoomState get _state => _session.state;
+  SessionRoomState get _state => session.state;
 
-  String get _eventSlug => _session.options.eventSlug;
+  String get _eventSlug => session.options.eventSlug;
 
   int get _roomVersion => _state.roomState.version;
 
   void onKeeperDisconnected(RoomStatus status) {
     if (status != RoomStatus.active) return;
 
-    unawaited(_session.devices.disableMicrophone());
+    unawaited(session.devices.disableMicrophone());
 
-    _keeperDisconnectedTimer?.cancel();
-    _keeperDisconnectedTimer = Timer(keeperDisconnectionTimeout, () {
+    keeperDisconnectedTimer?.cancel();
+    keeperDisconnectedTimer = Timer(keeperDisconnectionTimeout, () {
       unawaited(onKeeperDisconnectedTimeout());
     });
 
-    _session.setKeeperDisconnected(true);
+    session.setKeeperDisconnected(true);
   }
 
   void onKeeperConnected() {
-    _keeperDisconnectedTimer?.cancel();
-    _keeperDisconnectedTimer = null;
+    keeperDisconnectedTimer?.cancel();
+    keeperDisconnectedTimer = null;
 
-    _session.setKeeperDisconnected(false);
+    session.setKeeperDisconnected(false);
   }
 
   Future<void> onKeeperDisconnectedTimeout() async {
-    _keeperDisconnectedTimer?.cancel();
-    _keeperDisconnectedTimer = null;
+    keeperDisconnectedTimer?.cancel();
+    keeperDisconnectedTimer = null;
 
-    await _session.disconnectFromRoom();
+    await session.disconnectFromRoom();
   }
 
   void disposePresenceTracking() {
-    _keeperDisconnectedTimer?.cancel();
-    _keeperDisconnectedTimer = null;
+    keeperDisconnectedTimer?.cancel();
+    keeperDisconnectedTimer = null;
   }
 
   Future<T> _run<T>({
@@ -85,20 +85,20 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<void> passTotem({String? roundMessage}) async {
-    final room = _session.room;
+    final room = session.room;
     if (room == null || !_state.isMyTurn(room)) {
       throw StateError("Not the user's turn to pass the totem");
     }
     if (!_state.hasKeeper) {
       throw StateError('No keeper in the session to pass the totem');
     }
-    if (roundMessage != null && !_session.isCurrentUserKeeper()) {
+    if (roundMessage != null && !session.isCurrentUserKeeper()) {
       throw StateError(
         'Only the keeper can include a round message when passing the totem',
       );
     }
 
-    await _session.devices.disableMicrophone();
+    await session.devices.disableMicrophone();
     final roomState = await _run(
       action: () => ref.read(
         passTotemProvider(
@@ -109,12 +109,12 @@ class SessionKeeperController extends _$SessionKeeperController {
       ),
       errorMessage: 'Error passing totem',
     );
-    _session.applyRoomState(roomState);
+    session.applyRoomState(roomState);
     logger.i('Passed totem successfully');
   }
 
   Future<void> acceptTotem() async {
-    final room = _session.room;
+    final room = session.room;
     if (room == null || !_state.amNext(room)) {
       throw StateError("Not the user's turn to accept the totem");
     }
@@ -131,13 +131,13 @@ class SessionKeeperController extends _$SessionKeeperController {
       ),
       errorMessage: 'Error accepting totem',
     );
-    _session.applyRoomState(roomState);
-    await _session.devices.enableMicrophone();
+    session.applyRoomState(roomState);
+    await session.devices.enableMicrophone();
     logger.i('Accepted totem successfully');
   }
 
   Future<void> reorder(List<String> newOrder) async {
-    if (!_session.isCurrentUserKeeper()) return;
+    if (!session.isCurrentUserKeeper()) return;
     final roomState = await _run(
       action: () => ref.read(
         reorderParticipantsProvider(
@@ -148,12 +148,12 @@ class SessionKeeperController extends _$SessionKeeperController {
       ),
       errorMessage: 'Error reordering participants',
     );
-    _session.applyRoomState(roomState);
+    session.applyRoomState(roomState);
     logger.i('Reordered participants successfully');
   }
 
   Future<void> forcePassTotem() async {
-    if (!_session.isCurrentUserKeeper()) return;
+    if (!session.isCurrentUserKeeper()) return;
     final roomState = await _run(
       action: () => ref.read(
         forcePassTotemProvider(
@@ -163,12 +163,12 @@ class SessionKeeperController extends _$SessionKeeperController {
       ),
       errorMessage: 'Error force passing totem',
     );
-    _session.applyRoomState(roomState);
+    session.applyRoomState(roomState);
     logger.i('Force passed totem successfully');
   }
 
   Future<void> removeParticipant(String participantSlug) async {
-    if (!_session.isCurrentUserKeeper()) return;
+    if (!session.isCurrentUserKeeper()) return;
     await _run<void>(
       action: () => ref.read(
         removeParticipantProvider(
@@ -183,7 +183,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<bool> startSession() async {
-    if (!_session.isCurrentUserKeeper()) return false;
+    if (!session.isCurrentUserKeeper()) return false;
     try {
       await _run<void>(
         action: () => ref.read(
@@ -202,7 +202,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<bool> endSession() async {
-    if (!_session.isCurrentUserKeeper()) return false;
+    if (!session.isCurrentUserKeeper()) return false;
     try {
       final roomState = await _run(
         action: () => ref.read(
@@ -214,7 +214,7 @@ class SessionKeeperController extends _$SessionKeeperController {
         errorMessage: 'Error ending session',
         timeout: const Duration(seconds: 10),
       );
-      _session.applyRoomState(roomState);
+      session.applyRoomState(roomState);
       return true;
     } catch (_) {
       return false;
@@ -222,7 +222,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<void> banParticipant(String participantSlug) async {
-    if (!_session.isCurrentUserKeeper()) return;
+    if (!session.isCurrentUserKeeper()) return;
     await _run<void>(
       action: () => ref.read(
         banParticipantProvider(
@@ -238,7 +238,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<void> unbanParticipant(String participantSlug) async {
-    if (!_session.isCurrentUserKeeper()) return;
+    if (!session.isCurrentUserKeeper()) return;
 
     await _run<void>(
       action: () => ref.read(
@@ -255,7 +255,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<void> muteParticipant(String participantSlug) async {
-    if (!_session.isCurrentUserKeeper()) return;
+    if (!session.isCurrentUserKeeper()) return;
     await _run<void>(
       action: () => ref.read(
         muteParticipantProvider(
@@ -270,7 +270,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<void> muteEveryone() async {
-    if (!_session.isCurrentUserKeeper()) return;
+    if (!session.isCurrentUserKeeper()) return;
     await _run<void>(
       action: () => ref.read(muteEveryoneProvider(_eventSlug).future),
       errorMessage: 'Error muting everyone',

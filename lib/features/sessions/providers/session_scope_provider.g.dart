@@ -740,7 +740,7 @@ final class SessionMessagesProvider
   }
 }
 
-String _$sessionMessagesHash() => r'a1a4a2f82da8c165d00852e6afcd1421da168f3e';
+String _$sessionMessagesHash() => r'fc346f31bc9ace6128030e70f72ae61264bb02db';
 
 /// Last chat message if available.
 
@@ -803,7 +803,7 @@ final class LastSessionMessageProvider
 }
 
 String _$lastSessionMessageHash() =>
-    r'2890e31c29fe9873216acebb21ccb63c7f5b38a4';
+    r'31e78e019b591d4e379a8409bf15ddab37c1cb28';
 
 /// Optional round message sent by the keeper for the active round.
 
