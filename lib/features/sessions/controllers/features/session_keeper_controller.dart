@@ -152,6 +152,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     logger.i('Reordered participants successfully');
   }
 
+  // TODO(bdlukaa): Force pass is crashing the app.
   Future<void> forcePassTotem() async {
     if (!session.isCurrentUserKeeper()) return;
     final roomState = await _run(

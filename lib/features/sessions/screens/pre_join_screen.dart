@@ -251,9 +251,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
         type: TotemCardTransitionType.join,
         keepActionLoadingOnSuccess: true,
+        // TODO(bdlukaa): When sliding to join when the token hasn't been fetched yet, the action doesn't complete
+        // The loading indicator should be displayed either way..
         onActionPressed: () async {
           await _joinRoom();
-          return true;
+          return _hasRequestedJoin;
         },
       ),
       actionBar: ActionBar(

@@ -34,6 +34,7 @@ class _MyTurnState extends ConsumerState<MyTurn> {
 
   bool _hasShownSelfViewHiddenNotice = false;
 
+  // TODO(bdlukaa): This message should be shown once per session, not every time the user receives the totem.
   void _showSelfViewHiddenNotice() {
     if (_hasShownSelfViewHiddenNotice || !mounted) return;
     _hasShownSelfViewHiddenNotice = true;
