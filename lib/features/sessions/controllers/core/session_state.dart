@@ -36,14 +36,6 @@ class RoomDisconnectionError extends RoomError {
   String toString() => 'RoomDisconnectionError: ${reason.name}';
 }
 
-class RoomTimeoutError extends RoomError {
-  const RoomTimeoutError(this.phase);
-  final SessionPhase phase;
-
-  @override
-  String toString() => 'RoomTimeoutError in phase: ${phase.name}';
-}
-
 @immutable
 class ConnectionState {
   const ConnectionState({

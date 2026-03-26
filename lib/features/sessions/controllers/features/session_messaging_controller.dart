@@ -7,6 +7,7 @@ import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/shared/logger.dart';
+import 'package:uuid/uuid.dart';
 
 part 'session_messaging_controller.g.dart';
 
@@ -180,11 +181,10 @@ class SessionMessagingController extends _$SessionMessagingController {
     }
 
     final room = _room;
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
     final message = SessionChatMessage(
       message: text,
-      timestamp: timestamp,
-      id: timestamp.toString(),
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+      id: const Uuid().v4(),
       sender: true,
       participant: room?.localParticipant,
     );

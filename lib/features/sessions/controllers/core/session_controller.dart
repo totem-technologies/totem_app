@@ -323,7 +323,7 @@ class SessionController extends _$SessionController {
     );
 
     await ref
-        .read(sessionInfraControllerProvider(options).notifier)
+        .read(sessionInfraControllerProvider.notifier)
         .activate(event: event);
 
     _syncTimer?.cancel();
@@ -357,7 +357,7 @@ class SessionController extends _$SessionController {
 
     if (ref.mounted) {
       unawaited(
-        ref.read(sessionInfraControllerProvider(options).notifier).deactivate(),
+        ref.read(sessionInfraControllerProvider.notifier).deactivate(),
       );
     }
 

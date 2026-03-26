@@ -7,7 +7,6 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/core/services/screen_protection_service.dart';
-import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 part 'session_infra_controller.g.dart';
@@ -15,7 +14,7 @@ part 'session_infra_controller.g.dart';
 @riverpod
 class SessionInfraController extends _$SessionInfraController {
   @override
-  void build(SessionOptions options) {
+  void build() {
     ref.onDispose(dispose);
   }
 

@@ -26,7 +26,7 @@ SessionRoomState _initialState() {
     connection: const ConnectionState(
       phase: SessionPhase.connecting,
       state: RoomConnectionState.connecting,
-      error: RoomTimeoutError(SessionPhase.connecting),
+      error: RoomDisconnectionError(DisconnectReason.disconnected),
     ),
     participants: const ParticipantsState(removed: true),
     chat: const ChatState(),
@@ -62,7 +62,7 @@ void main() {
             connection: const ConnectionState(
               phase: SessionPhase.connecting,
               state: RoomConnectionState.connecting,
-              error: RoomTimeoutError(SessionPhase.connecting),
+              error: RoomDisconnectionError(DisconnectReason.disconnected),
             ),
             participants: const ParticipantsState(removed: false),
             chat: const ChatState(),
@@ -165,7 +165,7 @@ void main() {
 
         test('preserves state for non-livekit errors', () {
           final current = _initialState();
-          const error = RoomTimeoutError(SessionPhase.connecting);
+          const error = RoomDisconnectionError(DisconnectReason.disconnected);
 
           final next = reducer.reduceState(
             current,

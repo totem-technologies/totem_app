@@ -251,8 +251,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
         type: TotemCardTransitionType.join,
         keepActionLoadingOnSuccess: true,
-        // TODO(bdlukaa): When sliding to join when the token hasn't been fetched yet, the action doesn't complete
-        // The loading indicator should be displayed either way..
         onActionPressed: () async {
           await _joinRoom();
           return _hasRequestedJoin;
@@ -308,27 +306,34 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   Future<void> _joinRoom() async {
-    if (hasRequestedJoin || _showingAlreadyPresentDialog) return;
+    if (_showingAlreadyPresentDialog) return;
+
     _hasRequestedJoin = true;
     final options = _sessionOptions;
     if (options == null) {
-      _hasRequestedJoin = false;
       if (mounted) {
         setState(() {});
       }
       return;
     }
 
-    await ref.read(eventProvider(widget.sessionSlug).future);
-    final session = ref.read(sessionControllerProvider(options).notifier)
-      ..configureJoinPreferences(
-        cameraEnabled: _isCameraOn,
-        microphoneEnabled: _isMicOn,
-      );
-    await session.join();
-    _hasHandledConnectedState = false;
-    if (mounted) {
-      setState(() {});
+    if (_isJoining) return;
+    _isJoining = true;
+
+    try {
+      await ref.read(eventProvider(widget.sessionSlug).future);
+      final session = ref.read(sessionControllerProvider(options).notifier)
+        ..configureJoinPreferences(
+          cameraEnabled: _isCameraOn,
+          microphoneEnabled: _isMicOn,
+        );
+      await session.join();
+      _hasHandledConnectedState = false;
+      if (mounted) {
+        setState(() {});
+      }
+    } finally {
+      _isJoining = false;
     }
   }
 
@@ -368,6 +373,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   bool _showingAlreadyPresentDialog = false;
+  bool _isJoining = false;
 
   @override
   Widget build(BuildContext context) {
@@ -404,6 +410,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           );
           if (mounted) {
             setState(() {});
+          }
+
+          if (_hasRequestedJoin) {
+            _joinRoom();
           }
         }
       }

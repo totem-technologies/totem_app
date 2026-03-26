@@ -10,30 +10,23 @@ part of 'session_infra_controller.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(SessionInfraController)
-final sessionInfraControllerProvider = SessionInfraControllerFamily._();
+final sessionInfraControllerProvider = SessionInfraControllerProvider._();
 
 final class SessionInfraControllerProvider
     extends $NotifierProvider<SessionInfraController, void> {
-  SessionInfraControllerProvider._({
-    required SessionInfraControllerFamily super.from,
-    required SessionOptions super.argument,
-  }) : super(
-         retry: null,
-         name: r'sessionInfraControllerProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
+  SessionInfraControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sessionInfraControllerProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
   @override
   String debugGetCreateSourceHash() => _$sessionInfraControllerHash();
-
-  @override
-  String toString() {
-    return r'sessionInfraControllerProvider'
-        ''
-        '($argument)';
-  }
 
   @$internal
   @override
@@ -46,52 +39,13 @@ final class SessionInfraControllerProvider
       providerOverride: $SyncValueProvider<void>(value),
     );
   }
-
-  @override
-  bool operator ==(Object other) {
-    return other is SessionInfraControllerProvider &&
-        other.argument == argument;
-  }
-
-  @override
-  int get hashCode {
-    return argument.hashCode;
-  }
 }
 
 String _$sessionInfraControllerHash() =>
-    r'fbf92abf1903001afb017537cccdf03b69703ef1';
-
-final class SessionInfraControllerFamily extends $Family
-    with
-        $ClassFamilyOverride<
-          SessionInfraController,
-          void,
-          void,
-          void,
-          SessionOptions
-        > {
-  SessionInfraControllerFamily._()
-    : super(
-        retry: null,
-        name: r'sessionInfraControllerProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
-
-  SessionInfraControllerProvider call(SessionOptions options) =>
-      SessionInfraControllerProvider._(argument: options, from: this);
-
-  @override
-  String toString() => r'sessionInfraControllerProvider';
-}
+    r'7ce6fc02f0041f649dfbac29353cac44cb3b4d6b';
 
 abstract class _$SessionInfraController extends $Notifier<void> {
-  late final _$args = ref.$arg as SessionOptions;
-  SessionOptions get options => _$args;
-
-  void build(SessionOptions options);
+  void build();
   @$mustCallSuper
   @override
   void runBuild() {
@@ -104,6 +58,6 @@ abstract class _$SessionInfraController extends $Notifier<void> {
               Object?,
               Object?
             >;
-    element.handleCreate(ref, () => build(_$args));
+    element.handleCreate(ref, build);
   }
 }
