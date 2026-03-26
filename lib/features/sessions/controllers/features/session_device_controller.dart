@@ -15,14 +15,10 @@ part 'session_device_controller.g.dart';
 
 @Riverpod(keepAlive: true)
 class SessionDeviceController extends _$SessionDeviceController {
-  late SessionController _session;
-
   @override
-  void build(SessionController session) {
-    _session = session;
-  }
+  void build(SessionController session) {}
 
-  Room? get _room => _session.room;
+  Room? get _room => this.session.room;
 
   StreamSubscription<void>? _becomingNoisySubscription;
   StreamSubscription<audio.AudioDevicesChangedEvent>?
@@ -167,7 +163,7 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   Future<void> _autoSetSpeakerphone(bool enabled) async {
     await _room?.setSpeakerOn(enabled);
-    _session.onSpeakerphoneChanged(enabled);
+    this.session.onSpeakerphoneChanged(enabled);
   }
 
   String? get selectedAudioDeviceId => localAudioTrack?.currentOptions.deviceId;
@@ -211,8 +207,8 @@ class SessionDeviceController extends _$SessionDeviceController {
   Future<void> enableMicrophone() async {
     final room = _room;
     if (room?.localParticipant?.isMicrophoneEnabled() ?? false) return;
-    if (_session.state.roomState.status == RoomStatus.active &&
-        !_session.state.hasKeeper) {
+    if (this.session.state.roomState.status == RoomStatus.active &&
+        !this.session.state.hasKeeper) {
       return;
     }
 

@@ -52,7 +52,6 @@ class SessionController extends _$SessionController {
   Timer? _syncTimer;
   static const syncTimerDuration = Duration(seconds: 20);
 
-  SessionOptions? _options;
   bool? _cameraEnabledOverride;
   bool? _microphoneEnabledOverride;
   String? _lastMetadata;
@@ -127,7 +126,6 @@ class SessionController extends _$SessionController {
 
   @override
   SessionRoomState build(SessionOptions options) {
-    _options = options;
     ref
         .watch(eventProvider(options.eventSlug))
         .whenData((event) => this.event = event);
@@ -288,9 +286,6 @@ class SessionController extends _$SessionController {
       ),
     );
 
-    final options = _options;
-    if (options == null) return;
-
     await _initializeConnection(
       roomOptions: RoomOptions(
         defaultCameraCaptureOptions: options.cameraOptions,
@@ -360,8 +355,7 @@ class SessionController extends _$SessionController {
   void _cleanUp() {
     logger.d('Disposing SessionService and closing connections.');
 
-    final options = _options;
-    if (options != null && ref.mounted) {
+    if (ref.mounted) {
       unawaited(
         ref.read(sessionInfraControllerProvider(options).notifier).deactivate(),
       );
@@ -448,27 +442,25 @@ class SessionController extends _$SessionController {
 
   Future<void> _applyJoinMediaState() async {
     final currentRoom = room;
-    final options = _options;
     if (currentRoom == null) return;
 
-    final cameraEnabled =
-        _cameraEnabledOverride ?? (options?.cameraEnabled ?? false);
+    final cameraEnabled = _cameraEnabledOverride ?? options.cameraEnabled;
     currentRoom.localParticipant?.setCameraEnabled(cameraEnabled);
 
     final shouldEnableMicrophone = () {
       if (state.roomState.status == RoomStatus.waitingRoom &&
           !state.hasKeeper) {
-        return _microphoneEnabledOverride ?? options?.microphoneEnabled;
+        return _microphoneEnabledOverride ?? options.microphoneEnabled;
       }
       if (state.roomState.status == RoomStatus.active &&
           state.speakingNow == currentRoom.localParticipant?.identity) {
-        return _microphoneEnabledOverride ?? options?.microphoneEnabled;
+        return _microphoneEnabledOverride ?? options.microphoneEnabled;
       }
       return isCurrentUserKeeper() &&
-          (_microphoneEnabledOverride ?? options?.microphoneEnabled ?? false);
+          (_microphoneEnabledOverride ?? options.microphoneEnabled);
     }();
 
-    if (shouldEnableMicrophone ?? false) {
+    if (shouldEnableMicrophone) {
       await devices.enableMicrophone();
     } else {
       await devices.disableMicrophone();

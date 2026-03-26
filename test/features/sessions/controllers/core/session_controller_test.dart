@@ -29,7 +29,7 @@ void main() {
 
       test('defaultCameraCaptureOptions has h720_43 dimensions', () {
         expect(
-          SessionController.defaultCameraCaptureOptions.params?.dimensions,
+          SessionController.defaultCameraCaptureOptions.params.dimensions,
           equals(VideoDimensionsPresets.h720_43),
         );
       });
@@ -39,7 +39,7 @@ void main() {
           SessionController
               .defaultCameraCaptureOptions
               .params
-              ?.encoding
+              .encoding
               ?.maxFramerate,
           equals(20),
         );
@@ -50,7 +50,7 @@ void main() {
           SessionController
               .defaultCameraCaptureOptions
               .params
-              ?.encoding
+              .encoding
               ?.maxBitrate,
           equals(1300 * 1000),
         );

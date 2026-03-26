@@ -60,26 +60,22 @@ enum SessionCommunicationTopics {
 
 @Riverpod(keepAlive: true)
 class SessionMessagingController extends _$SessionMessagingController {
-  late SessionController _session;
-
   @override
-  void build(SessionController session) {
-    _session = session;
-  }
+  void build(SessionController session) {}
 
-  SessionRoomState get _state => _session.state;
+  SessionRoomState get _state => this.session.state;
 
-  Room? get _room => _session.room;
+  Room? get _room => this.session.room;
 
-  bool handleDataReceived(DataReceivedEvent event) {
+  void handleDataReceived(DataReceivedEvent event) {
     if (event.topic == SessionCommunicationTopics.emoji.topic) {
       final participant = event.participant;
-      if (participant == null) return true;
+      if (participant == null) return;
       final data = const Utf8Decoder().convert(event.data);
       ref
           .read(emojiReactionsProvider.notifier)
           .emitIncomingReaction(participant.identity, data);
-      return true;
+      return;
     }
 
     if (event.topic == SessionCommunicationTopics.chat.topic) {
@@ -89,7 +85,7 @@ class SessionMessagingController extends _$SessionMessagingController {
           jsonDecode(data) as Map<String, dynamic>,
           event.participant,
         );
-        _session.addSessionChatMessage(message);
+        this.session.addSessionChatMessage(message);
       } catch (error, stackTrace) {
         ErrorHandler.logError(
           error,
@@ -97,7 +93,7 @@ class SessionMessagingController extends _$SessionMessagingController {
           message: 'Error decoding chat message',
         );
       }
-      return true;
+      return;
     }
 
     if (event.topic == SessionCommunicationTopics.participantRemoved.topic) {
@@ -116,13 +112,13 @@ class SessionMessagingController extends _$SessionMessagingController {
           logger.d(
             'Participant removed event is not from the keeper, ignoring.',
           );
-          return true;
+          return;
         }
 
         if (identity == _room?.localParticipant?.identity) {
           logger.d('Received participant removed event for local participant.');
-          _session.markParticipantRemoved();
-          unawaited(_session.disconnectFromRoom());
+          this.session.markParticipantRemoved();
+          unawaited(this.session.disconnectFromRoom());
         }
       } catch (error, stackTrace) {
         ErrorHandler.logError(
@@ -131,10 +127,10 @@ class SessionMessagingController extends _$SessionMessagingController {
           message: 'Error decoding participant removed event',
         );
       }
-      return true;
+      return;
     }
 
-    return false;
+    return;
   }
 
   Future<void> sendReaction(String emoji) async {
@@ -176,7 +172,7 @@ class SessionMessagingController extends _$SessionMessagingController {
   }
 
   Future<void> sendMessage(String text) async {
-    if (!_session.isCurrentUserKeeper()) {
+    if (!this.session.isCurrentUserKeeper()) {
       logger.w(
         'Attempted to send chat message without being the keeper, ignoring',
       );
@@ -194,7 +190,7 @@ class SessionMessagingController extends _$SessionMessagingController {
     );
 
     try {
-      _session.addSessionChatMessage(message);
+      this.session.addSessionChatMessage(message);
       await room?.localParticipant
           ?.publishData(
             const Utf8Encoder().convert(message.toJson()),

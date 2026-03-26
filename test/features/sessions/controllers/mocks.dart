@@ -1,3 +1,4 @@
+import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:mockito/mockito.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
@@ -42,12 +43,18 @@ class FakeSessionController implements SessionController {
   SessionDeviceController mockDevices = FakeSessionDeviceController();
   bool disconnectFromRoomCalled = false;
   bool? lastKeeperDisconnectedValue;
+  List<SessionChatMessage> addedChatMessages = [];
+  bool isCurrentUserKeeperValue = false;
+  Room? mockRoom;
 
   @override
   SessionRoomState get state => mockState;
 
   @override
   SessionDeviceController get devices => mockDevices;
+
+  @override
+  Room? get room => mockRoom;
 
   @override
   Future<void> disconnectFromRoom() async {
@@ -57,6 +64,21 @@ class FakeSessionController implements SessionController {
   @override
   void setKeeperDisconnected(bool hasKeeperDisconnected) {
     lastKeeperDisconnectedValue = hasKeeperDisconnected;
+  }
+
+  @override
+  void addSessionChatMessage(SessionChatMessage message) {
+    addedChatMessages.add(message);
+  }
+
+  @override
+  bool isCurrentUserKeeper() {
+    return isCurrentUserKeeperValue;
+  }
+
+  @override
+  void markParticipantRemoved() {
+    // Implement if needed for tests
   }
 
   @override
