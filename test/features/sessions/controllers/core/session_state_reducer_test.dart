@@ -196,32 +196,6 @@ void main() {
           expect(state.connection.state, RoomConnectionState.error);
         });
       });
-
-      group('Unrelated connection events', () {
-        test('DisconnectReasonChanged keeps state unchanged', () {
-          final current = _initialState();
-
-          final next = reducer.reduceState(
-            current,
-            const DisconnectReasonChanged(DisconnectReason.unknown),
-          );
-
-          expect(next, current);
-        });
-
-        test('LiveKitErrorChanged keeps state unchanged', () {
-          final current = _initialState();
-
-          final next = reducer.reduceState(
-            current,
-            LiveKitErrorChanged(
-              UnexpectedStateException('error'),
-            ),
-          );
-
-          expect(next, current);
-        });
-      });
     });
 
     group('RoomState', () {

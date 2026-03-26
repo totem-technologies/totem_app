@@ -64,8 +64,6 @@ class SessionStateReducer {
             isSpeakerphoneEnabled: event.isSpeakerphoneEnabled,
           ),
         );
-      case DisconnectReasonChanged():
-        return current;
       case SessionErrorChanged():
         return SessionRoomState(
           connection: current.connection.copyWith(
@@ -79,8 +77,6 @@ class SessionStateReducer {
           chat: current.chat,
           turn: current.turn,
         );
-      case LiveKitErrorChanged():
-        return current;
       case SessionChatMessageAdded():
         return SessionRoomState(
           connection: current.connection,

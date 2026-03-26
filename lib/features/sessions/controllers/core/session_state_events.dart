@@ -42,22 +42,10 @@ class SpeakerphoneChanged extends SessionEvent {
   final bool isSpeakerphoneEnabled;
 }
 
-class DisconnectReasonChanged extends SessionEvent {
-  const DisconnectReasonChanged(this.disconnectReason);
-
-  final DisconnectReason? disconnectReason;
-}
-
 class SessionErrorChanged extends SessionEvent {
   const SessionErrorChanged(this.error);
 
   final RoomError? error;
-}
-
-class LiveKitErrorChanged extends SessionEvent {
-  const LiveKitErrorChanged(this.livekitError);
-
-  final LiveKitException? livekitError;
 }
 
 class SessionChatMessageAdded extends SessionEvent {
