@@ -52,12 +52,16 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   @override
   void dispose() {
-    _closeKeeperLeftNotification?.call();
-    _closeKeeperLeftNotification = null;
-    _notificationController.dismissAll();
+    _clearSessionPopups();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _batterySubscription?.cancel();
     super.dispose();
+  }
+
+  void _clearSessionPopups() {
+    _closeKeeperLeftNotification?.call();
+    _closeKeeperLeftNotification = null;
+    _notificationController.dismissAll();
   }
 
   final battery = Battery();
@@ -122,7 +126,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     if (!mounted) return;
     _closeKeeperLeftNotification?.call();
     _closeKeeperLeftNotification = null;
-    if (hasKeeperDisconnected) {
+    final roomStatus = ref.read(roomStatusProvider);
+    if (hasKeeperDisconnected && roomStatus == RoomStatus.active) {
       _closeKeeperLeftNotification = showPermanentNotificationPopup(
         context,
         icon: TotemIcons.pause,
@@ -170,6 +175,23 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         (previous, next) {
           if (previous == next) return;
           _setKeeperDisconnectedNotification(next);
+        },
+      )
+      ..listen(
+        roomStatusProvider,
+        (previous, next) {
+          if (next == RoomStatus.ended) {
+            _clearSessionPopups();
+          }
+        },
+      )
+      ..listen(
+        connectionStateProvider,
+        (previous, next) {
+          if (next == RoomConnectionState.disconnected ||
+              next == RoomConnectionState.error) {
+            _clearSessionPopups();
+          }
         },
       );
 
