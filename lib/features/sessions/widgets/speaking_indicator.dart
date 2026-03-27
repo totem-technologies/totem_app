@@ -204,7 +204,7 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
           shape: BoxShape.circle,
           color: backgroundColor,
         ),
-        padding: const EdgeInsetsDirectional.all(4),
+        padding: const EdgeInsetsDirectional.all(2),
         alignment: Alignment.center,
         child: SpeakingIndicator(participant: participant),
       ),

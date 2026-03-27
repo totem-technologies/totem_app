@@ -126,7 +126,6 @@ class FeaturedParticipantCard extends ConsumerWidget {
                               color: Colors.black54,
                               boxShadow: kElevationToShadow[6],
                             ),
-                            padding: const EdgeInsetsDirectional.all(4),
                             child: SpeakingIndicatorOrEmoji(
                               participant: activeSpeaker,
                               backgroundColor: Colors.transparent,
