@@ -195,6 +195,7 @@ Future<void> presentEmojiReaction(
   BuildContext context,
   String emoji, {
   GlobalKey<OverlayState>? overlayKey,
+  bool isInNotMyTurnScreen = false,
 }) async {
   final overlayBox =
       (overlayKey?.currentContext ?? Overlay.of(context).context)
@@ -222,7 +223,10 @@ Future<void> presentEmojiReaction(
               Orientation.landscape => position.dx + box.size.width * 0.4,
             };
             final double startY = switch (orientation) {
-              Orientation.portrait => position.dy + box.size.height / 2,
+              Orientation.portrait =>
+                isInNotMyTurnScreen
+                    ? position.dy + box.size.height / 2
+                    : position.dy + box.size.height / 12,
               Orientation.landscape => position.dy + box.size.height / 4,
             };
             return Stack(
@@ -367,11 +371,13 @@ class _RisingEmojiState extends State<RisingEmoji>
           ),
         );
       },
-      child: Text(
-        widget.emoji,
-        style: TextStyle(
-          fontSize: 44 * widget.sizeFactor,
-          textBaseline: TextBaseline.ideographic,
+      child: MediaQuery.withNoTextScaling(
+        child: Text(
+          widget.emoji,
+          style: TextStyle(
+            fontSize: 44 * widget.sizeFactor,
+            textBaseline: TextBaseline.ideographic,
+          ),
         ),
       ),
     );

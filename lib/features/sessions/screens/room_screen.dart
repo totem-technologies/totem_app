@@ -139,12 +139,22 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       ..listen(
         emojiReactionsProvider,
         (previous, next) {
+          final isMyTurn = ref.read(isMyTurnProvider);
+          final isReceivingTotem =
+              ref.read(turnStateProvider) == TurnState.passing &&
+              ref.read(amNextSpeakerProvider);
+          final isInNotMyTurnScreen = !isMyTurn && !isReceivingTotem;
+
           for (final reaction in next.where(
             (reaction) => !reaction.displayed,
           )) {
             ref
                 .read(emojiReactionsProvider.notifier)
-                .displayReaction(context, reaction);
+                .displayReaction(
+                  context,
+                  reaction,
+                  isInNotMyTurnScreen,
+                );
           }
         },
       )

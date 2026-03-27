@@ -240,7 +240,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       video: Semantics(
         label: 'Your video preview, camera ${_isCameraOn ? 'on' : 'off'}',
         image: true,
-        child: LocalParticipantVideoCard(
+        child: LocalParticipantCard(
           isCameraOn: _isCameraOn,
           audioTrack: _previewAudioTrack,
           videoTrack: _previewVideoTrack,

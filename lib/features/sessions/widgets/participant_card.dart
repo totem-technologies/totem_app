@@ -568,8 +568,8 @@ class ParticipantControlButton extends ConsumerWidget {
   }
 }
 
-class LocalParticipantVideoCard extends ConsumerWidget {
-  const LocalParticipantVideoCard({
+class LocalParticipantCard extends ConsumerWidget {
+  const LocalParticipantCard({
     this.isCameraOn = true,
     this.audioTrack,
     this.videoTrack,
@@ -710,7 +710,6 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   EventsListener<ParticipantEvent>? _listener;
   EventsListener<TrackEvent>? _trackListener;
   VideoQuality? _lastAppliedQuality;
-  String? _lastAppliedTrackSid;
   String? _listenedTrackSid;
 
   void _setupListeners() {
@@ -747,14 +746,10 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     if (publication is! RemoteTrackPublication<RemoteTrack>) return;
 
     final desired = widget.preferredVideoQuality;
-    final sameTrack = _lastAppliedTrackSid == publication.sid;
-    final sameQuality = _lastAppliedQuality == desired;
-    if (sameTrack && sameQuality) return;
 
     try {
       final previousQuality = _lastAppliedQuality;
       await publication.setVideoQuality(desired);
-      _lastAppliedTrackSid = publication.sid;
       _lastAppliedQuality = desired;
       logger.i(
         'Participant video quality changed '
