@@ -52,9 +52,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   @override
   void dispose() {
-    _notificationController.dismissAll();
     _closeKeeperLeftNotification?.call();
     _closeKeeperLeftNotification = null;
+    _notificationController.dismissAll();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _batterySubscription?.cancel();
     super.dispose();
@@ -135,26 +135,25 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentSession = ref.watch(currentSessionProvider);
+    final currentSessionEvent = ref.watch(currentSessionEventProvider);
+    final connectionState = ref.watch(connectionStateProvider);
+    final roomStatus = ref.watch(roomStatusProvider);
+    final disconnectReason = ref.watch(disconnectionReasonProvider);
+
     ref
       ..listen(
         emojiReactionsProvider,
         (previous, next) {
-          final isMyTurn = ref.read(isMyTurnProvider);
-          final isReceivingTotem =
-              ref.read(turnStateProvider) == TurnState.passing &&
-              ref.read(amNextSpeakerProvider);
-          final isInNotMyTurnScreen = !isMyTurn && !isReceivingTotem;
+          final isInNotMyTurnScreen =
+              currentSession?.resolveCurrentScreen() == RoomScreen.notMyTurn;
 
           for (final reaction in next.where(
             (reaction) => !reaction.displayed,
           )) {
             ref
                 .read(emojiReactionsProvider.notifier)
-                .displayReaction(
-                  context,
-                  reaction,
-                  isInNotMyTurnScreen,
-                );
+                .displayReaction(context, reaction, isInNotMyTurnScreen);
           }
         },
       )
@@ -173,15 +172,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           _setKeeperDisconnectedNotification(next);
         },
       );
-
-    final currentSession = ref.watch(currentSessionProvider);
-    final currentSessionEvent = ref.watch(currentSessionEventProvider);
-    final connectionState = ref.watch(connectionStateProvider);
-    final roomStatus = ref.watch(roomStatusProvider);
-    final disconnectReason = ref.watch(disconnectionReasonProvider);
-    final turnState = ref.watch(turnStateProvider);
-    final isMyTurn = ref.watch(isMyTurnProvider);
-    final amNext = ref.watch(amNextSpeakerProvider);
 
     if (currentSession == null || currentSessionEvent == null) {
       return widget.loadingScreen;
@@ -239,15 +229,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                   Positioned.fill(
                     child: RepaintBoundary(
                       child: _buildBody(
-                        ref,
                         currentSession,
                         currentSessionEvent,
                         disconnectReason,
-                        connectionState,
-                        roomStatus,
-                        turnState,
-                        isMyTurn,
-                        amNext,
                       ),
                     ),
                   ),
@@ -266,65 +250,45 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   }
 
   Widget _buildBody(
-    WidgetRef ref,
     SessionController session,
     SessionDetailSchema sessionEvent,
     DisconnectReason? disconnectReason,
-    RoomConnectionState connectionState,
-    RoomStatus roomStatus,
-    TurnState turnState,
-    bool isMyTurn,
-    bool amNext,
   ) {
-    switch (connectionState) {
-      case RoomConnectionState.error:
+    switch (session.resolveCurrentScreen()) {
+      case RoomScreen.error:
         return RoomErrorScreen(onRetry: session.join);
-      case RoomConnectionState.connecting:
+      case RoomScreen.loading:
         return widget.loadingScreen;
-      case RoomConnectionState.disconnected:
+      case RoomScreen.disconnected:
         return SessionDisconnectedScreen(
           session: sessionEvent,
           disconnectReason: disconnectReason,
         );
-      case RoomConnectionState.connected:
-        if (roomStatus == RoomStatus.ended) {
-          return SessionDisconnectedScreen(
-            session: sessionEvent,
-            disconnectReason: disconnectReason,
-          );
-        }
-
-        if (session.room?.localParticipant == null) {
-          return widget.loadingScreen;
-        }
-
-        if (turnState == TurnState.passing && amNext) {
-          return ReceiveTotemScreen(onAcceptTotem: session.keeper.acceptTotem);
-        }
-
-        if (isMyTurn) {
-          return Builder(
-            builder: (context) {
-              return MyTurn(
-                onPassTotem: (roundMessage) async {
-                  try {
-                    await session.keeper.passTotem(roundMessage: roundMessage);
-                    return true;
-                  } catch (error) {
-                    if (!context.mounted) return false;
-                    ErrorHandler.handleApiError(context, error);
-                    return false;
-                  }
-                },
-                event: session.event!,
-              );
-            },
-          );
-        } else {
-          return NotMyTurn(
-            event: session.event!,
-          );
-        }
+      case RoomScreen.receiving:
+        return ReceiveTotemScreen(onAcceptTotem: session.keeper.acceptTotem);
+      case RoomScreen.myTurn:
+      case RoomScreen.passing:
+        return Builder(
+          builder: (context) {
+            return MyTurn(
+              onPassTotem: (roundMessage) async {
+                try {
+                  await session.keeper.passTotem(roundMessage: roundMessage);
+                  return true;
+                } catch (error) {
+                  if (!context.mounted) return false;
+                  ErrorHandler.handleApiError(context, error);
+                  return false;
+                }
+              },
+              event: session.event!,
+            );
+          },
+        );
+      case RoomScreen.notMyTurn:
+        return NotMyTurn(
+          event: session.event!,
+        );
     }
   }
 }
