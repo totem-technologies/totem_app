@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
-import 'package:totem_app/features/blog/widgets/blog_post_card.dart';
 import 'package:totem_app/features/blog/widgets/featured_blog_post.dart';
+import 'package:totem_app/features/home/widgets/home_blog_card.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/empty_indicator.dart';
@@ -44,13 +44,16 @@ class BlogListScreen extends ConsumerWidget {
                         top: 20,
                         bottom: 20,
                       ),
-                      sliver: SliverFixedExtentList.builder(
-                        itemExtent: BlogPostCard.cardHeight + 10,
+                      sliver: SliverList.builder(
                         itemCount: data.items.sublist(1).length,
-                        itemBuilder: (context, index) =>
-                            BlogPostCard.fromBlogPostSchema(
-                              data.items[index + 1],
-                            ),
+                        itemBuilder: (context, index) => Padding(
+                          padding: const EdgeInsets.only(
+                            left: 20,
+                            right: 20,
+                            bottom: 16,
+                          ),
+                          child: HomeBlogCard(data: data.items[index + 1]),
+                        ),
                       ),
                     ),
                   ),

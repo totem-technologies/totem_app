@@ -83,7 +83,6 @@ class HomeScreen extends ConsumerWidget {
                                 'Your Next Session',
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 18,
                                 ),
                               ),
                             ),
@@ -122,7 +121,6 @@ class HomeScreen extends ConsumerWidget {
                                 'Upcoming Sessions',
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 18,
                                 ),
                               ),
                             ),
@@ -294,7 +292,6 @@ class _BlogSection extends ConsumerWidget {
                     'Blogs',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
-                      fontSize: 18,
                     ),
                   ),
                 ),

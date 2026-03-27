@@ -44,11 +44,16 @@ class NextSessionCard extends StatelessWidget {
       button: true,
       label: semanticLabel,
       excludeSemantics: true,
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(_borderRadius),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(_borderRadius),
+          boxShadow: AppTheme.cardShadow,
+        ),
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(_borderRadius),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
           onTap: onTap ?? () => _navigateToSession(context),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,6 +83,7 @@ class NextSessionCard extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 
