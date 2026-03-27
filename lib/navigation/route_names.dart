@@ -6,7 +6,6 @@ class RouteNames {
   // Auth routes
   static const login = '/auth/login';
   static const pinEntry = '/auth/pin';
-  static const communityGuidelines = '/auth/community-guidelines';
 
   // Onboarding
   static const onboarding = '/onboarding';

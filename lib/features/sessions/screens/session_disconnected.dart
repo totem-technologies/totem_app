@@ -11,6 +11,7 @@ import 'package:in_app_review/in_app_review.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/profile/screens/user_feedback.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
@@ -228,12 +229,17 @@ class _SessionDisconnectedScreenState
                             TextSpan(
                               text: 'Community Guidelines',
                               style: theme.textTheme.bodyLarge?.copyWith(
-                                color: theme.colorScheme.primary,
                                 fontWeight: FontWeight.w500,
                               ),
                               recognizer: TapGestureRecognizer()
-                                ..onTap = () {
-                                  context.push(RouteNames.communityGuidelines);
+                                ..onTap = () async {
+                                  final url = AppConfig.communityGuidelinesUrl;
+                                  if (await canLaunchUrl(url)) {
+                                    await launchUrl(
+                                      url,
+                                      mode: LaunchMode.externalApplication,
+                                    );
+                                  }
                                 },
                             ),
                             const TextSpan(text: '. '),
@@ -243,8 +249,8 @@ class _SessionDisconnectedScreenState
                             ),
                             TextSpan(
                               text: 'help@totem.org',
-                              style: const TextStyle(
-                                color: Colors.blue,
+                              style: TextStyle(
+                                color: Colors.blue.shade200,
                               ),
                               recognizer: TapGestureRecognizer()
                                 ..onTap = () {

@@ -169,8 +169,8 @@ class FeaturedParticipantCard extends ConsumerWidget {
                           ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(42),
-                            color: Colors.white.withValues(alpha: 0.3),
-                            boxShadow: kElevationToShadow[6],
+                            color: Colors.black54,
+                            boxShadow: kElevationToShadow[1],
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -231,104 +231,72 @@ class ParticipantCard extends ConsumerWidget {
     return RepaintBoundary(
       child: AspectRatio(
         aspectRatio: 16 / 21,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(borderRadius),
-            border: Border.all(
-              color: isKeeper ? AppTheme.yellow : Colors.white,
-              width: 2,
-            ),
-            boxShadow: isKeeper
-                ? const [
-                    BoxShadow(
-                      offset: Offset(0, 3),
-                      blurRadius: 1,
-                      spreadRadius: -2,
-                      color: AppTheme.yellow,
-                    ),
-                    BoxShadow(
-                      offset: Offset(0, 2),
-                      blurRadius: 2,
-                      color: AppTheme.yellow,
-                    ),
-                    BoxShadow(
-                      offset: Offset(0, 1),
-                      blurRadius: 5,
-                      color: AppTheme.yellow,
-                    ),
-                  ]
-                : null,
-          ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(borderRadius),
           clipBehavior: Clip.hardEdge,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(borderRadius - 2),
-            clipBehavior: Clip.hardEdge,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned.fill(
-                  child: ParticipantVideo(
-                    participant: participant,
-                    preferredVideoQuality: VideoQuality.MEDIUM,
-                  ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: ParticipantVideo(
+                  participant: participant,
+                  preferredVideoQuality: VideoQuality.MEDIUM,
                 ),
+              ),
+              PositionedDirectional(
+                top: overlayPadding,
+                start: overlayPadding,
+                child: SpeakingIndicatorOrEmoji(participant: participant),
+              ),
+              if (session != null &&
+                  currentUserIsKeeper &&
+                  currentUserSlug != participant.identity)
+                PositionedDirectional(
+                  end: overlayPadding,
+                  top: overlayPadding,
+                  child: ParticipantControlButton(
+                    participant: participant,
+                    overlayPadding: overlayPadding,
+                  ),
+                )
+              else if (isKeeper)
                 PositionedDirectional(
                   top: overlayPadding,
-                  start: overlayPadding,
-                  child: SpeakingIndicatorOrEmoji(participant: participant),
-                ),
-                if (session != null &&
-                    currentUserIsKeeper &&
-                    currentUserSlug != participant.identity)
-                  PositionedDirectional(
-                    end: overlayPadding,
-                    top: overlayPadding,
-                    child: ParticipantControlButton(
-                      participant: participant,
-                      overlayPadding: overlayPadding,
+                  end: overlayPadding,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black54,
+                      boxShadow: kElevationToShadow[6],
                     ),
-                  )
-                else if (isKeeper)
-                  PositionedDirectional(
-                    top: overlayPadding,
-                    end: overlayPadding,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.black54,
-                        boxShadow: kElevationToShadow[6],
-                      ),
-                      padding: const EdgeInsetsDirectional.all(4),
-                      child: const TotemIconLogo(
-                        color: AppTheme.white,
-                        size: 16,
-                      ),
-                    ),
-                  ),
-                PositionedDirectional(
-                  bottom: 8,
-                  start: 8,
-                  end: 8,
-                  child: SmartNameText(
-                    name: participant.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      shadows: [
-                        Shadow(
-                          offset: Offset(0, 1),
-                          blurRadius: 4,
-                        ),
-                      ],
+                    padding: const EdgeInsetsDirectional.all(4),
+                    child: const TotemIconLogo(
+                      color: AppTheme.white,
+                      size: 16,
                     ),
                   ),
                 ),
-              ],
-            ),
+              PositionedDirectional(
+                bottom: 8,
+                start: 8,
+                end: 8,
+                child: SmartNameText(
+                  name: participant.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    shadows: [
+                      Shadow(
+                        offset: Offset(0, 1),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -629,12 +597,11 @@ class LocalParticipantVideoCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: Colors.black,
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: theme.colorScheme.primary, width: 2),
         ),
         clipBehavior: Clip.antiAliasWithSaveLayer,
         child: ClipRRect(
           // radius - border width
-          borderRadius: BorderRadius.circular(30 - 2),
+          borderRadius: BorderRadius.circular(30),
           child: AspectRatio(
             aspectRatio: 16 / 21,
             child: Stack(
@@ -827,15 +794,15 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   // Whether the track is inactive due to poor network conditions.
   bool _isTrackInactive = false;
   void _onTrackEvent(TrackEvent event) {
+    if (mounted) return;
     if (event is VideoReceiverStatsEvent) {
       final bitrate = event.currentBitrate;
       if (bitrate < 10) {
-        _isTrackInactive = true;
-      } else if (_isTrackInactive) {
-        _isTrackInactive = false;
+        setState(() => _isTrackInactive = true);
+      } else {
+        setState(() => _isTrackInactive = false);
       }
     }
-    if (mounted) setState(() {});
   }
 
   void _onParticipantUpdated(ParticipantEvent _) {
