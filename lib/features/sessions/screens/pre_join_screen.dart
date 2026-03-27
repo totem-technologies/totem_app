@@ -53,7 +53,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   bool get hasRequestedJoin => _hasRequestedJoin;
   bool _hasHandledConnectedState = false;
 
-  final GlobalKey actionBarKey = GlobalKey();
   final GlobalKey loadingScreenKey = GlobalKey();
 
   @override
@@ -259,7 +258,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         isSliderLoading: _isLoading,
       ),
       actionBar: ActionBar(
-        key: actionBarKey,
+        key: SessionActionBar.actionBarKey,
         children: [
           ActionBarButton(
             semanticsLabel: 'Microphone ${_isMicOn ? 'on' : 'off'}',
@@ -470,7 +469,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       child: VideoRoomScreen(
         sessionSlug: widget.sessionSlug,
         loadingScreen: _buildPrejoinUI(),
-        actionBarKey: actionBarKey,
       ),
     );
   }

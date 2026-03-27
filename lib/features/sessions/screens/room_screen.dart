@@ -7,19 +7,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
 import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
 import 'package:totem_app/features/sessions/screens/options_sheet.dart';
 import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_disconnected.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -30,13 +27,11 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
   const VideoRoomScreen({
     required this.sessionSlug,
     required this.loadingScreen,
-    required this.actionBarKey,
     super.key,
   });
 
   final String sessionSlug;
   final Widget loadingScreen;
-  final GlobalKey actionBarKey;
 
   @override
   ConsumerState<VideoRoomScreen> createState() => _VideoRoomScreenState();
@@ -102,9 +97,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     }
   }
 
-  bool _chatSheetOpen = false;
-  bool _hasPendingSessionChatMessages = false;
-
   void _onLivekitError(LiveKitException error) {
     if (error is ConnectException ||
         error is MediaConnectException ||
@@ -154,21 +146,6 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                 .read(emojiReactionsProvider.notifier)
                 .displayReaction(context, reaction);
           }
-        },
-      )
-      ..listen(
-        lastSessionMessageProvider,
-        (previous, next) {
-          if (next == null || identical(previous, next)) return;
-          if (!mounted || _chatSheetOpen) return;
-          setState(() => _hasPendingSessionChatMessages = !_chatSheetOpen);
-          showNotificationPopup(
-            context,
-            icon: TotemIcons.chat,
-            title: 'New message',
-            message: next.message,
-            controller: _notificationController,
-          );
         },
       )
       ..listen(
@@ -312,25 +289,13 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         }
 
         if (turnState == TurnState.passing && amNext) {
-          return ReceiveTotemScreen(
-            actionBar: _buildActionBar(
-              ref,
-              session,
-              isMyTurn,
-            ),
-            onAcceptTotem: session.keeper.acceptTotem,
-          );
+          return ReceiveTotemScreen(onAcceptTotem: session.keeper.acceptTotem);
         }
 
         if (isMyTurn) {
           return Builder(
             builder: (context) {
               return MyTurn(
-                actionBar: _buildActionBar(
-                  ref,
-                  session,
-                  isMyTurn,
-                ),
                 onPassTotem: (roundMessage) async {
                   try {
                     await session.keeper.passTotem(roundMessage: roundMessage);
@@ -347,113 +312,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           );
         } else {
           return NotMyTurn(
-            actionBar: _buildActionBar(
-              ref,
-              session,
-              isMyTurn,
-            ),
             event: session.event!,
           );
         }
     }
-  }
-
-  Widget _buildActionBar(
-    WidgetRef ref,
-    SessionController session,
-    bool isMyTurn,
-  ) {
-    return Builder(
-      builder: (context) {
-        final participantKeys = ref.watch(sessionParticipantKeysProvider);
-        final user = session.room!.localParticipant!;
-
-        final isUserTileVisible =
-            participantKeys.getKey(user.identity).currentContext != null;
-
-        return ActionBar(
-          key: widget.actionBarKey,
-          children: [
-            ActionBarMicButton(
-              participant: user,
-              showSpeakingIndicator: !isUserTileVisible,
-              indicatorColor: Colors.black,
-              indicatorBarCount: 5,
-              onToggle: (shouldEnable) async {
-                if (shouldEnable) {
-                  await session.devices.enableMicrophone();
-                } else {
-                  await session.devices.disableMicrophone();
-                }
-              },
-            ),
-            ActionBarCameraButton(
-              participant: user,
-              onToggle: (shouldEnable) async {
-                if (shouldEnable) {
-                  await session.devices.enableCamera();
-                } else {
-                  await session.devices.disableCamera();
-                }
-              },
-            ),
-            if (!isMyTurn)
-              ActionBarEmojiButton(
-                onEmojiSelected: (emoji) {
-                  session.messaging.sendReaction(emoji);
-                },
-              ),
-            ActionBarButton(
-              semanticsLabel: 'Chat',
-              active: _chatSheetOpen,
-              onPressed: () async {
-                if (!mounted) return;
-                setState(() {
-                  _hasPendingSessionChatMessages = false;
-                  _chatSheetOpen = true;
-                });
-                await showSessionChatSheet(context);
-                if (!mounted) return;
-                setState(() => _chatSheetOpen = false);
-              },
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  const TotemIcon(TotemIcons.chat),
-                  if (_hasPendingSessionChatMessages)
-                    Container(
-                      height: 4,
-                      width: 4,
-                      decoration: const BoxDecoration(
-                        color: AppTheme.green,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 40,
-                maxHeight: 40,
-              ),
-              child: IconButton(
-                padding: EdgeInsetsDirectional.zero,
-                onPressed: () => showOptionsSheet(
-                  context,
-                  ref.read(currentSessionStateProvider)!,
-                  session.event!,
-                ),
-                icon: const TotemIcon(
-                  TotemIcons.more,
-                  color: Colors.white,
-                ),
-                tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
-              ),
-            ),
-          ],
-        );
-      },
-    );
   }
 }

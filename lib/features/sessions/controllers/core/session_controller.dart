@@ -41,6 +41,16 @@ class _SessionRoomMetadataResult {
   final String? lastMetadata;
 }
 
+enum RoomScreen {
+  error,
+  loading,
+  disconnected,
+  receiving,
+  passing,
+  myTurn,
+  notMyTurn,
+}
+
 @riverpod
 class SessionController extends _$SessionController {
   Room? _room;
@@ -526,6 +536,39 @@ class SessionController extends _$SessionController {
       roomState: null,
       lastMetadata: lastMetadata,
     );
+  }
+
+  RoomScreen resolveCurrentScreen() {
+    if (room == null) {
+      return RoomScreen.disconnected;
+    }
+    switch (state.connectionState) {
+      case RoomConnectionState.error:
+        return RoomScreen.error;
+      case RoomConnectionState.connecting:
+        return RoomScreen.loading;
+      case RoomConnectionState.disconnected:
+        return RoomScreen.disconnected;
+      case RoomConnectionState.connected:
+        if (state.roomState.status == RoomStatus.ended) {
+          return RoomScreen.disconnected;
+        }
+
+        if (room?.localParticipant == null) {
+          return RoomScreen.disconnected;
+        }
+
+        if (state.roomState.turnState == TurnState.passing &&
+            state.amNext(room!)) {
+          return RoomScreen.receiving;
+        }
+
+        if (state.isMyTurn(room!)) {
+          return RoomScreen.myTurn;
+        } else {
+          return RoomScreen.notMyTurn;
+        }
+    }
   }
 }
 

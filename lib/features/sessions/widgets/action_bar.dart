@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
+import 'package:totem_app/features/sessions/screens/options_sheet.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/popups.dart';
 
 class ActionBarButton extends StatelessWidget {
   const ActionBarButton({
@@ -107,7 +113,6 @@ class ActionBarMicButton extends StatefulWidget {
   const ActionBarMicButton({
     required this.participant,
     required this.onToggle,
-    this.showSpeakingIndicator = true,
     this.indicatorColor = Colors.black,
     this.indicatorBarCount = 5,
     super.key,
@@ -115,7 +120,6 @@ class ActionBarMicButton extends StatefulWidget {
 
   final LocalParticipant participant;
   final ActionBarButtonToggleCallback onToggle;
-  final bool showSpeakingIndicator;
   final Color indicatorColor;
   final int indicatorBarCount;
 
@@ -192,15 +196,13 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
       semanticsLabel: 'Microphone ${isEnabled ? 'on' : 'off'}',
       active: isEnabled,
       onPressed: _busy ? null : _toggleMicrophone,
-      child: isEnabled && widget.showSpeakingIndicator
+      child: isEnabled
           ? SpeakingIndicator(
               participant: widget.participant,
               foregroundColor: widget.indicatorColor,
               barCount: widget.indicatorBarCount,
             )
-          : TotemIcon(
-              isEnabled ? TotemIcons.microphoneOn : TotemIcons.microphoneOff,
-            ),
+          : const TotemIcon(TotemIcons.microphoneOff),
     );
   }
 }
@@ -332,5 +334,159 @@ class _ActionBarEmojiButtonState extends State<ActionBarEmojiButton> {
         );
       },
     );
+  }
+}
+
+class SessionActionBar extends ConsumerStatefulWidget {
+  const SessionActionBar({super.key});
+
+  @override
+  ConsumerState<SessionActionBar> createState() => _SessionActionBarState();
+
+  static final GlobalKey actionBarKey = GlobalKey();
+}
+
+class _SessionActionBarState extends ConsumerState<SessionActionBar> {
+  bool _chatSheetOpen = false;
+  bool _hasPendingSessionChatMessages = false;
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(
+      lastSessionMessageProvider,
+      (previous, next) {
+        if (next == null || identical(previous, next)) return;
+        if (!mounted || _chatSheetOpen) return;
+        setState(() => _hasPendingSessionChatMessages = !_chatSheetOpen);
+        showNotificationPopup(
+          context,
+          icon: TotemIcons.chat,
+          title: 'New message',
+          message: next.message,
+          // controller: _notificationController,
+        );
+      },
+    );
+    final session = ref.watch(currentSessionProvider)!;
+    final user = session.room!.localParticipant!;
+
+    final microphoneButton = ActionBarMicButton(
+      participant: user,
+      indicatorColor: Colors.black,
+      indicatorBarCount: 5,
+      onToggle: (shouldEnable) async {
+        if (shouldEnable) {
+          await session.devices.enableMicrophone();
+        } else {
+          await session.devices.disableMicrophone();
+        }
+      },
+    );
+
+    final cameraButton = ActionBarCameraButton(
+      participant: user,
+      onToggle: (shouldEnable) async {
+        if (shouldEnable) {
+          await session.devices.enableCamera();
+        } else {
+          await session.devices.disableCamera();
+        }
+      },
+    );
+
+    final emojiBarButton = ActionBarEmojiButton(
+      onEmojiSelected: (emoji) {
+        session.messaging.sendReaction(emoji);
+      },
+    );
+
+    final chatButton = ActionBarButton(
+      semanticsLabel: 'Chat',
+      active: _chatSheetOpen,
+      onPressed: () async {
+        if (!mounted) return;
+        setState(() {
+          _hasPendingSessionChatMessages = false;
+          _chatSheetOpen = true;
+        });
+        await showSessionChatSheet(context);
+        if (!mounted) return;
+        setState(() => _chatSheetOpen = false);
+      },
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          const TotemIcon(TotemIcons.chat),
+          if (_hasPendingSessionChatMessages)
+            Container(
+              height: 4,
+              width: 4,
+              decoration: const BoxDecoration(
+                color: AppTheme.green,
+                shape: BoxShape.circle,
+              ),
+            ),
+        ],
+      ),
+    );
+
+    final moreButton = ConstrainedBox(
+      constraints: const BoxConstraints(
+        maxWidth: 40,
+        maxHeight: 40,
+      ),
+      child: IconButton(
+        padding: EdgeInsetsDirectional.zero,
+        onPressed: () => showOptionsSheet(
+          context,
+          ref.read(currentSessionStateProvider)!,
+          session.event!,
+        ),
+        icon: const TotemIcon(
+          TotemIcons.more,
+          color: Colors.white,
+        ),
+        tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
+      ),
+    );
+
+    switch (session.resolveCurrentScreen()) {
+      case RoomScreen.error:
+      case RoomScreen.disconnected:
+      case RoomScreen.loading:
+        return const SizedBox.shrink();
+      case RoomScreen.notMyTurn:
+        return ActionBar(
+          key: SessionActionBar.actionBarKey,
+          children: [
+            microphoneButton,
+            cameraButton,
+            emojiBarButton,
+            chatButton,
+            moreButton,
+          ],
+        );
+      case RoomScreen.myTurn:
+      case RoomScreen.passing:
+        return ActionBar(
+          key: SessionActionBar.actionBarKey,
+          children: [
+            microphoneButton,
+            cameraButton,
+            chatButton,
+            moreButton,
+          ],
+        );
+      case RoomScreen.receiving:
+        return ActionBar(
+          key: SessionActionBar.actionBarKey,
+          children: [
+            microphoneButton,
+            cameraButton,
+            chatButton,
+            moreButton,
+          ],
+        );
+    }
   }
 }

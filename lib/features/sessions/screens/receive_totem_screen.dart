@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
@@ -10,12 +11,10 @@ import 'package:totem_app/shared/widgets/error_screen.dart';
 
 class ReceiveTotemScreen extends ConsumerWidget {
   const ReceiveTotemScreen({
-    required this.actionBar,
     required this.onAcceptTotem,
     super.key,
   });
 
-  final Widget actionBar;
   final Future<void> Function() onAcceptTotem;
 
   @override
@@ -112,7 +111,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
                       children: [
                         titleWidget,
                         receiveSlider,
-                        actionBar,
+                        const SessionActionBar(),
                       ],
                     ),
                   ),
@@ -127,7 +126,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
                     child: videoCard,
                   ),
                   receiveSlider,
-                  actionBar,
+                  const SessionActionBar(),
                 ],
               );
             }
