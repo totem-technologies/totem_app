@@ -54,36 +54,36 @@ class NextSessionCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(_borderRadius),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-          onTap: onTap ?? () => _navigateToSession(context),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildImage(),
-              Padding(
-                padding: const EdgeInsets.all(_contentPadding),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildMetadataRow(
-                      formattedDate: formattedDate,
-                      formattedTime: formattedTime,
-                      formattedTimePeriod: formattedTimePeriod,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildSpaceTitle(),
-                    const SizedBox(height: 4),
-                    _buildSessionTitle(),
-                    const SizedBox(height: 12),
-                    _buildAuthorRow(),
-                  ],
+            onTap: onTap ?? () => _navigateToSession(context),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildImage(),
+                Padding(
+                  padding: const EdgeInsets.all(_contentPadding),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildMetadataRow(
+                        formattedDate: formattedDate,
+                        formattedTime: formattedTime,
+                        formattedTimePeriod: formattedTimePeriod,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildSpaceTitle(),
+                      const SizedBox(height: 4),
+                      _buildSessionTitle(),
+                      const SizedBox(height: 12),
+                      _buildAuthorRow(),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
     );
   }
 
