@@ -141,7 +141,7 @@ void main() {
         find.byKey(EmojiReactions.emojiOverlayKey),
       );
 
-      final future = notifier.displayReaction(context, reaction);
+      final future = notifier.displayReaction(context, reaction, false);
 
       state = container.read(emojiReactionsProvider);
       expect(

@@ -789,7 +789,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   // Whether the track is inactive due to poor network conditions.
   bool _isTrackInactive = false;
   void _onTrackEvent(TrackEvent event) {
-    if (mounted) return;
+    if (!mounted) return;
     if (event is VideoReceiverStatsEvent) {
       final bitrate = event.currentBitrate;
       if (bitrate < 10) {

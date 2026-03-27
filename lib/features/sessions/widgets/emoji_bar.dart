@@ -318,9 +318,20 @@ class _RisingEmojiState extends State<RisingEmoji>
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
-    _opacityAnimation = Tween<double>(begin: 1, end: 0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
+    _opacityAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0, end: 1).chain(
+          CurveTween(curve: Curves.easeOut),
+        ),
+        weight: 8,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1, end: 0).chain(
+          CurveTween(curve: Curves.easeInOut),
+        ),
+        weight: 92,
+      ),
+    ]).animate(_controller);
 
     _amplitude = _random.nextDouble() * 30 + 20;
     _frequency = _random.nextDouble() * 2 + 2;
