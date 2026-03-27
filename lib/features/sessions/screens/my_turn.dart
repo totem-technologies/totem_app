@@ -11,8 +11,6 @@ import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
-import 'package:totem_app/shared/totem_icons.dart';
-import 'package:totem_app/shared/widgets/popups.dart';
 
 class MyTurn extends ConsumerStatefulWidget {
   const MyTurn({
@@ -31,22 +29,6 @@ class MyTurn extends ConsumerStatefulWidget {
 class _MyTurnState extends ConsumerState<MyTurn> {
   final roundMessageController = TextEditingController();
 
-  bool _hasShownSelfViewHiddenNotice = false;
-
-  // TODO(bdlukaa): This message should be shown once per session, not every time the user receives the totem.
-  void _showSelfViewHiddenNotice() {
-    if (_hasShownSelfViewHiddenNotice || !mounted) return;
-    _hasShownSelfViewHiddenNotice = true;
-
-    showNotificationPopup(
-      context,
-      icon: TotemIcons.info,
-      title: 'Your self-view is hidden',
-      message:
-          'As you share, your self-view is hidden. This is intentional, so you can settle in and speak freely.',
-    );
-  }
-
   @override
   void dispose() {
     roundMessageController.dispose();
@@ -60,12 +42,6 @@ class _MyTurnState extends ConsumerState<MyTurn> {
     final turnState = ref.watch(turnStateProvider);
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
     final nextUp = ref.watch(speakingNextParticipantProvider);
-
-    if (!_hasShownSelfViewHiddenNotice && turnState == TurnState.speaking) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showSelfViewHiddenNotice();
-      });
-    }
 
     return RoomBackground(
       status: roomStatus,

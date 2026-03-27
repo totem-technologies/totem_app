@@ -32,17 +32,34 @@ class ReceiveTotemScreen extends ConsumerWidget {
           builder: (context, orientation) {
             final isLandscape = orientation == Orientation.landscape;
 
-            final titleWidget = Padding(
-              padding: const EdgeInsetsDirectional.symmetric(horizontal: 50),
-              child: Text(
-                'The totem is being passed to you.',
-                style: theme.textTheme.titleLarge,
-                textAlign: TextAlign.center,
-              ),
+            final titleWidget = Column(
+              spacing: 16,
+              children: [
+                Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 50,
+                  ),
+                  child: Text(
+                    'The totem is being passed to you.',
+                    style: theme.textTheme.titleLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 16,
+                  ),
+                  child: Text(
+                    'As you share, your self-view is hidden. This is intentional, so you can settle in and speak freely.',
+                    style: theme.textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
             );
 
             final videoCard = Padding(
-              padding: const EdgeInsetsDirectional.all(20),
+              padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
               child: LocalParticipantCard(
                 isCameraOn:
                     session?.room?.localParticipant!.isCameraEnabled() ?? true,
