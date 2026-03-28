@@ -18,6 +18,9 @@ final class ReferralChoices {
       'newsletter' => newsletter,
       'dream' => dream,
       'other' => $other,
+      'chatgpt' => chatgpt,
+      'physical_media' => physicalMedia,
+      'friend' => friend,
       _ => ReferralChoices._(json),
     };
   }
@@ -40,6 +43,14 @@ final class ReferralChoices {
 
   static const ReferralChoices $other = ReferralChoices._('other');
 
+  static const ReferralChoices chatgpt = ReferralChoices._('chatgpt');
+
+  static const ReferralChoices physicalMedia = ReferralChoices._(
+    'physical_media',
+  );
+
+  static const ReferralChoices friend = ReferralChoices._('friend');
+
   static const List<ReferralChoices> values = [
     $default,
     search,
@@ -50,6 +61,9 @@ final class ReferralChoices {
     newsletter,
     dream,
     $other,
+    chatgpt,
+    physicalMedia,
+    friend,
   ];
 
   final String value;

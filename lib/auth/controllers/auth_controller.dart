@@ -138,6 +138,7 @@ class AuthController extends Notifier<AuthState> {
     required ReferralChoices? referralSource,
     required Set<String> interestTopics,
     required bool newsletterConsent,
+    String? referralOther,
   }) async {
     if (!isAuthenticated || state.user == null) {
       _setState(AuthState.error('User not authenticated for onboarding.'));
@@ -153,15 +154,13 @@ class AuthController extends Notifier<AuthState> {
         newsletterConsent: newsletterConsent,
       );
 
-      _authRepository
-          .completeOnboarding(
-            interestTopics: interestTopics,
-            referralSource: referralSource,
-            yearBorn: age == null ? null : (DateTime.now().year - age),
-          )
-          .then((_) {
-            logger.i('🔑 Onboard completed!');
-          });
+      await _authRepository.completeOnboarding(
+        interestTopics: interestTopics,
+        referralSource: referralSource,
+        referralOther: referralOther,
+        yearBorn: age == null ? null : (DateTime.now().year - age),
+      );
+      logger.i('🔑 Onboard completed!');
 
       _setState(AuthState.authenticated(user: updatedUser));
 

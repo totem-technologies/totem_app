@@ -35,6 +35,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
   final Set<String> _selectedTopics = <String>{};
   ReferralChoices? _referralSource;
+  String? _referralOther;
   bool _isLoading = false;
   bool _newsletterConsent = false;
 
@@ -73,6 +74,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           .completeOnboarding(
             firstName: _firstNameController.text.trim(),
             referralSource: _referralSource,
+            referralOther: _referralOther,
             interestTopics: _selectedTopics,
             age: int.tryParse(_ageController.text.trim()),
             newsletterConsent: _newsletterConsent,
@@ -117,8 +119,10 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             firstNameController: _firstNameController,
             ageController: _ageController,
             isLoading: _isLoading,
-            onReferralSourceSelected: (source) =>
-                setState(() => _referralSource = source),
+            onReferralSourceSelected: (source, other) => setState(() {
+              _referralSource = source;
+              _referralOther = other;
+            }),
             referralSource: _referralSource,
             newsletterConsent: _newsletterConsent,
             onNewsletterConsentChanged: (consent) =>
@@ -276,7 +280,7 @@ class _ProfileTab extends StatefulWidget {
   final TextEditingController ageController;
   final bool isLoading;
   final VoidCallback onContinue;
-  final ValueChanged<ReferralChoices> onReferralSourceSelected;
+  final void Function(ReferralChoices, String?) onReferralSourceSelected;
   final ReferralChoices? referralSource;
   final bool newsletterConsent;
   final ValueChanged<bool> onNewsletterConsentChanged;
@@ -412,13 +416,14 @@ class _ProfileTabState extends State<_ProfileTab>
         const SizedBox(height: 6),
         GestureDetector(
           onTap: () async {
-            final value = await showModalBottomSheet<ReferralChoices>(
-              isScrollControlled: true,
-              context: context,
-              builder: (context) => const ReferralSourceModal(),
-            );
+            final value =
+                await showModalBottomSheet<(ReferralChoices, String?)>(
+                  isScrollControlled: true,
+                  context: context,
+                  builder: (context) => const ReferralSourceModal(),
+                );
             if (value != null) {
-              widget.onReferralSourceSelected(value);
+              widget.onReferralSourceSelected(value.$1, value.$2);
             }
           },
           child: Container(
