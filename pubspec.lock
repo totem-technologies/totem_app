@@ -349,26 +349,26 @@ packages:
     dependency: "direct dev"
     description:
       name: degenerate
-      sha256: "02bd9ec0ec0fafe0ee818e09d280d1d1f58c0dc7c5a4c50f29c3aecd14983526"
+      sha256: "7fe40c2e78ee48000379bdad23cb3f50d09728fb6bc88432dbbe5505a35c6ee4"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.4"
+    version: "0.1.5"
   degenerate_dio:
     dependency: "direct main"
     description:
       name: degenerate_dio
-      sha256: "283d4809b41e8aeb6131f6d9fe11af4adc8a987a46ad7e2fdd41b802a05e2ea1"
+      sha256: "36af185198bd1124d35fc02363e315d629ec56809e634d033ab16eb18e7f9805"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.4"
+    version: "0.1.5"
   degenerate_runtime:
     dependency: transitive
     description:
       name: degenerate_runtime
-      sha256: "7742ee5236f2459e4c5bc24d297cec05d72126d3da4f1f209d66c0882eaa3b7d"
+      sha256: "2b912e5c40eb279c4acf5a1b75f8302ded46e6e1f383f73fb818a27088b69c27"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.4"
+    version: "0.1.5"
   device_info_plus:
     dependency: transitive
     description:
