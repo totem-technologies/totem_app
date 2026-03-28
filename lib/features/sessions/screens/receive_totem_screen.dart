@@ -18,6 +18,9 @@ class ReceiveTotemScreen extends ConsumerWidget {
     final sessionStatus = ref.watch(roomStatusProvider);
     final session = ref.watch(currentSessionProvider);
     final roundMessage = ref.watch(roundMessageProvider);
+    final isCameraOn = ref.watch(isCameraOnProvider);
+
+    print('is camera on $isCameraOn');
 
     return RoomBackground(
       status: sessionStatus,
@@ -56,8 +59,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
             final videoCard = Padding(
               padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
               child: LocalParticipantCard(
-                isCameraOn:
-                    session?.room?.localParticipant?.isCameraEnabled() ?? true,
+                isCameraOn: isCameraOn,
                 videoTrack: session?.devices.localVideoTrack,
               ),
             );

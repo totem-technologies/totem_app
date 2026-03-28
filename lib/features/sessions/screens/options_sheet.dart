@@ -11,6 +11,7 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart'
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/widgets/banned_participants_sheet.dart';
 import 'package:totem_app/features/sessions/widgets/participant_reorder_sheet.dart';
@@ -64,6 +65,9 @@ class OptionsSheet extends ConsumerWidget {
     final theme = Theme.of(context);
     final currentSession = ref.watch(currentSessionProvider)!;
     final state = ref.watch(currentSessionStateProvider)!;
+    final deviceState = ref.watch(
+      sessionDeviceControllerProvider(currentSession),
+    );
 
     final isKeeper = currentSession.isCurrentUserKeeper();
 
@@ -120,8 +124,8 @@ class OptionsSheet extends ConsumerWidget {
               //   ),
               OptionsSheetTile.output(
                 AudioOutputOptions(
-                  speakerOn: state.isSpeakerphoneEnabled,
-                  deviceId: currentSession.devices.selectedAudioOutputDeviceId,
+                  speakerOn: deviceState.isSpeakerphoneEnabled,
+                  deviceId: deviceState.selectedAudioOutputDeviceId,
                 ),
                 (options) {
                   if (options.speakerOn != null) {

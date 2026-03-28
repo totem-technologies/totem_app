@@ -120,6 +120,9 @@ class SessionInfraController extends _$SessionInfraController {
       final minutesLeft = endTime.difference(DateTime.now()).inMinutes;
 
       await FlutterForegroundTask.updateService(
+        notificationIcon: const NotificationIcon(
+          metaDataName: 'ic_launcher',
+        ),
         notificationTitle: event.title,
         notificationText: minutesLeft.isNegative
             ? 'at ${event.space.title}'

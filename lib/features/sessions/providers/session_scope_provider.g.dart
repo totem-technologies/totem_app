@@ -1316,3 +1316,55 @@ final class AmNextSpeakerProvider extends $FunctionalProvider<bool, bool, bool>
 }
 
 String _$amNextSpeakerHash() => r'fac9121165d1dc018fb2fc96eadf53038b0a264b';
+
+@ProviderFor(isCameraOn)
+final isCameraOnProvider = IsCameraOnProvider._();
+
+final class IsCameraOnProvider extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  IsCameraOnProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'isCameraOnProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[
+          currentSessionProvider,
+          currentSessionStateProvider,
+        ],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          IsCameraOnProvider.$allTransitiveDependencies0,
+          IsCameraOnProvider.$allTransitiveDependencies1,
+          IsCameraOnProvider.$allTransitiveDependencies2,
+        ],
+      );
+
+  static final $allTransitiveDependencies0 = currentSessionProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 = currentSessionStateProvider;
+
+  @override
+  String debugGetCreateSourceHash() => _$isCameraOnHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return isCameraOn(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$isCameraOnHash() => r'8cd38fa32a571a61e9d32c8a2d998297e0619957';

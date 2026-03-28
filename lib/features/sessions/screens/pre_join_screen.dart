@@ -207,6 +207,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
     try {
       _previewAudioTrack = await LocalAudioTrack.create();
+      await _previewAudioTrack!.enable();
       await _previewAudioTrack!.start();
     } catch (error, stackTrace) {
       _isMicOn = false;

@@ -55,15 +55,6 @@ class SessionStateReducer {
           chat: current.chat,
           turn: current.turn,
         );
-      case SpeakerphoneChanged():
-        return SessionRoomState(
-          connection: current.connection,
-          participants: current.participants,
-          chat: current.chat,
-          turn: current.turn.copyWith(
-            isSpeakerphoneEnabled: event.isSpeakerphoneEnabled,
-          ),
-        );
       case SessionErrorChanged():
         return SessionRoomState(
           connection: current.connection.copyWith(

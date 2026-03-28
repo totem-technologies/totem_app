@@ -5,6 +5,7 @@ import 'package:livekit_client/livekit_client.dart'
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 
 part 'session_scope_provider.g.dart';
 
@@ -246,4 +247,12 @@ bool amNextSpeaker(Ref ref) {
   final state = ref.watch(currentSessionStateProvider);
   if (currentSession?.room == null || state == null) return false;
   return state.amNext(currentSession!.room!);
+}
+
+@Riverpod(dependencies: [currentSession, currentSessionState])
+bool isCameraOn(Ref ref) {
+  final session = ref.watch(currentSessionProvider);
+  if (session == null) return false;
+  final devices = ref.watch(sessionDeviceControllerProvider(session));
+  return devices.isCameraEnabled;
 }

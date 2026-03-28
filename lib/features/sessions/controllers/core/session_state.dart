@@ -154,33 +154,26 @@ class ChatState {
 class SessionTurnState {
   const SessionTurnState({
     required this.roomState,
-    this.isSpeakerphoneEnabled = false,
   });
 
   final RoomState roomState;
-  final bool isSpeakerphoneEnabled;
 
   SessionTurnState copyWith({
     RoomState? roomState,
-    bool? isSpeakerphoneEnabled,
   }) {
     return SessionTurnState(
       roomState: roomState ?? this.roomState,
-      isSpeakerphoneEnabled:
-          isSpeakerphoneEnabled ?? this.isSpeakerphoneEnabled,
     );
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is SessionTurnState &&
-        other.roomState == roomState &&
-        other.isSpeakerphoneEnabled == isSpeakerphoneEnabled;
+    return other is SessionTurnState && other.roomState == roomState;
   }
 
   @override
-  int get hashCode => roomState.hashCode ^ isSpeakerphoneEnabled.hashCode;
+  int get hashCode => roomState.hashCode;
 }
 
 @immutable
@@ -234,7 +227,6 @@ class SessionRoomState {
   bool get hasKeeperDisconnected => participants.hasKeeperDisconnected;
   List<Participant> get participantsList => participants.participants;
   bool get removed => participants.removed;
-  bool get isSpeakerphoneEnabled => turn.isSpeakerphoneEnabled;
   List<SessionChatMessage> get messages => chat.messages;
 
   DisconnectReason? get disconnectReason {
@@ -303,7 +295,6 @@ class SessionRoomState {
         'error: ${connection.error}, '
         'participants: ${participants.participants.length}, '
         'removed: ${participants.removed}, '
-        'isSpeakerphoneEnabled: ${turn.isSpeakerphoneEnabled}, '
         'messages: ${chat.messages.length}'
         ')';
   }

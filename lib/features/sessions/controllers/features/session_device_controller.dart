@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:audio_session/audio_session.dart' as audio;
 import 'package:collection/collection.dart';
+import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
@@ -13,10 +14,90 @@ import 'package:totem_app/shared/logger.dart';
 
 part 'session_device_controller.g.dart';
 
+@immutable
+class SessionDeviceState {
+  const SessionDeviceState({
+    required this.selectedCameraDeviceId,
+    required this.selectedAudioDeviceId,
+    required this.selectedAudioOutputDeviceId,
+    required this.isSpeakerphoneEnabled,
+    required this.isMicrophoneEnabled,
+    required this.isCameraEnabled,
+  });
+
+  final String? selectedCameraDeviceId;
+  final String? selectedAudioDeviceId;
+  final String? selectedAudioOutputDeviceId;
+  final bool isSpeakerphoneEnabled;
+  final bool isMicrophoneEnabled;
+  final bool isCameraEnabled;
+
+  SessionDeviceState copyWith({
+    String? selectedCameraDeviceId,
+    String? selectedAudioDeviceId,
+    String? selectedAudioOutputDeviceId,
+    bool? isSpeakerphoneEnabled,
+    bool? isMicrophoneEnabled,
+    bool? isCameraEnabled,
+  }) {
+    return SessionDeviceState(
+      selectedCameraDeviceId:
+          selectedCameraDeviceId ?? this.selectedCameraDeviceId,
+      selectedAudioDeviceId:
+          selectedAudioDeviceId ?? this.selectedAudioDeviceId,
+      selectedAudioOutputDeviceId:
+          selectedAudioOutputDeviceId ?? this.selectedAudioOutputDeviceId,
+      isSpeakerphoneEnabled:
+          isSpeakerphoneEnabled ?? this.isSpeakerphoneEnabled,
+      isMicrophoneEnabled: isMicrophoneEnabled ?? this.isMicrophoneEnabled,
+      isCameraEnabled: isCameraEnabled ?? this.isCameraEnabled,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! SessionDeviceState) return false;
+    return other.selectedCameraDeviceId == selectedCameraDeviceId &&
+        other.selectedAudioDeviceId == selectedAudioDeviceId &&
+        other.selectedAudioOutputDeviceId == selectedAudioOutputDeviceId &&
+        other.isSpeakerphoneEnabled == isSpeakerphoneEnabled &&
+        other.isMicrophoneEnabled == isMicrophoneEnabled &&
+        other.isCameraEnabled == isCameraEnabled;
+  }
+
+  @override
+  int get hashCode {
+    return selectedCameraDeviceId.hashCode ^
+        selectedAudioDeviceId.hashCode ^
+        selectedAudioOutputDeviceId.hashCode ^
+        isSpeakerphoneEnabled.hashCode ^
+        isMicrophoneEnabled.hashCode ^
+        isCameraEnabled.hashCode;
+  }
+}
+
 @Riverpod(keepAlive: true)
 class SessionDeviceController extends _$SessionDeviceController {
+  SessionDeviceState _currentState() {
+    return SessionDeviceState(
+      selectedCameraDeviceId: selectedCameraDeviceId,
+      selectedAudioDeviceId: selectedAudioDeviceId,
+      selectedAudioOutputDeviceId: selectedAudioOutputDeviceId,
+      isSpeakerphoneEnabled: isSpeakerphoneEnabled,
+      isMicrophoneEnabled: isMicrophoneEnabled,
+      isCameraEnabled: isCameraEnabled,
+    );
+  }
+
+  void _emitState() {
+    state = _currentState();
+  }
+
   @override
-  void build(SessionController session) {}
+  SessionDeviceState build(SessionController session) {
+    return _currentState();
+  }
 
   Room? get _room => this.session.room;
 
@@ -56,6 +137,8 @@ class SessionDeviceController extends _$SessionDeviceController {
       if (hasExternalOutput) {
         _hasExternalOutput = true;
         await _autoSetSpeakerphone(false);
+      } else {
+        _emitState();
       }
 
       _becomingNoisySubscription = session.becomingNoisyEventStream.listen((_) {
@@ -83,6 +166,8 @@ class SessionDeviceController extends _$SessionDeviceController {
           logger.i('External audio output disconnected, switching to speaker.');
           _hasExternalOutput = false;
           unawaited(_autoSetSpeakerphone(true));
+        } else {
+          _emitState();
         }
       });
     } catch (error, stackTrace) {
@@ -144,7 +229,7 @@ class SessionDeviceController extends _$SessionDeviceController {
         message: 'Failed to switch camera position',
       );
     } finally {
-      ref.notifyListeners();
+      _emitState();
     }
   }
 
@@ -163,7 +248,7 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   Future<void> _autoSetSpeakerphone(bool enabled) async {
     await _room?.setSpeakerOn(enabled);
-    this.session.onSpeakerphoneChanged(enabled);
+    _emitState();
   }
 
   String? get selectedAudioDeviceId => localAudioTrack?.currentOptions.deviceId;
@@ -183,7 +268,7 @@ class SessionDeviceController extends _$SessionDeviceController {
 
     // See https://github.com/livekit/client-sdk-flutter/issues/959
     await room?.setAudioInputDevice(device);
-    ref.notifyListeners();
+    _emitState();
   }
 
   String? get selectedAudioOutputDeviceId {
@@ -198,7 +283,7 @@ class SessionDeviceController extends _$SessionDeviceController {
   Future<void> selectAudioOutputDevice(MediaDevice device) async {
     // See https://github.com/livekit/client-sdk-flutter/issues/858
     await _room?.setAudioOutputDevice(device);
-    ref.notifyListeners();
+    _emitState();
   }
 
   bool get isMicrophoneEnabled =>
@@ -215,7 +300,7 @@ class SessionDeviceController extends _$SessionDeviceController {
     if (room?.localParticipant != null) {
       await room?.localParticipant?.setMicrophoneEnabled(true);
     }
-    ref.notifyListeners();
+    _emitState();
   }
 
   Future<void> disableMicrophone() async {
@@ -225,7 +310,7 @@ class SessionDeviceController extends _$SessionDeviceController {
     }
     try {
       await room?.localParticipant?.setMicrophoneEnabled(false);
-      ref.notifyListeners();
+      _emitState();
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -235,8 +320,23 @@ class SessionDeviceController extends _$SessionDeviceController {
     }
   }
 
-  bool get isCameraEnabled =>
-      _room?.localParticipant?.isCameraEnabled() ?? false;
+  TrackPublication<Track>? get _cameraPublication {
+    return _room?.localParticipant?.getTrackPublicationBySource(
+      TrackSource.camera,
+    );
+  }
+
+  bool get _isCameraEnabled {
+    final publication = _cameraPublication;
+    if (publication == null) return false;
+
+    final track = publication.track;
+    final isMuted = track?.muted ?? publication.muted;
+    final isActive = track?.isActive ?? true;
+    return isActive && !isMuted;
+  }
+
+  bool get isCameraEnabled => _isCameraEnabled;
 
   Future<void> enableCamera() async {
     final room = _room;
@@ -251,7 +351,7 @@ class SessionDeviceController extends _$SessionDeviceController {
           ),
     );
 
-    ref.notifyListeners();
+    _emitState();
   }
 
   Future<void> disableCamera() async {
@@ -261,7 +361,7 @@ class SessionDeviceController extends _$SessionDeviceController {
     }
     await room?.localParticipant?.setCameraEnabled(false);
 
-    ref.notifyListeners();
+    _emitState();
   }
 
   Future<void> dispose() async {
