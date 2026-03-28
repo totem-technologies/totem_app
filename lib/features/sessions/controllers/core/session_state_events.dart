@@ -36,12 +36,6 @@ class ParticipantRemoved extends SessionEvent {
   const ParticipantRemoved();
 }
 
-class SpeakerphoneChanged extends SessionEvent {
-  const SpeakerphoneChanged(this.isSpeakerphoneEnabled);
-
-  final bool isSpeakerphoneEnabled;
-}
-
 class SessionErrorChanged extends SessionEvent {
   const SessionErrorChanged(this.error);
 

@@ -13,7 +13,7 @@ part of 'session_device_controller.dart';
 final sessionDeviceControllerProvider = SessionDeviceControllerFamily._();
 
 final class SessionDeviceControllerProvider
-    extends $NotifierProvider<SessionDeviceController, void> {
+    extends $NotifierProvider<SessionDeviceController, SessionDeviceState> {
   SessionDeviceControllerProvider._({
     required SessionDeviceControllerFamily super.from,
     required SessionController super.argument,
@@ -40,10 +40,10 @@ final class SessionDeviceControllerProvider
   SessionDeviceController create() => SessionDeviceController();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(void value) {
+  Override overrideWithValue(SessionDeviceState value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<void>(value),
+      providerOverride: $SyncValueProvider<SessionDeviceState>(value),
     );
   }
 
@@ -60,15 +60,15 @@ final class SessionDeviceControllerProvider
 }
 
 String _$sessionDeviceControllerHash() =>
-    r'2c9f768706a19e186852781e4f9de26bed78c9b3';
+    r'7d8269157419c7ef40c73e6592e76cc91830888c';
 
 final class SessionDeviceControllerFamily extends $Family
     with
         $ClassFamilyOverride<
           SessionDeviceController,
-          void,
-          void,
-          void,
+          SessionDeviceState,
+          SessionDeviceState,
+          SessionDeviceState,
           SessionController
         > {
   SessionDeviceControllerFamily._()
@@ -87,20 +87,20 @@ final class SessionDeviceControllerFamily extends $Family
   String toString() => r'sessionDeviceControllerProvider';
 }
 
-abstract class _$SessionDeviceController extends $Notifier<void> {
+abstract class _$SessionDeviceController extends $Notifier<SessionDeviceState> {
   late final _$args = ref.$arg as SessionController;
   SessionController get session => _$args;
 
-  void build(SessionController session);
+  SessionDeviceState build(SessionController session);
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<void, void>;
+    final ref = this.ref as $Ref<SessionDeviceState, SessionDeviceState>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<void, void>,
-              void,
+              AnyNotifier<SessionDeviceState, SessionDeviceState>,
+              SessionDeviceState,
               Object?,
               Object?
             >;

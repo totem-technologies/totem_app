@@ -126,7 +126,6 @@ class FeaturedParticipantCard extends ConsumerWidget {
                               color: Colors.black54,
                               boxShadow: kElevationToShadow[6],
                             ),
-                            padding: const EdgeInsetsDirectional.all(4),
                             child: SpeakingIndicatorOrEmoji(
                               participant: activeSpeaker,
                               backgroundColor: Colors.transparent,
@@ -170,8 +169,8 @@ class FeaturedParticipantCard extends ConsumerWidget {
                           ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(42),
-                            color: Colors.white.withValues(alpha: 0.3),
-                            boxShadow: kElevationToShadow[6],
+                            color: Colors.black54,
+                            boxShadow: kElevationToShadow[1],
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -232,104 +231,72 @@ class ParticipantCard extends ConsumerWidget {
     return RepaintBoundary(
       child: AspectRatio(
         aspectRatio: 16 / 21,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(borderRadius),
-            border: Border.all(
-              color: isKeeper ? AppTheme.yellow : Colors.white,
-              width: 2,
-            ),
-            boxShadow: isKeeper
-                ? const [
-                    BoxShadow(
-                      offset: Offset(0, 3),
-                      blurRadius: 1,
-                      spreadRadius: -2,
-                      color: AppTheme.yellow,
-                    ),
-                    BoxShadow(
-                      offset: Offset(0, 2),
-                      blurRadius: 2,
-                      color: AppTheme.yellow,
-                    ),
-                    BoxShadow(
-                      offset: Offset(0, 1),
-                      blurRadius: 5,
-                      color: AppTheme.yellow,
-                    ),
-                  ]
-                : null,
-          ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(borderRadius),
           clipBehavior: Clip.hardEdge,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(borderRadius - 2),
-            clipBehavior: Clip.hardEdge,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned.fill(
-                  child: ParticipantVideo(
-                    participant: participant,
-                    preferredVideoQuality: VideoQuality.MEDIUM,
-                  ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: ParticipantVideo(
+                  participant: participant,
+                  preferredVideoQuality: VideoQuality.MEDIUM,
                 ),
+              ),
+              PositionedDirectional(
+                top: overlayPadding,
+                start: overlayPadding,
+                child: SpeakingIndicatorOrEmoji(participant: participant),
+              ),
+              if (session != null &&
+                  currentUserIsKeeper &&
+                  currentUserSlug != participant.identity)
+                PositionedDirectional(
+                  end: overlayPadding,
+                  top: overlayPadding,
+                  child: ParticipantControlButton(
+                    participant: participant,
+                    overlayPadding: overlayPadding,
+                  ),
+                )
+              else if (isKeeper)
                 PositionedDirectional(
                   top: overlayPadding,
-                  start: overlayPadding,
-                  child: SpeakingIndicatorOrEmoji(participant: participant),
-                ),
-                if (session != null &&
-                    currentUserIsKeeper &&
-                    currentUserSlug != participant.identity)
-                  PositionedDirectional(
-                    end: overlayPadding,
-                    top: overlayPadding,
-                    child: ParticipantControlButton(
-                      participant: participant,
-                      overlayPadding: overlayPadding,
+                  end: overlayPadding,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black54,
+                      boxShadow: kElevationToShadow[6],
                     ),
-                  )
-                else if (isKeeper)
-                  PositionedDirectional(
-                    top: overlayPadding,
-                    end: overlayPadding,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.black54,
-                        boxShadow: kElevationToShadow[6],
-                      ),
-                      padding: const EdgeInsetsDirectional.all(4),
-                      child: const TotemIconLogo(
-                        color: AppTheme.white,
-                        size: 16,
-                      ),
-                    ),
-                  ),
-                PositionedDirectional(
-                  bottom: 8,
-                  start: 8,
-                  end: 8,
-                  child: SmartNameText(
-                    name: participant.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      shadows: [
-                        Shadow(
-                          offset: Offset(0, 1),
-                          blurRadius: 4,
-                        ),
-                      ],
+                    padding: const EdgeInsetsDirectional.all(4),
+                    child: const TotemIconLogo(
+                      color: AppTheme.white,
+                      size: 16,
                     ),
                   ),
                 ),
-              ],
-            ),
+              PositionedDirectional(
+                bottom: 8,
+                start: 8,
+                end: 8,
+                child: SmartNameText(
+                  name: participant.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    shadows: [
+                      Shadow(
+                        offset: Offset(0, 1),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -601,8 +568,8 @@ class ParticipantControlButton extends ConsumerWidget {
   }
 }
 
-class LocalParticipantVideoCard extends ConsumerWidget {
-  const LocalParticipantVideoCard({
+class LocalParticipantCard extends ConsumerWidget {
+  const LocalParticipantCard({
     this.isCameraOn = true,
     this.audioTrack,
     this.videoTrack,
@@ -620,88 +587,79 @@ class LocalParticipantVideoCard extends ConsumerWidget {
       authControllerProvider.select((auth) => auth.user),
     );
 
-    const overlayPadding = 12.0;
+    // const overlayPadding = 12.0;
 
     final isVideoTrackVisible =
         videoTrack != null && videoTrack!.isActive && !videoTrack!.muted;
-    return Container(
-      alignment: Alignment.center,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: theme.colorScheme.primary, width: 2),
-        ),
-        clipBehavior: Clip.antiAliasWithSaveLayer,
-        child: ClipRRect(
-          // radius - border width
-          borderRadius: BorderRadius.circular(30 - 2),
-          child: AspectRatio(
-            aspectRatio: 16 / 21,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (isVideoTrackVisible)
-                  IgnorePointer(
-                    child: VideoTrackRenderer(
-                      videoTrack!,
-                      fit: VideoViewFit.cover,
-                      renderMode: VideoRenderMode.platformView,
-                    ),
-                  )
-                else
-                  const LoadingVideoPlaceholder(),
-                AnimatedOpacity(
-                  opacity: (!isCameraOn || !isVideoTrackVisible) ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 10),
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: UserAvatar.currentUser(
-                            radius: 0,
-                            borderRadius: BorderRadius.zero,
-                            borderWidth: 0,
-                          ),
-                        ),
-                      ),
-                      PositionedDirectional(
-                        bottom: 14,
-                        start: 14,
-                        end: 14,
-                        child: AutoSizeText(
-                          user?.name ?? 'You',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            shadows: kElevationToShadow[6],
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                        ),
-                      ),
-                    ],
-                  ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(30),
+      child: AspectRatio(
+        aspectRatio: 16 / 21,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            const Positioned.fill(child: ColoredBox(color: Colors.black)),
+            if (isVideoTrackVisible)
+              IgnorePointer(
+                child: VideoTrackRenderer(
+                  videoTrack!,
+                  fit: VideoViewFit.cover,
+                  renderMode: VideoRenderMode.platformView,
                 ),
-                PositionedDirectional(
-                  top: overlayPadding,
-                  start: overlayPadding,
-                  child: Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.black54,
-                      boxShadow: kElevationToShadow[6],
+              )
+            else
+              const LoadingVideoPlaceholder(),
+            AnimatedOpacity(
+              opacity: (!isCameraOn || !isVideoTrackVisible) ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 10),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: UserAvatar.currentUser(
+                        radius: 0,
+                        borderRadius: BorderRadius.zero,
+                        borderWidth: 0,
+                      ),
                     ),
-                    padding: const EdgeInsetsDirectional.all(4),
-                    alignment: Alignment.center,
-                    child: SpeakingIndicatorAudioTrack(audioTrack: audioTrack),
                   ),
-                ),
-              ],
+                  PositionedDirectional(
+                    bottom: 14,
+                    start: 14,
+                    end: 14,
+                    child: AutoSizeText(
+                      user?.name ?? 'You',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        shadows: kElevationToShadow[6],
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+            // TODO(totem): The audio indicator doesn't work for local tracks
+            // https://github.com/livekit/client-sdk-flutter/issues/1044
+            // PositionedDirectional(
+            //   top: overlayPadding,
+            //   start: overlayPadding,
+            //   child: Container(
+            //     width: 24,
+            //     height: 24,
+            //     decoration: BoxDecoration(
+            //       shape: BoxShape.circle,
+            //       color: Colors.black54,
+            //       boxShadow: kElevationToShadow[6],
+            //     ),
+            //     padding: const EdgeInsetsDirectional.all(4),
+            //     alignment: Alignment.center,
+            //     child: SpeakingIndicatorAudioTrack(audioTrack: audioTrack),
+            //   ),
+            // ),
+          ],
         ),
       ),
     );
@@ -744,8 +702,8 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   EventsListener<ParticipantEvent>? _listener;
   EventsListener<TrackEvent>? _trackListener;
   VideoQuality? _lastAppliedQuality;
-  String? _lastAppliedTrackSid;
   String? _listenedTrackSid;
+  Timer? _qualityRetryTimer;
 
   void _setupListeners() {
     _listener?.dispose();
@@ -759,8 +717,8 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
   void _bindTrackListener() {
     final publication = videoTrack;
-    final trackSid = publication?.sid;
     final track = publication?.track;
+    final trackSid = track?.sid;
 
     if (_listenedTrackSid == trackSid && _trackListener != null) {
       return;
@@ -775,20 +733,30 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     }
   }
 
+  void _scheduleQualityUpdateBurst() {
+    _qualityRetryTimer?.cancel();
+    scheduleMicrotask(_applyPreferredRemoteQuality);
+    _qualityRetryTimer = Timer.periodic(const Duration(milliseconds: 300), (
+      timer,
+    ) {
+      if (!mounted || timer.tick >= 3) {
+        timer.cancel();
+        return;
+      }
+      scheduleMicrotask(_applyPreferredRemoteQuality);
+    });
+  }
+
   Future<void> _applyPreferredRemoteQuality() async {
     final publication = videoTrack;
     if (publication == null) return;
     if (publication is! RemoteTrackPublication<RemoteTrack>) return;
 
     final desired = widget.preferredVideoQuality;
-    final sameTrack = _lastAppliedTrackSid == publication.sid;
-    final sameQuality = _lastAppliedQuality == desired;
-    if (sameTrack && sameQuality) return;
 
     try {
       final previousQuality = _lastAppliedQuality;
       await publication.setVideoQuality(desired);
-      _lastAppliedTrackSid = publication.sid;
       _lastAppliedQuality = desired;
       logger.i(
         'Participant video quality changed '
@@ -808,13 +776,14 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   void initState() {
     super.initState();
     _setupListeners();
-    scheduleMicrotask(_applyPreferredRemoteQuality);
+    _scheduleQualityUpdateBurst();
   }
 
   void _onTrackMuted(TrackMutedEvent event) {
     if (event.publication.source != TrackSource.camera) return;
     if (!mounted) return;
     _bindTrackListener();
+    _scheduleQualityUpdateBurst();
     setState(() {});
   }
 
@@ -822,26 +791,27 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     if (event.publication.source != TrackSource.camera) return;
     if (!mounted) return;
     _bindTrackListener();
+    _scheduleQualityUpdateBurst();
     setState(() {});
   }
 
   // Whether the track is inactive due to poor network conditions.
   bool _isTrackInactive = false;
   void _onTrackEvent(TrackEvent event) {
+    if (!mounted) return;
     if (event is VideoReceiverStatsEvent) {
       final bitrate = event.currentBitrate;
       if (bitrate < 10) {
-        _isTrackInactive = true;
-      } else if (_isTrackInactive) {
-        _isTrackInactive = false;
+        setState(() => _isTrackInactive = true);
+      } else {
+        setState(() => _isTrackInactive = false);
       }
     }
-    if (mounted) setState(() {});
   }
 
   void _onParticipantUpdated(ParticipantEvent _) {
     _bindTrackListener();
-    scheduleMicrotask(_applyPreferredRemoteQuality);
+    _scheduleQualityUpdateBurst();
     if (mounted) setState(() {});
   }
 
@@ -854,12 +824,13 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     if (oldWidget.preferredVideoQuality != widget.preferredVideoQuality ||
         oldWidget.participant.identity != widget.participant.identity ||
         oldWidget.participant.sid != widget.participant.sid) {
-      scheduleMicrotask(_applyPreferredRemoteQuality);
+      _scheduleQualityUpdateBurst();
     }
   }
 
   @override
   void dispose() {
+    _qualityRetryTimer?.cancel();
     _listener?.dispose();
     _trackListener?.dispose();
     super.dispose();
@@ -875,15 +846,18 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         !track.muted &&
         !_isTrackInactive) {
       return IgnorePointer(
-        child: VideoTrackRenderer(
-          key: ValueKey(track.track!.sid),
-          track.track! as VideoTrack,
-          fit: VideoViewFit.cover,
-          // Use platform view for better CPU performance on iOS.
-          // The [VideoTrackRenderer] widget only supports platform views for iOS.
-          // On Android, it will still use the default texture rendering.
-          // https://github.com/livekit/client-sdk-flutter/issues/364
-          renderMode: VideoRenderMode.platformView,
+        child: ColoredBox(
+          color: Colors.black,
+          child: VideoTrackRenderer(
+            key: ValueKey(track.track!.sid),
+            track.track! as VideoTrack,
+            fit: VideoViewFit.cover,
+            // Use platform view for better CPU performance on iOS.
+            // The [VideoTrackRenderer] widget only supports platform views for iOS.
+            // On Android, it will still use the default texture rendering.
+            // https://github.com/livekit/client-sdk-flutter/issues/364
+            renderMode: VideoRenderMode.platformView,
+          ),
         ),
       );
     } else {

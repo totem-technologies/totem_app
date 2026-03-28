@@ -94,6 +94,7 @@ class EmojiReactions extends _$EmojiReactions {
   Future<void> displayReaction(
     BuildContext context,
     SessionEmojiReaction reaction,
+    bool isInNotMyTurnScreen,
   ) async {
     state = state
         .map((r) => r == reaction ? r.copyWith(displayed: true) : r)
@@ -103,6 +104,7 @@ class EmojiReactions extends _$EmojiReactions {
         context,
         reaction.emoji,
         overlayKey: EmojiReactions.emojiOverlayKey,
+        isInNotMyTurnScreen: isInNotMyTurnScreen,
       );
     } finally {
       state = state.where((e) => e != reaction).toList();

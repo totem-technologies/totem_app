@@ -5,6 +5,7 @@ import 'package:livekit_client/livekit_client.dart'
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 
 part 'session_scope_provider.g.dart';
 
@@ -86,6 +87,43 @@ TurnState turnState(Ref ref) {
         currentSessionStateProvider.select((s) => s?.roomState.turnState),
       ) ??
       TurnState.idle;
+}
+
+@Riverpod(dependencies: [currentSession, currentSessionState, connectionState])
+RoomScreen? resolveCurrentScreen(Ref ref) {
+  final session = ref.watch(currentSessionProvider);
+  final sessionState = ref.watch(currentSessionStateProvider);
+  final connectionState = ref.watch(connectionStateProvider);
+  if (session?.room == null) {
+    return RoomScreen.disconnected;
+  }
+  switch (connectionState) {
+    case RoomConnectionState.error:
+      return RoomScreen.error;
+    case RoomConnectionState.connecting:
+      return RoomScreen.loading;
+    case RoomConnectionState.disconnected:
+      return RoomScreen.disconnected;
+    case RoomConnectionState.connected:
+      if (sessionState?.roomState.status == RoomStatus.ended) {
+        return RoomScreen.disconnected;
+      }
+
+      if (session?.room?.localParticipant == null) {
+        return RoomScreen.disconnected;
+      }
+
+      if (sessionState?.roomState.turnState == TurnState.passing &&
+          sessionState!.amNext(session!.room!)) {
+        return RoomScreen.receiving;
+      }
+
+      if (sessionState!.isMyTurn(session!.room!)) {
+        return RoomScreen.myTurn;
+      } else {
+        return RoomScreen.notMyTurn;
+      }
+  }
 }
 
 /// The list of participants in the session.
@@ -209,4 +247,12 @@ bool amNextSpeaker(Ref ref) {
   final state = ref.watch(currentSessionStateProvider);
   if (currentSession?.room == null || state == null) return false;
   return state.amNext(currentSession!.room!);
+}
+
+@Riverpod(dependencies: [currentSession, currentSessionState])
+bool isCameraOn(Ref ref) {
+  final session = ref.watch(currentSessionProvider);
+  if (session == null) return false;
+  final devices = ref.watch(sessionDeviceControllerProvider(session));
+  return devices.isCameraEnabled;
 }

@@ -442,6 +442,63 @@ final class TurnStateProvider
 
 String _$turnStateHash() => r'2681884a14fea31b39e8e90e59ff498adad7720e';
 
+@ProviderFor(resolveCurrentScreen)
+final resolveCurrentScreenProvider = ResolveCurrentScreenProvider._();
+
+final class ResolveCurrentScreenProvider
+    extends $FunctionalProvider<RoomScreen?, RoomScreen?, RoomScreen?>
+    with $Provider<RoomScreen?> {
+  ResolveCurrentScreenProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'resolveCurrentScreenProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[
+          currentSessionProvider,
+          currentSessionStateProvider,
+          connectionStateProvider,
+        ],
+        $allTransitiveDependencies: <ProviderOrFamily>{
+          ResolveCurrentScreenProvider.$allTransitiveDependencies0,
+          ResolveCurrentScreenProvider.$allTransitiveDependencies1,
+          ResolveCurrentScreenProvider.$allTransitiveDependencies2,
+          ResolveCurrentScreenProvider.$allTransitiveDependencies3,
+        },
+      );
+
+  static final $allTransitiveDependencies0 = currentSessionProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 = currentSessionStateProvider;
+  static final $allTransitiveDependencies3 = connectionStateProvider;
+
+  @override
+  String debugGetCreateSourceHash() => _$resolveCurrentScreenHash();
+
+  @$internal
+  @override
+  $ProviderElement<RoomScreen?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  RoomScreen? create(Ref ref) {
+    return resolveCurrentScreen(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(RoomScreen? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<RoomScreen?>(value),
+    );
+  }
+}
+
+String _$resolveCurrentScreenHash() =>
+    r'7430dfbb9482bb92d3ae01b1d427d792c05e96e0';
+
 /// The list of participants in the session.
 
 @ProviderFor(sessionParticipants)
@@ -1259,3 +1316,55 @@ final class AmNextSpeakerProvider extends $FunctionalProvider<bool, bool, bool>
 }
 
 String _$amNextSpeakerHash() => r'fac9121165d1dc018fb2fc96eadf53038b0a264b';
+
+@ProviderFor(isCameraOn)
+final isCameraOnProvider = IsCameraOnProvider._();
+
+final class IsCameraOnProvider extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  IsCameraOnProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'isCameraOnProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[
+          currentSessionProvider,
+          currentSessionStateProvider,
+        ],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          IsCameraOnProvider.$allTransitiveDependencies0,
+          IsCameraOnProvider.$allTransitiveDependencies1,
+          IsCameraOnProvider.$allTransitiveDependencies2,
+        ],
+      );
+
+  static final $allTransitiveDependencies0 = currentSessionProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 = currentSessionStateProvider;
+
+  @override
+  String debugGetCreateSourceHash() => _$isCameraOnHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return isCameraOn(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$isCameraOnHash() => r'8cd38fa32a571a61e9d32c8a2d998297e0619957';

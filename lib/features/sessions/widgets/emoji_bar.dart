@@ -195,6 +195,7 @@ Future<void> presentEmojiReaction(
   BuildContext context,
   String emoji, {
   GlobalKey<OverlayState>? overlayKey,
+  bool isInNotMyTurnScreen = false,
 }) async {
   final overlayBox =
       (overlayKey?.currentContext ?? Overlay.of(context).context)
@@ -222,7 +223,10 @@ Future<void> presentEmojiReaction(
               Orientation.landscape => position.dx + box.size.width * 0.4,
             };
             final double startY = switch (orientation) {
-              Orientation.portrait => position.dy + box.size.height / 2,
+              Orientation.portrait =>
+                isInNotMyTurnScreen
+                    ? position.dy + box.size.height / 2
+                    : position.dy + box.size.height / 12,
               Orientation.landscape => position.dy + box.size.height / 4,
             };
             return Stack(
@@ -314,9 +318,20 @@ class _RisingEmojiState extends State<RisingEmoji>
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
-    _opacityAnimation = Tween<double>(begin: 1, end: 0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
+    _opacityAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0, end: 1).chain(
+          CurveTween(curve: Curves.easeOut),
+        ),
+        weight: 8,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1, end: 0).chain(
+          CurveTween(curve: Curves.easeInOut),
+        ),
+        weight: 92,
+      ),
+    ]).animate(_controller);
 
     _amplitude = _random.nextDouble() * 30 + 20;
     _frequency = _random.nextDouble() * 2 + 2;
@@ -367,11 +382,13 @@ class _RisingEmojiState extends State<RisingEmoji>
           ),
         );
       },
-      child: Text(
-        widget.emoji,
-        style: TextStyle(
-          fontSize: 44 * widget.sizeFactor,
-          textBaseline: TextBaseline.ideographic,
+      child: MediaQuery.withNoTextScaling(
+        child: Text(
+          widget.emoji,
+          style: TextStyle(
+            fontSize: 44 * widget.sizeFactor,
+            textBaseline: TextBaseline.ideographic,
+          ),
         ),
       ),
     );

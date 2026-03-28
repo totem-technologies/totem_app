@@ -129,7 +129,11 @@ class UserAvatar extends ConsumerWidget {
           },
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.white, width: borderWidth),
+          border: Border.all(
+            color: Colors.white,
+            width: borderWidth,
+            style: borderWidth == 0 ? BorderStyle.none : BorderStyle.solid,
+          ),
           borderRadius: borderRadius,
           image: showImage && image != null
               ? DecorationImage(

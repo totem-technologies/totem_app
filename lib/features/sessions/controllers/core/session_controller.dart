@@ -41,6 +41,16 @@ class _SessionRoomMetadataResult {
   final String? lastMetadata;
 }
 
+enum RoomScreen {
+  error,
+  loading,
+  disconnected,
+  receiving,
+  passing,
+  myTurn,
+  notMyTurn,
+}
+
 @riverpod
 class SessionController extends _$SessionController {
   Room? _room;
@@ -100,10 +110,6 @@ class SessionController extends _$SessionController {
     _dispatch(KeeperDisconnectedChanged(hasKeeperDisconnected));
   }
 
-  void onSpeakerphoneChanged(bool enabled) {
-    _dispatch(SpeakerphoneChanged(enabled));
-  }
-
   void addSessionChatMessage(SessionChatMessage message) {
     _dispatch(SessionChatMessageAdded(message));
   }
@@ -156,7 +162,6 @@ class SessionController extends _$SessionController {
       chat: const ChatState(),
       turn: SessionTurnState(
         roomState: initialRoomState,
-        isSpeakerphoneEnabled: devices.userSpeakerPreference,
       ),
     );
   }

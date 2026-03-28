@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
@@ -9,14 +10,7 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 
 class ReceiveTotemScreen extends ConsumerWidget {
-  const ReceiveTotemScreen({
-    required this.actionBar,
-    required this.onAcceptTotem,
-    super.key,
-  });
-
-  final Widget actionBar;
-  final Future<void> Function() onAcceptTotem;
+  const ReceiveTotemScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -24,6 +18,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
     final sessionStatus = ref.watch(roomStatusProvider);
     final session = ref.watch(currentSessionProvider);
     final roundMessage = ref.watch(roundMessageProvider);
+    final isCameraOn = ref.watch(isCameraOnProvider);
 
     return RoomBackground(
       status: sessionStatus,
@@ -33,20 +28,36 @@ class ReceiveTotemScreen extends ConsumerWidget {
           builder: (context, orientation) {
             final isLandscape = orientation == Orientation.landscape;
 
-            final titleWidget = Padding(
-              padding: const EdgeInsetsDirectional.symmetric(horizontal: 50),
-              child: Text(
-                'The totem is being passed to you.',
-                style: theme.textTheme.titleLarge,
-                textAlign: TextAlign.center,
-              ),
+            final titleWidget = Column(
+              spacing: 16,
+              children: [
+                Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 50,
+                  ),
+                  child: Text(
+                    'The totem is being passed to you.',
+                    style: theme.textTheme.titleLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 16,
+                  ),
+                  child: Text(
+                    'As you share, your self-view is hidden. This is intentional, so you can settle in and speak freely.',
+                    style: theme.textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
             );
 
             final videoCard = Padding(
-              padding: const EdgeInsetsDirectional.all(20),
-              child: LocalParticipantVideoCard(
-                isCameraOn:
-                    session?.room?.localParticipant!.isCameraEnabled() ?? true,
+              padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
+              child: LocalParticipantCard(
+                isCameraOn: isCameraOn,
                 videoTrack: session?.devices.localVideoTrack,
               ),
             );
@@ -66,12 +77,12 @@ class ReceiveTotemScreen extends ConsumerWidget {
                       textAlign: TextAlign.center,
                     ),
                   SizedBox(
-                    height: 60,
+                    height: 50,
                     child: ActionSlider(
                       text: 'Slide to Receive',
                       onActionCompleted: () async {
                         try {
-                          await onAcceptTotem();
+                          await session?.keeper.acceptTotem();
                           return true;
                         } catch (error, stackTrace) {
                           ErrorHandler.logError(
@@ -112,7 +123,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
                       children: [
                         titleWidget,
                         receiveSlider,
-                        actionBar,
+                        const SessionActionBar(),
                       ],
                     ),
                   ),
@@ -127,7 +138,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
                     child: videoCard,
                   ),
                   receiveSlider,
-                  actionBar,
+                  const SessionActionBar(),
                 ],
               );
             }

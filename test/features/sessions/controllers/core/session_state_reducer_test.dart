@@ -434,51 +434,6 @@ void main() {
       });
     });
 
-    group('TurnState', () {
-      group('SpeakerphoneChanged event', () {
-        test('updates speakerphone flag', () {
-          final current = _initialState();
-
-          final next = reducer.reduceState(
-            current,
-            const SpeakerphoneChanged(true),
-          );
-
-          expect(next.isSpeakerphoneEnabled, isTrue);
-        });
-
-        test('dispatches event correctly', () {
-          final state = _initialState();
-
-          var newState = reducer.reduceState(
-            state,
-            const SpeakerphoneChanged(true),
-          );
-
-          expect(newState.isSpeakerphoneEnabled, isTrue);
-
-          newState = reducer.reduceState(
-            newState,
-            const SpeakerphoneChanged(false),
-          );
-
-          expect(newState.isSpeakerphoneEnabled, isFalse);
-        });
-
-        test('toggles preference', () {
-          var state = _initialState();
-          final initialState = state.isSpeakerphoneEnabled;
-
-          state = reducer.reduceState(
-            state,
-            SpeakerphoneChanged(!initialState),
-          );
-
-          expect(state.isSpeakerphoneEnabled, !initialState);
-        });
-      });
-    });
-
     group('State immutability', () {
       test('original state not modified when adding message', () {
         final originalState = _initialState();

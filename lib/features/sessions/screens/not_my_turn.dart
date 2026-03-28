@@ -5,19 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
 class NotMyTurn extends ConsumerWidget {
-  const NotMyTurn({
-    required this.actionBar,
-    required this.event,
-    super.key,
-  });
+  const NotMyTurn({required this.event, super.key});
 
-  final Widget actionBar;
   final SessionDetailSchema event;
 
   @override
@@ -140,7 +136,9 @@ class NotMyTurn extends ConsumerWidget {
                                 ),
                               ),
                               ?marquee,
-                              Center(child: actionBar),
+                              const Center(
+                                child: SessionActionBar(),
+                              ),
                             ],
                           ),
                         ),
@@ -178,7 +176,7 @@ class NotMyTurn extends ConsumerWidget {
                     ),
                   ),
                   ?marquee,
-                  Center(child: actionBar),
+                  const Center(child: SessionActionBar()),
                 ],
               ),
             );

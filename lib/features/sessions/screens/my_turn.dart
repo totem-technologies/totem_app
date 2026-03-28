@@ -5,24 +5,17 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
-import 'package:totem_app/shared/totem_icons.dart';
-import 'package:totem_app/shared/widgets/popups.dart';
 
 class MyTurn extends ConsumerStatefulWidget {
-  const MyTurn({
-    required this.actionBar,
-    required this.onPassTotem,
-    required this.event,
-    super.key,
-  });
+  const MyTurn({required this.event, super.key});
 
-  final Widget actionBar;
-  final Future<bool> Function(String? roundMessage) onPassTotem;
   final SessionDetailSchema event;
 
   @override
@@ -32,26 +25,22 @@ class MyTurn extends ConsumerStatefulWidget {
 class _MyTurnState extends ConsumerState<MyTurn> {
   final roundMessageController = TextEditingController();
 
-  bool _hasShownSelfViewHiddenNotice = false;
-
-  // TODO(bdlukaa): This message should be shown once per session, not every time the user receives the totem.
-  void _showSelfViewHiddenNotice() {
-    if (_hasShownSelfViewHiddenNotice || !mounted) return;
-    _hasShownSelfViewHiddenNotice = true;
-
-    showNotificationPopup(
-      context,
-      icon: TotemIcons.info,
-      title: 'Your self-view is hidden',
-      message:
-          'As you share, your self-view is hidden. This is intentional, so you can settle in and speak freely.',
-    );
-  }
-
   @override
   void dispose() {
     roundMessageController.dispose();
     super.dispose();
+  }
+
+  Future<bool> _onPassTotem([String? roundMessage]) async {
+    final session = ref.read(currentSessionProvider);
+    try {
+      await session?.keeper.passTotem(roundMessage: roundMessage);
+      return true;
+    } catch (error) {
+      if (!mounted) return false;
+      ErrorHandler.handleApiError(context, error);
+      return false;
+    }
   }
 
   @override
@@ -61,12 +50,6 @@ class _MyTurnState extends ConsumerState<MyTurn> {
     final turnState = ref.watch(turnStateProvider);
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
     final nextUp = ref.watch(speakingNextParticipantProvider);
-
-    if (!_hasShownSelfViewHiddenNotice && turnState == TurnState.speaking) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showSelfViewHiddenNotice();
-      });
-    }
 
     return RoomBackground(
       status: roomStatus,
@@ -85,7 +68,7 @@ class _MyTurnState extends ConsumerState<MyTurn> {
 
             final normalPassCard = TransitionCard(
               type: transitionType,
-              onActionPressed: () => widget.onPassTotem(null),
+              onActionPressed: _onPassTotem,
               actionText:
                   nextUp != null &&
                       transitionType == TotemCardTransitionType.pass
@@ -118,7 +101,7 @@ class _MyTurnState extends ConsumerState<MyTurn> {
                           onActionCompleted: () {
                             final roundMessage = roundMessageController.text
                                 .trim();
-                            return widget.onPassTotem(
+                            return _onPassTotem(
                               roundMessage.isEmpty ? null : roundMessage,
                             );
                           },
@@ -165,7 +148,7 @@ class _MyTurnState extends ConsumerState<MyTurn> {
                                 offset: Offset(0, yOffset),
                                 child: passCard,
                               ),
-                              widget.actionBar,
+                              const SessionActionBar(),
                             ],
                           ),
                         ),
@@ -183,7 +166,7 @@ class _MyTurnState extends ConsumerState<MyTurn> {
                     offset: Offset(0, yOffset),
                     child: passCard,
                   ),
-                  widget.actionBar,
+                  const SessionActionBar(),
                 ],
               );
             }
