@@ -426,83 +426,6 @@ class OptionsSheet extends ConsumerWidget {
   }
 }
 
-Future<void> showPrejoinOptionsSheet(
-  BuildContext context, {
-  required CameraCaptureOptions cameraOptions,
-  required AudioOutputOptions audioOutputOptions,
-  required ValueChanged<CameraCaptureOptions> onCameraChanged,
-  required ValueChanged<AudioOutputOptions> onAudioOutputChanged,
-}) {
-  return showModalBottomSheet<void>(
-    context: context,
-    showDragHandle: false,
-    builder: (context) {
-      return PrejoinOptionsSheet(
-        onCameraChanged: onCameraChanged,
-        onAudioOutputChanged: onAudioOutputChanged,
-        cameraOptions: cameraOptions,
-        audioOutputOptions: audioOutputOptions,
-      );
-    },
-  );
-}
-
-class PrejoinOptionsSheet extends StatelessWidget {
-  const PrejoinOptionsSheet({
-    required this.cameraOptions,
-    required this.audioOutputOptions,
-    required this.onCameraChanged,
-    required this.onAudioOutputChanged,
-    super.key,
-  });
-
-  final CameraCaptureOptions cameraOptions;
-  final AudioOutputOptions audioOutputOptions;
-
-  final ValueChanged<CameraCaptureOptions> onCameraChanged;
-  final ValueChanged<AudioOutputOptions> onAudioOutputChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      shrinkWrap: true,
-      padding: const EdgeInsetsDirectional.only(
-        start: 20,
-        end: 20,
-        bottom: 36,
-      ),
-      children: [
-        const SheetDragHandle(),
-        OptionsSheetTile.camera(
-          cameraOptions,
-          () {
-            onCameraChanged(
-              cameraOptions.copyWith(
-                cameraPosition: cameraOptions.cameraPosition.switched(),
-              ),
-            );
-            Navigator.of(context).pop();
-          },
-        ),
-        const SizedBox(height: 14),
-        OptionsSheetTile.output(
-          audioOutputOptions,
-          (options) {
-            onAudioOutputChanged(options);
-            Navigator.of(context).pop();
-          },
-          (device) {
-            onAudioOutputChanged(
-              audioOutputOptions.copyWith(deviceId: device.deviceId),
-            );
-            Navigator.of(context).pop();
-          },
-        ),
-      ],
-    );
-  }
-}
-
 enum OptionsSheetTileType { destructive, normal }
 
 class OptionsSheetTile<T> extends StatelessWidget {
@@ -581,7 +504,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
     if (lkPlatformIsMobile()) {
       return OptionsSheetTile<MediaDevice>(
         title: 'Speaker',
-        icon: TotemIcons.speaker,
+        icon: TotemIcons.speakerOn,
         trailing: IgnorePointer(
           child: Switch.adaptive(
             value: options.speakerOn ?? false,

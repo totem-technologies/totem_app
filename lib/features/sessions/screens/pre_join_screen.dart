@@ -18,7 +18,6 @@ import 'package:totem_app/features/sessions/providers/session_scope_provider.dar
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
-import 'package:totem_app/features/sessions/screens/options_sheet.dart';
 import 'package:totem_app/features/sessions/screens/room_screen.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
@@ -47,6 +46,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   CameraCaptureOptions _cameraOptions =
       SessionController.defaultCameraCaptureOptions;
   var _audioOutputOptions = const AudioOutputOptions(speakerOn: true);
+  bool get _isSpeakerOn => _audioOutputOptions.speakerOn ?? false;
 
   SessionOptions? _sessionOptions;
   bool _hasRequestedJoin = false;
@@ -234,6 +234,12 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     }
   }
 
+  void _toggleSpeaker() {
+    setState(() {
+      _audioOutputOptions = AudioOutputOptions(speakerOn: !_isSpeakerOn);
+    });
+  }
+
   Widget _buildPrejoinUI() {
     return PrejoinRoomBaseScreen(
       key: loadingScreenKey,
@@ -269,37 +275,25 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
             ),
           ),
           ActionBarButton(
-            semanticsLabel: 'Camera ${_isCameraOn ? 'on' : 'off'}',
-            onPressed: !hasRequestedJoin ? _toggleCamera : null,
-            active: _isCameraOn,
+            semanticsLabel: 'Audio ${_isSpeakerOn ? 'on' : 'off'}',
+            onPressed: !hasRequestedJoin ? _toggleSpeaker : null,
+            active: _isSpeakerOn,
             child: TotemIcon(
-              _isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+              _isSpeakerOn ? TotemIcons.speakerOn : TotemIcons.speakerOff,
             ),
           ),
-          ActionBarButton(
-            semanticsLabel: MaterialLocalizations.of(
-              context,
-            ).moreButtonTooltip,
-            onPressed: () async {
-              if (hasRequestedJoin) return;
-              await showPrejoinOptionsSheet(
-                context,
-                cameraOptions: _cameraOptions,
-                audioOutputOptions: _audioOutputOptions,
-                onCameraChanged: (options) async {
-                  setState(() {
-                    _cameraOptions = options;
-                  });
-                  await _initializeLocalVideo();
-                },
-                onAudioOutputChanged: (options) {
-                  setState(() => _audioOutputOptions = options);
-                },
-              );
+          ActionBarCameraSwitcherButton(
+            isCameraOn: _isCameraOn,
+            onToggle: hasRequestedJoin ? null : _toggleCamera,
+            cameraPosition: _cameraOptions.cameraPosition,
+            onCameraPositionChanged: (position) {
+              setState(() {
+                _cameraOptions = _cameraOptions.copyWith(
+                  cameraPosition: position,
+                );
+              });
+              _initializeLocalVideo();
             },
-            child: const Center(
-              child: TotemIcon(TotemIcons.more, size: 18),
-            ),
           ),
         ],
       ),

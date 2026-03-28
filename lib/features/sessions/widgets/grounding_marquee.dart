@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:totem_app/core/config/theme.dart';
 
 class GroundingMarquee extends StatefulWidget {
   const GroundingMarquee({super.key});
@@ -105,7 +106,11 @@ class _Tip extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w300),
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w300,
+            color: AppTheme.black,
+          ),
         ),
       ),
     );

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -48,7 +50,6 @@ class ActionBarButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: active ? AppTheme.white : AppTheme.mauve,
             borderRadius: BorderRadius.circular(25),
-            border: Border.all(color: foregroundColor),
           ),
           child: Center(
             child: IconTheme.merge(
@@ -82,7 +83,7 @@ class ActionBar extends StatelessWidget {
     return RepaintBoundary(
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0x40000000),
+          color: Colors.white.withValues(alpha: 0.25),
           borderRadius: BorderRadius.circular(30),
         ),
         margin: const EdgeInsetsDirectional.only(bottom: 20),
@@ -203,6 +204,279 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
               barCount: widget.indicatorBarCount,
             )
           : const TotemIcon(TotemIcons.microphoneOff),
+    );
+  }
+}
+
+class ActionBarCameraSwitcherButton extends StatefulWidget {
+  const ActionBarCameraSwitcherButton({
+    required this.isCameraOn,
+    required this.onToggle,
+    required this.cameraPosition,
+    required this.onCameraPositionChanged,
+    super.key,
+  });
+
+  final bool isCameraOn;
+  final VoidCallback? onToggle;
+
+  final CameraPosition cameraPosition;
+  final ValueChanged<CameraPosition> onCameraPositionChanged;
+
+  @override
+  State<ActionBarCameraSwitcherButton> createState() =>
+      _ActionBarCameraSwitcherButtonState();
+}
+
+class _ActionBarCameraSwitcherButtonState
+    extends State<ActionBarCameraSwitcherButton>
+    with SingleTickerProviderStateMixin {
+  late final _menuController = AnimationController(
+    duration: const Duration(milliseconds: 200),
+    vsync: this,
+  );
+  OverlayEntry? entry;
+
+  @override
+  void dispose() {
+    _menuController.dispose();
+    entry?.remove();
+    super.dispose();
+  }
+
+  Future<void> showCameraPositionOptions(BuildContext context) {
+    final overlay = Overlay.of(context);
+
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return Future.value();
+    final overlaySize = overlay.context.size!;
+    final target = renderBox.localToGlobal(Offset.zero) & renderBox.size;
+    final position = RelativeRect.fromLTRB(
+      target.left,
+      target.top,
+      overlaySize.width - target.right,
+      overlaySize.height - target.bottom,
+    );
+
+    final completer = Completer<void>();
+
+    void dismissOverlay() {
+      if (entry?.mounted == true) {
+        entry?.remove();
+      }
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+      entry = null;
+    }
+
+    entry = OverlayEntry(
+      builder: (context) {
+        return ActionBarCameraSwitcherButtonOverlay(
+          initialCameraPosition: widget.cameraPosition,
+          onCameraPositionChanged: widget.onCameraPositionChanged,
+          onDismissOverlay: dismissOverlay,
+          position: Offset(
+            position.left,
+            overlaySize.height - position.top,
+          ),
+        );
+      },
+    );
+    overlay.insert(entry!);
+    return completer.future;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black45,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () async {
+              _menuController.forward();
+              await showCameraPositionOptions(context);
+              _menuController.reverse();
+            },
+            child: Padding(
+              padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: 8.0,
+              ),
+              child: AnimatedBuilder(
+                animation: _menuController,
+                builder: (context, child) {
+                  return Transform.rotate(
+                    angle: _menuController.value * 3.1415,
+                    child: child,
+                  );
+                },
+                child: const Icon(
+                  Icons.keyboard_arrow_down,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          ActionBarButton(
+            semanticsLabel: 'Camera ${widget.isCameraOn ? 'on' : 'off'}',
+            onPressed: widget.onToggle,
+            active: widget.isCameraOn,
+            child: TotemIcon(
+              widget.isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ActionBarCameraSwitcherButtonOverlay extends StatefulWidget {
+  const ActionBarCameraSwitcherButtonOverlay({
+    required this.initialCameraPosition,
+    required this.onCameraPositionChanged,
+    required this.onDismissOverlay,
+    required this.position,
+    super.key,
+  });
+
+  final CameraPosition initialCameraPosition;
+  final ValueChanged<CameraPosition> onCameraPositionChanged;
+
+  final VoidCallback onDismissOverlay;
+  final Offset position;
+
+  @override
+  State<ActionBarCameraSwitcherButtonOverlay> createState() =>
+      _ActionBarCameraSwitcherButtonOverlayState();
+}
+
+class _ActionBarCameraSwitcherButtonOverlayState
+    extends State<ActionBarCameraSwitcherButtonOverlay>
+    with SingleTickerProviderStateMixin {
+  late CameraPosition cameraPosition = widget.initialCameraPosition;
+  bool _isDismissing = false;
+
+  late final AnimationController _overlayAnimationController =
+      AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 220),
+      );
+  late final Animation<Offset> _slideAnimation =
+      Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero).animate(
+        CurvedAnimation(
+          parent: _overlayAnimationController,
+          curve: Curves.easeOutCubic,
+        ),
+      );
+
+  static const double buttonWidth = 60;
+  static const double buttonsSpacing = 4;
+
+  @override
+  void initState() {
+    super.initState();
+    _overlayAnimationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _overlayAnimationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _dismissOverlay() async {
+    if (_isDismissing) return;
+    _isDismissing = true;
+
+    await _overlayAnimationController.reverse();
+    if (mounted) {
+      widget.onDismissOverlay();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: _dismissOverlay,
+          ),
+        ),
+        Positioned(
+          left: widget.position.dx,
+          bottom: widget.position.dy,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(bottom: 8.0),
+              child: GestureDetector(
+                onTap: () {
+                  cameraPosition = cameraPosition == CameraPosition.front
+                      ? CameraPosition.back
+                      : CameraPosition.front;
+                  setState(() {});
+                  widget.onCameraPositionChanged(cameraPosition);
+                },
+                child: Material(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Stack(
+                      children: [
+                        AnimatedPositioned(
+                          top: 0,
+                          bottom: 0,
+                          left: cameraPosition == CameraPosition.front
+                              ? 0
+                              : buttonWidth + buttonsSpacing,
+                          right: cameraPosition == CameraPosition.back
+                              ? 0
+                              : buttonWidth + buttonsSpacing,
+                          duration: const Duration(milliseconds: 300),
+                          child: Container(
+                            width: buttonWidth,
+                            decoration: BoxDecoration(
+                              color: AppTheme.mauve,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                        ),
+                        DefaultTextStyle(
+                          style: theme.textTheme.bodyMedium!.copyWith(
+                            color: Colors.white,
+                          ),
+                          child: const Row(
+                            spacing: buttonsSpacing,
+                            children: [
+                              SizedBox(
+                                width: buttonWidth,
+                                child: Center(child: Text('Front')),
+                              ),
+                              SizedBox(
+                                width: buttonWidth,
+                                child: Center(child: Text('Back')),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
