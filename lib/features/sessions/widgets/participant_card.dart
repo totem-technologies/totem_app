@@ -587,7 +587,7 @@ class LocalParticipantCard extends ConsumerWidget {
       authControllerProvider.select((auth) => auth.user),
     );
 
-    const overlayPadding = 12.0;
+    // const overlayPadding = 12.0;
 
     final isVideoTrackVisible =
         videoTrack != null && videoTrack!.isActive && !videoTrack!.muted;
@@ -641,22 +641,24 @@ class LocalParticipantCard extends ConsumerWidget {
                 ],
               ),
             ),
-            PositionedDirectional(
-              top: overlayPadding,
-              start: overlayPadding,
-              child: Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.black54,
-                  boxShadow: kElevationToShadow[6],
-                ),
-                padding: const EdgeInsetsDirectional.all(4),
-                alignment: Alignment.center,
-                child: SpeakingIndicatorAudioTrack(audioTrack: audioTrack),
-              ),
-            ),
+            // TODO(totem): The audio indicator doesn't work for local tracks
+            // https://github.com/livekit/client-sdk-flutter/issues/1044
+            // PositionedDirectional(
+            //   top: overlayPadding,
+            //   start: overlayPadding,
+            //   child: Container(
+            //     width: 24,
+            //     height: 24,
+            //     decoration: BoxDecoration(
+            //       shape: BoxShape.circle,
+            //       color: Colors.black54,
+            //       boxShadow: kElevationToShadow[6],
+            //     ),
+            //     padding: const EdgeInsetsDirectional.all(4),
+            //     alignment: Alignment.center,
+            //     child: SpeakingIndicatorAudioTrack(audioTrack: audioTrack),
+            //   ),
+            // ),
           ],
         ),
       ),
