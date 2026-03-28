@@ -10,12 +10,7 @@ import 'package:totem_app/features/sessions/controllers/core/session_controller.
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
-
-class MockSessionController extends Mock implements SessionController {}
-
-class MockRoom extends Mock implements Room {}
-
-class MockLocalParticipant extends Mock implements LocalParticipant {}
+import '../controllers/mocks.dart';
 
 class MockParticipantEventsListener extends Mock
     implements EventsListener<ParticipantEvent> {}
@@ -115,19 +110,17 @@ void main() {
 
   group('SessionActionBar', () {
     late MockSessionController session;
-    late MockRoom room;
+    late FakeRoom room;
     late MockLocalParticipant participant;
     late MockParticipantEventsListener listener;
 
     setUp(() {
       session = MockSessionController();
-      room = MockRoom();
       participant = MockLocalParticipant();
+      room = FakeRoom(participant);
       listener = MockParticipantEventsListener();
 
       when(() => session.room).thenReturn(room);
-      when(() => room.localParticipant).thenReturn(participant);
-      when(() => participant.sid).thenReturn('local-participant');
 
       when(
         () => participant.getTrackPublicationBySource(TrackSource.microphone),

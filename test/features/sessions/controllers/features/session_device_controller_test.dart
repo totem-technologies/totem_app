@@ -1,58 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart';
-import 'package:livekit_client/src/core/engine.dart';
 import 'package:mocktail/mocktail.dart';
 // ignore: depend_on_referenced_packages
 import 'package:riverpod/riverpod.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 
 import '../mocks.dart';
-
-class MyFakeRoom extends Fake implements Room {
-  MyFakeRoom(this.participant);
-
-  final MockLocalParticipant participant;
-
-  @override
-  LocalParticipant get localParticipant => participant;
-
-  bool _speakerOn = false;
-
-  // We have to use extension methods or noSuchMethod to bypass properties that aren't overridable
-  @override
-  dynamic noSuchMethod(Invocation invocation) {
-    if (invocation.memberName == #engine) return FakeEngine();
-    if (invocation.memberName == #roomOptions) return const RoomOptions();
-    if (invocation.memberName == #speakerOn) return _speakerOn;
-    if (invocation.memberName == #setSpeakerOn) {
-      _speakerOn = invocation.positionalArguments[0] as bool;
-      return Future<void>.value();
-    }
-    if (invocation.memberName == #selectedVideoInputDeviceId) return null;
-    return super.noSuchMethod(invocation);
-  }
-}
-
-class FakeEngine extends Fake implements Engine {
-  @override
-  dynamic noSuchMethod(Invocation invocation) {
-    if (invocation.memberName == #roomOptions) return const RoomOptions();
-    return super.noSuchMethod(invocation);
-  }
-}
-
-class MockLocalParticipant extends Mock implements LocalParticipant {
-  @override
-  List<LocalTrackPublication<LocalAudioTrack>> get audioTrackPublications => [];
-
-  @override
-  List<LocalTrackPublication<LocalVideoTrack>> get videoTrackPublications => [];
-
-  @override
-  List<LocalTrackPublication<LocalTrack>> getTrackPublications() => [];
-}
-
-class FakeCameraCaptureOptions extends Fake implements CameraCaptureOptions {}
 
 void main() {
   setUpAll(() {
@@ -62,14 +15,14 @@ void main() {
   group('SessionDeviceController', () {
     group('Device Controls', () {
       late FakeSessionController mockSession;
-      late MyFakeRoom mockRoom;
+      late FakeRoom mockRoom;
       late MockLocalParticipant mockLocalParticipant;
       late ProviderContainer container;
 
       setUp(() {
         mockSession = FakeSessionController();
         mockLocalParticipant = MockLocalParticipant();
-        mockRoom = MyFakeRoom(mockLocalParticipant)..setSpeakerOn(true);
+        mockRoom = FakeRoom(mockLocalParticipant)..setSpeakerOn(true);
 
         mockSession.mockRoom = mockRoom;
 
