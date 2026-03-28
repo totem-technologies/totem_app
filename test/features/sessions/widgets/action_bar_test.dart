@@ -10,16 +10,9 @@ import 'package:totem_app/features/sessions/controllers/core/session_controller.
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
+import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../livekit_mocks.dart';
-
-class MockParticipantEventsListener extends Mock
-    implements EventsListener<ParticipantEvent> {}
-
-class FakeAuthController extends AuthController {
-  @override
-  AuthState build() => AuthState.unauthenticated();
-}
 
 class _TestLastMessageNotifier extends Notifier<SessionChatMessage?> {
   @override
@@ -131,10 +124,6 @@ void main() {
       ).thenReturn(null);
 
       when(() => participant.createListener()).thenReturn(listener);
-      when(
-        () => listener.on<ParticipantEvent>(any()),
-      ).thenReturn(() async {});
-      when(() => listener.dispose()).thenAnswer((_) async => true);
 
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
     });
@@ -147,7 +136,9 @@ void main() {
         tester,
         child: const SessionActionBar(),
         overrides: [
-          authControllerProvider.overrideWith(FakeAuthController.new),
+          authControllerProvider.overrideWith(
+            () => FakeAuthController(AuthState.unauthenticated()),
+          ),
           currentSessionProvider.overrideWith((ref) => session),
           lastSessionMessageProvider.overrideWith(
             (ref) => ref.watch(_testLastMessageProvider),
