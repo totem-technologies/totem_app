@@ -1,7 +1,7 @@
 // file copied from livekit_components package and modified
 
 import 'dart:async';
-import 'dart:math' show max;
+import 'dart:math' show max, min;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -92,6 +92,11 @@ const agentStateAttributeKey = 'lk.agent.state';
 
 class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
     with SingleTickerProviderStateMixin {
+  static const Duration _watchdogInterval = Duration(seconds: 2);
+  static const Duration _baseRestartCooldown = Duration(seconds: 3);
+  static const Duration _maxRestartCooldown = Duration(seconds: 30);
+  static const int _maxConsecutiveRestartAttempts = 6;
+
   late AnimationController _controller;
   late Animation<double> _pulseAnimation;
 
@@ -115,6 +120,34 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   int _listenerGeneration = 0;
   DateTime? _lastVisualizerEventAt;
   DateTime? _lastRestartAttemptAt;
+  int _consecutiveRestartAttempts = 0;
+
+  Future<void> _safeAsyncAction(
+    Future<void> Function() action, {
+    required String failureMessage,
+  }) async {
+    try {
+      await action();
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: failureMessage,
+      );
+    }
+  }
+
+  Duration get _currentRestartCooldown {
+    final exponent = min(_consecutiveRestartAttempts, 4);
+    final factor = 1 << exponent;
+    final cooldown = Duration(
+      milliseconds: _baseRestartCooldown.inMilliseconds * factor,
+    );
+    if (cooldown > _maxRestartCooldown) {
+      return _maxRestartCooldown;
+    }
+    return cooldown;
+  }
 
   bool get _hasStalledVisualizer {
     if (widget.audioTrack == null || widget.audioTrack!.muted) return false;
@@ -125,60 +158,33 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   }
 
   Future<void> _detachListeners() async {
-    try {
-      try {
-        await _visualizerListener?.dispose();
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Failed to dispose visualizer listener',
-        );
-      }
-      _visualizerListener = null;
+    final visualizerListener = _visualizerListener;
+    _visualizerListener = null;
+    await _safeAsyncAction(
+      () async => await visualizerListener?.dispose(),
+      failureMessage: 'Failed to dispose visualizer listener',
+    );
 
-      // Now stop and dispose the visualizer
-      if (_visualizer != null) {
-        try {
-          await _visualizer?.stop();
-        } catch (error, stackTrace) {
-          ErrorHandler.logError(
-            error,
-            stackTrace: stackTrace,
-            message: 'Failed to stop visualizer',
-          );
-        }
+    final visualizer = _visualizer;
+    _visualizer = null;
 
-        try {
-          await _visualizer?.dispose();
-        } catch (error, stackTrace) {
-          ErrorHandler.logError(
-            error,
-            stackTrace: stackTrace,
-            message: 'Failed to dispose visualizer',
-          );
-        }
-        _visualizer = null;
-      }
-
-      // Dispose participant listener last
-      try {
-        await _participantListener?.dispose();
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Failed to dispose participant listener',
-        );
-      }
-      _participantListener = null;
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to detach listeners',
+    if (visualizer != null) {
+      await _safeAsyncAction(
+        () async => await visualizer.stop(),
+        failureMessage: 'Failed to stop visualizer',
+      );
+      await _safeAsyncAction(
+        () async => await visualizer.dispose(),
+        failureMessage: 'Failed to dispose visualizer',
       );
     }
+
+    final participantListener = _participantListener;
+    _participantListener = null;
+    await _safeAsyncAction(
+      () async => await participantListener?.dispose(),
+      failureMessage: 'Failed to dispose participant listener',
+    );
   }
 
   Future<void> _reattachListeners() async {
@@ -240,20 +246,22 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
       }
     });
 
-    _visualizerWatchdogTimer = Timer.periodic(
-      const Duration(seconds: 2),
-      (_) {
-        if (!mounted || !_hasStalledVisualizer) return;
-        final now = DateTime.now();
-        final lastAttempt = _lastRestartAttemptAt;
-        if (lastAttempt != null &&
-            now.difference(lastAttempt) < const Duration(seconds: 3)) {
-          return;
-        }
-        _lastRestartAttemptAt = now;
-        _reattachListeners();
-      },
-    );
+    _visualizerWatchdogTimer = Timer.periodic(_watchdogInterval, (_) {
+      if (!mounted || !_hasStalledVisualizer) return;
+      if (_consecutiveRestartAttempts >= _maxConsecutiveRestartAttempts) {
+        return;
+      }
+
+      final now = DateTime.now();
+      final lastAttempt = _lastRestartAttemptAt;
+      if (lastAttempt != null && now.difference(lastAttempt) < _currentRestartCooldown) {
+        return;
+      }
+
+      _lastRestartAttemptAt = now;
+      _consecutiveRestartAttempts++;
+      _reattachListeners();
+    });
 
     _reattachListeners();
   }
@@ -298,6 +306,8 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
           if (!mounted) return;
 
           _lastVisualizerEventAt = DateTime.now();
+          _lastRestartAttemptAt = null;
+          _consecutiveRestartAttempts = 0;
           final events = element.event;
           for (
             var i = 0;
