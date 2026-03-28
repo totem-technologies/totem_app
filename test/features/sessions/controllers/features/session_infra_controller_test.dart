@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 // ignore: depend_on_referenced_packages
@@ -9,19 +8,11 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/services/screen_protection_service.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_infra_controller.dart';
 
+import '../../../../auth/controllers/auth_controller_mock.dart';
+import '../../../../core/services/screen_protection_service_mock.dart';
+import '../../../../mocks/flutter_foreground_task_mock.dart';
+import '../../../../mocks/wakelock_plus_mock.dart';
 import '../../../../setup.dart';
-
-class MockScreenProtectionService extends Mock
-    implements ScreenProtectionService {}
-
-class FakeAuthController extends AuthController {
-  FakeAuthController(this.fakeState);
-
-  final AuthState fakeState;
-
-  @override
-  AuthState build() => fakeState;
-}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -29,49 +20,8 @@ void main() {
   setUpAll(() {
     setupDotenv();
 
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-          const MethodChannel(
-            'dev.flutter.pigeon.wakelock_plus_platform_interface.WakelockPlusApi.toggle',
-          ),
-          (methodCall) async {
-            return <Object?>[null]; // pigeon expects success list wrapper
-          },
-        );
-
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-          const MethodChannel('com.pravera.flutter_foreground_task/methods'),
-          (methodCall) async {
-            if (methodCall.method == 'isRunningService') return false;
-            if (methodCall.method == 'checkNotificationPermission') {
-              return 1; // granted
-            }
-            if (methodCall.method == 'requestIgnoreBatteryOptimization') {
-              return true;
-            }
-            if (methodCall.method == 'startService') return true;
-            if (methodCall.method == 'stopService') return true;
-            return true; // just return true for anything else
-          },
-        );
-
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-          const MethodChannel('flutter_foreground_task/methods'),
-          (methodCall) async {
-            if (methodCall.method == 'isRunningService') return false;
-            if (methodCall.method == 'checkNotificationPermission') {
-              return 1; // granted
-            }
-            if (methodCall.method == 'requestIgnoreBatteryOptimization') {
-              return true;
-            }
-            if (methodCall.method == 'startService') return true;
-            if (methodCall.method == 'stopService') return true;
-            return true; // just return true for anything else
-          },
-        );
+    setupMockWakelockPlus();
+    setupMockFlutterForegroundTask();
   });
 
   group('SessionInfraController', () {
@@ -180,12 +130,9 @@ void main() {
           dateCreated: DateTime.now(),
         ),
       );
-      final container = createContainer(authState);
+      final container = createContainer(authState)
+        ..read(sessionInfraControllerProvider);
 
-      // Initialize provider so it sets up its disposal
-      container.read(sessionInfraControllerProvider);
-
-      // But wait to call activate, otherwise _screenProtectionEnabled = false initially
       final controller = container.read(
         sessionInfraControllerProvider.notifier,
       );
@@ -194,11 +141,8 @@ void main() {
         () => mockScreenProtection.setCaptureProtectionEnabled(true),
       ).called(1);
 
-      // Call dispose manually instead of container.dispose() to avoid Riverpod's
-      // StateError on reading other providers during container teardown
       controller.dispose();
 
-      // wait a bit for fire-and-forget deactivate to finish
       await Future<void>.delayed(const Duration(milliseconds: 10));
       verify(
         () => mockScreenProtection.setCaptureProtectionEnabled(false),

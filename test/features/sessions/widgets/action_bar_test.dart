@@ -10,7 +10,8 @@ import 'package:totem_app/features/sessions/controllers/core/session_controller.
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
-import '../controllers/mocks.dart';
+import '../controllers/core/session_controller_mock.dart';
+import '../livekit_mocks.dart';
 
 class MockParticipantEventsListener extends Mock
     implements EventsListener<ParticipantEvent> {}

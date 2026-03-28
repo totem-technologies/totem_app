@@ -5,7 +5,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 
-import '../mocks.dart';
+import '../../livekit_mocks.dart';
+import '../core/session_controller_mock.dart';
 
 void main() {
   setUpAll(() {

@@ -8,7 +8,7 @@ import 'package:riverpod/riverpod.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 
-import '../mocks.dart';
+import '../core/session_controller_mock.dart';
 
 void main() {
   group('SessionMessagingController', () {
