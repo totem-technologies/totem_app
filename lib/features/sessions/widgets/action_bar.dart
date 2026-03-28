@@ -311,7 +311,12 @@ class _ActionBarCameraSwitcherButtonState
                 animation: _menuController,
                 builder: (context, child) {
                   return Transform.rotate(
-                    angle: _menuController.value * math.pi,
+                    angle:
+                        CurvedAnimation(
+                          parent: _menuController,
+                          curve: Curves.easeOutCubic,
+                        ).value *
+                        math.pi,
                     child: child,
                   );
                 },
@@ -428,11 +433,13 @@ class _ActionBarCameraSwitcherButtonOverlayState
                 },
                 child: Material(
                   color: Colors.black54,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(100),
                   child: Padding(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsetsDirectional.all(8.0),
                     child: Stack(
+                      alignment: Alignment.center,
                       children: [
+                        const SizedBox(height: 30),
                         AnimatedPositioned(
                           top: 0,
                           bottom: 0,
@@ -447,7 +454,7 @@ class _ActionBarCameraSwitcherButtonOverlayState
                             width: buttonWidth,
                             decoration: BoxDecoration(
                               color: AppTheme.mauve,
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(100),
                             ),
                           ),
                         ),
