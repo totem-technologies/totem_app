@@ -45,7 +45,7 @@ class BlogListScreen extends ConsumerWidget {
                         bottom: 20,
                       ),
                       sliver: SliverList.builder(
-                        itemCount: data.items.sublist(1).length,
+                        itemCount: data.items.length - 1,
                         itemBuilder: (context, index) => Padding(
                           padding: const EdgeInsets.only(
                             left: 20,
