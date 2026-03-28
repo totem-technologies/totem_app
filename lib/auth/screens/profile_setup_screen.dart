@@ -142,7 +142,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             selectedTopics: _selectedTopics,
             isLoading: _isLoading,
             onSeeAllSpaces: () {
-              context.go(RouteNames.home);
+              context.go(RouteNames.spaces);
             },
           ),
         ],
@@ -596,8 +596,20 @@ class _SuggestionsTab extends ConsumerWidget {
         recommended.when(
           data: (sessions) {
             if (sessions.isEmpty) {
-              return const InfoText(
-                'No suggestions yet. Try selecting a few topics.',
+              return Column(
+                children: [
+                  const InfoText(
+                    'No suggestions yet. Try selecting a few topics.',
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: onSeeAllSpaces,
+                      child: const Text('Go to Home'),
+                    ),
+                  ),
+                ],
               );
             }
             return Column(
@@ -638,6 +650,12 @@ class _SuggestionsTab extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const CircularProgressIndicator.adaptive(strokeWidth: 1.5),
+                const SizedBox(height: 12),
+                Text(
+                  "We're looking for sessions for you",
+                  style: theme.textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
