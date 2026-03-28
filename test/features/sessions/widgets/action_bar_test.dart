@@ -149,8 +149,6 @@ void main() {
       WidgetTester tester, {
       required RoomScreen screen,
     }) async {
-      when(() => session.resolveCurrentScreen()).thenReturn(screen);
-
       await pumpWidget(
         tester,
         child: const SessionActionBar(),
@@ -162,6 +160,7 @@ void main() {
           ),
           sessionMessagesProvider.overrideWith((ref) => const []),
           isCurrentUserKeeperProvider.overrideWith((ref) => false),
+          resolveCurrentScreenProvider.overrideWith((ref) => screen),
         ],
       );
     }

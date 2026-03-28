@@ -20,8 +20,6 @@ class ReceiveTotemScreen extends ConsumerWidget {
     final roundMessage = ref.watch(roundMessageProvider);
     final isCameraOn = ref.watch(isCameraOnProvider);
 
-    print('is camera on $isCameraOn');
-
     return RoomBackground(
       status: sessionStatus,
       padding: const EdgeInsetsDirectional.all(20),

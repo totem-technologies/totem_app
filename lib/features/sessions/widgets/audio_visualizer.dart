@@ -98,6 +98,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   List<double> samples = <double>[];
   List<double> _backgroundSamples = <double>[];
   Timer? _uiThrottleTimer;
+  Timer? _visualizerWatchdogTimer;
 
   sdk.AudioVisualizer? _visualizer;
   sdk.EventsListener<sdk.AudioVisualizerEvent>? _visualizerListener;
@@ -110,6 +111,18 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   List<BarsViewItem>? _cachedBarItems;
   VisualizerState? _lastState;
   List<double>? _lastSamples;
+
+  int _listenerGeneration = 0;
+  DateTime? _lastVisualizerEventAt;
+  DateTime? _lastRestartAttemptAt;
+
+  bool get _hasStalledVisualizer {
+    if (widget.audioTrack == null || widget.audioTrack!.muted) return false;
+    if (_visualizer == null) return true;
+    final lastEventAt = _lastVisualizerEventAt;
+    if (lastEventAt == null) return true;
+    return DateTime.now().difference(lastEventAt) > const Duration(seconds: 3);
+  }
 
   Future<void> _detachListeners() async {
     try {
@@ -161,6 +174,19 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
     }
   }
 
+  Future<void> _reattachListeners() async {
+    final generation = ++_listenerGeneration;
+    await _detachListeners();
+    if (!mounted || generation != _listenerGeneration) return;
+    _backgroundSamples = List.filled(widget.options.barCount, 0);
+    if (mounted) {
+      setState(() {
+        samples = List.filled(widget.options.barCount, 0);
+      });
+    }
+    await _attachListeners(generation: generation);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -207,11 +233,28 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
       }
     });
 
-    _attachListeners();
+    _visualizerWatchdogTimer = Timer.periodic(
+      const Duration(seconds: 2),
+      (_) {
+        if (!mounted || !_hasStalledVisualizer) return;
+        final now = DateTime.now();
+        final lastAttempt = _lastRestartAttemptAt;
+        if (lastAttempt != null &&
+            now.difference(lastAttempt) < const Duration(seconds: 3)) {
+          return;
+        }
+        _lastRestartAttemptAt = now;
+        _reattachListeners();
+      },
+    );
+
+    _reattachListeners();
   }
 
-  Future<void> _attachListeners() async {
+  Future<void> _attachListeners({required int generation}) async {
     try {
+      if (!mounted || generation != _listenerGeneration) return;
+
       if (widget.participant != null) {
         _participantListener = widget.participant!.createListener();
         _participantListener?.on<sdk.TrackMutedEvent>((e) {
@@ -247,6 +290,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
         _visualizerListener?.on<sdk.AudioVisualizerEvent>((element) {
           if (!mounted) return;
 
+          _lastVisualizerEventAt = DateTime.now();
           final events = element.event;
           for (
             var i = 0;
@@ -258,7 +302,9 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
           }
         });
 
+        if (!mounted || generation != _listenerGeneration) return;
         await _visualizer!.start();
+        _lastVisualizerEventAt ??= DateTime.now();
       }
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -273,19 +319,22 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   void didUpdateWidget(SoundWaveformWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     final didUpdateParams =
+        !identical(oldWidget.participant, widget.participant) ||
         oldWidget.participant?.sid != widget.participant?.sid ||
+        !identical(oldWidget.audioTrack, widget.audioTrack) ||
         oldWidget.audioTrack?.sid != widget.audioTrack?.sid ||
         oldWidget.options != widget.options;
 
     if (didUpdateParams) {
-      _detachListeners();
-      _attachListeners();
+      _reattachListeners();
     }
   }
 
   @override
   void dispose() {
     _uiThrottleTimer?.cancel();
+    _visualizerWatchdogTimer?.cancel();
+    _listenerGeneration++;
     _controller.dispose();
     _detachListeners();
     super.dispose();
