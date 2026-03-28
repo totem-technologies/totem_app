@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
@@ -141,6 +140,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final currentSession = ref.watch(currentSessionProvider);
+    final currentRoomScreen = ref.watch(resolveCurrentScreenProvider)!;
     final currentSessionEvent = ref.watch(currentSessionEventProvider);
     final connectionState = ref.watch(connectionStateProvider);
     final roomStatus = ref.watch(roomStatusProvider);
@@ -151,7 +151,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         emojiReactionsProvider,
         (previous, next) {
           final isInNotMyTurnScreen =
-              currentSession?.resolveCurrentScreen() == RoomScreen.notMyTurn;
+              ref.read(resolveCurrentScreenProvider) == RoomScreen.notMyTurn;
 
           for (final reaction in next.where(
             (reaction) => !reaction.displayed,
@@ -252,6 +252,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
                     child: RepaintBoundary(
                       child: _buildBody(
                         currentSession,
+                        currentRoomScreen,
                         currentSessionEvent,
                         disconnectReason,
                       ),
@@ -273,10 +274,11 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   Widget _buildBody(
     SessionController session,
+    RoomScreen screen,
     SessionDetailSchema sessionEvent,
     DisconnectReason? disconnectReason,
   ) {
-    switch (session.resolveCurrentScreen()) {
+    switch (screen) {
       case RoomScreen.error:
         return RoomErrorScreen(onRetry: session.join);
       case RoomScreen.loading:
@@ -287,24 +289,12 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           disconnectReason: disconnectReason,
         );
       case RoomScreen.receiving:
-        return ReceiveTotemScreen(onAcceptTotem: session.keeper.acceptTotem);
+        return const ReceiveTotemScreen();
       case RoomScreen.myTurn:
       case RoomScreen.passing:
         return Builder(
           builder: (context) {
-            return MyTurn(
-              onPassTotem: (roundMessage) async {
-                try {
-                  await session.keeper.passTotem(roundMessage: roundMessage);
-                  return true;
-                } catch (error) {
-                  if (!context.mounted) return false;
-                  ErrorHandler.handleApiError(context, error);
-                  return false;
-                }
-              },
-              event: session.event!,
-            );
+            return MyTurn(event: session.event!);
           },
         );
       case RoomScreen.notMyTurn:

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -310,7 +311,7 @@ class _ActionBarCameraSwitcherButtonState
                 animation: _menuController,
                 builder: (context, child) {
                   return Transform.rotate(
-                    angle: _menuController.value * 3.1415,
+                    angle: _menuController.value * math.pi,
                     child: child,
                   );
                 },
@@ -631,7 +632,7 @@ class _SessionActionBarState extends ConsumerState<SessionActionBar> {
       (previous, next) {
         if (next == null || identical(previous, next)) return;
         if (!mounted || _chatSheetOpen) return;
-        setState(() => _hasPendingSessionChatMessages = !_chatSheetOpen);
+        setState(() => _hasPendingSessionChatMessages = true);
         showNotificationPopup(
           context,
           icon: TotemIcons.chat,
@@ -642,6 +643,12 @@ class _SessionActionBarState extends ConsumerState<SessionActionBar> {
       },
     );
     final session = ref.watch(currentSessionProvider)!;
+    final currentScreen = ref.watch(resolveCurrentScreenProvider);
+
+    if (currentScreen == null) {
+      return const SizedBox.shrink();
+    }
+
     final user = session.room!.localParticipant!;
 
     final microphoneButton = ActionBarMicButton(
@@ -724,7 +731,7 @@ class _SessionActionBarState extends ConsumerState<SessionActionBar> {
       ),
     );
 
-    switch (session.resolveCurrentScreen()) {
+    switch (currentScreen) {
       case RoomScreen.error:
       case RoomScreen.disconnected:
       case RoomScreen.loading:

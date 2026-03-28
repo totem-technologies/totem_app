@@ -442,6 +442,63 @@ final class TurnStateProvider
 
 String _$turnStateHash() => r'2681884a14fea31b39e8e90e59ff498adad7720e';
 
+@ProviderFor(resolveCurrentScreen)
+final resolveCurrentScreenProvider = ResolveCurrentScreenProvider._();
+
+final class ResolveCurrentScreenProvider
+    extends $FunctionalProvider<RoomScreen?, RoomScreen?, RoomScreen?>
+    with $Provider<RoomScreen?> {
+  ResolveCurrentScreenProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'resolveCurrentScreenProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[
+          currentSessionProvider,
+          currentSessionStateProvider,
+          connectionStateProvider,
+        ],
+        $allTransitiveDependencies: <ProviderOrFamily>{
+          ResolveCurrentScreenProvider.$allTransitiveDependencies0,
+          ResolveCurrentScreenProvider.$allTransitiveDependencies1,
+          ResolveCurrentScreenProvider.$allTransitiveDependencies2,
+          ResolveCurrentScreenProvider.$allTransitiveDependencies3,
+        },
+      );
+
+  static final $allTransitiveDependencies0 = currentSessionProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 = currentSessionStateProvider;
+  static final $allTransitiveDependencies3 = connectionStateProvider;
+
+  @override
+  String debugGetCreateSourceHash() => _$resolveCurrentScreenHash();
+
+  @$internal
+  @override
+  $ProviderElement<RoomScreen?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  RoomScreen? create(Ref ref) {
+    return resolveCurrentScreen(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(RoomScreen? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<RoomScreen?>(value),
+    );
+  }
+}
+
+String _$resolveCurrentScreenHash() =>
+    r'7430dfbb9482bb92d3ae01b1d427d792c05e96e0';
+
 /// The list of participants in the session.
 
 @ProviderFor(sessionParticipants)

@@ -88,6 +88,43 @@ TurnState turnState(Ref ref) {
       TurnState.idle;
 }
 
+@Riverpod(dependencies: [currentSession, currentSessionState, connectionState])
+RoomScreen? resolveCurrentScreen(Ref ref) {
+  final session = ref.watch(currentSessionProvider);
+  final sessionState = ref.watch(currentSessionStateProvider);
+  final connectionState = ref.watch(connectionStateProvider);
+  if (session?.room == null) {
+    return RoomScreen.disconnected;
+  }
+  switch (connectionState) {
+    case RoomConnectionState.error:
+      return RoomScreen.error;
+    case RoomConnectionState.connecting:
+      return RoomScreen.loading;
+    case RoomConnectionState.disconnected:
+      return RoomScreen.disconnected;
+    case RoomConnectionState.connected:
+      if (sessionState?.roomState.status == RoomStatus.ended) {
+        return RoomScreen.disconnected;
+      }
+
+      if (session?.room?.localParticipant == null) {
+        return RoomScreen.disconnected;
+      }
+
+      if (sessionState?.roomState.turnState == TurnState.passing &&
+          sessionState!.amNext(session!.room!)) {
+        return RoomScreen.receiving;
+      }
+
+      if (sessionState!.isMyTurn(session!.room!)) {
+        return RoomScreen.myTurn;
+      } else {
+        return RoomScreen.notMyTurn;
+      }
+  }
+}
+
 /// The list of participants in the session.
 @Riverpod(dependencies: [currentSessionState])
 List<Participant> sessionParticipants(Ref ref) {

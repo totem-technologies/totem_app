@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
@@ -13,13 +14,8 @@ import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
 class MyTurn extends ConsumerStatefulWidget {
-  const MyTurn({
-    required this.onPassTotem,
-    required this.event,
-    super.key,
-  });
+  const MyTurn({required this.event, super.key});
 
-  final Future<bool> Function(String? roundMessage) onPassTotem;
   final SessionDetailSchema event;
 
   @override
@@ -33,6 +29,18 @@ class _MyTurnState extends ConsumerState<MyTurn> {
   void dispose() {
     roundMessageController.dispose();
     super.dispose();
+  }
+
+  Future<bool> _onPassTotem([String? roundMessage]) async {
+    final session = ref.read(currentSessionProvider);
+    try {
+      await session?.keeper.passTotem(roundMessage: roundMessage);
+      return true;
+    } catch (error) {
+      if (!mounted) return false;
+      ErrorHandler.handleApiError(context, error);
+      return false;
+    }
   }
 
   @override
@@ -60,7 +68,7 @@ class _MyTurnState extends ConsumerState<MyTurn> {
 
             final normalPassCard = TransitionCard(
               type: transitionType,
-              onActionPressed: () => widget.onPassTotem(null),
+              onActionPressed: _onPassTotem,
               actionText:
                   nextUp != null &&
                       transitionType == TotemCardTransitionType.pass
@@ -93,7 +101,7 @@ class _MyTurnState extends ConsumerState<MyTurn> {
                           onActionCompleted: () {
                             final roundMessage = roundMessageController.text
                                 .trim();
-                            return widget.onPassTotem(
+                            return _onPassTotem(
                               roundMessage.isEmpty ? null : roundMessage,
                             );
                           },

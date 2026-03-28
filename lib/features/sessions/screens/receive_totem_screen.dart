@@ -10,12 +10,7 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 
 class ReceiveTotemScreen extends ConsumerWidget {
-  const ReceiveTotemScreen({
-    required this.onAcceptTotem,
-    super.key,
-  });
-
-  final Future<void> Function() onAcceptTotem;
+  const ReceiveTotemScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -62,7 +57,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
               padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
               child: LocalParticipantCard(
                 isCameraOn:
-                    session?.room?.localParticipant!.isCameraEnabled() ?? true,
+                    session?.room?.localParticipant?.isCameraEnabled() ?? true,
                 videoTrack: session?.devices.localVideoTrack,
               ),
             );
@@ -87,7 +82,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
                       text: 'Slide to Receive',
                       onActionCompleted: () async {
                         try {
-                          await onAcceptTotem();
+                          await session?.keeper.acceptTotem();
                           return true;
                         } catch (error, stackTrace) {
                           ErrorHandler.logError(
