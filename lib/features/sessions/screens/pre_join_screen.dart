@@ -357,7 +357,12 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         );
       await session.join();
       _hasHandledConnectedState = _isLoading = false;
-    } catch (_) {
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to join room',
+      );
     } finally {
       _isLoading = false;
       if (mounted) {

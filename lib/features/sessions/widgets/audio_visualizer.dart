@@ -170,11 +170,11 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
 
     if (visualizer != null) {
       await _safeAsyncAction(
-        () async => await visualizer.stop(),
+        visualizer.stop,
         failureMessage: 'Failed to stop visualizer',
       );
       await _safeAsyncAction(
-        () async => await visualizer.dispose(),
+        visualizer.dispose,
         failureMessage: 'Failed to dispose visualizer',
       );
     }
@@ -182,7 +182,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
     final participantListener = _participantListener;
     _participantListener = null;
     await _safeAsyncAction(
-      () async => await participantListener?.dispose(),
+      () async => participantListener?.dispose(),
       failureMessage: 'Failed to dispose participant listener',
     );
   }
@@ -254,7 +254,8 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
 
       final now = DateTime.now();
       final lastAttempt = _lastRestartAttemptAt;
-      if (lastAttempt != null && now.difference(lastAttempt) < _currentRestartCooldown) {
+      if (lastAttempt != null &&
+          now.difference(lastAttempt) < _currentRestartCooldown) {
         return;
       }
 

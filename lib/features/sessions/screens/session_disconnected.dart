@@ -65,6 +65,21 @@ class _SessionDisconnectedScreenState
   ThumbState _thumbState = ThumbState.none;
   Timer? _confettiTimer;
 
+  final _communityGuidelinesRecognizer = TapGestureRecognizer()
+    ..onTap = () async {
+      final url = AppConfig.communityGuidelinesUrl;
+      if (await canLaunchUrl(url)) {
+        await launchUrl(
+          url,
+          mode: LaunchMode.externalApplication,
+        );
+      }
+    };
+  final _helpEmailRecognizer = TapGestureRecognizer()
+    ..onTap = () {
+      launchUrl(Uri.parse('mailto:help@totem.org'));
+    };
+
   void _showConfetti() {
     double randomInRange(double min, double max) {
       return min + Random().nextDouble() * (max - min);
@@ -130,6 +145,8 @@ class _SessionDisconnectedScreenState
   void dispose() {
     _confettiTimer?.cancel();
     _confettiTimer = null;
+    _communityGuidelinesRecognizer.dispose();
+    _helpEmailRecognizer.dispose();
     super.dispose();
   }
 
@@ -231,16 +248,7 @@ class _SessionDisconnectedScreenState
                               style: theme.textTheme.bodyLarge?.copyWith(
                                 fontWeight: FontWeight.w500,
                               ),
-                              recognizer: TapGestureRecognizer()
-                                ..onTap = () async {
-                                  final url = AppConfig.communityGuidelinesUrl;
-                                  if (await canLaunchUrl(url)) {
-                                    await launchUrl(
-                                      url,
-                                      mode: LaunchMode.externalApplication,
-                                    );
-                                  }
-                                },
+                              recognizer: _communityGuidelinesRecognizer,
                             ),
                             const TextSpan(text: '. '),
                             const TextSpan(
@@ -252,10 +260,7 @@ class _SessionDisconnectedScreenState
                               style: TextStyle(
                                 color: Colors.blue.shade200,
                               ),
-                              recognizer: TapGestureRecognizer()
-                                ..onTap = () {
-                                  launchUrl(Uri.parse('mailto:help@totem.org'));
-                                },
+                              recognizer: _helpEmailRecognizer,
                             ),
                             const TextSpan(text: '.'),
                           ],
