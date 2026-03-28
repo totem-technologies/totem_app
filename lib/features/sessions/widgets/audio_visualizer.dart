@@ -126,6 +126,18 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
 
   Future<void> _detachListeners() async {
     try {
+      try {
+        await _visualizerListener?.dispose();
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to dispose visualizer listener',
+        );
+      }
+      _visualizerListener = null;
+
+      // Now stop and dispose the visualizer
       if (_visualizer != null) {
         try {
           await _visualizer?.stop();
@@ -146,21 +158,10 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
             message: 'Failed to dispose visualizer',
           );
         }
+        _visualizer = null;
       }
-    } finally {
-      _visualizer = null;
 
-      try {
-        await _visualizerListener?.dispose();
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Failed to dispose visualizer listener',
-        );
-      }
-      _visualizerListener = null;
-
+      // Dispose participant listener last
       try {
         await _participantListener?.dispose();
       } catch (error, stackTrace) {
@@ -171,6 +172,12 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
         );
       }
       _participantListener = null;
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to detach listeners',
+      );
     }
   }
 
