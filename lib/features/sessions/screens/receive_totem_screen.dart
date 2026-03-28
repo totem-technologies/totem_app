@@ -82,7 +82,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
                       textAlign: TextAlign.center,
                     ),
                   SizedBox(
-                    height: 60,
+                    height: 50,
                     child: ActionSlider(
                       text: 'Slide to Receive',
                       onActionCompleted: () async {
