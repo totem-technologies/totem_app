@@ -22,7 +22,7 @@ class SessionsHeader extends StatelessWidget {
         children: [
           Text(
             'Sessions',
-            style: theme.textTheme.headlineMedium?.copyWith(
+            style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),

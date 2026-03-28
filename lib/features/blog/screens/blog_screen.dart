@@ -37,7 +37,7 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
     ref.sentryReportFullyDisplayed(blogPostProvider(widget.slug));
 
     return Scaffold(
-      backgroundColor: const Color(0xffFCEFE4),
+      backgroundColor: AppTheme.cream,
       body: SafeArea(
         child: blogRef.when(
           data: (blog) {
@@ -53,7 +53,7 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                     pinned: true,
                     elevation: 0,
                     automaticallyImplyLeading: false,
-                    backgroundColor: const Color(0xffFCEFE4),
+                    backgroundColor: AppTheme.cream,
                     leading: CircleIconButton(
                       margin: const EdgeInsets.only(left: 20),
                       icon: TotemIcons.arrowBack,

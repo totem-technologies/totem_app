@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
-import 'package:totem_app/features/blog/widgets/blog_post_card.dart';
 import 'package:totem_app/features/blog/widgets/featured_blog_post.dart';
+import 'package:totem_app/features/home/widgets/home_blog_card.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/empty_indicator.dart';
@@ -30,47 +30,34 @@ class BlogListScreen extends ConsumerWidget {
 
           return LayoutBuilder(
             builder: (context, constraints) {
-              return Container(
-                constraints: BoxConstraints(
-                  maxHeight: constraints.maxHeight,
-                ),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: AlignmentDirectional.topEnd,
-                    end: AlignmentDirectional.bottomStart,
-                    stops: [0.6, 1],
-                    colors: [
-                      Color(0xffFCEFE4),
-                      Color(0xff435DD0),
-                    ],
+              return CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: FeaturedBlogPost.fromBlogPostSchema(
+                      data.items.first,
+                    ),
                   ),
-                ),
-                child: CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: FeaturedBlogPost.fromBlogPostSchema(
-                        data.items.first,
+                  SliverSafeArea(
+                    top: false,
+                    sliver: SliverPadding(
+                      padding: const EdgeInsetsDirectional.only(
+                        top: 20,
+                        bottom: 20,
                       ),
-                    ),
-                    SliverSafeArea(
-                      top: false,
-                      sliver: SliverPadding(
-                        padding: const EdgeInsetsDirectional.only(
-                          top: 20,
-                          bottom: 20,
-                        ),
-                        sliver: SliverFixedExtentList.builder(
-                          itemExtent: BlogPostCard.cardHeight + 10,
-                          itemCount: data.items.sublist(1).length,
-                          itemBuilder: (context, index) =>
-                              BlogPostCard.fromBlogPostSchema(
-                                data.items[index + 1],
-                              ),
+                      sliver: SliverList.builder(
+                        itemCount: data.items.length - 1,
+                        itemBuilder: (context, index) => Padding(
+                          padding: const EdgeInsets.only(
+                            left: 20,
+                            right: 20,
+                            bottom: 16,
+                          ),
+                          child: HomeBlogCard(data: data.items[index + 1]),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               );
             },
           );

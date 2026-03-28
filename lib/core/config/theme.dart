@@ -22,6 +22,15 @@ class AppTheme {
   static const Color purple = Color(0xFF8B5CF6);
   static const Color green = Color(0xFF19F554);
 
+  // --- Shadows ---
+  static const List<BoxShadow> cardShadow = [
+    BoxShadow(
+      color: Color(0x0F000000), // 6% black
+      blurRadius: 16,
+      offset: Offset(0, 4),
+    ),
+  ];
+
   // Basic Colors
   static const Color white = Colors.white;
   static const Color black = Colors.black;
