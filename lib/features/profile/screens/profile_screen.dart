@@ -39,56 +39,60 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               bottom: 8, // each tile already has a bottom padding of 12
             ).add(MediaQuery.paddingOf(context)),
             children: [
-              GestureDetector(
-                onTap: () => context.pushNamed(RouteNames.profileDetail),
-                child: Card(
-                  margin: EdgeInsetsDirectional.zero,
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.all(20),
-                    child: Row(
-                      spacing: 10,
-                      children: [
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(minWidth: 146),
-                          child: Column(
-                            spacing: 10,
-                            children: [
-                              UserAvatar.currentUser(),
-                              AutoSizeText(
+              Card(
+                margin: EdgeInsetsDirectional.zero,
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.all(20),
+                  child: Row(
+                    spacing: 10,
+                    children: [
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 146),
+                        child: Column(
+                          spacing: 10,
+                          children: [
+                            UserAvatar.currentUser(
+                              onTap: () =>
+                                  context.pushNamed(RouteNames.profileDetail),
+                            ),
+                            GestureDetector(
+                              onTap: () =>
+                                  context.pushNamed(RouteNames.profileDetail),
+                              child: AutoSizeText(
                                 user.name ?? 'You',
                                 style: theme.textTheme.headlineMedium,
                                 maxLines: 1,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                '${user.circleCount}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '${user.circleCount}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
                               ),
-                              const Text('Sessions joined'),
-                              const SizedBox(height: 20),
-                              Text(
-                                DateFormat(
-                                  'MMM, yyyy',
-                                ).format(user.dateCreated),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            ),
+                            const Text('Sessions joined'),
+                            const SizedBox(height: 20),
+                            Text(
+                              DateFormat(
+                                'MMM, yyyy',
+                              ).format(user.dateCreated),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
                               ),
-                              const Text('Member Since'),
-                            ],
-                          ),
+                            ),
+                            const Text('Member Since'),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
