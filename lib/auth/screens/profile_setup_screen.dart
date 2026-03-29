@@ -332,30 +332,32 @@ class _ProfileTabState extends State<_ProfileTab>
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => showProfileImagePicker(context),
-          child: Center(
-            child: Stack(
-              alignment: AlignmentDirectional.center,
-              children: [
-                UserAvatar.currentUser(radius: 50),
-                PositionedDirectional(
-                  bottom: -10,
-                  end: -10,
-                  child: Container(
-                    height: 40,
-                    width: 40,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: AlignmentDirectional.center,
+        Center(
+          child: Stack(
+            alignment: AlignmentDirectional.center,
+            children: [
+              UserAvatar.currentUser(
+                radius: 50,
+                onTap: () => showProfileImagePicker(context),
+              ),
+              PositionedDirectional(
+                bottom: -10,
+                end: -10,
+                child: Container(
+                  height: 40,
+                  width: 40,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: AlignmentDirectional.center,
+                  child: GestureDetector(
+                    onTap: () => showProfileImagePicker(context),
                     child: const TotemIcon(TotemIcons.edit),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 24),
