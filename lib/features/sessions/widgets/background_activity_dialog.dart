@@ -32,10 +32,9 @@ class BackgroundActivityDialog extends StatelessWidget {
           Text(
             'Stay connected',
             textAlign: TextAlign.center,
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.w600),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 16),
           Text(
@@ -44,8 +43,8 @@ class BackgroundActivityDialog extends StatelessWidget {
             'use the minimum power needed to keep you online.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
           ),
           const SizedBox(height: 24),
           SizedBox(

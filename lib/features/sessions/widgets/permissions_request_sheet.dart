@@ -78,10 +78,9 @@ class _PermissionsRequestSheetState
                 Text(
                   'Get Ready for your session',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w600),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -90,8 +89,8 @@ class _PermissionsRequestSheetState
                   'time in your device settings.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
                 const SizedBox(height: 32),
                 PermissionItemTile(
@@ -150,8 +149,7 @@ class _PermissionsRequestSheetState
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          isReady ? AppTheme.mauve : AppTheme.gray,
+                      backgroundColor: isReady ? AppTheme.mauve : AppTheme.gray,
                     ),
                     child: const Text('Continue'),
                   ),

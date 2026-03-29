@@ -76,8 +76,7 @@ class PermissionsController extends _$PermissionsController {
   }
 
   Future<void> requestNotification() async {
-    final result =
-        await FlutterForegroundTask.requestNotificationPermission();
+    final result = await FlutterForegroundTask.requestNotificationPermission();
     final status = result == NotificationPermission.granted
         ? PermissionStatus.granted
         : PermissionStatus.denied;

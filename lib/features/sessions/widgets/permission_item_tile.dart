@@ -83,9 +83,7 @@ class _CircleCheckbox extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: isChecked ? AppTheme.mauve : Colors.transparent,
-        border: isChecked
-            ? null
-            : Border.all(color: AppTheme.gray, width: 1.5),
+        border: isChecked ? null : Border.all(color: AppTheme.gray, width: 1.5),
       ),
       child: isChecked
           ? const Icon(Icons.check, size: 14, color: Colors.white)
