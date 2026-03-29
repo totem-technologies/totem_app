@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/controllers/features/permissions_controller.dart';
 import 'package:totem_app/features/sessions/widgets/permission_item_tile.dart';
@@ -14,8 +13,6 @@ Future<bool> showPermissionsRequestSheet(BuildContext context) async {
         backgroundColor: Colors.white,
         isScrollControlled: true,
         useSafeArea: true,
-        isDismissible: false,
-        enableDrag: false,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
         ),
@@ -87,18 +84,14 @@ class _PermissionsRequestSheetState
                       ?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Please review your preferences below to ensure a smooth '
                   'live experience. You can manage these permissions at any '
                   'time in your device settings.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: AppTheme.fontFamilySans,
-                    fontSize: 12,
-                    fontWeight: FontWeight.normal,
-                    color: Color(0xFF1F2937),
-                    height: 1.2,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                 ),
                 const SizedBox(height: 32),
                 PermissionItemTile(
@@ -110,7 +103,7 @@ class _PermissionsRequestSheetState
                   description:
                       'Allow Totem to send you notification about session, '
                       'new blog and more',
-                  isGranted: permissionsState.notificationStatus.isGranted,
+                  isGranted: permissionsState.isNotificationGranted,
                   onTap: controller.requestNotification,
                 ),
                 const SizedBox(height: 10),
@@ -123,7 +116,7 @@ class _PermissionsRequestSheetState
                   description:
                       'To speak during sessions, Totem needs access to your '
                       'microphone.',
-                  isGranted: permissionsState.microphoneStatus.isGranted,
+                  isGranted: permissionsState.isMicrophoneGranted,
                   onTap: controller.requestMicrophone,
                 ),
                 const SizedBox(height: 10),
@@ -136,7 +129,7 @@ class _PermissionsRequestSheetState
                   description:
                       'Allow camera access so others can see you during '
                       'the live session. You can turn it off at any time.',
-                  isGranted: permissionsState.cameraStatus.isGranted,
+                  isGranted: permissionsState.isCameraGranted,
                   onTap: controller.requestCamera,
                 ),
                 const SizedBox(height: 32),

@@ -38,18 +38,14 @@ class BackgroundActivityDialog extends StatelessWidget {
                 ?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'To prevent your session from dropping when you switch apps, '
             "Totem needs to stay active in the background. We'll only "
             'use the minimum power needed to keep you online.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: AppTheme.fontFamilySans,
-              fontSize: 16,
-              fontWeight: FontWeight.normal,
-              color: Color(0xFF1F2937),
-              height: 1.2,
-            ),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
           ),
           const SizedBox(height: 24),
           SizedBox(

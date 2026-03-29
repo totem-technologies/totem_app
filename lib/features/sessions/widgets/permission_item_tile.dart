@@ -19,50 +19,51 @@ class PermissionItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: isGranted ? null : onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppTheme.cream,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            icon,
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontFamily: AppTheme.fontFamilySans,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1F2937),
-                      height: 1.2,
+    return Material(
+      color: AppTheme.cream,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: isGranted ? null : onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              icon,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontFamilySans,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                        height: 1.2,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    description,
-                    style: const TextStyle(
-                      fontFamily: AppTheme.fontFamilySans,
-                      fontSize: 14,
-                      fontWeight: FontWeight.normal,
-                      color: Color(0xFF1F2937),
-                      height: 1.2,
+                    const SizedBox(height: 6),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontFamily: AppTheme.fontFamilySans,
+                        fontSize: 14,
+                        fontWeight: FontWeight.normal,
+                        color: Theme.of(context).colorScheme.onSurface,
+                        height: 1.2,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            _CircleCheckbox(isChecked: isGranted),
-          ],
+              const SizedBox(width: 10),
+              _CircleCheckbox(isChecked: isGranted),
+            ],
+          ),
         ),
       ),
     );

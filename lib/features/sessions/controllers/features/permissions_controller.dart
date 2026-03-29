@@ -15,8 +15,11 @@ class PermissionsState {
   final PermissionStatus microphoneStatus;
   final PermissionStatus notificationStatus;
 
-  bool get requiredPermissionsGranted =>
-      cameraStatus.isGranted && microphoneStatus.isGranted;
+  bool get isCameraGranted => cameraStatus.isGranted;
+  bool get isMicrophoneGranted => microphoneStatus.isGranted;
+  bool get isNotificationGranted => notificationStatus.isGranted;
+
+  bool get requiredPermissionsGranted => isCameraGranted && isMicrophoneGranted;
 
   PermissionsState copyWith({
     PermissionStatus? cameraStatus,
@@ -58,20 +61,18 @@ class PermissionsController extends _$PermissionsController {
 
   Future<void> requestCamera() async {
     final status = await Permission.camera.request();
+    state = state.copyWith(cameraStatus: status);
     if (status.isPermanentlyDenied) {
       await openAppSettings();
-      return;
     }
-    state = state.copyWith(cameraStatus: status);
   }
 
   Future<void> requestMicrophone() async {
     final status = await Permission.microphone.request();
+    state = state.copyWith(microphoneStatus: status);
     if (status.isPermanentlyDenied) {
       await openAppSettings();
-      return;
     }
-    state = state.copyWith(microphoneStatus: status);
   }
 
   Future<void> requestNotification() async {
