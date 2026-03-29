@@ -562,6 +562,20 @@ class TotemIcons {
 </svg>
 ''';
 
+  static const notification = '''
+<svg width="25" height="26" viewBox="0 0 25 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M12.5 3.25C8.77208 3.25 5.75 6.52208 5.75 10.5V14.25L4.25 17.25H20.75L19.25 14.25V10.5C19.25 6.52208 16.2279 3.25 12.5 3.25Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M10.25 20C10.25 21.2426 11.2574 22.25 12.5 22.25C13.7426 22.25 14.75 21.2426 14.75 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
+''';
+
+  static const backgroundMode = '''
+<svg width="45" height="45" viewBox="0 0 45 45" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M22.5 8.4375C22.5 8.4375 15.4688 8.4375 11.9531 11.9531C8.4375 15.4688 8.4375 22.5 8.4375 22.5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M22.5 36.5625C22.5 36.5625 29.5312 36.5625 33.0469 33.0469C36.5625 29.5312 36.5625 22.5 36.5625 22.5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
+''';
+
   static const pause = '''
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
   <path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"/>
