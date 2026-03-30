@@ -1,6 +1,11 @@
+// ignore_for_file: invalid_use_of_internal_member
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:livekit_client/livekit_client.dart'
+    hide ConnectionState, logger;
+import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
@@ -15,13 +20,32 @@ import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../livekit_mocks.dart';
 
+class FakeTrackEventsListener extends MockTrackEventsListener {
+  void Function(TrackEvent)? capturedListener;
+
+  @override
+  CancelListenFunc listen(void Function(TrackEvent event) listener) {
+    capturedListener = listener;
+    return () async {};
+  }
+}
+
 void main() {
   late MockRemoteParticipant remoteParticipant;
   late FakeSessionController fakeSessionState;
 
+  setUpAll(() {
+    registerFallbackValue(VideoQuality.HIGH);
+    registerFallbackValue(GlobalKey());
+  });
+
   setUp(() {
     remoteParticipant = MockRemoteParticipant('user-2', 'John Doe');
     fakeSessionState = FakeSessionController();
+
+    when(
+      () => remoteParticipant.createListener(),
+    ).thenReturn(MockParticipantEventsListener());
   });
 
   Future<void> pumpWidget(
@@ -106,6 +130,9 @@ void main() {
       tester,
     ) async {
       final keeperParticipant = MockRemoteParticipant('keeper-1', 'The Keeper');
+      when(
+        keeperParticipant.createListener,
+      ).thenReturn(MockParticipantEventsListener());
 
       // Add keeper-1 as keeper to the room state
       fakeSessionState.mockState = SessionRoomState(
@@ -186,6 +213,117 @@ void main() {
 
       expect(find.text('Waiting room'), findsOneWidget);
       expect(find.byType(TotemIcon), findsOneWidget); // clock icon
+    });
+  });
+
+  group('ParticipantVideo', () {
+    testWidgets('updates video quality when requested', (tester) async {
+      final mockParticipant = MockRemoteParticipant('user-2', 'John Doe');
+      final mockPublication = MockRemoteTrackPublication();
+      final mockTrack = MockRemoteVideoTrack();
+
+      when(
+        () => mockParticipant.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(mockPublication);
+      when(
+        mockParticipant.createListener,
+      ).thenReturn(MockParticipantEventsListener());
+
+      when(() => mockPublication.track).thenReturn(mockTrack);
+      when(() => mockPublication.source).thenReturn(TrackSource.camera);
+      when(() => mockPublication.sid).thenReturn('pub-sid');
+      when(() => mockPublication.videoQuality).thenReturn(VideoQuality.HIGH);
+      when(
+        () => mockPublication.setVideoQuality(any()),
+      ).thenAnswer((_) async {});
+      when(() => mockPublication.subscribed).thenReturn(true);
+      when(() => mockPublication.muted).thenReturn(false);
+
+      when(mockTrack.createListener).thenReturn(MockTrackEventsListener());
+      when(() => mockTrack.sid).thenReturn('track-sid');
+      when(() => mockTrack.isActive).thenReturn(true);
+      when(() => mockTrack.muted).thenReturn(false);
+      when(mockTrack.addViewKey).thenReturn(GlobalKey());
+      when(() => mockTrack.removeViewKey(any<GlobalKey>())).thenAnswer((_) {});
+
+      await pumpWidget(
+        tester,
+        authState: AuthState.unauthenticated(),
+        overrides: [
+          currentSessionStateProvider.overrideWithValue(
+            fakeSessionState.mockState,
+          ),
+        ],
+        child: ParticipantVideo(
+          participant: mockParticipant,
+          preferredVideoQuality: VideoQuality.HIGH,
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 400));
+
+      verify(
+        () => mockPublication.setVideoQuality(VideoQuality.HIGH),
+      ).called(greaterThan(0));
+    });
+
+    testWidgets('hides track when connection is lost (isTrackInactive)', (
+      tester,
+    ) async {
+      final mockParticipant = MockRemoteParticipant('user-2', 'John Doe');
+      final mockPublication = MockRemoteTrackPublication();
+      final mockTrack = MockRemoteVideoTrack();
+
+      when(
+        () => mockParticipant.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(mockPublication);
+      when(
+        mockParticipant.createListener,
+      ).thenReturn(MockParticipantEventsListener());
+
+      when(() => mockPublication.track).thenReturn(mockTrack);
+      when(() => mockPublication.source).thenReturn(TrackSource.camera);
+      when(() => mockPublication.sid).thenReturn('pub-sid');
+      when(() => mockPublication.videoQuality).thenReturn(VideoQuality.HIGH);
+      when(
+        () => mockPublication.setVideoQuality(any()),
+      ).thenAnswer((_) async {});
+      when(() => mockPublication.subscribed).thenReturn(true);
+      when(() => mockPublication.muted).thenReturn(false);
+
+      final trackListener = FakeTrackEventsListener();
+      when(mockTrack.createListener).thenReturn(trackListener);
+      when(() => mockTrack.sid).thenReturn('track-sid');
+      when(() => mockTrack.isActive).thenReturn(true);
+      when(() => mockTrack.muted).thenReturn(false);
+      when(mockTrack.addViewKey).thenReturn(GlobalKey());
+      when(() => mockTrack.removeViewKey(any<GlobalKey>())).thenAnswer((_) {});
+
+      await pumpWidget(
+        tester,
+        authState: AuthState.unauthenticated(),
+        overrides: [
+          currentSessionStateProvider.overrideWithValue(
+            fakeSessionState.mockState,
+          ),
+        ],
+        child: ParticipantVideo(
+          participant: mockParticipant,
+          preferredVideoQuality: VideoQuality.HIGH,
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.byType(VideoTrackRenderer), findsOneWidget);
+
+      final event = MockVideoReceiverStatsEvent();
+      when(() => event.currentBitrate).thenReturn(5);
+      trackListener.capturedListener?.call(event);
+
+      await tester.pumpAndSettle();
+
+      expect(find.byType(VideoTrackRenderer), findsNothing);
     });
   });
 }

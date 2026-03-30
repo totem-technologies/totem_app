@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:livekit_client/src/core/engine.dart';
 import 'package:mocktail/mocktail.dart';
@@ -78,7 +78,8 @@ class MockRemoteParticipant extends Mock implements RemoteParticipant {
   bool get isMuted => false;
 
   @override
-  List<RemoteTrackPublication<RemoteVideoTrack>> get videoTrackPublications => [];
+  List<RemoteTrackPublication<RemoteVideoTrack>> get videoTrackPublications =>
+      [];
 
   @override
   List<RemoteTrackPublication<RemoteTrack>> getTrackPublications() => [];
@@ -100,13 +101,15 @@ class MockParticipantEventsListener extends Mock
   }
 }
 
-class MockRemoteTrackPublication extends Mock implements RemoteTrackPublication<RemoteVideoTrack> {}
+class MockRemoteTrackPublication extends Mock
+    implements RemoteTrackPublication<RemoteVideoTrack> {}
 
 class MockRemoteVideoTrack extends Mock implements RemoteVideoTrack {}
 
 class MockLocalVideoTrack extends Mock implements LocalVideoTrack {}
 
-class MockTrackEventsListener extends Mock implements EventsListener<TrackEvent> {
+class MockTrackEventsListener extends Mock
+    implements EventsListener<TrackEvent> {
   @override
   CancelListenFunc on<E>(
     FutureOr<void> Function(E event) listener, {
@@ -125,3 +128,6 @@ class MockTrackEventsListener extends Mock implements EventsListener<TrackEvent>
     return true;
   }
 }
+
+class MockVideoReceiverStatsEvent extends Mock
+    implements VideoReceiverStatsEvent {}
