@@ -11,7 +11,6 @@ import 'package:totem_app/features/sessions/controllers/features/session_infra_c
 import '../../../../auth/controllers/auth_controller_mock.dart';
 import '../../../../core/services/screen_protection_service_mock.dart';
 import '../../../../mocks/flutter_foreground_task_mock.dart';
-import '../../../../mocks/wakelock_plus_mock.dart';
 import '../../../../setup.dart';
 
 void main() {
@@ -20,7 +19,6 @@ void main() {
   setUpAll(() {
     setupDotenv();
 
-    setupMockWakelockPlus();
     setupMockFlutterForegroundTask();
   });
 

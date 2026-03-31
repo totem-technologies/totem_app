@@ -36,5 +36,4 @@ Future<void> setupFirebase() async {
   );
 }
 
-// TODO(test): Session repository layer tests
 // TODO(test): Screens Tests
