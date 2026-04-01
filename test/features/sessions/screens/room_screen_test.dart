@@ -1,10 +1,35 @@
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
+import 'package:mocktail/mocktail.dart';
+import 'package:totem_app/auth/controllers/auth_controller.dart';
+import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_app/features/sessions/screens/error_screen.dart';
+import 'package:totem_app/features/sessions/screens/my_turn.dart';
+import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
+import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/room_screen.dart';
+import 'package:totem_app/features/sessions/screens/session_disconnected.dart';
+
+import '../../../auth/controllers/auth_controller_mock.dart';
+import '../controllers/core/session_controller_mock.dart';
+import '../controllers/features/session_device_controller_mock.dart';
+import '../livekit_mocks.dart';
+
+MockLocalParticipant _buildMockParticipant(String id) {
+  final participant = MockLocalParticipant(id);
+  when(
+    participant.createListener,
+  ).thenReturn(MockParticipantEventsListener());
+  when(participant.isMicrophoneEnabled).thenAnswer((_) => false);
+  when(participant.isCameraEnabled).thenAnswer((_) => false);
+  when(() => participant.getTrackPublicationBySource(any())).thenReturn(null);
+  return participant;
+}
 
 SessionDetailSchema _createSessionEvent({
   required DateTime start,
@@ -71,6 +96,77 @@ Future<void> _pumpRoomScreen(
         home: VideoRoomScreen(
           sessionSlug: 'test-session',
           loadingScreen: SizedBox.shrink(),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+}
+
+Future<void> _pumpRoomScreenForResolvedScreen(
+  WidgetTester tester, {
+  required MockSessionController session,
+  required SessionDetailSchema event,
+  required RoomScreen screen,
+}) async {
+  final p1 = _buildMockParticipant('user-1');
+  final p2 = _buildMockParticipant('user-2');
+  final keeper = _buildMockParticipant('keeper-1');
+
+  final sessionState = SessionRoomState(
+    connection: const ConnectionState(
+      phase: SessionPhase.connected,
+      state: RoomConnectionState.connected,
+    ),
+    participants: ParticipantsState(
+      participants: [
+        p1,
+        p2,
+        keeper,
+      ],
+    ),
+    chat: const ChatState(),
+    turn: const SessionTurnState(
+      roomState: RoomState(
+        keeper: 'keeper-1',
+        nextSpeaker: 'user-2',
+        currentSpeaker: 'user-1',
+        status: RoomStatus.active,
+        turnState: TurnState.idle,
+        sessionSlug: 'test-session',
+        statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+        talkingOrder: [],
+        version: 1,
+        roundNumber: 1,
+      ),
+    ),
+  );
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        authControllerProvider.overrideWith(
+          () => FakeAuthController(AuthState.unauthenticated()),
+        ),
+        currentSessionProvider.overrideWith((ref) => session),
+        currentSessionStateProvider.overrideWithValue(sessionState),
+        currentSessionEventProvider.overrideWith((ref) => event),
+        resolveCurrentScreenProvider.overrideWith((ref) => screen),
+        connectionStateProvider.overrideWith(
+          (ref) => RoomConnectionState.connected,
+        ),
+        roomStatusProvider.overrideWith((ref) => RoomStatus.active),
+        isCurrentUserKeeperProvider.overrideWith((ref) => false),
+        isCameraOnProvider.overrideWith((ref) => false),
+        roundMessageProvider.overrideWith((ref) => null),
+        sessionMessagesProvider.overrideWith((ref) => const []),
+        lastSessionMessageProvider.overrideWith((ref) => null),
+        disconnectionReasonProvider.overrideWith((ref) => null),
+      ],
+      child: const MaterialApp(
+        home: VideoRoomScreen(
+          sessionSlug: 'test-session',
+          loadingScreen: SizedBox(key: ValueKey('loading-screen')),
         ),
       ),
     ),
@@ -196,6 +292,156 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
 }
 
 void main() {
+  group('VideoRoomScreen - screen rendering', () {
+    late MockSessionController session;
+    late MockSessionDeviceController devices;
+
+    setUpAll(() {
+      registerFallbackValue(TrackSource.camera);
+    });
+
+    setUp(() {
+      session = MockSessionController();
+      devices = MockSessionDeviceController();
+      final localParticipant = _buildMockParticipant('user-1');
+
+      when(() => session.room).thenReturn(FakeRoom(localParticipant));
+      when(() => session.devices).thenReturn(devices);
+      when(() => devices.localVideoTrack).thenReturn(null);
+      when(() => session.isCurrentUserKeeper()).thenReturn(false);
+      when(() => session.event).thenReturn(
+        _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 5)),
+          duration: 10,
+        ),
+      );
+      when(() => session.join()).thenAnswer((_) async {});
+    });
+
+    testWidgets('renders loading screen for RoomScreen.loading', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.loading,
+      );
+
+      expect(find.byKey(const ValueKey('loading-screen')), findsOneWidget);
+    });
+
+    testWidgets('renders disconnected screen for RoomScreen.disconnected', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.disconnected,
+      );
+
+      expect(find.byType(SessionDisconnectedScreen), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('renders error screen for RoomScreen.error', (tester) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.error,
+      );
+
+      expect(find.byType(RoomErrorScreen), findsOneWidget);
+    });
+
+    testWidgets('renders receive totem screen for RoomScreen.receiving', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.receiving,
+      );
+
+      expect(find.byType(ReceiveTotemScreen), findsOneWidget);
+    });
+
+    testWidgets('renders my turn screen for RoomScreen.myTurn', (tester) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.myTurn,
+      );
+
+      expect(find.byType(MyTurn), findsOneWidget);
+    });
+
+    testWidgets('renders my turn screen for RoomScreen.passing', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.passing,
+      );
+
+      expect(find.byType(MyTurn), findsOneWidget);
+    });
+
+    testWidgets('renders not my turn screen for RoomScreen.notMyTurn', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.notMyTurn,
+      );
+
+      expect(find.byType(NotMyTurn), findsOneWidget);
+    });
+  });
+
   group('VideoRoomScreen - 5 minute warning', () {
     testWidgets('shows the warning popup when 5 minutes remain', (
       tester,
