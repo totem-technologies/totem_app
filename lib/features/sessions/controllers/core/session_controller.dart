@@ -51,6 +51,28 @@ enum RoomScreen {
   notMyTurn,
 }
 
+/// The reason the session was diconnected.
+///
+/// See also:
+///
+///  * [DisconnectReason], the reason the user was disconnected from the livekit room.
+enum SessionDisconnectedReason {
+  /// The same account joined from another device and replaced this device.
+  movedToAnotherDevice,
+
+  /// The session has ended normally, usually by the keeper.
+  keeperEnded,
+
+  /// The keeper left the session and didn't come back within the timeout period.
+  keeperAbsent,
+
+  /// The keeper never joined the session and it ended after the timeout period.
+  roomEmpty,
+
+  /// The user was kicked out of the session by the keeper.
+  removed,
+}
+
 @riverpod
 class SessionController extends _$SessionController {
   Room? _room;

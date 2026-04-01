@@ -1,18 +1,15 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
-
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/app_config.dart';
@@ -36,6 +33,7 @@ import 'package:totem_app/shared/routing.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/utils.dart';
 import 'package:totem_app/shared/widgets/circle_icon_button.dart';
+import 'package:totem_app/shared/widgets/confetti.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
@@ -503,7 +501,6 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   bool _initialized = false;
   String _currentTimeago = '';
   Timer? _timer;
-  Timer? _confettiTimer;
 
   void _initFromEvent(SessionDetailSchema event) {
     if (_initialized) return;
@@ -521,7 +518,6 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   @override
   void dispose() {
     _timer?.cancel();
-    _confettiTimer?.cancel();
     super.dispose();
   }
 
@@ -682,46 +678,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
         onAddToCalendar: () => _addToCalendar(event),
       ),
     );
-    double randomInRange(double min, double max) =>
-        min + Random().nextDouble() * (max - min);
-    const total = 10;
-    var progress = 0;
-    _confettiTimer?.cancel();
-    _confettiTimer = Timer.periodic(const Duration(milliseconds: 250), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      progress++;
-      if (progress >= total) {
-        timer.cancel();
-        return;
-      }
-      final count = ((1 - progress / total) * 50).toInt();
-      final ctx = context; // snapshot after mounted check
-      Confetti.launch(
-        ctx,
-        options: ConfettiOptions(
-          particleCount: count,
-          startVelocity: 30,
-          spread: 360,
-          ticks: 60,
-          x: randomInRange(0.1, 0.3),
-          y: Random().nextDouble() - 0.2,
-        ),
-      );
-      Confetti.launch(
-        ctx,
-        options: ConfettiOptions(
-          particleCount: count,
-          startVelocity: 30,
-          spread: 360,
-          ticks: 60,
-          x: randomInRange(0.7, 0.9),
-          y: Random().nextDouble() - 0.2,
-        ),
-      );
-    });
+    if (mounted) ConfettiController.showConfetti(context);
   }
 
   Future<void> _addToCalendar(SessionDetailSchema event) async {

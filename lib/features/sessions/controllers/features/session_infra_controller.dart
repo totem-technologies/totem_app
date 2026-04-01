@@ -210,7 +210,7 @@ class SessionInfraController extends _$SessionInfraController {
     if (_backgroundModeEnabled ||
         _wakelockEnabled ||
         _screenProtectionEnabled) {
-      unawaited(deactivate());
+      deactivate();
     }
   }
 }

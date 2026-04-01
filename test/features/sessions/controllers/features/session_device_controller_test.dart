@@ -1,33 +1,131 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:livekit_client/livekit_client.dart';
+import 'package:mocktail/mocktail.dart';
+// ignore: depend_on_referenced_packages
+import 'package:riverpod/riverpod.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 
+import '../../livekit_mocks.dart';
+import '../core/session_controller_mock.dart';
+
 void main() {
-  // TODO(test): implement tests for SessionDeviceController
+  setUpAll(() {
+    registerFallbackValue(FakeCameraCaptureOptions());
+  });
+
   group('SessionDeviceController', () {
-    test('externalAudioOutputTypes includes common audio output devices', () {
-      // Verify that common external audio device types are recognized
-      expect(
-        SessionDeviceController.externalAudioOutputTypes.length,
-        greaterThan(0),
-        reason: 'Should have at least one external audio output type',
+    group('Device Controls', () {
+      late FakeSessionController mockSession;
+      late FakeRoom mockRoom;
+      late MockLocalParticipant mockLocalParticipant;
+      late ProviderContainer container;
+
+      setUp(() {
+        mockSession = FakeSessionController();
+        mockLocalParticipant = MockLocalParticipant();
+        mockRoom = FakeRoom(mockLocalParticipant)..setSpeakerOn(true);
+
+        mockSession.mockRoom = mockRoom;
+
+        when(
+          () => mockLocalParticipant.isMicrophoneEnabled(),
+        ).thenReturn(false);
+        when(
+          () => mockLocalParticipant.setMicrophoneEnabled(any()),
+        ).thenAnswer((_) async => null);
+
+        when(() => mockLocalParticipant.isCameraEnabled()).thenReturn(false);
+        when(
+          () => mockLocalParticipant.setCameraEnabled(
+            any(),
+            cameraCaptureOptions: any(named: 'cameraCaptureOptions'),
+          ),
+        ).thenAnswer((_) async => null);
+
+        container = ProviderContainer();
+      });
+
+      tearDown(() {
+        container.dispose();
+      });
+
+      test(
+        'enableMicrophone calls setMicrophoneEnabled on localParticipant',
+        () async {
+          final controller = container.read(
+            sessionDeviceControllerProvider(mockSession).notifier,
+          );
+
+          await controller.enableMicrophone();
+
+          verify(
+            () => mockLocalParticipant.setMicrophoneEnabled(true),
+          ).called(1);
+        },
       );
-    });
 
-    test('externalAudioOutputTypes contains expected device type names', () {
-      final deviceTypeNames = SessionDeviceController.externalAudioOutputTypes
-          .map((e) => e.toString())
-          .toList();
+      test('enableMicrophone does nothing if already enabled', () async {
+        when(() => mockLocalParticipant.isMicrophoneEnabled()).thenReturn(true);
+        final controller = container.read(
+          sessionDeviceControllerProvider(mockSession).notifier,
+        );
 
-      expect(deviceTypeNames, isNotEmpty);
-    });
+        await controller.enableMicrophone();
 
-    test('externalAudioOutputTypes includes common headset types', () {
-      final typeStrings = SessionDeviceController.externalAudioOutputTypes
-          .map((e) => e.toString())
-          .toList();
+        verifyNever(() => mockLocalParticipant.setMicrophoneEnabled(any()));
+      });
 
-      // Should handle various audio output scenarios
-      expect(typeStrings, isNotEmpty);
+      test(
+        'disableMicrophone calls setMicrophoneEnabled(false) on localParticipant',
+        () async {
+          when(
+            () => mockLocalParticipant.isMicrophoneEnabled(),
+          ).thenReturn(true);
+          final controller = container.read(
+            sessionDeviceControllerProvider(mockSession).notifier,
+          );
+
+          await controller.disableMicrophone();
+
+          verify(
+            () => mockLocalParticipant.setMicrophoneEnabled(false),
+          ).called(1);
+        },
+      );
+
+      test('disableMicrophone does nothing if already disabled', () async {
+        when(
+          () => mockLocalParticipant.isMicrophoneEnabled(),
+        ).thenReturn(false);
+        final controller = container.read(
+          sessionDeviceControllerProvider(mockSession).notifier,
+        );
+
+        await controller.disableMicrophone();
+
+        verifyNever(() => mockLocalParticipant.setMicrophoneEnabled(any()));
+      });
+
+      test(
+        'disableCamera calls setCameraEnabled(false) on localParticipant',
+        () async {
+          when(() => mockLocalParticipant.isCameraEnabled()).thenReturn(true);
+          final controller = container.read(
+            sessionDeviceControllerProvider(mockSession).notifier,
+          );
+
+          await controller.disableCamera();
+
+          verify(() => mockLocalParticipant.setCameraEnabled(false)).called(1);
+        },
+      );
+
+      test('resetSpeakerRoutingDefaults resets preferences', () {
+        final controller = container.read(
+          sessionDeviceControllerProvider(mockSession).notifier,
+        )..resetSpeakerRoutingDefaults();
+        expect(controller.userSpeakerPreference, isTrue);
+      });
     });
   });
 }

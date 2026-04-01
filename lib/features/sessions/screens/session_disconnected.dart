@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:in_app_review/in_app_review.dart';
@@ -14,6 +12,7 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/profile/screens/user_feedback.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
@@ -23,23 +22,38 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/confetti.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-enum _SessionDisconnectedReason {
-  /// The same account joined from another device and replaced this device.
-  movedToAnotherDevice,
+/// Resolves the [SessionDisconnectedReason] from the given
+/// [disconnectReason] and [sessionState].
+///
+/// This is extracted as a pure function so it can be unit-tested independently.
+@visibleForTesting
+SessionDisconnectedReason resolveDisconnectedReason({
+  DisconnectReason? disconnectReason,
+  SessionRoomState? sessionState,
+}) {
+  if (disconnectReason == DisconnectReason.duplicateIdentity) {
+    return SessionDisconnectedReason.movedToAnotherDevice;
+  }
 
-  /// The session has ended normally, usually by the keeper.
-  keeperEnded,
+  if (sessionState?.removed ?? false) {
+    return SessionDisconnectedReason.removed;
+  }
 
-  /// The keeper left the session and didn't come back within the timeout period.
-  keeperAbsent,
+  if (sessionState?.roomState.status == RoomStatus.ended &&
+      sessionState?.roomState.statusDetail is RoomStateStatusDetailEnded) {
+    final detail =
+        sessionState!.roomState.statusDetail as RoomStateStatusDetailEnded;
+    return switch (detail.endedDetail.reason) {
+      EndReason.keeperAbsent => SessionDisconnectedReason.keeperAbsent,
+      EndReason.roomEmpty => SessionDisconnectedReason.roomEmpty,
+      EndReason.keeperEnded || _ => SessionDisconnectedReason.keeperEnded,
+    };
+  }
 
-  /// The keeper never joined the session and it ended after the timeout period.
-  roomEmpty,
-
-  /// The user was kicked out of the session by the keeper.
-  removed,
+  return SessionDisconnectedReason.keeperEnded;
 }
 
 class SessionDisconnectedScreen extends ConsumerStatefulWidget {
@@ -56,8 +70,50 @@ class SessionDisconnectedScreen extends ConsumerStatefulWidget {
   ConsumerState<SessionDisconnectedScreen> createState() =>
       _SessionDisconnectedScreenState();
 
-  static const _reviewRequestedKey = 'session_review_requested';
-  static const _sessionLikedCountKey = 'session_liked_count';
+  @visibleForTesting
+  static const reviewRequestedKey = 'session_review_requested';
+  @visibleForTesting
+  static const sessionLikedCountKey = 'session_liked_count';
+
+  /// Displays the in-app review prompt after the user has liked 5 sessions,
+  /// if the platform supports it and the prompt hasn't been shown before.
+  @visibleForTesting
+  static Future<void> incrementSessionLikedCount({
+    SharedPreferences? prefs,
+    InAppReview? inAppReview,
+  }) async {
+    final effectivePrefs = prefs ?? await SharedPreferences.getInstance();
+    final effectiveInAppReview = inAppReview ?? InAppReview.instance;
+
+    final alreadyRequested =
+        effectivePrefs.getBool(SessionDisconnectedScreen.reviewRequestedKey) ??
+        false;
+    if (alreadyRequested) return;
+
+    final count =
+        (effectivePrefs.getInt(
+              SessionDisconnectedScreen.sessionLikedCountKey,
+            ) ??
+            0) +
+        1;
+    await effectivePrefs.setInt(
+      SessionDisconnectedScreen.sessionLikedCountKey,
+      count,
+    );
+    if (count >= 5) {
+      try {
+        if (await effectiveInAppReview.isAvailable()) {
+          await effectiveInAppReview.requestReview();
+          await effectivePrefs.setBool(
+            SessionDisconnectedScreen.reviewRequestedKey,
+            true,
+          );
+        }
+      } catch (_) {
+        // Fine if fail
+      }
+    }
+  }
 }
 
 class _SessionDisconnectedScreenState
@@ -79,55 +135,6 @@ class _SessionDisconnectedScreenState
     ..onTap = () {
       launchUrl(Uri.parse('mailto:help@totem.org'));
     };
-
-  void _showConfetti() {
-    double randomInRange(double min, double max) {
-      return min + Random().nextDouble() * (max - min);
-    }
-
-    const total = 10;
-    var progress = 0;
-    _confettiTimer?.cancel();
-    _confettiTimer = Timer.periodic(const Duration(milliseconds: 250), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        _confettiTimer = null;
-        return;
-      }
-      progress++;
-
-      if (progress >= total) {
-        timer.cancel();
-        _confettiTimer = null;
-        return;
-      }
-
-      final count = ((1 - progress / total) * 50).toInt();
-
-      Confetti.launch(
-        context,
-        options: ConfettiOptions(
-          particleCount: count,
-          startVelocity: 30,
-          spread: 360,
-          ticks: 60,
-          x: randomInRange(0.1, 0.3),
-          y: Random().nextDouble() - 0.2,
-        ),
-      );
-      Confetti.launch(
-        context,
-        options: ConfettiOptions(
-          particleCount: count,
-          startVelocity: 30,
-          spread: 360,
-          ticks: 60,
-          x: randomInRange(0.7, 0.9),
-          y: Random().nextDouble() - 0.2,
-        ),
-      );
-    });
-  }
 
   @override
   void initState() {
@@ -167,32 +174,10 @@ class _SessionDisconnectedScreenState
           final sessionState = ref.watch(currentSessionStateProvider);
           final disconnectReason =
               widget.disconnectReason ?? sessionState?.disconnectReason;
-          final sessionReason = () {
-            if (disconnectReason == DisconnectReason.duplicateIdentity) {
-              return _SessionDisconnectedReason.movedToAnotherDevice;
-            }
-
-            if (sessionState?.removed ?? false) {
-              return _SessionDisconnectedReason.removed;
-            }
-
-            if (sessionState?.roomState.status == RoomStatus.ended &&
-                sessionState?.roomState.statusDetail
-                    is RoomStateStatusDetailEnded) {
-              final detail =
-                  sessionState!.roomState.statusDetail
-                      as RoomStateStatusDetailEnded;
-              return switch (detail.endedDetail.reason) {
-                EndReason.keeperAbsent =>
-                  _SessionDisconnectedReason.keeperAbsent,
-                EndReason.roomEmpty => _SessionDisconnectedReason.roomEmpty,
-                EndReason.keeperEnded ||
-                _ => _SessionDisconnectedReason.keeperEnded,
-              };
-            }
-
-            return _SessionDisconnectedReason.keeperEnded;
-          }();
+          final sessionReason = resolveDisconnectedReason(
+            disconnectReason: disconnectReason,
+            sessionState: sessionState,
+          );
 
           final nextEvents = widget.session.space.nextEvents
               .where((e) => e.slug != widget.session.slug)
@@ -215,14 +200,14 @@ class _SessionDisconnectedScreenState
                       header: true,
                       child: Text(
                         switch (sessionReason) {
-                          _SessionDisconnectedReason.keeperAbsent =>
+                          SessionDisconnectedReason.keeperAbsent =>
                             'Session will be rescheduled',
-                          _SessionDisconnectedReason.movedToAnotherDevice =>
+                          SessionDisconnectedReason.movedToAnotherDevice =>
                             'Session moved to another device',
-                          _SessionDisconnectedReason.removed =>
+                          SessionDisconnectedReason.removed =>
                             "You've been removed from this session.",
-                          _SessionDisconnectedReason.roomEmpty ||
-                          _SessionDisconnectedReason.keeperEnded =>
+                          SessionDisconnectedReason.roomEmpty ||
+                          SessionDisconnectedReason.keeperEnded =>
                             'Session Ended',
                         },
                         style: theme.textTheme.headlineMedium,
@@ -231,16 +216,16 @@ class _SessionDisconnectedScreenState
                     ),
                     Text.rich(
                       switch (sessionReason) {
-                        _SessionDisconnectedReason.keeperAbsent => const TextSpan(
+                        SessionDisconnectedReason.keeperAbsent => const TextSpan(
                           text:
                               'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
                         ),
-                        _SessionDisconnectedReason.movedToAnotherDevice =>
+                        SessionDisconnectedReason.movedToAnotherDevice =>
                           const TextSpan(
                             text:
                                 'This account joined the same session on another device. Continue there or rejoin from this device.',
                           ),
-                        _SessionDisconnectedReason.removed => TextSpan(
+                        SessionDisconnectedReason.removed => TextSpan(
                           text: 'Please take a moment to review our ',
                           children: [
                             TextSpan(
@@ -265,27 +250,27 @@ class _SessionDisconnectedScreenState
                             const TextSpan(text: '.'),
                           ],
                         ),
-                        _SessionDisconnectedReason.keeperEnded ||
-                        _SessionDisconnectedReason.roomEmpty => const TextSpan(
+                        SessionDisconnectedReason.keeperEnded ||
+                        SessionDisconnectedReason.roomEmpty => const TextSpan(
                           text:
                               'Thank you for joining!\nWe hope you found the session enjoyable.',
                         ),
                       },
                       textAlign: TextAlign.center,
                     ),
-                    if (sessionReason == _SessionDisconnectedReason.keeperEnded)
+                    if (sessionReason == SessionDisconnectedReason.keeperEnded)
                       _SessionFeedbackWidget(
                         state: _thumbState,
                         onThumbUpPressed: () async {
                           setState(() => _thumbState = ThumbState.up);
-                          _showConfetti();
+                          ConfettiController.showConfetti(context);
                           await ref.read(
                             sessionFeedbackProvider(
                               widget.session.slug,
                               SessionFeedbackOptions.up,
                             ).future,
                           );
-                          await _incrementSessionLikedCount();
+                          await SessionDisconnectedScreen.incrementSessionLikedCount();
                         },
                         onThumbDownPressed: () async {
                           await showUserFeedbackDialog(
@@ -387,34 +372,6 @@ class _SessionDisconnectedScreenState
         },
       ),
     );
-  }
-
-  /// Displays the in-app review prompt after the user has liked 5 sessions,
-  /// if the platform supports itand the prompt hasn't been shown before.
-  Future<void> _incrementSessionLikedCount() async {
-    final prefs = await SharedPreferences.getInstance();
-    final alreadyRequested =
-        prefs.getBool(SessionDisconnectedScreen._reviewRequestedKey) ?? false;
-    if (alreadyRequested) return;
-
-    final count =
-        (prefs.getInt(SessionDisconnectedScreen._sessionLikedCountKey) ?? 0) +
-        1;
-    await prefs.setInt(SessionDisconnectedScreen._sessionLikedCountKey, count);
-    if (count >= 5) {
-      final inAppReview = InAppReview.instance;
-      try {
-        if (await inAppReview.isAvailable()) {
-          await inAppReview.requestReview();
-          await prefs.setBool(
-            SessionDisconnectedScreen._reviewRequestedKey,
-            true,
-          );
-        }
-      } catch (_) {
-        // Fine if fail
-      }
-    }
   }
 }
 

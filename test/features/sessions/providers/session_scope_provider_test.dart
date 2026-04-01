@@ -2,9 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart'
+    show RoomScreen;
 import 'package:totem_app/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
+
+import '../controllers/core/session_controller_mock.dart';
+import '../livekit_mocks.dart';
 
 RoomState _roomState({
   RoomStatus status = RoomStatus.waitingRoom,
@@ -201,6 +206,180 @@ void main() {
       expect(container.read(hasKeeperProvider), isFalse);
       expect(container.read(featuredParticipantProvider), isNull);
       expect(container.read(speakingNextParticipantProvider), isNull);
+    });
+
+    test('computes active session properties correctly', () {
+      final alice = MockLocalParticipant('alice');
+      final bob = MockLocalParticipant('bob');
+      final keeperParticipant = MockLocalParticipant('keeper');
+
+      final participants = [alice, bob, keeperParticipant];
+
+      final fakeSession = FakeSessionController()
+        ..mockRoom = FakeRoom(alice)
+        ..isCurrentUserKeeperValue = true;
+
+      final container = ProviderContainer(
+        overrides: [
+          currentSessionStateProvider.overrideWithValue(
+            _state(
+              connectionState: RoomConnectionState.connected,
+              phase: SessionPhase.connected,
+              roomStatus: RoomStatus.waitingRoom,
+              turnState: TurnState.idle,
+              participants: participants,
+              keeper: 'keeper',
+              currentSpeaker: 'keeper',
+              nextSpeaker: 'alice',
+            ),
+          ),
+          currentSessionProvider.overrideWithValue(fakeSession),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(hasKeeperProvider), isTrue);
+      expect(container.read(featuredParticipantProvider)?.identity, 'keeper');
+      expect(
+        container.read(speakingNextParticipantProvider)?.identity,
+        'alice',
+      );
+
+      expect(container.read(isCurrentUserKeeperProvider), isTrue);
+      expect(container.read(isMyTurnProvider), isFalse);
+      expect(container.read(amNextSpeakerProvider), isTrue);
+      expect(
+        container.read(resolveCurrentScreenProvider),
+        RoomScreen.notMyTurn,
+      );
+    });
+
+    test('resolveCurrentScreen resolves different states', () {
+      final alice = MockLocalParticipant('alice');
+      final fakeSession = FakeSessionController();
+
+      ProviderContainer containerForState(
+        RoomConnectionState connState,
+        RoomStatus status,
+        TurnState turnState,
+        String? currentSpeaker,
+        String? nextSpeaker, {
+        bool noRoom = false,
+        bool noLocalParticipant = false,
+      }) {
+        if (noRoom) {
+          fakeSession.mockRoom = null;
+        } else if (noLocalParticipant) {
+          fakeSession.mockRoom = FakeRoom(MockLocalParticipant('other'));
+        } else {
+          fakeSession.mockRoom = FakeRoom(alice);
+        }
+
+        final container = ProviderContainer(
+          overrides: [
+            connectionStateProvider.overrideWithValue(connState),
+            currentSessionStateProvider.overrideWithValue(
+              _state(
+                connectionState: connState,
+                roomStatus: status,
+                turnState: turnState,
+                participants: [alice],
+                keeper: 'keeper',
+                currentSpeaker: currentSpeaker,
+                nextSpeaker: nextSpeaker,
+              ),
+            ),
+            currentSessionProvider.overrideWithValue(fakeSession),
+          ],
+        );
+        addTearDown(container.dispose);
+        return container;
+      }
+
+      // No room -> disconnected
+      expect(
+        containerForState(
+          RoomConnectionState.connected,
+          RoomStatus.active,
+          TurnState.idle,
+          'alice',
+          'alice',
+          noRoom: true,
+        ).read(resolveCurrentScreenProvider),
+        RoomScreen.disconnected,
+      );
+
+      // error -> RoomScreen.error
+      expect(
+        containerForState(
+          RoomConnectionState.error,
+          RoomStatus.active,
+          TurnState.idle,
+          'alice',
+          'alice',
+        ).read(resolveCurrentScreenProvider),
+        RoomScreen.error,
+      );
+
+      // loading -> RoomScreen.loading
+      expect(
+        containerForState(
+          RoomConnectionState.connecting,
+          RoomStatus.active,
+          TurnState.idle,
+          'alice',
+          'alice',
+        ).read(resolveCurrentScreenProvider),
+        RoomScreen.loading,
+      );
+
+      // disconnected -> RoomScreen.disconnected
+      expect(
+        containerForState(
+          RoomConnectionState.disconnected,
+          RoomStatus.active,
+          TurnState.idle,
+          'alice',
+          'alice',
+        ).read(resolveCurrentScreenProvider),
+        RoomScreen.disconnected,
+      );
+
+      // connected, RoomStatus.ended -> RoomScreen.disconnected
+      expect(
+        containerForState(
+          RoomConnectionState.connected,
+          RoomStatus.ended,
+          TurnState.idle,
+          'alice',
+          'alice',
+        ).read(resolveCurrentScreenProvider),
+        RoomScreen.disconnected,
+      );
+
+      // TurnState.passing and amNextSpeaker -> RoomScreen.receiving
+      expect(
+        containerForState(
+          RoomConnectionState.connected,
+          RoomStatus.active,
+          TurnState.passing,
+          'keeper',
+          'alice',
+        ).read(resolveCurrentScreenProvider),
+        RoomScreen.receiving,
+      );
+
+      // My turn
+      expect(
+        containerForState(
+          RoomConnectionState.connected,
+          RoomStatus.active,
+          TurnState.idle,
+          'alice',
+          'keeper',
+        ).read(resolveCurrentScreenProvider),
+        RoomScreen.myTurn,
+      );
     });
   });
 }
