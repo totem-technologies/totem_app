@@ -5,7 +5,6 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_confetti/flutter_confetti.dart';
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:in_app_review/in_app_review.dart';
@@ -15,8 +14,8 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/profile/screens/user_feedback.dart';
-import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
@@ -26,23 +25,6 @@ import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-enum SessionDisconnectedReason {
-  /// The same account joined from another device and replaced this device.
-  movedToAnotherDevice,
-
-  /// The session has ended normally, usually by the keeper.
-  keeperEnded,
-
-  /// The keeper left the session and didn't come back within the timeout period.
-  keeperAbsent,
-
-  /// The keeper never joined the session and it ended after the timeout period.
-  roomEmpty,
-
-  /// The user was kicked out of the session by the keeper.
-  removed,
-}
 
 /// Resolves the [SessionDisconnectedReason] from the given
 /// [disconnectReason] and [sessionState].
@@ -89,8 +71,50 @@ class SessionDisconnectedScreen extends ConsumerStatefulWidget {
   ConsumerState<SessionDisconnectedScreen> createState() =>
       _SessionDisconnectedScreenState();
 
-  static const _reviewRequestedKey = 'session_review_requested';
-  static const _sessionLikedCountKey = 'session_liked_count';
+  @visibleForTesting
+  static const reviewRequestedKey = 'session_review_requested';
+  @visibleForTesting
+  static const sessionLikedCountKey = 'session_liked_count';
+
+  /// Displays the in-app review prompt after the user has liked 5 sessions,
+  /// if the platform supports it and the prompt hasn't been shown before.
+  @visibleForTesting
+  static Future<void> incrementSessionLikedCount({
+    SharedPreferences? prefs,
+    InAppReview? inAppReview,
+  }) async {
+    final effectivePrefs = prefs ?? await SharedPreferences.getInstance();
+    final effectiveInAppReview = inAppReview ?? InAppReview.instance;
+
+    final alreadyRequested =
+        effectivePrefs.getBool(SessionDisconnectedScreen.reviewRequestedKey) ??
+        false;
+    if (alreadyRequested) return;
+
+    final count =
+        (effectivePrefs.getInt(
+              SessionDisconnectedScreen.sessionLikedCountKey,
+            ) ??
+            0) +
+        1;
+    await effectivePrefs.setInt(
+      SessionDisconnectedScreen.sessionLikedCountKey,
+      count,
+    );
+    if (count >= 5) {
+      try {
+        if (await effectiveInAppReview.isAvailable()) {
+          await effectiveInAppReview.requestReview();
+          await effectivePrefs.setBool(
+            SessionDisconnectedScreen.reviewRequestedKey,
+            true,
+          );
+        }
+      } catch (_) {
+        // Fine if fail
+      }
+    }
+  }
 }
 
 class _SessionDisconnectedScreenState
@@ -296,7 +320,7 @@ class _SessionDisconnectedScreenState
                               SessionFeedbackOptions.up,
                             ).future,
                           );
-                          await _incrementSessionLikedCount();
+                          await SessionDisconnectedScreen.incrementSessionLikedCount();
                         },
                         onThumbDownPressed: () async {
                           await showUserFeedbackDialog(
@@ -398,34 +422,6 @@ class _SessionDisconnectedScreenState
         },
       ),
     );
-  }
-
-  /// Displays the in-app review prompt after the user has liked 5 sessions,
-  /// if the platform supports itand the prompt hasn't been shown before.
-  Future<void> _incrementSessionLikedCount() async {
-    final prefs = await SharedPreferences.getInstance();
-    final alreadyRequested =
-        prefs.getBool(SessionDisconnectedScreen._reviewRequestedKey) ?? false;
-    if (alreadyRequested) return;
-
-    final count =
-        (prefs.getInt(SessionDisconnectedScreen._sessionLikedCountKey) ?? 0) +
-        1;
-    await prefs.setInt(SessionDisconnectedScreen._sessionLikedCountKey, count);
-    if (count >= 5) {
-      final inAppReview = InAppReview.instance;
-      try {
-        if (await inAppReview.isAvailable()) {
-          await inAppReview.requestReview();
-          await prefs.setBool(
-            SessionDisconnectedScreen._reviewRequestedKey,
-            true,
-          );
-        }
-      } catch (_) {
-        // Fine if fail
-      }
-    }
   }
 }
 
