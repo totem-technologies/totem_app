@@ -16,6 +16,7 @@ import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
+import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
 
 class MockSessionKeeperController extends Mock
@@ -129,6 +130,7 @@ SessionRoomState _buildState({
 void main() {
   late MockSessionController session;
   late MockSessionKeeperController keeper;
+  late MockSessionDeviceController devices;
   late MockLocalParticipant localParticipant;
   late FakeRoom room;
 
@@ -139,12 +141,18 @@ void main() {
   setUp(() {
     session = MockSessionController();
     keeper = MockSessionKeeperController();
+    devices = MockSessionDeviceController();
     localParticipant = MockLocalParticipant('user-1');
     room = FakeRoom(localParticipant);
 
     when(() => session.room).thenReturn(room);
     when(() => session.keeper).thenReturn(keeper);
+    when(() => session.devices).thenReturn(devices);
     when(() => session.isCurrentUserKeeper()).thenReturn(true);
+    when(() => devices.enableMicrophone()).thenAnswer((_) async {});
+    when(() => devices.disableMicrophone()).thenAnswer((_) async {});
+    when(() => devices.enableCamera()).thenAnswer((_) async {});
+    when(() => devices.disableCamera()).thenAnswer((_) async {});
 
     when(
       () =>
@@ -253,6 +261,31 @@ void main() {
       expect(find.text('Slide to pass to User Two'), findsOneWidget);
       expect(find.byType(SessionActionBar), findsOneWidget);
       expect(find.byType(ParticipantCard), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('action bar exposes controls and toggles mic/camera', (
+      tester,
+    ) async {
+      final state = _buildState(
+        keeper: 'user-1',
+        currentSpeaker: 'user-1',
+        nextSpeaker: 'user-2',
+      );
+
+      await pumpMyTurn(tester, sessionState: state, isKeeper: true);
+
+      expect(find.bySemanticsLabel('Microphone off'), findsOneWidget);
+      expect(find.bySemanticsLabel('Camera off'), findsOneWidget);
+      expect(find.bySemanticsLabel('Chat'), findsOneWidget);
+      expect(find.bySemanticsLabel('Send reaction'), findsNothing);
+
+      await tester.tap(find.bySemanticsLabel('Microphone off'));
+      await tester.pump();
+      verify(() => devices.enableMicrophone()).called(1);
+
+      await tester.tap(find.bySemanticsLabel('Camera off'));
+      await tester.pump();
+      verify(() => devices.enableCamera()).called(1);
     });
 
     testWidgets('passes the Totem with a trimmed round message', (

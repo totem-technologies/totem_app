@@ -17,6 +17,7 @@ import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
+import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
 
 /// A minimal [SessionDetailSchema] for testing.
@@ -142,6 +143,7 @@ final _testLastMessageProvider =
 
 void main() {
   late MockSessionController session;
+  late MockSessionDeviceController devices;
   late MockLocalParticipant localParticipant;
   late FakeRoom room;
 
@@ -151,11 +153,17 @@ void main() {
 
   setUp(() {
     session = MockSessionController();
+    devices = MockSessionDeviceController();
     localParticipant = MockLocalParticipant('user-1');
     room = FakeRoom(localParticipant);
 
     when(() => session.room).thenReturn(room);
+    when(() => session.devices).thenReturn(devices);
     when(() => session.isCurrentUserKeeper()).thenReturn(false);
+    when(() => devices.enableMicrophone()).thenAnswer((_) async {});
+    when(() => devices.disableMicrophone()).thenAnswer((_) async {});
+    when(() => devices.enableCamera()).thenAnswer((_) async {});
+    when(() => devices.disableCamera()).thenAnswer((_) async {});
 
     when(
       () =>
@@ -436,6 +444,29 @@ void main() {
         await pumpNotMyTurn(tester, sessionState: state);
 
         expect(find.byType(SessionActionBar), findsOneWidget);
+      });
+
+      testWidgets('shows reaction control and toggles mic/camera', (
+        tester,
+      ) async {
+        final state = _buildState(
+          status: RoomStatus.active,
+        );
+
+        await pumpNotMyTurn(tester, sessionState: state);
+
+        expect(find.bySemanticsLabel('Microphone off'), findsOneWidget);
+        expect(find.bySemanticsLabel('Camera off'), findsOneWidget);
+        expect(find.bySemanticsLabel('Chat'), findsOneWidget);
+        expect(find.bySemanticsLabel('Send reaction'), findsOneWidget);
+
+        await tester.tap(find.bySemanticsLabel('Microphone off'));
+        await tester.pump();
+        verify(() => devices.enableMicrophone()).called(1);
+
+        await tester.tap(find.bySemanticsLabel('Camera off'));
+        await tester.pump();
+        verify(() => devices.enableCamera()).called(1);
       });
     });
 
