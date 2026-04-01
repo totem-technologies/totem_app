@@ -180,6 +180,7 @@ class _MutableRoomScreenHarness {
     required this.eventProvider,
     required this.connectionStateProvider,
     required this.roomStatusProvider,
+    required this.hasKeeperDisconnectedProvider,
   });
 
   final ProviderContainer container;
@@ -189,6 +190,8 @@ class _MutableRoomScreenHarness {
   connectionStateProvider;
   final NotifierProvider<_RoomStatusOverrideNotifier, RoomStatus>
   roomStatusProvider;
+  final NotifierProvider<_KeeperDisconnectedOverrideNotifier, bool>
+  hasKeeperDisconnectedProvider;
 }
 
 class _SessionEventOverrideNotifier extends Notifier<SessionDetailSchema?> {
@@ -233,11 +236,26 @@ class _RoomStatusOverrideNotifier extends Notifier<RoomStatus> {
   }
 }
 
+class _KeeperDisconnectedOverrideNotifier extends Notifier<bool> {
+  _KeeperDisconnectedOverrideNotifier(this._initial);
+
+  final bool _initial;
+
+  @override
+  bool build() => _initial;
+
+  // ignore: use_setters_to_change_properties
+  void set(bool value) {
+    state = value;
+  }
+}
+
 Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
   WidgetTester tester, {
   required SessionDetailSchema event,
   required RoomConnectionState connectionState,
   required RoomStatus roomStatus,
+  bool hasKeeperDisconnected = false,
 }) async {
   final eventStateProvider =
       NotifierProvider<_SessionEventOverrideNotifier, SessionDetailSchema?>(
@@ -250,6 +268,10 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
   final roomStatusStateProvider =
       NotifierProvider<_RoomStatusOverrideNotifier, RoomStatus>(
         () => _RoomStatusOverrideNotifier(roomStatus),
+      );
+  final hasKeeperDisconnectedStateProvider =
+      NotifierProvider<_KeeperDisconnectedOverrideNotifier, bool>(
+        () => _KeeperDisconnectedOverrideNotifier(hasKeeperDisconnected),
       );
 
   await tester.pumpWidget(
@@ -265,6 +287,9 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
         ),
         roomStatusProvider.overrideWith(
           (ref) => ref.watch(roomStatusStateProvider),
+        ),
+        hasKeeperDisconnectedProvider.overrideWith(
+          (ref) => ref.watch(hasKeeperDisconnectedStateProvider),
         ),
         disconnectionReasonProvider.overrideWith((ref) => null),
       ],
@@ -288,6 +313,7 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
     eventProvider: eventStateProvider,
     connectionStateProvider: connectionStateStateProvider,
     roomStatusProvider: roomStatusStateProvider,
+    hasKeeperDisconnectedProvider: hasKeeperDisconnectedStateProvider,
   );
 }
 
@@ -710,6 +736,122 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Time Remaining 5 min'), findsOneWidget);
+    });
+  });
+
+  group('VideoRoomScreen - keeper disconnect popup lifecycle', () {
+    testWidgets('shows keeper paused popup when keeper disconnects in active', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      harness.container
+          .read(harness.hasKeeperDisconnectedProvider.notifier)
+          .set(true);
+      await tester.pumpAndSettle();
+
+      expect(find.text('The session has been paused.'), findsOneWidget);
+      expect(find.text('The keeper will be right back.'), findsOneWidget);
+    });
+
+    testWidgets('hides keeper paused popup when keeper reconnects', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      harness.container
+          .read(harness.hasKeeperDisconnectedProvider.notifier)
+          .set(true);
+      await tester.pumpAndSettle();
+      expect(find.text('The session has been paused.'), findsOneWidget);
+
+      harness.container
+          .read(harness.hasKeeperDisconnectedProvider.notifier)
+          .set(false);
+      await tester.pumpAndSettle();
+
+      expect(find.text('The session has been paused.'), findsNothing);
+      expect(find.text('The keeper will be right back.'), findsNothing);
+    });
+
+    testWidgets('clears keeper paused popup when room ends', (tester) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      harness.container
+          .read(harness.hasKeeperDisconnectedProvider.notifier)
+          .set(true);
+      await tester.pumpAndSettle();
+      expect(find.text('The session has been paused.'), findsOneWidget);
+
+      harness.container
+          .read(harness.roomStatusProvider.notifier)
+          .set(
+            RoomStatus.ended,
+          );
+      await tester.pumpAndSettle();
+
+      expect(find.text('The session has been paused.'), findsNothing);
+    });
+
+    testWidgets('clears keeper paused popup when connection disconnects', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      harness.container
+          .read(harness.hasKeeperDisconnectedProvider.notifier)
+          .set(true);
+      await tester.pumpAndSettle();
+      expect(find.text('The session has been paused.'), findsOneWidget);
+
+      harness.container
+          .read(harness.connectionStateProvider.notifier)
+          .set(
+            RoomConnectionState.disconnected,
+          );
+      await tester.pumpAndSettle();
+
+      expect(find.text('The session has been paused.'), findsNothing);
     });
   });
 }
