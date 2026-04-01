@@ -5,6 +5,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_confetti/flutter_confetti.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:in_app_review/in_app_review.dart';
@@ -15,6 +16,7 @@ import 'package:totem_app/core/config/app_config.dart';
 import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
 import 'package:totem_app/features/profile/screens/user_feedback.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
@@ -25,7 +27,7 @@ import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-enum _SessionDisconnectedReason {
+enum SessionDisconnectedReason {
   /// The same account joined from another device and replaced this device.
   movedToAnotherDevice,
 
@@ -40,6 +42,37 @@ enum _SessionDisconnectedReason {
 
   /// The user was kicked out of the session by the keeper.
   removed,
+}
+
+/// Resolves the [SessionDisconnectedReason] from the given
+/// [disconnectReason] and [sessionState].
+///
+/// This is extracted as a pure function so it can be unit-tested independently.
+@visibleForTesting
+SessionDisconnectedReason resolveDisconnectedReason({
+  DisconnectReason? disconnectReason,
+  SessionRoomState? sessionState,
+}) {
+  if (disconnectReason == DisconnectReason.duplicateIdentity) {
+    return SessionDisconnectedReason.movedToAnotherDevice;
+  }
+
+  if (sessionState?.removed ?? false) {
+    return SessionDisconnectedReason.removed;
+  }
+
+  if (sessionState?.roomState.status == RoomStatus.ended &&
+      sessionState?.roomState.statusDetail is RoomStateStatusDetailEnded) {
+    final detail =
+        sessionState!.roomState.statusDetail as RoomStateStatusDetailEnded;
+    return switch (detail.endedDetail.reason) {
+      EndReason.keeperAbsent => SessionDisconnectedReason.keeperAbsent,
+      EndReason.roomEmpty => SessionDisconnectedReason.roomEmpty,
+      EndReason.keeperEnded || _ => SessionDisconnectedReason.keeperEnded,
+    };
+  }
+
+  return SessionDisconnectedReason.keeperEnded;
 }
 
 class SessionDisconnectedScreen extends ConsumerStatefulWidget {
@@ -167,32 +200,10 @@ class _SessionDisconnectedScreenState
           final sessionState = ref.watch(currentSessionStateProvider);
           final disconnectReason =
               widget.disconnectReason ?? sessionState?.disconnectReason;
-          final sessionReason = () {
-            if (disconnectReason == DisconnectReason.duplicateIdentity) {
-              return _SessionDisconnectedReason.movedToAnotherDevice;
-            }
-
-            if (sessionState?.removed ?? false) {
-              return _SessionDisconnectedReason.removed;
-            }
-
-            if (sessionState?.roomState.status == RoomStatus.ended &&
-                sessionState?.roomState.statusDetail
-                    is RoomStateStatusDetailEnded) {
-              final detail =
-                  sessionState!.roomState.statusDetail
-                      as RoomStateStatusDetailEnded;
-              return switch (detail.endedDetail.reason) {
-                EndReason.keeperAbsent =>
-                  _SessionDisconnectedReason.keeperAbsent,
-                EndReason.roomEmpty => _SessionDisconnectedReason.roomEmpty,
-                EndReason.keeperEnded ||
-                _ => _SessionDisconnectedReason.keeperEnded,
-              };
-            }
-
-            return _SessionDisconnectedReason.keeperEnded;
-          }();
+          final sessionReason = resolveDisconnectedReason(
+            disconnectReason: disconnectReason,
+            sessionState: sessionState,
+          );
 
           final nextEvents = widget.session.space.nextEvents
               .where((e) => e.slug != widget.session.slug)
@@ -215,14 +226,14 @@ class _SessionDisconnectedScreenState
                       header: true,
                       child: Text(
                         switch (sessionReason) {
-                          _SessionDisconnectedReason.keeperAbsent =>
+                          SessionDisconnectedReason.keeperAbsent =>
                             'Session will be rescheduled',
-                          _SessionDisconnectedReason.movedToAnotherDevice =>
+                          SessionDisconnectedReason.movedToAnotherDevice =>
                             'Session moved to another device',
-                          _SessionDisconnectedReason.removed =>
+                          SessionDisconnectedReason.removed =>
                             "You've been removed from this session.",
-                          _SessionDisconnectedReason.roomEmpty ||
-                          _SessionDisconnectedReason.keeperEnded =>
+                          SessionDisconnectedReason.roomEmpty ||
+                          SessionDisconnectedReason.keeperEnded =>
                             'Session Ended',
                         },
                         style: theme.textTheme.headlineMedium,
@@ -231,16 +242,16 @@ class _SessionDisconnectedScreenState
                     ),
                     Text.rich(
                       switch (sessionReason) {
-                        _SessionDisconnectedReason.keeperAbsent => const TextSpan(
+                        SessionDisconnectedReason.keeperAbsent => const TextSpan(
                           text:
                               'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
                         ),
-                        _SessionDisconnectedReason.movedToAnotherDevice =>
+                        SessionDisconnectedReason.movedToAnotherDevice =>
                           const TextSpan(
                             text:
                                 'This account joined the same session on another device. Continue there or rejoin from this device.',
                           ),
-                        _SessionDisconnectedReason.removed => TextSpan(
+                        SessionDisconnectedReason.removed => TextSpan(
                           text: 'Please take a moment to review our ',
                           children: [
                             TextSpan(
@@ -265,15 +276,15 @@ class _SessionDisconnectedScreenState
                             const TextSpan(text: '.'),
                           ],
                         ),
-                        _SessionDisconnectedReason.keeperEnded ||
-                        _SessionDisconnectedReason.roomEmpty => const TextSpan(
+                        SessionDisconnectedReason.keeperEnded ||
+                        SessionDisconnectedReason.roomEmpty => const TextSpan(
                           text:
                               'Thank you for joining!\nWe hope you found the session enjoyable.',
                         ),
                       },
                       textAlign: TextAlign.center,
                     ),
-                    if (sessionReason == _SessionDisconnectedReason.keeperEnded)
+                    if (sessionReason == SessionDisconnectedReason.keeperEnded)
                       _SessionFeedbackWidget(
                         state: _thumbState,
                         onThumbUpPressed: () async {
