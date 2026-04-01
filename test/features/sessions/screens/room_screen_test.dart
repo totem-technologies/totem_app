@@ -9,10 +9,11 @@ import 'package:totem_app/features/sessions/screens/room_screen.dart';
 SessionDetailSchema _createSessionEvent({
   required DateTime start,
   required int duration,
+  String slug = 'test-session',
   bool ended = false,
 }) {
   return SessionDetailSchema(
-    slug: 'test-session',
+    slug: slug,
     title: 'Test Session',
     space: MobileSpaceDetailSchema(
       slug: 'test-space',
@@ -75,6 +76,123 @@ Future<void> _pumpRoomScreen(
     ),
   );
   await tester.pump();
+}
+
+class _MutableRoomScreenHarness {
+  const _MutableRoomScreenHarness({
+    required this.container,
+    required this.eventProvider,
+    required this.connectionStateProvider,
+    required this.roomStatusProvider,
+  });
+
+  final ProviderContainer container;
+  final NotifierProvider<_SessionEventOverrideNotifier, SessionDetailSchema?>
+  eventProvider;
+  final NotifierProvider<_ConnectionStateOverrideNotifier, RoomConnectionState>
+  connectionStateProvider;
+  final NotifierProvider<_RoomStatusOverrideNotifier, RoomStatus>
+  roomStatusProvider;
+}
+
+class _SessionEventOverrideNotifier extends Notifier<SessionDetailSchema?> {
+  _SessionEventOverrideNotifier(this._initial);
+
+  final SessionDetailSchema? _initial;
+
+  @override
+  SessionDetailSchema? build() => _initial;
+
+  // ignore: use_setters_to_change_properties
+  void set(SessionDetailSchema? value) {
+    state = value;
+  }
+}
+
+class _ConnectionStateOverrideNotifier extends Notifier<RoomConnectionState> {
+  _ConnectionStateOverrideNotifier(this._initial);
+
+  final RoomConnectionState _initial;
+
+  @override
+  RoomConnectionState build() => _initial;
+
+  // ignore: use_setters_to_change_properties
+  void set(RoomConnectionState value) {
+    state = value;
+  }
+}
+
+class _RoomStatusOverrideNotifier extends Notifier<RoomStatus> {
+  _RoomStatusOverrideNotifier(this._initial);
+
+  final RoomStatus _initial;
+
+  @override
+  RoomStatus build() => _initial;
+
+  // ignore: use_setters_to_change_properties
+  void set(RoomStatus value) {
+    state = value;
+  }
+}
+
+Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
+  WidgetTester tester, {
+  required SessionDetailSchema event,
+  required RoomConnectionState connectionState,
+  required RoomStatus roomStatus,
+}) async {
+  final eventStateProvider =
+      NotifierProvider<_SessionEventOverrideNotifier, SessionDetailSchema?>(
+        () => _SessionEventOverrideNotifier(event),
+      );
+  final connectionStateStateProvider =
+      NotifierProvider<_ConnectionStateOverrideNotifier, RoomConnectionState>(
+        () => _ConnectionStateOverrideNotifier(connectionState),
+      );
+  final roomStatusStateProvider =
+      NotifierProvider<_RoomStatusOverrideNotifier, RoomStatus>(
+        () => _RoomStatusOverrideNotifier(roomStatus),
+      );
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        currentSessionProvider.overrideWith((ref) => null),
+        currentSessionEventProvider.overrideWith(
+          (ref) => ref.watch(eventStateProvider),
+        ),
+        resolveCurrentScreenProvider.overrideWith((ref) => RoomScreen.loading),
+        connectionStateProvider.overrideWith(
+          (ref) => ref.watch(connectionStateStateProvider),
+        ),
+        roomStatusProvider.overrideWith(
+          (ref) => ref.watch(roomStatusStateProvider),
+        ),
+        disconnectionReasonProvider.overrideWith((ref) => null),
+      ],
+      child: const MaterialApp(
+        home: VideoRoomScreen(
+          sessionSlug: 'test-session',
+          loadingScreen: SizedBox.shrink(),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+
+  final container = ProviderScope.containerOf(
+    tester.element(find.byType(VideoRoomScreen)),
+    listen: false,
+  );
+
+  return _MutableRoomScreenHarness(
+    container: container,
+    eventProvider: eventStateProvider,
+    connectionStateProvider: connectionStateStateProvider,
+    roomStatusProvider: roomStatusStateProvider,
+  );
 }
 
 void main() {
@@ -154,6 +272,198 @@ void main() {
 
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('Time Remaining 5 min'), findsNothing);
+    });
+
+    testWidgets(
+      'does not re-show warning after room rebuilds for same session slug',
+      (tester) async {
+        final now = DateTime.now();
+        final event = _createSessionEvent(
+          slug: 'stable-session',
+          start: now.subtract(const Duration(minutes: 9)),
+          duration: 10,
+        );
+
+        final harness = await _pumpRoomScreenWithMutableState(
+          tester,
+          event: event,
+          connectionState: RoomConnectionState.connected,
+          roomStatus: RoomStatus.active,
+        );
+
+        await tester.pump(const Duration(seconds: 1));
+        expect(find.text('Time Remaining 5 min'), findsOneWidget);
+
+        await tester.pump(const Duration(seconds: 8));
+        await tester.pumpAndSettle();
+        expect(find.text('Time Remaining 5 min'), findsNothing);
+
+        harness.container
+            .read(harness.roomStatusProvider.notifier)
+            .set(RoomStatus.waitingRoom);
+        await tester.pump();
+        harness.container
+            .read(harness.roomStatusProvider.notifier)
+            .set(RoomStatus.active);
+        await tester.pump(const Duration(seconds: 2));
+
+        expect(find.text('Time Remaining 5 min'), findsNothing);
+      },
+    );
+
+    testWidgets('schedules warning and shows it only after threshold', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final event = _createSessionEvent(
+        start: now.subtract(const Duration(minutes: 2)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreen(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      await tester.pump(const Duration(minutes: 2, seconds: 50));
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+
+      await tester.pump(const Duration(seconds: 15));
+      expect(find.text('Time Remaining 5 min'), findsOneWidget);
+    });
+
+    testWidgets('shows warning immediately when threshold already passed', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final event = _createSessionEvent(
+        start: now.subtract(const Duration(minutes: 9)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreen(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Time Remaining 5 min'), findsOneWidget);
+    });
+
+    testWidgets('does not show warning when event has ended', (tester) async {
+      final now = DateTime.now();
+      final event = _createSessionEvent(
+        start: now.subtract(const Duration(minutes: 9)),
+        duration: 10,
+        ended: true,
+      );
+
+      await _pumpRoomScreen(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+    });
+
+    testWidgets('cancels scheduled warning when connection disconnects', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final event = _createSessionEvent(
+        start: now.subtract(const Duration(minutes: 4)),
+        duration: 10,
+      );
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      await tester.pump(const Duration(seconds: 30));
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+
+      harness.container
+          .read(harness.connectionStateProvider.notifier)
+          .set(RoomConnectionState.disconnected);
+      await tester.pump();
+
+      await tester.pump(const Duration(seconds: 45));
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+    });
+
+    testWidgets('cancels scheduled warning when room ends before threshold', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final event = _createSessionEvent(
+        start: now.subtract(const Duration(minutes: 4)),
+        duration: 10,
+      );
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      await tester.pump(const Duration(seconds: 30));
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+
+      harness.container
+          .read(harness.roomStatusProvider.notifier)
+          .set(RoomStatus.ended);
+      await tester.pump();
+
+      await tester.pump(const Duration(seconds: 45));
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+    });
+
+    testWidgets('resets one-shot guard when session slug changes', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final eventA = _createSessionEvent(
+        slug: 'session-a',
+        start: now.subtract(const Duration(minutes: 9)),
+        duration: 10,
+      );
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: eventA,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Time Remaining 5 min'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 8));
+      await tester.pumpAndSettle();
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+
+      final eventB = _createSessionEvent(
+        slug: 'session-b',
+        start: DateTime.now().subtract(const Duration(minutes: 9)),
+        duration: 10,
+      );
+
+      harness.container.read(harness.eventProvider.notifier).set(eventB);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Time Remaining 5 min'), findsOneWidget);
     });
   });
 }
