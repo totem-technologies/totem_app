@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:in_app_review/in_app_review.dart';
@@ -24,6 +22,7 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/confetti.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Resolves the [SessionDisconnectedReason] from the given
@@ -136,55 +135,6 @@ class _SessionDisconnectedScreenState
     ..onTap = () {
       launchUrl(Uri.parse('mailto:help@totem.org'));
     };
-
-  void _showConfetti() {
-    double randomInRange(double min, double max) {
-      return min + Random().nextDouble() * (max - min);
-    }
-
-    const total = 10;
-    var progress = 0;
-    _confettiTimer?.cancel();
-    _confettiTimer = Timer.periodic(const Duration(milliseconds: 250), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        _confettiTimer = null;
-        return;
-      }
-      progress++;
-
-      if (progress >= total) {
-        timer.cancel();
-        _confettiTimer = null;
-        return;
-      }
-
-      final count = ((1 - progress / total) * 50).toInt();
-
-      Confetti.launch(
-        context,
-        options: ConfettiOptions(
-          particleCount: count,
-          startVelocity: 30,
-          spread: 360,
-          ticks: 60,
-          x: randomInRange(0.1, 0.3),
-          y: Random().nextDouble() - 0.2,
-        ),
-      );
-      Confetti.launch(
-        context,
-        options: ConfettiOptions(
-          particleCount: count,
-          startVelocity: 30,
-          spread: 360,
-          ticks: 60,
-          x: randomInRange(0.7, 0.9),
-          y: Random().nextDouble() - 0.2,
-        ),
-      );
-    });
-  }
 
   @override
   void initState() {
@@ -313,7 +263,7 @@ class _SessionDisconnectedScreenState
                         state: _thumbState,
                         onThumbUpPressed: () async {
                           setState(() => _thumbState = ThumbState.up);
-                          _showConfetti();
+                          ConfettiController.showConfetti(context);
                           await ref.read(
                             sessionFeedbackProvider(
                               widget.session.slug,
