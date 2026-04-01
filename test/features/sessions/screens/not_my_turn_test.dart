@@ -13,6 +13,7 @@ import 'package:totem_app/features/sessions/providers/session_scope_provider.dar
 import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/grounding_marquee.dart';
+import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
@@ -65,6 +66,21 @@ MockRemoteParticipant _mockRemote(String id, String name) {
   when(p.createListener).thenReturn(MockParticipantEventsListener());
   when(() => p.getTrackPublicationBySource(any())).thenReturn(null);
   return p;
+}
+
+List<Participant> _buildParticipantsWithLocal(
+  MockLocalParticipant localParticipant,
+  int count,
+) {
+  if (count <= 1) return [localParticipant];
+
+  return [
+    localParticipant,
+    ...List.generate(
+      count - 1,
+      (index) => _mockRemote('user-${index + 2}', 'User ${index + 2}'),
+    ),
+  ];
 }
 
 SessionRoomState _buildState({
@@ -221,6 +237,49 @@ void main() {
   }
 
   group('NotMyTurn', () {
+    group('participant grid', () {
+      testWidgets('renders the participant grid for room sizes up to 12', (
+        tester,
+      ) async {
+        for (final participantCount in [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+        ]) {
+          final state = _buildState(
+            status: RoomStatus.active,
+            keeper: 'keeper-0',
+            currentSpeaker: 'speaker-0',
+            nextSpeaker: 'user-1',
+            participants: _buildParticipantsWithLocal(
+              localParticipant,
+              participantCount,
+            ),
+          );
+
+          await pumpNotMyTurn(tester, sessionState: state);
+
+          expect(
+            find.byType(ParticipantCard),
+            findsNWidgets(participantCount),
+          );
+          expect(find.byType(NotMyTurn), findsOneWidget);
+
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        }
+      });
+    });
+
     group('waitingRoom status without keeper', () {
       testWidgets('shows "Waiting for the Keeper to join..." text', (
         tester,

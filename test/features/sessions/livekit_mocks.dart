@@ -9,6 +9,9 @@ class MockLocalParticipant extends Mock implements LocalParticipant {
   final String id;
 
   @override
+  String get name => 'Local Participant';
+
+  @override
   String get identity => id;
 
   @override

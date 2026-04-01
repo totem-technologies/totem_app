@@ -69,11 +69,19 @@ MockRemoteParticipant _mockRemote(String id, String name) {
   return participant;
 }
 
-List<Participant> _buildParticipants(int count) {
-  return List.generate(
-    count,
-    (index) => _mockRemote('user-${index + 1}', 'User ${index + 1}'),
-  );
+List<Participant> _buildParticipantsWithLocal(
+  MockLocalParticipant localParticipant,
+  int count,
+) {
+  if (count <= 1) return [localParticipant];
+
+  return [
+    localParticipant,
+    ...List.generate(
+      count - 1,
+      (index) => _mockRemote('user-${index + 2}', 'User ${index + 2}'),
+    ),
+  ];
 }
 
 SessionRoomState _buildState({
@@ -210,7 +218,10 @@ void main() {
           keeper: 'user-1',
           currentSpeaker: 'speaker-0',
           nextSpeaker: 'user-2',
-          participants: _buildParticipants(participantCount),
+          participants: _buildParticipantsWithLocal(
+            localParticipant,
+            participantCount,
+          ),
         );
 
         await pumpMyTurn(tester, sessionState: state, isKeeper: true);
