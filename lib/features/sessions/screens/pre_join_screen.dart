@@ -198,7 +198,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     }
   }
 
-  Future<void> _initializeLocalAudio() async {
+  Future<LocalAudioTrack?> _initializeLocalAudio() async {
     if (_previewAudioTrack != null) {
       await _previewAudioTrack!.stop();
       await _previewAudioTrack!.dispose();
@@ -209,6 +209,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       _previewAudioTrack = await LocalAudioTrack.create();
       await _previewAudioTrack!.enable();
       await _previewAudioTrack!.start();
+      return _previewAudioTrack;
     } catch (error, stackTrace) {
       _isMicOn = false;
       ErrorHandler.logError(
@@ -219,19 +220,21 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     } finally {
       if (mounted) setState(() {});
     }
+    return null;
   }
 
   void _toggleCamera() {
     setState(() => _isCameraOn = !_isCameraOn);
   }
 
-  void _toggleMic() async {
+  Future<void> _toggleMic() async {
     setState(() => _isMicOn = !_isMicOn);
+    final track = await _initializeLocalAudio();
     switch (_isMicOn) {
       case true:
-        await _previewAudioTrack?.unmute(stopOnMute: false);
+        await track?.unmute(stopOnMute: false);
       case false:
-        await _previewAudioTrack?.mute(stopOnMute: false);
+        await track?.mute(stopOnMute: false);
     }
   }
 
@@ -267,13 +270,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       actionBar: ActionBar(
         key: SessionActionBar.actionBarKey,
         children: [
-          ActionBarButton(
-            semanticsLabel: 'Microphone ${_isMicOn ? 'on' : 'off'}',
-            onPressed: !hasRequestedJoin ? _toggleMic : null,
-            active: _isMicOn,
-            child: TotemIcon(
-              _isMicOn ? TotemIcons.microphoneOn : TotemIcons.microphoneOff,
-            ),
+          ActionBarMicButton(
+            participant: null,
+            audioTrack: _previewAudioTrack,
+            onToggle: (v) async => _toggleMic(),
           ),
           ActionBarButton(
             semanticsLabel: 'Audio ${_isSpeakerOn ? 'on' : 'off'}',

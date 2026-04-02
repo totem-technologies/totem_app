@@ -42,7 +42,11 @@ dependencies:
   sentry_dio: ^9.8.0
 
   # Video Experience
-  livekit_client: ^2.7.0
+  # livekit_client: ^2.7.0
+  livekit_client:
+    git:
+      url: https://github.com/livekit/client-sdk-flutter/
+      ref: hiroshi/fix-local-audio
   flutter_foreground_task: ^9.2.0
   wakelock_plus: ^1.4.0
   audio_session: ^0.2.1

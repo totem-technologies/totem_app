@@ -9,7 +9,7 @@ class SmartNameText extends StatelessWidget {
     super.key,
   });
   final String name;
-  final TextStyle style;
+  final TextStyle? style;
   final double abbreviationThreshold;
   final TextAlign textAlign;
 
@@ -22,7 +22,9 @@ class SmartNameText extends StatelessWidget {
 
         final fullFits = _doesTextFit(
           text: fullName,
-          style: style.copyWith(fontSize: abbreviationThreshold),
+          style: (style ?? const TextStyle()).copyWith(
+            fontSize: abbreviationThreshold,
+          ),
           maxWidth: constraints.maxWidth,
           minFontSize: abbreviationThreshold,
         );

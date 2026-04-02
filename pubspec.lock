@@ -978,10 +978,11 @@ packages:
   livekit_client:
     dependency: "direct main"
     description:
-      name: livekit_client
-      sha256: "23a71bf6c94f83c0d1146c7ced8b863a5f8fe57c5e3007ea5f1b2881066b4126"
-      url: "https://pub.dev"
-    source: hosted
+      path: "."
+      ref: "hiroshi/fix-local-audio"
+      resolved-ref: "8721c30547ab3e9cd18cf4838669abe71a8b6137"
+      url: "https://github.com/livekit/client-sdk-flutter/"
+    source: git
     version: "2.7.0"
   logger:
     dependency: "direct main"

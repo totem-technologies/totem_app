@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart' hide logger;
@@ -587,10 +586,9 @@ class LocalParticipantCard extends ConsumerWidget {
       authControllerProvider.select((auth) => auth.user),
     );
 
-    // const overlayPadding = 12.0;
-
     final isVideoTrackVisible =
         videoTrack != null && videoTrack!.isActive && !videoTrack!.muted;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(30),
       child: AspectRatio(
@@ -627,38 +625,19 @@ class LocalParticipantCard extends ConsumerWidget {
                     bottom: 14,
                     start: 14,
                     end: 14,
-                    child: AutoSizeText(
-                      user?.name ?? 'You',
+                    child: SmartNameText(
+                      name: user?.name ?? 'You',
                       style: theme.textTheme.titleLarge?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         shadows: kElevationToShadow[6],
                       ),
                       textAlign: TextAlign.center,
-                      maxLines: 1,
                     ),
                   ),
                 ],
               ),
             ),
-            // TODO(totem): The audio indicator doesn't work for local tracks
-            // https://github.com/livekit/client-sdk-flutter/issues/1044
-            // PositionedDirectional(
-            //   top: overlayPadding,
-            //   start: overlayPadding,
-            //   child: Container(
-            //     width: 24,
-            //     height: 24,
-            //     decoration: BoxDecoration(
-            //       shape: BoxShape.circle,
-            //       color: Colors.black54,
-            //       boxShadow: kElevationToShadow[6],
-            //     ),
-            //     padding: const EdgeInsetsDirectional.all(4),
-            //     alignment: Alignment.center,
-            //     child: SpeakingIndicatorAudioTrack(audioTrack: audioTrack),
-            //   ),
-            // ),
           ],
         ),
       ),
