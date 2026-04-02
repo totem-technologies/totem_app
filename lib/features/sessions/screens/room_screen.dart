@@ -54,6 +54,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   @override
   void dispose() {
+    _closeKeeperDisconnectedNotification();
     _clearSessionPopups();
     _clearTimeRemainingWarningTimer();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -61,9 +62,13 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     super.dispose();
   }
 
-  void _clearSessionPopups() {
+  void _closeKeeperDisconnectedNotification() {
     _closeKeeperLeftNotification?.call();
     _closeKeeperLeftNotification = null;
+  }
+
+  void _clearSessionPopups() {
+    _closeKeeperDisconnectedNotification();
     _notificationController.dismissAll();
   }
 
@@ -182,18 +187,27 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
   void _setKeeperDisconnectedNotification(bool hasKeeperDisconnected) {
     if (!mounted) return;
-    _closeKeeperLeftNotification?.call();
-    _closeKeeperLeftNotification = null;
+
     final roomStatus = ref.read(roomStatusProvider);
-    if (hasKeeperDisconnected && roomStatus == RoomStatus.active) {
-      _closeKeeperLeftNotification = showPermanentNotificationPopup(
-        context,
-        icon: TotemIcons.pause,
-        title: 'The session has been paused.',
-        message: 'The keeper will be right back.',
-        controller: _notificationController,
-      );
+    final shouldShow =
+        hasKeeperDisconnected && roomStatus == RoomStatus.active;
+
+    if (!shouldShow) {
+      _closeKeeperDisconnectedNotification();
+      return;
     }
+
+    if (_closeKeeperLeftNotification != null) {
+      return;
+    }
+
+    _closeKeeperLeftNotification = showPermanentNotificationPopup(
+      context,
+      icon: TotemIcons.pause,
+      title: 'The session has been paused.',
+      message: 'The keeper will be right back.',
+      controller: _notificationController,
+    );
   }
 
   @override
@@ -245,6 +259,10 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       ..listen(
         roomStatusProvider,
         (previous, next) {
+          _setKeeperDisconnectedNotification(
+            ref.read(hasKeeperDisconnectedProvider),
+          );
+
           if (next == RoomStatus.ended) {
             _clearSessionPopups();
             _clearTimeRemainingWarningTimer();
