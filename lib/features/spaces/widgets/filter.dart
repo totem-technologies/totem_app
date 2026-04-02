@@ -61,7 +61,7 @@ class SpacesFilterBar extends StatelessWidget {
               ),
             ),
             Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: Container(
                 width: 28,
                 decoration: BoxDecoration(
@@ -87,7 +87,7 @@ class SpacesFilterBar extends StatelessWidget {
               ),
             ),
             Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: Container(
                 width: 16,
                 decoration: BoxDecoration(

@@ -334,7 +334,7 @@ class ParticipantControlButton extends ConsumerWidget {
           color: backgroundColor,
         ),
         padding: const EdgeInsetsDirectional.all(2),
-        alignment: Alignment.center,
+        alignment: AlignmentDirectional.center,
         child: const TotemIcon(
           TotemIcons.moreVertical,
           size: 20,

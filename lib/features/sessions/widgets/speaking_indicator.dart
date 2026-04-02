@@ -183,7 +183,7 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: Colors.white,
                     ),
-                    alignment: Alignment.center,
+                    alignment: AlignmentDirectional.center,
                     child: Text(
                       emojis.first,
                       style: const TextStyle(
@@ -205,7 +205,7 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
           color: backgroundColor,
         ),
         padding: const EdgeInsetsDirectional.all(2),
-        alignment: Alignment.center,
+        alignment: AlignmentDirectional.center,
         child: SpeakingIndicator(participant: participant),
       ),
     );

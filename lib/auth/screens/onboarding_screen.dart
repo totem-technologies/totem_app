@@ -127,7 +127,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       child: Material(
         // Use a Stack to layer the fixed top bar and the paged content
         child: Stack(
-          alignment: Alignment.topCenter,
+          alignment: AlignmentDirectional.topCenter,
           children: [
             PageView.builder(
               hitTestBehavior: HitTestBehavior.translucent,
@@ -143,9 +143,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ),
 
             Align(
-              alignment: Alignment.bottomCenter,
+              alignment: AlignmentDirectional.bottomCenter,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
                 constraints: const BoxConstraints(
                   minHeight: 200,
                   maxWidth: double.infinity,
@@ -156,7 +156,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       0,
                       -0.5, // center-top pos
                     ),
-                    end: Alignment.bottomCenter,
+                    end: AlignmentDirectional.bottomCenter,
                     colors: [
                       Colors.transparent,
                       AppTheme.slate,
@@ -219,7 +219,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               child: AnimatedContainer(
                                 key: ValueKey(index),
                                 duration: const Duration(milliseconds: 200),
-                                margin: const EdgeInsets.symmetric(
+                                margin: const EdgeInsetsDirectional.symmetric(
                                   horizontal: 4,
                                 ),
                                 width: index == currentPage ? 30 : 10,
@@ -288,11 +288,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                           child: SizedBox(
                                             height: 54,
                                             child: Padding(
-                                              padding: EdgeInsets.symmetric(
-                                                horizontal: isLastPage
-                                                    ? 24
-                                                    : 15,
-                                              ),
+                                              padding:
+                                                  EdgeInsetsDirectional.symmetric(
+                                                    horizontal: isLastPage
+                                                        ? 24
+                                                        : 15,
+                                                  ),
                                               child: Center(
                                                 widthFactor: 1,
                                                 child: isLastPage
@@ -340,8 +341,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               width: double.infinity,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  begin: AlignmentDirectional.topCenter,
+                  end: AlignmentDirectional.bottomCenter,
                   colors: [
                     AppTheme.slate.withValues(alpha: 0.6),
                     Colors.transparent,

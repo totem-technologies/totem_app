@@ -83,7 +83,9 @@ class BannedParticipantsSheet extends ConsumerWidget {
               ),
               if (bannedParticipants.isNotEmpty)
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 20,
+                  ),
                   sliver: SliverList.builder(
                     itemCount: bannedParticipants.length,
                     itemBuilder: (context, index) {
@@ -161,7 +163,7 @@ class _BannedParticipantItemState
     final user = ref.watch(userProfileProvider(widget.participantSlug));
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsetsDirectional.only(bottom: 8),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryFixedDim,
         borderRadius: BorderRadius.circular(20),
@@ -217,13 +219,13 @@ class _BannedParticipantItemState
             ? const SizedBox(
                 width: 24,
                 height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator.adaptive(strokeWidth: 2),
               )
             : TextButton(
                 onPressed: _onUnban,
                 child: const Text('Unban'),
               ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        contentPadding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
       ),
     );
   }

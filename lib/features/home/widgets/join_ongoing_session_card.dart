@@ -67,7 +67,7 @@ class JoinOngoingSessionCard extends ConsumerWidget {
             bottom: 10,
           ),
           child: Padding(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsetsDirectional.all(10),
             child: Row(
               spacing: 10,
               children: [

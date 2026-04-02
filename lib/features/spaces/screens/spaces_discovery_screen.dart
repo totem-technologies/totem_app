@@ -210,7 +210,7 @@ class _SpacesDiscoveryScreenState extends ConsumerState<SpacesDiscoveryScreen> {
               : CrossFadeState.showFirst,
         ),
         Padding(
-          padding: const EdgeInsets.only(bottom: 8, right: 16),
+          padding: const EdgeInsetsDirectional.only(bottom: 8, end: 16),
           child: Row(
             children: [
               Expanded(
@@ -227,7 +227,7 @@ class _SpacesDiscoveryScreenState extends ConsumerState<SpacesDiscoveryScreen> {
                 curve: Curves.easeInOut,
                 child: _isCollapsed
                     ? Padding(
-                        padding: const EdgeInsets.only(left: 16),
+                        padding: const EdgeInsetsDirectional.only(start: 16),
                         child: MySessionsButton(
                           isSelected: isMySessionsSelected,
                           onTap: toggleMySessions,
@@ -289,7 +289,7 @@ class _SpacesDiscoveryScreenState extends ConsumerState<SpacesDiscoveryScreen> {
     return ListView(
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: 100),
+          padding: const EdgeInsetsDirectional.only(top: 100),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -333,7 +333,7 @@ class _SpacesDiscoveryScreenState extends ConsumerState<SpacesDiscoveryScreen> {
       //   to preserve date grouping on tablets if that UX becomes a priority.
       final allSessions = groupedSessions.expand((g) => g.sessions).toList();
       return GridView.builder(
-        padding: const EdgeInsets.symmetric(
+        padding: const EdgeInsetsDirectional.symmetric(
           horizontal: 100,
         ).copyWith(bottom: 20),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -380,10 +380,10 @@ class _ScrollFadeWrapper extends StatelessWidget {
       children: [
         child,
         // Fade gradient that appears when scrolling, only over session cards
-        Positioned(
+        PositionedDirectional(
           top: 0,
-          left: _dateColumnWidth,
-          right: 0,
+          start: _dateColumnWidth,
+          end: 0,
           height: _fadeHeight,
           child: IgnorePointer(
             child: AnimatedOpacity(
@@ -392,8 +392,8 @@ class _ScrollFadeWrapper extends StatelessWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+                    begin: AlignmentDirectional.topCenter,
+                    end: AlignmentDirectional.bottomCenter,
                     colors: [
                       AppTheme.cream,
                       AppTheme.cream.withValues(alpha: 0),

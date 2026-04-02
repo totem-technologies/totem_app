@@ -21,7 +21,7 @@ class SessionCard extends StatelessWidget {
 
   static const _borderRadius = 16.0;
   static const _imageHeight = 160.0;
-  static const _contentPadding = EdgeInsets.all(12);
+  static const _contentPadding = EdgeInsetsDirectional.all(12);
 
   @override
   Widget build(BuildContext context) {

@@ -121,7 +121,9 @@ class _ParticipantReorderWidgetState
                   ),
                 ),
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 20,
+                  ),
                   sliver: SliverReorderableList(
                     itemCount: participants.length,
                     onReorder: (oldIndex, newIndex) {
@@ -148,7 +150,7 @@ class _ParticipantReorderWidgetState
                 ),
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsetsDirectional.all(20),
                     child: Row(
                       spacing: 16,
                       children: [
@@ -270,7 +272,7 @@ class _ParticipantReorderItem extends ConsumerWidget {
         : theme.colorScheme.onPrimary;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsetsDirectional.only(bottom: 8),
       decoration: BoxDecoration(
         color: !isSpeakingNow
             ? theme.colorScheme.primaryContainer
@@ -332,7 +334,7 @@ class _ParticipantReorderItem extends ConsumerWidget {
             color: foregroundColor,
           ),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        contentPadding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
       ),
     );
   }

@@ -412,7 +412,10 @@ class _QuickMessageChip extends StatelessWidget {
         onLongPress: onSend,
         borderRadius: BorderRadius.circular(14),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: 12,
+            vertical: 8,
+          ),
           child: Text(
             label,
             style: TextStyle(

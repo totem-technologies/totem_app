@@ -63,8 +63,8 @@ class WelcomeCard extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          begin: AlignmentDirectional.topCenter,
+          end: AlignmentDirectional.bottomCenter,
           colors: [
             Colors.transparent,
             Colors.transparent,
@@ -81,9 +81,9 @@ class WelcomeCard extends StatelessWidget {
     final fontSize = isTablet ? 14.0 : 16.0;
     final bottomPadding = isTablet ? 16.0 : 10.0;
 
-    return Positioned(
-      left: 20,
-      right: 20,
+    return PositionedDirectional(
+      start: 20,
+      end: 20,
       bottom: bottomPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,

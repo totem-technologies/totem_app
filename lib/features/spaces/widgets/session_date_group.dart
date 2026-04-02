@@ -32,7 +32,7 @@ class SliverStickyDateGroup extends StatelessWidget {
     return SliverMainAxisGroup(
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsetsDirectional.only(bottom: 16),
           sliver: SliverCrossAxisGroup(
             slivers: [
               SliverConstrainedCrossAxis(
@@ -49,7 +49,7 @@ class SliverStickyDateGroup extends StatelessWidget {
               SliverCrossAxisExpanded(
                 flex: 1,
                 sliver: SliverPadding(
-                  padding: const EdgeInsets.only(right: 16),
+                  padding: const EdgeInsetsDirectional.only(end: 16),
                   sliver: SliverList.separated(
                     itemCount: dateGroup.sessions.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 16),
@@ -90,9 +90,9 @@ class _DateIndicatorHeaderDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Align(
-      alignment: Alignment.topLeft,
+      alignment: AlignmentDirectional.topStart,
       child: Padding(
-        padding: const EdgeInsets.only(left: 16),
+        padding: const EdgeInsetsDirectional.only(start: 16),
         child: DateIndicator(date: date, isToday: isToday),
       ),
     );
@@ -150,7 +150,7 @@ class DateIndicator extends StatelessWidget {
         Expanded(
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 5),
+            padding: const EdgeInsetsDirectional.symmetric(vertical: 5),
             decoration: const BoxDecoration(
               color: AppTheme.mauve,
               borderRadius: BorderRadius.vertical(
@@ -197,7 +197,7 @@ class DateIndicator extends StatelessWidget {
       children: [
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsetsDirectional.symmetric(vertical: 4),
           decoration: BoxDecoration(
             color: AppTheme.gray.withValues(alpha: 0.3),
             borderRadius: const BorderRadius.vertical(

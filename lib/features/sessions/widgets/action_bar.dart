@@ -440,16 +440,16 @@ class _ActionBarCameraSwitcherButtonOverlayState
                   child: Padding(
                     padding: const EdgeInsetsDirectional.all(8.0),
                     child: Stack(
-                      alignment: Alignment.center,
+                      alignment: AlignmentDirectional.center,
                       children: [
                         const SizedBox(height: 30),
-                        AnimatedPositioned(
+                        AnimatedPositionedDirectional(
                           top: 0,
                           bottom: 0,
-                          left: cameraPosition == CameraPosition.front
+                          start: cameraPosition == CameraPosition.front
                               ? 0
                               : buttonWidth + buttonsSpacing,
-                          right: cameraPosition == CameraPosition.back
+                          end: cameraPosition == CameraPosition.back
                               ? 0
                               : buttonWidth + buttonsSpacing,
                           duration: const Duration(milliseconds: 300),
