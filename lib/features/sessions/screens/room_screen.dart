@@ -189,8 +189,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     if (!mounted) return;
 
     final roomStatus = ref.read(roomStatusProvider);
-    final shouldShow =
-        hasKeeperDisconnected && roomStatus == RoomStatus.active;
+    final shouldShow = hasKeeperDisconnected && roomStatus == RoomStatus.active;
 
     if (!shouldShow) {
       _closeKeeperDisconnectedNotification();
