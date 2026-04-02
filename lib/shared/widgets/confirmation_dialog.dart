@@ -25,7 +25,7 @@ class ConfirmationDialog extends StatefulWidget {
   final TotemIconData? icon;
   final Widget? iconWidget;
   final double iconSize;
-  final String? title;
+  final String title;
   final String content;
   final TextStyle? contentStyle;
   final String confirmButtonText;
@@ -71,19 +71,18 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                     dimension: iconSize,
                     child: Center(child: widget.iconWidget),
                   ),
-                if (widget.title != null)
-                  Semantics(
-                    header: true,
-                    namesRoute: true,
-                    child: Text(
-                      widget.title!,
-                      textAlign: TextAlign.center,
-                      style:
-                          (theme.dialogTheme.titleTextStyle ??
-                                  theme.textTheme.titleLarge)
-                              ?.copyWith(color: theme.colorScheme.onSurface),
-                    ),
+                Semantics(
+                  header: true,
+                  namesRoute: true,
+                  child: Text(
+                    widget.title,
+                    textAlign: TextAlign.center,
+                    style:
+                        (theme.dialogTheme.titleTextStyle ??
+                                theme.textTheme.titleLarge)
+                            ?.copyWith(color: theme.colorScheme.onSurface),
                   ),
+                ),
               ],
             ),
             Text(

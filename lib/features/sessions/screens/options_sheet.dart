@@ -321,10 +321,9 @@ class OptionsSheet extends ConsumerWidget {
                     .whenData((user) => user.name)
                     .value;
             return ConfirmationDialog(
-              title: null,
+              title: 'Are you sure?',
               confirmButtonText: 'Force pass',
               content:
-                  'Are you sure you want to force pass the totem? '
                   'This will end ${state.roomState.currentSpeaker != null ? "the current speaker's turn" : 'the current turn'} '
                   'and give the totem to ${nextParticipantName ?? 'the next participant'}.',
               contentStyle: theme.textTheme.titleMedium?.copyWith(

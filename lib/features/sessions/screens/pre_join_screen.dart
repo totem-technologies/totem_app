@@ -157,8 +157,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   void _initializeAndCheckPermissions() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _requestPermissions();
       await Future.wait([
-        _requestPermissions(),
         _detectHeadphones(),
         _initializeLocalVideo(),
         _initializeLocalAudio(),
