@@ -325,7 +325,7 @@ class ParticipantControlButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
-      onTapUp: (details) => _showParticipantMenu(context, ref, details),
+      onTap: () => _showParticipantMenu(context),
       child: Container(
         width: 24,
         height: 24,
@@ -344,17 +344,15 @@ class ParticipantControlButton extends ConsumerWidget {
     );
   }
 
-  Future<void> _showParticipantMenu(
-    BuildContext context,
-    WidgetRef ref,
-    TapUpDetails details,
-  ) async {
+  Future<void> _showParticipantMenu(BuildContext context) async {
     final box = context.findRenderObject() as RenderBox?;
     if (box == null) return;
 
+    final buttonTopLeft = box.localToGlobal(Offset.zero);
+    final buttonRect = buttonTopLeft & box.size;
+
     final position = _calculateMenuPosition(
-      tapPosition: details.globalPosition,
-      cardSize: box.size,
+      buttonRect: buttonRect,
       screenSize: MediaQuery.sizeOf(context),
     );
 
@@ -374,15 +372,29 @@ class ParticipantControlButton extends ConsumerWidget {
   }
 
   RelativeRect _calculateMenuPosition({
-    required Offset tapPosition,
-    required Size cardSize,
+    required Rect buttonRect,
     required Size screenSize,
   }) {
+    const menuWidth = 170.0;
+    const verticalGap = 8.0;
+    const screenPadding = 8.0;
+
+    final maxLeft = (screenSize.width - menuWidth - screenPadding).clamp(
+      screenPadding,
+      double.infinity,
+    );
+
+    final left = (buttonRect.right - menuWidth).clamp(screenPadding, maxLeft);
+    final top = (buttonRect.bottom + verticalGap).clamp(
+      screenPadding,
+      screenSize.height - screenPadding,
+    );
+
     return RelativeRect.fromLTRB(
-      tapPosition.dx - cardSize.width + overlayPadding * 2,
-      tapPosition.dy + overlayPadding * 2.5,
-      screenSize.width - tapPosition.dx,
-      screenSize.height - tapPosition.dy,
+      left,
+      top,
+      screenSize.width - left - menuWidth,
+      screenSize.height - top,
     );
   }
 
