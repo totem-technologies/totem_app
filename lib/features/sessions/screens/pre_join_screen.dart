@@ -27,6 +27,37 @@ import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 
+/// Shows a dialog when the user tries to join a session they are already
+/// in on another device, asking if they want to leave the other session
+/// and join on this device instead.
+///
+/// Returns true if the user chooses to leave the other session and join
+/// on this device, false otherwise.
+Future<bool> showAlreadyPresentDialog(BuildContext context) async {
+  try {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return ConfirmationDialog(
+              title: "You're Already in This Session",
+              content:
+                  'You are already in this session on another device. Do you want to leave the other session and join on this device?',
+              icon: TotemIcons.questionMarkCircle,
+              iconSize: 60,
+              confirmButtonText: 'Join Here',
+              onConfirm: () async {
+                Navigator.of(context).pop(true);
+              },
+              type: ConfirmationDialogType.standard,
+            );
+          },
+        ) ??
+        false;
+  } catch (_) {
+    return false;
+  }
+}
+
 class PreJoinScreen extends ConsumerStatefulWidget {
   const PreJoinScreen({required this.sessionSlug, super.key});
 
@@ -37,23 +68,31 @@ class PreJoinScreen extends ConsumerStatefulWidget {
 }
 
 class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
+  // Preview media state
   LocalVideoTrack? _previewVideoTrack;
   var _isCameraOn = true;
 
   LocalAudioTrack? _previewAudioTrack;
   var _isMicOn = true;
 
+  // Join configuration state
   CameraCaptureOptions _cameraOptions =
       SessionController.defaultCameraCaptureOptions;
   var _audioOutputOptions = const AudioOutputOptions(speakerOn: true);
   bool get _isSpeakerOn => _audioOutputOptions.speakerOn ?? false;
 
+  // Session/join lifecycle state
   SessionOptions? _sessionOptions;
   bool _hasRequestedJoin = false;
   bool get hasRequestedJoin => _hasRequestedJoin;
   bool _hasHandledConnectedState = false;
+  bool _showingAlreadyPresentDialog = false;
+  bool? _isLoading;
 
-  final GlobalKey loadingScreenKey = GlobalKey();
+  // Guards concurrent permission prompts.
+  bool _permissionsRequestLock = false;
+
+  final GlobalKey _loadingScreenKey = GlobalKey();
 
   @override
   void initState() {
@@ -82,15 +121,16 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     super.dispose();
   }
 
-  // Do not perform multiple permission requests
-  bool _permissionsRequestLock = false;
+  // ===== Initialization =====
 
   void _initializeAndCheckPermissions() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _requestPermissions();
-      await _detectHeadphones();
-      _initializeLocalVideo();
-      _initializeLocalAudio();
+      await Future.wait([
+        _requestPermissions(),
+        _detectHeadphones(),
+        _initializeLocalVideo(),
+        _initializeLocalAudio(),
+      ]);
       if (mounted) {
         SentryDisplayWidget.of(context).reportFullyDisplayed();
       }
@@ -119,6 +159,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       );
     }
   }
+
+  // ===== Permissions =====
 
   Future<void> _requestPermissions() async {
     if (_permissionsRequestLock) return;
@@ -221,6 +263,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     return null;
   }
 
+  // ===== Local controls =====
+
   void _toggleCamera() {
     setState(() => _isCameraOn = !_isCameraOn);
   }
@@ -242,9 +286,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     });
   }
 
+  // ===== UI =====
+
   Widget _buildPrejoinUI() {
     return PrejoinRoomBaseScreen(
-      key: loadingScreenKey,
+      key: _loadingScreenKey,
       video: Semantics(
         label: 'Your video preview, camera ${_isCameraOn ? 'on' : 'off'}',
         image: true,
@@ -299,6 +345,17 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     );
   }
 
+  Widget _buildErrorScreen(Object? error) {
+    return RoomBackground(
+      child: RoomErrorScreen(
+        error: error,
+        onRetry: _onRetry,
+      ),
+    );
+  }
+
+  // ===== Join flow =====
+
   Future<void> _handleToken(
     JoinResponse response, {
     bool shouldShowAlreadyPresentDialog = true,
@@ -327,8 +384,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       }
     }
   }
-
-  bool? _isLoading;
 
   Future<void> _joinRoom({bool showAlreadyPresentDialog = true}) async {
     try {
@@ -368,6 +423,16 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       }
     }
   }
+
+  Future<void> _onRetry() async {
+    setState(() => _isLoading = null);
+    final _ = await ref.refresh(
+      sessionTokenProvider(widget.sessionSlug).future,
+    );
+    final _ = await ref.refresh(eventProvider(widget.sessionSlug).future);
+  }
+
+  // ===== Track disposal =====
 
   Future<void> _disposePreviewVideoTrack() async {
     if (_previewVideoTrack != null) {
@@ -414,21 +479,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     ]);
   }
 
-  bool _showingAlreadyPresentDialog = false;
+  // ===== Provider listeners =====
 
-  Future<void> _onRetry() async {
-    setState(() => _isLoading = null);
-    final _ = await ref.refresh(
-      sessionTokenProvider(widget.sessionSlug).future,
-    );
-    final _ = await ref.refresh(eventProvider(widget.sessionSlug).future);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final tokenData = ref.watch(sessionTokenProvider(widget.sessionSlug));
-    final sessionData = ref.watch(eventProvider(widget.sessionSlug));
-
+  void _listenForTokenUpdates() {
     ref.listen(
       sessionTokenProvider(widget.sessionSlug),
       (previous, next) async {
@@ -437,37 +490,39 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         }
       },
     );
+  }
 
-    if (_sessionOptions != null) {
-      ref.listen(
-        sessionProvider(_sessionOptions!).select((s) => s.connectionState),
-        (previous, next) {
-          if (_hasHandledConnectedState) return;
-          if (next != RoomConnectionState.connected) return;
+  void _listenForConnectedState() {
+    final options = _sessionOptions;
+    if (options == null) return;
 
-          _hasHandledConnectedState = true;
-          _disposePreviewTracks();
-          SentryDisplayWidget.of(context).reportFullyDisplayed();
-        },
-      );
-    }
+    ref.listen(
+      sessionProvider(options).select((s) => s.connectionState),
+      (previous, next) {
+        if (_hasHandledConnectedState) return;
+        if (next != RoomConnectionState.connected) return;
+
+        _hasHandledConnectedState = true;
+        _disposePreviewTracks();
+        SentryDisplayWidget.of(context).reportFullyDisplayed();
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokenData = ref.watch(sessionTokenProvider(widget.sessionSlug));
+    final sessionData = ref.watch(eventProvider(widget.sessionSlug));
+
+    _listenForTokenUpdates();
+    _listenForConnectedState();
 
     if (tokenData.hasError) {
-      return RoomBackground(
-        child: RoomErrorScreen(
-          error: tokenData.error,
-          onRetry: _onRetry,
-        ),
-      );
+      return _buildErrorScreen(tokenData.error);
     }
 
     if (sessionData.hasError) {
-      return RoomBackground(
-        child: RoomErrorScreen(
-          error: sessionData.error,
-          onRetry: _onRetry,
-        ),
-      );
+      return _buildErrorScreen(sessionData.error);
     }
 
     final isLoading =
@@ -487,36 +542,5 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         loadingScreen: _buildPrejoinUI(),
       ),
     );
-  }
-}
-
-/// Shows a dialog when the user tries to join a session they are already
-/// in on another device, asking if they want to leave the other session
-/// and join on this device instead.
-///
-/// Returns true if the user chooses to leave the other session and join
-/// on this device, false otherwise.
-Future<bool> showAlreadyPresentDialog(BuildContext context) async {
-  try {
-    return await showDialog<bool>(
-          context: context,
-          builder: (context) {
-            return ConfirmationDialog(
-              title: "You're Already in This Session",
-              content:
-                  'You are already in this session on another device. Do you want to leave the other session and join on this device?',
-              icon: TotemIcons.questionMarkCircle,
-              iconSize: 60,
-              confirmButtonText: 'Join Here',
-              onConfirm: () async {
-                Navigator.of(context).pop(true);
-              },
-              type: ConfirmationDialogType.standard,
-            );
-          },
-        ) ??
-        false;
-  } catch (_) {
-    return false;
   }
 }
