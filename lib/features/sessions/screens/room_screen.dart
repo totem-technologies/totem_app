@@ -41,6 +41,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   final _notificationController = PopupController();
 
   VoidCallback? _closeKeeperLeftNotification;
+  Timer? _timeRemainingWarningTimer;
+  String? _timeRemainingWarningSessionSlug;
+  bool _hasShownTimeRemainingWarning = false;
 
   @override
   void initState() {
@@ -52,6 +55,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   @override
   void dispose() {
     _clearSessionPopups();
+    _clearTimeRemainingWarningTimer();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _batterySubscription?.cancel();
     super.dispose();
@@ -61,6 +65,61 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     _closeKeeperLeftNotification?.call();
     _closeKeeperLeftNotification = null;
     _notificationController.dismissAll();
+  }
+
+  void _clearTimeRemainingWarningTimer() {
+    _timeRemainingWarningTimer?.cancel();
+    _timeRemainingWarningTimer = null;
+  }
+
+  void _scheduleTimeRemainingWarning(
+    SessionDetailSchema? sessionEvent,
+    RoomConnectionState connectionState,
+    RoomStatus roomStatus,
+  ) {
+    if (sessionEvent == null ||
+        connectionState != RoomConnectionState.connected ||
+        roomStatus != RoomStatus.active ||
+        sessionEvent.ended) {
+      _clearTimeRemainingWarningTimer();
+      return;
+    }
+
+    if (_timeRemainingWarningSessionSlug != sessionEvent.slug) {
+      _timeRemainingWarningSessionSlug = sessionEvent.slug;
+      _hasShownTimeRemainingWarning = false;
+      _clearTimeRemainingWarningTimer();
+    }
+
+    if (_hasShownTimeRemainingWarning ||
+        _timeRemainingWarningTimer?.isActive == true) {
+      return;
+    }
+
+    final endTime = sessionEvent.start.add(
+      Duration(minutes: sessionEvent.duration),
+    );
+    final warningTime = endTime.subtract(const Duration(minutes: 5));
+    final delay = warningTime.difference(DateTime.now());
+
+    _timeRemainingWarningTimer = Timer(
+      delay.isNegative ? Duration.zero : delay,
+      _showTimeRemainingWarning,
+    );
+  }
+
+  void _showTimeRemainingWarning() {
+    _timeRemainingWarningTimer = null;
+    if (!mounted || _hasShownTimeRemainingWarning) return;
+
+    _hasShownTimeRemainingWarning = true;
+    showNotificationPopup(
+      context,
+      icon: TotemIcons.clockCircle,
+      title: 'Time Remaining 5 min',
+      message: 'Thanks for your participation in this session today',
+      controller: _notificationController,
+    );
   }
 
   final battery = Battery();
@@ -146,6 +205,12 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     final roomStatus = ref.watch(roomStatusProvider);
     final disconnectReason = ref.watch(disconnectionReasonProvider);
 
+    _scheduleTimeRemainingWarning(
+      currentSessionEvent,
+      connectionState,
+      roomStatus,
+    );
+
     ref
       ..listen(
         emojiReactionsProvider,
@@ -182,6 +247,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         (previous, next) {
           if (next == RoomStatus.ended) {
             _clearSessionPopups();
+            _clearTimeRemainingWarningTimer();
           }
         },
       )
@@ -191,6 +257,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           if (next == RoomConnectionState.disconnected ||
               next == RoomConnectionState.error) {
             _clearSessionPopups();
+            _clearTimeRemainingWarningTimer();
           }
         },
       );

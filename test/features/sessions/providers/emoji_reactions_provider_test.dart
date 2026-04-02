@@ -110,7 +110,7 @@ void main() {
   });
 
   group('EmojiReactions Display Logic', () {
-    testWidgets('displayReaction updates state lifecycle', (tester) async {
+    Future<ProviderContainer> pumpOverlayHost(WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
@@ -127,7 +127,11 @@ void main() {
       final element = tester.element(
         find.byKey(EmojiReactions.emojiOverlayKey),
       );
-      final container = ProviderScope.containerOf(element);
+      return ProviderScope.containerOf(element);
+    }
+
+    testWidgets('displayReaction updates state lifecycle', (tester) async {
+      final container = await pumpOverlayHost(tester);
 
       final notifier = container.read(emojiReactionsProvider.notifier);
 
@@ -155,6 +159,52 @@ void main() {
 
       state = container.read(emojiReactionsProvider);
       expect(state, isEmpty, reason: 'Should be removed after display is done');
+    });
+
+    testWidgets('displayReaction renders emoji on screen while animating', (
+      tester,
+    ) async {
+      final container = await pumpOverlayHost(tester);
+      final notifier = container.read(emojiReactionsProvider.notifier);
+
+      await notifier.emitIncomingReaction('user1', '🔥');
+      final reaction = container.read(emojiReactionsProvider).first;
+
+      final context = tester.element(
+        find.byKey(EmojiReactions.emojiOverlayKey),
+      );
+
+      final future = notifier.displayReaction(context, reaction, false);
+      await tester.pump();
+
+      expect(find.text('🔥'), findsOneWidget);
+
+      await tester.pumpAndSettle(const Duration(seconds: 4));
+      await future;
+      expect(find.text('🔥'), findsNothing);
+    });
+
+    testWidgets('displayReaction renders emoji in not-my-turn mode too', (
+      tester,
+    ) async {
+      final container = await pumpOverlayHost(tester);
+      final notifier = container.read(emojiReactionsProvider.notifier);
+
+      await notifier.emitIncomingReaction('user1', '🎉');
+      final reaction = container.read(emojiReactionsProvider).first;
+
+      final context = tester.element(
+        find.byKey(EmojiReactions.emojiOverlayKey),
+      );
+
+      final future = notifier.displayReaction(context, reaction, true);
+      await tester.pump();
+
+      expect(find.text('🎉'), findsOneWidget);
+
+      await tester.pumpAndSettle(const Duration(seconds: 4));
+      await future;
+      expect(find.text('🎉'), findsNothing);
     });
   });
 }
