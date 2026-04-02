@@ -1,5 +1,8 @@
+// ignore_for_file: prefer_final_fields
+
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:livekit_client/src/core/engine.dart';
 import 'package:mocktail/mocktail.dart';
@@ -109,7 +112,55 @@ class MockRemoteTrackPublication extends Mock
 
 class MockRemoteVideoTrack extends Mock implements RemoteVideoTrack {}
 
-class MockLocalVideoTrack extends Mock implements LocalVideoTrack {}
+class MockLocalVideoTrack extends Mock implements LocalVideoTrack {
+  MockLocalVideoTrack({bool muted = false, bool isActive = true})
+    : _muted = muted,
+      _isActive = isActive {
+    when(() => this.muted).thenAnswer((_) => _muted);
+    when(() => this.isActive).thenAnswer((_) => _isActive);
+    when(start).thenAnswer((_) async => true);
+    when(stop).thenAnswer((_) async => true);
+    when(dispose).thenAnswer((_) async => true);
+  }
+
+  bool _muted;
+  bool _isActive;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.memberName == #addViewKey) {
+      return GlobalKey();
+    }
+    if (invocation.memberName == #removeViewKey) {
+      return null;
+    }
+    return super.noSuchMethod(invocation);
+  }
+}
+
+class MockLocalAudioTrack extends Mock implements LocalAudioTrack {
+  MockLocalAudioTrack({bool muted = false, bool isActive = true})
+    : _muted = muted,
+      _isActive = isActive {
+    when(() => this.muted).thenAnswer((_) => _muted);
+    when(() => this.isActive).thenAnswer((_) => _isActive);
+    when(enable).thenAnswer((_) async => true);
+    when(start).thenAnswer((_) async => true);
+    when(stop).thenAnswer((_) async => true);
+    when(dispose).thenAnswer((_) async => true);
+    when(() => mute(stopOnMute: false)).thenAnswer((_) async {
+      _muted = true;
+      return true;
+    });
+    when(() => unmute(stopOnMute: false)).thenAnswer((_) async {
+      _muted = false;
+      return true;
+    });
+  }
+
+  bool _muted;
+  bool _isActive;
+}
 
 class MockTrackEventsListener extends Mock
     implements EventsListener<TrackEvent> {

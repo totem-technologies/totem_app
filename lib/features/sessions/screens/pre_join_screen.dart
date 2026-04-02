@@ -27,6 +27,33 @@ import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 
+@visibleForTesting
+abstract class PreJoinPreviewTrackFactory {
+  const PreJoinPreviewTrackFactory();
+
+  Future<LocalVideoTrack?> createVideoTrack(
+    CameraCaptureOptions cameraOptions,
+  );
+
+  Future<LocalAudioTrack?> createAudioTrack();
+}
+
+class _LiveKitPreJoinPreviewTrackFactory extends PreJoinPreviewTrackFactory {
+  const _LiveKitPreJoinPreviewTrackFactory();
+
+  @override
+  Future<LocalVideoTrack?> createVideoTrack(
+    CameraCaptureOptions cameraOptions,
+  ) {
+    return LocalVideoTrack.createCameraTrack(cameraOptions);
+  }
+
+  @override
+  Future<LocalAudioTrack?> createAudioTrack() {
+    return LocalAudioTrack.create();
+  }
+}
+
 /// Shows a dialog when the user tries to join a session they are already
 /// in on another device, asking if they want to leave the other session
 /// and join on this device instead.
@@ -59,9 +86,14 @@ Future<bool> showAlreadyPresentDialog(BuildContext context) async {
 }
 
 class PreJoinScreen extends ConsumerStatefulWidget {
-  const PreJoinScreen({required this.sessionSlug, super.key});
+  const PreJoinScreen({
+    required this.sessionSlug,
+    this.previewTrackFactory = const _LiveKitPreJoinPreviewTrackFactory(),
+    super.key,
+  });
 
   final String sessionSlug;
+  final PreJoinPreviewTrackFactory previewTrackFactory;
 
   @override
   ConsumerState<PreJoinScreen> createState() => _PreJoinScreenState();
@@ -224,7 +256,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     }
 
     try {
-      _previewVideoTrack = await LocalVideoTrack.createCameraTrack(
+      _previewVideoTrack = await widget.previewTrackFactory.createVideoTrack(
         _cameraOptions,
       );
       await _previewVideoTrack!.start();
@@ -246,7 +278,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     }
 
     try {
-      _previewAudioTrack = await LocalAudioTrack.create();
+      _previewAudioTrack = await widget.previewTrackFactory.createAudioTrack();
       await _previewAudioTrack!.enable();
       await _previewAudioTrack!.start();
       return _previewAudioTrack;
