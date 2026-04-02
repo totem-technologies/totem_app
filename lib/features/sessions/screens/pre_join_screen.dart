@@ -58,7 +58,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   @override
   void initState() {
     super.initState();
-    _requestLock = false;
+    _permissionsRequestLock = false;
     _initializeAndCheckPermissions();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
@@ -75,7 +75,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       _previewAudioTrack!.dispose();
       _previewAudioTrack = null;
     }
-    _requestLock = false;
+    _permissionsRequestLock = false;
     if (!hasRequestedJoin) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
@@ -83,7 +83,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   // Do not perform multiple permission requests
-  bool _requestLock = false;
+  bool _permissionsRequestLock = false;
 
   void _initializeAndCheckPermissions() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -121,8 +121,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   Future<void> _requestPermissions() async {
-    if (_requestLock) return;
-    _requestLock = true;
+    if (_permissionsRequestLock) return;
+    _permissionsRequestLock = true;
 
     try {
       final statuses = await [
@@ -172,13 +172,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
       await SessionInfraController.requestPermissions();
     } finally {
-      _requestLock = false;
+      _permissionsRequestLock = false;
     }
   }
 
   Future<void> _initializeLocalVideo() async {
     if (_previewVideoTrack != null) {
-      await _disposePreviewTrack();
+      await _disposePreviewVideoTrack();
     }
 
     try {
@@ -200,9 +200,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   Future<LocalAudioTrack?> _initializeLocalAudio() async {
     if (_previewAudioTrack != null) {
-      await _previewAudioTrack!.stop();
-      await _previewAudioTrack!.dispose();
-      _previewAudioTrack = null;
+      await _disposePreviewAudioTrack();
     }
 
     try {
@@ -371,7 +369,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     }
   }
 
-  Future<void> _disposePreviewTrack() async {
+  Future<void> _disposePreviewVideoTrack() async {
     if (_previewVideoTrack != null) {
       try {
         await _previewVideoTrack!.stop();
@@ -387,6 +385,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         _previewVideoTrack = null;
       }
     }
+  }
+
+  Future<void> _disposePreviewAudioTrack() async {
     if (_previewAudioTrack != null) {
       try {
         await _previewAudioTrack!.stop();
@@ -406,7 +407,22 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     }
   }
 
+  Future<void> _disposePreviewTracks() async {
+    await Future.wait([
+      _disposePreviewVideoTrack(),
+      _disposePreviewAudioTrack(),
+    ]);
+  }
+
   bool _showingAlreadyPresentDialog = false;
+
+  Future<void> _onRetry() async {
+    setState(() => _isLoading = null);
+    final _ = await ref.refresh(
+      sessionTokenProvider(widget.sessionSlug).future,
+    );
+    final _ = await ref.refresh(eventProvider(widget.sessionSlug).future);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -430,7 +446,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           if (next != RoomConnectionState.connected) return;
 
           _hasHandledConnectedState = true;
-          _disposePreviewTrack();
+          _disposePreviewTracks();
           SentryDisplayWidget.of(context).reportFullyDisplayed();
         },
       );
@@ -440,8 +456,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       return RoomBackground(
         child: RoomErrorScreen(
           error: tokenData.error,
-          onRetry: () =>
-              ref.refresh(sessionTokenProvider(widget.sessionSlug).future),
+          onRetry: _onRetry,
         ),
       );
     }
@@ -449,7 +464,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     if (sessionData.hasError) {
       return RoomBackground(
         child: RoomErrorScreen(
-          onRetry: () => ref.refresh(eventProvider(widget.sessionSlug).future),
+          error: sessionData.error,
+          onRetry: _onRetry,
         ),
       );
     }
