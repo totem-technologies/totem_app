@@ -5,7 +5,7 @@ import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.d
 import 'package:totem_app/features/sessions/widgets/audio_visualizer.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
-class SpeakingIndicatorAudioTrack extends StatefulWidget {
+class SpeakingIndicatorAudioTrack extends StatelessWidget {
   const SpeakingIndicatorAudioTrack({
     required this.audioTrack,
     this.participant,
@@ -21,22 +21,68 @@ class SpeakingIndicatorAudioTrack extends StatefulWidget {
   final int barCount;
 
   @override
-  State<SpeakingIndicatorAudioTrack> createState() =>
-      _SpeakingIndicatorAudioTrackState();
+  Widget build(BuildContext context) {
+    return _SpeakingIndicatorCore(
+      audioTrack: audioTrack,
+      participant: participant,
+      foregroundColor: foregroundColor,
+      barCount: barCount,
+    );
+  }
 }
 
-class _SpeakingIndicatorAudioTrackState
-    extends State<SpeakingIndicatorAudioTrack> {
+class SpeakingIndicator extends StatelessWidget {
+  const SpeakingIndicator({
+    required this.participant,
+    this.foregroundColor = Colors.white,
+    this.barCount = 3,
+    super.key,
+  });
+
+  final Participant participant;
+  final Color foregroundColor;
+  final int barCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SpeakingIndicatorCore(
+      participant: participant,
+      foregroundColor: foregroundColor,
+      barCount: barCount,
+    );
+  }
+}
+
+class _SpeakingIndicatorCore extends StatefulWidget {
+  const _SpeakingIndicatorCore({
+    required this.foregroundColor,
+    required this.barCount,
+    this.audioTrack,
+    this.participant,
+  });
+
+  final AudioTrack? audioTrack;
+  final Participant? participant;
+  final Color? foregroundColor;
+  final int barCount;
+
+  @override
+  State<_SpeakingIndicatorCore> createState() => _SpeakingIndicatorCoreState();
+}
+
+class _SpeakingIndicatorCoreState extends State<_SpeakingIndicatorCore> {
   EventsListener<ParticipantEvent>? _participantListener;
   EventsListener<TrackEvent>? _trackListener;
 
   TrackPublication<Track>? get audioTrack {
-    if (widget.participant is RemoteParticipant) {
-      return widget.participant?.getTrackPublicationBySource(
+    final participant = widget.participant;
+
+    if (participant is RemoteParticipant) {
+      return participant.getTrackPublicationBySource(
         TrackSource.microphone,
       );
     } else {
-      return widget.participant?.audioTrackPublications
+      return participant?.audioTrackPublications
           .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)
           .firstOrNull;
     }
@@ -45,18 +91,24 @@ class _SpeakingIndicatorAudioTrackState
   @override
   void initState() {
     super.initState();
-    setup();
+    _setupListeners();
   }
 
   @override
-  void didUpdateWidget(covariant SpeakingIndicatorAudioTrack oldWidget) {
+  void didUpdateWidget(covariant _SpeakingIndicatorCore oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.participant?.sid != widget.participant?.sid) {
-      setup();
+    if (oldWidget.participant?.sid != widget.participant?.sid ||
+        oldWidget.audioTrack != widget.audioTrack) {
+      _setupListeners();
     }
   }
 
-  void setup() {
+  AudioTrack? get _resolvedAudioTrack {
+    final publicationTrack = audioTrack?.track;
+    return widget.audioTrack ?? publicationTrack as AudioTrack?;
+  }
+
+  void _setupListeners() {
     _participantListener?.dispose();
     _participantListener = widget.participant?.createListener();
     _participantListener
@@ -66,8 +118,9 @@ class _SpeakingIndicatorAudioTrackState
 
     _trackListener?.dispose();
     _trackListener = null;
-    if (audioTrack?.track != null) {
-      _trackListener = audioTrack!.track!.createListener();
+    final resolvedTrack = _resolvedAudioTrack;
+    if (resolvedTrack != null) {
+      _trackListener = resolvedTrack.createListener();
       _trackListener!.listen(_onTrackEvent);
     }
   }
@@ -101,18 +154,14 @@ class _SpeakingIndicatorAudioTrackState
 
   @override
   Widget build(BuildContext context) {
-    if (widget.audioTrack != null &&
-        !widget.audioTrack!.muted /* && audioTrack!.subscribed */ ) {
+    final resolvedAudioTrack = _resolvedAudioTrack;
+
+    if (resolvedAudioTrack != null && !resolvedAudioTrack.muted) {
       return LayoutBuilder(
         builder: (context, constraints) {
           return RepaintBoundary(
             child: SoundWaveformWidget(
-              audioTrack:
-                  widget.audioTrack ??
-                  (widget.participant
-                          ?.getTrackPublicationBySource(TrackSource.microphone)
-                          ?.track
-                      as AudioTrack?),
+              audioTrack: resolvedAudioTrack,
               participant: widget.participant,
               options: AudioVisualizerWidgetOptions(
                 color: widget.foregroundColor,
@@ -126,112 +175,12 @@ class _SpeakingIndicatorAudioTrackState
           );
         },
       );
-    } else {
-      return TotemIcon(
-        TotemIcons.microphoneOff,
-        size: 20,
-        color: widget.foregroundColor,
-      );
     }
-  }
-}
 
-class SpeakingIndicator extends StatefulWidget {
-  const SpeakingIndicator({
-    required this.participant,
-    this.foregroundColor = Colors.white,
-    this.barCount = 3,
-    super.key,
-  });
-
-  final Participant participant;
-  final Color foregroundColor;
-  final int barCount;
-
-  @override
-  State<SpeakingIndicator> createState() => _SpeakingIndicatorState();
-}
-
-class _SpeakingIndicatorState extends State<SpeakingIndicator> {
-  EventsListener<ParticipantEvent>? _participantListener;
-  EventsListener<TrackEvent>? _trackListener;
-
-  TrackPublication<Track>? get audioTrack {
-    if (widget.participant is RemoteParticipant) {
-      return widget.participant.getTrackPublicationBySource(
-        TrackSource.microphone,
-      );
-    } else {
-      return widget.participant.audioTrackPublications
-          .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)
-          .firstOrNull;
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    setup();
-  }
-
-  @override
-  void didUpdateWidget(covariant SpeakingIndicator oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.participant.sid != widget.participant.sid) {
-      setup();
-    }
-  }
-
-  void setup() {
-    _participantListener?.dispose();
-    _participantListener = widget.participant.createListener();
-    _participantListener!
-      ..on<TrackMutedEvent>(_onTrackMuted)
-      ..on<TrackUnmutedEvent>(_onTrackUnmuted)
-      ..on<ParticipantEvent>(_onParticipantEvent);
-
-    _trackListener?.dispose();
-    _trackListener = null;
-    if (audioTrack?.track != null) {
-      _trackListener = audioTrack!.track!.createListener();
-      _trackListener!.listen(_onTrackEvent);
-    }
-  }
-
-  void _onTrackMuted(TrackMutedEvent event) {
-    if (!mounted) return;
-    if (event.publication.source == TrackSource.microphone) setState(() {});
-  }
-
-  void _onTrackUnmuted(TrackUnmutedEvent event) {
-    if (!mounted) return;
-    if (event.publication.source == TrackSource.microphone) setState(() {});
-  }
-
-  void _onTrackEvent(TrackEvent event) {
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  void _onParticipantEvent(ParticipantEvent event) {
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _participantListener?.dispose();
-    _trackListener?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SpeakingIndicatorAudioTrack(
-      audioTrack: audioTrack?.track as AudioTrack?,
-      participant: widget.participant,
-      foregroundColor: widget.foregroundColor,
-      barCount: widget.barCount,
+    return TotemIcon(
+      TotemIcons.microphoneOff,
+      size: 20,
+      color: widget.foregroundColor,
     );
   }
 }
