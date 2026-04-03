@@ -80,122 +80,125 @@ class _ParticipantReorderWidgetState
 
     return PopScope(
       canPop: !_loading,
-      child: Column(
-        children: [
-          const SheetDragHandle(),
-          Expanded(
-            child: CustomScrollView(
-              shrinkWrap: true,
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.only(
-                      start: 20,
-                      end: 20,
-                      bottom: 6,
-                    ),
-                    child: Text(
-                      'Reorder Participants',
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
+          children: [
+            const SheetDragHandle(),
+            Expanded(
+              child: CustomScrollView(
+                shrinkWrap: true,
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.only(
+                        start: 20,
+                        end: 20,
+                        bottom: 6,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.only(
-                      start: 20,
-                      end: 20,
-                      bottom: 20,
-                    ),
-                    child: Text(
-                      'Drag to set participant order',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.black,
+                      child: Text(
+                        'Reorder Participants',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: 20,
-                  ),
-                  sliver: SliverReorderableList(
-                    itemCount: participants.length,
-                    onReorder: (oldIndex, newIndex) {
-                      _handleReorder(context, ref, oldIndex, newIndex);
-                    },
-                    itemBuilder: (context, index) {
-                      final participantIdentity = participants[index];
-
-                      final participant = widget.state.participantsList
-                          .firstWhereOrNull(
-                            (p) => p.identity == participantIdentity,
-                          );
-
-                      return _ParticipantReorderItem(
-                        key: ValueKey(participantIdentity),
-                        participantIdentity: participantIdentity,
-                        participant: participant,
-                        index: index,
-                        isSpeakingNow:
-                            participantIdentity == widget.state.speakingNow,
-                      );
-                    },
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.all(20),
-                    child: Row(
-                      spacing: 16,
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Cancel'),
-                          ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.only(
+                        start: 20,
+                        end: 20,
+                        bottom: 20,
+                      ),
+                      child: Text(
+                        'Drag to set participant order',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.black,
                         ),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              if (_loading) return;
-                              setState(() => _loading = true);
-                              await _updateParticipantOrder(
-                                context,
-                                ref,
-                                _localOrder,
-                              );
-                              if (mounted && context.mounted) {
-                                setState(() => _loading = false);
-                                Navigator.of(context).pop();
-                              }
-                            },
-                            child: _loading
-                                ? const LoadingIndicator(
-                                    color: Colors.white,
-                                    size: 24,
-                                  )
-                                : const Text('Save'),
-                          ),
-                        ),
-                      ],
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
-                ),
-                const SliverSafeArea(
-                  top: false,
-                  bottom: true,
-                  sliver: SliverToBoxAdapter(),
-                ),
-              ],
+                  SliverPadding(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 20,
+                    ),
+                    sliver: SliverReorderableList(
+                      itemCount: participants.length,
+                      onReorder: (oldIndex, newIndex) {
+                        _handleReorder(context, ref, oldIndex, newIndex);
+                      },
+                      itemBuilder: (context, index) {
+                        final participantIdentity = participants[index];
+
+                        final participant = widget.state.participantsList
+                            .firstWhereOrNull(
+                              (p) => p.identity == participantIdentity,
+                            );
+
+                        return _ParticipantReorderItem(
+                          key: ValueKey(participantIdentity),
+                          participantIdentity: participantIdentity,
+                          participant: participant,
+                          index: index,
+                          isSpeakingNow:
+                              participantIdentity == widget.state.speakingNow,
+                        );
+                      },
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.all(20),
+                      child: Row(
+                        spacing: 16,
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('Cancel'),
+                            ),
+                          ),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                if (_loading) return;
+                                setState(() => _loading = true);
+                                await _updateParticipantOrder(
+                                  context,
+                                  ref,
+                                  _localOrder,
+                                );
+                                if (mounted && context.mounted) {
+                                  setState(() => _loading = false);
+                                  Navigator.of(context).pop();
+                                }
+                              },
+                              child: _loading
+                                  ? const LoadingIndicator(
+                                      color: Colors.white,
+                                      size: 24,
+                                    )
+                                  : const Text('Save'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SliverSafeArea(
+                    top: false,
+                    bottom: true,
+                    sliver: SliverToBoxAdapter(),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -279,62 +282,65 @@ class _ParticipantReorderItem extends ConsumerWidget {
             : theme.colorScheme.primaryFixedDim,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: ListTile(
-        leading: SizedBox(
-          width: 32,
-          height: 32,
-          child: AnimatedSwitcher(
-            duration: kThemeChangeDuration,
-            child: user.when(
-              data: (userData) => UserAvatar.fromUserSchema(
-                userData,
-                borderRadius: BorderRadius.circular(20),
-                borderWidth: 0,
-              ),
-              error: (error, stackTrace) => const CircleAvatar(
-                backgroundColor: Colors.grey,
-                child: TotemIcon(
-                  TotemIcons.person,
-                  size: 20,
-                  color: Colors.white,
+      child: Material(
+        type: MaterialType.transparency,
+        child: ListTile(
+          leading: SizedBox(
+            width: 32,
+            height: 32,
+            child: AnimatedSwitcher(
+              duration: kThemeChangeDuration,
+              child: user.when(
+                data: (userData) => UserAvatar.fromUserSchema(
+                  userData,
+                  borderRadius: BorderRadius.circular(20),
+                  borderWidth: 0,
                 ),
+                error: (error, stackTrace) => const CircleAvatar(
+                  backgroundColor: Colors.grey,
+                  child: TotemIcon(
+                    TotemIcons.person,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                ),
+                loading: () => const SizedBox.shrink(),
               ),
-              loading: () => const SizedBox.shrink(),
             ),
           ),
-        ),
-        title: user.when(
-          data: (userData) => Text(
-            userData.name ?? participantIdentity,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+          title: user.when(
+            data: (userData) => Text(
+              userData.name ?? participantIdentity,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: foregroundColor,
+              ),
+            ),
+            error: (error, stackTrace) => Text(
+              participantIdentity,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: foregroundColor,
+              ),
+            ),
+            loading: () => Text(
+              participant?.name ?? participantIdentity,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: foregroundColor,
+              ),
+            ),
+          ),
+          trailing: ReorderableDragStartListener(
+            index: index,
+            child: TotemIcon(
+              TotemIcons.dragHandle,
+              size: 24,
               color: foregroundColor,
             ),
           ),
-          error: (error, stackTrace) => Text(
-            participantIdentity,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: foregroundColor,
-            ),
-          ),
-          loading: () => Text(
-            participant?.name ?? participantIdentity,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: foregroundColor,
-            ),
-          ),
+          contentPadding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
         ),
-        trailing: ReorderableDragStartListener(
-          index: index,
-          child: TotemIcon(
-            TotemIcons.dragHandle,
-            size: 24,
-            color: foregroundColor,
-          ),
-        ),
-        contentPadding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
       ),
     );
   }

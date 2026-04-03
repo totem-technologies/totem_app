@@ -90,6 +90,7 @@ SessionRoomState _buildState({
   String keeper = 'keeper-1',
   String currentSpeaker = 'speaker-1',
   String? nextSpeaker = 'user-2',
+  List<String> talkingOrder = const [],
   List<Participant>? participants,
   bool hasKeeperDisconnected = false,
 }) {
@@ -123,12 +124,19 @@ SessionRoomState _buildState({
         statusDetail: status == RoomStatus.waitingRoom
             ? const RoomStateStatusDetailWaitingRoom(WaitingRoomDetail())
             : const RoomStateStatusDetailActive(ActiveDetail()),
-        talkingOrder: const [],
+        talkingOrder: talkingOrder,
         version: 1,
         roundNumber: 1,
       ),
     ),
   );
+}
+
+List<String> _participantGridIdentities(WidgetTester tester) {
+  return tester
+      .widgetList<ParticipantCard>(find.byType(ParticipantCard))
+      .map((card) => card.participantIdentity)
+      .toList();
 }
 
 class _TestLastMessageNotifier extends Notifier<SessionChatMessage?> {
@@ -285,6 +293,47 @@ void main() {
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
         }
+      });
+
+      testWidgets('updates participant order when talking order changes', (
+        tester,
+      ) async {
+        final participants = [
+          _mockRemote('user-1', 'User One'),
+          _mockRemote('user-2', 'User Two'),
+          _mockRemote('user-3', 'User Three'),
+          _mockRemote('keeper-1', 'Keeper'),
+        ];
+
+        final initialState = _buildState(
+          status: RoomStatus.active,
+          keeper: 'keeper-1',
+          currentSpeaker: 'keeper-1',
+          nextSpeaker: 'user-2',
+          talkingOrder: const ['keeper-1', 'user-2', 'user-3', 'user-1'],
+          participants: participants,
+        );
+
+        await pumpNotMyTurn(tester, sessionState: initialState);
+        expect(
+          _participantGridIdentities(tester),
+          equals(const ['user-2', 'user-3', 'user-1']),
+        );
+
+        final reorderedState = _buildState(
+          status: RoomStatus.active,
+          keeper: 'keeper-1',
+          currentSpeaker: 'keeper-1',
+          nextSpeaker: 'user-3',
+          talkingOrder: const ['keeper-1', 'user-3', 'user-1', 'user-2'],
+          participants: participants,
+        );
+
+        await pumpNotMyTurn(tester, sessionState: reorderedState);
+        expect(
+          _participantGridIdentities(tester),
+          equals(const ['user-3', 'user-1', 'user-2']),
+        );
       });
     });
 
