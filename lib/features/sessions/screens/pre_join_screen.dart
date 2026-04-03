@@ -427,22 +427,28 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         shouldShowAlreadyPresentDialog: showAlreadyPresentDialog,
       );
 
-      if (hasRequestedJoin || _showingAlreadyPresentDialog) return;
-      _hasRequestedJoin = true;
+      if (_sessionOptions == null ||
+          hasRequestedJoin ||
+          _showingAlreadyPresentDialog) {
+        return;
+      }
 
-      final options = _sessionOptions!;
-
-      setState(() => _isLoading = true);
+      setState(() {
+        _hasRequestedJoin = true;
+        _isLoading = true;
+      });
 
       await ref.read(eventProvider(widget.sessionSlug).future);
-      final session = ref.read(sessionControllerProvider(options).notifier)
-        ..configureJoinPreferences(
-          cameraEnabled: _isCameraOn,
-          microphoneEnabled: _isMicOn,
-        );
+      final session =
+          ref.read(sessionControllerProvider(_sessionOptions!).notifier)
+            ..configureJoinPreferences(
+              cameraEnabled: _isCameraOn,
+              microphoneEnabled: _isMicOn,
+            );
       await session.join();
       _hasHandledConnectedState = _isLoading = false;
     } catch (error, stackTrace) {
+      _hasRequestedJoin = false;
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,

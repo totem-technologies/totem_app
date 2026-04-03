@@ -135,6 +135,7 @@ class _PreviewTrackFactory extends PreJoinPreviewTrackFactory {
   @override
   Future<LocalAudioTrack?> createAudioTrack() async {
     final track = MockLocalAudioTrack();
+    when(track.createListener).thenReturn(MockTrackEventsListener());
     audioTracks.add(track);
     return track;
   }
@@ -279,6 +280,59 @@ void main() {
 
         expect(find.text('Something went wrong'), findsOneWidget);
         expect(find.text('Retry'), findsOneWidget);
+      });
+
+      testWidgets('retries and recovers after an initial token failure', (
+        tester,
+      ) async {
+        Future<JoinResponse> Function() loadToken = () async =>
+            throw Exception('token failed');
+        var tokenAttempts = 0;
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authControllerProvider.overrideWith(
+                () => FakeAuthController(AuthState.unauthenticated()),
+              ),
+              sessionTokenProvider(sessionSlug).overrideWith((ref) async {
+                tokenAttempts += 1;
+                return loadToken();
+              }),
+              eventProvider(sessionSlug).overrideWith((ref) async {
+                return _createSessionEvent(
+                  start: DateTime(2024, 1, 1, 10),
+                  duration: 60,
+                  slug: sessionSlug,
+                );
+              }),
+            ],
+            child: const SentryDisplayWidget(
+              child: MaterialApp(
+                home: PreJoinScreen(sessionSlug: sessionSlug),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(find.text('Something went wrong'), findsOneWidget);
+        expect(find.text('Retry'), findsOneWidget);
+
+        loadToken = () async => _createJoinResponse();
+
+        await tester.tap(find.text('Retry'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(tokenAttempts, greaterThanOrEqualTo(2));
+        expect(find.text('Something went wrong'), findsNothing);
+        expect(find.text('Swipe to Join'), findsOneWidget);
+        expect(find.text('Welcome'), findsOneWidget);
       });
 
       testWidgets('shows the event error screen when the event load fails', (
