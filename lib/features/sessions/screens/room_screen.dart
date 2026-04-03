@@ -200,6 +200,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       return;
     }
 
+    _closeKeeperLeftNotification?.call();
     _closeKeeperLeftNotification = showPermanentNotificationPopup(
       context,
       icon: TotemIcons.pause,
@@ -253,6 +254,15 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         (previous, next) {
           if (previous == next) return;
           _setKeeperDisconnectedNotification(next);
+        },
+      )
+      ..listen(
+        resolveCurrentScreenProvider,
+        (previous, next) {
+          if (next == RoomScreen.disconnected || next == RoomScreen.error) {
+            _clearSessionPopups();
+            _clearTimeRemainingWarningTimer();
+          }
         },
       )
       ..listen(

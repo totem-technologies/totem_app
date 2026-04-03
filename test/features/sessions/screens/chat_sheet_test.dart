@@ -121,9 +121,13 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          authControllerProvider.overrideWith(() => FakeAuthController(authState)),
+          authControllerProvider.overrideWith(
+            () => FakeAuthController(authState),
+          ),
           currentSessionProvider.overrideWith((ref) => session),
-          currentSessionEventProvider.overrideWith((ref) => _createSessionEvent()),
+          currentSessionEventProvider.overrideWith(
+            (ref) => _createSessionEvent(),
+          ),
           currentSessionStateProvider.overrideWithValue(
             _createSessionState(messages: messages),
           ),
@@ -155,9 +159,13 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          authControllerProvider.overrideWith(() => FakeAuthController(authState)),
+          authControllerProvider.overrideWith(
+            () => FakeAuthController(authState),
+          ),
           currentSessionProvider.overrideWith((ref) => session),
-          currentSessionEventProvider.overrideWith((ref) => _createSessionEvent()),
+          currentSessionEventProvider.overrideWith(
+            (ref) => _createSessionEvent(),
+          ),
           currentSessionStateProvider.overrideWithValue(
             _createSessionState(messages: messages),
           ),
@@ -209,7 +217,10 @@ void main() {
         authState: AuthState.unauthenticated(),
       );
 
-      expect(find.text('Only the Keeper can post messages here'), findsOneWidget);
+      expect(
+        find.text('Only the Keeper can post messages here'),
+        findsOneWidget,
+      );
       expect(find.text('No messages yet'), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
       expect(find.byType(IconButton), findsNothing);
