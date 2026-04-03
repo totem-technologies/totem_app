@@ -36,6 +36,18 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
   final _messageController = TextEditingController();
   int _previousMessageCount = 0;
 
+  void _scrollToBottom(ScrollController scrollController) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!scrollController.hasClients) return;
+      scrollController.jumpTo(scrollController.position.maxScrollExtent);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (scrollController.hasClients) {
+          scrollController.jumpTo(scrollController.position.maxScrollExtent);
+        }
+      });
+    });
+  }
+
   @override
   void dispose() {
     _messageController.dispose();
@@ -69,13 +81,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
         if (messages.length != _previousMessageCount) {
           _previousMessageCount = messages.length;
           if (messages.isNotEmpty) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (scrollController.hasClients) {
-                scrollController.jumpTo(
-                  scrollController.position.maxScrollExtent,
-                );
-              }
-            });
+            _scrollToBottom(scrollController);
           }
         }
 
@@ -84,15 +90,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
           if (message.isNotEmpty) {
             session.messaging.sendMessage(message);
             _messageController.clear();
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (scrollController.hasClients) {
-                scrollController.animateTo(
-                  scrollController.position.maxScrollExtent,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOut,
-                );
-              }
-            });
+            _scrollToBottom(scrollController);
           }
         }
 
@@ -238,10 +236,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
                               ),
                             ),
                             child: IconButton(
-                              icon: const TotemIcon(
-                                TotemIcons.send,
-                                size: 20,
-                              ),
+                              icon: const TotemIcon(TotemIcons.send, size: 20),
                               color: theme.colorScheme.onPrimary,
                               onPressed: send,
                             ),
