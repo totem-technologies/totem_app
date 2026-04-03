@@ -112,7 +112,38 @@ class FeaturedParticipantCard extends ConsumerWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.end,
+                    spacing: 2,
                     children: [
+                      if (session.isKeeper(activeSpeaker.identity))
+                        Container(
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(42),
+                            color: Colors.black54,
+                            boxShadow: kElevationToShadow[1],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            spacing: 5,
+                            children: [
+                              const TotemIconLogo(
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                              Text(
+                                'Keeper',
+                                style: theme.textTheme.bodySmall!.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       Row(
                         spacing: 12,
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -160,36 +191,6 @@ class FeaturedParticipantCard extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      if (session.isKeeper(activeSpeaker.identity))
-                        Container(
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(42),
-                            color: Colors.black54,
-                            boxShadow: kElevationToShadow[1],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            spacing: 5,
-                            children: [
-                              const TotemIconLogo(
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              Text(
-                                'Keeper',
-                                style: theme.textTheme.bodySmall!.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                     ],
                   ),
                 ),
