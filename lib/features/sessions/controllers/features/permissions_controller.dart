@@ -1,9 +1,11 @@
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:meta/meta.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'permissions_controller.g.dart';
 
+@immutable
 class PermissionsState {
   const PermissionsState({
     this.cameraStatus = PermissionStatus.denied,
@@ -32,17 +34,31 @@ class PermissionsState {
       notificationStatus: notificationStatus ?? this.notificationStatus,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is PermissionsState &&
+        other.cameraStatus == cameraStatus &&
+        other.microphoneStatus == microphoneStatus &&
+        other.notificationStatus == notificationStatus;
+  }
+
+  @override
+  int get hashCode =>
+      cameraStatus.hashCode ^
+      microphoneStatus.hashCode ^
+      notificationStatus.hashCode;
 }
 
 @riverpod
 class PermissionsController extends _$PermissionsController {
   @override
-  PermissionsState build() {
-    refreshStatuses();
-    return const PermissionsState();
+  Future<PermissionsState> build() async {
+    return currentStatuses;
   }
 
-  Future<void> refreshStatuses() async {
+  Future<PermissionsState> get currentStatuses async {
     final camera = await Permission.camera.status;
     final microphone = await Permission.microphone.status;
 
@@ -52,16 +68,20 @@ class PermissionsController extends _$PermissionsController {
         ? PermissionStatus.granted
         : PermissionStatus.denied;
 
-    state = PermissionsState(
+    return PermissionsState(
       cameraStatus: camera,
       microphoneStatus: microphone,
       notificationStatus: notificationStatus,
     );
   }
 
+  Future<void> refreshStatuses() async {
+    state = AsyncValue.data(await currentStatuses);
+  }
+
   Future<void> requestCamera() async {
     final status = await Permission.camera.request();
-    state = state.copyWith(cameraStatus: status);
+    state = AsyncValue.data(state.asData!.value.copyWith(cameraStatus: status));
     if (status.isPermanentlyDenied) {
       await openAppSettings();
     }
@@ -69,7 +89,9 @@ class PermissionsController extends _$PermissionsController {
 
   Future<void> requestMicrophone() async {
     final status = await Permission.microphone.request();
-    state = state.copyWith(microphoneStatus: status);
+    state = AsyncValue.data(
+      state.asData!.value.copyWith(microphoneStatus: status),
+    );
     if (status.isPermanentlyDenied) {
       await openAppSettings();
     }
@@ -80,6 +102,8 @@ class PermissionsController extends _$PermissionsController {
     final status = result == NotificationPermission.granted
         ? PermissionStatus.granted
         : PermissionStatus.denied;
-    state = state.copyWith(notificationStatus: status);
+    state = AsyncValue.data(
+      state.asData!.value.copyWith(notificationStatus: status),
+    );
   }
 }

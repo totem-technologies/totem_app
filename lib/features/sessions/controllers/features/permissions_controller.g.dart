@@ -13,7 +13,7 @@ part of 'permissions_controller.dart';
 final permissionsControllerProvider = PermissionsControllerProvider._();
 
 final class PermissionsControllerProvider
-    extends $NotifierProvider<PermissionsController, PermissionsState> {
+    extends $AsyncNotifierProvider<PermissionsController, PermissionsState> {
   PermissionsControllerProvider._()
     : super(
         from: null,
@@ -31,30 +31,24 @@ final class PermissionsControllerProvider
   @$internal
   @override
   PermissionsController create() => PermissionsController();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(PermissionsState value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<PermissionsState>(value),
-    );
-  }
 }
 
 String _$permissionsControllerHash() =>
-    r'permissions_controller_generated_hash';
+    r'318e6bf70d836eaf9ab8dc34888ff414135c02c3';
 
-abstract class _$PermissionsController extends $Notifier<PermissionsState> {
-  PermissionsState build();
+abstract class _$PermissionsController
+    extends $AsyncNotifier<PermissionsState> {
+  FutureOr<PermissionsState> build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<PermissionsState, void>;
+    final ref =
+        this.ref as $Ref<AsyncValue<PermissionsState>, PermissionsState>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<PermissionsState, void>,
-              PermissionsState,
+              AnyNotifier<AsyncValue<PermissionsState>, PermissionsState>,
+              AsyncValue<PermissionsState>,
               Object?,
               Object?
             >;

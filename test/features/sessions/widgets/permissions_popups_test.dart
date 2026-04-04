@@ -17,7 +17,7 @@ class FakePermissionsController extends PermissionsController {
   int cameraRequests = 0;
 
   @override
-  PermissionsState build() {
+  Future<PermissionsState> build() async {
     lastInstance = this;
     return initialState;
   }

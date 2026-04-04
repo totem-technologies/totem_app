@@ -128,9 +128,13 @@ class _PermissionsRequestSheetState
 
   @override
   Widget build(BuildContext context) {
-    final permissionsState = ref.watch(permissionsControllerProvider);
+    final theme = Theme.of(context);
+    final permissionsState = ref
+        .watch(permissionsControllerProvider)
+        .asData
+        ?.value;
     final controller = ref.read(permissionsControllerProvider.notifier);
-    final isReady = permissionsState.requiredPermissionsGranted;
+    final isReady = permissionsState?.requiredPermissionsGranted ?? false;
 
     return Padding(
       padding: const EdgeInsetsDirectional.only(bottom: 32),
@@ -149,9 +153,9 @@ class _PermissionsRequestSheetState
                 Text(
                   'Get Ready for your session',
                   textAlign: TextAlign.center,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -159,8 +163,8 @@ class _PermissionsRequestSheetState
                   'experience. You can manage these permissions anytime in '
                   'your device settings.',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -173,7 +177,7 @@ class _PermissionsRequestSheetState
                   description:
                       'Allow Totem to send you notification about session, '
                       'new blog and more',
-                  isGranted: permissionsState.isNotificationGranted,
+                  isGranted: permissionsState?.isNotificationGranted ?? false,
                   onTap: controller.requestNotification,
                 ),
                 const SizedBox(height: 10),
@@ -186,7 +190,7 @@ class _PermissionsRequestSheetState
                   description:
                       'To speak during sessions, Totem needs access to your '
                       'microphone.',
-                  isGranted: permissionsState.isMicrophoneGranted,
+                  isGranted: permissionsState?.isMicrophoneGranted ?? false,
                   onTap: controller.requestMicrophone,
                 ),
                 const SizedBox(height: 10),
@@ -199,7 +203,7 @@ class _PermissionsRequestSheetState
                   description:
                       'Allow camera access so others can see you during '
                       'the live session. You can turn it off at any time.',
-                  isGranted: permissionsState.isCameraGranted,
+                  isGranted: permissionsState?.isCameraGranted ?? false,
                   onTap: controller.requestCamera,
                 ),
                 const SizedBox(height: 32),
@@ -244,6 +248,7 @@ class PermissionItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Material(
       color: AppTheme.cream,
       borderRadius: BorderRadius.circular(20),
@@ -267,7 +272,7 @@ class PermissionItemTile extends StatelessWidget {
                         fontFamily: AppTheme.fontFamilySans,
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: theme.colorScheme.onSurface,
                         height: 1.2,
                       ),
                     ),
@@ -278,7 +283,7 @@ class PermissionItemTile extends StatelessWidget {
                         fontFamily: AppTheme.fontFamilySans,
                         fontSize: 14,
                         fontWeight: FontWeight.normal,
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: theme.colorScheme.onSurface,
                         height: 1.2,
                       ),
                     ),
