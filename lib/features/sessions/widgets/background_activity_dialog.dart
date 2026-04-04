@@ -54,7 +54,18 @@ class BackgroundActivityDialog extends StatelessWidget {
                 await FlutterForegroundTask.requestIgnoreBatteryOptimization();
                 if (context.mounted) Navigator.of(context).pop();
               },
-              child: const Text('Enable Background Mode'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                textStyle: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              child: const Text(
+                'Enable Background Mode',
+                softWrap: false,
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
         ],
