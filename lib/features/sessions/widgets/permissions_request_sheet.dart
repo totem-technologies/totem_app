@@ -62,7 +62,7 @@ class _PermissionsRequestSheetState
     final isReady = permissionsState.requiredPermissionsGranted;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 32),
+      padding: const EdgeInsetsDirectional.only(bottom: 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -70,7 +70,7 @@ class _PermissionsRequestSheetState
             margin: EdgeInsetsDirectional.only(top: 12, bottom: 12),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -84,9 +84,9 @@ class _PermissionsRequestSheetState
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Please review your preferences below to ensure a smooth '
-                  'live experience. You can manage these permissions at any '
-                  'time in your device settings.',
+                  'Review your preferences below for a smooth live '
+                  'experience. You can manage these permissions anytime in '
+                  'your device settings.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
@@ -135,23 +135,15 @@ class _PermissionsRequestSheetState
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (isReady) {
-                        Navigator.of(context).pop(true);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Please grant camera and microphone permissions to continue.',
-                            ),
-                          ),
-                        );
-                      }
-                    },
+                    onPressed: isReady
+                        ? () {
+                            Navigator.of(context).pop(true);
+                          }
+                        : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isReady ? AppTheme.mauve : AppTheme.gray,
                     ),
-                    child: const Text('Continue'),
+                    child: Text(isReady ? 'Continue' : 'Grant Permissions'),
                   ),
                 ),
               ],

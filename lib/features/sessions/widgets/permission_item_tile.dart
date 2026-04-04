@@ -30,7 +30,7 @@ class PermissionItemTile extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              icon,
+              SizedBox(width: 24, height: 24, child: Center(child: icon)),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
