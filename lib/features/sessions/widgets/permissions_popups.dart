@@ -198,7 +198,7 @@ class _PermissionsRequestSheetState
                   ),
                   title: 'Notification',
                   description:
-                      'Allow Totem to send you notification about sessions, '
+                      'Allow Totem to send you notifications about sessions, '
                       'new blogs, and more',
                   isGranted: permissionsState?.isNotificationGranted ?? false,
                   onTap: controller.requestNotification,
@@ -275,7 +275,7 @@ class PermissionItemTile extends StatelessWidget {
     return Semantics(
       button: true,
       label:
-          '$title permission, ${isGranted ? "granted" : "not granted"}. $description. Tap to ${isGranted ? "revoke" : "grant"} permission.',
+          '$title permission, ${isGranted ? "granted" : "not granted"}. $description. Tap to grant permission.',
       child: Material(
         color: AppTheme.cream,
         borderRadius: BorderRadius.circular(20),

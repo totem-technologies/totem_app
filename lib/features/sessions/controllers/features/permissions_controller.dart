@@ -81,7 +81,10 @@ class PermissionsController extends _$PermissionsController {
 
   Future<void> requestCamera() async {
     final status = await Permission.camera.request();
-    state = AsyncValue.data(state.asData!.value.copyWith(cameraStatus: status));
+    state = AsyncValue.data(
+      state.asData?.value.copyWith(cameraStatus: status) ??
+          PermissionsState(cameraStatus: status),
+    );
     if (status.isPermanentlyDenied) {
       await openAppSettings();
     }
@@ -90,7 +93,8 @@ class PermissionsController extends _$PermissionsController {
   Future<void> requestMicrophone() async {
     final status = await Permission.microphone.request();
     state = AsyncValue.data(
-      state.asData!.value.copyWith(microphoneStatus: status),
+      state.asData?.value.copyWith(microphoneStatus: status) ??
+          PermissionsState(microphoneStatus: status),
     );
     if (status.isPermanentlyDenied) {
       await openAppSettings();
@@ -103,7 +107,8 @@ class PermissionsController extends _$PermissionsController {
         ? PermissionStatus.granted
         : PermissionStatus.denied;
     state = AsyncValue.data(
-      state.asData!.value.copyWith(notificationStatus: status),
+      state.asData?.value.copyWith(notificationStatus: status) ??
+          PermissionsState(notificationStatus: status),
     );
   }
 }
