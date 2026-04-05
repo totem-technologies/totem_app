@@ -2,6 +2,7 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:meta/meta.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
 
 part 'permissions_controller.g.dart';
 
@@ -53,62 +54,135 @@ class PermissionsState {
 
 @riverpod
 class PermissionsController extends _$PermissionsController {
+  PermissionsState get _currentOrDefault =>
+      state.asData?.value ?? const PermissionsState();
+
   @override
   Future<PermissionsState> build() async {
-    return currentStatuses;
+    try {
+      return currentStatuses;
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to build permissions state',
+      );
+      return _currentOrDefault;
+    }
   }
 
   Future<PermissionsState> get currentStatuses async {
-    final camera = await Permission.camera.status;
-    final microphone = await Permission.microphone.status;
+    try {
+      final camera = await Permission.camera.status;
+      final microphone = await Permission.microphone.status;
 
-    final notifPermission =
-        await FlutterForegroundTask.checkNotificationPermission();
-    final notificationStatus = notifPermission == NotificationPermission.granted
-        ? PermissionStatus.granted
-        : PermissionStatus.denied;
+      final notifPermission =
+          await FlutterForegroundTask.checkNotificationPermission();
+      final notificationStatus =
+          notifPermission == NotificationPermission.granted
+          ? PermissionStatus.granted
+          : PermissionStatus.denied;
 
-    return PermissionsState(
-      cameraStatus: camera,
-      microphoneStatus: microphone,
-      notificationStatus: notificationStatus,
-    );
+      return PermissionsState(
+        cameraStatus: camera,
+        microphoneStatus: microphone,
+        notificationStatus: notificationStatus,
+      );
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to fetch current permission statuses',
+      );
+      return _currentOrDefault;
+    }
   }
 
   Future<void> refreshStatuses() async {
-    state = AsyncValue.data(await currentStatuses);
+    try {
+      state = AsyncValue.data(await currentStatuses);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to refresh permission statuses',
+      );
+      state = AsyncValue.data(_currentOrDefault);
+    }
   }
 
   Future<void> requestCamera() async {
-    final status = await Permission.camera.request();
-    state = AsyncValue.data(
-      state.asData?.value.copyWith(cameraStatus: status) ??
-          PermissionsState(cameraStatus: status),
-    );
-    if (status.isPermanentlyDenied) {
-      await openAppSettings();
+    try {
+      final status = await Permission.camera.request();
+      state = AsyncValue.data(_currentOrDefault.copyWith(cameraStatus: status));
+
+      if (status.isPermanentlyDenied) {
+        try {
+          await openAppSettings();
+        } catch (error, stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Failed to open app settings after camera denial',
+          );
+        }
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to request camera permission',
+      );
+      state = AsyncValue.data(_currentOrDefault);
     }
   }
 
   Future<void> requestMicrophone() async {
-    final status = await Permission.microphone.request();
-    state = AsyncValue.data(
-      state.asData?.value.copyWith(microphoneStatus: status) ??
-          PermissionsState(microphoneStatus: status),
-    );
-    if (status.isPermanentlyDenied) {
-      await openAppSettings();
+    try {
+      final status = await Permission.microphone.request();
+      state = AsyncValue.data(
+        _currentOrDefault.copyWith(microphoneStatus: status),
+      );
+
+      if (status.isPermanentlyDenied) {
+        try {
+          await openAppSettings();
+        } catch (error, stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Failed to open app settings after microphone denial',
+          );
+        }
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to request microphone permission',
+      );
+      state = AsyncValue.data(_currentOrDefault);
     }
   }
 
   Future<void> requestNotification() async {
-    final result = await FlutterForegroundTask.requestNotificationPermission();
-    final status = result == NotificationPermission.granted
-        ? PermissionStatus.granted
-        : PermissionStatus.denied;
-    state = AsyncValue.data(
-      state.asData?.value.copyWith(notificationStatus: status) ??
-          PermissionsState(notificationStatus: status),
-    );
+    try {
+      final result =
+          await FlutterForegroundTask.requestNotificationPermission();
+      final status = result == NotificationPermission.granted
+          ? PermissionStatus.granted
+          : PermissionStatus.denied;
+
+      state = AsyncValue.data(
+        _currentOrDefault.copyWith(notificationStatus: status),
+      );
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to request notification permission',
+      );
+      state = AsyncValue.data(_currentOrDefault);
+    }
   }
 }
