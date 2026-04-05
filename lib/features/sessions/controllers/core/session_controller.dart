@@ -321,29 +321,32 @@ class SessionController extends _$SessionController {
         dynacast: true,
         defaultVideoPublishOptions: VideoPublishOptions(
           videoCodec: 'h265',
-          backupVideoCodec: const BackupVideoCodec(
-            codec: 'vp8',
-            simulcast: true,
+          videoEncoding: const VideoEncoding(
+            // HIGH
+            maxBitrate: 300_000,
+            maxFramerate: 15,
           ),
           simulcast: true,
           videoSimulcastLayers: [
             VideoParameters(
-              dimensions: VideoParametersPresets.h540_43.dimensions,
+              dimensions:
+                  VideoParametersPresets.h180_43.dimensions, // 240x180 LOW
               encoding: const VideoEncoding(
-                maxBitrate: 400_000,
-                maxFramerate: 20,
+                maxBitrate: 50_000,
+                maxFramerate: 15,
               ),
             ),
             VideoParameters(
-              dimensions: VideoParametersPresets.h720_43.dimensions,
+              dimensions:
+                  VideoParametersPresets.h360_43.dimensions, // 480x360 MEDIUM
               encoding: const VideoEncoding(
-                maxBitrate: 1_500_000,
-                maxFramerate: 20,
+                maxBitrate: 100_000,
+                maxFramerate: 15,
               ),
             ),
           ],
         ),
-        adaptiveStream: true,
+        adaptiveStream: false, // Handle quality switch manually
       ),
       url: AppConfig.liveKitUrl,
       token: options.token,

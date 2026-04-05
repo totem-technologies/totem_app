@@ -1,19 +1,19 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:audio_session/audio_session.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
-import 'package:permission_handler/permission_handler.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
-import 'package:totem_app/features/sessions/controllers/features/session_infra_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
@@ -22,6 +22,7 @@ import 'package:totem_app/features/sessions/screens/room_screen.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
+import 'package:totem_app/features/sessions/widgets/permissions_popups.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -121,15 +122,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   bool _showingAlreadyPresentDialog = false;
   bool? _isLoading;
 
-  // Guards concurrent permission prompts.
-  bool _permissionsRequestLock = false;
-
   final GlobalKey _loadingScreenKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
-    _permissionsRequestLock = false;
     _initializeAndCheckPermissions();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
@@ -146,23 +143,33 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       _previewAudioTrack!.dispose();
       _previewAudioTrack = null;
     }
-    _permissionsRequestLock = false;
     if (!hasRequestedJoin) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
     super.dispose();
   }
 
-  // ===== Initialization =====
-
   void _initializeAndCheckPermissions() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _requestPermissions();
-      await Future.wait([
-        _detectHeadphones(),
-        _initializeLocalVideo(),
-        _initializeLocalAudio(),
-      ]);
+      if (!mounted) return;
+
+      final granted = await showPermissionsRequestSheet(context);
+      if (!mounted) return;
+
+      if (!granted) {
+        context.pop();
+        return;
+      }
+
+      if (!kIsWeb && Platform.isAndroid) {
+        if (!mounted) return;
+        await showBackgroundActivityDialog(context);
+      }
+
+      if (!mounted) return;
+      await _detectHeadphones();
+      _initializeLocalVideo();
+      _initializeLocalAudio();
       if (mounted) {
         SentryDisplayWidget.of(context).reportFullyDisplayed();
       }
@@ -189,64 +196,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         stackTrace: stackTrace,
         message: 'Failed to detect audio output devices',
       );
-    }
-  }
-
-  // ===== Permissions =====
-
-  Future<void> _requestPermissions() async {
-    if (_permissionsRequestLock) return;
-    _permissionsRequestLock = true;
-
-    try {
-      final statuses = await [
-        Permission.camera,
-        Permission.microphone,
-      ].request();
-
-      final cameraStatus =
-          statuses[Permission.camera] ?? PermissionStatus.denied;
-      final micStatus =
-          statuses[Permission.microphone] ?? PermissionStatus.denied;
-
-      if (!cameraStatus.isGranted || !micStatus.isGranted) {
-        if (!mounted) return;
-
-        final missing = <String>[];
-        if (!cameraStatus.isGranted) missing.add('Camera');
-        if (!micStatus.isGranted) missing.add('Microphone');
-
-        final isPermanent =
-            cameraStatus.isPermanentlyDenied || micStatus.isPermanentlyDenied;
-
-        await showAdaptiveDialog<void>(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog.adaptive(
-            title: const Text('Permissions Required'),
-            content: Text(
-              '${missing.join(' and ')} access is required. ${isPermanent ? 'Please enable them in System Settings.' : 'Please grant these permissions to continue.'}',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  isPermanent ? openAppSettings() : _requestPermissions();
-                },
-                child: Text(isPermanent ? 'Open Settings' : 'Try Again'),
-              ),
-            ],
-          ),
-        );
-      }
-
-      await SessionInfraController.requestPermissions();
-    } finally {
-      _permissionsRequestLock = false;
     }
   }
 
