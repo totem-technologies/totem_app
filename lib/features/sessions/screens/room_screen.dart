@@ -8,6 +8,7 @@ import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
@@ -185,6 +186,20 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     }
   }
 
+  void _onAudioRouteChanged(SessionDeviceState next) {
+    final message = next.isSpeakerphoneEnabled
+        ? 'Audio is now playing through speaker.'
+        : 'Audio is now routed to another output device.';
+
+    showNotificationPopup(
+      context,
+      icon: TotemIcons.speakerOn,
+      title: 'Audio route changed',
+      message: message,
+      controller: _notificationController,
+    );
+  }
+
   void _setKeeperDisconnectedNotification(bool hasKeeperDisconnected) {
     if (!mounted) return;
 
@@ -218,6 +233,25 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     final connectionState = ref.watch(connectionStateProvider);
     final roomStatus = ref.watch(roomStatusProvider);
     final disconnectReason = ref.watch(disconnectionReasonProvider);
+
+    if (currentSession != null) {
+      ref.listen(
+        sessionDeviceControllerProvider(currentSession),
+        (previous, next) {
+          if (!mounted) return;
+          if (connectionState != RoomConnectionState.connected) return;
+
+          final routeChanged =
+              previous != null &&
+              (previous.isSpeakerphoneEnabled != next.isSpeakerphoneEnabled ||
+                  previous.selectedAudioOutputDeviceId !=
+                      next.selectedAudioOutputDeviceId);
+
+          if (!routeChanged) return;
+          _onAudioRouteChanged(next);
+        },
+      );
+    }
 
     _scheduleTimeRemainingWarning(
       currentSessionEvent,
