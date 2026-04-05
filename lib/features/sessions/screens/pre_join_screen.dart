@@ -168,8 +168,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
       if (!mounted) return;
       await _detectHeadphones();
-      _initializeLocalVideo();
-      _initializeLocalAudio();
+      await Future.wait([_initializeLocalVideo(), _initializeLocalAudio()]);
       if (mounted) {
         SentryDisplayWidget.of(context).reportFullyDisplayed();
       }
