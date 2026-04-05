@@ -128,9 +128,9 @@ VoidCallback showPopup(
   }
 
   popup = OverlayEntry(
-    builder: (context) => Positioned(
-      left: 0,
-      right: 0,
+    builder: (context) => PositionedDirectional(
+      start: 0,
+      end: 0,
       child: Material(
         color: Colors.transparent,
         child: AnimatedPopup(

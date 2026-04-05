@@ -61,7 +61,7 @@ class NextSessionCard extends StatelessWidget {
               children: [
                 _buildImage(),
                 Padding(
-                  padding: const EdgeInsets.all(_contentPadding),
+                  padding: const EdgeInsetsDirectional.all(_contentPadding),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

@@ -121,7 +121,7 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
                   // Right: Content area
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.all(
+                      padding: const EdgeInsetsDirectional.all(
                         UpcomingSessionCard._contentPadding,
                       ),
                       child: Column(
@@ -295,7 +295,10 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
             onTap: () => _navigateToSession(context),
             borderRadius: BorderRadius.circular(20),
             child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              padding: EdgeInsetsDirectional.symmetric(
+                horizontal: 12,
+                vertical: 5,
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -333,7 +336,10 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
           onTap: _loading ? null : _handleAttend,
           borderRadius: BorderRadius.circular(20),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 15,
+              vertical: 5,
+            ),
             child: _loading
                 ? const SizedBox(
                     width: 40,

@@ -274,7 +274,7 @@ class _ActionSliderState extends State<ActionSlider> {
             ),
             child: Stack(
               clipBehavior: Clip.none,
-              alignment: Alignment.center,
+              alignment: AlignmentDirectional.center,
               children: [
                 Center(
                   child: Padding(

@@ -46,7 +46,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
                     horizontal: 16,
                   ),
                   child: Text(
-                    'As you share, your self-view is hidden. This is intentional, so you can settle in and speak freely.',
+                    "We'll hide your self-view during your turn so you can stay in the moment. Everyone else will still see you. You can disable your camera at any time.",
                     style: theme.textTheme.bodyMedium,
                     textAlign: TextAlign.center,
                   ),

@@ -47,9 +47,9 @@ class BlogListScreen extends ConsumerWidget {
                       sliver: SliverList.builder(
                         itemCount: data.items.length - 1,
                         itemBuilder: (context, index) => Padding(
-                          padding: const EdgeInsets.only(
-                            left: 20,
-                            right: 20,
+                          padding: const EdgeInsetsDirectional.only(
+                            start: 20,
+                            end: 20,
                             bottom: 16,
                           ),
                           child: HomeBlogCard(data: data.items[index + 1]),

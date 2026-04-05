@@ -51,7 +51,7 @@ class PrejoinRoomBaseScreen extends StatelessWidget {
                           horizontal: 40,
                           // vertical: 10,
                         ),
-                        alignment: Alignment.center,
+                        alignment: AlignmentDirectional.center,
                         child: video,
                       ),
                     ),

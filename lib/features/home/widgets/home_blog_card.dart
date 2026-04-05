@@ -21,7 +21,7 @@ class HomeBlogCard extends StatelessWidget {
 
   static const _borderRadius = 16.0;
   static const _imageHeight = 200.0;
-  static const _contentPadding = EdgeInsets.all(16);
+  static const _contentPadding = EdgeInsetsDirectional.all(16);
 
   @override
   Widget build(BuildContext context) {
@@ -139,9 +139,9 @@ class _BlogImage extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           _buildImage(),
-          Positioned(
+          PositionedDirectional(
             top: 12,
-            left: 12,
+            start: 12,
             child: BlogPostCardBadge(text: '$readTime min read'),
           ),
         ],
@@ -156,7 +156,7 @@ class _BlogImage extends StatelessWidget {
         fit: BoxFit.cover,
         placeholder: (_, _) => ColoredBox(
           color: Colors.grey.shade200,
-          child: const Center(child: CircularProgressIndicator()),
+          child: const Center(child: CircularProgressIndicator.adaptive()),
         ),
         errorWidget: (_, _, _) => const ColoredBox(
           color: AppTheme.cream,
@@ -246,7 +246,10 @@ class _ReadMoreButton extends StatelessWidget {
       style: FilledButton.styleFrom(
         backgroundColor: AppTheme.mauve,
         foregroundColor: AppTheme.white,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: 14,
+          vertical: 10,
+        ),
         minimumSize: const Size(0, 40),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
