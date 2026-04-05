@@ -1,9 +1,15 @@
+// ignore_for_file: depend_on_referenced_packages
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task_method_channel.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task_platform_interface.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:platform/platform.dart';
 import 'package:totem_app/features/sessions/controllers/features/permissions_controller.dart';
 import 'package:totem_app/features/sessions/widgets/permissions_popups.dart';
 
@@ -30,16 +36,28 @@ class FakePermissionsController extends PermissionsController {
   @override
   Future<void> requestNotification() async {
     notificationRequests++;
+    final current = state.asData?.value ?? const PermissionsState();
+    state = AsyncData(
+      current.copyWith(notificationStatus: PermissionStatus.granted),
+    );
   }
 
   @override
   Future<void> requestMicrophone() async {
     microphoneRequests++;
+    final current = state.asData?.value ?? const PermissionsState();
+    state = AsyncData(
+      current.copyWith(microphoneStatus: PermissionStatus.granted),
+    );
   }
 
   @override
   Future<void> requestCamera() async {
     cameraRequests++;
+    final current = state.asData?.value ?? const PermissionsState();
+    state = AsyncData(
+      current.copyWith(cameraStatus: PermissionStatus.granted),
+    );
   }
 }
 
@@ -94,6 +112,7 @@ void main() {
           ),
         ],
       );
+      await tester.pumpAndSettle();
 
       expect(find.text('Grant Permissions'), findsOneWidget);
 
@@ -121,6 +140,7 @@ void main() {
             ),
           ],
         );
+        await tester.pumpAndSettle();
 
         expect(find.text('Continue'), findsOneWidget);
 
@@ -143,6 +163,7 @@ void main() {
           ),
         ],
       );
+      await tester.pumpAndSettle();
 
       final controller = FakePermissionsController.lastInstance;
       expect(controller, isNotNull);
@@ -171,6 +192,7 @@ void main() {
           ),
         ],
       );
+      await tester.pumpAndSettle();
 
       final controller = FakePermissionsController.lastInstance;
       expect(controller, isNotNull);
@@ -187,7 +209,39 @@ void main() {
   });
 
   group('showPermissionsRequestSheet', () {
+    testWidgets('returns true without showing sheet when already granted', (
+      tester,
+    ) async {
+      FakePermissionsController.initialState = const PermissionsState(
+        cameraStatus: PermissionStatus.granted,
+        microphoneStatus: PermissionStatus.granted,
+        notificationStatus: PermissionStatus.denied,
+      );
+
+      final context = await pumpHost(
+        tester,
+        child: const SizedBox.shrink(),
+        overrides: [
+          permissionsControllerProvider.overrideWith(
+            FakePermissionsController.new,
+          ),
+        ],
+      );
+
+      final result = await showPermissionsRequestSheet(context);
+      await tester.pumpAndSettle();
+
+      expect(result, isTrue);
+      expect(find.byType(PermissionsRequestSheet), findsNothing);
+    });
+
     testWidgets('returns false when dismissed', (tester) async {
+      FakePermissionsController.initialState = const PermissionsState(
+        cameraStatus: PermissionStatus.denied,
+        microphoneStatus: PermissionStatus.denied,
+        notificationStatus: PermissionStatus.denied,
+      );
+
       final context = await pumpHost(
         tester,
         child: const SizedBox.shrink(),
@@ -210,11 +264,7 @@ void main() {
     testWidgets('returns true when tapping Continue in ready state', (
       tester,
     ) async {
-      FakePermissionsController.initialState = const PermissionsState(
-        cameraStatus: PermissionStatus.granted,
-        microphoneStatus: PermissionStatus.granted,
-        notificationStatus: PermissionStatus.denied,
-      );
+      FakePermissionsController.initialState = const PermissionsState();
 
       final context = await pumpHost(
         tester,
@@ -229,6 +279,10 @@ void main() {
       final future = showPermissionsRequestSheet(context);
       await tester.pumpAndSettle();
 
+      await tester.tap(find.text('Mic'));
+      await tester.tap(find.text('Camera'));
+      await tester.pump();
+
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 
@@ -237,7 +291,59 @@ void main() {
   });
 
   group('BackgroundActivityDialog', () {
+    const methodChannel = MethodChannel('flutter_foreground_task/methods');
+
+    setUp(() {
+      final platform = FlutterForegroundTaskPlatform.instance;
+      if (platform is MethodChannelFlutterForegroundTask) {
+        platform.platform = FakePlatform(operatingSystem: 'android');
+      }
+    });
+
+    tearDown(() {
+      final platform = FlutterForegroundTaskPlatform.instance;
+      if (platform is MethodChannelFlutterForegroundTask) {
+        platform.platform = const LocalPlatform();
+      }
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(methodChannel, null);
+    });
+
+    testWidgets('is skipped when battery optimization is already ignored', (
+      tester,
+    ) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(methodChannel, (call) async {
+            if (call.method == 'isIgnoringBatteryOptimizations') {
+              return true;
+            }
+            if (call.method == 'requestIgnoreBatteryOptimization') {
+              return true;
+            }
+            return null;
+          });
+
+      final context = await pumpHost(tester, child: const SizedBox.shrink());
+
+      await showBackgroundActivityDialog(context);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Stay connected'), findsNothing);
+    });
+
     testWidgets('is not dismissed by tapping outside dialog', (tester) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(methodChannel, (call) async {
+            if (call.method == 'isIgnoringBatteryOptimizations') {
+              return false;
+            }
+            if (call.method == 'requestIgnoreBatteryOptimization') {
+              return true;
+            }
+            return null;
+          });
+
       final context = await pumpHost(tester, child: const SizedBox.shrink());
 
       unawaited(showBackgroundActivityDialog(context));
@@ -252,6 +358,20 @@ void main() {
     });
 
     testWidgets('closes when tapping Enable Background Mode', (tester) async {
+      var requestCalled = false;
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(methodChannel, (call) async {
+            if (call.method == 'isIgnoringBatteryOptimizations') {
+              return false;
+            }
+            if (call.method == 'requestIgnoreBatteryOptimization') {
+              requestCalled = true;
+              return true;
+            }
+            return null;
+          });
+
       final context = await pumpHost(tester, child: const SizedBox.shrink());
 
       unawaited(showBackgroundActivityDialog(context));
@@ -260,6 +380,7 @@ void main() {
       await tester.tap(find.text('Enable Background Mode'));
       await tester.pumpAndSettle();
 
+      expect(requestCalled, isTrue);
       expect(find.text('Stay connected'), findsNothing);
     });
   });

@@ -6,7 +6,13 @@ import 'package:totem_app/features/sessions/controllers/features/permissions_con
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 
-Future<void> showBackgroundActivityDialog(BuildContext context) {
+Future<void> showBackgroundActivityDialog(BuildContext context) async {
+  final isIgnored = await FlutterForegroundTask.isIgnoringBatteryOptimizations;
+
+  if (isIgnored || !context.mounted) {
+    return;
+  }
+
   return showDialog<void>(
     context: context,
     barrierDismissible: false,
@@ -78,6 +84,22 @@ class BackgroundActivityDialog extends StatelessWidget {
 }
 
 Future<bool> showPermissionsRequestSheet(BuildContext context) async {
+  final container = ProviderScope.containerOf(context, listen: false);
+
+  try {
+    final currentPermissions = await container.read(
+      permissionsControllerProvider.future,
+    );
+
+    if (currentPermissions.requiredPermissionsGranted) {
+      return true;
+    }
+  } catch (_) {
+    // Fall back to showing the sheet if the initial permission read fails.
+  }
+
+  if (!context.mounted) return false;
+
   return await showModalBottomSheet<bool>(
         context: context,
         showDragHandle: false,
@@ -151,7 +173,7 @@ class _PermissionsRequestSheetState
               children: [
                 const SizedBox(height: 12),
                 Text(
-                  'Get Ready for your session',
+                  'Get ready for your session',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
@@ -175,8 +197,8 @@ class _PermissionsRequestSheetState
                   ),
                   title: 'Notification',
                   description:
-                      'Allow Totem to send you notification about session, '
-                      'new blog and more',
+                      'Allow Totem to send you notification about sessions, '
+                      'new blogs, and more',
                   isGranted: permissionsState?.isNotificationGranted ?? false,
                   onTap: controller.requestNotification,
                 ),
@@ -249,50 +271,55 @@ class PermissionItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Material(
-      color: AppTheme.cream,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: isGranted ? null : onTap,
+    return Semantics(
+      button: true,
+      label:
+          '$title permission, ${isGranted ? "granted" : "not granted"}. $description. Tap to ${isGranted ? "revoke" : "grant"} permission.',
+      child: Material(
+        color: AppTheme.cream,
         borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(width: 24, height: 24, child: Center(child: icon)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontFamily: AppTheme.fontFamilySans,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface,
-                        height: 1.2,
+        child: InkWell(
+          onTap: isGranted ? null : onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(width: 24, height: 24, child: Center(child: icon)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontFamily: AppTheme.fontFamilySans,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface,
+                          height: 1.2,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontFamily: AppTheme.fontFamilySans,
-                        fontSize: 14,
-                        fontWeight: FontWeight.normal,
-                        color: theme.colorScheme.onSurface,
-                        height: 1.2,
+                      const SizedBox(height: 6),
+                      Text(
+                        description,
+                        style: TextStyle(
+                          fontFamily: AppTheme.fontFamilySans,
+                          fontSize: 14,
+                          fontWeight: FontWeight.normal,
+                          color: theme.colorScheme.onSurface,
+                          height: 1.2,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              _CircleCheckbox(isChecked: isGranted),
-            ],
+                const SizedBox(width: 10),
+                _CircleCheckbox(isChecked: isGranted),
+              ],
+            ),
           ),
         ),
       ),
