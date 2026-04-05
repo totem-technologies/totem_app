@@ -97,7 +97,7 @@ class TransitionCard extends StatelessWidget {
                 'Bring participants out of the waiting room and begin '
                     'the conversation.',
               TotemCardTransitionType.waitingReceive =>
-                'Waiting the receiver to accept...\n'
+                'Waiting for the receiver to accept...\n'
                     'It is still your turn',
             },
             style: theme.textTheme.bodyLarge?.copyWith(
