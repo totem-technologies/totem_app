@@ -266,6 +266,8 @@ class NotificationPopup extends StatelessWidget {
             spacing: 8,
             children: [
               Container(
+                height: 24 + 8,
+                width: 24 + 8,
                 padding: const EdgeInsetsDirectional.all(8),
                 decoration: BoxDecoration(
                   color: iconBackgroundColor ?? AppTheme.mauve,
