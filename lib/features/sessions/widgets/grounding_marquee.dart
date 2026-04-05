@@ -23,7 +23,10 @@ class _GroundingMarqueeState extends State<GroundingMarquee>
     'It’s always acceptable to pass.',
   ];
 
-  static const _tipDuration = Duration(milliseconds: 2500);
+  /// Duration each tip is shown before transitioning to the next one.
+  static const _tipDuration = Duration(seconds: 5);
+
+  /// Duration in between the end of one tip and the start of the next.
   static const _tipDelay = Duration(seconds: 3);
   static const _fadeDuration = Duration(milliseconds: 350);
 
