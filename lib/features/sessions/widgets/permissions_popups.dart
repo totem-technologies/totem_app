@@ -25,6 +25,7 @@ class BackgroundActivityDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return AlertDialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
@@ -41,9 +42,9 @@ class BackgroundActivityDialog extends StatelessWidget {
           Text(
             'Stay connected',
             textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 16),
           Text(
@@ -51,8 +52,8 @@ class BackgroundActivityDialog extends StatelessWidget {
             "Totem needs to stay active in the background. We'll only "
             'use the minimum power needed to keep you online.',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 24),

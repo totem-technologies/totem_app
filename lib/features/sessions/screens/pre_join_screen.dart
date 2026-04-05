@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_session/audio_session.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -92,7 +93,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         return;
       }
 
-      if (Platform.isAndroid) {
+      if (!kIsWeb && Platform.isAndroid) {
         if (!mounted) return;
         await showBackgroundActivityDialog(context);
       }
