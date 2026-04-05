@@ -16,7 +16,7 @@ class SessionsHeader extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.all(20).copyWith(bottom: 16),
+      padding: const EdgeInsetsDirectional.all(20).copyWith(bottom: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -73,7 +73,7 @@ class MySessionsButton extends StatelessWidget {
               ),
             ],
           ),
-          padding: EdgeInsets.symmetric(
+          padding: EdgeInsetsDirectional.symmetric(
             horizontal: iconOnly ? 10 : 16,
             vertical: 10,
           ),

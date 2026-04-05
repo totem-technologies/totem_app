@@ -78,8 +78,8 @@ class FeaturedBlogPost extends StatelessWidget {
                       1,
                     );
                     return LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
+                      begin: AlignmentDirectional.topCenter,
+                      end: AlignmentDirectional.bottomCenter,
                       colors: const [Colors.transparent, Colors.black],
                       stops: [startStop, 1.0],
                     ).createShader(
@@ -94,7 +94,9 @@ class FeaturedBlogPost extends StatelessWidget {
                     memCacheHeight: (345 * pixelRatio).round(),
                     placeholder: (context, url) => Container(
                       color: Colors.grey[300],
-                      child: const Center(child: CircularProgressIndicator()),
+                      child: const Center(
+                        child: CircularProgressIndicator.adaptive(),
+                      ),
                     ),
                     errorWidget: (context, url, error) {
                       return Image.asset(

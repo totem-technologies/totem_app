@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart' hide logger;
@@ -113,7 +112,38 @@ class FeaturedParticipantCard extends ConsumerWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.end,
+                    spacing: 2,
                     children: [
+                      if (session.isKeeper(activeSpeaker.identity))
+                        Container(
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(42),
+                            color: Colors.black54,
+                            boxShadow: kElevationToShadow[1],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            spacing: 5,
+                            children: [
+                              const TotemIconLogo(
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                              Text(
+                                'Keeper',
+                                style: theme.textTheme.bodySmall!.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       Row(
                         spacing: 12,
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -161,36 +191,6 @@ class FeaturedParticipantCard extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      if (session.isKeeper(activeSpeaker.identity))
-                        Container(
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(42),
-                            color: Colors.black54,
-                            boxShadow: kElevationToShadow[1],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            spacing: 5,
-                            children: [
-                              const TotemIconLogo(
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              Text(
-                                'Keeper',
-                                style: theme.textTheme.bodySmall!.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -326,7 +326,7 @@ class ParticipantControlButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
-      onTapUp: (details) => _showParticipantMenu(context, ref, details),
+      onTap: () => _showParticipantMenu(context),
       child: Container(
         width: 24,
         height: 24,
@@ -335,7 +335,7 @@ class ParticipantControlButton extends ConsumerWidget {
           color: backgroundColor,
         ),
         padding: const EdgeInsetsDirectional.all(2),
-        alignment: Alignment.center,
+        alignment: AlignmentDirectional.center,
         child: const TotemIcon(
           TotemIcons.moreVertical,
           size: 20,
@@ -345,17 +345,15 @@ class ParticipantControlButton extends ConsumerWidget {
     );
   }
 
-  Future<void> _showParticipantMenu(
-    BuildContext context,
-    WidgetRef ref,
-    TapUpDetails details,
-  ) async {
+  Future<void> _showParticipantMenu(BuildContext context) async {
     final box = context.findRenderObject() as RenderBox?;
     if (box == null) return;
 
+    final buttonTopLeft = box.localToGlobal(Offset.zero);
+    final buttonRect = buttonTopLeft & box.size;
+
     final position = _calculateMenuPosition(
-      tapPosition: details.globalPosition,
-      cardSize: box.size,
+      buttonRect: buttonRect,
       screenSize: MediaQuery.sizeOf(context),
     );
 
@@ -375,15 +373,29 @@ class ParticipantControlButton extends ConsumerWidget {
   }
 
   RelativeRect _calculateMenuPosition({
-    required Offset tapPosition,
-    required Size cardSize,
+    required Rect buttonRect,
     required Size screenSize,
   }) {
+    const menuWidth = 170.0;
+    const verticalGap = 8.0;
+    const screenPadding = 8.0;
+
+    final maxLeft = (screenSize.width - menuWidth - screenPadding).clamp(
+      screenPadding,
+      double.infinity,
+    );
+
+    final left = (buttonRect.right - menuWidth).clamp(screenPadding, maxLeft);
+    final top = (buttonRect.bottom + verticalGap).clamp(
+      screenPadding,
+      screenSize.height - screenPadding,
+    );
+
     return RelativeRect.fromLTRB(
-      tapPosition.dx - cardSize.width + overlayPadding * 2,
-      tapPosition.dy + overlayPadding * 2.5,
-      screenSize.width - tapPosition.dx,
-      screenSize.height - tapPosition.dy,
+      left,
+      top,
+      screenSize.width - left - menuWidth,
+      screenSize.height - top,
     );
   }
 
@@ -587,10 +599,9 @@ class LocalParticipantCard extends ConsumerWidget {
       authControllerProvider.select((auth) => auth.user),
     );
 
-    // const overlayPadding = 12.0;
-
     final isVideoTrackVisible =
         videoTrack != null && videoTrack!.isActive && !videoTrack!.muted;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(30),
       child: AspectRatio(
@@ -627,38 +638,19 @@ class LocalParticipantCard extends ConsumerWidget {
                     bottom: 14,
                     start: 14,
                     end: 14,
-                    child: AutoSizeText(
-                      user?.name ?? 'You',
+                    child: SmartNameText(
+                      name: user?.name ?? 'You',
                       style: theme.textTheme.titleLarge?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         shadows: kElevationToShadow[6],
                       ),
                       textAlign: TextAlign.center,
-                      maxLines: 1,
                     ),
                   ),
                 ],
               ),
             ),
-            // TODO(totem): The audio indicator doesn't work for local tracks
-            // https://github.com/livekit/client-sdk-flutter/issues/1044
-            // PositionedDirectional(
-            //   top: overlayPadding,
-            //   start: overlayPadding,
-            //   child: Container(
-            //     width: 24,
-            //     height: 24,
-            //     decoration: BoxDecoration(
-            //       shape: BoxShape.circle,
-            //       color: Colors.black54,
-            //       boxShadow: kElevationToShadow[6],
-            //     ),
-            //     padding: const EdgeInsetsDirectional.all(4),
-            //     alignment: Alignment.center,
-            //     child: SpeakingIndicatorAudioTrack(audioTrack: audioTrack),
-            //   ),
-            // ),
           ],
         ),
       ),

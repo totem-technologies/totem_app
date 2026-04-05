@@ -58,7 +58,7 @@ class SuggestedSpaceCard extends StatelessWidget {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
                   child: Align(
-                    alignment: Alignment.topLeft,
+                    alignment: AlignmentDirectional.topStart,
                     child: IntrinsicWidth(
                       child: Container(
                         padding: const EdgeInsetsDirectional.symmetric(
@@ -94,8 +94,8 @@ class SuggestedSpaceCard extends StatelessWidget {
                   bottomRight: Radius.circular(20),
                 ),
                 gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  begin: AlignmentDirectional.topCenter,
+                  end: AlignmentDirectional.bottomCenter,
                   colors: [
                     AppTheme.slate.withValues(alpha: 0),
                     AppTheme.slate,
@@ -111,8 +111,8 @@ class SuggestedSpaceCard extends StatelessWidget {
                     bottomRight: Radius.circular(20),
                   ),
                   gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+                    begin: AlignmentDirectional.topCenter,
+                    end: AlignmentDirectional.bottomCenter,
                     colors: [
                       AppTheme.slate.withValues(alpha: 0),
                       AppTheme.slate,
@@ -164,7 +164,7 @@ class SuggestedSpaceCard extends StatelessWidget {
                                   ),
                                   errorWidget: (_, _, _) => Container(
                                     color: theme.colorScheme.primary,
-                                    alignment: Alignment.center,
+                                    alignment: AlignmentDirectional.center,
                                     child: const Icon(
                                       Icons.person,
                                       color: Colors.white,
@@ -175,7 +175,7 @@ class SuggestedSpaceCard extends StatelessWidget {
                               }
                               return Container(
                                 color: theme.colorScheme.primary,
-                                alignment: Alignment.center,
+                                alignment: AlignmentDirectional.center,
                                 child: const Icon(
                                   Icons.person,
                                   color: Colors.white,

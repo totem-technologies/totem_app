@@ -55,7 +55,7 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                     automaticallyImplyLeading: false,
                     backgroundColor: AppTheme.cream,
                     leading: CircleIconButton(
-                      margin: const EdgeInsets.only(left: 20),
+                      margin: const EdgeInsetsDirectional.only(start: 20),
                       icon: TotemIcons.arrowBack,
                       tooltip: MaterialLocalizations.of(
                         context,

@@ -18,17 +18,17 @@ class ImageGradientMask extends StatelessWidget {
         fit: StackFit.passthrough,
         children: [
           child,
-          Positioned(
-            left: 0,
-            right: 0,
+          PositionedDirectional(
+            start: 0,
+            end: 0,
             bottom: 0,
             height: gradientHeight,
             child: const IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+                    begin: AlignmentDirectional.topCenter,
+                    end: AlignmentDirectional.bottomCenter,
                     colors: [Colors.transparent, Colors.black],
                   ),
                 ),

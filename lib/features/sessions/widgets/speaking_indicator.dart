@@ -22,37 +22,16 @@ class SpeakingIndicatorAudioTrack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (audioTrack != null &&
-        !audioTrack!.muted /* && audioTrack!.subscribed */ ) {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          return RepaintBoundary(
-            child: SoundWaveformWidget(
-              audioTrack: audioTrack,
-              participant: participant,
-              options: AudioVisualizerWidgetOptions(
-                color: foregroundColor,
-                barCount: barCount,
-                barMinOpacity: 0.8,
-                spacing: 2.5,
-                minHeight: constraints.maxHeight * 0.2,
-                maxHeight: constraints.maxHeight,
-              ),
-            ),
-          );
-        },
-      );
-    } else {
-      return TotemIcon(
-        TotemIcons.microphoneOff,
-        size: 20,
-        color: foregroundColor,
-      );
-    }
+    return _SpeakingIndicatorCore(
+      audioTrack: audioTrack,
+      participant: participant,
+      foregroundColor: foregroundColor,
+      barCount: barCount,
+    );
   }
 }
 
-class SpeakingIndicator extends StatefulWidget {
+class SpeakingIndicator extends StatelessWidget {
   const SpeakingIndicator({
     required this.participant,
     this.foregroundColor = Colors.white,
@@ -65,20 +44,45 @@ class SpeakingIndicator extends StatefulWidget {
   final int barCount;
 
   @override
-  State<SpeakingIndicator> createState() => _SpeakingIndicatorState();
+  Widget build(BuildContext context) {
+    return _SpeakingIndicatorCore(
+      participant: participant,
+      foregroundColor: foregroundColor,
+      barCount: barCount,
+    );
+  }
 }
 
-class _SpeakingIndicatorState extends State<SpeakingIndicator> {
+class _SpeakingIndicatorCore extends StatefulWidget {
+  const _SpeakingIndicatorCore({
+    required this.foregroundColor,
+    required this.barCount,
+    this.audioTrack,
+    this.participant,
+  });
+
+  final AudioTrack? audioTrack;
+  final Participant? participant;
+  final Color? foregroundColor;
+  final int barCount;
+
+  @override
+  State<_SpeakingIndicatorCore> createState() => _SpeakingIndicatorCoreState();
+}
+
+class _SpeakingIndicatorCoreState extends State<_SpeakingIndicatorCore> {
   EventsListener<ParticipantEvent>? _participantListener;
   EventsListener<TrackEvent>? _trackListener;
 
   TrackPublication<Track>? get audioTrack {
-    if (widget.participant is RemoteParticipant) {
-      return widget.participant.getTrackPublicationBySource(
+    final participant = widget.participant;
+
+    if (participant is RemoteParticipant) {
+      return participant.getTrackPublicationBySource(
         TrackSource.microphone,
       );
     } else {
-      return widget.participant.audioTrackPublications
+      return participant?.audioTrackPublications
           .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)
           .firstOrNull;
     }
@@ -87,29 +91,36 @@ class _SpeakingIndicatorState extends State<SpeakingIndicator> {
   @override
   void initState() {
     super.initState();
-    setup();
+    _setupListeners();
   }
 
   @override
-  void didUpdateWidget(covariant SpeakingIndicator oldWidget) {
+  void didUpdateWidget(covariant _SpeakingIndicatorCore oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.participant.sid != widget.participant.sid) {
-      setup();
+    if (oldWidget.participant?.sid != widget.participant?.sid ||
+        oldWidget.audioTrack != widget.audioTrack) {
+      _setupListeners();
     }
   }
 
-  void setup() {
+  AudioTrack? get _resolvedAudioTrack {
+    final publicationTrack = audioTrack?.track;
+    return widget.audioTrack ?? publicationTrack as AudioTrack?;
+  }
+
+  void _setupListeners() {
     _participantListener?.dispose();
-    _participantListener = widget.participant.createListener();
-    _participantListener!
-      ..on<TrackMutedEvent>(_onTrackMuted)
+    _participantListener = widget.participant?.createListener();
+    _participantListener
+      ?..on<TrackMutedEvent>(_onTrackMuted)
       ..on<TrackUnmutedEvent>(_onTrackUnmuted)
       ..on<ParticipantEvent>(_onParticipantEvent);
 
     _trackListener?.dispose();
     _trackListener = null;
-    if (audioTrack?.track != null) {
-      _trackListener = audioTrack!.track!.createListener();
+    final resolvedTrack = _resolvedAudioTrack;
+    if (resolvedTrack != null) {
+      _trackListener = resolvedTrack.createListener();
       _trackListener!.listen(_onTrackEvent);
     }
   }
@@ -143,11 +154,33 @@ class _SpeakingIndicatorState extends State<SpeakingIndicator> {
 
   @override
   Widget build(BuildContext context) {
-    return SpeakingIndicatorAudioTrack(
-      audioTrack: audioTrack?.track as AudioTrack?,
-      participant: widget.participant,
-      foregroundColor: widget.foregroundColor,
-      barCount: widget.barCount,
+    final resolvedAudioTrack = _resolvedAudioTrack;
+
+    if (resolvedAudioTrack != null && !resolvedAudioTrack.muted) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          return RepaintBoundary(
+            child: SoundWaveformWidget(
+              audioTrack: resolvedAudioTrack,
+              participant: widget.participant,
+              options: AudioVisualizerWidgetOptions(
+                color: widget.foregroundColor,
+                barCount: widget.barCount,
+                barMinOpacity: 0.8,
+                spacing: 2.5,
+                minHeight: constraints.maxHeight * 0.2,
+                maxHeight: constraints.maxHeight,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    return TotemIcon(
+      TotemIcons.microphoneOff,
+      size: 20,
+      color: widget.foregroundColor,
     );
   }
 }
@@ -183,7 +216,7 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: Colors.white,
                     ),
-                    alignment: Alignment.center,
+                    alignment: AlignmentDirectional.center,
                     child: Text(
                       emojis.first,
                       style: const TextStyle(
@@ -205,7 +238,7 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
           color: backgroundColor,
         ),
         padding: const EdgeInsetsDirectional.all(2),
-        alignment: Alignment.center,
+        alignment: AlignmentDirectional.center,
         child: SpeakingIndicator(participant: participant),
       ),
     );

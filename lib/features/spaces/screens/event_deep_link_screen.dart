@@ -28,10 +28,10 @@ class EventDeepLinkScreen extends ConsumerWidget {
 
     return eventAsync.when(
       data: (_) => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: CircularProgressIndicator.adaptive()),
       ),
       loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: CircularProgressIndicator.adaptive()),
       ),
       error: (error, stack) => ErrorScreen(
         error: error,

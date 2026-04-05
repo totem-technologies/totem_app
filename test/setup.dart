@@ -35,5 +35,3 @@ Future<void> setupFirebase() async {
     ),
   );
 }
-
-// TODO(test): Screens Tests

@@ -122,10 +122,10 @@ class _EmojiBarOverlayState extends State<_EmojiBarOverlay>
             ),
           ),
         ),
-        Positioned(
+        PositionedDirectional(
           top: topPosition,
-          left: widget.position.dx,
-          right: 0,
+          start: widget.position.dx,
+          end: 0,
           child: FadeTransition(
             opacity: _animationController,
             child: EmojiBar(

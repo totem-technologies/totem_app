@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/date.dart';
@@ -385,8 +384,8 @@ class SmallSpaceCard extends StatelessWidget {
                     Colors.transparent,
                     Colors.black54,
                   ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  begin: AlignmentDirectional.topCenter,
+                  end: AlignmentDirectional.bottomCenter,
                 ),
               ),
             ),
