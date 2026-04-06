@@ -10,6 +10,7 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
+import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
@@ -17,7 +18,6 @@ import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
 import 'package:totem_app/features/sessions/screens/options_sheet.dart';
 import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_disconnected.dart';
-import 'package:totem_app/features/sessions/services/session_feedback_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -301,7 +301,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
           if (previous != RoomScreen.receiving &&
               next == RoomScreen.receiving) {
             unawaited(
-              ref.read(sessionFeedbackServiceProvider).playTotemArrivedCue(),
+              ref.read(sessionCuesServiceProvider).playTotemArrivedCue(),
             );
           }
 
@@ -321,9 +321,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
           if (isRoomOpeningTransition || isRoomClosingTransition) {
             unawaited(
-              ref
-                  .read(sessionFeedbackServiceProvider)
-                  .playSessionTransitionCue(),
+              ref.read(sessionCuesServiceProvider).playSessionTransitionCue(),
             );
           }
 

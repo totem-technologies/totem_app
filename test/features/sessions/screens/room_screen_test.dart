@@ -8,6 +8,7 @@ import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
@@ -15,7 +16,6 @@ import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
 import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/room_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_disconnected.dart';
-import 'package:totem_app/features/sessions/services/session_feedback_service.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
@@ -295,7 +295,7 @@ class _TestSessionDeviceController extends SessionDeviceController {
   }
 }
 
-class _TestSessionFeedbackService extends SessionFeedbackService {
+class _TestSessionCuesService extends SessionCuesService {
   int sessionTransitionCueCount = 0;
   int totemArrivedCueCount = 0;
 
@@ -1162,7 +1162,7 @@ void main() {
     testWidgets('plays transition cue for waiting room to active', (
       tester,
     ) async {
-      final feedbackService = _TestSessionFeedbackService();
+      final feedbackService = _TestSessionCuesService();
 
       final harness = await _pumpRoomScreenWithMutableState(
         tester,
@@ -1173,7 +1173,7 @@ void main() {
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.waitingRoom,
         extraOverrides: [
-          sessionFeedbackServiceProvider.overrideWithValue(feedbackService),
+          sessionCuesServiceProvider.overrideWithValue(feedbackService),
         ],
       );
 
@@ -1195,7 +1195,7 @@ void main() {
     });
 
     testWidgets('plays transition cue for active to ended', (tester) async {
-      final feedbackService = _TestSessionFeedbackService();
+      final feedbackService = _TestSessionCuesService();
 
       final harness = await _pumpRoomScreenWithMutableState(
         tester,
@@ -1206,7 +1206,7 @@ void main() {
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
         extraOverrides: [
-          sessionFeedbackServiceProvider.overrideWithValue(feedbackService),
+          sessionCuesServiceProvider.overrideWithValue(feedbackService),
         ],
       );
 
@@ -1221,7 +1221,7 @@ void main() {
     testWidgets('plays totem arrived cue when receiving screen appears', (
       tester,
     ) async {
-      final feedbackService = _TestSessionFeedbackService();
+      final feedbackService = _TestSessionCuesService();
 
       final harness = await _pumpRoomScreenWithMutableState(
         tester,
@@ -1233,7 +1233,7 @@ void main() {
         roomStatus: RoomStatus.active,
         roomScreen: RoomScreen.notMyTurn,
         extraOverrides: [
-          sessionFeedbackServiceProvider.overrideWithValue(feedbackService),
+          sessionCuesServiceProvider.overrideWithValue(feedbackService),
         ],
       );
 

@@ -9,9 +9,9 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_keeper_controller.dart';
+import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
-import 'package:totem_app/features/sessions/services/session_feedback_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
@@ -25,7 +25,7 @@ import '../livekit_mocks.dart';
 class MockSessionKeeperController extends Mock
     implements SessionKeeperController {}
 
-class _TestSessionFeedbackService extends SessionFeedbackService {
+class _TestSessionCuesService extends SessionCuesService {
   int swipePulseCount = 0;
 
   @override
@@ -192,11 +192,10 @@ void main() {
     WidgetTester tester, {
     required SessionRoomState sessionState,
     required bool isKeeper,
-    SessionFeedbackService? feedbackService,
+    SessionCuesService? cuesService,
   }) async {
     when(() => session.isCurrentUserKeeper()).thenReturn(isKeeper);
-    final testFeedbackService =
-        feedbackService ?? _TestSessionFeedbackService();
+    final testCuesService = cuesService ?? _TestSessionCuesService();
 
     await tester.pumpWidget(
       ProviderScope(
@@ -217,7 +216,7 @@ void main() {
           ),
           currentSessionStateProvider.overrideWithValue(sessionState),
           currentSessionProvider.overrideWith((ref) => session),
-          sessionFeedbackServiceProvider.overrideWithValue(testFeedbackService),
+          sessionCuesServiceProvider.overrideWithValue(testCuesService),
           userProfileProvider.overrideWith((ref, slug) async {
             return PublicUserSchema(
               slug: slug,
@@ -330,7 +329,7 @@ void main() {
         currentSpeaker: 'user-1',
         nextSpeaker: 'user-2',
       );
-      final feedbackService = _TestSessionFeedbackService();
+      final cuesService = _TestSessionCuesService();
 
       when(
         () => keeper.passTotem(roundMessage: 'A round message'),
@@ -340,7 +339,7 @@ void main() {
         tester,
         sessionState: state,
         isKeeper: true,
-        feedbackService: feedbackService,
+        cuesService: cuesService,
       );
 
       await tester.enterText(
@@ -353,7 +352,7 @@ void main() {
       verify(
         () => keeper.passTotem(roundMessage: 'A round message'),
       ).called(1);
-      expect(feedbackService.swipePulseCount, 1);
+      expect(cuesService.swipePulseCount, 1);
     });
 
     testWidgets('shows the standard pass card when the user is not keeper', (

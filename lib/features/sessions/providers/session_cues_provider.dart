@@ -4,14 +4,61 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/shared/assets.dart';
 import 'package:totem_app/shared/logger.dart';
 
-final sessionFeedbackServiceProvider = Provider<SessionFeedbackService>((ref) {
-  final service = SessionFeedbackService();
+final sessionCuesServiceProvider = Provider<SessionCuesService>((ref) {
+  final service = SessionCuesService();
   ref.onDispose(service.dispose);
   return service;
 });
 
-class SessionFeedbackService {
-  final AudioPlayer _audioPlayer = AudioPlayer();
+typedef SessionCuesHapticPulseCallback = Future<void> Function();
+
+abstract class SessionCuesAudioPlayer {
+  Future<void> setPlayerMode(PlayerMode mode);
+  Future<void> setReleaseMode(ReleaseMode mode);
+  Future<void> setAudioContext(AudioContext context);
+  Future<void> stop();
+  Future<void> playAsset(String assetSourcePath);
+  void dispose();
+}
+
+class AudioplayersSessionCuesAudioPlayer implements SessionCuesAudioPlayer {
+  AudioplayersSessionCuesAudioPlayer() : _player = AudioPlayer();
+
+  final AudioPlayer _player;
+
+  @override
+  Future<void> setPlayerMode(PlayerMode mode) => _player.setPlayerMode(mode);
+
+  @override
+  Future<void> setReleaseMode(ReleaseMode mode) => _player.setReleaseMode(mode);
+
+  @override
+  Future<void> setAudioContext(AudioContext context) =>
+      _player.setAudioContext(context);
+
+  @override
+  Future<void> stop() => _player.stop();
+
+  @override
+  Future<void> playAsset(String assetSourcePath) {
+    return _player.play(AssetSource(assetSourcePath));
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+  }
+}
+
+class SessionCuesService {
+  SessionCuesService({
+    SessionCuesAudioPlayer? audioPlayer,
+    SessionCuesHapticPulseCallback? pulseHaptic,
+  }) : _audioPlayer = audioPlayer ?? AudioplayersSessionCuesAudioPlayer(),
+       _pulseHaptic = pulseHaptic ?? HapticFeedback.lightImpact;
+
+  final SessionCuesAudioPlayer _audioPlayer;
+  final SessionCuesHapticPulseCallback _pulseHaptic;
   bool _configured = false;
 
   Future<void> playSessionTransitionCue() {
@@ -23,14 +70,14 @@ class SessionFeedbackService {
   }
 
   Future<void> pulseSwipeCompletion() async {
-    await HapticFeedback.lightImpact();
+    await _pulseHaptic();
   }
 
   Future<void> _playAsset(String assetPath) async {
     try {
       await _configurePlayer();
       await _audioPlayer.stop();
-      await _audioPlayer.play(AssetSource(_toAssetSourcePath(assetPath)));
+      await _audioPlayer.playAsset(_toAssetSourcePath(assetPath));
     } catch (error, stackTrace) {
       logger.e(
         'Failed to play session feedback sound: $assetPath',
@@ -49,9 +96,6 @@ class SessionFeedbackService {
       AudioContext(
         iOS: AudioContextIOS(
           category: AVAudioSessionCategory.ambient,
-          options: const {
-            AVAudioSessionOptions.mixWithOthers,
-          },
         ),
         android: const AudioContextAndroid(
           usageType: AndroidUsageType.notification,
