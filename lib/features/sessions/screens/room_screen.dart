@@ -239,7 +239,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         sessionDeviceControllerProvider(currentSession),
         (previous, next) {
           if (!mounted) return;
-          if (connectionState != RoomConnectionState.connected) return;
+
+          final currentConnectionState = ref.read(connectionStateProvider);
+          if (currentConnectionState != RoomConnectionState.connected) return;
 
           final routeChanged =
               previous != null &&
@@ -263,6 +265,8 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       ..listen(
         emojiReactionsProvider,
         (previous, next) {
+          if (!mounted) return;
+
           final isInNotMyTurnScreen =
               ref.read(resolveCurrentScreenProvider) == RoomScreen.notMyTurn;
 
