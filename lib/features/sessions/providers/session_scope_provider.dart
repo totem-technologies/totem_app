@@ -94,17 +94,18 @@ RoomScreen? resolveCurrentScreen(Ref ref) {
   final session = ref.watch(currentSessionProvider);
   final sessionState = ref.watch(currentSessionStateProvider);
   final connectionState = ref.watch(connectionStateProvider);
-  if (session?.room == null) {
-    return RoomScreen.disconnected;
-  }
   switch (connectionState) {
-    case RoomConnectionState.error:
-      return RoomScreen.error;
     case RoomConnectionState.connecting:
       return RoomScreen.loading;
+    case RoomConnectionState.error:
+      return RoomScreen.error;
     case RoomConnectionState.disconnected:
       return RoomScreen.disconnected;
     case RoomConnectionState.connected:
+      if (session?.room == null) {
+        return RoomScreen.disconnected;
+      }
+
       if (sessionState?.roomState.status == RoomStatus.ended) {
         return RoomScreen.disconnected;
       }

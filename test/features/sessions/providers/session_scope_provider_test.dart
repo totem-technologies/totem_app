@@ -333,6 +333,19 @@ void main() {
         RoomScreen.loading,
       );
 
+      // connecting without room (fast-join race) -> RoomScreen.loading
+      expect(
+        containerForState(
+          RoomConnectionState.connecting,
+          RoomStatus.active,
+          TurnState.idle,
+          'alice',
+          'alice',
+          noRoom: true,
+        ).read(resolveCurrentScreenProvider),
+        RoomScreen.loading,
+      );
+
       // disconnected -> RoomScreen.disconnected
       expect(
         containerForState(

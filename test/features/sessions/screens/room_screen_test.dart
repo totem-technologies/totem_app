@@ -7,6 +7,7 @@ import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
@@ -109,6 +110,9 @@ Future<void> _pumpRoomScreenForResolvedScreen(
   required MockSessionController session,
   required SessionDetailSchema event,
   required RoomScreen screen,
+  RoomConnectionState connectionState = RoomConnectionState.connected,
+  RoomStatus roomStatus = RoomStatus.active,
+  List<Object?> extraOverrides = const [],
 }) async {
   final p1 = _buildMockParticipant('user-1');
   final p2 = _buildMockParticipant('user-2');
@@ -153,16 +157,15 @@ Future<void> _pumpRoomScreenForResolvedScreen(
         currentSessionStateProvider.overrideWithValue(sessionState),
         currentSessionEventProvider.overrideWith((ref) => event),
         resolveCurrentScreenProvider.overrideWith((ref) => screen),
-        connectionStateProvider.overrideWith(
-          (ref) => RoomConnectionState.connected,
-        ),
-        roomStatusProvider.overrideWith((ref) => RoomStatus.active),
+        connectionStateProvider.overrideWith((ref) => connectionState),
+        roomStatusProvider.overrideWith((ref) => roomStatus),
         isCurrentUserKeeperProvider.overrideWith((ref) => false),
         isCameraOnProvider.overrideWith((ref) => false),
         roundMessageProvider.overrideWith((ref) => null),
         sessionMessagesProvider.overrideWith((ref) => const []),
         lastSessionMessageProvider.overrideWith((ref) => null),
         disconnectionReasonProvider.overrideWith((ref) => null),
+        ...extraOverrides.cast(),
       ],
       child: const MaterialApp(
         home: VideoRoomScreen(
@@ -264,6 +267,29 @@ class _KeeperDisconnectedOverrideNotifier extends Notifier<bool> {
 
   // ignore: use_setters_to_change_properties
   void set(bool value) {
+    state = value;
+  }
+}
+
+class _TestSessionDeviceController extends SessionDeviceController {
+  static SessionDeviceState initialState = const SessionDeviceState(
+    selectedCameraDeviceId: null,
+    selectedAudioDeviceId: null,
+    selectedAudioOutputDeviceId: null,
+    isSpeakerphoneEnabled: true,
+    isMicrophoneEnabled: false,
+    isCameraEnabled: false,
+  );
+  static _TestSessionDeviceController? lastInstance;
+
+  @override
+  SessionDeviceState build(SessionController session) {
+    lastInstance = this;
+    return initialState;
+  }
+
+  // ignore: use_setters_to_change_properties
+  void emit(SessionDeviceState value) {
     state = value;
   }
 }
@@ -788,6 +814,116 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(NotificationPopup), findsNothing);
+    });
+  });
+
+  group('VideoRoomScreen - audio route popup', () {
+    late MockSessionController session;
+    late MockSessionDeviceController devices;
+
+    setUp(() {
+      session = MockSessionController();
+      devices = MockSessionDeviceController();
+      _TestSessionDeviceController.lastInstance = null;
+      _TestSessionDeviceController.initialState = const SessionDeviceState(
+        selectedCameraDeviceId: null,
+        selectedAudioDeviceId: null,
+        selectedAudioOutputDeviceId: null,
+        isSpeakerphoneEnabled: true,
+        isMicrophoneEnabled: false,
+        isCameraEnabled: false,
+      );
+
+      final localParticipant = _buildMockParticipant('user-1');
+      when(() => session.room).thenReturn(FakeRoom(localParticipant));
+      when(() => session.devices).thenReturn(devices);
+      when(() => devices.localVideoTrack).thenReturn(null);
+      when(() => session.isCurrentUserKeeper()).thenReturn(false);
+      when(() => session.event).thenReturn(
+        _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 5)),
+          duration: 10,
+        ),
+      );
+    });
+
+    testWidgets('shows popup when audio route changes', (tester) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.notMyTurn,
+        extraOverrides: [
+          sessionDeviceControllerProvider(
+            session,
+          ).overrideWith(_TestSessionDeviceController.new),
+        ],
+      );
+
+      expect(find.text('Audio route changed'), findsNothing);
+
+      final controller = _TestSessionDeviceController.lastInstance;
+      expect(controller, isNotNull);
+
+      controller!.emit(
+        const SessionDeviceState(
+          selectedCameraDeviceId: null,
+          selectedAudioDeviceId: null,
+          selectedAudioOutputDeviceId: 'headphones',
+          isSpeakerphoneEnabled: false,
+          isMicrophoneEnabled: false,
+          isCameraEnabled: false,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Audio route changed'), findsOneWidget);
+      expect(
+        find.text('Audio is now routed to another output device.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('does not show popup while disconnected', (tester) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.notMyTurn,
+        connectionState: RoomConnectionState.disconnected,
+        extraOverrides: [
+          sessionDeviceControllerProvider(
+            session,
+          ).overrideWith(_TestSessionDeviceController.new),
+        ],
+      );
+
+      final controller = _TestSessionDeviceController.lastInstance;
+      expect(controller, isNotNull);
+
+      controller!.emit(
+        const SessionDeviceState(
+          selectedCameraDeviceId: null,
+          selectedAudioDeviceId: null,
+          selectedAudioOutputDeviceId: 'headphones',
+          isSpeakerphoneEnabled: false,
+          isMicrophoneEnabled: false,
+          isCameraEnabled: false,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Audio route changed'), findsNothing);
     });
   });
 

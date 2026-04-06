@@ -345,7 +345,7 @@ void main() {
       await pumpMyTurn(tester, sessionState: state, isKeeper: true);
 
       expect(
-        find.textContaining('Waiting the receiver to accept...'),
+        find.textContaining('Waiting for the receiver to accept...'),
         findsOneWidget,
       );
       expect(find.byType(TextField), findsNothing);
