@@ -86,9 +86,9 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
       final authState = ref.read(authControllerProvider.notifier);
       if (!authState.isOnboardingCompleted) {
         for (final path in <String>[
-          TotemAssets.onboarding1,
-          TotemAssets.onboarding2,
-          TotemAssets.onboarding3,
+          TotemImageAssets.onboarding1,
+          TotemImageAssets.onboarding2,
+          TotemImageAssets.onboarding3,
         ]) {
           precacheImage(AssetImage(path), context);
         }

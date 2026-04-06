@@ -157,13 +157,13 @@ class SpaceCard extends StatelessWidget {
                               ),
                               errorWidget: (context, url, error) {
                                 return Image.asset(
-                                  TotemAssets.genericBackground,
+                                  TotemImageAssets.genericBackground,
                                   fit: BoxFit.cover,
                                 );
                               },
                             )
                           : Image.asset(
-                              TotemAssets.genericBackground,
+                              TotemImageAssets.genericBackground,
                               fit: BoxFit.cover,
                             ),
                     ),
@@ -364,12 +364,12 @@ class SmallSpaceCard extends StatelessWidget {
                           color: Colors.black.withValues(alpha: 0.6),
                         ),
                         errorWidget: (context, url, error) => Image.asset(
-                          TotemAssets.genericBackground,
+                          TotemImageAssets.genericBackground,
                           fit: BoxFit.cover,
                         ),
                       )
                     : Image.asset(
-                        TotemAssets.genericBackground,
+                        TotemImageAssets.genericBackground,
                         fit: BoxFit.cover,
                       ),
               ),

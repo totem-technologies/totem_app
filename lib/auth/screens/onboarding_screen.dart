@@ -23,20 +23,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     const _OnboardingData(
       title: 'Welcome',
       description: 'Totem is where you find your people, and share your story.',
-      image: TotemAssets.onboarding1,
+      image: TotemImageAssets.onboarding1,
     ),
     const _OnboardingData(
       title: 'Our Promise',
       description:
           'We provide a moderated space you can safely express '
           'yourself and learn from others.',
-      image: TotemAssets.onboarding2,
+      image: TotemImageAssets.onboarding2,
     ),
     const _OnboardingData(
       title: 'Our Ask',
       description:
           'Keep everything confidential, and speak only from your own experience.',
-      image: TotemAssets.onboarding3,
+      image: TotemImageAssets.onboarding3,
     ),
   ];
 

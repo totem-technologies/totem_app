@@ -64,7 +64,7 @@ class _ErrorScreenState extends State<ErrorScreen> {
                   child: AspectRatio(
                     aspectRatio: 1.2,
                     child: SvgPicture.asset(
-                      TotemAssets.errorIndicatorSvg,
+                      TotemImageAssets.errorIndicatorSvg,
                       semanticsLabel: 'Error Indicator',
                     ),
                   ),

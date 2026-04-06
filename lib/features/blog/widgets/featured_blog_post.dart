@@ -100,7 +100,7 @@ class FeaturedBlogPost extends StatelessWidget {
                     ),
                     errorWidget: (context, url, error) {
                       return Image.asset(
-                        TotemAssets.genericBackground,
+                        TotemImageAssets.genericBackground,
                         fit: BoxFit.cover,
                       );
                     },

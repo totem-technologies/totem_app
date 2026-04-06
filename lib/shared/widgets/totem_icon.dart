@@ -13,7 +13,7 @@ class TotemIconLogo extends StatelessWidget {
     return SizedBox.square(
       dimension: size,
       child: Image.asset(
-        TotemAssets.logoLarge,
+        TotemImageAssets.logoLarge,
         width: size,
         height: size,
         color: color,
@@ -37,7 +37,7 @@ class TotemLogo extends StatelessWidget {
     return SizedBox(
       height: size,
       child: Image.asset(
-        TotemAssets.logoSmall,
+        TotemImageAssets.logoSmall,
         fit: BoxFit.contain,
         color: color,
       ),

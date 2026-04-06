@@ -105,6 +105,7 @@ flutter:
 
   assets:
     - .env
+    - assets/audio/
     - assets/images/
     - assets/logo/
 

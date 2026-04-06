@@ -464,13 +464,13 @@ class _SpaceHeaderImage extends StatelessWidget {
           color: Colors.black.withValues(alpha: 0.5),
         ),
         errorWidget: (context, url, error) => Image.asset(
-          TotemAssets.genericBackground,
+          TotemImageAssets.genericBackground,
           fit: BoxFit.cover,
         ),
       );
     }
     return Image.asset(
-      TotemAssets.genericBackground,
+      TotemImageAssets.genericBackground,
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,
@@ -1063,12 +1063,12 @@ class _UpcomingSessionCard extends StatelessWidget {
                           color: Colors.black.withValues(alpha: 0.3),
                         ),
                         errorWidget: (context, url, error) => Image.asset(
-                          TotemAssets.genericBackground,
+                          TotemImageAssets.genericBackground,
                           fit: BoxFit.cover,
                         ),
                       )
                     : Image.asset(
-                        TotemAssets.genericBackground,
+                        TotemImageAssets.genericBackground,
                         fit: BoxFit.cover,
                       ),
               ),
