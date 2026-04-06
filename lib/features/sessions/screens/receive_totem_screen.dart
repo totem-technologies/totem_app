@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_app/features/sessions/services/session_feedback_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
@@ -83,6 +84,9 @@ class ReceiveTotemScreen extends ConsumerWidget {
                       onActionCompleted: () async {
                         try {
                           await session?.keeper.acceptTotem();
+                          await ref
+                              .read(sessionFeedbackServiceProvider)
+                              .pulseSwipeCompletion();
                           return true;
                         } catch (error, stackTrace) {
                           ErrorHandler.logError(

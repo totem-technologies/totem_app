@@ -17,6 +17,7 @@ import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
 import 'package:totem_app/features/sessions/screens/options_sheet.dart';
 import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_disconnected.dart';
+import 'package:totem_app/features/sessions/services/session_feedback_service.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -297,6 +298,12 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       ..listen(
         resolveCurrentScreenProvider,
         (previous, next) {
+          if (previous != RoomScreen.receiving && next == RoomScreen.receiving) {
+            unawaited(
+              ref.read(sessionFeedbackServiceProvider).playTotemArrivedCue(),
+            );
+          }
+
           if (next == RoomScreen.disconnected || next == RoomScreen.error) {
             _clearSessionPopups();
             _clearTimeRemainingWarningTimer();
@@ -306,6 +313,19 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       ..listen(
         roomStatusProvider,
         (previous, next) {
+          final isRoomOpeningTransition =
+              previous == RoomStatus.waitingRoom && next == RoomStatus.active;
+          final isRoomClosingTransition =
+              previous == RoomStatus.active && next == RoomStatus.ended;
+
+          if (isRoomOpeningTransition || isRoomClosingTransition) {
+            unawaited(
+              ref
+                  .read(sessionFeedbackServiceProvider)
+                  .playSessionTransitionCue(),
+            );
+          }
+
           _setKeeperDisconnectedNotification(
             ref.read(hasKeeperDisconnectedProvider),
           );

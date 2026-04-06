@@ -8,6 +8,7 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_app/features/sessions/services/session_feedback_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
@@ -35,6 +36,7 @@ class _MyTurnState extends ConsumerState<MyTurn> {
     final session = ref.read(currentSessionProvider);
     try {
       await session?.keeper.passTotem(roundMessage: roundMessage);
+      await ref.read(sessionFeedbackServiceProvider).pulseSwipeCompletion();
       return true;
     } catch (error) {
       if (!mounted) return false;

@@ -10,17 +10,37 @@ import 'package:totem_app/features/sessions/controllers/core/session_controller.
 import 'package:totem_app/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
+import 'package:totem_app/features/sessions/services/session_feedback_service.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
+import '../../../setup.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
 
 class MockSessionKeeperController extends Mock
     implements SessionKeeperController {}
+
+class _TestSessionFeedbackService extends SessionFeedbackService {
+  int swipePulseCount = 0;
+
+  @override
+  Future<void> pulseSwipeCompletion() async {
+    swipePulseCount += 1;
+  }
+
+  @override
+  Future<void> playSessionTransitionCue() async {}
+
+  @override
+  Future<void> playTotemArrivedCue() async {}
+
+  @override
+  void dispose() {}
+}
 
 /// A minimal [SessionDetailSchema] for testing.
 SessionDetailSchema _createTestSession() {
@@ -97,29 +117,6 @@ SessionRoomState _buildState({
       participants ??
       [
         _mockRemote('user-1', 'User One'),
-        _mockRemote('user-2', 'User Two'),
-        _mockRemote('user-3', 'User Three'),
-      ];
-
-  return SessionRoomState(
-    connection: const ConnectionState(
-      phase: SessionPhase.connected,
-      state: RoomConnectionState.connected,
-    ),
-    participants: ParticipantsState(participants: defaultParticipants),
-    chat: const ChatState(),
-    turn: SessionTurnState(
-      roomState: RoomState(
-        keeper: keeper,
-        nextSpeaker: nextSpeaker ?? '',
-        currentSpeaker: currentSpeaker,
-        status: status,
-        turnState: turnState,
-        sessionSlug: 'test-session',
-        statusDetail: status == RoomStatus.waitingRoom
-            ? const RoomStateStatusDetailWaitingRoom(WaitingRoomDetail())
-            : const RoomStateStatusDetailActive(ActiveDetail()),
-        talkingOrder: const [],
         version: 1,
         roundNumber: 1,
       ),
@@ -135,6 +132,7 @@ void main() {
   late FakeRoom room;
 
   setUpAll(() {
+    setupDotenv();
     registerFallbackValue(TrackSource.camera);
   });
 
@@ -170,8 +168,10 @@ void main() {
     WidgetTester tester, {
     required SessionRoomState sessionState,
     required bool isKeeper,
+    SessionFeedbackService? feedbackService,
   }) async {
     when(() => session.isCurrentUserKeeper()).thenReturn(isKeeper);
+    final testFeedbackService = feedbackService ?? _TestSessionFeedbackService();
 
     await tester.pumpWidget(
       ProviderScope(
@@ -192,6 +192,7 @@ void main() {
           ),
           currentSessionStateProvider.overrideWithValue(sessionState),
           currentSessionProvider.overrideWith((ref) => session),
+          sessionFeedbackServiceProvider.overrideWithValue(testFeedbackService),
         ],
         child: MaterialApp(
           home: Scaffold(
@@ -296,12 +297,18 @@ void main() {
         currentSpeaker: 'user-1',
         nextSpeaker: 'user-2',
       );
+      final feedbackService = _TestSessionFeedbackService();
 
       when(
         () => keeper.passTotem(roundMessage: 'A round message'),
       ).thenAnswer((_) async {});
 
-      await pumpMyTurn(tester, sessionState: state, isKeeper: true);
+      await pumpMyTurn(
+        tester,
+        sessionState: state,
+        isKeeper: true,
+        feedbackService: feedbackService,
+      );
 
       await tester.enterText(
         find.byType(TextField),
@@ -313,6 +320,7 @@ void main() {
       verify(
         () => keeper.passTotem(roundMessage: 'A round message'),
       ).called(1);
+      expect(feedbackService.swipePulseCount, 1);
     });
 
     testWidgets('shows the standard pass card when the user is not keeper', (
