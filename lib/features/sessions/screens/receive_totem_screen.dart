@@ -83,10 +83,10 @@ class ReceiveTotemScreen extends ConsumerWidget {
                       text: 'Slide to Receive',
                       onActionCompleted: () async {
                         try {
-                          await session?.keeper.acceptTotem();
                           await ref
                               .read(sessionFeedbackServiceProvider)
                               .pulseSwipeCompletion();
+                          await session?.keeper.acceptTotem();
                           return true;
                         } catch (error, stackTrace) {
                           ErrorHandler.logError(

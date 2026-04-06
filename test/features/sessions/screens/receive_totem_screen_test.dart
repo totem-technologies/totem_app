@@ -123,7 +123,8 @@ void main() {
     bool isCameraOn = false,
     SessionFeedbackService? feedbackService,
   }) async {
-    final testFeedbackService = feedbackService ?? _TestSessionFeedbackService();
+    final testFeedbackService =
+        feedbackService ?? _TestSessionFeedbackService();
 
     await tester.pumpWidget(
       ProviderScope(
@@ -242,7 +243,7 @@ void main() {
         find.text('We were unable to accept the totem. Please try again.'),
         findsOneWidget,
       );
-      expect(feedbackService.swipePulseCount, 0);
+      expect(feedbackService.swipePulseCount, 1);
     });
 
     testWidgets('renders correctly in landscape orientation', (tester) async {

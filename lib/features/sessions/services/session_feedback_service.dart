@@ -49,11 +49,11 @@ class SessionFeedbackService {
       AudioContext(
         iOS: AudioContextIOS(
           category: AVAudioSessionCategory.ambient,
-          options: {
+          options: const {
             AVAudioSessionOptions.mixWithOthers,
           },
         ),
-        android: AudioContextAndroid(
+        android: const AudioContextAndroid(
           usageType: AndroidUsageType.notification,
           contentType: AndroidContentType.sonification,
           audioFocus: AndroidAudioFocus.none,

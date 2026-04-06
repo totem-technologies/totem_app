@@ -6,6 +6,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
@@ -117,6 +118,29 @@ SessionRoomState _buildState({
       participants ??
       [
         _mockRemote('user-1', 'User One'),
+        _mockRemote('user-2', 'User Two'),
+        _mockRemote('user-3', 'User Three'),
+      ];
+
+  return SessionRoomState(
+    connection: const ConnectionState(
+      phase: SessionPhase.connected,
+      state: RoomConnectionState.connected,
+    ),
+    participants: ParticipantsState(participants: defaultParticipants),
+    chat: const ChatState(),
+    turn: SessionTurnState(
+      roomState: RoomState(
+        keeper: keeper,
+        nextSpeaker: nextSpeaker ?? '',
+        currentSpeaker: currentSpeaker,
+        status: status,
+        turnState: turnState,
+        sessionSlug: 'test-session',
+        statusDetail: status == RoomStatus.waitingRoom
+            ? const RoomStateStatusDetailWaitingRoom(WaitingRoomDetail())
+            : const RoomStateStatusDetailActive(ActiveDetail()),
+        talkingOrder: const [],
         version: 1,
         roundNumber: 1,
       ),
@@ -171,7 +195,8 @@ void main() {
     SessionFeedbackService? feedbackService,
   }) async {
     when(() => session.isCurrentUserKeeper()).thenReturn(isKeeper);
-    final testFeedbackService = feedbackService ?? _TestSessionFeedbackService();
+    final testFeedbackService =
+        feedbackService ?? _TestSessionFeedbackService();
 
     await tester.pumpWidget(
       ProviderScope(
@@ -193,6 +218,14 @@ void main() {
           currentSessionStateProvider.overrideWithValue(sessionState),
           currentSessionProvider.overrideWith((ref) => session),
           sessionFeedbackServiceProvider.overrideWithValue(testFeedbackService),
+          userProfileProvider.overrideWith((ref, slug) async {
+            return PublicUserSchema(
+              slug: slug,
+              name: 'User $slug',
+              profileAvatarType: ProfileAvatarTypeEnum.td,
+              dateCreated: DateTime(2024),
+            );
+          }),
         ],
         child: MaterialApp(
           home: Scaffold(
