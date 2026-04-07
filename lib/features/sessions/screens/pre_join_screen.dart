@@ -14,6 +14,7 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
@@ -393,6 +394,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
               cameraEnabled: _isCameraOn,
               microphoneEnabled: _isMicOn,
             );
+      ref.read(sessionCuesServiceProvider).playSessionTransitionCue();
       await session.join();
       _hasHandledConnectedState = _isLoading = false;
     } catch (error, stackTrace) {

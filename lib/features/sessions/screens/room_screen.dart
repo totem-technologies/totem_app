@@ -312,15 +312,11 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       ..listen(
         roomStatusProvider,
         (previous, next) {
-          final isRoomOpeningTransition =
-              previous == RoomStatus.waitingRoom && next == RoomStatus.active;
           final isRoomClosingTransition =
               previous == RoomStatus.active && next == RoomStatus.ended;
 
-          if (isRoomOpeningTransition || isRoomClosingTransition) {
-            unawaited(
-              ref.read(sessionCuesServiceProvider).playSessionTransitionCue(),
-            );
+          if (isRoomClosingTransition) {
+            ref.read(sessionCuesServiceProvider).playSessionTransitionCue();
           }
 
           _setKeeperDisconnectedNotification(
