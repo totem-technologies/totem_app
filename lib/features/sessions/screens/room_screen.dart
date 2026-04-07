@@ -300,9 +300,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         (previous, next) {
           if (previous != RoomScreen.receiving &&
               next == RoomScreen.receiving) {
-            unawaited(
-              ref.read(sessionCuesServiceProvider).playTotemArrivedCue(),
-            );
+            ref.read(sessionCuesServiceProvider).playTotemArrivedCue();
           }
 
           if (next == RoomScreen.disconnected || next == RoomScreen.error) {

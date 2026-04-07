@@ -102,9 +102,7 @@ void main() {
 
     test('disposes underlying audio player', () {
       final fakePlayer = _FakeSessionCuesAudioPlayer();
-      final service = SessionCuesService(audioPlayer: fakePlayer);
-
-      service.dispose();
+      final _ = SessionCuesService(audioPlayer: fakePlayer)..dispose();
 
       expect(fakePlayer.disposeCallCount, 1);
     });

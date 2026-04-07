@@ -70,7 +70,11 @@ class SessionCuesService {
   }
 
   Future<void> pulseSwipeCompletion() async {
-    await _pulseHaptic();
+    try {
+      await _pulseHaptic();
+    } catch (error, stackTrace) {
+      logger.e('Failed to pulse haptic', error: error, stackTrace: stackTrace);
+    }
   }
 
   Future<void> _playAsset(String assetPath) async {
