@@ -289,6 +289,9 @@ class _TestSessionDeviceController extends SessionDeviceController {
     return initialState;
   }
 
+  @override
+  bool get audioRouteNotificationsEnabled => true;
+
   // ignore: use_setters_to_change_properties
   void emit(SessionDeviceState value) {
     state = value;

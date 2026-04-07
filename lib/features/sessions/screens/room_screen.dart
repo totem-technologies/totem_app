@@ -319,9 +319,12 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       ..listen(
         roomStatusProvider,
         (previous, next) {
-          final isRoomClosingTransition = next == RoomStatus.ended;
+          final isRoomOpeningTransition =
+              previous == RoomStatus.waitingRoom && next == RoomStatus.active;
+          final isRoomClosingTransition =
+              previous == RoomStatus.active && next == RoomStatus.ended;
 
-          if (isRoomClosingTransition) {
+          if (isRoomOpeningTransition || isRoomClosingTransition) {
             ref.read(sessionCuesServiceProvider).playSessionTransitionCue();
           }
 
