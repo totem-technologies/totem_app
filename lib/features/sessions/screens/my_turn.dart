@@ -35,7 +35,7 @@ class _MyTurnState extends ConsumerState<MyTurn> {
   Future<bool> _onPassTotem([String? roundMessage]) async {
     final session = ref.read(currentSessionProvider);
     try {
-      await ref.read(sessionCuesServiceProvider).pulseSwipeCompletion();
+      ref.read(sessionCuesServiceProvider).pulseSwipeCompletion();
       await session?.keeper.passTotem(roundMessage: roundMessage);
       return true;
     } catch (error) {
