@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 
@@ -75,6 +77,9 @@ class _EmojiBarOverlay extends StatefulWidget {
 
 class _EmojiBarOverlayState extends State<_EmojiBarOverlay>
     with SingleTickerProviderStateMixin {
+  static const _defaultEmojis = ['🫶', '💖', '😢', '🔥', '👏', '🎉'];
+  static var _didWarmEmojiGlyphs = false;
+
   Timer? _timer;
 
   late final AnimationController _animationController = AnimationController(
@@ -85,6 +90,7 @@ class _EmojiBarOverlayState extends State<_EmojiBarOverlay>
   @override
   void initState() {
     super.initState();
+    _warmEmojiGlyphs();
     _startTimer();
   }
 
@@ -105,6 +111,44 @@ class _EmojiBarOverlayState extends State<_EmojiBarOverlay>
     if (mounted) {
       widget.onDismissed();
     }
+  }
+
+  void _warmEmojiGlyphs() {
+    if (!kIsWeb) return;
+    if (_didWarmEmojiGlyphs) return;
+    _didWarmEmojiGlyphs = true;
+
+    // On web, first-time emoji painting may show placeholders briefly while
+    // glyphs are being resolved. Painting once off-screen warms the cache.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final textDirection =
+          Directionality.maybeOf(context) ?? TextDirection.ltr;
+      const style = TextStyle(
+        fontSize: 24,
+        textBaseline: TextBaseline.ideographic,
+      );
+
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      var dy = 0.0;
+
+      for (final emoji in _defaultEmojis) {
+        final painter =
+            TextPainter(
+                text: TextSpan(text: emoji, style: style),
+                textDirection: textDirection,
+                maxLines: 1,
+              )
+              ..layout()
+              ..paint(canvas, Offset(0, dy));
+        dy += painter.height + 2;
+        painter.dispose();
+      }
+
+      recorder.endRecording().dispose();
+    });
   }
 
   @override
@@ -133,8 +177,7 @@ class _EmojiBarOverlayState extends State<_EmojiBarOverlay>
                 widget.onEmojiSelected(emoji);
                 _startTimer();
               },
-              // TODO(web): Precache these emojis somewhere to avoid the placeholder when showing the bar for the first time
-              emojis: const ['🫶', '💖', '😢', '🔥', '👏', '🎉'],
+              emojis: _defaultEmojis,
             ),
           ),
         ),
