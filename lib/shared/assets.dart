@@ -1,5 +1,5 @@
-class TotemAssets {
-  const TotemAssets._();
+class TotemImageAssets {
+  const TotemImageAssets._();
 
   static const genericBackground = 'assets/images/welcome_background.jpg';
   static const welcomeCardImage = 'assets/images/welcome_card_img.webp';
@@ -11,4 +11,13 @@ class TotemAssets {
 
   static const logoLarge = 'assets/logo/logo-square-black-512.png';
   static const logoSmall = 'assets/logo/logo-black-small.png';
+}
+
+class TotemAudioAssets {
+  const TotemAudioAssets._();
+
+  static const enterLeaveSessionRingtone =
+      'assets/audio/enter_leave_session_ringtone.mp3';
+  static const totemReceivedRingtone =
+      'assets/audio/totem_received_ringtone.mp3';
 }

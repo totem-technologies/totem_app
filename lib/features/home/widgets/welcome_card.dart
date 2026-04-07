@@ -54,7 +54,7 @@ class WelcomeCard extends StatelessWidget {
 
   Widget _buildBackgroundImage() {
     return Image.asset(
-      TotemAssets.welcomeCardImage,
+      TotemImageAssets.welcomeCardImage,
       fit: BoxFit.cover,
     );
   }

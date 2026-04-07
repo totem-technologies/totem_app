@@ -100,12 +100,12 @@ class NextSessionCard extends StatelessWidget {
                 color: Colors.grey.shade200,
               ),
               errorWidget: (context, url, error) => Image.asset(
-                TotemAssets.genericBackground,
+                TotemImageAssets.genericBackground,
                 fit: BoxFit.cover,
               ),
             )
           : Image.asset(
-              TotemAssets.genericBackground,
+              TotemImageAssets.genericBackground,
               fit: BoxFit.cover,
             ),
     );

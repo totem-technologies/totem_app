@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
@@ -34,6 +35,7 @@ class _MyTurnState extends ConsumerState<MyTurn> {
   Future<bool> _onPassTotem([String? roundMessage]) async {
     final session = ref.read(currentSessionProvider);
     try {
+      ref.read(sessionCuesServiceProvider).pulseSwipeCompletion();
       await session?.keeper.passTotem(roundMessage: roundMessage);
       return true;
     } catch (error) {

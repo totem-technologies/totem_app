@@ -236,7 +236,7 @@ void main() {
     );
 
     testWidgets(
-      'PopupController dismissAll closes multiple permanent notifications',
+      'PopupController queues permanent notifications one after another',
       (tester) async {
         final context = await pumpHost(tester);
         final controller = PopupController();
@@ -259,11 +259,7 @@ void main() {
 
         await tester.pump();
         expect(find.text('Permanent A'), findsOneWidget);
-        expect(find.text('Permanent B'), findsOneWidget);
-
-        await tester.pump(const Duration(seconds: 10));
-        expect(find.text('Permanent A'), findsOneWidget);
-        expect(find.text('Permanent B'), findsOneWidget);
+        expect(find.text('Permanent B'), findsNothing);
 
         controller.dismissAll();
         await tester.pumpAndSettle();
@@ -272,6 +268,34 @@ void main() {
         expect(find.text('Permanent B'), findsNothing);
       },
     );
+
+    testWidgets('duplicate notification popup is suppressed', (tester) async {
+      final context = await pumpHost(tester);
+      final controller = PopupController();
+
+      showNotificationPopup(
+        context,
+        controller: controller,
+        icon: TotemIcons.chat,
+        title: 'Duplicate',
+        message: 'Shown only once',
+      );
+
+      showNotificationPopup(
+        context,
+        controller: controller,
+        icon: TotemIcons.chat,
+        title: 'Duplicate',
+        message: 'Shown only once',
+      );
+
+      await tester.pump();
+      expect(find.text('Duplicate'), findsOneWidget);
+
+      controller.dismissAll();
+      await tester.pumpAndSettle();
+      expect(find.text('Duplicate'), findsNothing);
+    });
   });
 
   group('PopupController', () {
@@ -299,7 +323,7 @@ void main() {
 
       await tester.pump();
       expect(find.text('Ephemeral'), findsOneWidget);
-      expect(find.text('Persistent'), findsOneWidget);
+      expect(find.text('Persistent'), findsNothing);
 
       controller.dismissAll();
       await tester.pumpAndSettle();
@@ -408,7 +432,7 @@ void main() {
 
       await tester.pump();
       expect(find.text('Ephemeral mixed'), findsOneWidget);
-      expect(find.text('Permanent mixed'), findsOneWidget);
+      expect(find.text('Permanent mixed'), findsNothing);
 
       await tester.pump(const Duration(seconds: 6));
       await tester.pumpAndSettle();

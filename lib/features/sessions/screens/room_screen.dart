@@ -10,6 +10,7 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
+import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
@@ -193,7 +194,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
     showNotificationPopup(
       context,
-      icon: TotemIcons.speakerOn,
+      icon: next.isSpeakerphoneEnabled
+          ? TotemIcons.speakerOn
+          : TotemIcons.speakerOff,
       title: 'Audio route changed',
       message: message,
       controller: _notificationController,
@@ -238,18 +241,23 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       ref.listen(
         sessionDeviceControllerProvider(currentSession),
         (previous, next) {
-          if (!mounted) return;
+          if (!mounted || previous == null) return;
+
+          final audioRouteController = ref.read(
+            sessionDeviceControllerProvider(currentSession).notifier,
+          );
+          if (!audioRouteController.audioRouteNotificationsEnabled) return;
 
           final currentConnectionState = ref.read(connectionStateProvider);
           if (currentConnectionState != RoomConnectionState.connected) return;
 
           final routeChanged =
-              previous != null &&
-              (previous.isSpeakerphoneEnabled != next.isSpeakerphoneEnabled ||
-                  previous.selectedAudioOutputDeviceId !=
-                      next.selectedAudioOutputDeviceId);
+              previous.isSpeakerphoneEnabled != next.isSpeakerphoneEnabled ||
+              previous.selectedAudioOutputDeviceId !=
+                  next.selectedAudioOutputDeviceId;
 
           if (!routeChanged) return;
+
           _onAudioRouteChanged(next);
         },
       );
@@ -297,6 +305,11 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       ..listen(
         resolveCurrentScreenProvider,
         (previous, next) {
+          if (previous != RoomScreen.receiving &&
+              next == RoomScreen.receiving) {
+            ref.read(sessionCuesServiceProvider).playTotemArrivedCue();
+          }
+
           if (next == RoomScreen.disconnected || next == RoomScreen.error) {
             _clearSessionPopups();
             _clearTimeRemainingWarningTimer();
@@ -306,6 +319,15 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       ..listen(
         roomStatusProvider,
         (previous, next) {
+          final isRoomOpeningTransition =
+              previous == RoomStatus.waitingRoom && next == RoomStatus.active;
+          final isRoomClosingTransition =
+              previous == RoomStatus.active && next == RoomStatus.ended;
+
+          if (isRoomOpeningTransition || isRoomClosingTransition) {
+            ref.read(sessionCuesServiceProvider).playSessionTransitionCue();
+          }
+
           _setKeeperDisconnectedNotification(
             ref.read(hasKeeperDisconnectedProvider),
           );

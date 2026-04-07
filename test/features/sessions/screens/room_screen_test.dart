@@ -8,6 +8,7 @@ import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
@@ -288,10 +289,34 @@ class _TestSessionDeviceController extends SessionDeviceController {
     return initialState;
   }
 
+  @override
+  bool get audioRouteNotificationsEnabled => true;
+
   // ignore: use_setters_to_change_properties
   void emit(SessionDeviceState value) {
     state = value;
   }
+}
+
+class _TestSessionCuesService extends SessionCuesService {
+  int sessionTransitionCueCount = 0;
+  int totemArrivedCueCount = 0;
+
+  @override
+  Future<void> playSessionTransitionCue() async {
+    sessionTransitionCueCount += 1;
+  }
+
+  @override
+  Future<void> playTotemArrivedCue() async {
+    totemArrivedCueCount += 1;
+  }
+
+  @override
+  Future<void> pulseSwipeCompletion() async {}
+
+  @override
+  void dispose() {}
 }
 
 Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
@@ -301,6 +326,7 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
   required RoomStatus roomStatus,
   bool hasKeeperDisconnected = false,
   RoomScreen roomScreen = RoomScreen.notMyTurn,
+  List<Object?> extraOverrides = const [],
 }) async {
   final eventStateProvider =
       NotifierProvider<_SessionEventOverrideNotifier, SessionDetailSchema?>(
@@ -343,6 +369,7 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
           (ref) => ref.watch(hasKeeperDisconnectedStateProvider),
         ),
         disconnectionReasonProvider.overrideWith((ref) => null),
+        ...extraOverrides.cast(),
       ],
       child: const MaterialApp(
         home: VideoRoomScreen(
@@ -1131,6 +1158,103 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(NotificationPopup), findsNothing);
+    });
+  });
+
+  group('VideoRoomScreen - session feedback cues', () {
+    testWidgets('plays transition cue for waiting room to active', (
+      tester,
+    ) async {
+      final feedbackService = _TestSessionCuesService();
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 2)),
+          duration: 10,
+        ),
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.waitingRoom,
+        extraOverrides: [
+          sessionCuesServiceProvider.overrideWithValue(feedbackService),
+        ],
+      );
+
+      expect(feedbackService.sessionTransitionCueCount, 0);
+
+      harness.container
+          .read(harness.roomStatusProvider.notifier)
+          .set(RoomStatus.active);
+      await tester.pump();
+
+      expect(feedbackService.sessionTransitionCueCount, 1);
+
+      harness.container
+          .read(harness.roomStatusProvider.notifier)
+          .set(RoomStatus.active);
+      await tester.pump();
+
+      expect(feedbackService.sessionTransitionCueCount, 1);
+    });
+
+    testWidgets('plays transition cue for active to ended', (tester) async {
+      final feedbackService = _TestSessionCuesService();
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 2)),
+          duration: 10,
+        ),
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+        extraOverrides: [
+          sessionCuesServiceProvider.overrideWithValue(feedbackService),
+        ],
+      );
+
+      harness.container
+          .read(harness.roomStatusProvider.notifier)
+          .set(RoomStatus.ended);
+      await tester.pump();
+
+      expect(feedbackService.sessionTransitionCueCount, 1);
+    });
+
+    testWidgets('plays totem arrived cue when receiving screen appears', (
+      tester,
+    ) async {
+      final feedbackService = _TestSessionCuesService();
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 2)),
+          duration: 10,
+        ),
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+        roomScreen: RoomScreen.notMyTurn,
+        extraOverrides: [
+          sessionCuesServiceProvider.overrideWithValue(feedbackService),
+        ],
+      );
+
+      expect(feedbackService.totemArrivedCueCount, 0);
+
+      harness.container
+          .read(harness.roomScreenProvider.notifier)
+          .set(RoomScreen.receiving);
+      await tester.pump();
+
+      expect(feedbackService.totemArrivedCueCount, 1);
+
+      harness.container
+          .read(harness.roomScreenProvider.notifier)
+          .set(RoomScreen.receiving);
+      await tester.pump();
+
+      expect(feedbackService.totemArrivedCueCount, 1);
     });
   });
 }

@@ -106,6 +106,7 @@ class SessionDeviceController extends _$SessionDeviceController {
   _devicesChangedSubscription;
   bool _userSpeakerPreference = true;
   bool _hasExternalOutput = false;
+  bool _audioRouteNotificationsEnabled = false;
 
   static const externalAudioOutputTypes = <audio.AudioDeviceType>{
     audio.AudioDeviceType.wiredHeadset,
@@ -120,6 +121,15 @@ class SessionDeviceController extends _$SessionDeviceController {
   };
 
   bool get userSpeakerPreference => _userSpeakerPreference;
+
+  /// Whether the controller has finished setting up listeners for audio route changes.
+  ///
+  /// This is useful for UI to not rely on the presence of external outputs until listeners
+  /// are set up.
+  ///
+  /// Effectively, the Audio Route Changed notification will not be emitted until this is
+  /// true, even if there are external outputs present.
+  bool get audioRouteNotificationsEnabled => _audioRouteNotificationsEnabled;
 
   void resetSpeakerRoutingDefaults() {
     _userSpeakerPreference = true;
@@ -176,6 +186,8 @@ class SessionDeviceController extends _$SessionDeviceController {
         stackTrace: stackTrace,
         message: 'Failed to setup device change listener',
       );
+    } finally {
+      _audioRouteNotificationsEnabled = true;
     }
   }
 

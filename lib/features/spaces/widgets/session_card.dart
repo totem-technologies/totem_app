@@ -104,11 +104,14 @@ class _SessionImage extends StatelessWidget {
                 fit: BoxFit.cover,
                 placeholder: (_, _) => Container(color: Colors.grey.shade200),
                 errorWidget: (_, _, _) => Image.asset(
-                  TotemAssets.genericBackground,
+                  TotemImageAssets.genericBackground,
                   fit: BoxFit.cover,
                 ),
               )
-            : Image.asset(TotemAssets.genericBackground, fit: BoxFit.cover),
+            : Image.asset(
+                TotemImageAssets.genericBackground,
+                fit: BoxFit.cover,
+              ),
       ),
     );
   }

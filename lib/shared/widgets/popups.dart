@@ -6,7 +6,7 @@ import 'package:flutter/semantics.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
-const _defaultPopupAnimationDuration = Duration(milliseconds: 380);
+const _defaultPopupAnimationDuration = Duration(milliseconds: 600);
 const _defaultPopupDuration = Duration(milliseconds: 2800);
 
 class AnimatedPopup extends StatefulWidget {
@@ -85,22 +85,151 @@ class AnimatedPopupState extends State<AnimatedPopup>
   }
 }
 
-class PopupController {
-  final Set<VoidCallback> _activeDismissers = <VoidCallback>{};
+class _PopupRequest {
+  _PopupRequest({
+    required this.overlay,
+    required this.popup,
+    required this.onClosed,
+    required this.dedupeKey,
+    this.onShown,
+  });
 
-  void _register(VoidCallback dismiss) {
-    _activeDismissers.add(dismiss);
+  final OverlayState overlay;
+  final OverlayEntry popup;
+  final VoidCallback onClosed;
+  final Object? dedupeKey;
+  final VoidCallback? onShown;
+
+  final GlobalKey<AnimatedPopupState> key = GlobalKey<AnimatedPopupState>();
+
+  bool _isShown = false;
+  bool _isCancelled = false;
+  bool _isClosed = false;
+  bool _isDismissing = false;
+
+  bool get isCancelled => _isCancelled;
+
+  void show() {
+    if (_isShown || _isCancelled) return;
+
+    _isShown = true;
+    overlay.insert(popup);
+    onShown?.call();
   }
 
-  void _unregister(VoidCallback dismiss) {
-    _activeDismissers.remove(dismiss);
+  void cancelQueued() {
+    if (_isShown || _isCancelled || _isClosed) return;
+
+    _isCancelled = true;
+  }
+
+  void dismissActive() {
+    if (_isClosed || _isDismissing) return;
+
+    _isDismissing = true;
+
+    final state = key.currentState;
+    if (state != null) {
+      unawaited(state.dismiss());
+      return;
+    }
+
+    if (popup.mounted) {
+      popup.remove();
+    }
+    close();
+  }
+
+  void close() {
+    if (_isClosed) return;
+
+    _isClosed = true;
+    onClosed();
+  }
+}
+
+class PopupController {
+  final List<_PopupRequest> _queue = <_PopupRequest>[];
+  _PopupRequest? _activeRequest;
+  bool _isBulkDismissing = false;
+
+  bool _hasDuplicate(Object? dedupeKey) {
+    if (dedupeKey == null) return false;
+
+    if (_activeRequest?.dedupeKey == dedupeKey) {
+      return true;
+    }
+
+    return _queue.any((request) => request.dedupeKey == dedupeKey);
+  }
+
+  void _enqueue(_PopupRequest request) {
+    if (_hasDuplicate(request.dedupeKey)) {
+      return;
+    }
+
+    _queue.add(request);
+    _pumpQueue();
+  }
+
+  void _pumpQueue() {
+    if (_activeRequest != null) return;
+
+    while (_queue.isNotEmpty) {
+      final nextRequest = _queue.removeAt(0);
+      if (nextRequest.isCancelled) {
+        continue;
+      }
+
+      _activeRequest = nextRequest;
+      nextRequest.show();
+      break;
+    }
+  }
+
+  void _handleRequestClosed(_PopupRequest request) {
+    if (_activeRequest == request) {
+      _activeRequest = null;
+    } else {
+      _queue.remove(request);
+    }
+
+    if (!_isBulkDismissing) {
+      _pumpQueue();
+    }
+  }
+
+  void _dismissRequest(_PopupRequest request) {
+    if (_activeRequest == request) {
+      request.dismissActive();
+      return;
+    }
+
+    final wasQueued = _queue.remove(request);
+    if (wasQueued) {
+      request.cancelQueued();
+    }
   }
 
   void dismissAll() {
-    final dismissers = List<VoidCallback>.from(_activeDismissers);
-    for (final dismiss in dismissers) {
-      dismiss();
+    final requests = <_PopupRequest>[
+      ..._queue,
+      ?_activeRequest,
+    ];
+
+    if (requests.isEmpty) return;
+
+    _isBulkDismissing = true;
+    for (final request in requests) {
+      if (request == _activeRequest) {
+        request.dismissActive();
+      } else {
+        request.cancelQueued();
+      }
     }
+    _queue.clear();
+    _activeRequest = null;
+    _isBulkDismissing = false;
   }
 }
 
@@ -110,22 +239,13 @@ VoidCallback showPopup(
   PopupController? controller,
   Duration animationDuration = _defaultPopupAnimationDuration,
   Duration duration = _defaultPopupDuration,
+  VoidCallback? onShown,
+  Object? dedupeKey,
 }) {
-  final key = GlobalKey<AnimatedPopupState>();
   final overlay = Overlay.of(context);
 
-  var removed = false;
   late OverlayEntry popup;
-  late VoidCallback dismiss;
-
-  void removePopup() {
-    if (removed) return;
-    removed = true;
-    controller?._unregister(dismiss);
-    if (popup.mounted) {
-      popup.remove();
-    }
-  }
+  late final _PopupRequest request;
 
   popup = OverlayEntry(
     builder: (context) => PositionedDirectional(
@@ -134,31 +254,46 @@ VoidCallback showPopup(
       child: Material(
         color: Colors.transparent,
         child: AnimatedPopup(
-          key: key,
+          key: request.key,
           animationDuration: animationDuration,
           duration: duration,
-          onDismissed: removePopup,
+          onDismissed: () {
+            if (popup.mounted) {
+              popup.remove();
+            }
+            request.close();
+          },
           popup: Builder(builder: builder),
         ),
       ),
     ),
   );
 
-  dismiss = () {
-    if (removed) return;
+  request = _PopupRequest(
+    overlay: overlay,
+    popup: popup,
+    dedupeKey: dedupeKey,
+    onClosed: () {
+      controller?._handleRequestClosed(request);
+    },
+    onShown: onShown,
+  );
 
-    final state = key.currentState;
-    if (state != null) {
-      unawaited(state.dismiss());
+  Null dismiss() {
+    if (controller != null) {
+      controller._dismissRequest(request);
       return;
     }
 
-    removePopup();
-  };
+    request.dismissActive();
+  }
 
-  overlay.insert(popup);
+  if (controller != null) {
+    controller._enqueue(request);
+  } else {
+    request.show();
+  }
 
-  controller?._register(dismiss);
   return dismiss;
 }
 
@@ -169,14 +304,18 @@ void showNotificationPopup(
   required String message,
   PopupController? controller,
 }) {
-  SemanticsService.sendAnnouncement(
-    View.of(context),
-    'New message: $message',
-    TextDirection.ltr,
-  );
+  final view = View.of(context);
   showPopup(
     context,
     controller: controller,
+    dedupeKey: ('notification', icon, title, message),
+    onShown: () {
+      SemanticsService.sendAnnouncement(
+        view,
+        'New message: $message',
+        TextDirection.ltr,
+      );
+    },
     builder: (context) {
       return NotificationPopup(
         icon: icon,
@@ -207,14 +346,19 @@ VoidCallback showPermanentNotificationPopup(
   required String message,
   required PopupController controller,
 }) {
-  SemanticsService.sendAnnouncement(
-    View.of(context),
-    'New message: $message',
-    TextDirection.ltr,
-  );
-  return showDismissiblePopup(
+  final view = View.of(context);
+  return showPopup(
     context,
     controller: controller,
+    duration: Duration.zero,
+    dedupeKey: ('permanent_notification', icon, title, message),
+    onShown: () {
+      SemanticsService.sendAnnouncement(
+        view,
+        'New message: $message',
+        TextDirection.ltr,
+      );
+    },
     builder: (context) {
       return NotificationPopup(
         icon: icon,

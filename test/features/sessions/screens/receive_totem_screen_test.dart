@@ -8,6 +8,7 @@ import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_keeper_controller.dart';
+import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
@@ -21,6 +22,24 @@ import '../livekit_mocks.dart';
 
 class MockSessionKeeperController extends Mock
     implements SessionKeeperController {}
+
+class _TestSessionCuesService extends SessionCuesService {
+  int swipePulseCount = 0;
+
+  @override
+  Future<void> pulseSwipeCompletion() async {
+    swipePulseCount += 1;
+  }
+
+  @override
+  Future<void> playSessionTransitionCue() async {}
+
+  @override
+  Future<void> playTotemArrivedCue() async {}
+
+  @override
+  void dispose() {}
+}
 
 SessionRoomState _buildState({
   RoomStatus status = RoomStatus.active,
@@ -102,7 +121,10 @@ void main() {
     SessionRoomState? state,
     String? roundMessage,
     bool isCameraOn = false,
+    SessionCuesService? feedbackService,
   }) async {
+    final testCuesService = feedbackService ?? _TestSessionCuesService();
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -128,6 +150,7 @@ void main() {
           resolveCurrentScreenProvider.overrideWith(
             (ref) => RoomScreen.receiving,
           ),
+          sessionCuesServiceProvider.overrideWithValue(testCuesService),
         ],
         child: const MaterialApp(
           home: Scaffold(
@@ -176,12 +199,28 @@ void main() {
     });
 
     testWidgets('accepts totem when slider completes', (tester) async {
-      await pumpReceiveTotem(tester);
+      final feedbackService = _TestSessionCuesService();
+
+      await pumpReceiveTotem(tester, feedbackService: feedbackService);
 
       await tester.drag(find.byType(ActionSlider), const Offset(500, 0));
       await tester.pump();
 
       verify(() => keeper.acceptTotem()).called(1);
+      expect(feedbackService.swipePulseCount, 1);
+    });
+
+    testWidgets('triggers soft haptic after successful receive swipe', (
+      tester,
+    ) async {
+      final feedbackService = _TestSessionCuesService();
+
+      await pumpReceiveTotem(tester, feedbackService: feedbackService);
+
+      await tester.drag(find.byType(ActionSlider), const Offset(500, 0));
+      await tester.pump();
+
+      expect(feedbackService.swipePulseCount, 1);
     });
 
     testWidgets('shows error popup when accept totem fails', (tester) async {
@@ -189,7 +228,9 @@ void main() {
         () => keeper.acceptTotem(),
       ).thenThrow(Exception('accept failed'));
 
-      await pumpReceiveTotem(tester);
+      final feedbackService = _TestSessionCuesService();
+
+      await pumpReceiveTotem(tester, feedbackService: feedbackService);
 
       await tester.drag(find.byType(ActionSlider), const Offset(500, 0));
       await tester.pump();
@@ -201,6 +242,7 @@ void main() {
         find.text('We were unable to accept the totem. Please try again.'),
         findsOneWidget,
       );
+      expect(feedbackService.swipePulseCount, 1);
     });
 
     testWidgets('renders correctly in landscape orientation', (tester) async {

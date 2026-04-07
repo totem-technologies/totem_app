@@ -86,7 +86,7 @@ class _CardScreenState extends State<CardScreen>
                         },
                         blendMode: BlendMode.darken,
                         child: Image.asset(
-                          TotemAssets.genericBackground,
+                          TotemImageAssets.genericBackground,
                           fit: BoxFit.cover,
                         ),
                       ),

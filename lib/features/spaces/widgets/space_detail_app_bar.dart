@@ -49,7 +49,7 @@ class SpaceDetailAppBar extends StatelessWidget {
                         memCacheWidth: (screenWidth * pixelRatio).round(),
                         errorWidget: (context, url, error) {
                           return Image.asset(
-                            TotemAssets.genericBackground,
+                            TotemImageAssets.genericBackground,
                             fit: BoxFit.cover,
                           );
                         },
@@ -58,7 +58,7 @@ class SpaceDetailAppBar extends StatelessWidget {
                         ),
                       )
                     : Image.asset(
-                        TotemAssets.genericBackground,
+                        TotemImageAssets.genericBackground,
                         fit: BoxFit.cover,
                       ),
               ),

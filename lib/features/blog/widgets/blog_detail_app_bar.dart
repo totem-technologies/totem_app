@@ -36,7 +36,7 @@ class BlogDetailAppBar extends StatelessWidget {
                 colorBlendMode: BlendMode.darken,
                 errorWidget: (context, url, error) {
                   return Image.asset(
-                    TotemAssets.genericBackground,
+                    TotemImageAssets.genericBackground,
                     fit: BoxFit.cover,
                   );
                 },
