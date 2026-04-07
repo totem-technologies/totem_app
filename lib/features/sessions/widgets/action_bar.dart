@@ -652,14 +652,13 @@ class _SessionActionBarState extends ConsumerState<SessionActionBar> {
         );
       },
     );
-    final session = ref.watch(currentSessionProvider)!;
+    final session = ref.watch(currentSessionProvider);
     final currentScreen = ref.watch(resolveCurrentScreenProvider);
+    final user = session?.room?.localParticipant;
 
-    if (currentScreen == null) {
+    if (session == null || currentScreen == null || user == null) {
       return const SizedBox.shrink();
     }
-
-    final user = session.room!.localParticipant!;
 
     final microphoneButton = ActionBarMicButton(
       participant: user,
