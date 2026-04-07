@@ -1,8 +1,7 @@
-// ignore_for_file: unused_element_parameter
-
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
@@ -10,6 +9,7 @@ import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
+import 'package:totem_app/shared/widgets/viewport_resolver.dart';
 
 class NotMyTurn extends ConsumerWidget {
   const NotMyTurn({required this.event, super.key});
@@ -21,6 +21,7 @@ class NotMyTurn extends ConsumerWidget {
     final sessionStatus = ref.watch(roomStatusProvider);
     final amNext = ref.watch(amNextSpeakerProvider);
     final currentSession = ref.watch(currentSessionProvider)!;
+    final currentSessionState = ref.watch(currentSessionStateProvider)!;
     final activeSpeaker = ref.watch(featuredParticipantProvider);
     final nextUp = ref.watch(speakingNextParticipantProvider);
     final hasKeeper = ref.watch(hasKeeperProvider);
@@ -28,11 +29,9 @@ class NotMyTurn extends ConsumerWidget {
 
     return RoomBackground(
       status: sessionStatus,
-      child: OrientationBuilder(
-        builder: (context, orientation) {
+      child: ViewportResolver(
+        builder: (context, viewportKind) {
           final theme = Theme.of(context);
-          final isLandscape = orientation == Orientation.landscape;
-
           final nextUpText = () {
             if (sessionStatus == RoomStatus.waitingRoom) {
               return Text(
@@ -82,7 +81,7 @@ class NotMyTurn extends ConsumerWidget {
           final participantGrid = _NotMyTurnGrid(
             event: event,
             speakingNow: activeSpeaker?.identity,
-            isLandscape: isLandscape,
+            isLandscape: viewportKind.isLarge,
           );
 
           final Widget? marquee = () {
@@ -98,88 +97,166 @@ class NotMyTurn extends ConsumerWidget {
             }
           }();
 
-          if (isLandscape) {
-            final isLTR = Directionality.of(context) == TextDirection.ltr;
-            return SafeArea(
-              top: false,
-              bottom: false,
-              left: !isLTR,
-              right: isLTR,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Expanded(flex: 2, child: FeaturedParticipantCard()),
-                  Expanded(
-                    flex: 3,
-                    child: SafeArea(
-                      left: false,
-                      right: true,
-                      child: Overlay.wrap(
-                        child: Padding(
-                          padding: const EdgeInsetsDirectional.only(
-                            start: 16,
-                            end: 16,
-                            top: 16,
-                          ),
-                          child: Column(
-                            spacing: 16,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              nextUpText,
-                              Expanded(
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsetsDirectional.symmetric(
-                                        vertical: 8,
-                                      ),
-                                  child: participantGrid,
+          switch (viewportKind) {
+            case ViewportKind.smallPortrait:
+              return SafeArea(
+                top: false,
+                bottom: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: 16,
+                  children: [
+                    SizedBox(
+                      height: MediaQuery.heightOf(context) * 0.475,
+                      child: const FeaturedParticipantCard(),
+                    ),
+                    Padding(
+                      padding: const EdgeInsetsDirectional.symmetric(
+                        horizontal: 28,
+                      ),
+                      child: nextUpText,
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.symmetric(
+                          horizontal: 28,
+                        ),
+                        child: participantGrid,
+                      ),
+                    ),
+                    ?marquee,
+                    const Center(child: SessionActionBar()),
+                  ],
+                ),
+              );
+            case ViewportKind.smallLandscape:
+              final isLTR = Directionality.of(context) == TextDirection.ltr;
+              return SafeArea(
+                top: false,
+                bottom: false,
+                left: !isLTR,
+                right: isLTR,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Expanded(flex: 2, child: FeaturedParticipantCard()),
+                    Expanded(
+                      flex: 3,
+                      child: SafeArea(
+                        left: false,
+                        right: true,
+                        child: Overlay.wrap(
+                          child: Padding(
+                            padding: const EdgeInsetsDirectional.only(
+                              start: 16,
+                              end: 16,
+                              top: 16,
+                            ),
+                            child: Column(
+                              spacing: 16,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                nextUpText,
+                                Expanded(
+                                  child: Padding(
+                                    padding:
+                                        const EdgeInsetsDirectional.symmetric(
+                                          vertical: 8,
+                                        ),
+                                    child: participantGrid,
+                                  ),
                                 ),
-                              ),
-                              ?marquee,
-                              const Center(
-                                child: SessionActionBar(),
-                              ),
-                            ],
+                                ?marquee,
+                                const Center(
+                                  child: SessionActionBar(),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          } else {
-            return SafeArea(
-              top: false,
-              bottom: false,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 16,
-                children: [
-                  SizedBox(
-                    height: MediaQuery.heightOf(context) * 0.475,
-                    child: const FeaturedParticipantCard(),
-                  ),
-                  Padding(
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: 28,
+                  ],
+                ),
+              );
+            case ViewportKind.mediumPlus:
+              return Padding(
+                padding: const EdgeInsetsDirectional.symmetric(
+                  vertical: 40,
+                  horizontal: 20,
+                ),
+                child: Column(
+                  spacing: 10,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text:
+                                      '${currentSessionState.participants.participants.length}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const TextSpan(text: ' Participants'),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            children: [
+                              Text(
+                                event.title,
+                                style: theme.textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                event.space.title,
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                      ],
                     ),
-                    child: nextUpText,
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: const EdgeInsetsDirectional.symmetric(
-                        horizontal: 28,
+                    const Divider(color: AppTheme.slate),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.all(10.0),
+                        child: Column(
+                          spacing: 10,
+                          children: [
+                            Expanded(
+                              child: AspectRatio(
+                                aspectRatio: 16 / 9,
+                                child: _NotMyTurnGrid(
+                                  event: event,
+                                  speakingNow: activeSpeaker?.identity,
+                                  showSpeakingNowParticipant: true,
+                                  gap: 20,
+                                ),
+                              ),
+                            ),
+                            ?marquee,
+                            const Center(
+                              child: SessionActionBar(),
+                            ),
+                          ],
+                        ),
                       ),
-                      child: participantGrid,
                     ),
-                  ),
-                  ?marquee,
-                  const Center(child: SessionActionBar()),
-                ],
-              ),
-            );
+                  ],
+                ),
+              );
           }
         },
       ),
@@ -191,12 +268,14 @@ class _NotMyTurnGrid extends ConsumerWidget {
   const _NotMyTurnGrid({
     required this.event,
     required this.speakingNow,
+    this.showSpeakingNowParticipant = false,
     this.gap = 10,
     this.isLandscape = false,
   });
 
   final SessionDetailSchema event;
   final String? speakingNow;
+  final bool showSpeakingNowParticipant;
   final double gap;
   final bool isLandscape;
 
@@ -210,6 +289,7 @@ class _NotMyTurnGrid extends ConsumerWidget {
       originalParticipants: participants,
       state: sessionState,
       speakingNow: speakingNow,
+      showSpeakingNow: showSpeakingNowParticipant,
     );
     final itemCount = sortedParticipants.length;
     if (itemCount == 0) return const SizedBox.shrink();

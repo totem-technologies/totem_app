@@ -83,13 +83,15 @@ class _MyTurnState extends ConsumerState<MyTurn> {
                 if (isKeeper) {
                   passCard = TransitionCardContainer(
                     children: [
-                      TextField(
-                        controller: roundMessageController,
-                        decoration: const InputDecoration(
-                          hintText: 'Your prompt for this round',
-                        ),
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.colorScheme.onSurface,
+                      Flexible(
+                        child: TextField(
+                          controller: roundMessageController,
+                          decoration: const InputDecoration(
+                            hintText: 'Your prompt for this round',
+                          ),
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.onSurface,
+                          ),
                         ),
                       ),
                       ConstrainedBox(
