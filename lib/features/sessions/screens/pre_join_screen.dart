@@ -134,16 +134,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   @override
   void dispose() {
-    if (_previewVideoTrack != null) {
-      _previewVideoTrack!.stop();
-      _previewVideoTrack!.dispose();
-      _previewVideoTrack = null;
-    }
-    if (_previewAudioTrack != null) {
-      _previewAudioTrack!.stop();
-      _previewAudioTrack!.dispose();
-      _previewAudioTrack = null;
-    }
+    _disposePreviewTracks();
     if (!hasRequestedJoin) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }

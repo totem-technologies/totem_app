@@ -313,6 +313,8 @@ class SessionController extends _$SessionController {
       ),
     );
 
+    final cameraEnabled = _cameraEnabledOverride ?? options.cameraEnabled;
+
     await _initializeConnection(
       roomOptions: RoomOptions(
         defaultCameraCaptureOptions: options.cameraOptions,
@@ -366,6 +368,10 @@ class SessionController extends _$SessionController {
       await _connect(
         url: AppConfig.liveKitUrl,
         token: options.token,
+        fastConnectOptions: FastConnectOptions(
+          microphone: TrackOption(enabled: options.microphoneEnabled),
+          camera: TrackOption(enabled: cameraEnabled),
+        ),
       );
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -451,8 +457,16 @@ class SessionController extends _$SessionController {
     return _room!;
   }
 
-  Future<void> _connect({required String url, required String token}) async {
-    await _room?.connect(url, token);
+  Future<void> _connect({
+    required String url,
+    required String token,
+    required FastConnectOptions fastConnectOptions,
+  }) async {
+    await _room?.connect(
+      url,
+      token,
+      fastConnectOptions: fastConnectOptions,
+    );
   }
 
   Future<void> _disconnect() async {
