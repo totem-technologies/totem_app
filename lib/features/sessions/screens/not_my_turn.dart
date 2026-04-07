@@ -84,13 +84,21 @@ class NotMyTurn extends ConsumerWidget {
             isLandscape: viewportKind.isLarge,
           );
 
-          final Widget? marquee = () {
+          final startCard = () {
+            if (sessionStatus == RoomStatus.waitingRoom &&
+                isCurrentUserKeeper) {
+              return TransitionCard(
+                type: TotemCardTransitionType.start,
+                onActionPressed: currentSession.keeper.startSession,
+              );
+            }
+            return null;
+          }();
+
+          final Widget? marqueeOrStart = () {
             if (sessionStatus == RoomStatus.waitingRoom) {
               if (isCurrentUserKeeper) {
-                return TransitionCard(
-                  type: TotemCardTransitionType.start,
-                  onActionPressed: currentSession.keeper.startSession,
-                );
+                return startCard;
               } else {
                 return const GroundingMarquee();
               }
@@ -125,7 +133,7 @@ class NotMyTurn extends ConsumerWidget {
                         child: participantGrid,
                       ),
                     ),
-                    ?marquee,
+                    ?marqueeOrStart,
                     const Center(child: SessionActionBar()),
                   ],
                 ),
@@ -167,7 +175,7 @@ class NotMyTurn extends ConsumerWidget {
                                     child: participantGrid,
                                   ),
                                 ),
-                                ?marquee,
+                                ?marqueeOrStart,
                                 const Center(
                                   child: SessionActionBar(),
                                 ),
@@ -246,7 +254,10 @@ class NotMyTurn extends ConsumerWidget {
                                 ),
                               ),
                             ),
-                            ?marquee,
+                            if (sessionStatus == RoomStatus.waitingRoom) ...[
+                              const GroundingMarquee(),
+                              ?startCard,
+                            ],
                             const Center(
                               child: SessionActionBar(),
                             ),
