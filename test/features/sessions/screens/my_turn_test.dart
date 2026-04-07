@@ -13,8 +13,8 @@ import 'package:totem_app/features/sessions/providers/session_cues_provider.dart
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/my_turn.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
-import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../setup.dart';
@@ -289,7 +289,7 @@ void main() {
       await pumpMyTurn(tester, sessionState: state, isKeeper: true);
 
       expect(find.byType(TextField), findsOneWidget);
-      expect(find.byType(ActionSlider), findsOneWidget);
+      expect(find.byType(ActionSliderButton), findsOneWidget);
       expect(find.text('Your prompt for this round'), findsOneWidget);
       expect(find.text('Slide to pass to User Two'), findsOneWidget);
       expect(find.byType(SessionActionBar), findsOneWidget);

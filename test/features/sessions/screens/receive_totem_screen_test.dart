@@ -12,7 +12,7 @@ import 'package:totem_app/features/sessions/providers/session_cues_provider.dart
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
-import 'package:totem_app/features/sessions/widgets/transition_card.dart';
+import 'package:totem_app/features/sessions/widgets/action_slider_button.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../setup.dart';
@@ -203,7 +203,7 @@ void main() {
 
       await pumpReceiveTotem(tester, feedbackService: feedbackService);
 
-      await tester.drag(find.byType(ActionSlider), const Offset(500, 0));
+      await tester.drag(find.byType(ActionSliderButton), const Offset(500, 0));
       await tester.pump();
 
       verify(() => keeper.acceptTotem()).called(1);
@@ -217,7 +217,7 @@ void main() {
 
       await pumpReceiveTotem(tester, feedbackService: feedbackService);
 
-      await tester.drag(find.byType(ActionSlider), const Offset(500, 0));
+      await tester.drag(find.byType(ActionSliderButton), const Offset(500, 0));
       await tester.pump();
 
       expect(feedbackService.swipePulseCount, 1);
@@ -232,7 +232,7 @@ void main() {
 
       await pumpReceiveTotem(tester, feedbackService: feedbackService);
 
-      await tester.drag(find.byType(ActionSlider), const Offset(500, 0));
+      await tester.drag(find.byType(ActionSliderButton), const Offset(500, 0));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -280,11 +280,11 @@ void main() {
 
       await pumpReceiveTotem(tester);
 
-      await tester.drag(find.byType(ActionSlider), const Offset(500, 0));
+      await tester.drag(find.byType(ActionSliderButton), const Offset(500, 0));
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Something went wrong'), findsOneWidget);
 
-      await tester.drag(find.byType(ActionSlider), const Offset(500, 0));
+      await tester.drag(find.byType(ActionSliderButton), const Offset(500, 0));
       await tester.pump();
 
       verify(() => keeper.acceptTotem()).called(2);

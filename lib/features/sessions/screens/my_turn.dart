@@ -10,6 +10,7 @@ import 'package:totem_app/features/sessions/controllers/core/session_controller.
 import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
@@ -98,9 +99,9 @@ class _MyTurnState extends ConsumerState<MyTurn> {
                         constraints: const BoxConstraints(
                           minWidth: 160,
                         ),
-                        child: ActionSlider(
+                        child: ActionSliderButton(
                           text:
-                              'Slide to pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
+                              'Pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
                                   .trim(),
                           onActionCompleted: () {
                             final roundMessage = roundMessageController.text

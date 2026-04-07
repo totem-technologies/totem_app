@@ -191,6 +191,14 @@ void main() {
     String currentUserSlug = 'user-1',
     bool isKeeper = false,
   }) async {
+    tester.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     when(() => session.isCurrentUserKeeper()).thenReturn(isKeeper);
 
     await tester.pumpWidget(

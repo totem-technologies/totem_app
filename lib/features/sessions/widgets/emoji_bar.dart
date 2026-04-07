@@ -133,6 +133,7 @@ class _EmojiBarOverlayState extends State<_EmojiBarOverlay>
                 widget.onEmojiSelected(emoji);
                 _startTimer();
               },
+              // TODO(web): Precache these emojis somewhere to avoid the placeholder when showing the bar for the first time
               emojis: const ['🫶', '💖', '😢', '🔥', '👏', '🎉'],
             ),
           ),
