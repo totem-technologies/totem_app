@@ -194,7 +194,9 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
 
     showNotificationPopup(
       context,
-      icon: TotemIcons.speakerOn,
+      icon: next.isSpeakerphoneEnabled
+          ? TotemIcons.speakerOn
+          : TotemIcons.speakerOff,
       title: 'Audio route changed',
       message: message,
       controller: _notificationController,
@@ -239,18 +241,23 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
       ref.listen(
         sessionDeviceControllerProvider(currentSession),
         (previous, next) {
-          if (!mounted) return;
+          if (!mounted || previous == null) return;
+
+          final audioRouteController = ref.read(
+            sessionDeviceControllerProvider(currentSession).notifier,
+          );
+          if (!audioRouteController.audioRouteNotificationsEnabled) return;
 
           final currentConnectionState = ref.read(connectionStateProvider);
           if (currentConnectionState != RoomConnectionState.connected) return;
 
           final routeChanged =
-              previous != null &&
-              (previous.isSpeakerphoneEnabled != next.isSpeakerphoneEnabled ||
-                  previous.selectedAudioOutputDeviceId !=
-                      next.selectedAudioOutputDeviceId);
+              previous.isSpeakerphoneEnabled != next.isSpeakerphoneEnabled ||
+              previous.selectedAudioOutputDeviceId !=
+                  next.selectedAudioOutputDeviceId;
 
           if (!routeChanged) return;
+
           _onAudioRouteChanged(next);
         },
       );

@@ -106,6 +106,7 @@ class SessionDeviceController extends _$SessionDeviceController {
   _devicesChangedSubscription;
   bool _userSpeakerPreference = true;
   bool _hasExternalOutput = false;
+  bool _audioRouteNotificationsEnabled = false;
 
   static const externalAudioOutputTypes = <audio.AudioDeviceType>{
     audio.AudioDeviceType.wiredHeadset,
@@ -120,6 +121,8 @@ class SessionDeviceController extends _$SessionDeviceController {
   };
 
   bool get userSpeakerPreference => _userSpeakerPreference;
+
+  bool get audioRouteNotificationsEnabled => _audioRouteNotificationsEnabled;
 
   void resetSpeakerRoutingDefaults() {
     _userSpeakerPreference = true;
@@ -176,6 +179,8 @@ class SessionDeviceController extends _$SessionDeviceController {
         stackTrace: stackTrace,
         message: 'Failed to setup device change listener',
       );
+    } finally {
+      _audioRouteNotificationsEnabled = true;
     }
   }
 

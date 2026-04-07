@@ -394,8 +394,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
               cameraEnabled: _isCameraOn,
               microphoneEnabled: _isMicOn,
             );
-      ref.read(sessionCuesServiceProvider).playSessionTransitionCue();
       await session.join();
+      ref.read(sessionCuesServiceProvider).playSessionTransitionCue();
       _hasHandledConnectedState = _isLoading = false;
     } catch (error, stackTrace) {
       _hasRequestedJoin = false;
