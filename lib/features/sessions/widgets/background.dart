@@ -62,17 +62,17 @@ class RoomBackground extends StatelessWidget {
               _ => roomDecoration,
             },
             padding: padding,
-            child: DefaultTextStyle.merge(
-              style: TextStyle(color: foregroudColor),
-              child: Theme(
-                data: Theme.of(context).copyWith(
-                  scaffoldBackgroundColor: Colors.transparent,
-                  textTheme: Theme.of(context).textTheme.apply(
-                    bodyColor: foregroudColor,
-                    displayColor: foregroudColor,
-                    decorationColor: foregroudColor,
-                  ),
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                scaffoldBackgroundColor: Colors.transparent,
+                textTheme: Theme.of(context).textTheme.apply(
+                  bodyColor: foregroudColor,
+                  displayColor: foregroudColor,
+                  decorationColor: foregroudColor,
                 ),
+              ),
+              child: DefaultTextStyle.merge(
+                style: TextStyle(color: foregroudColor),
                 child: Material(
                   type: MaterialType.transparency,
                   child: child,

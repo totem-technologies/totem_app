@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
@@ -18,7 +20,7 @@ class NotMyTurn extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessionStatus = ref.watch(roomStatusProvider);
+    final roomStatus = ref.watch(roomStatusProvider);
     final amNext = ref.watch(amNextSpeakerProvider);
     final currentSession = ref.watch(currentSessionProvider)!;
     final currentSessionState = ref.watch(currentSessionStateProvider)!;
@@ -28,12 +30,12 @@ class NotMyTurn extends ConsumerWidget {
     final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
 
     return RoomBackground(
-      status: sessionStatus,
+      status: roomStatus,
       child: ViewportResolver(
         builder: (context, viewportKind) {
           final theme = Theme.of(context);
           final nextUpText = () {
-            if (sessionStatus == RoomStatus.waitingRoom) {
+            if (roomStatus == RoomStatus.waitingRoom) {
               return Text(
                 () {
                   if (!hasKeeper) {
@@ -43,7 +45,7 @@ class NotMyTurn extends ConsumerWidget {
                 }(),
                 style: theme.textTheme.bodyLarge,
               );
-            } else if (sessionStatus == RoomStatus.active) {
+            } else if (roomStatus == RoomStatus.active) {
               if (!hasKeeper) {
                 return Text(
                   'The session has been paused...',
@@ -81,12 +83,11 @@ class NotMyTurn extends ConsumerWidget {
           final participantGrid = _NotMyTurnGrid(
             event: event,
             speakingNow: activeSpeaker?.identity,
-            isLandscape: viewportKind.isLarge,
+            viewportKind: viewportKind,
           );
 
           final startCard = () {
-            if (sessionStatus == RoomStatus.waitingRoom &&
-                isCurrentUserKeeper) {
+            if (roomStatus == RoomStatus.waitingRoom && isCurrentUserKeeper) {
               return TransitionCard(
                 type: TotemCardTransitionType.start,
                 onActionPressed: currentSession.keeper.startSession,
@@ -96,7 +97,7 @@ class NotMyTurn extends ConsumerWidget {
           }();
 
           final Widget? marqueeOrStart = () {
-            if (sessionStatus == RoomStatus.waitingRoom) {
+            if (roomStatus == RoomStatus.waitingRoom) {
               if (isCurrentUserKeeper) {
                 return startCard;
               } else {
@@ -189,6 +190,7 @@ class NotMyTurn extends ConsumerWidget {
                 ),
               );
             case ViewportKind.mediumPlus:
+              final participantKeys = ref.watch(sessionParticipantKeysProvider);
               return Padding(
                 padding: const EdgeInsetsDirectional.symmetric(
                   vertical: 40,
@@ -197,46 +199,107 @@ class NotMyTurn extends ConsumerWidget {
                 child: Column(
                   spacing: 10,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 1,
-                          child: RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text:
-                                      '${currentSessionState.participants.participants.length}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                    Padding(
+                      padding: const EdgeInsetsDirectional.symmetric(
+                        horizontal: 20.0,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 1,
+                            child: RichText(
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text:
+                                        '${currentSessionState.participants.participants.length}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
+                                  const TextSpan(text: ' Participants'),
+                                ],
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              children: [
+                                Text(
+                                  event.title,
+                                  style: theme.textTheme.headlineMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                 ),
-                                const TextSpan(text: ' Participants'),
+                                Text(
+                                  event.space.title,
+                                  style: theme.textTheme.bodyMedium,
+                                ),
                               ],
                             ),
                           ),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            children: [
-                              Text(
-                                event.title,
-                                style: theme.textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                          if (roomStatus == RoomStatus.active)
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  RichText(
+                                    text: TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text: activeSpeaker?.name ?? '',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const TextSpan(text: ' Now speaking'),
+                                      ],
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
+                                    textAlign: TextAlign.start,
+                                  ),
+                                  RichText(
+                                    text: TextSpan(
+                                      children: [
+                                        if (amNext)
+                                          const TextSpan(
+                                            text: 'You are Next',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          )
+                                        else if (nextUp != null) ...[
+                                          const TextSpan(text: 'Next up '),
+                                          TextSpan(
+                                            text: nextUp.name,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
                               ),
-                              Text(
-                                event.space.title,
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Spacer(),
-                      ],
+                            )
+                          else
+                            const Spacer(),
+                        ],
+                      ),
                     ),
-                    const Divider(color: AppTheme.slate),
+                    Divider(
+                      color: switch (roomStatus) {
+                        RoomStatus.waitingRoom => AppTheme.slate,
+                        _ => AppTheme.cream,
+                      },
+                    ),
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsetsDirectional.all(10.0),
@@ -246,21 +309,46 @@ class NotMyTurn extends ConsumerWidget {
                             Expanded(
                               child: AspectRatio(
                                 aspectRatio: 16 / 9,
-                                child: _NotMyTurnGrid(
-                                  event: event,
-                                  speakingNow: activeSpeaker?.identity,
-                                  showSpeakingNowParticipant: true,
-                                  gap: 20,
+                                child: Row(
+                                  spacing: 20,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    // TODO(web): The featured card should have the same height as the grid
+                                    // Currently, when there are 5 participants, for example, the grid is at
+                                    // the middle of the tile, causing a weird effect.
+                                    if (roomStatus == RoomStatus.active &&
+                                        activeSpeaker != null)
+                                      ParticipantCard(
+                                        key: participantKeys.getKey(
+                                          activeSpeaker.identity,
+                                        ),
+                                        session: event,
+                                        participant: activeSpeaker,
+                                        participantIdentity:
+                                            activeSpeaker.identity,
+                                      ),
+                                    Flexible(
+                                      child: _NotMyTurnGrid(
+                                        event: event,
+                                        speakingNow: activeSpeaker?.identity,
+                                        // Only show the speaking now participant in waiting room.
+                                        // In active room, the speaking now participant is already featured.
+                                        showSpeakingNowParticipant:
+                                            roomStatus ==
+                                            RoomStatus.waitingRoom,
+                                        gap: 20,
+                                        viewportKind: viewportKind,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                            if (sessionStatus == RoomStatus.waitingRoom) ...[
+                            if (roomStatus == RoomStatus.waitingRoom) ...[
                               const GroundingMarquee(),
                               ?startCard,
                             ],
-                            const Center(
-                              child: SessionActionBar(),
-                            ),
+                            const Center(child: SessionActionBar()),
                           ],
                         ),
                       ),
@@ -279,16 +367,16 @@ class _NotMyTurnGrid extends ConsumerWidget {
   const _NotMyTurnGrid({
     required this.event,
     required this.speakingNow,
+    required this.viewportKind,
     this.showSpeakingNowParticipant = false,
     this.gap = 10,
-    this.isLandscape = false,
   });
 
   final SessionDetailSchema event;
   final String? speakingNow;
   final bool showSpeakingNowParticipant;
   final double gap;
-  final bool isLandscape;
+  final ViewportKind viewportKind;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -306,24 +394,35 @@ class _NotMyTurnGrid extends ConsumerWidget {
     if (itemCount == 0) return const SizedBox.shrink();
 
     late final int crossAxisCount;
-    if (isLandscape) {
-      if (itemCount <= 2) {
-        crossAxisCount = 2;
-      } else if (itemCount <= 4) {
-        crossAxisCount = 2;
-      } else if (itemCount <= 6) {
-        crossAxisCount = 3;
-      } else {
-        crossAxisCount = 4;
-      }
-    } else {
-      if (itemCount <= 6) {
-        crossAxisCount = 3;
-      } else if (itemCount <= 12) {
-        crossAxisCount = 4;
-      } else {
-        crossAxisCount = 5;
-      }
+    switch (viewportKind) {
+      case ViewportKind.smallPortrait:
+        if (itemCount <= 6) {
+          crossAxisCount = 3;
+        } else if (itemCount <= 12) {
+          crossAxisCount = 4;
+        } else {
+          crossAxisCount = 5;
+        }
+      case ViewportKind.smallLandscape:
+        if (itemCount <= 2) {
+          crossAxisCount = 2;
+        } else if (itemCount <= 4) {
+          crossAxisCount = 2;
+        } else if (itemCount <= 6) {
+          crossAxisCount = 3;
+        } else {
+          crossAxisCount = 4;
+        }
+      case ViewportKind.mediumPlus:
+        if (itemCount <= 2) {
+          crossAxisCount = 1;
+        } else if (itemCount <= 4) {
+          crossAxisCount = 2;
+        } else if (itemCount <= 8) {
+          crossAxisCount = 3;
+        } else {
+          crossAxisCount = math.sqrt(itemCount).ceil();
+        }
     }
 
     final rowCount = (itemCount / crossAxisCount).ceil();

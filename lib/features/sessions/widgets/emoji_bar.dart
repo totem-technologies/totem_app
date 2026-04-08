@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 
+// TODO(web): Emoji bar should be at the left bottom of the screen.
+
 /// Displays an emoji bar above the given button context and calls
 /// [onEmojiSelected] with the selected emoji.
 Future<void> showEmojiBar(
