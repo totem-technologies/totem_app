@@ -173,7 +173,8 @@ void main() {
       expect(find.bySemanticsLabel('Camera off'), findsOneWidget);
       expect(find.bySemanticsLabel('Chat'), findsOneWidget);
       expect(find.bySemanticsLabel('Send reaction'), findsNothing);
-      expect(find.text('Slide to Receive'), findsOneWidget);
+      expect(find.byType(ActionSliderButton), findsOneWidget);
+      expect(find.text('Receive'), findsOneWidget);
       expect(find.text('"Take your time"'), findsOneWidget);
     });
 
@@ -182,7 +183,8 @@ void main() {
     ) async {
       await pumpReceiveTotem(tester, roundMessage: null);
 
-      expect(find.text('Slide to Receive'), findsOneWidget);
+      expect(find.byType(ActionSliderButton), findsOneWidget);
+      expect(find.text('Receive'), findsOneWidget);
       expect(find.text('"Take your time"'), findsNothing);
     });
 
@@ -256,7 +258,8 @@ void main() {
       await pumpReceiveTotem(tester, roundMessage: 'Breathe and share');
 
       expect(find.byType(SessionActionBar), findsOneWidget);
-      expect(find.text('Slide to Receive'), findsOneWidget);
+      expect(find.byType(ActionSliderButton), findsOneWidget);
+      expect(find.text('Receive'), findsOneWidget);
       expect(find.text('"Breathe and share"'), findsOneWidget);
     });
 
@@ -265,7 +268,8 @@ void main() {
     ) async {
       await pumpReceiveTotem(tester, isCameraOn: true);
 
-      expect(find.text('Slide to Receive'), findsOneWidget);
+      expect(find.byType(ActionSliderButton), findsOneWidget);
+      expect(find.text('Receive'), findsOneWidget);
       expect(find.byType(SessionActionBar), findsOneWidget);
     });
 

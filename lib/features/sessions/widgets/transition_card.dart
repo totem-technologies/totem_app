@@ -72,32 +72,35 @@ class TransitionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final shouldShowActionButton =
+        type != TotemCardTransitionType.waitingReceive;
 
-    final actionButton = Padding(
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 14),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minWidth: 160,
-        ),
-        child: ActionSliderButton(
-          text:
-              actionText ??
-              switch (type) {
-                TotemCardTransitionType.join => 'Join',
-                TotemCardTransitionType.pass => 'Pass',
-                TotemCardTransitionType.receive => 'Receive',
-                TotemCardTransitionType.start => 'Start Session',
-                TotemCardTransitionType.waitingReceive =>
-                  throw UnsupportedError(
-                    'This should never be reached',
-                  ),
-              },
-          onActionCompleted: onActionPressed,
-          keepLoadingOnSuccess: keepActionLoadingOnSuccess,
-          isLoading: isSliderLoading,
-        ),
-      ),
-    );
+    final buttonText =
+        actionText ??
+        switch (type) {
+          TotemCardTransitionType.join => 'Join',
+          TotemCardTransitionType.pass => 'Pass',
+          TotemCardTransitionType.receive => 'Receive',
+          TotemCardTransitionType.start => 'Start Session',
+          TotemCardTransitionType.waitingReceive => '',
+        };
+
+    final actionButton = shouldShowActionButton
+        ? Padding(
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 14),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minWidth: 160,
+              ),
+              child: ActionSliderButton(
+                text: buttonText,
+                onActionCompleted: onActionPressed,
+                keepLoadingOnSuccess: keepActionLoadingOnSuccess,
+                isLoading: isSliderLoading,
+              ),
+            ),
+          )
+        : null;
 
     return TransitionCardContainer(
       margin: margin,
@@ -123,7 +126,7 @@ class TransitionCard extends StatelessWidget {
                   'Your session will start soon. Please check your audio and video before joining.',
                   textAlign: TextAlign.center,
                 ),
-                actionButton,
+                if (actionButton != null) actionButton,
               ],
             ),
           )
@@ -150,11 +153,8 @@ class TransitionCard extends StatelessWidget {
               maxLines: 2,
             ),
           ),
-        ?switch (type) {
-          TotemCardTransitionType.waitingReceive ||
-          TotemCardTransitionType.join => null,
-          _ => actionButton,
-        },
+        if (actionButton != null && type != TotemCardTransitionType.join)
+          actionButton,
       ],
     );
   }

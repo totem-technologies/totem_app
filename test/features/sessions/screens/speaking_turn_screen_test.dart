@@ -291,7 +291,7 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
       expect(find.byType(ActionSliderButton), findsOneWidget);
       expect(find.text('Your prompt for this round'), findsOneWidget);
-      expect(find.text('Slide to pass to User Two'), findsOneWidget);
+      expect(find.text('Pass to User Two'), findsOneWidget);
       expect(find.byType(SessionActionBar), findsOneWidget);
       expect(find.byType(ParticipantCard), findsAtLeastNWidgets(1));
     });
