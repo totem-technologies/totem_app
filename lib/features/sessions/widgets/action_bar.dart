@@ -123,7 +123,7 @@ class ActionBarMicButton extends StatefulWidget {
 
   final LocalParticipant? participant;
   final AudioTrack? audioTrack;
-  final ActionBarButtonToggleCallback onToggle;
+  final ActionBarButtonToggleCallback? onToggle;
   final Color indicatorColor;
   final int indicatorBarCount;
 
@@ -184,7 +184,7 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
 
     setState(() => _busy = true);
     try {
-      await widget.onToggle(!_isMicrophoneEnabled);
+      await widget.onToggle?.call(!_isMicrophoneEnabled);
     } finally {
       if (mounted) {
         setState(() => _busy = false);

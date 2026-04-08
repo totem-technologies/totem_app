@@ -8,16 +8,18 @@ class TransitionCardContainer extends StatelessWidget {
   const TransitionCardContainer({
     required this.children,
     this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
+    this.constraints = const BoxConstraints(maxWidth: 650),
     super.key,
   });
 
   final EdgeInsetsGeometry margin;
   final List<Widget> children;
+  final BoxConstraints constraints;
 
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 650),
+      constraints: constraints,
       child: LayoutBuilder(
         builder: (context, constraints) {
           return Card(
@@ -70,8 +72,39 @@ class TransitionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    final actionButton = Padding(
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: 14),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: 160,
+        ),
+        child: ActionSliderButton(
+          text:
+              actionText ??
+              switch (type) {
+                TotemCardTransitionType.join => 'Join',
+                TotemCardTransitionType.pass => 'Pass',
+                TotemCardTransitionType.receive => 'Receive',
+                TotemCardTransitionType.start => 'Start Session',
+                TotemCardTransitionType.waitingReceive =>
+                  throw UnsupportedError(
+                    'This should never be reached',
+                  ),
+              },
+          onActionCompleted: onActionPressed,
+          keepLoadingOnSuccess: keepActionLoadingOnSuccess,
+          isLoading: isSliderLoading,
+        ),
+      ),
+    );
+
     return TransitionCardContainer(
       margin: margin,
+      constraints: switch (type) {
+        TotemCardTransitionType.join => const BoxConstraints(maxWidth: 366),
+        _ => const BoxConstraints(maxWidth: 650),
+      },
       children: [
         if (type == TotemCardTransitionType.join)
           Flexible(
@@ -90,6 +123,7 @@ class TransitionCard extends StatelessWidget {
                   'Your session will start soon. Please check your audio and video before joining.',
                   textAlign: TextAlign.center,
                 ),
+                actionButton,
               ],
             ),
           )
@@ -116,32 +150,11 @@ class TransitionCard extends StatelessWidget {
               maxLines: 2,
             ),
           ),
-        if (type != TotemCardTransitionType.waitingReceive)
-          Padding(
-            padding: const EdgeInsetsDirectional.symmetric(horizontal: 14),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                minWidth: 160,
-              ),
-              child: ActionSliderButton(
-                text:
-                    actionText ??
-                    switch (type) {
-                      TotemCardTransitionType.join => 'Join',
-                      TotemCardTransitionType.pass => 'Pass',
-                      TotemCardTransitionType.receive => 'Receive',
-                      TotemCardTransitionType.start => 'Start Session',
-                      TotemCardTransitionType.waitingReceive =>
-                        throw UnsupportedError(
-                          'This should never be reached',
-                        ),
-                    },
-                onActionCompleted: onActionPressed,
-                keepLoadingOnSuccess: keepActionLoadingOnSuccess,
-                isLoading: isSliderLoading,
-              ),
-            ),
-          ),
+        ?switch (type) {
+          TotemCardTransitionType.waitingReceive ||
+          TotemCardTransitionType.join => null,
+          _ => actionButton,
+        },
       ],
     );
   }

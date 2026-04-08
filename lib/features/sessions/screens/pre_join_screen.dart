@@ -272,8 +272,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           videoTrack: _previewVideoTrack,
         ),
       ),
-
-      joinSlider: TransitionCard(
+      joinCard: TransitionCard(
         margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
         type: TotemCardTransitionType.join,
         keepActionLoadingOnSuccess: true,
@@ -289,7 +288,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
           ActionBarMicButton(
             participant: null,
             audioTrack: _previewAudioTrack,
-            onToggle: (v) async => _toggleMic(),
+            onToggle: !hasRequestedJoin ? (v) async => _toggleMic() : null,
           ),
           ActionBarButton(
             semanticsLabel: 'Audio ${_isSpeakerOn ? 'on' : 'off'}',
