@@ -14,8 +14,8 @@ import 'package:totem_app/features/sessions/controllers/core/session_state.dart'
     as session_state;
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/pre_join_screen.dart';
-import 'package:totem_app/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
@@ -493,8 +493,7 @@ void main() {
           final initialSpeakerButton = tester
               .widgetList<ActionBarButton>(find.byType(ActionBarButton))
               .firstWhere(
-                (button) =>
-                    (button.semanticsLabel ?? '').startsWith('Audio '),
+                (button) => (button.semanticsLabel ?? '').startsWith('Audio '),
               );
           expect(
             initialSpeakerButton.onPressed,
@@ -531,8 +530,7 @@ void main() {
           final speakerButtons = tester
               .widgetList<ActionBarButton>(find.byType(ActionBarButton))
               .where(
-                (button) =>
-                    (button.semanticsLabel ?? '').startsWith('Audio '),
+                (button) => (button.semanticsLabel ?? '').startsWith('Audio '),
               );
           expect(
             speakerButtons.every((button) => button.onPressed == null),

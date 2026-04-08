@@ -3,12 +3,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/grounding_marquee.dart';
+import 'package:totem_app/features/sessions/widgets/large_screen_header.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 import 'package:totem_app/shared/widgets/viewport_resolver.dart';
@@ -23,7 +23,6 @@ class NotMyTurn extends ConsumerWidget {
     final roomStatus = ref.watch(roomStatusProvider);
     final amNext = ref.watch(amNextSpeakerProvider);
     final currentSession = ref.watch(currentSessionProvider)!;
-    final currentSessionState = ref.watch(currentSessionStateProvider)!;
     final activeSpeaker = ref.watch(featuredParticipantProvider);
     final nextUp = ref.watch(speakingNextParticipantProvider);
     final hasKeeper = ref.watch(hasKeeperProvider);
@@ -199,107 +198,7 @@ class NotMyTurn extends ConsumerWidget {
                 child: Column(
                   spacing: 10,
                   children: [
-                    Padding(
-                      padding: const EdgeInsetsDirectional.symmetric(
-                        horizontal: 20.0,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            flex: 1,
-                            child: RichText(
-                              text: TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text:
-                                        '${currentSessionState.participants.participants.length}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const TextSpan(text: ' Participants'),
-                                ],
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Column(
-                              children: [
-                                Text(
-                                  event.title,
-                                  style: theme.textTheme.headlineMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                                Text(
-                                  event.space.title,
-                                  style: theme.textTheme.bodyMedium,
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (roomStatus == RoomStatus.active)
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: activeSpeaker?.name ?? '',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                        const TextSpan(text: ' Now speaking'),
-                                      ],
-                                      style: theme.textTheme.bodyMedium,
-                                    ),
-                                    textAlign: TextAlign.start,
-                                  ),
-                                  RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        if (amNext)
-                                          const TextSpan(
-                                            text: 'You are Next',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          )
-                                        else if (nextUp != null) ...[
-                                          const TextSpan(text: 'Next up '),
-                                          TextSpan(
-                                            text: nextUp.name,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                      style: theme.textTheme.bodyMedium,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
-                            )
-                          else
-                            const Spacer(),
-                        ],
-                      ),
-                    ),
-                    Divider(
-                      color: switch (roomStatus) {
-                        RoomStatus.waitingRoom => AppTheme.slate,
-                        _ => AppTheme.cream,
-                      },
-                    ),
+                    const SessionStatusHeader(),
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsetsDirectional.all(10.0),
