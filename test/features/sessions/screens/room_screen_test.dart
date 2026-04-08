@@ -11,11 +11,11 @@ import 'package:totem_app/features/sessions/controllers/features/session_device_
 import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
-import 'package:totem_app/features/sessions/screens/my_turn.dart';
-import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
+import 'package:totem_app/features/sessions/screens/listening_turn_screen.dart';
 import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/room_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_disconnected.dart';
+import 'package:totem_app/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
@@ -96,7 +96,7 @@ Future<void> _pumpRoomScreen(
         disconnectionReasonProvider.overrideWith((ref) => null),
       ],
       child: const MaterialApp(
-        home: VideoRoomScreen(
+        home: VideoSessionScreen(
           sessionSlug: 'test-session',
           loadingScreen: SizedBox.shrink(),
         ),
@@ -169,7 +169,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
         ...extraOverrides.cast(),
       ],
       child: const MaterialApp(
-        home: VideoRoomScreen(
+        home: VideoSessionScreen(
           sessionSlug: 'test-session',
           loadingScreen: SizedBox(key: ValueKey('loading-screen')),
         ),
@@ -325,7 +325,7 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
   required RoomConnectionState connectionState,
   required RoomStatus roomStatus,
   bool hasKeeperDisconnected = false,
-  RoomScreen roomScreen = RoomScreen.notMyTurn,
+  RoomScreen roomScreen = RoomScreen.listening,
   List<Object?> extraOverrides = const [],
 }) async {
   final eventStateProvider =
@@ -372,7 +372,7 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
         ...extraOverrides.cast(),
       ],
       child: const MaterialApp(
-        home: VideoRoomScreen(
+        home: VideoSessionScreen(
           sessionSlug: 'test-session',
           loadingScreen: SizedBox.shrink(),
         ),
@@ -382,7 +382,7 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
   await tester.pump();
 
   final container = ProviderScope.containerOf(
-    tester.element(find.byType(VideoRoomScreen)),
+    tester.element(find.byType(VideoSessionScreen)),
     listen: false,
   );
 
@@ -473,7 +473,7 @@ void main() {
         screen: RoomScreen.error,
       );
 
-      expect(find.byType(RoomErrorScreen), findsOneWidget);
+      expect(find.byType(SessionErrorScreen), findsOneWidget);
     });
 
     testWidgets('renders receive totem screen for RoomScreen.receiving', (
@@ -504,10 +504,10 @@ void main() {
         tester,
         session: session,
         event: event,
-        screen: RoomScreen.myTurn,
+        screen: RoomScreen.speaking,
       );
 
-      expect(find.byType(MyTurn), findsOneWidget);
+      expect(find.byType(SpeakingTurnScreen), findsOneWidget);
     });
 
     testWidgets('renders my turn screen for RoomScreen.passing', (
@@ -525,10 +525,10 @@ void main() {
         screen: RoomScreen.passing,
       );
 
-      expect(find.byType(MyTurn), findsOneWidget);
+      expect(find.byType(SpeakingTurnScreen), findsOneWidget);
     });
 
-    testWidgets('renders not my turn screen for RoomScreen.notMyTurn', (
+    testWidgets('renders not my turn screen for RoomScreen.listening', (
       tester,
     ) async {
       final event = _createSessionEvent(
@@ -540,10 +540,10 @@ void main() {
         tester,
         session: session,
         event: event,
-        screen: RoomScreen.notMyTurn,
+        screen: RoomScreen.listening,
       );
 
-      expect(find.byType(NotMyTurn), findsOneWidget);
+      expect(find.byType(ListeningTurnScreen), findsOneWidget);
     });
   });
 
@@ -884,7 +884,7 @@ void main() {
         tester,
         session: session,
         event: event,
-        screen: RoomScreen.notMyTurn,
+        screen: RoomScreen.listening,
         extraOverrides: [
           sessionDeviceControllerProvider(
             session,
@@ -926,7 +926,7 @@ void main() {
         tester,
         session: session,
         event: event,
-        screen: RoomScreen.notMyTurn,
+        screen: RoomScreen.listening,
         connectionState: RoomConnectionState.disconnected,
         extraOverrides: [
           sessionDeviceControllerProvider(
@@ -1084,7 +1084,7 @@ void main() {
           event: event,
           connectionState: RoomConnectionState.connected,
           roomStatus: RoomStatus.active,
-          roomScreen: RoomScreen.notMyTurn,
+          roomScreen: RoomScreen.listening,
         );
 
         harness.container
@@ -1115,7 +1115,7 @@ void main() {
         event: event,
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
-        roomScreen: RoomScreen.notMyTurn,
+        roomScreen: RoomScreen.listening,
       );
 
       harness.container
@@ -1145,7 +1145,7 @@ void main() {
         event: event,
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
-        roomScreen: RoomScreen.notMyTurn,
+        roomScreen: RoomScreen.listening,
       );
 
       harness.container
@@ -1234,7 +1234,7 @@ void main() {
         ),
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
-        roomScreen: RoomScreen.notMyTurn,
+        roomScreen: RoomScreen.listening,
         extraOverrides: [
           sessionCuesServiceProvider.overrideWithValue(feedbackService),
         ],

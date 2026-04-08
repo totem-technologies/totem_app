@@ -743,7 +743,7 @@ class _SessionActionBarState extends ConsumerState<SessionActionBar> {
       case RoomScreen.disconnected:
       case RoomScreen.loading:
         return const SizedBox.shrink();
-      case RoomScreen.notMyTurn:
+      case RoomScreen.listening:
         return ActionBar(
           key: SessionActionBar.actionBarKey,
           children: [
@@ -754,7 +754,7 @@ class _SessionActionBarState extends ConsumerState<SessionActionBar> {
             moreButton,
           ],
         );
-      case RoomScreen.myTurn:
+      case RoomScreen.speaking:
       case RoomScreen.passing:
         return ActionBar(
           key: SessionActionBar.actionBarKey,

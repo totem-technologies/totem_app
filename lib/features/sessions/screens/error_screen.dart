@@ -5,8 +5,8 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/circle_icon_button.dart';
 
-class RoomErrorScreen extends StatelessWidget {
-  const RoomErrorScreen({this.onRetry, this.error, super.key});
+class SessionErrorScreen extends StatelessWidget {
+  const SessionErrorScreen({this.onRetry, this.error, super.key});
 
   final VoidCallback? onRetry;
   final Object? error;

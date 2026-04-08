@@ -10,7 +10,7 @@ import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
+import 'package:totem_app/features/sessions/screens/listening_turn_screen.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
@@ -185,7 +185,7 @@ void main() {
     ).thenReturn(MockParticipantEventsListener());
   });
 
-  Future<void> pumpNotMyTurn(
+  Future<void> pumpListeningTurn(
     WidgetTester tester, {
     required SessionRoomState sessionState,
     String currentUserSlug = 'user-1',
@@ -243,7 +243,7 @@ void main() {
             return state?.speakingNextParticipant();
           }),
           resolveCurrentScreenProvider.overrideWith(
-            (ref) => RoomScreen.notMyTurn,
+            (ref) => RoomScreen.listening,
           ),
           lastSessionMessageProvider.overrideWith(
             (ref) => ref.watch(_testLastMessageProvider),
@@ -252,7 +252,7 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: NotMyTurn(event: _createTestSession()),
+            body: ListeningTurnScreen(event: _createTestSession()),
           ),
         ),
       ),
@@ -260,7 +260,7 @@ void main() {
     await tester.pump();
   }
 
-  group('NotMyTurn', () {
+  group('ListeningTurn', () {
     group('participant grid', () {
       testWidgets('renders the participant grid for room sizes up to 12', (
         tester,
@@ -290,13 +290,13 @@ void main() {
             ),
           );
 
-          await pumpNotMyTurn(tester, sessionState: state);
+          await pumpListeningTurn(tester, sessionState: state);
 
           expect(
             find.byType(ParticipantCard),
             findsNWidgets(participantCount),
           );
-          expect(find.byType(NotMyTurn), findsOneWidget);
+          expect(find.byType(ListeningTurnScreen), findsOneWidget);
 
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
@@ -322,7 +322,7 @@ void main() {
           participants: participants,
         );
 
-        await pumpNotMyTurn(tester, sessionState: initialState);
+        await pumpListeningTurn(tester, sessionState: initialState);
         expect(
           _participantGridIdentities(tester),
           equals(const ['user-2', 'user-3', 'user-1']),
@@ -337,7 +337,7 @@ void main() {
           participants: participants,
         );
 
-        await pumpNotMyTurn(tester, sessionState: reorderedState);
+        await pumpListeningTurn(tester, sessionState: reorderedState);
         expect(
           _participantGridIdentities(tester),
           equals(const ['user-3', 'user-1', 'user-2']),
@@ -358,7 +358,7 @@ void main() {
           ],
         );
 
-        await pumpNotMyTurn(tester, sessionState: state);
+        await pumpListeningTurn(tester, sessionState: state);
 
         expect(
           find.text('Waiting for the Keeper to join...'),
@@ -375,7 +375,7 @@ void main() {
           ],
         );
 
-        await pumpNotMyTurn(tester, sessionState: state);
+        await pumpListeningTurn(tester, sessionState: state);
 
         expect(find.byType(GroundingMarquee), findsOneWidget);
       });
@@ -389,7 +389,7 @@ void main() {
           status: RoomStatus.waitingRoom,
         );
 
-        await pumpNotMyTurn(tester, sessionState: state);
+        await pumpListeningTurn(tester, sessionState: state);
 
         expect(
           find.text('The session is about to start...'),
@@ -404,7 +404,7 @@ void main() {
             status: RoomStatus.waitingRoom,
           );
 
-          await pumpNotMyTurn(
+          await pumpListeningTurn(
             tester,
             sessionState: state,
             isKeeper: false,
@@ -432,7 +432,7 @@ void main() {
             nextSpeaker: 'user-1',
           );
 
-          await pumpNotMyTurn(
+          await pumpListeningTurn(
             tester,
             sessionState: state,
             currentUserSlug: 'user-1',
@@ -450,7 +450,7 @@ void main() {
           nextSpeaker: 'user-2',
         );
 
-        await pumpNotMyTurn(
+        await pumpListeningTurn(
           tester,
           sessionState: state,
           currentUserSlug: 'user-1',
@@ -464,7 +464,7 @@ void main() {
           status: RoomStatus.active,
         );
 
-        await pumpNotMyTurn(tester, sessionState: state);
+        await pumpListeningTurn(tester, sessionState: state);
 
         expect(find.byType(GroundingMarquee), findsNothing);
       });
@@ -483,7 +483,7 @@ void main() {
           ],
         );
 
-        await pumpNotMyTurn(tester, sessionState: state);
+        await pumpListeningTurn(tester, sessionState: state);
 
         expect(
           find.text('The session has been paused...'),
@@ -498,7 +498,7 @@ void main() {
           status: RoomStatus.active,
         );
 
-        await pumpNotMyTurn(tester, sessionState: state);
+        await pumpListeningTurn(tester, sessionState: state);
 
         expect(find.byType(SessionActionBar), findsOneWidget);
       });
@@ -510,7 +510,7 @@ void main() {
           status: RoomStatus.active,
         );
 
-        await pumpNotMyTurn(tester, sessionState: state);
+        await pumpListeningTurn(tester, sessionState: state);
 
         expect(find.bySemanticsLabel('Microphone off'), findsOneWidget);
         expect(find.bySemanticsLabel('Camera off'), findsOneWidget);
@@ -528,14 +528,14 @@ void main() {
     });
 
     group('widget structure', () {
-      testWidgets('renders NotMyTurn without crashing', (tester) async {
+      testWidgets('renders ListeningTurn without crashing', (tester) async {
         final state = _buildState(
           status: RoomStatus.active,
         );
 
-        await pumpNotMyTurn(tester, sessionState: state);
+        await pumpListeningTurn(tester, sessionState: state);
 
-        expect(find.byType(NotMyTurn), findsOneWidget);
+        expect(find.byType(ListeningTurnScreen), findsOneWidget);
       });
     });
   });

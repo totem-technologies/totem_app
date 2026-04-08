@@ -178,7 +178,7 @@ void main() {
     testWidgets('shows expected controls on not-my-turn screen', (
       tester,
     ) async {
-      await pumpSessionActionBar(tester, screen: RoomScreen.notMyTurn);
+      await pumpSessionActionBar(tester, screen: RoomScreen.listening);
       await tester.pump();
 
       expect(find.byType(ActionBar), findsOneWidget);
@@ -187,7 +187,7 @@ void main() {
     });
 
     testWidgets('shows expected controls on my-turn screen', (tester) async {
-      await pumpSessionActionBar(tester, screen: RoomScreen.myTurn);
+      await pumpSessionActionBar(tester, screen: RoomScreen.speaking);
       await tester.pump();
 
       expect(find.byType(ActionBar), findsOneWidget);
@@ -198,7 +198,7 @@ void main() {
     testWidgets('shows pending badge and notification on new chat message', (
       tester,
     ) async {
-      await pumpSessionActionBar(tester, screen: RoomScreen.notMyTurn);
+      await pumpSessionActionBar(tester, screen: RoomScreen.listening);
       await tester.pump();
 
       expect(findPendingBadge(), findsNothing);
@@ -224,7 +224,7 @@ void main() {
     });
 
     testWidgets('opens chat sheet and clears pending badge', (tester) async {
-      await pumpSessionActionBar(tester, screen: RoomScreen.notMyTurn);
+      await pumpSessionActionBar(tester, screen: RoomScreen.listening);
       await tester.pump();
 
       final context = tester.element(find.byType(SessionActionBar));

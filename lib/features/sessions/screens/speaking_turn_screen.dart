@@ -15,16 +15,16 @@ import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
-class MyTurn extends ConsumerStatefulWidget {
-  const MyTurn({required this.event, super.key});
+class SpeakingTurnScreen extends ConsumerStatefulWidget {
+  const SpeakingTurnScreen({required this.event, super.key});
 
   final SessionDetailSchema event;
 
   @override
-  ConsumerState<MyTurn> createState() => _MyTurnState();
+  ConsumerState<SpeakingTurnScreen> createState() => _SpeakingTurnState();
 }
 
-class _MyTurnState extends ConsumerState<MyTurn> {
+class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
   final roundMessageController = TextEditingController();
 
   @override
@@ -60,7 +60,7 @@ class _MyTurnState extends ConsumerState<MyTurn> {
         child: OrientationBuilder(
           builder: (context, orientation) {
             final isLandscape = orientation == Orientation.landscape;
-            final participantGrid = _MyTurnGrid(
+            final participantGrid = _SpeakingTurnGrid(
               isLandscape: isLandscape,
               event: widget.event,
             );
@@ -182,8 +182,8 @@ class _MyTurnState extends ConsumerState<MyTurn> {
   }
 }
 
-class _MyTurnGrid extends ConsumerWidget {
-  const _MyTurnGrid({
+class _SpeakingTurnGrid extends ConsumerWidget {
+  const _SpeakingTurnGrid({
     required this.isLandscape,
     required this.event,
     this.maxPerLineCount = 10,

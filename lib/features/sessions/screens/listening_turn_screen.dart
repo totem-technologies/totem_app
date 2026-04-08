@@ -13,8 +13,8 @@ import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 import 'package:totem_app/shared/widgets/viewport_resolver.dart';
 
-class NotMyTurn extends ConsumerWidget {
-  const NotMyTurn({required this.event, super.key});
+class ListeningTurnScreen extends ConsumerWidget {
+  const ListeningTurnScreen({required this.event, super.key});
 
   final SessionDetailSchema event;
 
@@ -79,7 +79,7 @@ class NotMyTurn extends ConsumerWidget {
             return const SizedBox.shrink();
           }();
 
-          final participantGrid = _NotMyTurnGrid(
+          final participantGrid = _ListeningTurnGrid(
             event: event,
             speakingNow: activeSpeaker?.identity,
             viewportKind: viewportKind,
@@ -205,6 +205,7 @@ class NotMyTurn extends ConsumerWidget {
                         child: Column(
                           spacing: 10,
                           children: [
+                            const SizedBox.shrink(),
                             Expanded(
                               child: AspectRatio(
                                 aspectRatio: 16 / 9,
@@ -227,7 +228,7 @@ class NotMyTurn extends ConsumerWidget {
                                             activeSpeaker.identity,
                                       ),
                                     Flexible(
-                                      child: _NotMyTurnGrid(
+                                      child: _ListeningTurnGrid(
                                         event: event,
                                         speakingNow: activeSpeaker?.identity,
                                         // Only show the speaking now participant in waiting room.
@@ -244,9 +245,11 @@ class NotMyTurn extends ConsumerWidget {
                               ),
                             ),
                             if (roomStatus == RoomStatus.waitingRoom) ...[
+                              const SizedBox.shrink(),
                               const GroundingMarquee(),
                               ?startCard,
                             ],
+                            const SizedBox.shrink(),
                             const Center(child: SessionActionBar()),
                           ],
                         ),
@@ -262,8 +265,8 @@ class NotMyTurn extends ConsumerWidget {
   }
 }
 
-class _NotMyTurnGrid extends ConsumerWidget {
-  const _NotMyTurnGrid({
+class _ListeningTurnGrid extends ConsumerWidget {
+  const _ListeningTurnGrid({
     required this.event,
     required this.speakingNow,
     required this.viewportKind,

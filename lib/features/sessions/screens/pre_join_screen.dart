@@ -318,7 +318,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   Widget _buildErrorScreen(Object? error) {
     return RoomBackground(
-      child: RoomErrorScreen(
+      child: SessionErrorScreen(
         error: error,
         onRetry: _onRetry,
       ),
@@ -515,7 +515,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       overrides: [
         sessionScopeProvider.overrideWith((ref) => _sessionOptions!),
       ],
-      child: VideoRoomScreen(
+      child: VideoSessionScreen(
         sessionSlug: widget.sessionSlug,
         loadingScreen: _buildPrejoinUI(),
       ),

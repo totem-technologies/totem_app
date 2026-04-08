@@ -241,7 +241,7 @@ class SessionRoomState {
     return null;
   }
 
-  bool isMyTurn(Room room) {
+  bool amSpeaking(Room room) {
     return turn.roomState.currentSpeaker != null &&
         turn.roomState.currentSpeaker == room.localParticipant?.identity;
   }

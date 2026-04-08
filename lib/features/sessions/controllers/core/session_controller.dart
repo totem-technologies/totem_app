@@ -47,8 +47,8 @@ enum RoomScreen {
   disconnected,
   receiving,
   passing,
-  myTurn,
-  notMyTurn,
+  speaking,
+  listening,
 }
 
 /// The reason the session was diconnected.

@@ -241,7 +241,7 @@ Future<void> presentEmojiReaction(
   BuildContext context,
   String emoji, {
   GlobalKey<OverlayState>? overlayKey,
-  bool isInNotMyTurnScreen = false,
+  bool isInListeningTurnScreen = false,
 }) async {
   final overlayBox =
       (overlayKey?.currentContext ?? Overlay.of(context).context)
@@ -270,7 +270,7 @@ Future<void> presentEmojiReaction(
             };
             final double startY = switch (orientation) {
               Orientation.portrait =>
-                isInNotMyTurnScreen
+                isInListeningTurnScreen
                     ? position.dy + box.size.height / 2
                     : position.dy + box.size.height / 12,
               Orientation.landscape => position.dy + box.size.height / 4,
