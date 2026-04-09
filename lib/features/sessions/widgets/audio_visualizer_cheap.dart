@@ -178,7 +178,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   Future<void> _attachListeners() async {
     try {
       if (widget.participant != null) {
-        _participantListener = widget.participant!.createListener();
+        _participantListener = widget.participant?.createListener();
 
         _participantListener?.on<sdk.TrackMutedEvent>((e) {
           if (!mounted) return;
@@ -213,7 +213,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
           }
         });
 
-        await _visualizer!.start();
+        await _visualizer?.start();
       }
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -356,7 +356,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
     if (state == VisualizerState.active) {
       final samplesChanged =
           _lastSamples == null ||
-          _lastSamples!.length != samples.length ||
+          _lastSamples?.length != samples.length ||
           !listEquals(_lastSamples, samples);
 
       if (_cachedBarItems != null && _lastState == state && !samplesChanged) {

@@ -135,7 +135,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
                               ),
                               Text(
                                 'Keeper',
-                                style: theme.textTheme.bodySmall!.copyWith(
+                                style: theme.textTheme.bodySmall?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 12,
@@ -181,7 +181,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
                           Flexible(
                             child: SmartNameText(
                               name: activeSpeaker.name,
-                              style: theme.textTheme.titleLarge!.copyWith(
+                              style: theme.textTheme.titleLarge?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
                                 shadows: kElevationToShadow[6],

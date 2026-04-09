@@ -197,7 +197,8 @@ class SessionDeviceController extends _$SessionDeviceController {
         ?.getTrackPublications()
         .firstWhereOrNull((track) => track.kind == TrackType.VIDEO)
         ?.track;
-    if (userTrack?.currentOptions is CameraCaptureOptions) {
+    if (userTrack?.currentOptions != null &&
+        userTrack?.currentOptions is CameraCaptureOptions) {
       return (userTrack!.currentOptions as CameraCaptureOptions).deviceId;
     }
     return room
