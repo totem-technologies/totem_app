@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
@@ -58,8 +60,50 @@ ProviderContainer _createContainerWithEventOverride(String eventSlug) {
 
 void main() {
   group('SessionController', () {
-    group('initializeConnection', () {
-      test('assigns controller room and returns same instance', () async {
+    group('Connection Lifecycle', () {
+      test(
+        'initializeConnection assigns room and returns same instance',
+        () async {
+          const eventSlug = 'test-session';
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+
+          const options = SessionOptions(
+            eventSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: true,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            audioOutputOptions: AudioOutputOptions(speakerOn: true),
+          );
+
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+
+          final initializedRoom = await controller.initializeConnection(
+            roomOptions: RoomOptions(
+              defaultCameraCaptureOptions: options.cameraOptions,
+              defaultAudioCaptureOptions: const AudioCaptureOptions(),
+              defaultAudioOutputOptions: options.audioOutputOptions,
+            ),
+            url: 'wss://example.livekit.cloud',
+            token: options.token,
+          );
+
+          expect(controller.room, isNotNull);
+          expect(identical(controller.room, initializedRoom), isTrue);
+        },
+      );
+
+      test('disposeConnection clears initialized room', () async {
         const eventSlug = 'test-session';
         final container = _createContainerWithEventOverride(eventSlug);
         addTearDown(container.dispose);
@@ -84,7 +128,7 @@ void main() {
           sessionControllerProvider(options).notifier,
         );
 
-        final initializedRoom = await controller.initializeConnection(
+        await controller.initializeConnection(
           roomOptions: RoomOptions(
             defaultCameraCaptureOptions: options.cameraOptions,
             defaultAudioCaptureOptions: const AudioCaptureOptions(),
@@ -95,11 +139,12 @@ void main() {
         );
 
         expect(controller.room, isNotNull);
-        expect(identical(controller.room, initializedRoom), isTrue);
+        await controller.disposeConnection();
+        expect(controller.room, isNull);
       });
     });
 
-    group('public state mutation methods', () {
+    group('Test-Visible Helpers', () {
       const eventSlug = 'test-session';
       const options = SessionOptions(
         eventSlug: eventSlug,
@@ -110,7 +155,7 @@ void main() {
         audioOutputOptions: AudioOutputOptions(speakerOn: true),
       );
 
-      test('setKeeperDisconnected updates state', () {
+      test('sortedParticipants returns empty when room is null', () {
         final container = _createContainerWithEventOverride(eventSlug);
         addTearDown(container.dispose);
         final sub = container.listen(
@@ -124,7 +169,97 @@ void main() {
           sessionControllerProvider(options).notifier,
         );
 
-        controller.setKeeperDisconnected(true);
+        expect(controller.sortedParticipants(), isEmpty);
+      });
+
+      test(
+        'resolveMetadataState returns null roomState for empty metadata',
+        () {
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+
+          final result = controller.resolveMetadataState(
+            metadata: '',
+            lastMetadata: 'previous-metadata',
+          );
+
+          expect(result.roomState, isNull);
+          expect(result.lastMetadata, 'previous-metadata');
+        },
+      );
+
+      test('resolveMetadataState decodes and returns new roomState', () {
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+
+        const expected = RoomState(
+          keeper: 'keeper-1',
+          nextSpeaker: 'next-speaker',
+          currentSpeaker: 'current-speaker',
+          status: RoomStatus.waitingRoom,
+          turnState: TurnState.idle,
+          sessionSlug: eventSlug,
+          statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
+          talkingOrder: ['current-speaker', 'next-speaker'],
+          version: 7,
+          roundNumber: 3,
+        );
+        final metadata = jsonEncode(expected.toJson());
+
+        final result = controller.resolveMetadataState(
+          metadata: metadata,
+          lastMetadata: null,
+        );
+
+        expect(result.roomState, expected);
+        expect(result.lastMetadata, metadata);
+      });
+    });
+
+    group('Public State API', () {
+      const eventSlug = 'test-session';
+      const options = SessionOptions(
+        eventSlug: eventSlug,
+        token: 'test-token',
+        cameraEnabled: true,
+        microphoneEnabled: true,
+        cameraOptions: SessionController.defaultCameraCaptureOptions,
+        audioOutputOptions: AudioOutputOptions(speakerOn: true),
+      );
+
+      test('setKeeperDisconnected updates hasKeeperDisconnected', () {
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        final _ = container.read(
+          sessionControllerProvider(options).notifier,
+        )..setKeeperDisconnected(true);
 
         final state = container.read(sessionControllerProvider(options));
         expect(state.hasKeeperDisconnected, isTrue);
@@ -140,25 +275,24 @@ void main() {
         );
         addTearDown(sub.close);
 
-        final controller = container.read(
-          sessionControllerProvider(options).notifier,
-        );
-
-        controller.addSessionChatMessage(
-          const SessionChatMessage(
-            message: 'hello',
-            timestamp: 1,
-            id: 'm1',
-            sender: true,
-          ),
-        );
+        final _ =
+            container.read(
+              sessionControllerProvider(options).notifier,
+            )..addSessionChatMessage(
+              const SessionChatMessage(
+                message: 'hello',
+                timestamp: 1,
+                id: 'm1',
+                sender: true,
+              ),
+            );
 
         final state = container.read(sessionControllerProvider(options));
         expect(state.messages, hasLength(1));
         expect(state.messages.first.message, 'hello');
       });
 
-      test('markParticipantRemoved updates state', () {
+      test('markParticipantRemoved updates removed flag', () {
         final container = _createContainerWithEventOverride(eventSlug);
         addTearDown(container.dispose);
         final sub = container.listen(
@@ -168,17 +302,15 @@ void main() {
         );
         addTearDown(sub.close);
 
-        final controller = container.read(
+        final _ = container.read(
           sessionControllerProvider(options).notifier,
-        );
-
-        controller.markParticipantRemoved();
+        )..markParticipantRemoved();
 
         final state = container.read(sessionControllerProvider(options));
         expect(state.removed, isTrue);
       });
 
-      test('applyRoomState updates current room state', () {
+      test('applyRoomState updates roomState', () {
         final container = _createContainerWithEventOverride(eventSlug);
         addTearDown(container.dispose);
         final sub = container.listen(
@@ -232,7 +364,7 @@ void main() {
       );
     });
 
-    group('static configuration', () {
+    group('Static Defaults', () {
       test('syncTimerDuration is 20 seconds', () {
         expect(
           SessionController.syncTimerDuration,

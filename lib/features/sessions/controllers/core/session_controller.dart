@@ -32,8 +32,8 @@ export 'package:totem_app/features/sessions/controllers/utils.dart';
 
 part 'session_controller.g.dart';
 
-class _SessionRoomMetadataResult {
-  const _SessionRoomMetadataResult({
+class SessionRoomMetadataResult {
+  const SessionRoomMetadataResult({
     required this.roomState,
     required this.lastMetadata,
   });
@@ -191,16 +191,16 @@ class SessionController extends _$SessionController {
 
   void _updateParticipantsList() {
     try {
-      final sortedParticipants = _sortedParticipants();
+      final participantsSorted = sortedParticipants();
 
-      final hasKeeper = sortedParticipants.any(
+      final hasKeeper = participantsSorted.any(
         (p) => state.isKeeper(p.identity),
       );
       if (state.hasKeeperDisconnected && hasKeeper) {
         _onKeeperConnected();
       }
 
-      _dispatch(ParticipantsChanged(sortedParticipants));
+      _dispatch(ParticipantsChanged(participantsSorted));
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -262,7 +262,7 @@ class SessionController extends _$SessionController {
     if (newSessionState != null) {
       _dispatch(RoomStateChanged(newSessionState));
     } else {
-      final metadataResult = _resolveMetadataState(
+      final metadataResult = resolveMetadataState(
         metadata: room?.metadata,
         lastMetadata: _lastMetadata,
       );
@@ -424,7 +424,7 @@ class SessionController extends _$SessionController {
     _syncTimer?.cancel();
     _syncTimer = null;
 
-    _disposeConnection();
+    disposeConnection();
   }
 
   @visibleForTesting
@@ -475,7 +475,8 @@ class SessionController extends _$SessionController {
     await _room?.disconnect();
   }
 
-  Future<void> _disposeConnection() async {
+  @visibleForTesting
+  Future<void> disposeConnection() async {
     try {
       _listener
         ?..cancelAll()
@@ -516,7 +517,8 @@ class SessionController extends _$SessionController {
     }
   }
 
-  List<Participant> _sortedParticipants() {
+  @visibleForTesting
+  List<Participant> sortedParticipants() {
     final participants = <Participant>[
       if (room != null) ...[
         ...?room?.remoteParticipants.values,
@@ -531,12 +533,13 @@ class SessionController extends _$SessionController {
     );
   }
 
-  _SessionRoomMetadataResult _resolveMetadataState({
+  @visibleForTesting
+  SessionRoomMetadataResult resolveMetadataState({
     required String? metadata,
     required String? lastMetadata,
   }) {
     if (metadata == null || metadata.isEmpty) {
-      return _SessionRoomMetadataResult(
+      return SessionRoomMetadataResult(
         roomState: null,
         lastMetadata: lastMetadata,
       );
@@ -544,7 +547,7 @@ class SessionController extends _$SessionController {
 
     try {
       if (lastMetadata == null) {
-        return _SessionRoomMetadataResult(
+        return SessionRoomMetadataResult(
           roomState: RoomState.fromJson(
             jsonDecode(metadata) as Map<String, dynamic>,
           ),
@@ -553,7 +556,7 @@ class SessionController extends _$SessionController {
       }
 
       if (metadata != lastMetadata) {
-        return _SessionRoomMetadataResult(
+        return SessionRoomMetadataResult(
           roomState: RoomState.fromJson(
             jsonDecode(metadata) as Map<String, dynamic>,
           ),
@@ -568,7 +571,7 @@ class SessionController extends _$SessionController {
       );
     }
 
-    return _SessionRoomMetadataResult(
+    return SessionRoomMetadataResult(
       roomState: null,
       lastMetadata: lastMetadata,
     );
