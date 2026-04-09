@@ -428,7 +428,6 @@ class SessionController extends _$SessionController {
   }
 
   @visibleForTesting
-  @internal
   Future<Room> initializeConnection({
     required RoomOptions roomOptions,
     required String url,
