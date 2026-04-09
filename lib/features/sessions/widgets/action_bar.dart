@@ -462,9 +462,11 @@ class _ActionBarCameraSwitcherButtonOverlayState
                           ),
                         ),
                         DefaultTextStyle(
-                          style: theme.textTheme.bodyMedium!.copyWith(
-                            color: Colors.white,
-                          ),
+                          style:
+                              (theme.textTheme.bodyMedium ?? const TextStyle())
+                                  .copyWith(
+                                    color: Colors.white,
+                                  ),
                           child: const Row(
                             spacing: buttonsSpacing,
                             children: [
@@ -499,7 +501,7 @@ class ActionBarCameraButton extends StatefulWidget {
     super.key,
   });
 
-  final LocalParticipant participant;
+  final LocalParticipant? participant;
   final ActionBarButtonToggleCallback onToggle;
 
   @override
@@ -519,15 +521,15 @@ class _ActionBarCameraButtonState extends State<ActionBarCameraButton> {
   @override
   void didUpdateWidget(covariant ActionBarCameraButton oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.participant.sid != widget.participant.sid) {
+    if (oldWidget.participant?.sid != widget.participant?.sid) {
       _bindListener();
     }
   }
 
   void _bindListener() {
     _participantListener?.dispose();
-    _participantListener = widget.participant.createListener()
-      ..on<ParticipantEvent>((_) {
+    _participantListener = widget.participant?.createListener()
+      ?..on<ParticipantEvent>((_) {
         if (mounted) setState(() {});
       });
   }
@@ -539,7 +541,7 @@ class _ActionBarCameraButtonState extends State<ActionBarCameraButton> {
   }
 
   TrackPublication<Track>? get _cameraPublication {
-    return widget.participant.getTrackPublicationBySource(TrackSource.camera);
+    return widget.participant?.getTrackPublicationBySource(TrackSource.camera);
   }
 
   bool get _isCameraEnabled {
@@ -659,7 +661,7 @@ class _SessionActionBarState extends ConsumerState<SessionActionBar> {
       return const SizedBox.shrink();
     }
 
-    final user = session.room!.localParticipant!;
+    final user = session.room?.localParticipant;
 
     final microphoneButton = ActionBarMicButton(
       participant: user,

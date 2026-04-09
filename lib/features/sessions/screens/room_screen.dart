@@ -372,7 +372,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         //   This route would be a modal sheet or a dialog.
         final navigator = _roomNavigatorKey.currentState;
         if (navigator?.canPop() ?? false) {
-          navigator!.pop();
+          navigator?.pop();
           return;
         }
 

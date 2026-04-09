@@ -897,7 +897,7 @@ void main() {
       final controller = _TestSessionDeviceController.lastInstance;
       expect(controller, isNotNull);
 
-      controller!.emit(
+      controller?.emit(
         const SessionDeviceState(
           selectedCameraDeviceId: null,
           selectedAudioDeviceId: null,
@@ -938,7 +938,7 @@ void main() {
       final controller = _TestSessionDeviceController.lastInstance;
       expect(controller, isNotNull);
 
-      controller!.emit(
+      controller?.emit(
         const SessionDeviceState(
           selectedCameraDeviceId: null,
           selectedAudioDeviceId: null,

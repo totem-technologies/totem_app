@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions, logger;
+import 'package:meta/meta.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
@@ -217,13 +218,13 @@ class SessionController extends _$SessionController {
 
     logger.i(
       'Connected to LiveKit room as '
-      '"${room!.localParticipant!.identity}".',
+      '"${room?.localParticipant?.identity}".',
     );
 
     _onRoomChanges();
 
     unawaited(_applyJoinMediaState());
-    // context.room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
+    // context.room.localParticipant?.setMicrophoneEnabled(_options.microphoneEnabled)
     _dispatch(
       const ConnectionChanged(
         RoomConnectionState.connected,
@@ -315,7 +316,7 @@ class SessionController extends _$SessionController {
 
     final cameraEnabled = _cameraEnabledOverride ?? options.cameraEnabled;
 
-    await _initializeConnection(
+    await initializeConnection(
       roomOptions: RoomOptions(
         defaultCameraCaptureOptions: options.cameraOptions,
         defaultAudioCaptureOptions: const AudioCaptureOptions(),
@@ -426,15 +427,17 @@ class SessionController extends _$SessionController {
     _disposeConnection();
   }
 
-  Future<Room> _initializeConnection({
+  @visibleForTesting
+  @internal
+  Future<Room> initializeConnection({
     required RoomOptions roomOptions,
     required String url,
     required String token,
   }) async {
-    _room ??= Room(roomOptions: roomOptions);
-    await _room!.prepareConnection(url, token);
+    final room = _room ??= Room(roomOptions: roomOptions);
+    await room.prepareConnection(url, token);
 
-    _listener ??= _room!.createListener()
+    _listener ??= room.createListener()
       ..on((_) {
         if (ref.mounted) {
           _onRoomChanges();
@@ -454,7 +457,7 @@ class SessionController extends _$SessionController {
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
       ..on<ParticipantConnectedEvent>(_onParticipantConnected);
 
-    return _room!;
+    return room;
   }
 
   Future<void> _connect({
@@ -517,8 +520,8 @@ class SessionController extends _$SessionController {
   List<Participant> _sortedParticipants() {
     final participants = <Participant>[
       if (room != null) ...[
-        ...room!.remoteParticipants.values,
-        if (room!.localParticipant != null) room!.localParticipant!,
+        ...?room?.remoteParticipants.values,
+        ?room?.localParticipant,
       ],
     ];
 

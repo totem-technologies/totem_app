@@ -1,10 +1,99 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions;
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_state.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 
 void main() {
   group('SessionController', () {
+    group('initializeConnection', () {
+      test('assigns controller room and returns same instance', () async {
+        const eventSlug = 'test-session';
+        final container = ProviderContainer(
+          overrides: [
+            eventProvider(eventSlug).overrideWithValue(
+              AsyncData(
+                SessionDetailSchema(
+                slug: eventSlug,
+                title: 'Test Session',
+                space: MobileSpaceDetailSchema(
+                  slug: 'test-space',
+                  title: 'Test Space',
+                  imageLink: null,
+                  shortDescription: 'A test space.',
+                  content: '',
+                  author: PublicUserSchema(
+                    profileAvatarType: ProfileAvatarTypeEnum.td,
+                    dateCreated: DateTime(2024),
+                  ),
+                  category: null,
+                  subscribers: 0,
+                  recurring: null,
+                  price: 0,
+                  nextEvents: const [],
+                ),
+                content: '',
+                seatsLeft: 10,
+                duration: 60,
+                start: DateTime(2026, 1, 1),
+                attending: true,
+                open: true,
+                started: true,
+                cancelled: false,
+                joinable: true,
+                ended: false,
+                rsvpUrl: '',
+                joinUrl: null,
+                subscribeUrl: '',
+                calLink: '',
+                subscribed: false,
+                userTimezone: null,
+                meetingProvider: MeetingProviderEnum.livekit,
+                ),
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        const options = SessionOptions(
+          eventSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: true,
+          microphoneEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          audioOutputOptions: AudioOutputOptions(speakerOn: true),
+        );
+
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, __) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+
+        final initializedRoom = await controller.initializeConnection(
+          roomOptions: RoomOptions(
+            defaultCameraCaptureOptions: options.cameraOptions,
+            defaultAudioCaptureOptions: const AudioCaptureOptions(),
+            defaultAudioOutputOptions: options.audioOutputOptions,
+          ),
+          url: 'wss://example.livekit.cloud',
+          token: options.token,
+        );
+
+        expect(controller.room, isNotNull);
+        expect(identical(controller.room, initializedRoom), isTrue);
+      });
+    });
+
     group('static configuration', () {
       test('syncTimerDuration is 20 seconds', () {
         expect(

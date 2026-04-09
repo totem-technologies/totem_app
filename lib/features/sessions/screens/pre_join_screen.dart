@@ -199,7 +199,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       _previewVideoTrack = await widget.previewTrackFactory.createVideoTrack(
         _cameraOptions,
       );
-      await _previewVideoTrack!.start();
+      await _previewVideoTrack?.start();
     } catch (error, stackTrace) {
       _isCameraOn = false;
       ErrorHandler.logError(
@@ -219,8 +219,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
     try {
       _previewAudioTrack = await widget.previewTrackFactory.createAudioTrack();
-      await _previewAudioTrack!.enable();
-      await _previewAudioTrack!.start();
+      await _previewAudioTrack?.enable();
+      await _previewAudioTrack?.start();
       return _previewAudioTrack;
     } catch (error, stackTrace) {
       _isMicOn = false;
@@ -416,13 +416,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   Future<void> _disposePreviewVideoTrack() async {
     if (_previewVideoTrack != null) {
       try {
-        await _previewVideoTrack!.stop();
+        await _previewVideoTrack?.stop();
       } catch (e) {
         ErrorHandler.logError(e, message: 'Failed to stop preview track');
       }
 
       try {
-        await _previewVideoTrack!.dispose();
+        await _previewVideoTrack?.dispose();
       } catch (e) {
         ErrorHandler.logError(e, message: 'Failed to dispose preview track');
       } finally {
@@ -434,12 +434,12 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   Future<void> _disposePreviewAudioTrack() async {
     if (_previewAudioTrack != null) {
       try {
-        await _previewAudioTrack!.stop();
+        await _previewAudioTrack?.stop();
       } catch (e) {
         ErrorHandler.logError(e, message: 'Failed to stop preview audio track');
       }
       try {
-        await _previewAudioTrack!.dispose();
+        await _previewAudioTrack?.dispose();
       } catch (e) {
         ErrorHandler.logError(
           e,

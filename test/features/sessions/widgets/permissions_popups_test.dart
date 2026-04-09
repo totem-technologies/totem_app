@@ -171,7 +171,7 @@ void main() {
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pump();
 
-      expect(controller!.refreshCalls, 1);
+      expect(controller?.refreshCalls, 1);
     });
 
     testWidgets('tapping permission tiles triggers request methods', (
