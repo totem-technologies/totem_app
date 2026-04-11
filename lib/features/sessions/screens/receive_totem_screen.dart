@@ -7,8 +7,10 @@ import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
+import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
+import 'package:totem_app/shared/widgets/viewport_resolver.dart';
 
 class ReceiveTotemScreen extends ConsumerWidget {
   const ReceiveTotemScreen({super.key});
@@ -18,17 +20,39 @@ class ReceiveTotemScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final sessionStatus = ref.watch(roomStatusProvider);
     final session = ref.watch(currentSessionProvider);
-    final roundMessage = ref.watch(roundMessageProvider);
+    final roundPrompt = ref.watch(roundMessageProvider);
     final isCameraOn = ref.watch(isCameraOnProvider);
+
+    Future<bool> onAccept() async {
+      try {
+        ref.read(sessionCuesServiceProvider).pulseSwipeCompletion();
+        await session?.keeper.acceptTotem();
+        return true;
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Accept Totem failed',
+        );
+        if (context.mounted) {
+          showErrorPopup(
+            context,
+            icon: TotemIcons.errorOutlined,
+            title: 'Something went wrong',
+            message: 'We were unable to accept the totem. Please try again.',
+          );
+        }
+
+        return false;
+      }
+    }
 
     return RoomBackground(
       status: sessionStatus,
       padding: const EdgeInsetsDirectional.all(20),
       child: SafeArea(
-        child: OrientationBuilder(
-          builder: (context, orientation) {
-            final isLandscape = orientation == Orientation.landscape;
-
+        child: ViewportResolver(
+          builder: (context, viewportKind) {
             final titleWidget = Column(
               spacing: 16,
               children: [
@@ -63,50 +87,28 @@ class ReceiveTotemScreen extends ConsumerWidget {
               ),
             );
 
+            final roundPromptText = roundPrompt != null
+                ? Text(
+                    '"$roundPrompt"',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontStyle: FontStyle.italic,
+                    ),
+                    textAlign: TextAlign.center,
+                  )
+                : null;
+
             final receiveSlider = Padding(
               padding: const EdgeInsetsDirectional.symmetric(horizontal: 30),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 spacing: 20,
                 children: [
-                  if (roundMessage != null)
-                    Text(
-                      '"$roundMessage"',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontStyle: FontStyle.italic,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
+                  ?roundPromptText,
                   SizedBox(
                     height: 50,
                     child: ActionSliderButton(
                       text: 'Receive',
-                      onActionCompleted: () async {
-                        try {
-                          ref
-                              .read(sessionCuesServiceProvider)
-                              .pulseSwipeCompletion();
-                          await session?.keeper.acceptTotem();
-                          return true;
-                        } catch (error, stackTrace) {
-                          ErrorHandler.logError(
-                            error,
-                            stackTrace: stackTrace,
-                            message: 'Accept Totem failed',
-                          );
-                          if (context.mounted) {
-                            showErrorPopup(
-                              context,
-                              icon: TotemIcons.errorOutlined,
-                              title: 'Something went wrong',
-                              message:
-                                  'We were unable to accept the totem. Please try again.',
-                            );
-                          }
-
-                          return false;
-                        }
-                      },
+                      onActionCompleted: onAccept,
                       keepLoadingOnSuccess: true,
                     ),
                   ),
@@ -114,37 +116,50 @@ class ReceiveTotemScreen extends ConsumerWidget {
               ),
             );
 
-            if (isLandscape) {
-              return Row(
-                spacing: 16,
-                children: [
-                  Expanded(child: videoCard),
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      spacing: 20,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        titleWidget,
-                        receiveSlider,
-                        const SessionActionBar(),
-                      ],
+            switch (viewportKind) {
+              case ViewportKind.smallPortrait:
+                return Column(
+                  spacing: 40,
+                  children: [
+                    titleWidget,
+                    Expanded(child: videoCard),
+                    receiveSlider,
+                    const SessionActionBar(),
+                  ],
+                );
+              case ViewportKind.smallLandscape:
+                return Row(
+                  spacing: 16,
+                  children: [
+                    Expanded(child: videoCard),
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        spacing: 20,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          titleWidget,
+                          receiveSlider,
+                          const SessionActionBar(),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              );
-            } else {
-              return Column(
-                spacing: 40,
-                children: [
-                  titleWidget,
-                  Expanded(
-                    child: videoCard,
-                  ),
-                  receiveSlider,
-                  const SessionActionBar(),
-                ],
-              );
+                  ],
+                );
+              case ViewportKind.mediumPlus:
+                return Column(
+                  spacing: 20,
+                  children: [
+                    Expanded(child: videoCard),
+                    ?roundPromptText,
+                    TransitionCard(
+                      type: TotemCardTransitionType.receive,
+                      onActionPressed: onAccept,
+                      keepActionLoadingOnSuccess: true,
+                    ),
+                    const SessionActionBar(),
+                  ],
+                );
             }
           },
         ),

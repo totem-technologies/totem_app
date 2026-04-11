@@ -28,12 +28,14 @@ class TransitionCardContainer extends StatelessWidget {
               borderRadius: BorderRadius.circular(25),
             ),
             child: Padding(
-              padding: const EdgeInsetsDirectional.only(
-                top: 12,
-                start: 16,
-                end: 16,
-                bottom: 16,
-              ),
+              padding: constraints.maxWidth < 500
+                  ? const EdgeInsetsDirectional.only(
+                      top: 12,
+                      start: 16,
+                      end: 16,
+                      bottom: 16,
+                    )
+                  : const EdgeInsetsDirectional.all(16),
               child: Flex(
                 direction: constraints.maxWidth < 500
                     ? Axis.vertical
