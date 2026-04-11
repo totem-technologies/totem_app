@@ -94,6 +94,11 @@ RoomScreen? resolveCurrentScreen(Ref ref) {
   final session = ref.watch(currentSessionProvider);
   final sessionState = ref.watch(currentSessionStateProvider);
   final connectionState = ref.watch(connectionStateProvider);
+
+  if (session == null || sessionState == null) {
+    return null;
+  }
+
   switch (connectionState) {
     case RoomConnectionState.connecting:
       return RoomScreen.loading;
@@ -102,24 +107,26 @@ RoomScreen? resolveCurrentScreen(Ref ref) {
     case RoomConnectionState.disconnected:
       return RoomScreen.disconnected;
     case RoomConnectionState.connected:
-      if (session?.room == null) {
+      if (session.room == null) {
         return RoomScreen.disconnected;
       }
 
-      if (sessionState?.roomState.status == RoomStatus.ended) {
+      final room = session.room!;
+
+      if (sessionState.roomState.status == RoomStatus.ended) {
         return RoomScreen.disconnected;
       }
 
-      if (session?.room?.localParticipant == null) {
+      if (room.localParticipant == null) {
         return RoomScreen.disconnected;
       }
 
-      if (sessionState?.roomState.turnState == TurnState.passing &&
-          sessionState!.amNext(session!.room!)) {
+      if (sessionState.roomState.turnState == TurnState.passing &&
+          sessionState.amNext(room)) {
         return RoomScreen.receiving;
       }
 
-      if (sessionState!.amSpeaking(session!.room!)) {
+      if (sessionState.amSpeaking(session.room!)) {
         return RoomScreen.speaking;
       } else {
         return RoomScreen.listening;

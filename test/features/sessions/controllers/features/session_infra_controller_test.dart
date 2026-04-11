@@ -32,7 +32,10 @@ void main() {
       ).thenAnswer((_) async {});
     });
 
-    ProviderContainer createContainer(AuthState authState) {
+    ProviderContainer createContainer(
+      AuthState authState, {
+      bool registerTearDown = true,
+    }) {
       final container = ProviderContainer(
         overrides: [
           authControllerProvider.overrideWith(
@@ -41,7 +44,9 @@ void main() {
           screenProtectionProvider.overrideWithValue(mockScreenProtection),
         ],
       );
-      addTearDown(container.dispose);
+      if (registerTearDown) {
+        addTearDown(container.dispose);
+      }
       return container;
     }
 
@@ -118,7 +123,7 @@ void main() {
       ).called(1);
     });
 
-    test('dispose calls deactivate', () async {
+    test('disposing the container clears screen protection', () async {
       final authState = AuthState.authenticated(
         user: UserSchema(
           email: 'test@example.com',
@@ -128,8 +133,10 @@ void main() {
           dateCreated: DateTime.now(),
         ),
       );
-      final container = createContainer(authState)
-        ..read(sessionInfraControllerProvider);
+      final container = createContainer(
+        authState,
+        registerTearDown: false,
+      )..read(sessionInfraControllerProvider);
 
       final controller = container.read(
         sessionInfraControllerProvider.notifier,
@@ -139,7 +146,7 @@ void main() {
         () => mockScreenProtection.setCaptureProtectionEnabled(true),
       ).called(1);
 
-      controller.dispose();
+      container.dispose();
 
       await Future<void>.delayed(const Duration(milliseconds: 10));
       verify(

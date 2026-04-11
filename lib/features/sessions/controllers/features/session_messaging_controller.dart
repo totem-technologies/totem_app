@@ -109,7 +109,7 @@ class SessionMessagingController extends _$SessionMessagingController {
 
         // If participant identity is null, message is server-originated.
         if (event.participant?.identity != null &&
-            event.participant!.identity != _state.roomState.keeper) {
+            event.participant?.identity != _state.roomState.keeper) {
           logger.d(
             'Participant removed event is not from the keeper, ignoring.',
           );

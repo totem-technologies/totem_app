@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions, logger;
+import 'package:meta/meta.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
@@ -31,8 +32,8 @@ export 'package:totem_app/features/sessions/controllers/utils.dart';
 
 part 'session_controller.g.dart';
 
-class _SessionRoomMetadataResult {
-  const _SessionRoomMetadataResult({
+class SessionRoomMetadataResult {
+  const SessionRoomMetadataResult({
     required this.roomState,
     required this.lastMetadata,
   });
@@ -190,16 +191,16 @@ class SessionController extends _$SessionController {
 
   void _updateParticipantsList() {
     try {
-      final sortedParticipants = _sortedParticipants();
+      final participantsSorted = sortedParticipants();
 
-      final hasKeeper = sortedParticipants.any(
+      final hasKeeper = participantsSorted.any(
         (p) => state.isKeeper(p.identity),
       );
       if (state.hasKeeperDisconnected && hasKeeper) {
         _onKeeperConnected();
       }
 
-      _dispatch(ParticipantsChanged(sortedParticipants));
+      _dispatch(ParticipantsChanged(participantsSorted));
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -217,13 +218,13 @@ class SessionController extends _$SessionController {
 
     logger.i(
       'Connected to LiveKit room as '
-      '"${room!.localParticipant!.identity}".',
+      '"${room?.localParticipant?.identity}".',
     );
 
     _onRoomChanges();
 
     unawaited(_applyJoinMediaState());
-    // context.room.localParticipant!.setMicrophoneEnabled(_options.microphoneEnabled)
+    // context.room.localParticipant?.setMicrophoneEnabled(_options.microphoneEnabled)
     _dispatch(
       const ConnectionChanged(
         RoomConnectionState.connected,
@@ -261,7 +262,7 @@ class SessionController extends _$SessionController {
     if (newSessionState != null) {
       _dispatch(RoomStateChanged(newSessionState));
     } else {
-      final metadataResult = _resolveMetadataState(
+      final metadataResult = resolveMetadataState(
         metadata: room?.metadata,
         lastMetadata: _lastMetadata,
       );
@@ -315,7 +316,7 @@ class SessionController extends _$SessionController {
 
     final cameraEnabled = _cameraEnabledOverride ?? options.cameraEnabled;
 
-    await _initializeConnection(
+    await initializeConnection(
       roomOptions: RoomOptions(
         defaultCameraCaptureOptions: options.cameraOptions,
         defaultAudioCaptureOptions: const AudioCaptureOptions(),
@@ -423,18 +424,19 @@ class SessionController extends _$SessionController {
     _syncTimer?.cancel();
     _syncTimer = null;
 
-    _disposeConnection();
+    disposeConnection();
   }
 
-  Future<Room> _initializeConnection({
+  @visibleForTesting
+  Future<Room> initializeConnection({
     required RoomOptions roomOptions,
     required String url,
     required String token,
   }) async {
-    _room ??= Room(roomOptions: roomOptions);
-    await _room!.prepareConnection(url, token);
+    final room = _room ??= Room(roomOptions: roomOptions);
+    await room.prepareConnection(url, token);
 
-    _listener ??= _room!.createListener()
+    _listener ??= room.createListener()
       ..on((_) {
         if (ref.mounted) {
           _onRoomChanges();
@@ -454,7 +456,7 @@ class SessionController extends _$SessionController {
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
       ..on<ParticipantConnectedEvent>(_onParticipantConnected);
 
-    return _room!;
+    return room;
   }
 
   Future<void> _connect({
@@ -473,7 +475,8 @@ class SessionController extends _$SessionController {
     await _room?.disconnect();
   }
 
-  Future<void> _disposeConnection() async {
+  @visibleForTesting
+  Future<void> disposeConnection() async {
     try {
       _listener
         ?..cancelAll()
@@ -514,11 +517,12 @@ class SessionController extends _$SessionController {
     }
   }
 
-  List<Participant> _sortedParticipants() {
+  @visibleForTesting
+  List<Participant> sortedParticipants() {
     final participants = <Participant>[
       if (room != null) ...[
-        ...room!.remoteParticipants.values,
-        if (room!.localParticipant != null) room!.localParticipant!,
+        ...?room?.remoteParticipants.values,
+        ?room?.localParticipant,
       ],
     ];
 
@@ -529,12 +533,13 @@ class SessionController extends _$SessionController {
     );
   }
 
-  _SessionRoomMetadataResult _resolveMetadataState({
+  @visibleForTesting
+  SessionRoomMetadataResult resolveMetadataState({
     required String? metadata,
     required String? lastMetadata,
   }) {
     if (metadata == null || metadata.isEmpty) {
-      return _SessionRoomMetadataResult(
+      return SessionRoomMetadataResult(
         roomState: null,
         lastMetadata: lastMetadata,
       );
@@ -542,7 +547,7 @@ class SessionController extends _$SessionController {
 
     try {
       if (lastMetadata == null) {
-        return _SessionRoomMetadataResult(
+        return SessionRoomMetadataResult(
           roomState: RoomState.fromJson(
             jsonDecode(metadata) as Map<String, dynamic>,
           ),
@@ -551,7 +556,7 @@ class SessionController extends _$SessionController {
       }
 
       if (metadata != lastMetadata) {
-        return _SessionRoomMetadataResult(
+        return SessionRoomMetadataResult(
           roomState: RoomState.fromJson(
             jsonDecode(metadata) as Map<String, dynamic>,
           ),
@@ -566,7 +571,7 @@ class SessionController extends _$SessionController {
       );
     }
 
-    return _SessionRoomMetadataResult(
+    return SessionRoomMetadataResult(
       roomState: null,
       lastMetadata: lastMetadata,
     );

@@ -13,8 +13,11 @@ part 'session_infra_controller.g.dart';
 
 @riverpod
 class SessionInfraController extends _$SessionInfraController {
+  late final ScreenProtectionService _screenProtectionService;
+
   @override
   void build() {
+    _screenProtectionService = ref.read(screenProtectionProvider);
     ref.onDispose(dispose);
   }
 
@@ -179,9 +182,7 @@ class SessionInfraController extends _$SessionInfraController {
       final email = ref.read(authControllerProvider).user?.email;
       final shouldProtect =
           !ScreenProtectionService.shouldAllowScreenCaptureForEmail(email);
-      ref
-          .read(screenProtectionProvider)
-          .setCaptureProtectionEnabled(shouldProtect);
+      _screenProtectionService.setCaptureProtectionEnabled(shouldProtect);
       _screenProtectionEnabled = shouldProtect;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -194,7 +195,7 @@ class SessionInfraController extends _$SessionInfraController {
 
   void _disableScreenProtection() {
     try {
-      ref.read(screenProtectionProvider).setCaptureProtectionEnabled(false);
+      _screenProtectionService.setCaptureProtectionEnabled(false);
       _screenProtectionEnabled = false;
     } catch (error, stackTrace) {
       ErrorHandler.logError(

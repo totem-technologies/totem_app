@@ -272,7 +272,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
       if (!mounted || generation != _listenerGeneration) return;
 
       if (widget.participant != null) {
-        _participantListener = widget.participant!.createListener();
+        _participantListener = widget.participant?.createListener();
         _participantListener?.on<sdk.TrackMutedEvent>((e) {
           if (!mounted) return;
           _backgroundSamples = List.filled(widget.options.barCount, 0);
