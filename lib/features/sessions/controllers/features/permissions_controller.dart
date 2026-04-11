@@ -1,5 +1,5 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-import 'package:meta/meta.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
@@ -76,13 +76,17 @@ class PermissionsController extends _$PermissionsController {
       final camera = await Permission.camera.status;
       final microphone = await Permission.microphone.status;
 
-      final notifPermission =
-          await FlutterForegroundTask.checkNotificationPermission();
-      final notificationStatus =
-          notifPermission == NotificationPermission.granted
-          ? PermissionStatus.granted
-          : PermissionStatus.denied;
-
+      PermissionStatus notificationStatus = PermissionStatus.denied;
+      if (!(kIsWeb || kIsWasm)) {
+        final notificationsPermission =
+            await FlutterForegroundTask.checkNotificationPermission();
+        notificationStatus =
+            notificationsPermission == NotificationPermission.granted
+            ? PermissionStatus.granted
+            : PermissionStatus.denied;
+      } else {
+        notificationStatus = await Permission.notification.status;
+      }
       return PermissionsState(
         cameraStatus: camera,
         microphoneStatus: microphone,
@@ -108,6 +112,34 @@ class PermissionsController extends _$PermissionsController {
         message: 'Failed to refresh permission statuses',
       );
       state = AsyncValue.data(_currentOrDefault);
+    }
+  }
+
+  Future<void> requestPermissions() async {
+    try {
+      final statuses = await [
+        Permission.camera,
+        Permission.microphone,
+        Permission.notification,
+      ].request();
+      state = AsyncValue.data(
+        _currentOrDefault.copyWith(
+          cameraStatus:
+              statuses[Permission.camera] ?? _currentOrDefault.cameraStatus,
+          microphoneStatus:
+              statuses[Permission.microphone] ??
+              _currentOrDefault.microphoneStatus,
+          notificationStatus:
+              statuses[Permission.notification] ??
+              _currentOrDefault.notificationStatus,
+        ),
+      );
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to request permissions',
+      );
     }
   }
 
@@ -167,11 +199,16 @@ class PermissionsController extends _$PermissionsController {
 
   Future<void> requestNotification() async {
     try {
-      final result =
-          await FlutterForegroundTask.requestNotificationPermission();
-      final status = result == NotificationPermission.granted
-          ? PermissionStatus.granted
-          : PermissionStatus.denied;
+      PermissionStatus status;
+      if (kIsWeb || kIsWasm) {
+        status = await Permission.notification.request();
+      } else {
+        final result =
+            await FlutterForegroundTask.requestNotificationPermission();
+        status = result == NotificationPermission.granted
+            ? PermissionStatus.granted
+            : PermissionStatus.denied;
+      }
 
       state = AsyncValue.data(
         _currentOrDefault.copyWith(notificationStatus: status),

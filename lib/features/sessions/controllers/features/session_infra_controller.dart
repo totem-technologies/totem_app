@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
@@ -69,24 +70,27 @@ class SessionInfraController extends _$SessionInfraController {
   Future<void> _setupBackgroundMode(SessionDetailSchema? event) async {
     try {
       await requestPermissions();
-      FlutterForegroundTask.init(
-        androidNotificationOptions: AndroidNotificationOptions(
-          channelId: 'totem_session',
-          channelName: 'Totem Session',
-          channelImportance: NotificationChannelImportance.LOW,
-          priority: NotificationPriority.LOW,
-        ),
-        iosNotificationOptions: const IOSNotificationOptions(
-          showNotification: false,
-          playSound: false,
-        ),
-        foregroundTaskOptions: ForegroundTaskOptions(
-          eventAction: ForegroundTaskEventAction.nothing(),
-          allowWakeLock: true,
-          allowWifiLock: true,
-        ),
-      );
-      await _startBackgroundService(event);
+
+      if (!(kIsWeb || kIsWasm)) {
+        FlutterForegroundTask.init(
+          androidNotificationOptions: AndroidNotificationOptions(
+            channelId: 'totem_session',
+            channelName: 'Totem Session',
+            channelImportance: NotificationChannelImportance.LOW,
+            priority: NotificationPriority.LOW,
+          ),
+          iosNotificationOptions: const IOSNotificationOptions(
+            showNotification: false,
+            playSound: false,
+          ),
+          foregroundTaskOptions: ForegroundTaskOptions(
+            eventAction: ForegroundTaskEventAction.nothing(),
+            allowWakeLock: true,
+            allowWifiLock: true,
+          ),
+        );
+        await _startBackgroundService(event);
+      }
       _backgroundModeEnabled = true;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -158,23 +162,37 @@ class SessionInfraController extends _$SessionInfraController {
   }
 
   static Future<bool> requestPermissions() async {
-    var notificationPermission =
-        await FlutterForegroundTask.checkNotificationPermission();
-    if (notificationPermission != NotificationPermission.granted) {
-      notificationPermission =
-          await FlutterForegroundTask.requestNotificationPermission();
+    if (kIsWeb || kIsWasm) {
+      // Infra permissions aren't relevant on web, so we can skip requesting them.
+      return true;
+    }
+    if (Platform.isAndroid || Platform.isIOS) {
+      try {
+        var notificationPermission =
+            await FlutterForegroundTask.checkNotificationPermission();
+        if (notificationPermission != NotificationPermission.granted) {
+          notificationPermission =
+              await FlutterForegroundTask.requestNotificationPermission();
+        }
+
+        if (notificationPermission != NotificationPermission.granted) {
+          return false;
+        }
+
+        if (Platform.isAndroid &&
+            !await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
+          return FlutterForegroundTask.requestIgnoreBatteryOptimization();
+        }
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Error requesting notification permission',
+        );
+      }
     }
 
-    if (notificationPermission != NotificationPermission.granted) {
-      return false;
-    }
-
-    if (Platform.isAndroid &&
-        !await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
-      return FlutterForegroundTask.requestIgnoreBatteryOptimization();
-    }
-
-    return true;
+    return false;
   }
 
   void _applyScreenCapturePolicy() {

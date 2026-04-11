@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,10 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 
 Future<void> showBackgroundActivityDialog(BuildContext context) async {
+  if (kIsWeb || kIsWasm) {
+    // Background mode isn't relevant on web, so we can skip showing the dialog.
+    return;
+  }
   final isIgnored = await FlutterForegroundTask.isIgnoringBatteryOptimizations;
 
   if (isIgnored || !context.mounted) {
@@ -95,8 +100,22 @@ Future<bool> showPermissionsRequestSheet(BuildContext context) async {
     if (currentPermissions.requiredPermissionsGranted) {
       return true;
     }
-  } catch (_) {
+  } catch (error) {
     // Fall back to showing the sheet if the initial permission read fails.
+  }
+
+  if (kIsWeb || kIsWasm) {
+    try {
+      final permissions = container.read(
+        permissionsControllerProvider.notifier,
+      );
+      await permissions.requestPermissions();
+
+      return (await permissions.currentStatuses).requiredPermissionsGranted;
+    } catch (error) {
+      // If checking web permissions fails, we'll show the sheet as a fallback.
+    }
+    return false;
   }
 
   if (!context.mounted) return false;

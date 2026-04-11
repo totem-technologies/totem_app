@@ -126,7 +126,7 @@ class TransitionCard extends StatelessWidget {
                   'Your session will start soon. Please check your audio and video before joining.',
                   textAlign: TextAlign.center,
                 ),
-                if (actionButton != null) actionButton,
+                ?actionButton,
               ],
             ),
           )
