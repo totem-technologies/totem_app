@@ -14,6 +14,7 @@ import 'package:totem_app/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
+import 'package:totem_app/shared/widgets/viewport_resolver.dart';
 
 class SpeakingTurnScreen extends ConsumerStatefulWidget {
   const SpeakingTurnScreen({required this.event, super.key});
@@ -57,11 +58,10 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
     return RoomBackground(
       status: roomStatus,
       child: SafeArea(
-        child: OrientationBuilder(
-          builder: (context, orientation) {
-            final isLandscape = orientation == Orientation.landscape;
+        child: ViewportResolver(
+          builder: (context, viewportKind) {
             final participantGrid = _SpeakingTurnGrid(
-              isLandscape: isLandscape,
+              isLandscape: viewportKind.isLarge,
               event: widget.event,
             );
 
@@ -123,7 +123,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                 passCard = normalPassCard;
             }
             final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-            final restingBottom = switch (isLandscape) {
+            final restingBottom = switch (viewportKind.isLarge) {
               true => 180,
               false => 80,
             };
@@ -134,46 +134,60 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
             final double yOffset = keyboardInset > 0
                 ? -math.max(0.0, (keyboardInset + 16) - restingBottom)
                 : 0.0;
-            if (isLandscape) {
-              return Column(
-                spacing: 16,
-                children: [
-                  Expanded(
-                    child: Row(
-                      spacing: 16,
-                      children: [
-                        Expanded(child: participantGrid),
-                        Flexible(
-                          child: Column(
-                            spacing: 16,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Transform.translate(
-                                offset: Offset(0, yOffset),
-                                child: passCard,
-                              ),
-                              const SessionActionBar(),
-                            ],
-                          ),
-                        ),
-                      ],
+
+            switch (viewportKind) {
+              case ViewportKind.smallPortrait:
+                return Column(
+                  spacing: 20,
+                  children: [
+                    Expanded(child: participantGrid),
+                    Transform.translate(
+                      offset: Offset(0, yOffset),
+                      child: passCard,
                     ),
-                  ),
-                ],
-              );
-            } else {
-              return Column(
-                spacing: 20,
-                children: [
-                  Expanded(child: participantGrid),
-                  Transform.translate(
-                    offset: Offset(0, yOffset),
-                    child: passCard,
-                  ),
-                  const SessionActionBar(),
-                ],
-              );
+                    const SessionActionBar(),
+                  ],
+                );
+              case ViewportKind.smallLandscape:
+                return Column(
+                  spacing: 16,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        spacing: 16,
+                        children: [
+                          Expanded(child: participantGrid),
+                          Flexible(
+                            child: Column(
+                              spacing: 16,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Transform.translate(
+                                  offset: Offset(0, yOffset),
+                                  child: passCard,
+                                ),
+                                const SessionActionBar(),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              case ViewportKind.mediumPlus:
+                return Column(
+                  spacing: 16,
+                  children: [
+                    Expanded(child: participantGrid),
+                    Transform.translate(
+                      offset: Offset(0, yOffset),
+                      child: passCard,
+                    ),
+                    const SessionActionBar(),
+                  ],
+                );
             }
           },
         ),

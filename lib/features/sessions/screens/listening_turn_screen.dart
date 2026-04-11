@@ -8,7 +8,6 @@ import 'package:totem_app/features/sessions/providers/session_scope_provider.dar
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/grounding_marquee.dart';
-import 'package:totem_app/features/sessions/widgets/large_screen_header.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 import 'package:totem_app/shared/widgets/viewport_resolver.dart';
@@ -198,7 +197,6 @@ class ListeningTurnScreen extends ConsumerWidget {
                 child: Column(
                   spacing: 10,
                   children: [
-                    const SessionStatusHeader(),
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsetsDirectional.all(10.0),
