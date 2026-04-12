@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/shared/widgets/viewport_resolver.dart';
 
 // TODO(web): Emoji bar should be at the left bottom of the screen.
 
@@ -220,18 +221,20 @@ Future<void> presentEmojiReaction(
   try {
     entry = OverlayEntry(
       builder: (context) {
-        return OrientationBuilder(
-          builder: (context, orientation) {
-            final double startX = switch (orientation) {
-              Orientation.portrait => position.dx + box.size.width * 0.15,
-              Orientation.landscape => position.dx + box.size.width * 0.4,
+        return ViewportResolver(
+          builder: (context, viewportKind) {
+            final double startX = switch (viewportKind) {
+              ViewportKind.smallPortrait => position.dx + box.size.width * 0.15,
+              ViewportKind.smallLandscape => position.dx + box.size.width * 0.4,
+              ViewportKind.mediumPlus => position.dx + box.size.width * 0.075,
             };
-            final double startY = switch (orientation) {
-              Orientation.portrait =>
+            final double startY = switch (viewportKind) {
+              ViewportKind.smallPortrait =>
                 isInListeningTurnScreen
                     ? position.dy + box.size.height / 2
                     : position.dy + box.size.height / 12,
-              Orientation.landscape => position.dy + box.size.height / 4,
+              ViewportKind.smallLandscape => position.dy + box.size.height / 4,
+              ViewportKind.mediumPlus => position.dy + box.size.height / 16,
             };
             return Stack(
               children: [
