@@ -5,23 +5,42 @@ import 'package:totem_app/features/sessions/controllers/core/session_controller.
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
+import 'package:totem_app/shared/widgets/viewport_resolver.dart';
 
 Future<void> showBannedParticipantsSheet(
   BuildContext context,
   SessionController session,
   SessionRoomState state,
 ) {
-  return showModalBottomSheet(
-    context: context,
-    showDragHandle: false,
-    backgroundColor: const Color(0xFFF3F1E9),
-    isScrollControlled: true,
-    useSafeArea: true,
-    builder: (context) => BannedParticipantsSheet(
-      session: session,
-      state: state,
-    ),
-  );
+  switch (ViewportResolver.getViewportKind(context)) {
+    case ViewportKind.smallPortrait:
+    case ViewportKind.smallLandscape:
+      return showModalBottomSheet(
+        context: context,
+        showDragHandle: false,
+        backgroundColor: const Color(0xFFF3F1E9),
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (context) => BannedParticipantsSheet(
+          session: session,
+          state: state,
+        ),
+      );
+    case ViewportKind.mediumPlus:
+      return showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          backgroundColor: const Color(0xFFF3F1E9),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: SizedBox(
+            width: 400,
+            child: BannedParticipantsSheet(session: session, state: state),
+          ),
+        ),
+      );
+  }
 }
 
 class BannedParticipantsSheet extends ConsumerWidget {
@@ -40,9 +59,10 @@ class BannedParticipantsSheet extends ConsumerWidget {
     final bannedParticipants = state.roomState.bannedParticipants;
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         const SheetDragHandle(),
-        Expanded(
+        Flexible(
           child: CustomScrollView(
             shrinkWrap: true,
             slivers: [

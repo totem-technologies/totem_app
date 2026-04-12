@@ -19,22 +19,22 @@ class ViewportResolver extends StatelessWidget {
 
   final ViewportResolverBuilder builder;
 
-  @override
-  Widget build(BuildContext context) {
+  static ViewportKind getViewportKind(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final orientation = MediaQuery.orientationOf(context);
 
-    final viewportKind = () {
-      if (size.width < 600) {
-        return switch (orientation) {
-          Orientation.portrait => ViewportKind.smallPortrait,
-          Orientation.landscape => ViewportKind.smallLandscape,
-        };
-      } else {
-        return ViewportKind.mediumPlus;
-      }
-    }();
+    if (size.width < 600) {
+      return switch (orientation) {
+        Orientation.portrait => ViewportKind.smallPortrait,
+        Orientation.landscape => ViewportKind.smallLandscape,
+      };
+    } else {
+      return ViewportKind.mediumPlus;
+    }
+  }
 
-    return builder(context, viewportKind);
+  @override
+  Widget build(BuildContext context) {
+    return builder(context, getViewportKind(context));
   }
 }

@@ -328,8 +328,8 @@ class ParticipantControlButton extends ConsumerWidget {
     return GestureDetector(
       onTap: () => _showParticipantMenu(context),
       child: Container(
-        width: 24,
-        height: 24,
+        width: 20,
+        height: 20,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: backgroundColor,
@@ -338,7 +338,7 @@ class ParticipantControlButton extends ConsumerWidget {
         alignment: AlignmentDirectional.center,
         child: const TotemIcon(
           TotemIcons.moreVertical,
-          size: 20,
+          size: 16,
           color: Colors.white,
         ),
       ),

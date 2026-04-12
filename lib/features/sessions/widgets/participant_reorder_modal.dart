@@ -9,25 +9,48 @@ import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
+import 'package:totem_app/shared/widgets/viewport_resolver.dart';
 
-Future<void> showParticipantReorderWidget(
+Future<void> showParticipantReorderModals(
   BuildContext context,
   SessionController session,
   SessionRoomState state,
   SessionDetailSchema event,
 ) {
-  return showModalBottomSheet(
-    context: context,
-    showDragHandle: false,
-    backgroundColor: const Color(0xFFF3F1E9),
-    isScrollControlled: true,
-    useSafeArea: true,
-    builder: (context) => ParticipantReorderWidget(
-      session: session,
-      state: state,
-      event: event,
-    ),
-  );
+  switch (ViewportResolver.getViewportKind(context)) {
+    case ViewportKind.smallPortrait:
+    case ViewportKind.smallLandscape:
+      return showModalBottomSheet(
+        context: context,
+        showDragHandle: true,
+        backgroundColor: const Color(0xFFF3F1E9),
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (context) => ParticipantReorderWidget(
+          session: session,
+          state: state,
+          event: event,
+        ),
+      );
+    case ViewportKind.mediumPlus:
+      return showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          backgroundColor: const Color(0xFFF3F1E9),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: SizedBox(
+            width: 400,
+            child: ParticipantReorderWidget(
+              session: session,
+              state: state,
+              event: event,
+            ),
+          ),
+        ),
+      );
+  }
 }
 
 class ParticipantReorderWidget extends ConsumerStatefulWidget {
@@ -83,9 +106,10 @@ class _ParticipantReorderWidgetState
       child: Material(
         type: MaterialType.transparency,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             const SheetDragHandle(),
-            Expanded(
+            Flexible(
               child: CustomScrollView(
                 shrinkWrap: true,
                 slivers: [
@@ -273,6 +297,8 @@ class _ParticipantReorderItem extends ConsumerWidget {
     final foregroundColor = !isSpeakingNow
         ? theme.colorScheme.onPrimaryContainer
         : theme.colorScheme.onPrimary;
+
+    // TODO(totem): When tapping on a participant, show a modal with their info
 
     return Container(
       margin: const EdgeInsetsDirectional.only(bottom: 8),

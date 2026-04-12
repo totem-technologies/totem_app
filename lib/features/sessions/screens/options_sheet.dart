@@ -14,7 +14,7 @@ import 'package:totem_app/features/sessions/controllers/core/session_controller.
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/widgets/banned_participants_sheet.dart';
-import 'package:totem_app/features/sessions/widgets/participant_reorder_sheet.dart';
+import 'package:totem_app/features/sessions/widgets/participant_reorder_modal.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
@@ -171,7 +171,7 @@ class OptionsSheet extends ConsumerWidget {
                   icon: TotemIcons.reorderParticipants,
                   onTap: () {
                     Navigator.of(context).pop();
-                    showParticipantReorderWidget(
+                    showParticipantReorderModals(
                       context,
                       currentSession,
                       state,
