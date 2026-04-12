@@ -51,7 +51,7 @@ class RoomBackground extends StatelessWidget {
             color: AppTheme.slate,
           );
 
-          final foregroudColor = switch (status) {
+          final foregroundColor = switch (status) {
             RoomStatus.waitingRoom => Colors.black,
             _ => Colors.white,
           };
@@ -66,13 +66,13 @@ class RoomBackground extends StatelessWidget {
               data: Theme.of(context).copyWith(
                 scaffoldBackgroundColor: Colors.transparent,
                 textTheme: Theme.of(context).textTheme.apply(
-                  bodyColor: foregroudColor,
-                  displayColor: foregroudColor,
-                  decorationColor: foregroudColor,
+                  bodyColor: foregroundColor,
+                  displayColor: foregroundColor,
+                  decorationColor: foregroundColor,
                 ),
               ),
               child: DefaultTextStyle.merge(
-                style: TextStyle(color: foregroudColor),
+                style: TextStyle(color: foregroundColor),
                 child: Material(
                   type: MaterialType.transparency,
                   child: child,

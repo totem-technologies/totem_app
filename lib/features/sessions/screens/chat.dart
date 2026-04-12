@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
@@ -74,16 +75,20 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
   final _messageController = TextEditingController();
   int _previousMessageCount = 0;
 
-  void _scrollToBottom(ScrollController scrollController) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+  Future<void> _scrollToBottom(ScrollController scrollController) async {
+    Future<void> jumpToBottom() async {
       if (!scrollController.hasClients) return;
-      scrollController.jumpTo(scrollController.position.maxScrollExtent);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (scrollController.hasClients) {
-          scrollController.jumpTo(scrollController.position.maxScrollExtent);
-        }
-      });
-    });
+
+      final position = scrollController.position;
+      if (!position.hasContentDimensions) return;
+
+      scrollController.jumpTo(position.maxScrollExtent);
+    }
+
+    await SchedulerBinding.instance.endOfFrame;
+    await jumpToBottom();
+    await SchedulerBinding.instance.endOfFrame;
+    await jumpToBottom();
   }
 
   @override

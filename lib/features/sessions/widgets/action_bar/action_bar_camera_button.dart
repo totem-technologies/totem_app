@@ -62,8 +62,7 @@ class _ActionBarCameraSwitcherButtonState
     super.didUpdateWidget(oldWidget);
     if (oldWidget.availableCameraDevices != widget.availableCameraDevices ||
         oldWidget.selectedCameraDeviceId != widget.selectedCameraDeviceId) {
-      entry?.remove();
-      entry = null;
+      closeCameraPositionOptions();
     }
   }
 
@@ -113,6 +112,12 @@ class _ActionBarCameraSwitcherButtonState
     );
     overlay.insert(entry!);
     return completer.future;
+  }
+
+  Future<void> closeCameraPositionOptions() async {
+    await _menuController.reverse();
+    entry?.remove();
+    entry = null;
   }
 
   @override
