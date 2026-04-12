@@ -9,10 +9,12 @@ import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/chat.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
+import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
 
 class _TestLastMessageNotifier extends Notifier<SessionChatMessage?> {
@@ -103,19 +105,120 @@ void main() {
     });
   });
 
+  group('ActionBarCameraSwitcherButton', () {
+    testWidgets('shows a vertical list of cameras on desktop/web', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1000));
+      addTearDown(() async {
+        await tester.binding.setSurfaceSize(null);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 120),
+                child: ActionBarCameraSwitcherButton(
+                  isCameraOn: true,
+                  onToggle: null,
+                  cameraPosition: CameraPosition.front,
+                  availableCameraDevices: const [
+                    MediaDevice('camera-1', 'Front Camera', 'videoinput', null),
+                    MediaDevice('camera-2', 'Rear Camera', 'videoinput', null),
+                  ],
+                  selectedCameraDeviceId: 'camera-2',
+                  onCameraPositionChanged: (_) {},
+                  onCameraDeviceSelected: (_) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.keyboard_arrow_down));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Camera'), findsOneWidget);
+      expect(find.text('Front Camera'), findsOneWidget);
+      expect(find.text('Rear Camera'), findsOneWidget);
+      expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
+    });
+
+    testWidgets('falls back to a plain toggle with one camera', (tester) async {
+      var toggles = 0;
+
+      await tester.binding.setSurfaceSize(const Size(800, 1000));
+      addTearDown(() async {
+        await tester.binding.setSurfaceSize(null);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 120),
+                child: ActionBarCameraSwitcherButton(
+                  isCameraOn: true,
+                  onToggle: () {
+                    toggles++;
+                  },
+                  cameraPosition: CameraPosition.front,
+                  availableCameraDevices: const [
+                    MediaDevice('camera-1', 'Front Camera', 'videoinput', null),
+                  ],
+                  selectedCameraDeviceId: 'camera-1',
+                  onCameraPositionChanged: (_) {},
+                  onCameraDeviceSelected: (_) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.keyboard_arrow_down), findsNothing);
+      await tester.tap(find.byType(ActionBarButton));
+      await tester.pump();
+
+      expect(toggles, 1);
+    });
+  });
+
   group('SessionActionBar', () {
     late MockSessionController session;
     late FakeRoom room;
     late MockLocalParticipant participant;
     late MockParticipantEventsListener listener;
+    late MockSessionDeviceController deviceController;
 
     setUp(() {
       session = MockSessionController();
+      deviceController = MockSessionDeviceController();
       participant = MockLocalParticipant();
       room = FakeRoom(participant);
       listener = MockParticipantEventsListener();
 
       when(() => session.room).thenReturn(room);
+      when(() => session.devices).thenReturn(deviceController);
+      when(() => deviceController.isCameraEnabled).thenReturn(false);
+      when(() => deviceController.selectedCameraDeviceId).thenReturn(null);
+      when(() => deviceController.localVideoTrack).thenReturn(null);
+      when(
+        () => deviceController.enableCamera(),
+      ).thenAnswer((_) => Future<void>.value());
+      when(
+        () => deviceController.disableCamera(),
+      ).thenAnswer((_) => Future<void>.value());
 
       when(
         () => participant.getTrackPublicationBySource(TrackSource.microphone),
@@ -185,6 +288,11 @@ void main() {
       expect(find.byType(ActionBar), findsOneWidget);
       expect(find.byType(ActionBarButton), findsNWidgets(4));
       expect(find.byType(IconButton), findsOneWidget);
+      if (lkPlatformIsDesktop()) {
+        expect(find.byType(ActionBarCameraSwitcherButton), findsOneWidget);
+      } else {
+        expect(find.byType(ActionBarCameraButton), findsOneWidget);
+      }
     });
 
     testWidgets('shows expected controls on my-turn screen', (tester) async {

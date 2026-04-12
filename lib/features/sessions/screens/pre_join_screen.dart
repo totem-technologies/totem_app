@@ -20,7 +20,10 @@ import 'package:totem_app/features/sessions/repositories/session_repository.dart
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/screens/room_screen.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_speaker_button.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/permissions_popups.dart';
@@ -105,6 +108,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   // Preview media state
   LocalVideoTrack? _previewVideoTrack;
   var _isCameraOn = true;
+  List<MediaDevice> _availableCameraDevices = [];
+  StreamSubscription<List<MediaDevice>>? _cameraDevicesSubscription;
 
   LocalAudioTrack? _previewAudioTrack;
   var _isMicOn = true;
@@ -129,11 +134,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   void initState() {
     super.initState();
     _initializeAndCheckPermissions();
+    _listenToCameraDevices();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   @override
   void dispose() {
+    _cameraDevicesSubscription?.cancel();
     _disposePreviewTracks();
     if (!hasRequestedJoin) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -188,6 +195,28 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         message: 'Failed to detect audio output devices',
       );
     }
+  }
+
+  void _listenToCameraDevices() {
+    _cameraDevicesSubscription = Hardware.instance.onDeviceChange.stream.listen(
+      (devices) {
+        if (!mounted) return;
+        setState(() {
+          _availableCameraDevices = devices
+              .where((device) => device.kind == 'videoinput')
+              .toList();
+        });
+      },
+    );
+
+    unawaited(
+      Hardware.instance.videoInputs().then((devices) {
+        if (!mounted) return;
+        setState(() {
+          _availableCameraDevices = devices;
+        });
+      }),
+    );
   }
 
   Future<void> _initializeLocalVideo() async {
@@ -290,22 +319,28 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
             audioTrack: _previewAudioTrack,
             onToggle: !hasRequestedJoin ? (v) async => _toggleMic() : null,
           ),
-          ActionBarButton(
-            semanticsLabel: 'Audio ${_isSpeakerOn ? 'on' : 'off'}',
-            onPressed: !hasRequestedJoin ? _toggleSpeaker : null,
-            active: _isSpeakerOn,
-            child: TotemIcon(
-              _isSpeakerOn ? TotemIcons.speakerOn : TotemIcons.speakerOff,
-            ),
+          ActionBarSpeakerButton(
+            isSpeakerOn: _isSpeakerOn,
+            onSpeakerToggled: hasRequestedJoin ? null : (v) => _toggleSpeaker(),
           ),
           ActionBarCameraSwitcherButton(
             isCameraOn: _isCameraOn,
             onToggle: hasRequestedJoin ? null : _toggleCamera,
             cameraPosition: _cameraOptions.cameraPosition,
+            availableCameraDevices: _availableCameraDevices,
+            selectedCameraDeviceId: _cameraOptions.deviceId,
             onCameraPositionChanged: (position) {
               setState(() {
                 _cameraOptions = _cameraOptions.copyWith(
                   cameraPosition: position,
+                );
+              });
+              _initializeLocalVideo();
+            },
+            onCameraDeviceSelected: (device) {
+              setState(() {
+                _cameraOptions = _cameraOptions.copyWith(
+                  deviceId: device.deviceId,
                 );
               });
               _initializeLocalVideo();

@@ -14,7 +14,9 @@ import 'package:totem_app/features/sessions/controllers/core/session_state.dart'
     as session_state;
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/pre_join_screen.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
 import 'package:totem_app/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 

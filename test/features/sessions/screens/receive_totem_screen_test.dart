@@ -11,7 +11,7 @@ import 'package:totem_app/features/sessions/controllers/features/session_keeper_
 import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/action_slider_button.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';

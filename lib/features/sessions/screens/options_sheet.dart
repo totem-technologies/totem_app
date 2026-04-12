@@ -19,6 +19,7 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
+import 'package:totem_app/shared/widgets/responsive_modal.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 
 Future<bool?> showLeaveDialog(BuildContext context) {
@@ -41,15 +42,24 @@ Future<void> showOptionsSheet(
   SessionRoomState state,
   mobile_api.SessionDetailSchema session,
 ) {
-  return showModalBottomSheet(
+  return showResponsiveModal<void>(
     context: context,
     showDragHandle: false,
-    backgroundColor: const Color(0xFFF3F1E9),
+    useRootNavigator: false,
+    bottomSheetBackgroundColor: const Color(0xFFF3F1E9),
+    dialogBackgroundColor: const Color(0xFFF3F1E9),
     isScrollControlled: true,
-    useSafeArea: true,
-    builder: (context) {
+    smallScreenBuilder: (context) {
       return SafeArea(
         child: OptionsSheet(session: session),
+      );
+    },
+    largeScreenBuilder: (context) {
+      return SizedBox(
+        width: 400,
+        child: SafeArea(
+          child: OptionsSheet(session: session),
+        ),
       );
     },
   );
@@ -85,14 +95,15 @@ class OptionsSheet extends ConsumerWidget {
             shrinkWrap: true,
             physics: const ClampingScrollPhysics(),
             children: <Widget>[
-              OptionsSheetTile.camera(
-                currentSession.devices.localVideoTrack?.currentOptions
-                    as CameraCaptureOptions?,
-                () {
-                  currentSession.devices.switchCameraPosition();
-                  Navigator.of(context).pop();
-                },
-              ),
+              if (lkPlatformIsMobile())
+                OptionsSheetTile.camera(
+                  currentSession.devices.localVideoTrack?.currentOptions
+                      as CameraCaptureOptions?,
+                  () {
+                    currentSession.devices.switchCameraPosition();
+                    Navigator.of(context).pop();
+                  },
+                ),
               // if (lkPlatformIsDesktop())
               //   MediaDeviceSelectButton(
               //     builder: (context, roomCtx, deviceCtx) {
@@ -157,15 +168,17 @@ class OptionsSheet extends ConsumerWidget {
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
-                if (state.roomState.status == mobile_api.RoomStatus.waitingRoom)
-                  OptionsSheetTile<void>(
-                    title: 'Start session',
-                    icon: TotemIcons.feedback,
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      _onStartSession(context, currentSession);
-                    },
-                  ),
+                // TODO(totem): Consider re-enabling this in the future.
+                // The session can be started from the waiting room.
+                // if (state.roomState.status == mobile_api.RoomStatus.waitingRoom)
+                //   OptionsSheetTile<void>(
+                //     title: 'Start session',
+                //     icon: TotemIcons.feedback,
+                //     onTap: () {
+                //       Navigator.of(context).pop();
+                //       _onStartSession(context, currentSession);
+                //     },
+                //   ),
                 OptionsSheetTile<void>(
                   title: 'Reorder Participants',
                   icon: TotemIcons.reorderParticipants,
@@ -347,44 +360,6 @@ class OptionsSheet extends ConsumerWidget {
                 }
               },
             );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _onStartSession(
-    BuildContext context,
-    SessionController session,
-  ) async {
-    return showDialog<void>(
-      context: context,
-      builder: (context) {
-        return ConfirmationDialog(
-          title: 'Start Session',
-          content: 'Are you sure you want to start the session?',
-          confirmButtonText: 'Start Session',
-          type: ConfirmationDialogType.standard,
-          onConfirm: () async {
-            try {
-              await session.keeper.startSession();
-              if (!context.mounted) return;
-              Navigator.of(context).pop();
-            } catch (error) {
-              if (!context.mounted) return;
-              Navigator.of(context).pop();
-              await ErrorHandler.handleApiError(
-                context,
-                error,
-                onRetry: () async {
-                  try {
-                    await session.keeper.startSession();
-                  } catch (e) {
-                    // Error already handled by handleApiError
-                  }
-                },
-              );
-            }
           },
         );
       },
