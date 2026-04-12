@@ -477,6 +477,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
   final Widget? trailing;
 
   static Widget camera(CameraCaptureOptions? options, VoidCallback onSwitch) {
+    // TODO(web): Implement camera device selection for desktop platforms.
     return OptionsSheetTile<MediaDevice>(
       title: switch (options?.cameraPosition) {
         CameraPosition.front => 'Front',
