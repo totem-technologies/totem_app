@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_dynamic_calls
+
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -171,6 +173,12 @@ void main() {
     when(() => session.keeper).thenReturn(keeper);
     when(() => session.devices).thenReturn(devices);
     when(() => session.isCurrentUserKeeper()).thenReturn(true);
+    when(() => devices.isCameraEnabled).thenReturn(false);
+    when(() => devices.isMicrophoneEnabled).thenReturn(false);
+    when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
+    when(() => devices.selectedCameraDeviceId).thenReturn(null);
+    when(() => devices.selectedAudioDeviceId).thenReturn(null);
+    when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
     when(() => devices.enableMicrophone()).thenAnswer((_) async {});
     when(() => devices.disableMicrophone()).thenAnswer((_) async {});
     when(() => devices.enableCamera()).thenAnswer((_) async {});
@@ -346,7 +354,8 @@ void main() {
         find.byType(TextField),
         '  A round message  ',
       );
-      await tester.drag(find.byType(ActionSlider), const Offset(500, 0));
+      final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
+      await actionSlider.widget.onActionCompleted();
       await tester.pump();
 
       verify(

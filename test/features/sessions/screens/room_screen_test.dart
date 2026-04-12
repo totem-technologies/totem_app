@@ -412,6 +412,12 @@ void main() {
 
       when(() => session.room).thenReturn(FakeRoom(localParticipant));
       when(() => session.devices).thenReturn(devices);
+      when(() => devices.isCameraEnabled).thenReturn(false);
+      when(() => devices.isMicrophoneEnabled).thenReturn(false);
+      when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
+      when(() => devices.selectedCameraDeviceId).thenReturn(null);
+      when(() => devices.selectedAudioDeviceId).thenReturn(null);
+      when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
       when(() => devices.localVideoTrack).thenReturn(null);
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
       when(() => session.event).thenReturn(
@@ -864,6 +870,12 @@ void main() {
       final localParticipant = _buildMockParticipant('user-1');
       when(() => session.room).thenReturn(FakeRoom(localParticipant));
       when(() => session.devices).thenReturn(devices);
+      when(() => devices.isCameraEnabled).thenReturn(false);
+      when(() => devices.isMicrophoneEnabled).thenReturn(false);
+      when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
+      when(() => devices.selectedCameraDeviceId).thenReturn(null);
+      when(() => devices.selectedAudioDeviceId).thenReturn(null);
+      when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
       when(() => devices.localVideoTrack).thenReturn(null);
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
       when(() => session.event).thenReturn(

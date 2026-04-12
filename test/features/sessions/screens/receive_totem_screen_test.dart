@@ -1,3 +1,7 @@
+// ignore_for_file: avoid_dynamic_calls
+
+import 'dart:ui';
+
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -97,6 +101,12 @@ void main() {
     when(() => session.devices).thenReturn(devices);
     when(() => session.keeper).thenReturn(keeper);
     when(() => session.isCurrentUserKeeper()).thenReturn(false);
+    when(() => devices.isCameraEnabled).thenReturn(false);
+    when(() => devices.isMicrophoneEnabled).thenReturn(false);
+    when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
+    when(() => devices.selectedCameraDeviceId).thenReturn(null);
+    when(() => devices.selectedAudioDeviceId).thenReturn(null);
+    when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
 
     when(() => devices.enableMicrophone()).thenAnswer((_) async {});
     when(() => devices.disableMicrophone()).thenAnswer((_) async {});
@@ -124,6 +134,14 @@ void main() {
     SessionCuesService? feedbackService,
   }) async {
     final testCuesService = feedbackService ?? _TestSessionCuesService();
+
+    final mouseGesture = await tester.createGesture(
+      kind: PointerDeviceKind.mouse,
+    );
+    await mouseGesture.addPointer(location: const Offset(10, 10));
+    await tester.pump();
+    await mouseGesture.removePointer();
+    await tester.pump();
 
     await tester.pumpWidget(
       ProviderScope(
@@ -205,8 +223,11 @@ void main() {
 
       await pumpReceiveTotem(tester, feedbackService: feedbackService);
 
-      await tester.drag(find.byType(ActionSliderButton), const Offset(500, 0));
+      expect(find.byType(ActionSlider), findsOneWidget);
+      final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
+      await actionSlider.widget.onActionCompleted();
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       verify(() => keeper.acceptTotem()).called(1);
       expect(feedbackService.swipePulseCount, 1);
@@ -219,8 +240,11 @@ void main() {
 
       await pumpReceiveTotem(tester, feedbackService: feedbackService);
 
-      await tester.drag(find.byType(ActionSliderButton), const Offset(500, 0));
+      expect(find.byType(ActionSlider), findsOneWidget);
+      final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
+      await actionSlider.widget.onActionCompleted();
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(feedbackService.swipePulseCount, 1);
     });
@@ -234,7 +258,9 @@ void main() {
 
       await pumpReceiveTotem(tester, feedbackService: feedbackService);
 
-      await tester.drag(find.byType(ActionSliderButton), const Offset(500, 0));
+      expect(find.byType(ActionSlider), findsOneWidget);
+      final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
+      await actionSlider.widget.onActionCompleted();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -284,12 +310,16 @@ void main() {
 
       await pumpReceiveTotem(tester);
 
-      await tester.drag(find.byType(ActionSliderButton), const Offset(500, 0));
+      expect(find.byType(ActionSlider), findsOneWidget);
+      final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
+      await actionSlider.widget.onActionCompleted();
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Something went wrong'), findsOneWidget);
 
-      await tester.drag(find.byType(ActionSliderButton), const Offset(500, 0));
+      await actionSlider.widget.onActionCompleted();
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       verify(() => keeper.acceptTotem()).called(2);
     });
