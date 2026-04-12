@@ -11,28 +11,74 @@ import 'package:totem_app/features/sessions/providers/session_scope_provider.dar
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
+import 'package:totem_app/shared/widgets/viewport_resolver.dart';
 
 Future<void> showSessionChatSheet(BuildContext context) {
-  return showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: false,
-    useSafeArea: true,
-    backgroundColor: Colors.white,
-    builder: (context) {
-      return const SessionChatSheet();
-    },
-  );
+  switch (ViewportResolver.getViewportKind(context)) {
+    case ViewportKind.smallPortrait:
+    case ViewportKind.smallLandscape:
+      return showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: false,
+        useSafeArea: true,
+        backgroundColor: Colors.white,
+        useRootNavigator: false,
+        builder: (context) {
+          return DraggableScrollableSheet(
+            maxChildSize: 0.9,
+            initialChildSize: 0.75,
+            expand: false,
+            builder: (context, scrollController) {
+              return SessionChatMessages(scrollController: scrollController);
+            },
+          );
+        },
+      );
+    case ViewportKind.mediumPlus:
+      return showDialog(
+        context: context,
+        useRootNavigator: false,
+        builder: (context) => Dialog(
+          alignment: AlignmentDirectional.centerEnd,
+          insetPadding: const EdgeInsetsDirectional.only(
+            start: 24,
+          ).resolve(Directionality.of(context)),
+          backgroundColor: Colors.white,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadiusDirectional.horizontal(
+              start: Radius.circular(20),
+            ),
+          ),
+          child: const SizedBox(
+            width: 400,
+            child: SessionChatMessages(shouldShowCloseButton: true),
+          ),
+        ),
+      );
+  }
 }
 
-class SessionChatSheet extends ConsumerStatefulWidget {
-  const SessionChatSheet({super.key});
+class SessionChatMessages extends ConsumerStatefulWidget {
+  const SessionChatMessages({
+    super.key,
+    this.scrollController,
+    this.shouldShowCloseButton = false,
+  });
+
+  final ScrollController? scrollController;
+  final bool shouldShowCloseButton;
 
   @override
-  ConsumerState<SessionChatSheet> createState() => _SessionChatSheetState();
+  ConsumerState<SessionChatMessages> createState() =>
+      _SessionChatMessagesState();
 }
 
-class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
+class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
+  ScrollController? _localController;
+  ScrollController get scrollController =>
+      widget.scrollController ?? (_localController ??= ScrollController());
+
   final _messageController = TextEditingController();
   int _previousMessageCount = 0;
 
@@ -51,6 +97,7 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
   @override
   void dispose() {
     _messageController.dispose();
+    _localController?.dispose();
     super.dispose();
   }
 
@@ -58,7 +105,6 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
-    final session = ref.watch(currentSessionProvider)!;
     final sessionEvent = ref.watch(currentSessionEventProvider);
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
 
@@ -73,184 +119,195 @@ class _SessionChatSheetState extends ConsumerState<SessionChatSheet> {
 
     final messages = ref.watch(sessionMessagesProvider);
 
-    return DraggableScrollableSheet(
-      maxChildSize: 0.9,
-      initialChildSize: 0.75,
-      expand: false,
-      builder: (context, scrollController) {
-        if (messages.length != _previousMessageCount) {
-          _previousMessageCount = messages.length;
-          if (messages.isNotEmpty) {
-            _scrollToBottom(scrollController);
-          }
-        }
+    if (messages.length != _previousMessageCount) {
+      _previousMessageCount = messages.length;
+      if (messages.isNotEmpty) {
+        _scrollToBottom(scrollController);
+      }
+    }
 
-        void send() {
-          final message = _messageController.text.trim();
-          if (message.isNotEmpty) {
-            session.messaging.sendMessage(message);
-            _messageController.clear();
-            _scrollToBottom(scrollController);
-          }
-        }
+    void send() {
+      final message = _messageController.text.trim();
+      if (message.isNotEmpty) {
+        ref.read(currentSessionProvider)?.messaging.sendMessage(message);
+        _messageController.clear();
+        _scrollToBottom(scrollController);
+      }
+    }
 
-        return Scaffold(
-          backgroundColor: Colors.transparent,
-          // use scaffold to get proper virtual keyboard padding handling
-          body: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsetsDirectional.only(
-                bottom: 20,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SheetDragHandle(),
-                  if (!isKeeper)
-                    const Padding(
-                      padding: EdgeInsetsDirectional.only(
-                        bottom: 8,
-                        start: 20,
-                        end: 20,
-                      ),
-                      child: Text(
-                        'Only the Keeper can post messages here',
-                        style: TextStyle(color: Color(0xFF787D7E)),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  if (messages.isEmpty) ...[
-                    const Padding(
-                      padding: EdgeInsetsDirectional.only(
-                        top: 20,
-                        bottom: 8,
-                        start: 20,
-                        end: 20,
-                      ),
-                      child: Text(
-                        'No messages yet',
-                        style: TextStyle(color: Color(0xFF787D7E)),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    const Spacer(),
-                  ] else
-                    Expanded(
-                      child: ListView.separated(
-                        padding: EdgeInsetsDirectional.only(
-                          bottom: isKeeper ? 8 : 0,
-                          start: 20,
-                          end: 20,
-                        ),
-                        controller: scrollController,
-                        itemCount: messages.length,
-                        itemBuilder: (context, index) {
-                          final msg = messages[index];
-                          final isMine =
-                              msg.participant?.identity == user?.email;
-                          if (isMine) {
-                            return MyChatBubble(message: msg);
-                          } else {
-                            final showAvatar =
-                                index == 0 ||
-                                messages[index - 1].participant?.identity !=
-                                    msg.participant?.identity;
-                            return OtherChatBubble(
-                              showAvatar: showAvatar,
-                              message: msg,
-                              session: sessionEvent,
-                            );
-                          }
-                        },
-                        separatorBuilder: (_, _) => const SizedBox(height: 10),
-                      ),
-                    ),
-                  if (isKeeper) ...[
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(
-                        top: 8,
-                        start: 20,
-                        end: 20,
-                      ),
-                      child: Text(
-                        'Long press to send a quick message',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.black54,
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(top: 8),
-                      child: SizedBox(
-                        height: 36,
-                        child: ListView.separated(
-                          padding: const EdgeInsetsDirectional.only(
-                            start: 20,
-                            end: 20,
-                          ),
-                          scrollDirection: Axis.horizontal,
-                          itemCount: fastMessages.length,
-                          itemBuilder: (context, index) {
-                            final label = fastMessages[index];
-                            return _QuickMessageChip(
-                              label: label,
-                              onSend: () =>
-                                  session.messaging.sendMessage(label),
-                            );
-                          },
-                          separatorBuilder: (_, _) => const SizedBox(width: 8),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(
-                        top: 8,
-                        start: 20,
-                        end: 20,
-                      ),
-                      child: TextField(
-                        controller: _messageController,
-                        onSubmitted: (_) => send(),
-                        textInputAction: TextInputAction.send,
-                        style: TextStyle(
-                          color: theme.colorScheme.onSurface,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Message',
-                          border: const OutlineInputBorder(),
-                          suffixIcon: Container(
-                            margin: const EdgeInsetsDirectional.only(
-                              end: 8,
-                              top: 6,
-                              bottom: 6,
-                            ),
-                            constraints: const BoxConstraints(
-                              maxHeight: 42,
-                              maxWidth: 42,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary,
-                              borderRadius: const BorderRadius.all(
-                                Radius.circular(16),
-                              ),
-                            ),
-                            child: IconButton(
-                              icon: const TotemIcon(TotemIcons.send, size: 20),
-                              color: theme.colorScheme.onPrimary,
-                              onPressed: send,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+    final closeButton = widget.shouldShowCloseButton
+        ? Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 12.0,
+              vertical: 8,
+            ),
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: IconButton(
+                icon: const TotemIcon(TotemIcons.closeRounded, size: 20),
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ),
+          )
+        : null;
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      // use scaffold to get proper virtual keyboard padding handling
+      body: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsetsDirectional.only(
+            bottom: 20,
           ),
-        );
-      },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SheetDragHandle(),
+              ?closeButton,
+              if (!isKeeper)
+                const Padding(
+                  padding: EdgeInsetsDirectional.only(
+                    bottom: 8,
+                    start: 20,
+                    end: 20,
+                  ),
+                  child: Text(
+                    'Only the Keeper can post messages here',
+                    style: TextStyle(color: Color(0xFF787D7E)),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              if (messages.isEmpty) ...[
+                const Padding(
+                  padding: EdgeInsetsDirectional.only(
+                    top: 20,
+                    bottom: 8,
+                    start: 20,
+                    end: 20,
+                  ),
+                  child: Text(
+                    'No messages yet',
+                    style: TextStyle(color: Color(0xFF787D7E)),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const Spacer(),
+              ] else
+                Expanded(
+                  child: ListView.separated(
+                    padding: EdgeInsetsDirectional.only(
+                      bottom: isKeeper ? 8 : 0,
+                      start: 20,
+                      end: 20,
+                    ),
+                    controller: scrollController,
+                    itemCount: messages.length,
+                    itemBuilder: (context, index) {
+                      final msg = messages[index];
+                      final isMine = msg.participant?.identity == user?.email;
+                      if (isMine) {
+                        return MyChatBubble(message: msg);
+                      } else {
+                        final showAvatar =
+                            index == 0 ||
+                            messages[index - 1].participant?.identity !=
+                                msg.participant?.identity;
+                        return OtherChatBubble(
+                          showAvatar: showAvatar,
+                          message: msg,
+                          session: sessionEvent,
+                        );
+                      }
+                    },
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  ),
+                ),
+              if (isKeeper) ...[
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(
+                    top: 8,
+                    start: 20,
+                    end: 20,
+                  ),
+                  child: Text(
+                    'Long press to send a quick message',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.black54,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(top: 8),
+                  child: SizedBox(
+                    height: 36,
+                    child: ListView.separated(
+                      padding: const EdgeInsetsDirectional.only(
+                        start: 20,
+                        end: 20,
+                      ),
+                      scrollDirection: Axis.horizontal,
+                      itemCount: fastMessages.length,
+                      itemBuilder: (context, index) {
+                        final label = fastMessages[index];
+                        return _QuickMessageChip(
+                          label: label,
+                          onSend: () => ref
+                              .read(currentSessionProvider)
+                              ?.messaging
+                              .sendMessage(label),
+                        );
+                      },
+                      separatorBuilder: (_, _) => const SizedBox(width: 8),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(
+                    top: 8,
+                    start: 20,
+                    end: 20,
+                  ),
+                  child: TextField(
+                    controller: _messageController,
+                    onSubmitted: (_) => send(),
+                    textInputAction: TextInputAction.send,
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Message',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: Container(
+                        margin: const EdgeInsetsDirectional.only(
+                          end: 8,
+                          top: 6,
+                          bottom: 6,
+                        ),
+                        constraints: const BoxConstraints(
+                          maxHeight: 42,
+                          maxWidth: 42,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
+                          borderRadius: const BorderRadius.all(
+                            Radius.circular(16),
+                          ),
+                        ),
+                        child: IconButton(
+                          icon: const TotemIcon(TotemIcons.send, size: 20),
+                          color: theme.colorScheme.onPrimary,
+                          onPressed: send,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
