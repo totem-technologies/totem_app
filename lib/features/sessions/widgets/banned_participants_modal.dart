@@ -3,48 +3,34 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/responsive_modal.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
-import 'package:totem_app/shared/widgets/viewport_resolver.dart';
 
-Future<void> showBannedParticipantsSheet(
+Future<void> showBannedParticipantsModal(
   BuildContext context,
   SessionController session,
   SessionRoomState state,
 ) {
-  switch (ViewportResolver.getViewportKind(context)) {
-    case ViewportKind.smallPortrait:
-    case ViewportKind.smallLandscape:
-      return showModalBottomSheet(
-        context: context,
-        showDragHandle: false,
-        backgroundColor: const Color(0xFFF3F1E9),
-        isScrollControlled: true,
-        useSafeArea: true,
-        builder: (context) => BannedParticipantsSheet(
-          session: session,
-          state: state,
-        ),
-      );
-    case ViewportKind.mediumPlus:
-      return showDialog(
-        context: context,
-        builder: (context) => Dialog(
-          backgroundColor: const Color(0xFFF3F1E9),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: SizedBox(
-            width: 400,
-            child: BannedParticipantsSheet(session: session, state: state),
-          ),
-        ),
-      );
-  }
+  return showResponsiveModal<void>(
+    context: context,
+    useRootNavigator: false,
+    showDragHandle: false,
+    bottomSheetBackgroundColor: const Color(0xFFF3F1E9),
+    dialogBackgroundColor: const Color(0xFFF3F1E9),
+    smallScreenBuilder: (context) => BannedParticipants(
+      session: session,
+      state: state,
+    ),
+    largeScreenBuilder: (context) => SizedBox(
+      width: 400,
+      child: BannedParticipants(session: session, state: state),
+    ),
+  );
 }
 
-class BannedParticipantsSheet extends ConsumerWidget {
-  const BannedParticipantsSheet({
+class BannedParticipants extends ConsumerWidget {
+  const BannedParticipants({
     required this.session,
     required this.state,
     super.key,

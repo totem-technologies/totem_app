@@ -102,6 +102,7 @@ class SessionInfraController extends _$SessionInfraController {
   }
 
   Future<void> _startBackgroundService(SessionDetailSchema? event) async {
+    if (kIsWeb || kIsWasm) return;
     if (!await FlutterForegroundTask.isRunningService) {
       await FlutterForegroundTask.startService(
         notificationTitle: 'Totem Session',
@@ -151,13 +152,14 @@ class SessionInfraController extends _$SessionInfraController {
       if (await FlutterForegroundTask.isRunningService) {
         await FlutterForegroundTask.stopService();
       }
-      _backgroundModeEnabled = false;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Error stopping background service',
       );
+    } finally {
+      _backgroundModeEnabled = false;
     }
   }
 

@@ -9,54 +9,46 @@ import 'package:totem_app/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_app/shared/widgets/responsive_modal.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
-import 'package:totem_app/shared/widgets/viewport_resolver.dart';
 
-Future<void> showSessionChatSheet(BuildContext context) {
-  switch (ViewportResolver.getViewportKind(context)) {
-    case ViewportKind.smallPortrait:
-    case ViewportKind.smallLandscape:
-      return showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        showDragHandle: false,
-        useSafeArea: true,
-        backgroundColor: Colors.white,
-        useRootNavigator: false,
-        builder: (context) {
-          return DraggableScrollableSheet(
-            maxChildSize: 0.9,
-            initialChildSize: 0.75,
-            expand: false,
-            builder: (context, scrollController) {
-              return SessionChatMessages(scrollController: scrollController);
-            },
-          );
+Future<void> showSessionChat(BuildContext context) {
+  return showResponsiveModal<void>(
+    context: context,
+    useRootNavigator: false,
+    showDragHandle: false,
+    bottomSheetBackgroundColor: Colors.white,
+    dialogBackgroundColor: Colors.white,
+    dialogAlignment: AlignmentDirectional.centerEnd,
+    dialogInsetPadding: const EdgeInsets.only(
+      left: 24,
+      top: 24,
+      right: 24,
+      bottom: 24,
+    ),
+    dialogShape: const RoundedRectangleBorder(
+      borderRadius: BorderRadiusDirectional.horizontal(
+        start: Radius.circular(20),
+      ),
+    ),
+    smallScreenBuilder: (context) {
+      return DraggableScrollableSheet(
+        maxChildSize: 0.9,
+        initialChildSize: 0.75,
+        expand: false,
+        builder: (context, scrollController) {
+          return SessionChatMessages(scrollController: scrollController);
         },
       );
-    case ViewportKind.mediumPlus:
-      return showDialog(
-        context: context,
-        useRootNavigator: false,
-        builder: (context) => Dialog(
-          alignment: AlignmentDirectional.centerEnd,
-          insetPadding: const EdgeInsetsDirectional.only(
-            start: 24,
-          ).resolve(Directionality.of(context)),
-          backgroundColor: Colors.white,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadiusDirectional.horizontal(
-              start: Radius.circular(20),
-            ),
-          ),
-          child: const SizedBox(
-            width: 400,
-            child: SessionChatMessages(shouldShowCloseButton: true),
-          ),
-        ),
+    },
+    largeScreenBuilder: (context) {
+      return const SizedBox(
+        width: 400,
+        child: SessionChatMessages(shouldShowCloseButton: true),
       );
-  }
+    },
+  );
 }
 
 class SessionChatMessages extends ConsumerStatefulWidget {

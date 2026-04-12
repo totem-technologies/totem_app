@@ -7,7 +7,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
+import 'package:totem_app/features/sessions/screens/chat.dart';
 import 'package:totem_app/features/sessions/screens/options_sheet.dart';
 import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
@@ -699,7 +699,7 @@ class _SessionActionBarState extends ConsumerState<SessionActionBar> {
           _hasPendingSessionChatMessages = false;
           _chatSheetOpen = true;
         });
-        await showSessionChatSheet(context);
+        await showSessionChat(context);
         if (!mounted) return;
         setState(() => _chatSheetOpen = false);
       },

@@ -8,8 +8,9 @@ import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
+import 'package:totem_app/features/sessions/screens/chat.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar.dart';
+
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../livekit_mocks.dart';
@@ -246,7 +247,7 @@ void main() {
       await tester.tap(find.bySemanticsLabel('Chat'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(SessionChatSheet), findsOneWidget);
+      expect(find.byType(SessionChatMessages), findsOneWidget);
       expect(find.text('No messages yet'), findsOneWidget);
       expect(findPendingBadge(), findsNothing);
 
@@ -256,7 +257,7 @@ void main() {
       ).pop();
       await tester.pumpAndSettle();
 
-      expect(find.byType(SessionChatSheet), findsNothing);
+      expect(find.byType(SessionChatMessages), findsNothing);
       expect(findPendingBadge(), findsNothing);
     });
   });
