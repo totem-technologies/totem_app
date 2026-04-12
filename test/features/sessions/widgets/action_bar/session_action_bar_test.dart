@@ -1,21 +1,24 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
+import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/chat.dart';
+import 'package:totem_app/features/sessions/screens/options_sheet.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
 
-import '../../../auth/controllers/auth_controller_mock.dart';
-import '../controllers/core/session_controller_mock.dart';
-import '../controllers/features/session_device_controller_mock.dart';
-import '../livekit_mocks.dart';
+import '../../../../auth/controllers/auth_controller_mock.dart';
+import '../../controllers/core/session_controller_mock.dart';
+import '../../controllers/features/session_device_controller_mock.dart';
+import '../../livekit_mocks.dart';
 
 class _TestLastMessageNotifier extends Notifier<SessionChatMessage?> {
   @override
@@ -25,6 +28,79 @@ class _TestLastMessageNotifier extends Notifier<SessionChatMessage?> {
   void set(SessionChatMessage? message) {
     state = message;
   }
+}
+
+class _MockRoom extends Mock implements Room {}
+
+SessionRoomState _createSessionState() {
+  return SessionRoomState(
+    connection: const ConnectionState(
+      phase: SessionPhase.connected,
+      state: RoomConnectionState.connected,
+    ),
+    participants: ParticipantsState(
+      participants: [
+        MockLocalParticipant('user-1'),
+        MockLocalParticipant('user-2'),
+        MockLocalParticipant('keeper-1'),
+      ],
+    ),
+    chat: const ChatState(),
+    turn: const SessionTurnState(
+      roomState: RoomState(
+        keeper: 'keeper-1',
+        nextSpeaker: 'user-2',
+        currentSpeaker: 'user-1',
+        status: RoomStatus.active,
+        turnState: TurnState.idle,
+        sessionSlug: 'test-session',
+        statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+        talkingOrder: ['keeper-1', 'user-1', 'user-2'],
+        version: 1,
+        roundNumber: 1,
+      ),
+    ),
+  );
+}
+
+SessionDetailSchema _createSessionEvent() {
+  return SessionDetailSchema(
+    slug: 'test-session',
+    title: 'Test Session',
+    space: MobileSpaceDetailSchema(
+      slug: 'test-space',
+      title: 'Test Space',
+      imageLink: null,
+      shortDescription: 'A test space.',
+      content: '',
+      author: PublicUserSchema(
+        profileAvatarType: ProfileAvatarTypeEnum.td,
+        dateCreated: DateTime(2024),
+      ),
+      category: null,
+      subscribers: 0,
+      recurring: null,
+      price: 0,
+      nextEvents: const [],
+    ),
+    content: '',
+    seatsLeft: 10,
+    duration: 60,
+    start: DateTime(2024, 1, 1, 10),
+    attending: true,
+    open: true,
+    started: true,
+    cancelled: false,
+    joinable: true,
+    ended: false,
+    rsvpUrl: '',
+    joinUrl: null,
+    subscribeUrl: '',
+    calLink: '',
+    subscribed: false,
+    userTimezone: null,
+    meetingProvider: MeetingProviderEnum.livekit,
+  );
 }
 
 final _testLastMessageProvider =
@@ -47,152 +123,6 @@ void main() {
       ),
     );
   }
-
-  group('ActionBarButton', () {
-    testWidgets('invokes callback on tap', (tester) async {
-      var taps = 0;
-
-      await pumpWidget(
-        tester,
-        child: ActionBarButton(
-          onPressed: () => taps++,
-          child: const Icon(Icons.message),
-        ),
-      );
-
-      await tester.tap(find.byType(ActionBarButton));
-      await tester.pump();
-
-      expect(taps, 1);
-    });
-
-    testWidgets('is disabled when callback is null', (tester) async {
-      await pumpWidget(
-        tester,
-        child: const ActionBarButton(
-          onPressed: null,
-          semanticsLabel: 'Disabled action',
-          child: Icon(Icons.message),
-        ),
-      );
-
-      final gesture = tester.widget<GestureDetector>(
-        find.descendant(
-          of: find.byType(ActionBarButton),
-          matching: find.byType(GestureDetector),
-        ),
-      );
-      expect(gesture.onTap, isNull);
-    });
-  });
-
-  group('ActionBar', () {
-    testWidgets('renders all provided children', (tester) async {
-      await pumpWidget(
-        tester,
-        child: const ActionBar(
-          children: [
-            Text('One'),
-            Text('Two'),
-            Text('Three'),
-          ],
-        ),
-      );
-
-      expect(find.text('One'), findsOneWidget);
-      expect(find.text('Two'), findsOneWidget);
-      expect(find.text('Three'), findsOneWidget);
-    });
-  });
-
-  group('ActionBarCameraSwitcherButton', () {
-    testWidgets('shows a vertical list of cameras on desktop/web', (
-      tester,
-    ) async {
-      await tester.binding.setSurfaceSize(const Size(800, 1000));
-      addTearDown(() async {
-        await tester.binding.setSurfaceSize(null);
-      });
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 120),
-                child: ActionBarCameraSwitcherButton(
-                  isCameraOn: true,
-                  onToggle: null,
-                  cameraPosition: CameraPosition.front,
-                  availableCameraDevices: const [
-                    MediaDevice('camera-1', 'Front Camera', 'videoinput', null),
-                    MediaDevice('camera-2', 'Rear Camera', 'videoinput', null),
-                  ],
-                  selectedCameraDeviceId: 'camera-2',
-                  onCameraPositionChanged: (_) {},
-                  onCameraDeviceSelected: (_) {},
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.keyboard_arrow_down));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Camera'), findsOneWidget);
-      expect(find.text('Front Camera'), findsOneWidget);
-      expect(find.text('Rear Camera'), findsOneWidget);
-      expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
-    });
-
-    testWidgets('falls back to a plain toggle with one camera', (tester) async {
-      var toggles = 0;
-
-      await tester.binding.setSurfaceSize(const Size(800, 1000));
-      addTearDown(() async {
-        await tester.binding.setSurfaceSize(null);
-      });
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 120),
-                child: ActionBarCameraSwitcherButton(
-                  isCameraOn: true,
-                  onToggle: () {
-                    toggles++;
-                  },
-                  cameraPosition: CameraPosition.front,
-                  availableCameraDevices: const [
-                    MediaDevice('camera-1', 'Front Camera', 'videoinput', null),
-                  ],
-                  selectedCameraDeviceId: 'camera-1',
-                  onCameraPositionChanged: (_) {},
-                  onCameraDeviceSelected: (_) {},
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      expect(find.byIcon(Icons.keyboard_arrow_down), findsNothing);
-      await tester.tap(find.byType(ActionBarButton));
-      await tester.pump();
-
-      expect(toggles, 1);
-    });
-  });
 
   group('SessionActionBar', () {
     late MockSessionController session;
@@ -226,10 +156,12 @@ void main() {
       when(
         () => participant.getTrackPublicationBySource(TrackSource.camera),
       ).thenReturn(null);
+      when(() => participant.isMicrophoneEnabled()).thenReturn(false);
 
       when(() => participant.createListener()).thenReturn(listener);
 
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
+      when(() => session.event).thenReturn(_createSessionEvent());
     });
 
     Future<void> pumpSessionActionBar(
@@ -248,6 +180,9 @@ void main() {
             (ref) => ref.watch(_testLastMessageProvider),
           ),
           sessionMessagesProvider.overrideWith((ref) => const []),
+          currentSessionStateProvider.overrideWith(
+            (ref) => _createSessionState(),
+          ),
           isCurrentUserKeeperProvider.overrideWith((ref) => false),
           resolveCurrentScreenProvider.overrideWith((ref) => screen),
         ],
@@ -288,11 +223,7 @@ void main() {
       expect(find.byType(ActionBar), findsOneWidget);
       expect(find.byType(ActionBarButton), findsNWidgets(4));
       expect(find.byType(IconButton), findsOneWidget);
-      if (lkPlatformIsDesktop()) {
-        expect(find.byType(ActionBarCameraSwitcherButton), findsOneWidget);
-      } else {
-        expect(find.byType(ActionBarCameraButton), findsOneWidget);
-      }
+      expect(find.byType(SessionActionBarCameraButton), findsOneWidget);
     });
 
     testWidgets('shows expected controls on my-turn screen', (tester) async {
@@ -302,6 +233,72 @@ void main() {
       expect(find.byType(ActionBar), findsOneWidget);
       expect(find.byType(ActionBarButton), findsNWidgets(3));
       expect(find.byType(IconButton), findsOneWidget);
+    });
+
+    testWidgets('shows emoji button on listening screen', (tester) async {
+      await pumpSessionActionBar(tester, screen: RoomScreen.listening);
+      await tester.pumpAndSettle();
+      expect(find.byType(ActionBarEmojiButton), findsOneWidget);
+    });
+
+    testWidgets('hides emoji button on speaking screen', (tester) async {
+      await pumpSessionActionBar(tester, screen: RoomScreen.speaking);
+      await tester.pumpAndSettle();
+      expect(find.byType(ActionBarEmojiButton), findsNothing);
+    });
+
+    testWidgets('hides emoji button on passing screen', (tester) async {
+      await pumpSessionActionBar(tester, screen: RoomScreen.passing);
+      await tester.pumpAndSettle();
+      expect(find.byType(ActionBarEmojiButton), findsNothing);
+    });
+
+    testWidgets('hides emoji button on receiving screen', (tester) async {
+      await pumpSessionActionBar(tester, screen: RoomScreen.receiving);
+      await tester.pumpAndSettle();
+      expect(find.byType(ActionBarEmojiButton), findsNothing);
+    });
+
+    testWidgets('returns empty widget when session is null', (tester) async {
+      await pumpWidget(
+        tester,
+        child: const SessionActionBar(),
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => FakeAuthController(AuthState.unauthenticated()),
+          ),
+          currentSessionProvider.overrideWith((ref) => null),
+          resolveCurrentScreenProvider.overrideWith(
+            (ref) => RoomScreen.listening,
+          ),
+        ],
+      );
+
+      await tester.pump();
+      expect(find.byType(ActionBar), findsNothing);
+    });
+
+    testWidgets('returns empty widget when local participant is null', (
+      tester,
+    ) async {
+      final roomWithoutUser = _MockRoom();
+      when(() => roomWithoutUser.localParticipant).thenReturn(null);
+      when(() => session.room).thenReturn(roomWithoutUser);
+
+      await pumpSessionActionBar(tester, screen: RoomScreen.listening);
+      await tester.pump();
+
+      expect(find.byType(ActionBar), findsNothing);
+    });
+
+    testWidgets('opens options sheet when tapping more button', (tester) async {
+      await pumpSessionActionBar(tester, screen: RoomScreen.listening);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OptionsSheet), findsOneWidget);
     });
 
     testWidgets('shows pending badge and notification on new chat message', (
