@@ -12,7 +12,6 @@ import 'package:totem_app/features/sessions/providers/session_scope_provider.dar
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
-import 'package:totem_app/shared/logger.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
@@ -745,24 +744,24 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     if (publication == null) return;
     if (publication is! RemoteTrackPublication<RemoteTrack>) return;
 
-    final desired = widget.preferredVideoQuality;
+    // final desired = widget.preferredVideoQuality;
 
-    try {
-      final previousQuality = _lastAppliedQuality;
-      await publication.setVideoQuality(desired);
-      _lastAppliedQuality = desired;
-      logger.i(
-        'Participant video quality changed '
-        '(identity=${widget.participant.identity}, sid=${publication.sid}): '
-        '${previousQuality?.name ?? 'unset'} -> ${publication.videoQuality.name}',
-      );
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to set remote video quality',
-      );
-    }
+    // try {
+    //   final previousQuality = _lastAppliedQuality;
+    //   await publication.setVideoQuality(desired);
+    //   _lastAppliedQuality = desired;
+    //   logger.i(
+    //     'Participant video quality changed '
+    //     '(identity=${widget.participant.identity}, sid=${publication.sid}): '
+    //     '${previousQuality?.name ?? 'unset'} -> ${publication.videoQuality.name}',
+    //   );
+    // } catch (error, stackTrace) {
+    //   ErrorHandler.logError(
+    //     error,
+    //     stackTrace: stackTrace,
+    //     message: 'Failed to set remote video quality',
+    //   );
+    // }
   }
 
   @override
