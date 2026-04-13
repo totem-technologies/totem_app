@@ -359,6 +359,7 @@ class ParticipantControlButton extends ConsumerWidget {
 
     await showMenu(
       context: context,
+      useRootNavigator: false,
       constraints: const BoxConstraints(),
       position: position,
       color: Colors.black.withValues(alpha: 0.8),

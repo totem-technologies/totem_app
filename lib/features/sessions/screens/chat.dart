@@ -22,12 +22,6 @@ Future<void> showSessionChat(BuildContext context) {
     bottomSheetBackgroundColor: Colors.white,
     dialogBackgroundColor: Colors.white,
     dialogAlignment: AlignmentDirectional.centerEnd,
-    dialogInsetPadding: const EdgeInsets.only(
-      left: 24,
-      top: 24,
-      right: 24,
-      bottom: 24,
-    ),
     dialogShape: const RoundedRectangleBorder(
       borderRadius: BorderRadiusDirectional.horizontal(
         start: Radius.circular(20),
