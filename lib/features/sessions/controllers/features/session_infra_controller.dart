@@ -22,6 +22,10 @@ class SessionInfraController extends _$SessionInfraController {
     ref.onDispose(dispose);
   }
 
+  static bool get canUseForegroundTask {
+    return !kIsWeb && !kIsWasm && (Platform.isAndroid || Platform.isIOS);
+  }
+
   Timer? _notificationTimer;
   bool _wakelockEnabled = false;
   bool _backgroundModeEnabled = false;
@@ -71,7 +75,7 @@ class SessionInfraController extends _$SessionInfraController {
     try {
       await requestPermissions();
 
-      if (!(kIsWeb || kIsWasm)) {
+      if (canUseForegroundTask) {
         FlutterForegroundTask.init(
           androidNotificationOptions: AndroidNotificationOptions(
             channelId: 'totem_session',
@@ -102,7 +106,7 @@ class SessionInfraController extends _$SessionInfraController {
   }
 
   Future<void> _startBackgroundService(SessionDetailSchema? event) async {
-    if (kIsWeb || kIsWasm) return;
+    if (!canUseForegroundTask) return;
     if (!await FlutterForegroundTask.isRunningService) {
       await FlutterForegroundTask.startService(
         notificationTitle: 'Totem Session',
@@ -148,23 +152,24 @@ class SessionInfraController extends _$SessionInfraController {
       _notificationTimer = null;
     } catch (_) {}
 
-    try {
-      if (await FlutterForegroundTask.isRunningService) {
-        await FlutterForegroundTask.stopService();
+    if (canUseForegroundTask) {
+      try {
+        if (await FlutterForegroundTask.isRunningService) {
+          await FlutterForegroundTask.stopService();
+        }
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Error stopping background service',
+        );
       }
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error stopping background service',
-      );
-    } finally {
-      _backgroundModeEnabled = false;
     }
+    _backgroundModeEnabled = false;
   }
 
   static Future<bool> requestPermissions() async {
-    if (kIsWeb || kIsWasm) {
+    if (!canUseForegroundTask) {
       // Infra permissions aren't relevant on web, so we can skip requesting them.
       return true;
     }
