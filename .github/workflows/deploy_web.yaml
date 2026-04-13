@@ -39,7 +39,7 @@ jobs:
           echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
 
       - name: Build
-        run: flutter build web
+        run: flutter build web --wasm
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v4

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
+import 'package:totem_app/shared/widgets/viewport_resolver.dart';
 
 enum ConfirmationDialogType { destructive, standard }
 
@@ -45,100 +46,124 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
     final iconSize = MediaQuery.textScalerOf(context).scale(widget.iconSize);
     return PopScope(
       canPop: !_loading,
-      child: AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 20,
-          children: [
-            Column(
+      child: ViewportResolver(
+        builder: (context, viewportKind) {
+          final contentPadding = switch (viewportKind) {
+            ViewportKind.mediumPlus => const EdgeInsets.symmetric(
+              horizontal: 40,
+              vertical: 24,
+            ),
+            _ => const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+          };
+          return AlertDialog(
+            constraints: const BoxConstraints(maxWidth: 480),
+            contentPadding: contentPadding,
+            content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 10,
+              spacing: 20,
               children: [
-                if (widget.icon != null)
-                  TotemIcon(
-                    widget.icon!,
-                    size: iconSize,
-                    color: switch (widget.type) {
-                      ConfirmationDialogType.destructive => Colors.red,
-                      ConfirmationDialogType.standard =>
-                        theme.colorScheme.primary,
-                    },
-                  )
-                else if (widget.iconWidget != null)
-                  SizedBox.square(
-                    dimension: iconSize,
-                    child: Center(child: widget.iconWidget),
-                  ),
-                Semantics(
-                  header: true,
-                  namesRoute: true,
-                  child: Text(
-                    widget.title,
-                    textAlign: TextAlign.center,
-                    style:
-                        (theme.dialogTheme.titleTextStyle ??
-                                theme.textTheme.titleLarge)
-                            ?.copyWith(color: theme.colorScheme.onSurface),
-                  ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: 10,
+                  children: [
+                    if (widget.icon != null)
+                      TotemIcon(
+                        widget.icon!,
+                        size: iconSize,
+                        color: switch (widget.type) {
+                          ConfirmationDialogType.destructive => Colors.red,
+                          ConfirmationDialogType.standard =>
+                            theme.colorScheme.primary,
+                        },
+                      )
+                    else if (widget.iconWidget != null)
+                      SizedBox.square(
+                        dimension: iconSize,
+                        child: Center(child: widget.iconWidget),
+                      ),
+                    Semantics(
+                      header: true,
+                      namesRoute: true,
+                      child: Text(
+                        widget.title,
+                        textAlign: TextAlign.center,
+                        style:
+                            (theme.dialogTheme.titleTextStyle ??
+                                    theme.textTheme.titleLarge)
+                                ?.copyWith(color: theme.colorScheme.onSurface),
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  widget.content,
+                  textAlign: TextAlign.center,
+                  style: widget.contentStyle,
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: 12,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (_loading) return;
+                        setState(() => _loading = true);
+                        await widget.onConfirm().timeout(
+                          const Duration(seconds: 10),
+                          onTimeout: () {
+                            if (context.mounted) {
+                              ErrorHandler.showErrorDialog(
+                                context,
+                                message:
+                                    'Something went wrong. Please try again.',
+                              );
+                            }
+                          },
+                        );
+                        if (mounted) {
+                          setState(() {
+                            _loading = false;
+                          });
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: switch (widget.type) {
+                          ConfirmationDialogType.destructive => const Color(
+                            0xFFFF3B30,
+                          ),
+                          ConfirmationDialogType.standard =>
+                            theme.colorScheme.primary,
+                        },
+                        foregroundColor: switch (widget.type) {
+                          ConfirmationDialogType.destructive => Colors.white,
+                          ConfirmationDialogType.standard =>
+                            theme.colorScheme.onPrimary,
+                        },
+                      ),
+                      child: _loading
+                          ? const LoadingIndicator(
+                              color: Colors.white,
+                              size: 24,
+                              semanticsLabel: 'Processing',
+                            )
+                          : Text(
+                              widget.confirmButtonText,
+                              textAlign: TextAlign.center,
+                            ),
+                    ),
+                    OutlinedButton(
+                      onPressed: _loading ? null : () => context.pop(),
+                      child: const Text('Cancel', textAlign: TextAlign.center),
+                    ),
+                  ],
                 ),
               ],
             ),
-            Text(
-              widget.content,
-              textAlign: TextAlign.center,
-              style: widget.contentStyle,
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (_loading) return;
-                setState(() => _loading = true);
-                await widget.onConfirm().timeout(
-                  const Duration(seconds: 10),
-                  onTimeout: () {
-                    if (context.mounted) {
-                      ErrorHandler.showErrorDialog(
-                        context,
-                        message: 'Something went wrong. Please try again.',
-                      );
-                    }
-                  },
-                );
-                if (mounted) {
-                  setState(() {
-                    _loading = false;
-                  });
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: switch (widget.type) {
-                  ConfirmationDialogType.destructive => const Color(0xFFFF3B30),
-                  ConfirmationDialogType.standard => theme.colorScheme.primary,
-                },
-                foregroundColor: switch (widget.type) {
-                  ConfirmationDialogType.destructive => Colors.white,
-                  ConfirmationDialogType.standard =>
-                    theme.colorScheme.onPrimary,
-                },
-              ),
-              child: _loading
-                  ? const LoadingIndicator(
-                      color: Colors.white,
-                      size: 24,
-                      semanticsLabel: 'Processing',
-                    )
-                  : Text(
-                      widget.confirmButtonText,
-                      textAlign: TextAlign.center,
-                    ),
-            ),
-            OutlinedButton(
-              onPressed: _loading ? null : () => context.pop(),
-              child: const Text('Cancel', textAlign: TextAlign.center),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

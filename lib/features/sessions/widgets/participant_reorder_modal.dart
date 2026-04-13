@@ -7,25 +7,34 @@ import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
+import 'package:totem_app/shared/widgets/responsive_modal.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
-Future<void> showParticipantReorderWidget(
+Future<void> showParticipantReorderModals(
   BuildContext context,
   SessionController session,
   SessionRoomState state,
   SessionDetailSchema event,
 ) {
-  return showModalBottomSheet(
+  return showResponsiveModal<void>(
     context: context,
-    showDragHandle: false,
-    backgroundColor: const Color(0xFFF3F1E9),
-    isScrollControlled: true,
-    useSafeArea: true,
-    builder: (context) => ParticipantReorderWidget(
+    useRootNavigator: false,
+    showDragHandle: true,
+    bottomSheetBackgroundColor: const Color(0xFFF3F1E9),
+    dialogBackgroundColor: const Color(0xFFF3F1E9),
+    smallScreenBuilder: (context) => ParticipantReorderWidget(
       session: session,
       state: state,
       event: event,
+    ),
+    largeScreenBuilder: (context) => SizedBox(
+      width: 400,
+      child: ParticipantReorderWidget(
+        session: session,
+        state: state,
+        event: event,
+      ),
     ),
   );
 }
@@ -83,9 +92,10 @@ class _ParticipantReorderWidgetState
       child: Material(
         type: MaterialType.transparency,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             const SheetDragHandle(),
-            Expanded(
+            Flexible(
               child: CustomScrollView(
                 shrinkWrap: true,
                 slivers: [
@@ -273,6 +283,8 @@ class _ParticipantReorderItem extends ConsumerWidget {
     final foregroundColor = !isSpeakingNow
         ? theme.colorScheme.onPrimaryContainer
         : theme.colorScheme.onPrimary;
+
+    // TODO(totem): When tapping on a participant, show a modal with their info
 
     return Container(
       margin: const EdgeInsetsDirectional.only(bottom: 8),
