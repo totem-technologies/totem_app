@@ -472,11 +472,41 @@ class SessionController extends _$SessionController {
   }
 
   Future<void> _disconnect() async {
+    await _disableLocalMediaTracks();
     await _room?.disconnect();
+  }
+
+  Future<void> _disableLocalMediaTracks() async {
+    final localParticipant = _room?.localParticipant;
+    if (localParticipant == null) {
+      return;
+    }
+
+    try {
+      await localParticipant.setCameraEnabled(false);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to disable camera while leaving session',
+      );
+    }
+
+    try {
+      await localParticipant.setMicrophoneEnabled(false);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to disable microphone while leaving session',
+      );
+    }
   }
 
   @visibleForTesting
   Future<void> disposeConnection() async {
+    await _disableLocalMediaTracks();
+
     try {
       _listener
         ?..cancelAll()
