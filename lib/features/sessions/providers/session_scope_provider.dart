@@ -126,10 +126,10 @@ RoomScreen? resolveCurrentScreen(Ref ref) {
         return RoomScreen.receiving;
       }
 
-      if (sessionState.isMyTurn(room)) {
-        return RoomScreen.myTurn;
+      if (sessionState.amSpeaking(session.room!)) {
+        return RoomScreen.speaking;
       } else {
-        return RoomScreen.notMyTurn;
+        return RoomScreen.listening;
       }
   }
 }
@@ -245,7 +245,7 @@ bool isMyTurn(Ref ref) {
   final currentSession = ref.watch(currentSessionProvider);
   final state = ref.watch(currentSessionStateProvider);
   if (currentSession?.room == null || state == null) return false;
-  return state.isMyTurn(currentSession!.room!);
+  return state.amSpeaking(currentSession!.room!);
 }
 
 /// Whether the current user is next to speak.

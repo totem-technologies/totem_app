@@ -86,7 +86,7 @@ class SessionKeeperController extends _$SessionKeeperController {
 
   Future<void> passTotem({String? roundMessage}) async {
     final room = session.room;
-    if (room == null || !_state.isMyTurn(room)) {
+    if (room == null || !_state.amSpeaking(room)) {
       throw StateError("Not the user's turn to pass the totem");
     }
     if (!_state.hasKeeper) {

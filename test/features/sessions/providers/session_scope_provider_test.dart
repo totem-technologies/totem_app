@@ -250,7 +250,7 @@ void main() {
       expect(container.read(amNextSpeakerProvider), isTrue);
       expect(
         container.read(resolveCurrentScreenProvider),
-        RoomScreen.notMyTurn,
+        RoomScreen.listening,
       );
     });
 
@@ -391,7 +391,7 @@ void main() {
           'alice',
           'keeper',
         ).read(resolveCurrentScreenProvider),
-        RoomScreen.myTurn,
+        RoomScreen.speaking,
       );
     });
   });

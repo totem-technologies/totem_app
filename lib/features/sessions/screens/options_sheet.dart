@@ -13,12 +13,14 @@ import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/widgets/banned_participants_sheet.dart';
-import 'package:totem_app/features/sessions/widgets/participant_reorder_sheet.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/banned_participants_modal.dart';
+import 'package:totem_app/features/sessions/widgets/participant_reorder_modal.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
+import 'package:totem_app/shared/widgets/responsive_modal.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 
 Future<bool?> showLeaveDialog(BuildContext context) {
@@ -41,15 +43,24 @@ Future<void> showOptionsSheet(
   SessionRoomState state,
   mobile_api.SessionDetailSchema session,
 ) {
-  return showModalBottomSheet(
+  return showResponsiveModal<void>(
     context: context,
     showDragHandle: false,
-    backgroundColor: const Color(0xFFF3F1E9),
+    useRootNavigator: false,
+    bottomSheetBackgroundColor: const Color(0xFFF3F1E9),
+    dialogBackgroundColor: const Color(0xFFF3F1E9),
     isScrollControlled: true,
-    useSafeArea: true,
-    builder: (context) {
+    smallScreenBuilder: (context) {
       return SafeArea(
         child: OptionsSheet(session: session),
+      );
+    },
+    largeScreenBuilder: (context) {
+      return SizedBox(
+        width: 400,
+        child: SafeArea(
+          child: OptionsSheet(session: session),
+        ),
       );
     },
   );
@@ -85,7 +96,7 @@ class OptionsSheet extends ConsumerWidget {
             shrinkWrap: true,
             physics: const ClampingScrollPhysics(),
             children: <Widget>[
-              OptionsSheetTile.camera(
+              ?OptionsSheetTile.camera(
                 currentSession.devices.localVideoTrack?.currentOptions
                     as CameraCaptureOptions?,
                 () {
@@ -93,36 +104,7 @@ class OptionsSheet extends ConsumerWidget {
                   Navigator.of(context).pop();
                 },
               ),
-              // if (lkPlatformIsDesktop())
-              //   MediaDeviceSelectButton(
-              //     builder: (context, roomCtx, deviceCtx) {
-              //       final audioInputs = deviceCtx.audioInputs;
-              //       final selected =
-              //           deviceCtx.audioInputs?.firstWhereOrNull(
-              //             (e) {
-              //               return e.deviceId ==
-              //                       (roomCtx
-              //                               .localAudioTrack
-              //                               ?.currentOptions
-              //                               .deviceId ??
-              //                           currentSession.selectedAudioDeviceId) &&
-              //                   e.label.isNotEmpty;
-              //             },
-              //           ) ??
-              //           deviceCtx.audioInputs?.firstOrNull;
-              //       return OptionsSheetTile.fromMediaDevice(
-              //         device: selected,
-              //         options: audioInputs ?? [],
-              //         onOptionChanged: (value) {
-              //           if (value != null) {
-              //             currentSession.selectAudioDevice(value);
-              //           }
-              //         },
-              //         icon: TotemIcons.microphoneOn,
-              //       );
-              //     },
-              //   ),
-              OptionsSheetTile.output(
+              ?OptionsSheetTile.output(
                 AudioOutputOptions(
                   speakerOn: deviceState.isSpeakerphoneEnabled,
                   deviceId: deviceState.selectedAudioOutputDeviceId,
@@ -157,21 +139,23 @@ class OptionsSheet extends ConsumerWidget {
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
-                if (state.roomState.status == mobile_api.RoomStatus.waitingRoom)
-                  OptionsSheetTile<void>(
-                    title: 'Start session',
-                    icon: TotemIcons.feedback,
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      _onStartSession(context, currentSession);
-                    },
-                  ),
+                // TODO(totem): Consider re-enabling this in the future.
+                // The session can be started from the waiting room.
+                // if (state.roomState.status == mobile_api.RoomStatus.waitingRoom)
+                //   OptionsSheetTile<void>(
+                //     title: 'Start session',
+                //     icon: TotemIcons.feedback,
+                //     onTap: () {
+                //       Navigator.of(context).pop();
+                //       _onStartSession(context, currentSession);
+                //     },
+                //   ),
                 OptionsSheetTile<void>(
                   title: 'Reorder Participants',
                   icon: TotemIcons.reorderParticipants,
                   onTap: () {
                     Navigator.of(context).pop();
-                    showParticipantReorderWidget(
+                    showParticipantReorderModals(
                       context,
                       currentSession,
                       state,
@@ -186,7 +170,7 @@ class OptionsSheet extends ConsumerWidget {
                   icon: TotemIcons.removePerson,
                   onTap: () {
                     Navigator.of(context).pop();
-                    showBannedParticipantsSheet(context, currentSession, state);
+                    showBannedParticipantsModal(context, currentSession, state);
                   },
                 ),
                 OptionsSheetTile<void>(
@@ -353,44 +337,6 @@ class OptionsSheet extends ConsumerWidget {
     );
   }
 
-  Future<void> _onStartSession(
-    BuildContext context,
-    SessionController session,
-  ) async {
-    return showDialog<void>(
-      context: context,
-      builder: (context) {
-        return ConfirmationDialog(
-          title: 'Start Session',
-          content: 'Are you sure you want to start the session?',
-          confirmButtonText: 'Start Session',
-          type: ConfirmationDialogType.standard,
-          onConfirm: () async {
-            try {
-              await session.keeper.startSession();
-              if (!context.mounted) return;
-              Navigator.of(context).pop();
-            } catch (error) {
-              if (!context.mounted) return;
-              Navigator.of(context).pop();
-              await ErrorHandler.handleApiError(
-                context,
-                error,
-                onRetry: () async {
-                  try {
-                    await session.keeper.startSession();
-                  } catch (e) {
-                    // Error already handled by handleApiError
-                  }
-                },
-              );
-            }
-          },
-        );
-      },
-    );
-  }
-
   Future<void> _onEndSession(
     BuildContext context,
     SessionController session,
@@ -457,10 +403,9 @@ class OptionsSheetTile<T> extends StatelessWidget {
          'If selectedOption is provided, options must also be provided.',
        ),
        assert(
-         (options != null &&
-                 selectedOption != null &&
-                 options.contains(selectedOption)) ||
-             (options == null),
+         options == null ||
+             selectedOption == null ||
+             options.contains(selectedOption),
          'selectedOption must be one of the options provided.',
        );
 
@@ -476,30 +421,37 @@ class OptionsSheetTile<T> extends StatelessWidget {
 
   final Widget? trailing;
 
-  static Widget camera(CameraCaptureOptions? options, VoidCallback onSwitch) {
-    return OptionsSheetTile<MediaDevice>(
-      title: switch (options?.cameraPosition) {
-        CameraPosition.front => 'Front',
-        CameraPosition.back => 'Back',
-        null => 'Camera disabled',
-      },
-      icon: options == null ? TotemIcons.cameraOff : TotemIcons.cameraOn,
-      trailing: options != null
-          ? IgnorePointer(
-              child: IconButton(
-                icon: const Icon(Icons.switch_camera_outlined),
-                onPressed: () {},
-              ),
-            )
-          : null,
-      onTap: switch (options?.cameraPosition) {
-        null => null,
-        _ => onSwitch,
-      },
-    );
+  /// A tile to switch the camera position.
+  ///
+  /// On desktop platforms, the user can choose the camera device on the action bar
+  /// See [SessionActionBar]
+  static Widget? camera(CameraCaptureOptions? options, VoidCallback onSwitch) {
+    if (lkPlatformIsMobile()) {
+      return OptionsSheetTile<MediaDevice>(
+        title: switch (options?.cameraPosition) {
+          CameraPosition.front => 'Front',
+          CameraPosition.back => 'Back',
+          null => 'Camera disabled',
+        },
+        icon: options == null ? TotemIcons.cameraOff : TotemIcons.cameraOn,
+        trailing: options != null
+            ? IgnorePointer(
+                child: IconButton(
+                  icon: const Icon(Icons.switch_camera_outlined),
+                  onPressed: () {},
+                ),
+              )
+            : null,
+        onTap: switch (options?.cameraPosition) {
+          null => null,
+          _ => onSwitch,
+        },
+      );
+    }
+    return null;
   }
 
-  static Widget output(
+  static Widget? output(
     AudioOutputOptions options,
     ValueChanged<AudioOutputOptions> onSwitch,
     ValueChanged<MediaDevice> onDeviceSelect,
@@ -521,34 +473,10 @@ class OptionsSheetTile<T> extends StatelessWidget {
         },
       );
     } else {
-      // TODO(bdlukaa): Implement audio output selection for desktop platforms.
-      return const SizedBox.shrink();
-      // return MediaDeviceSelectButton(
-      //   builder: (context, roomCtx, deviceCtx) {
-      //     final audioOutputs = deviceCtx.audioOutputs?.where((
-      //       device,
-      //     ) {
-      //       return device.label.isNotEmpty && device.label != 'Earpiece';
-      //     });
-      //     final selected =
-      //         deviceCtx.audioOutputs?.firstWhereOrNull(
-      //           (e) {
-      //             return e.deviceId == options.deviceId && e.label.isNotEmpty;
-      //           },
-      //         ) ??
-      //         deviceCtx.audioOutputs?.firstOrNull;
-      //     return OptionsSheetTile.fromMediaDevice(
-      //       device: selected,
-      //       options: audioOutputs ?? [],
-      //       onOptionChanged: (value) {
-      //         if (value != null) {
-      //           onDeviceSelect(value);
-      //         }
-      //       },
-      //       icon: TotemIcons.speaker,
-      //     );
-      //   },
-      // );
+      return _DesktopAudioOutputTile(
+        options: options,
+        onDeviceSelect: onDeviceSelect,
+      );
     }
   }
 
@@ -649,6 +577,85 @@ class OptionsSheetTile<T> extends StatelessWidget {
       trailing:
           trailing ??
           (onTap != null ? Icon(Icons.adaptive.arrow_forward) : null),
+    );
+  }
+}
+
+class _DesktopAudioOutputTile extends StatefulWidget {
+  const _DesktopAudioOutputTile({
+    required this.options,
+    required this.onDeviceSelect,
+  });
+
+  final AudioOutputOptions options;
+  final ValueChanged<MediaDevice> onDeviceSelect;
+
+  @override
+  State<_DesktopAudioOutputTile> createState() =>
+      _DesktopAudioOutputTileState();
+}
+
+class _DesktopAudioOutputTileState extends State<_DesktopAudioOutputTile> {
+  List<MediaDevice> _audioOutputs = const [];
+  StreamSubscription<List<MediaDevice>>? _audioOutputsSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToAudioOutputs();
+  }
+
+  @override
+  void dispose() {
+    _audioOutputsSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _listenToAudioOutputs() {
+    _audioOutputsSubscription = Hardware.instance.onDeviceChange.stream.listen(
+      _onDeviceChange,
+    );
+
+    Hardware.instance.audioOutputs().then((devices) {
+      if (!mounted) return;
+      setState(() {
+        _audioOutputs = _filterAudioOutputs(devices);
+      });
+    });
+  }
+
+  void _onDeviceChange(List<MediaDevice> devices) {
+    if (!mounted) return;
+    setState(() {
+      _audioOutputs = _filterAudioOutputs(devices);
+    });
+  }
+
+  List<MediaDevice> _filterAudioOutputs(List<MediaDevice> devices) {
+    return devices.where((device) {
+      return device.kind == 'audiooutput' &&
+          device.label.isNotEmpty &&
+          device.label != 'Earpiece';
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selected =
+        _audioOutputs.firstWhereOrNull(
+          (device) => device.deviceId == widget.options.deviceId,
+        ) ??
+        _audioOutputs.firstOrNull;
+
+    return OptionsSheetTile.fromMediaDevice(
+      device: selected,
+      options: _audioOutputs,
+      onOptionChanged: (value) {
+        if (value != null) {
+          widget.onDeviceSelect(value);
+        }
+      },
+      icon: TotemIcons.speakerOn,
     );
   }
 }

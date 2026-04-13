@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/shared/widgets/viewport_resolver.dart';
 
 /// Displays an emoji bar above the given button context and calls
 /// [onEmojiSelected] with the selected emoji.
@@ -133,7 +134,7 @@ class _EmojiBarOverlayState extends State<_EmojiBarOverlay>
                 widget.onEmojiSelected(emoji);
                 _startTimer();
               },
-              emojis: const ['🫶', '💖', '😢', '🔥', '👏', '🎉'],
+              emojis: EmojiBar.defaultEmojis,
             ),
           ),
         ),
@@ -151,6 +152,8 @@ class EmojiBar extends StatelessWidget {
 
   final List<String> emojis;
   final ValueChanged<String> onEmojiSelected;
+
+  static const defaultEmojis = ['🫶', '💖', '😢', '🔥', '👏', '🎉'];
 
   @override
   Widget build(BuildContext context) {
@@ -195,7 +198,7 @@ Future<void> presentEmojiReaction(
   BuildContext context,
   String emoji, {
   GlobalKey<OverlayState>? overlayKey,
-  bool isInNotMyTurnScreen = false,
+  bool isInListeningTurnScreen = false,
 }) async {
   final overlayBox =
       (overlayKey?.currentContext ?? Overlay.of(context).context)
@@ -216,18 +219,20 @@ Future<void> presentEmojiReaction(
   try {
     entry = OverlayEntry(
       builder: (context) {
-        return OrientationBuilder(
-          builder: (context, orientation) {
-            final double startX = switch (orientation) {
-              Orientation.portrait => position.dx + box.size.width * 0.15,
-              Orientation.landscape => position.dx + box.size.width * 0.4,
+        return ViewportResolver(
+          builder: (context, viewportKind) {
+            final double startX = switch (viewportKind) {
+              ViewportKind.smallPortrait => position.dx + box.size.width * 0.15,
+              ViewportKind.smallLandscape => position.dx + box.size.width * 0.4,
+              ViewportKind.mediumPlus => position.dx + box.size.width * 0.075,
             };
-            final double startY = switch (orientation) {
-              Orientation.portrait =>
-                isInNotMyTurnScreen
+            final double startY = switch (viewportKind) {
+              ViewportKind.smallPortrait =>
+                isInListeningTurnScreen
                     ? position.dy + box.size.height / 2
                     : position.dy + box.size.height / 12,
-              Orientation.landscape => position.dy + box.size.height / 4,
+              ViewportKind.smallLandscape => position.dy + box.size.height / 4,
+              ViewportKind.mediumPlus => position.dy + box.size.height / 16,
             };
             return Stack(
               children: [

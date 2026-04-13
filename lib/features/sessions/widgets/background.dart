@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-
 import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_app/shared/widgets/viewport_resolver.dart';
 
 class RoomBackground extends StatelessWidget {
   const RoomBackground({
@@ -28,22 +28,22 @@ class RoomBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlayStyle,
-      child: OrientationBuilder(
-        builder: (context, orientation) {
-          final isLandscape = orientation == Orientation.landscape;
-
+      child: ViewportResolver(
+        builder: (context, viewportKind) {
           final waitingDecoration = BoxDecoration(
             gradient: LinearGradient(
               colors: const [
                 AppTheme.cream,
                 AppTheme.mauve,
               ],
-              begin: isLandscape
-                  ? AlignmentDirectional.centerStart
-                  : AlignmentDirectional.topCenter,
-              end: isLandscape
-                  ? AlignmentDirectional.centerEnd
-                  : AlignmentDirectional.bottomCenter,
+              begin: switch (viewportKind) {
+                ViewportKind.smallLandscape => AlignmentDirectional.centerStart,
+                _ => AlignmentDirectional.topCenter,
+              },
+              end: switch (viewportKind) {
+                ViewportKind.smallLandscape => AlignmentDirectional.centerEnd,
+                _ => AlignmentDirectional.bottomCenter,
+              },
               stops: const [0.5, 1],
             ),
           );
@@ -51,7 +51,7 @@ class RoomBackground extends StatelessWidget {
             color: AppTheme.slate,
           );
 
-          final foregroudColor = switch (status) {
+          final foregroundColor = switch (status) {
             RoomStatus.waitingRoom => Colors.black,
             _ => Colors.white,
           };
@@ -62,17 +62,17 @@ class RoomBackground extends StatelessWidget {
               _ => roomDecoration,
             },
             padding: padding,
-            child: DefaultTextStyle.merge(
-              style: TextStyle(color: foregroudColor),
-              child: Theme(
-                data: Theme.of(context).copyWith(
-                  scaffoldBackgroundColor: Colors.transparent,
-                  textTheme: Theme.of(context).textTheme.apply(
-                    bodyColor: foregroudColor,
-                    displayColor: foregroudColor,
-                    decorationColor: foregroudColor,
-                  ),
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                scaffoldBackgroundColor: Colors.transparent,
+                textTheme: Theme.of(context).textTheme.apply(
+                  bodyColor: foregroundColor,
+                  displayColor: foregroundColor,
+                  decorationColor: foregroundColor,
                 ),
+              ),
+              child: DefaultTextStyle.merge(
+                style: TextStyle(color: foregroundColor),
                 child: Material(
                   type: MaterialType.transparency,
                   child: child,

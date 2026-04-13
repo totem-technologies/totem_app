@@ -1,5 +1,5 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-import 'package:meta/meta.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
@@ -67,7 +67,7 @@ class PermissionsController extends _$PermissionsController {
         stackTrace: stackTrace,
         message: 'Failed to build permissions state',
       );
-      return _currentOrDefault;
+      return const PermissionsState();
     }
   }
 
@@ -76,13 +76,17 @@ class PermissionsController extends _$PermissionsController {
       final camera = await Permission.camera.status;
       final microphone = await Permission.microphone.status;
 
-      final notifPermission =
-          await FlutterForegroundTask.checkNotificationPermission();
-      final notificationStatus =
-          notifPermission == NotificationPermission.granted
-          ? PermissionStatus.granted
-          : PermissionStatus.denied;
-
+      PermissionStatus notificationStatus = PermissionStatus.denied;
+      if (!(kIsWeb || kIsWasm)) {
+        final notificationsPermission =
+            await FlutterForegroundTask.checkNotificationPermission();
+        notificationStatus =
+            notificationsPermission == NotificationPermission.granted
+            ? PermissionStatus.granted
+            : PermissionStatus.denied;
+      } else {
+        notificationStatus = await Permission.notification.status;
+      }
       return PermissionsState(
         cameraStatus: camera,
         microphoneStatus: microphone,
@@ -94,27 +98,59 @@ class PermissionsController extends _$PermissionsController {
         stackTrace: stackTrace,
         message: 'Failed to fetch current permission statuses',
       );
-      return _currentOrDefault;
+      return const PermissionsState();
     }
   }
 
   Future<void> refreshStatuses() async {
     try {
-      state = AsyncValue.data(await currentStatuses);
+      final statuses = await currentStatuses;
+      if (!ref.mounted) return;
+      state = AsyncValue.data(statuses);
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Failed to refresh permission statuses',
       );
-      state = AsyncValue.data(_currentOrDefault);
+      if (!ref.mounted) return;
+      state = const AsyncValue.data(PermissionsState());
+    }
+  }
+
+  Future<void> requestPermissions() async {
+    try {
+      final current = _currentOrDefault;
+      final statuses = await [
+        Permission.camera,
+        Permission.microphone,
+        Permission.notification,
+      ].request();
+      if (!ref.mounted) return;
+      state = AsyncValue.data(
+        current.copyWith(
+          cameraStatus: statuses[Permission.camera] ?? current.cameraStatus,
+          microphoneStatus:
+              statuses[Permission.microphone] ?? current.microphoneStatus,
+          notificationStatus:
+              statuses[Permission.notification] ?? current.notificationStatus,
+        ),
+      );
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to request permissions',
+      );
     }
   }
 
   Future<void> requestCamera() async {
+    final current = _currentOrDefault;
     try {
       final status = await Permission.camera.request();
-      state = AsyncValue.data(_currentOrDefault.copyWith(cameraStatus: status));
+      if (!ref.mounted) return;
+      state = AsyncValue.data(current.copyWith(cameraStatus: status));
 
       if (status.isPermanentlyDenied) {
         try {
@@ -133,16 +169,17 @@ class PermissionsController extends _$PermissionsController {
         stackTrace: stackTrace,
         message: 'Failed to request camera permission',
       );
-      state = AsyncValue.data(_currentOrDefault);
+      if (!ref.mounted) return;
+      state = AsyncValue.data(current);
     }
   }
 
   Future<void> requestMicrophone() async {
+    final current = _currentOrDefault;
     try {
       final status = await Permission.microphone.request();
-      state = AsyncValue.data(
-        _currentOrDefault.copyWith(microphoneStatus: status),
-      );
+      if (!ref.mounted) return;
+      state = AsyncValue.data(current.copyWith(microphoneStatus: status));
 
       if (status.isPermanentlyDenied) {
         try {
@@ -161,28 +198,35 @@ class PermissionsController extends _$PermissionsController {
         stackTrace: stackTrace,
         message: 'Failed to request microphone permission',
       );
-      state = AsyncValue.data(_currentOrDefault);
+      if (!ref.mounted) return;
+      state = AsyncValue.data(current);
     }
   }
 
   Future<void> requestNotification() async {
+    final current = _currentOrDefault;
     try {
-      final result =
-          await FlutterForegroundTask.requestNotificationPermission();
-      final status = result == NotificationPermission.granted
-          ? PermissionStatus.granted
-          : PermissionStatus.denied;
+      PermissionStatus status;
+      if (kIsWeb || kIsWasm) {
+        status = await Permission.notification.request();
+      } else {
+        final result =
+            await FlutterForegroundTask.requestNotificationPermission();
+        status = result == NotificationPermission.granted
+            ? PermissionStatus.granted
+            : PermissionStatus.denied;
+      }
 
-      state = AsyncValue.data(
-        _currentOrDefault.copyWith(notificationStatus: status),
-      );
+      if (!ref.mounted) return;
+      state = AsyncValue.data(current.copyWith(notificationStatus: status));
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Failed to request notification permission',
       );
-      state = AsyncValue.data(_currentOrDefault);
+      if (!ref.mounted) return;
+      state = AsyncValue.data(current);
     }
   }
 }

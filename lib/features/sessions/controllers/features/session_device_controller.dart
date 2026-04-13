@@ -367,6 +367,14 @@ class SessionDeviceController extends _$SessionDeviceController {
     _emitState();
   }
 
+  Future<void> selectCameraDevice(MediaDevice device) async {
+    final room = _room;
+    if (room == null) return;
+
+    await room.setVideoInputDevice(device);
+    _emitState();
+  }
+
   Future<void> disableCamera() async {
     final room = _room;
     if (!(room?.localParticipant?.isCameraEnabled() ?? false)) {

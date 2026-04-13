@@ -10,12 +10,12 @@ class PrejoinRoomBaseScreen extends StatelessWidget {
   const PrejoinRoomBaseScreen({
     required this.video,
     required this.actionBar,
-    this.joinSlider,
+    this.joinCard,
     super.key,
   });
 
   final Widget video;
-  final Widget? joinSlider;
+  final Widget? joinCard;
   final Widget actionBar;
 
   @override
@@ -56,7 +56,7 @@ class PrejoinRoomBaseScreen extends StatelessWidget {
                       ),
                     ),
                     // SizedBox needed to maintain padding with and without it.
-                    joinSlider ?? const SizedBox(),
+                    joinCard ?? const SizedBox(),
                     actionBar,
                   ],
                 ),

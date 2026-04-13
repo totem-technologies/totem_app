@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_dynamic_calls
+
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,10 +13,10 @@ import 'package:totem_app/features/sessions/controllers/core/session_controller.
 import 'package:totem_app/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/screens/my_turn.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar.dart';
+import 'package:totem_app/features/sessions/screens/speaking_turn_screen.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
-import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../setup.dart';
@@ -171,6 +173,12 @@ void main() {
     when(() => session.keeper).thenReturn(keeper);
     when(() => session.devices).thenReturn(devices);
     when(() => session.isCurrentUserKeeper()).thenReturn(true);
+    when(() => devices.isCameraEnabled).thenReturn(false);
+    when(() => devices.isMicrophoneEnabled).thenReturn(false);
+    when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
+    when(() => devices.selectedCameraDeviceId).thenReturn(null);
+    when(() => devices.selectedAudioDeviceId).thenReturn(null);
+    when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
     when(() => devices.enableMicrophone()).thenAnswer((_) async {});
     when(() => devices.disableMicrophone()).thenAnswer((_) async {});
     when(() => devices.enableCamera()).thenAnswer((_) async {});
@@ -188,7 +196,7 @@ void main() {
     ).thenReturn(MockParticipantEventsListener());
   });
 
-  Future<void> pumpMyTurn(
+  Future<void> pumpSpeakingTurn(
     WidgetTester tester, {
     required SessionRoomState sessionState,
     required bool isKeeper,
@@ -228,7 +236,7 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: MyTurn(event: _createTestSession()),
+            body: SpeakingTurnScreen(event: _createTestSession()),
           ),
         ),
       ),
@@ -237,7 +245,7 @@ void main() {
     await tester.pump();
   }
 
-  group('MyTurn', () {
+  group('SpeakingTurn', () {
     testWidgets('renders the participant grid for room sizes up to 12', (
       tester,
     ) async {
@@ -265,13 +273,13 @@ void main() {
           ),
         );
 
-        await pumpMyTurn(tester, sessionState: state, isKeeper: true);
+        await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
         expect(
           find.byType(ParticipantCard),
           findsNWidgets(participantCount),
         );
-        expect(find.byType(MyTurn), findsOneWidget);
+        expect(find.byType(SpeakingTurnScreen), findsOneWidget);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
       }
@@ -286,12 +294,12 @@ void main() {
         nextSpeaker: 'user-2',
       );
 
-      await pumpMyTurn(tester, sessionState: state, isKeeper: true);
+      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
       expect(find.byType(TextField), findsOneWidget);
-      expect(find.byType(ActionSlider), findsOneWidget);
+      expect(find.byType(ActionSliderButton), findsOneWidget);
       expect(find.text('Your prompt for this round'), findsOneWidget);
-      expect(find.text('Slide to pass to User Two'), findsOneWidget);
+      expect(find.text('Pass to User Two'), findsOneWidget);
       expect(find.byType(SessionActionBar), findsOneWidget);
       expect(find.byType(ParticipantCard), findsAtLeastNWidgets(1));
     });
@@ -305,7 +313,7 @@ void main() {
         nextSpeaker: 'user-2',
       );
 
-      await pumpMyTurn(tester, sessionState: state, isKeeper: true);
+      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
       expect(find.bySemanticsLabel('Microphone off'), findsOneWidget);
       expect(find.bySemanticsLabel('Camera off'), findsOneWidget);
@@ -335,7 +343,7 @@ void main() {
         () => keeper.passTotem(roundMessage: 'A round message'),
       ).thenAnswer((_) async {});
 
-      await pumpMyTurn(
+      await pumpSpeakingTurn(
         tester,
         sessionState: state,
         isKeeper: true,
@@ -346,7 +354,8 @@ void main() {
         find.byType(TextField),
         '  A round message  ',
       );
-      await tester.drag(find.byType(ActionSlider), const Offset(500, 0));
+      final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
+      await actionSlider.widget.onActionCompleted();
       await tester.pump();
 
       verify(
@@ -364,7 +373,7 @@ void main() {
         nextSpeaker: 'user-2',
       );
 
-      await pumpMyTurn(tester, sessionState: state, isKeeper: false);
+      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: false);
 
       expect(find.byType(TextField), findsNothing);
       expect(find.byType(ActionSlider), findsOneWidget);
@@ -382,7 +391,7 @@ void main() {
         turnState: TurnState.passing,
       );
 
-      await pumpMyTurn(tester, sessionState: state, isKeeper: true);
+      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
       expect(
         find.textContaining('Waiting for the receiver to accept...'),

@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:battery_plus/battery_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,19 +15,20 @@ import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.d
 import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
-import 'package:totem_app/features/sessions/screens/my_turn.dart';
-import 'package:totem_app/features/sessions/screens/not_my_turn.dart';
+import 'package:totem_app/features/sessions/screens/listening_turn_screen.dart';
 import 'package:totem_app/features/sessions/screens/options_sheet.dart';
 import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_disconnected.dart';
+import 'package:totem_app/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
+import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/error_screen.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
 
-class VideoRoomScreen extends ConsumerStatefulWidget {
-  const VideoRoomScreen({
+class VideoSessionScreen extends ConsumerStatefulWidget {
+  const VideoSessionScreen({
     required this.sessionSlug,
     required this.loadingScreen,
     super.key,
@@ -35,10 +38,12 @@ class VideoRoomScreen extends ConsumerStatefulWidget {
   final Widget loadingScreen;
 
   @override
-  ConsumerState<VideoRoomScreen> createState() => _VideoRoomScreenState();
+  ConsumerState<VideoSessionScreen> createState() => _VideoSessionScreenState();
 }
 
-class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
+class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
+  static var _didWarmEmojiGlyphs = false;
+
   final _roomNavigatorKey = GlobalKey<NavigatorState>();
   final _notificationController = PopupController();
 
@@ -52,6 +57,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _listenToBatteryChanges();
+    _warmEmojiGlyphs();
   }
 
   @override
@@ -62,6 +68,44 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _batterySubscription?.cancel();
     super.dispose();
+  }
+
+  void _warmEmojiGlyphs() {
+    if (!kIsWeb) return;
+    if (_didWarmEmojiGlyphs) return;
+    _didWarmEmojiGlyphs = true;
+
+    // On web, first-time emoji painting may show placeholders briefly while
+    // glyphs are being resolved. Painting once off-screen warms the cache.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final textDirection =
+          Directionality.maybeOf(context) ?? TextDirection.ltr;
+      const style = TextStyle(
+        fontSize: 24,
+        textBaseline: TextBaseline.ideographic,
+      );
+
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      var dy = 0.0;
+
+      for (final emoji in EmojiBar.defaultEmojis) {
+        final painter =
+            TextPainter(
+                text: TextSpan(text: emoji, style: style),
+                textDirection: textDirection,
+                maxLines: 1,
+              )
+              ..layout()
+              ..paint(canvas, Offset(0, dy));
+        dy += painter.height + 2;
+        painter.dispose();
+      }
+
+      recorder.endRecording().dispose();
+    });
   }
 
   void _closeKeeperDisconnectedNotification() {
@@ -275,15 +319,15 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         (previous, next) {
           if (!mounted) return;
 
-          final isInNotMyTurnScreen =
-              ref.read(resolveCurrentScreenProvider) == RoomScreen.notMyTurn;
+          final isListeningTurnScreen =
+              ref.read(resolveCurrentScreenProvider) == RoomScreen.listening;
 
           for (final reaction in next.where(
             (reaction) => !reaction.displayed,
           )) {
             ref
                 .read(emojiReactionsProvider.notifier)
-                .displayReaction(context, reaction, isInNotMyTurnScreen);
+                .displayReaction(context, reaction, isListeningTurnScreen);
           }
         },
       )
@@ -434,7 +478,7 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
   ) {
     switch (screen) {
       case RoomScreen.error:
-        return RoomErrorScreen(onRetry: session.join);
+        return SessionErrorScreen(onRetry: session.join);
       case RoomScreen.loading:
         return widget.loadingScreen;
       case RoomScreen.disconnected:
@@ -444,15 +488,15 @@ class _VideoRoomScreenState extends ConsumerState<VideoRoomScreen> {
         );
       case RoomScreen.receiving:
         return const ReceiveTotemScreen();
-      case RoomScreen.myTurn:
+      case RoomScreen.speaking:
       case RoomScreen.passing:
         return Builder(
           builder: (context) {
-            return MyTurn(event: session.event!);
+            return SpeakingTurnScreen(event: session.event!);
           },
         );
-      case RoomScreen.notMyTurn:
-        return NotMyTurn(
+      case RoomScreen.listening:
+        return ListeningTurnScreen(
           event: session.event!,
         );
     }

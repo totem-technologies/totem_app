@@ -11,7 +11,7 @@ void main() {
   }) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: RoomErrorScreen(
+        home: SessionErrorScreen(
           onRetry: onRetry,
           error: error,
         ),

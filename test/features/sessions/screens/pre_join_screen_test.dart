@@ -14,7 +14,10 @@ import 'package:totem_app/features/sessions/controllers/core/session_state.dart'
     as session_state;
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/pre_join_screen.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
+import 'package:totem_app/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
@@ -141,6 +144,22 @@ class _PreviewTrackFactory extends PreJoinPreviewTrackFactory {
   }
 }
 
+class _NoOpSessionController extends sessions.SessionController {
+  @override
+  session_state.SessionRoomState build(session_state.SessionOptions options) {
+    return _createConnectedSessionState();
+  }
+
+  @override
+  void configureJoinPreferences({
+    required bool cameraEnabled,
+    required bool microphoneEnabled,
+  }) {}
+
+  @override
+  Future<void> join() async {}
+}
+
 void main() {
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -162,6 +181,7 @@ void main() {
     SessionDetailSchema? event,
     Exception? eventError,
     PreJoinPreviewTrackFactory? previewTrackFactory,
+    bool useNoOpSessionController = false,
   }) async {
     final sessionEvent =
         event ??
@@ -195,6 +215,10 @@ void main() {
                 .overrideWithValue(
                   _createConnectedSessionState(),
                 ),
+          if (useNoOpSessionController)
+            sessions
+                .sessionControllerProvider(_createSessionOptions())
+                .overrideWith(_NoOpSessionController.new),
           eventProvider(sessionSlug).overrideWith((ref) async {
             if (eventError != null) {
               throw eventError;
@@ -264,7 +288,7 @@ void main() {
         await pumpPreJoinScreen(tester);
 
         expect(find.byType(ActionBar), findsOneWidget);
-        expect(find.text('Swipe to Join'), findsOneWidget);
+        expect(find.byType(ActionSliderButton), findsOneWidget);
         expect(find.text('Welcome'), findsOneWidget);
       });
     });
@@ -331,7 +355,7 @@ void main() {
 
         expect(tokenAttempts, greaterThanOrEqualTo(2));
         expect(find.text('Something went wrong'), findsNothing);
-        expect(find.text('Swipe to Join'), findsOneWidget);
+        expect(find.byType(ActionSliderButton), findsOneWidget);
         expect(find.text('Welcome'), findsOneWidget);
       });
 
@@ -453,6 +477,77 @@ void main() {
         verify(audioTrack.stop).called(1);
         verify(audioTrack.dispose).called(1);
       });
+
+      testWidgets(
+        'does not allow changing action bar items after join is requested',
+        (tester) async {
+          await pumpPreJoinScreen(
+            tester,
+            useNoOpSessionController: true,
+          );
+
+          expect(
+            tester
+                .widget<ActionBarMicButton>(find.byType(ActionBarMicButton))
+                .onToggle,
+            isNotNull,
+          );
+          final initialSpeakerButton = tester
+              .widgetList<ActionBarButton>(find.byType(ActionBarButton))
+              .firstWhere(
+                (button) => (button.semanticsLabel ?? '').startsWith('Audio '),
+              );
+          expect(
+            initialSpeakerButton.onPressed,
+            isNotNull,
+          );
+          expect(
+            tester
+                .widget<ActionBarCameraSwitcherButton>(
+                  find.byType(ActionBarCameraSwitcherButton),
+                )
+                .onToggle,
+            isNotNull,
+          );
+
+          final sliderFinder = find.byType(ActionSlider);
+          final buttonFinder = find.byType(ActionButton);
+          if (sliderFinder.evaluate().isNotEmpty) {
+            await tester.drag(
+              sliderFinder.first,
+              const Offset(500, 0),
+              warnIfMissed: false,
+            );
+          } else {
+            await tester.tap(buttonFinder.first);
+          }
+          await tester.pump();
+
+          expect(
+            tester
+                .widgetList<ActionBarMicButton>(find.byType(ActionBarMicButton))
+                .every((button) => button.onToggle == null),
+            isTrue,
+          );
+          final speakerButtons = tester
+              .widgetList<ActionBarButton>(find.byType(ActionBarButton))
+              .where(
+                (button) => (button.semanticsLabel ?? '').startsWith('Audio '),
+              );
+          expect(
+            speakerButtons.every((button) => button.onPressed == null),
+            isTrue,
+          );
+          expect(
+            tester
+                .widgetList<ActionBarCameraSwitcherButton>(
+                  find.byType(ActionBarCameraSwitcherButton),
+                )
+                .every((button) => button.onToggle == null),
+            isTrue,
+          );
+        },
+      );
     });
 
     group('already-present dialog', () {
@@ -464,7 +559,17 @@ void main() {
           joinResponse: _createJoinResponse(isAlreadyPresent: true),
         );
 
-        await tester.drag(find.text('Swipe to Join'), const Offset(600, 0));
+        final sliderFinder = find.byType(ActionSlider);
+        final buttonFinder = find.byType(ActionButton);
+        if (sliderFinder.evaluate().isNotEmpty) {
+          await tester.drag(
+            sliderFinder.first,
+            const Offset(600, 0),
+            warnIfMissed: false,
+          );
+        } else {
+          await tester.tap(buttonFinder.first);
+        }
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 250));
         await tester.pump(const Duration(milliseconds: 250));

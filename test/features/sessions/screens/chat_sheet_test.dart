@@ -8,7 +8,7 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/screens/chat_sheet.dart';
+import 'package:totem_app/features/sessions/screens/chat.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
@@ -135,7 +135,7 @@ void main() {
         ],
         child: const MaterialApp(
           home: Scaffold(
-            body: SessionChatSheet(),
+            body: SessionChatMessages(),
           ),
         ),
       ),
@@ -176,7 +176,7 @@ void main() {
         ],
         child: const MaterialApp(
           home: Scaffold(
-            body: SessionChatSheet(),
+            body: SessionChatMessages(),
           ),
         ),
       ),
@@ -185,7 +185,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final container = ProviderScope.containerOf(
-      tester.element(find.byType(SessionChatSheet)),
+      tester.element(find.byType(SessionChatMessages)),
       listen: false,
     );
 

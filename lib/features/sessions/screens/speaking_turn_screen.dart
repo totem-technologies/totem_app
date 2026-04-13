@@ -9,21 +9,23 @@ import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_app/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
+import 'package:totem_app/shared/widgets/viewport_resolver.dart';
 
-class MyTurn extends ConsumerStatefulWidget {
-  const MyTurn({required this.event, super.key});
+class SpeakingTurnScreen extends ConsumerStatefulWidget {
+  const SpeakingTurnScreen({required this.event, super.key});
 
   final SessionDetailSchema event;
 
   @override
-  ConsumerState<MyTurn> createState() => _MyTurnState();
+  ConsumerState<SpeakingTurnScreen> createState() => _SpeakingTurnState();
 }
 
-class _MyTurnState extends ConsumerState<MyTurn> {
+class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
   final roundMessageController = TextEditingController();
 
   @override
@@ -56,11 +58,10 @@ class _MyTurnState extends ConsumerState<MyTurn> {
     return RoomBackground(
       status: roomStatus,
       child: SafeArea(
-        child: OrientationBuilder(
-          builder: (context, orientation) {
-            final isLandscape = orientation == Orientation.landscape;
-            final participantGrid = _MyTurnGrid(
-              isLandscape: isLandscape,
+        child: ViewportResolver(
+          builder: (context, viewportKind) {
+            final participantGrid = _SpeakingTurnGrid(
+              isLandscape: viewportKind.isLarge,
               event: widget.event,
             );
 
@@ -83,22 +84,24 @@ class _MyTurnState extends ConsumerState<MyTurn> {
                 if (isKeeper) {
                   passCard = TransitionCardContainer(
                     children: [
-                      TextField(
-                        controller: roundMessageController,
-                        decoration: const InputDecoration(
-                          hintText: 'Your prompt for this round',
-                        ),
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.colorScheme.onSurface,
+                      Flexible(
+                        child: TextField(
+                          controller: roundMessageController,
+                          decoration: const InputDecoration(
+                            hintText: 'Your prompt for this round',
+                          ),
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.onSurface,
+                          ),
                         ),
                       ),
                       ConstrainedBox(
                         constraints: const BoxConstraints(
                           minWidth: 160,
                         ),
-                        child: ActionSlider(
+                        child: ActionSliderButton(
                           text:
-                              'Slide to pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
+                              'Pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
                                   .trim(),
                           onActionCompleted: () {
                             final roundMessage = roundMessageController.text
@@ -120,7 +123,7 @@ class _MyTurnState extends ConsumerState<MyTurn> {
                 passCard = normalPassCard;
             }
             final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-            final restingBottom = switch (isLandscape) {
+            final restingBottom = switch (viewportKind.isLarge) {
               true => 180,
               false => 80,
             };
@@ -131,46 +134,60 @@ class _MyTurnState extends ConsumerState<MyTurn> {
             final double yOffset = keyboardInset > 0
                 ? -math.max(0.0, (keyboardInset + 16) - restingBottom)
                 : 0.0;
-            if (isLandscape) {
-              return Column(
-                spacing: 16,
-                children: [
-                  Expanded(
-                    child: Row(
-                      spacing: 16,
-                      children: [
-                        Expanded(child: participantGrid),
-                        Flexible(
-                          child: Column(
-                            spacing: 16,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Transform.translate(
-                                offset: Offset(0, yOffset),
-                                child: passCard,
-                              ),
-                              const SessionActionBar(),
-                            ],
-                          ),
-                        ),
-                      ],
+
+            switch (viewportKind) {
+              case ViewportKind.smallPortrait:
+                return Column(
+                  spacing: 20,
+                  children: [
+                    Expanded(child: participantGrid),
+                    Transform.translate(
+                      offset: Offset(0, yOffset),
+                      child: passCard,
                     ),
-                  ),
-                ],
-              );
-            } else {
-              return Column(
-                spacing: 20,
-                children: [
-                  Expanded(child: participantGrid),
-                  Transform.translate(
-                    offset: Offset(0, yOffset),
-                    child: passCard,
-                  ),
-                  const SessionActionBar(),
-                ],
-              );
+                    const SessionActionBar(),
+                  ],
+                );
+              case ViewportKind.smallLandscape:
+                return Column(
+                  spacing: 16,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        spacing: 16,
+                        children: [
+                          Expanded(child: participantGrid),
+                          Flexible(
+                            child: Column(
+                              spacing: 16,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Transform.translate(
+                                  offset: Offset(0, yOffset),
+                                  child: passCard,
+                                ),
+                                const SessionActionBar(),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              case ViewportKind.mediumPlus:
+                return Column(
+                  spacing: 16,
+                  children: [
+                    Expanded(child: participantGrid),
+                    Transform.translate(
+                      offset: Offset(0, yOffset),
+                      child: passCard,
+                    ),
+                    const SessionActionBar(),
+                  ],
+                );
             }
           },
         ),
@@ -179,8 +196,8 @@ class _MyTurnState extends ConsumerState<MyTurn> {
   }
 }
 
-class _MyTurnGrid extends ConsumerWidget {
-  const _MyTurnGrid({
+class _SpeakingTurnGrid extends ConsumerWidget {
+  const _SpeakingTurnGrid({
     required this.isLandscape,
     required this.event,
     this.maxPerLineCount = 10,
