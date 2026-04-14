@@ -99,7 +99,6 @@ class FeaturedParticipantCard extends ConsumerWidget {
                 child: ParticipantVideo(
                   key: participantKeys.getKey(activeSpeaker.identity),
                   participant: activeSpeaker,
-                  preferredVideoQuality: VideoQuality.HIGH,
                 ),
               ),
               PositionedDirectional(
@@ -236,10 +235,7 @@ class ParticipantCard extends ConsumerWidget {
           child: Stack(
             children: [
               Positioned.fill(
-                child: ParticipantVideo(
-                  participant: participant,
-                  preferredVideoQuality: VideoQuality.MEDIUM,
-                ),
+                child: ParticipantVideo(participant: participant),
               ),
               PositionedDirectional(
                 top: overlayPadding,
@@ -659,14 +655,9 @@ class LocalParticipantCard extends ConsumerWidget {
 }
 
 class ParticipantVideo extends ConsumerStatefulWidget {
-  const ParticipantVideo({
-    required this.participant,
-    this.preferredVideoQuality = VideoQuality.MEDIUM,
-    super.key,
-  });
+  const ParticipantVideo({required this.participant, super.key});
 
   final Participant<TrackPublication<Track>> participant;
-  final VideoQuality preferredVideoQuality;
 
   @override
   ConsumerState<ParticipantVideo> createState() => _ParticipantVideoState();
@@ -693,9 +684,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
   EventsListener<ParticipantEvent>? _listener;
   EventsListener<TrackEvent>? _trackListener;
-  VideoQuality? _lastAppliedQuality;
   String? _listenedTrackSid;
-  Timer? _qualityRetryTimer;
 
   void _setupListeners() {
     _listener?.dispose();
@@ -725,57 +714,16 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     }
   }
 
-  void _scheduleQualityUpdateBurst() {
-    _qualityRetryTimer?.cancel();
-    scheduleMicrotask(_applyPreferredRemoteQuality);
-    _qualityRetryTimer = Timer.periodic(const Duration(milliseconds: 300), (
-      timer,
-    ) {
-      if (!mounted || timer.tick >= 3) {
-        timer.cancel();
-        return;
-      }
-      scheduleMicrotask(_applyPreferredRemoteQuality);
-    });
-  }
-
-  Future<void> _applyPreferredRemoteQuality() async {
-    final publication = videoTrack;
-    if (publication == null) return;
-    if (publication is! RemoteTrackPublication<RemoteTrack>) return;
-
-    // final desired = widget.preferredVideoQuality;
-
-    // try {
-    //   final previousQuality = _lastAppliedQuality;
-    //   await publication.setVideoQuality(desired);
-    //   _lastAppliedQuality = desired;
-    //   logger.i(
-    //     'Participant video quality changed '
-    //     '(identity=${widget.participant.identity}, sid=${publication.sid}): '
-    //     '${previousQuality?.name ?? 'unset'} -> ${publication.videoQuality.name}',
-    //   );
-    // } catch (error, stackTrace) {
-    //   ErrorHandler.logError(
-    //     error,
-    //     stackTrace: stackTrace,
-    //     message: 'Failed to set remote video quality',
-    //   );
-    // }
-  }
-
   @override
   void initState() {
     super.initState();
     _setupListeners();
-    _scheduleQualityUpdateBurst();
   }
 
   void _onTrackMuted(TrackMutedEvent event) {
     if (event.publication.source != TrackSource.camera) return;
     if (!mounted) return;
     _bindTrackListener();
-    _scheduleQualityUpdateBurst();
     setState(() {});
   }
 
@@ -783,7 +731,6 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     if (event.publication.source != TrackSource.camera) return;
     if (!mounted) return;
     _bindTrackListener();
-    _scheduleQualityUpdateBurst();
     setState(() {});
   }
 
@@ -803,7 +750,6 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
   void _onParticipantUpdated(ParticipantEvent _) {
     _bindTrackListener();
-    _scheduleQualityUpdateBurst();
     if (mounted) setState(() {});
   }
 
@@ -813,16 +759,10 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     if (oldWidget.participant.sid != widget.participant.sid) {
       _setupListeners();
     }
-    if (oldWidget.preferredVideoQuality != widget.preferredVideoQuality ||
-        oldWidget.participant.identity != widget.participant.identity ||
-        oldWidget.participant.sid != widget.participant.sid) {
-      _scheduleQualityUpdateBurst();
-    }
   }
 
   @override
   void dispose() {
-    _qualityRetryTimer?.cancel();
     _listener?.dispose();
     _trackListener?.dispose();
     super.dispose();
