@@ -82,6 +82,8 @@ class OptionsSheet extends ConsumerWidget {
 
     final isKeeper = currentSession.isCurrentUserKeeper();
 
+    // TODO(web): This does not look good on big screen
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
