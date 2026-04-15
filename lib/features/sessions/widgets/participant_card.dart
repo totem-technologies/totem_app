@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart' hide logger;
@@ -664,6 +665,19 @@ class ParticipantVideo extends ConsumerStatefulWidget {
 }
 
 class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
+  // --- Debug Stats State ---
+  int _currentBitrate = 0;
+  num frameHeight = 0;
+  num frameWidth = 0;
+  num fps = 0;
+  num framesSent = 0;
+  num framesDecoded = 0;
+
+  void resetStats() {
+    _currentBitrate = frameHeight = frameWidth = framesSent = framesDecoded = 0;
+    fps = 0;
+  }
+
   TrackPublication<Track>? get videoTrack {
     if (widget.participant is RemoteParticipant) {
       return widget.participant.getTrackPublicationBySource(TrackSource.camera);
@@ -736,15 +750,37 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
   // Whether the track is inactive due to poor network conditions.
   bool _isTrackInactive = false;
+
   void _onTrackEvent(TrackEvent event) {
     if (!mounted) return;
+
     if (event is VideoReceiverStatsEvent) {
+      resetStats();
+
       final bitrate = event.currentBitrate;
-      if (bitrate < 10) {
-        setState(() => _isTrackInactive = true);
-      } else {
-        setState(() => _isTrackInactive = false);
-      }
+      setState(() {
+        frameHeight = event.stats.frameHeight ?? 0;
+        frameWidth = event.stats.frameWidth ?? 0;
+        fps = event.stats.framesPerSecond ?? 0;
+        framesSent = -1;
+        framesDecoded = event.stats.framesDecoded ?? 0;
+
+        _currentBitrate = bitrate.round();
+        _isTrackInactive = bitrate < 10;
+      });
+    } else if (event is VideoSenderStatsEvent) {
+      resetStats();
+
+      setState(() {
+        final stats = event.stats.values.lastOrNull;
+        frameHeight = stats?.frameHeight ?? 0;
+        frameWidth = stats?.frameWidth ?? 0;
+        fps = stats?.framesPerSecond ?? 0;
+        framesSent = stats?.framesSent ?? 0;
+        framesDecoded = -1;
+
+        _currentBitrate = event.currentBitrate.round();
+      });
     }
   }
 
@@ -773,21 +809,20 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     final user = ref.watch(userProfileProvider(widget.participant.identity));
     final track = videoTrack;
 
+    // 1. Resolve the core UI (Video or Avatar)
+    Widget content;
+
     if (track != null &&
         track.subscribed &&
         !track.muted &&
         !_isTrackInactive) {
-      return IgnorePointer(
+      content = IgnorePointer(
         child: ColoredBox(
           color: Colors.black,
           child: VideoTrackRenderer(
             key: ValueKey(track.track!.sid),
             track.track! as VideoTrack,
             fit: VideoViewFit.cover,
-            // Use platform view for better CPU performance on iOS.
-            // The [VideoTrackRenderer] widget only supports platform views for iOS.
-            // On Android, it will still use the default texture rendering.
-            // https://github.com/livekit/client-sdk-flutter/issues/364
             renderMode: VideoRenderMode.platformView,
           ),
         ),
@@ -797,39 +832,78 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         authControllerProvider.select((auth) => auth.user?.slug),
       );
       if (widget.participant.identity == localUserSlug) {
-        return IgnorePointer(
+        content = IgnorePointer(
           child: UserAvatar.currentUser(
             radius: 0,
             borderRadius: BorderRadius.zero,
             borderWidth: 0,
           ),
         );
+      } else {
+        content = IgnorePointer(
+          child: user.when(
+            data: (user) {
+              return UserAvatar.fromUserSchema(
+                user,
+                borderRadius: BorderRadius.zero,
+                borderWidth: 0,
+              );
+            },
+            error: (error, stackTrace) {
+              return const ColoredBox(
+                color: AppTheme.mauve,
+                child: Center(
+                  child: TotemIcon(
+                    TotemIcons.person,
+                    size: 24,
+                    color: Colors.white,
+                  ),
+                ),
+              );
+            },
+            loading: () => const LoadingVideoPlaceholder(borderRadius: 0),
+          ),
+        );
       }
+    }
 
-      return IgnorePointer(
-        child: user.when(
-          data: (user) {
-            return UserAvatar.fromUserSchema(
-              user,
-              borderRadius: BorderRadius.zero,
-              borderWidth: 0,
-            );
-          },
-          error: (error, stackTrace) {
-            return const ColoredBox(
-              color: AppTheme.mauve,
-              child: Center(
-                child: TotemIcon(
-                  TotemIcons.person,
-                  size: 24,
-                  color: Colors.white,
+    if (kDebugMode) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          content,
+          Positioned(
+            top: 8,
+            left: 8,
+            child: IgnorePointer(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'ID: ${widget.participant.identity}\n'
+                  'Bitrate: $_currentBitrate\n'
+                  'Res: ${frameWidth}x$frameHeight\n'
+                  'FPS: $fps\n'
+                  'F.Sent: $framesSent\n'
+                  'F.Decoded: $framesDecoded\n'
+                  'is inactive: $_isTrackInactive',
+                  style: const TextStyle(
+                    color: Colors.greenAccent,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    height: 1.3,
+                  ),
                 ),
               ),
-            );
-          },
-          loading: () => const LoadingVideoPlaceholder(borderRadius: 0),
-        ),
+            ),
+          ),
+        ],
       );
     }
+
+    return content;
   }
 }
