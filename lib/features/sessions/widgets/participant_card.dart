@@ -673,6 +673,9 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   num framesSent = 0;
   num framesDecoded = 0;
 
+  // --- Quality Control State ---
+  VideoQuality? _lastRequestedQuality;
+
   void resetStats() {
     _currentBitrate = frameHeight = frameWidth = framesSent = framesDecoded = 0;
     fps = 0;
@@ -789,11 +792,50 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     if (mounted) setState(() {});
   }
 
+  /// Calculates the required video quality based on the physical size of the widget
+  void _updateVideoQualityIfNeeded(
+    BoxConstraints constraints,
+    double pixelRatio,
+  ) {
+    if (widget.participant is! RemoteParticipant) return;
+    final remoteParticipant = widget.participant as RemoteParticipant;
+
+    // Convert logical layout pixels to physical screen pixels
+    final physicalSize = Size(
+      constraints.maxWidth * pixelRatio,
+      constraints.maxHeight * pixelRatio,
+    );
+    VideoQuality targetQuality;
+
+    if (physicalSize.longestSide < 450) {
+      targetQuality = VideoQuality.LOW;
+    } else if (physicalSize.longestSide < 800) {
+      targetQuality = VideoQuality.MEDIUM;
+    } else {
+      targetQuality = VideoQuality.HIGH;
+    }
+
+    if (_lastRequestedQuality != targetQuality) {
+      _lastRequestedQuality = targetQuality;
+      remoteParticipant.videoTrackPublications.firstOrNull?.setVideoQuality(
+        targetQuality,
+      );
+
+      if (kDebugMode) {
+        debugPrint(
+          'Participant [${widget.participant.identity}] Target Quality updated to: $targetQuality '
+          '(Physical size: ${physicalSize.width.toInt()}x${physicalSize.height.toInt()})',
+        );
+      }
+    }
+  }
+
   @override
   void didUpdateWidget(covariant ParticipantVideo oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.participant.sid != widget.participant.sid) {
       _setupListeners();
+      _lastRequestedQuality = null;
     }
   }
 
@@ -804,28 +846,41 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     super.dispose();
   }
 
+  bool _shouldShowStatistics = kDebugMode;
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(userProfileProvider(widget.participant.identity));
     final track = videoTrack;
 
-    // 1. Resolve the core UI (Video or Avatar)
     Widget content;
 
     if (track != null &&
         track.subscribed &&
         !track.muted &&
         !_isTrackInactive) {
-      content = IgnorePointer(
-        child: ColoredBox(
-          color: Colors.black,
-          child: VideoTrackRenderer(
-            key: ValueKey(track.track!.sid),
-            track.track! as VideoTrack,
-            fit: VideoViewFit.cover,
-            renderMode: VideoRenderMode.platformView,
-          ),
-        ),
+      content = LayoutBuilder(
+        builder: (context, constraints) {
+          final pixelRatio = MediaQuery.of(context).devicePixelRatio;
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _updateVideoQualityIfNeeded(constraints, pixelRatio);
+            }
+          });
+
+          return IgnorePointer(
+            child: ColoredBox(
+              color: Colors.black,
+              child: VideoTrackRenderer(
+                key: ValueKey(track.track!.sid),
+                track.track! as VideoTrack,
+                fit: VideoViewFit.cover,
+                renderMode: VideoRenderMode.platformView,
+              ),
+            ),
+          );
+        },
       );
     } else {
       final localUserSlug = ref.watch(
@@ -868,39 +923,48 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     }
 
     if (kDebugMode) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          content,
-          Positioned(
-            top: 8,
-            left: 8,
-            child: IgnorePointer(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'ID: ${widget.participant.identity}\n'
-                  'Bitrate: $_currentBitrate\n'
-                  'Res: ${frameWidth}x$frameHeight\n'
-                  'FPS: $fps\n'
-                  'F.Sent: $framesSent\n'
-                  'F.Decoded: $framesDecoded\n'
-                  'is inactive: $_isTrackInactive',
-                  style: const TextStyle(
-                    color: Colors.greenAccent,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    height: 1.3,
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(
+          () => _shouldShowStatistics = !_shouldShowStatistics,
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            content,
+            if (_shouldShowStatistics)
+              Positioned(
+                top: 8,
+                left: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'ID: ${widget.participant.identity}\n'
+                    'Bitrate: $_currentBitrate\n'
+                    'Res: ${frameWidth}x$frameHeight\n'
+                    'FPS: $fps\n'
+                    'F.Sent: $framesSent\n'
+                    'F.Decoded: $framesDecoded\n'
+                    'Quality: ${_lastRequestedQuality?.name ?? 'None'}\n'
+                    'is inactive: $_isTrackInactive',
+                    style: const TextStyle(
+                      color: Colors.greenAccent,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      height: 1.3,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-        ],
+          ],
+        ),
       );
     }
 
