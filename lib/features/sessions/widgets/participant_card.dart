@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart' hide logger;
-import 'package:livekit_client/src/stats/stats.dart' as stats;
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -671,18 +670,16 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   num frameHeight = 0;
   num frameWidth = 0;
   num fps = 0;
-  num framesSent = 0;
-  num framesDecoded = 0;
   String? qualityLimitationReason;
   String? decoderImplementation;
-  stats.CodecStats? _lastStats;
+  String? mimeType;
 
   // --- Quality Control State ---
   VideoQuality? _lastRequestedQuality;
 
   void resetStats() {
-    _currentBitrate = frameHeight = frameWidth = framesSent = framesDecoded = 0;
-    qualityLimitationReason = decoderImplementation = _lastStats = null;
+    _currentBitrate = frameHeight = frameWidth = 0;
+    qualityLimitationReason = decoderImplementation = mimeType = null;
     fps = 0;
   }
 
@@ -770,11 +767,8 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         frameHeight = event.stats.frameHeight ?? 0;
         frameWidth = event.stats.frameWidth ?? 0;
         fps = event.stats.framesPerSecond ?? 0;
-        framesSent = -1;
-        framesDecoded = event.stats.framesDecoded ?? 0;
         decoderImplementation = event.stats.decoderImplementation;
-        // qualityLimitationReason = event.stats.qualityLimitationReason;
-        _lastStats = event.stats;
+        mimeType = event.stats.mimeType;
 
         _currentBitrate = bitrate.round();
         _isTrackInactive = bitrate < 10;
@@ -787,10 +781,8 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         frameHeight = stats?.frameHeight ?? 0;
         frameWidth = stats?.frameWidth ?? 0;
         fps = stats?.framesPerSecond ?? 0;
-        framesSent = stats?.framesSent ?? 0;
-        framesDecoded = -1;
         qualityLimitationReason = stats?.qualityLimitationReason;
-        _lastStats = stats;
+        mimeType = stats?.mimeType;
 
         _currentBitrate = event.currentBitrate.round();
       });
@@ -808,7 +800,6 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     double pixelRatio,
   ) {
     if (widget.participant is! RemoteParticipant) return;
-    final remoteParticipant = widget.participant as RemoteParticipant;
 
     // Convert logical layout pixels to physical screen pixels
     final physicalSize = Size(
@@ -932,7 +923,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
       }
     }
 
-    if (kDebugMode) {
+    if (kDebugMode || user.value?.isStaff == true) {
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => setState(
@@ -955,15 +946,15 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    'ID: ${widget.participant.identity}\n'
+                    // 'ID: ${widget.participant.identity}\n'
                     'Bitrate: $_currentBitrate\n'
                     'Res: ${frameWidth}x$frameHeight\n'
                     'FPS: $fps\n'
-                    'F.Sent: $framesSent\n'
-                    'F.Decoded: $framesDecoded\n'
-                    'Quality: ${_lastRequestedQuality?.name ?? 'None'}\n'
-                    'Mime: ${_lastStats?.mimeType ?? 'None'}\n'
-                    'is inactive: $_isTrackInactive',
+                    // 'F.Sent: $framesSent\n'
+                    // 'F.Decoded: $framesDecoded\n'
+                    // 'Quality: ${_lastRequestedQuality?.name ?? 'None'}\n'
+                    'Mime: ${mimeType ?? 'None'}\n'
+                    'Is off: $_isTrackInactive',
                     style: const TextStyle(
                       color: Colors.greenAccent,
                       fontSize: 10,
