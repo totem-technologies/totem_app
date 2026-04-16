@@ -322,39 +322,39 @@ class SessionController extends _$SessionController {
         defaultAudioCaptureOptions: const AudioCaptureOptions(),
         defaultAudioOutputOptions: options.audioOutputOptions,
         dynacast: true,
-        defaultVideoPublishOptions: VideoPublishOptions(
-          simulcast: true,
+        defaultVideoPublishOptions: const VideoPublishOptions(
+          // simulcast: true,
           videoCodec: 'h265',
-          videoEncoding: const VideoEncoding(
-            maxBitrate: 1_500_000,
-            maxFramerate: 30,
-          ),
-          videoSimulcastLayers: [
-            // Low: Small tiles (216p @ 15fps) - Minimal CPU impact
-            // const VideoParameters(
-            //   dimensions: VideoDimensions(384, 216),
-            //   encoding: VideoEncoding(
-            //     maxBitrate: 150_000,
-            //     maxFramerate: 15,
-            //   ),
-            // ),
-            // Medium: Mid-size tiles (540p @ 20fps)
-            const VideoParameters(
-              dimensions: VideoDimensions(960, 540),
-              encoding: VideoEncoding(
-                maxBitrate: 450_000,
-                maxFramerate: 24,
-              ),
-            ),
-            // High: The active speaker (720p @ 30fps)
-            VideoParameters(
-              dimensions: VideoParametersPresets.h720_169.dimensions,
-              encoding: const VideoEncoding(
-                maxBitrate: 1_500_000,
-                maxFramerate: 30,
-              ),
-            ),
-          ],
+          //   videoEncoding: const VideoEncoding(
+          //     maxBitrate: 1_500_000,
+          //     maxFramerate: 30,
+          //   ),
+          //   videoSimulcastLayers: [
+          //     // Low: Small tiles (216p @ 15fps) - Minimal CPU impact
+          //     // const VideoParameters(
+          //     //   dimensions: VideoDimensions(384, 216),
+          //     //   encoding: VideoEncoding(
+          //     //     maxBitrate: 150_000,
+          //     //     maxFramerate: 15,
+          //     //   ),
+          //     // ),
+          //     // Medium: Mid-size tiles (540p @ 20fps)
+          //     const VideoParameters(
+          //       dimensions: VideoDimensions(960, 540),
+          //       encoding: VideoEncoding(
+          //         maxBitrate: 450_000,
+          //         maxFramerate: 24,
+          //       ),
+          //     ),
+          //     // High: The active speaker (720p @ 30fps)
+          //     VideoParameters(
+          //       dimensions: VideoParametersPresets.h720_169.dimensions,
+          //       encoding: const VideoEncoding(
+          //         maxBitrate: 1_500_000,
+          //         maxFramerate: 30,
+          //       ),
+          //     ),
+          //   ],
         ),
         adaptiveStream: true,
       ),

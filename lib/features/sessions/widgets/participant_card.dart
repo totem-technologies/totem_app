@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart' hide logger;
+import 'package:livekit_client/src/stats/stats.dart' as stats;
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/config/theme.dart';
@@ -672,12 +673,16 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   num fps = 0;
   num framesSent = 0;
   num framesDecoded = 0;
+  String? qualityLimitationReason;
+  String? decoderImplementation;
+  stats.CodecStats? _lastStats;
 
   // --- Quality Control State ---
   VideoQuality? _lastRequestedQuality;
 
   void resetStats() {
     _currentBitrate = frameHeight = frameWidth = framesSent = framesDecoded = 0;
+    qualityLimitationReason = decoderImplementation = _lastStats = null;
     fps = 0;
   }
 
@@ -767,6 +772,9 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         fps = event.stats.framesPerSecond ?? 0;
         framesSent = -1;
         framesDecoded = event.stats.framesDecoded ?? 0;
+        decoderImplementation = event.stats.decoderImplementation;
+        // qualityLimitationReason = event.stats.qualityLimitationReason;
+        _lastStats = event.stats;
 
         _currentBitrate = bitrate.round();
         _isTrackInactive = bitrate < 10;
@@ -781,6 +789,8 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         fps = stats?.framesPerSecond ?? 0;
         framesSent = stats?.framesSent ?? 0;
         framesDecoded = -1;
+        qualityLimitationReason = stats?.qualityLimitationReason;
+        _lastStats = stats;
 
         _currentBitrate = event.currentBitrate.round();
       });
@@ -817,9 +827,9 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
     if (_lastRequestedQuality != targetQuality) {
       _lastRequestedQuality = targetQuality;
-      remoteParticipant.videoTrackPublications.firstOrNull?.setVideoQuality(
-        targetQuality,
-      );
+      // remoteParticipant.videoTrackPublications.firstOrNull?.setVideoQuality(
+      //   targetQuality,
+      // );
 
       if (kDebugMode) {
         debugPrint(
@@ -934,11 +944,10 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
             content,
             if (_shouldShowStatistics)
               Positioned(
-                top: 8,
-                left: 8,
+                left: 4,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
+                    horizontal: 4,
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
@@ -953,6 +962,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
                     'F.Sent: $framesSent\n'
                     'F.Decoded: $framesDecoded\n'
                     'Quality: ${_lastRequestedQuality?.name ?? 'None'}\n'
+                    'Mime: ${_lastStats?.mimeType ?? 'None'}\n'
                     'is inactive: $_isTrackInactive',
                     style: const TextStyle(
                       color: Colors.greenAccent,
