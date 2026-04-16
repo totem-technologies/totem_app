@@ -161,15 +161,19 @@ class _NoOpSessionController extends sessions.SessionController {
 }
 
 void main() {
+  late VoidCallback restoreWebRtcChannels;
+
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
     setupDotenv();
     silenceLogger();
     setupMockFlutterForegroundTask();
     setupMockPermissionHandler();
+    restoreWebRtcChannels = stubFlutterWebRtcChannels();
   });
 
   tearDownAll(() {
+    restoreWebRtcChannels();
     clearMockFlutterForegroundTask();
     clearMockPermissionHandler();
   });

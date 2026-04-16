@@ -98,7 +98,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
             else ...[
               Positioned.fill(
                 child: ParticipantVideo(
-                  key: participantKeys.getKey(activeSpeaker.identity),
+                  key: participantKeys.getKey(activeSpeaker.sid),
                   participant: activeSpeaker,
                 ),
               ),
@@ -674,9 +674,6 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   String? decoderImplementation;
   String? mimeType;
 
-  // --- Quality Control State ---
-  VideoQuality? _lastRequestedQuality;
-
   void resetStats() {
     _currentBitrate = frameHeight = frameWidth = 0;
     qualityLimitationReason = decoderImplementation = mimeType = null;
@@ -794,49 +791,11 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     if (mounted) setState(() {});
   }
 
-  /// Calculates the required video quality based on the physical size of the widget
-  void _updateVideoQualityIfNeeded(
-    BoxConstraints constraints,
-    double pixelRatio,
-  ) {
-    if (widget.participant is! RemoteParticipant) return;
-
-    // Convert logical layout pixels to physical screen pixels
-    final physicalSize = Size(
-      constraints.maxWidth * pixelRatio,
-      constraints.maxHeight * pixelRatio,
-    );
-    VideoQuality targetQuality;
-
-    if (physicalSize.longestSide < 450) {
-      targetQuality = VideoQuality.LOW;
-    } else if (physicalSize.longestSide < 800) {
-      targetQuality = VideoQuality.MEDIUM;
-    } else {
-      targetQuality = VideoQuality.HIGH;
-    }
-
-    if (_lastRequestedQuality != targetQuality) {
-      _lastRequestedQuality = targetQuality;
-      // remoteParticipant.videoTrackPublications.firstOrNull?.setVideoQuality(
-      //   targetQuality,
-      // );
-
-      if (kDebugMode) {
-        debugPrint(
-          'Participant [${widget.participant.identity}] Target Quality updated to: $targetQuality '
-          '(Physical size: ${physicalSize.width.toInt()}x${physicalSize.height.toInt()})',
-        );
-      }
-    }
-  }
-
   @override
   void didUpdateWidget(covariant ParticipantVideo oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.participant.sid != widget.participant.sid) {
       _setupListeners();
-      _lastRequestedQuality = null;
     }
   }
 
@@ -860,28 +819,16 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         track.subscribed &&
         !track.muted &&
         !_isTrackInactive) {
-      content = LayoutBuilder(
-        builder: (context, constraints) {
-          final pixelRatio = MediaQuery.of(context).devicePixelRatio;
-
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              _updateVideoQualityIfNeeded(constraints, pixelRatio);
-            }
-          });
-
-          return IgnorePointer(
-            child: ColoredBox(
-              color: Colors.black,
-              child: VideoTrackRenderer(
-                key: ValueKey(track.track!.sid),
-                track.track! as VideoTrack,
-                fit: VideoViewFit.cover,
-                renderMode: VideoRenderMode.platformView,
-              ),
-            ),
-          );
-        },
+      content = IgnorePointer(
+        child: ColoredBox(
+          color: Colors.black,
+          child: VideoTrackRenderer(
+            key: ValueKey(track.track!.sid),
+            track.track! as VideoTrack,
+            fit: VideoViewFit.cover,
+            renderMode: VideoRenderMode.platformView,
+          ),
+        ),
       );
     } else {
       final localUserSlug = ref.watch(
@@ -946,13 +893,9 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    // 'ID: ${widget.participant.identity}\n'
                     'Bitrate: $_currentBitrate\n'
                     'Res: ${frameWidth}x$frameHeight\n'
                     'FPS: $fps\n'
-                    // 'F.Sent: $framesSent\n'
-                    // 'F.Decoded: $framesDecoded\n'
-                    // 'Quality: ${_lastRequestedQuality?.name ?? 'None'}\n'
                     'Mime: ${mimeType ?? 'None'}\n'
                     'Is off: $_isTrackInactive',
                     style: const TextStyle(

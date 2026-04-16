@@ -12,8 +12,11 @@ part 'session_scope_provider.g.dart';
 class SessionParticipantKeys {
   final Map<String, GlobalKey> _participantKeys = {};
 
-  GlobalKey getKey(String identity) {
-    return _participantKeys.putIfAbsent(identity, GlobalKey.new);
+  // Keyed by participant SID (not identity) so a rejoin — which produces
+  // a new SID for the same identity — unmounts the old tile and remounts
+  // a fresh one, forcing the video renderer to reallocate its surface.
+  GlobalKey getKey(String participantSid) {
+    return _participantKeys.putIfAbsent(participantSid, GlobalKey.new);
   }
 }
 

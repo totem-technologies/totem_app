@@ -3,11 +3,58 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
 // ignore: depend_on_referenced_packages
 import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:livekit_client/src/core/engine.dart';
+import 'package:livekit_client/src/stats/stats.dart' show VideoReceiverStats;
 import 'package:mocktail/mocktail.dart';
+
+class MockMediaStream extends Mock implements webrtc.MediaStream {
+  @override
+  String get id => 'mock-stream-id';
+
+  @override
+  String get ownerTag => 'mock-owner-tag';
+}
+
+/// Stubs the flutter_webrtc platform channels so [VideoTrackRenderer] can
+/// initialize inside widget tests without a real platform. Returns a teardown.
+VoidCallback stubFlutterWebRtcChannels() {
+  final messenger =
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  var nextTextureId = 1;
+  final textureChannels = <MethodChannel>[];
+
+  const mainChannel = MethodChannel('FlutterWebRTC.Method');
+  messenger.setMockMethodCallHandler(mainChannel, (call) async {
+    switch (call.method) {
+      case 'createVideoRenderer':
+        final textureId = nextTextureId++;
+        final textureChannel = MethodChannel(
+          'FlutterWebRTC/Texture$textureId',
+        );
+        messenger.setMockMethodCallHandler(textureChannel, (_) async => null);
+        textureChannels.add(textureChannel);
+        return {'textureId': textureId};
+      case 'getSources':
+        return {'sources': <dynamic>[]};
+      case 'videoRendererSetSrcObject':
+      case 'videoRendererDispose':
+        return null;
+    }
+    return null;
+  });
+
+  return () {
+    messenger.setMockMethodCallHandler(mainChannel, null);
+    for (final channel in textureChannels) {
+      messenger.setMockMethodCallHandler(channel, null);
+    }
+  };
+}
 
 class MockLocalParticipant extends Mock implements LocalParticipant {
   MockLocalParticipant([this.id = 'local-participant']);
@@ -153,7 +200,33 @@ class MockParticipantEventsListener extends Mock
 class MockRemoteTrackPublication extends Mock
     implements RemoteTrackPublication<RemoteVideoTrack> {}
 
-class MockRemoteVideoTrack extends Mock implements RemoteVideoTrack {}
+// Default stubs for the VideoTrack mixin methods the SDK calls during
+// VideoTrackRenderer initState/dispose. Returning sane values here keeps
+// individual tests from having to repeat these three lines.
+dynamic _videoTrackDefaults(Invocation invocation) {
+  switch (invocation.memberName) {
+    case #registerVideoView:
+      return 'mock-view-id';
+    case #unregisterVideoView:
+      return null;
+    case #source:
+      return TrackSource.camera;
+    case #mediaStream:
+      return MockMediaStream();
+  }
+  return null;
+}
+
+class MockRemoteVideoTrack extends Mock implements RemoteVideoTrack {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    final defaulted = _videoTrackDefaults(invocation);
+    if (defaulted != null || invocation.memberName == #unregisterVideoView) {
+      return defaulted;
+    }
+    return super.noSuchMethod(invocation);
+  }
+}
 
 class MockLocalVideoTrack extends Mock implements LocalVideoTrack {
   MockLocalVideoTrack({bool muted = false, bool isActive = true})
@@ -171,11 +244,9 @@ class MockLocalVideoTrack extends Mock implements LocalVideoTrack {
 
   @override
   dynamic noSuchMethod(Invocation invocation) {
-    if (invocation.memberName == #addViewKey) {
-      return GlobalKey();
-    }
-    if (invocation.memberName == #removeViewKey) {
-      return null;
+    final defaulted = _videoTrackDefaults(invocation);
+    if (defaulted != null || invocation.memberName == #unregisterVideoView) {
+      return defaulted;
     }
     return super.noSuchMethod(invocation);
   }
@@ -260,5 +331,13 @@ class CapturingTrackEventsListener extends MockTrackEventsListener {
   void emit(TrackEvent event) => capturedListener?.call(event);
 }
 
+class MockVideoReceiverStats extends Mock implements VideoReceiverStats {}
+
 class MockVideoReceiverStatsEvent extends Mock
-    implements VideoReceiverStatsEvent {}
+    implements VideoReceiverStatsEvent {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.memberName == #stats) return MockVideoReceiverStats();
+    return super.noSuchMethod(invocation);
+  }
+}

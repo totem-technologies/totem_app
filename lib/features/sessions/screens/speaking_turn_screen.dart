@@ -277,7 +277,7 @@ class _SpeakingTurnGrid extends ConsumerWidget {
                       final participant = sortedParticipants[itemIndex];
                       return Expanded(
                         child: ParticipantCard(
-                          key: participantKeys.getKey(participant.identity),
+                          key: participantKeys.getKey(participant.sid),
                           participant: participant,
                           session: event,
                           participantIdentity: participant.identity,

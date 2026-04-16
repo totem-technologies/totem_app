@@ -32,8 +32,15 @@ void main() {
   late MockRemoteParticipant remoteParticipant;
   late FakeSessionController fakeSessionState;
 
+  late VoidCallback restoreWebRtcChannels;
+
   setUpAll(() {
     registerFallbackValue(GlobalKey());
+    restoreWebRtcChannels = stubFlutterWebRtcChannels();
+  });
+
+  tearDownAll(() {
+    restoreWebRtcChannels();
   });
 
   setUp(() {
@@ -239,8 +246,6 @@ void main() {
       when(() => mockTrack.sid).thenReturn('track-sid');
       when(() => mockTrack.isActive).thenReturn(true);
       when(() => mockTrack.muted).thenReturn(false);
-      // when(mockTrack.addViewKey).thenReturn(GlobalKey());
-      // when(() => mockTrack.removeViewKey(any<GlobalKey>())).thenAnswer((_) {});
 
       await pumpWidget(
         tester,
