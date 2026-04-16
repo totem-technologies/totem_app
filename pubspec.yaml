@@ -45,8 +45,13 @@ dependencies:
   # livekit_client: ^2.7.0
   livekit_client:
     git:
-      url: https://github.com/livekit/client-sdk-flutter/
-      ref: hiroshi/fix-local-audio
+      url: https://github.com/totem-technologies/client-sdk-flutter/
+      ref: main
+    # path: ../client-sdk-flutter
+    # git:
+      # url: https://github.com/livekit/client-sdk-flutter/
+      # ref: hiroshi/fix-local-audio # Fixes Local Audio visualizer
+      # ref: hiroshi/better-track-settings # Fixes manually setting quality
   flutter_foreground_task: ^9.2.0
   wakelock_plus: ^1.4.0
   audio_session: ^0.2.1

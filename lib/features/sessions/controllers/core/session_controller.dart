@@ -322,34 +322,41 @@ class SessionController extends _$SessionController {
         defaultAudioCaptureOptions: const AudioCaptureOptions(),
         defaultAudioOutputOptions: options.audioOutputOptions,
         dynacast: true,
-        defaultVideoPublishOptions: VideoPublishOptions(
+        defaultVideoPublishOptions: const VideoPublishOptions(
+          // simulcast: true,
           videoCodec: 'h265',
-          videoEncoding: const VideoEncoding(
-            // HIGH
-            maxBitrate: 300_000,
-            maxFramerate: 15,
-          ),
-          simulcast: true,
-          videoSimulcastLayers: [
-            VideoParameters(
-              dimensions:
-                  VideoParametersPresets.h180_43.dimensions, // 240x180 LOW
-              encoding: const VideoEncoding(
-                maxBitrate: 50_000,
-                maxFramerate: 15,
-              ),
-            ),
-            VideoParameters(
-              dimensions:
-                  VideoParametersPresets.h360_43.dimensions, // 480x360 MEDIUM
-              encoding: const VideoEncoding(
-                maxBitrate: 100_000,
-                maxFramerate: 15,
-              ),
-            ),
-          ],
+          //   videoEncoding: const VideoEncoding(
+          //     maxBitrate: 1_500_000,
+          //     maxFramerate: 30,
+          //   ),
+          //   videoSimulcastLayers: [
+          //     // Low: Small tiles (216p @ 15fps) - Minimal CPU impact
+          //     // const VideoParameters(
+          //     //   dimensions: VideoDimensions(384, 216),
+          //     //   encoding: VideoEncoding(
+          //     //     maxBitrate: 150_000,
+          //     //     maxFramerate: 15,
+          //     //   ),
+          //     // ),
+          //     // Medium: Mid-size tiles (540p @ 20fps)
+          //     const VideoParameters(
+          //       dimensions: VideoDimensions(960, 540),
+          //       encoding: VideoEncoding(
+          //         maxBitrate: 450_000,
+          //         maxFramerate: 24,
+          //       ),
+          //     ),
+          //     // High: The active speaker (720p @ 30fps)
+          //     VideoParameters(
+          //       dimensions: VideoParametersPresets.h720_169.dimensions,
+          //       encoding: const VideoEncoding(
+          //         maxBitrate: 1_500_000,
+          //         maxFramerate: 30,
+          //       ),
+          //     ),
+          //   ],
         ),
-        adaptiveStream: false, // Handle quality switch manually
+        adaptiveStream: true,
       ),
       url: AppConfig.liveKitUrl,
       token: options.token,
@@ -472,11 +479,41 @@ class SessionController extends _$SessionController {
   }
 
   Future<void> _disconnect() async {
+    await _disableLocalMediaTracks();
     await _room?.disconnect();
+  }
+
+  Future<void> _disableLocalMediaTracks() async {
+    final localParticipant = _room?.localParticipant;
+    if (localParticipant == null) {
+      return;
+    }
+
+    try {
+      await localParticipant.setCameraEnabled(false);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to disable camera while leaving session',
+      );
+    }
+
+    try {
+      await localParticipant.setMicrophoneEnabled(false);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to disable microphone while leaving session',
+      );
+    }
   }
 
   @visibleForTesting
   Future<void> disposeConnection() async {
+    await _disableLocalMediaTracks();
+
     try {
       _listener
         ?..cancelAll()

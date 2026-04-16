@@ -1,5 +1,3 @@
-// ignore_for_file: invalid_use_of_internal_member
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,7 +33,6 @@ void main() {
   late FakeSessionController fakeSessionState;
 
   setUpAll(() {
-    registerFallbackValue(VideoQuality.HIGH);
     registerFallbackValue(GlobalKey());
   });
 
@@ -217,56 +214,6 @@ void main() {
   });
 
   group('ParticipantVideo', () {
-    testWidgets('updates video quality when requested', (tester) async {
-      final mockParticipant = MockRemoteParticipant('user-2', 'John Doe');
-      final mockPublication = MockRemoteTrackPublication();
-      final mockTrack = MockRemoteVideoTrack();
-
-      when(
-        () => mockParticipant.getTrackPublicationBySource(TrackSource.camera),
-      ).thenReturn(mockPublication);
-      when(
-        mockParticipant.createListener,
-      ).thenReturn(MockParticipantEventsListener());
-
-      when(() => mockPublication.track).thenReturn(mockTrack);
-      when(() => mockPublication.source).thenReturn(TrackSource.camera);
-      when(() => mockPublication.sid).thenReturn('pub-sid');
-      when(() => mockPublication.videoQuality).thenReturn(VideoQuality.HIGH);
-      when(
-        () => mockPublication.setVideoQuality(any()),
-      ).thenAnswer((_) async {});
-      when(() => mockPublication.subscribed).thenReturn(true);
-      when(() => mockPublication.muted).thenReturn(false);
-
-      when(mockTrack.createListener).thenReturn(MockTrackEventsListener());
-      when(() => mockTrack.sid).thenReturn('track-sid');
-      when(() => mockTrack.isActive).thenReturn(true);
-      when(() => mockTrack.muted).thenReturn(false);
-      when(mockTrack.addViewKey).thenReturn(GlobalKey());
-      when(() => mockTrack.removeViewKey(any<GlobalKey>())).thenAnswer((_) {});
-
-      await pumpWidget(
-        tester,
-        authState: AuthState.unauthenticated(),
-        overrides: [
-          currentSessionStateProvider.overrideWithValue(
-            fakeSessionState.mockState,
-          ),
-        ],
-        child: ParticipantVideo(
-          participant: mockParticipant,
-          preferredVideoQuality: VideoQuality.HIGH,
-        ),
-      );
-
-      await tester.pump(const Duration(milliseconds: 400));
-
-      verify(
-        () => mockPublication.setVideoQuality(VideoQuality.HIGH),
-      ).called(greaterThan(0));
-    });
-
     testWidgets('hides track when connection is lost (isTrackInactive)', (
       tester,
     ) async {
@@ -284,10 +231,6 @@ void main() {
       when(() => mockPublication.track).thenReturn(mockTrack);
       when(() => mockPublication.source).thenReturn(TrackSource.camera);
       when(() => mockPublication.sid).thenReturn('pub-sid');
-      when(() => mockPublication.videoQuality).thenReturn(VideoQuality.HIGH);
-      when(
-        () => mockPublication.setVideoQuality(any()),
-      ).thenAnswer((_) async {});
       when(() => mockPublication.subscribed).thenReturn(true);
       when(() => mockPublication.muted).thenReturn(false);
 
@@ -296,8 +239,8 @@ void main() {
       when(() => mockTrack.sid).thenReturn('track-sid');
       when(() => mockTrack.isActive).thenReturn(true);
       when(() => mockTrack.muted).thenReturn(false);
-      when(mockTrack.addViewKey).thenReturn(GlobalKey());
-      when(() => mockTrack.removeViewKey(any<GlobalKey>())).thenAnswer((_) {});
+      // when(mockTrack.addViewKey).thenReturn(GlobalKey());
+      // when(() => mockTrack.removeViewKey(any<GlobalKey>())).thenAnswer((_) {});
 
       await pumpWidget(
         tester,
@@ -307,10 +250,7 @@ void main() {
             fakeSessionState.mockState,
           ),
         ],
-        child: ParticipantVideo(
-          participant: mockParticipant,
-          preferredVideoQuality: VideoQuality.HIGH,
-        ),
+        child: ParticipantVideo(participant: mockParticipant),
       );
 
       await tester.pumpAndSettle();

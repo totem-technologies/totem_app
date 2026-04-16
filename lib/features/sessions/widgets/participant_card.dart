@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart' hide logger;
@@ -12,7 +13,6 @@ import 'package:totem_app/features/sessions/providers/session_scope_provider.dar
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
-import 'package:totem_app/shared/logger.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_app/shared/widgets/totem_icon.dart';
@@ -100,7 +100,6 @@ class FeaturedParticipantCard extends ConsumerWidget {
                 child: ParticipantVideo(
                   key: participantKeys.getKey(activeSpeaker.identity),
                   participant: activeSpeaker,
-                  preferredVideoQuality: VideoQuality.HIGH,
                 ),
               ),
               PositionedDirectional(
@@ -237,10 +236,7 @@ class ParticipantCard extends ConsumerWidget {
           child: Stack(
             children: [
               Positioned.fill(
-                child: ParticipantVideo(
-                  participant: participant,
-                  preferredVideoQuality: VideoQuality.MEDIUM,
-                ),
+                child: ParticipantVideo(participant: participant),
               ),
               PositionedDirectional(
                 top: overlayPadding,
@@ -660,20 +656,33 @@ class LocalParticipantCard extends ConsumerWidget {
 }
 
 class ParticipantVideo extends ConsumerStatefulWidget {
-  const ParticipantVideo({
-    required this.participant,
-    this.preferredVideoQuality = VideoQuality.MEDIUM,
-    super.key,
-  });
+  const ParticipantVideo({required this.participant, super.key});
 
   final Participant<TrackPublication<Track>> participant;
-  final VideoQuality preferredVideoQuality;
 
   @override
   ConsumerState<ParticipantVideo> createState() => _ParticipantVideoState();
 }
 
 class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
+  // --- Debug Stats State ---
+  int _currentBitrate = 0;
+  num frameHeight = 0;
+  num frameWidth = 0;
+  num fps = 0;
+  String? qualityLimitationReason;
+  String? decoderImplementation;
+  String? mimeType;
+
+  // --- Quality Control State ---
+  VideoQuality? _lastRequestedQuality;
+
+  void resetStats() {
+    _currentBitrate = frameHeight = frameWidth = 0;
+    qualityLimitationReason = decoderImplementation = mimeType = null;
+    fps = 0;
+  }
+
   TrackPublication<Track>? get videoTrack {
     if (widget.participant is RemoteParticipant) {
       return widget.participant.getTrackPublicationBySource(TrackSource.camera);
@@ -694,9 +703,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
   EventsListener<ParticipantEvent>? _listener;
   EventsListener<TrackEvent>? _trackListener;
-  VideoQuality? _lastAppliedQuality;
   String? _listenedTrackSid;
-  Timer? _qualityRetryTimer;
 
   void _setupListeners() {
     _listener?.dispose();
@@ -726,57 +733,16 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     }
   }
 
-  void _scheduleQualityUpdateBurst() {
-    _qualityRetryTimer?.cancel();
-    scheduleMicrotask(_applyPreferredRemoteQuality);
-    _qualityRetryTimer = Timer.periodic(const Duration(milliseconds: 300), (
-      timer,
-    ) {
-      if (!mounted || timer.tick >= 3) {
-        timer.cancel();
-        return;
-      }
-      scheduleMicrotask(_applyPreferredRemoteQuality);
-    });
-  }
-
-  Future<void> _applyPreferredRemoteQuality() async {
-    final publication = videoTrack;
-    if (publication == null) return;
-    if (publication is! RemoteTrackPublication<RemoteTrack>) return;
-
-    final desired = widget.preferredVideoQuality;
-
-    try {
-      final previousQuality = _lastAppliedQuality;
-      await publication.setVideoQuality(desired);
-      _lastAppliedQuality = desired;
-      logger.i(
-        'Participant video quality changed '
-        '(identity=${widget.participant.identity}, sid=${publication.sid}): '
-        '${previousQuality?.name ?? 'unset'} -> ${publication.videoQuality.name}',
-      );
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to set remote video quality',
-      );
-    }
-  }
-
   @override
   void initState() {
     super.initState();
     _setupListeners();
-    _scheduleQualityUpdateBurst();
   }
 
   void _onTrackMuted(TrackMutedEvent event) {
     if (event.publication.source != TrackSource.camera) return;
     if (!mounted) return;
     _bindTrackListener();
-    _scheduleQualityUpdateBurst();
     setState(() {});
   }
 
@@ -784,28 +750,85 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     if (event.publication.source != TrackSource.camera) return;
     if (!mounted) return;
     _bindTrackListener();
-    _scheduleQualityUpdateBurst();
     setState(() {});
   }
 
   // Whether the track is inactive due to poor network conditions.
   bool _isTrackInactive = false;
+
   void _onTrackEvent(TrackEvent event) {
     if (!mounted) return;
+
     if (event is VideoReceiverStatsEvent) {
+      resetStats();
+
       final bitrate = event.currentBitrate;
-      if (bitrate < 10) {
-        setState(() => _isTrackInactive = true);
-      } else {
-        setState(() => _isTrackInactive = false);
-      }
+      setState(() {
+        frameHeight = event.stats.frameHeight ?? 0;
+        frameWidth = event.stats.frameWidth ?? 0;
+        fps = event.stats.framesPerSecond ?? 0;
+        decoderImplementation = event.stats.decoderImplementation;
+        mimeType = event.stats.mimeType;
+
+        _currentBitrate = bitrate.round();
+        _isTrackInactive = bitrate < 10;
+      });
+    } else if (event is VideoSenderStatsEvent) {
+      resetStats();
+
+      setState(() {
+        final stats = event.stats.values.lastOrNull;
+        frameHeight = stats?.frameHeight ?? 0;
+        frameWidth = stats?.frameWidth ?? 0;
+        fps = stats?.framesPerSecond ?? 0;
+        qualityLimitationReason = stats?.qualityLimitationReason;
+        mimeType = stats?.mimeType;
+
+        _currentBitrate = event.currentBitrate.round();
+      });
     }
   }
 
   void _onParticipantUpdated(ParticipantEvent _) {
     _bindTrackListener();
-    _scheduleQualityUpdateBurst();
     if (mounted) setState(() {});
+  }
+
+  /// Calculates the required video quality based on the physical size of the widget
+  void _updateVideoQualityIfNeeded(
+    BoxConstraints constraints,
+    double pixelRatio,
+  ) {
+    if (widget.participant is! RemoteParticipant) return;
+
+    // Convert logical layout pixels to physical screen pixels
+    final physicalSize = Size(
+      constraints.maxWidth * pixelRatio,
+      constraints.maxHeight * pixelRatio,
+    );
+    VideoQuality targetQuality;
+
+    if (physicalSize.longestSide < 450) {
+      targetQuality = VideoQuality.LOW;
+    } else if (physicalSize.longestSide < 800) {
+      targetQuality = VideoQuality.MEDIUM;
+    } else {
+      targetQuality = VideoQuality.HIGH;
+    }
+
+    if (_lastRequestedQuality != targetQuality) {
+      _lastRequestedQuality = targetQuality;
+      // remoteParticipant.videoTrackPublications.firstOrNull?.setVideoQuality(
+      //   targetQuality,
+      // );
+
+      if (kDebugMode) {
+        debugPrint(
+          'Participant [${widget.participant.identity}] Target Quality updated to: $targetQuality '
+          '(Physical size: ${physicalSize.width.toInt()}x${physicalSize.height.toInt()})',
+        );
+      }
+    }
   }
 
   @override
@@ -813,84 +836,139 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.participant.sid != widget.participant.sid) {
       _setupListeners();
-    }
-    if (oldWidget.preferredVideoQuality != widget.preferredVideoQuality ||
-        oldWidget.participant.identity != widget.participant.identity ||
-        oldWidget.participant.sid != widget.participant.sid) {
-      _scheduleQualityUpdateBurst();
+      _lastRequestedQuality = null;
     }
   }
 
   @override
   void dispose() {
-    _qualityRetryTimer?.cancel();
     _listener?.dispose();
     _trackListener?.dispose();
     super.dispose();
   }
+
+  bool _shouldShowStatistics = kDebugMode;
 
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(userProfileProvider(widget.participant.identity));
     final track = videoTrack;
 
+    Widget content;
+
     if (track != null &&
         track.subscribed &&
         !track.muted &&
         !_isTrackInactive) {
-      return IgnorePointer(
-        child: ColoredBox(
-          color: Colors.black,
-          child: VideoTrackRenderer(
-            key: ValueKey(track.track!.sid),
-            track.track! as VideoTrack,
-            fit: VideoViewFit.cover,
-            // Use platform view for better CPU performance on iOS.
-            // The [VideoTrackRenderer] widget only supports platform views for iOS.
-            // On Android, it will still use the default texture rendering.
-            // https://github.com/livekit/client-sdk-flutter/issues/364
-            renderMode: VideoRenderMode.platformView,
-          ),
-        ),
+      content = LayoutBuilder(
+        builder: (context, constraints) {
+          final pixelRatio = MediaQuery.of(context).devicePixelRatio;
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _updateVideoQualityIfNeeded(constraints, pixelRatio);
+            }
+          });
+
+          return IgnorePointer(
+            child: ColoredBox(
+              color: Colors.black,
+              child: VideoTrackRenderer(
+                key: ValueKey(track.track!.sid),
+                track.track! as VideoTrack,
+                fit: VideoViewFit.cover,
+                renderMode: VideoRenderMode.platformView,
+              ),
+            ),
+          );
+        },
       );
     } else {
       final localUserSlug = ref.watch(
         authControllerProvider.select((auth) => auth.user?.slug),
       );
       if (widget.participant.identity == localUserSlug) {
-        return IgnorePointer(
+        content = IgnorePointer(
           child: UserAvatar.currentUser(
             radius: 0,
             borderRadius: BorderRadius.zero,
             borderWidth: 0,
           ),
         );
+      } else {
+        content = IgnorePointer(
+          child: user.when(
+            data: (user) {
+              return UserAvatar.fromUserSchema(
+                user,
+                borderRadius: BorderRadius.zero,
+                borderWidth: 0,
+              );
+            },
+            error: (error, stackTrace) {
+              return const ColoredBox(
+                color: AppTheme.mauve,
+                child: Center(
+                  child: TotemIcon(
+                    TotemIcons.person,
+                    size: 24,
+                    color: Colors.white,
+                  ),
+                ),
+              );
+            },
+            loading: () => const LoadingVideoPlaceholder(borderRadius: 0),
+          ),
+        );
       }
+    }
 
-      return IgnorePointer(
-        child: user.when(
-          data: (user) {
-            return UserAvatar.fromUserSchema(
-              user,
-              borderRadius: BorderRadius.zero,
-              borderWidth: 0,
-            );
-          },
-          error: (error, stackTrace) {
-            return const ColoredBox(
-              color: AppTheme.mauve,
-              child: Center(
-                child: TotemIcon(
-                  TotemIcons.person,
-                  size: 24,
-                  color: Colors.white,
+    if (kDebugMode || user.value?.isStaff == true) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(
+          () => _shouldShowStatistics = !_shouldShowStatistics,
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            content,
+            if (_shouldShowStatistics)
+              Positioned(
+                left: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    // 'ID: ${widget.participant.identity}\n'
+                    'Bitrate: $_currentBitrate\n'
+                    'Res: ${frameWidth}x$frameHeight\n'
+                    'FPS: $fps\n'
+                    // 'F.Sent: $framesSent\n'
+                    // 'F.Decoded: $framesDecoded\n'
+                    // 'Quality: ${_lastRequestedQuality?.name ?? 'None'}\n'
+                    'Mime: ${mimeType ?? 'None'}\n'
+                    'Is off: $_isTrackInactive',
+                    style: const TextStyle(
+                      color: Colors.greenAccent,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      height: 1.3,
+                    ),
+                  ),
                 ),
               ),
-            );
-          },
-          loading: () => const LoadingVideoPlaceholder(borderRadius: 0),
+          ],
         ),
       );
     }
+
+    return content;
   }
 }

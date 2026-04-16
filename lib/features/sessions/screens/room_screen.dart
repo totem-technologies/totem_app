@@ -433,6 +433,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         // If the session is connected, show a dialog to confirm the action.
         final shouldPop = await showLeaveDialog(context) ?? false;
         if (context.mounted && shouldPop) {
+          await currentSession.leave();
+          if (!context.mounted) return;
           popOrHome(context);
         }
       },

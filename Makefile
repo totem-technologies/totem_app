@@ -12,7 +12,7 @@ clean:
 
 run-chrome:
 	@echo "Running app in Chrome..."
-	flutter run -d chrome
+	flutter run -d chrome --web-browser-flag "--disable-web-security"
 
 build-runner:
 	@echo "Running build_runner for code generation..."

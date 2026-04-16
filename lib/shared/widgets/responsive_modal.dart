@@ -13,7 +13,7 @@ Future<T?> showResponsiveModal<T>({
   Color dialogBackgroundColor = Colors.white,
   ShapeBorder? dialogShape,
   AlignmentGeometry dialogAlignment = Alignment.center,
-  EdgeInsets dialogInsetPadding = const EdgeInsets.all(24),
+  EdgeInsetsGeometry dialogInsetPadding = const EdgeInsets.all(24),
 }) {
   switch (ViewportResolver.getViewportKind(context)) {
     case ViewportKind.smallPortrait:
@@ -33,7 +33,7 @@ Future<T?> showResponsiveModal<T>({
         useRootNavigator: useRootNavigator,
         builder: (context) => Dialog(
           alignment: dialogAlignment,
-          insetPadding: dialogInsetPadding,
+          insetPadding: dialogInsetPadding.resolve(Directionality.of(context)),
           backgroundColor: dialogBackgroundColor,
           shape:
               dialogShape ??

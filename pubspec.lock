@@ -1035,9 +1035,9 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "hiroshi/fix-local-audio"
-      resolved-ref: "8721c30547ab3e9cd18cf4838669abe71a8b6137"
-      url: "https://github.com/livekit/client-sdk-flutter/"
+      ref: main
+      resolved-ref: f735c4b7094212137217dab90e946cfc4d76168d
+      url: "https://github.com/totem-technologies/client-sdk-flutter/"
     source: git
     version: "2.7.0"
   logger:
