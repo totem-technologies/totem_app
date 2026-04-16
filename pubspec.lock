@@ -1035,9 +1035,9 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "hiroshi/better-track-settings"
-      resolved-ref: ae65843de62e6d5be9fc23bb6d85b5619c9df15c
-      url: "https://github.com/livekit/client-sdk-flutter/"
+      ref: main
+      resolved-ref: f735c4b7094212137217dab90e946cfc4d76168d
+      url: "https://github.com/totem-technologies/client-sdk-flutter/"
     source: git
     version: "2.7.0"
   logger:
