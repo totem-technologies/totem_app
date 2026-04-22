@@ -4,6 +4,8 @@ import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
+// TODO(web): Microphone should have picker same as camera
+
 class ActionBarMicButton extends StatefulWidget {
   const ActionBarMicButton({
     required this.participant,

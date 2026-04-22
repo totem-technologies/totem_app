@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
@@ -8,6 +11,7 @@ import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_camera
 import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_chat_button.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_speaker_button.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 
 typedef ActionBarButtonToggleCallback =
@@ -103,6 +107,107 @@ class ActionBar extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The action bar displayed in the pre join screen.
+class PrejoinActionBar extends StatefulWidget {
+  const PrejoinActionBar({
+    required this.hasRequestedJoin,
+    required this.previewAudioTrack,
+    required this.onToggleMic,
+    required this.isSpeakerOn,
+    required this.onToggleSpeaker,
+    required this.isCameraOn,
+    required this.onToggleCamera,
+    required this.cameraPosition,
+    required this.selectedCameraDeviceId,
+    required this.onCameraPositionChanged,
+    required this.onCameraDeviceSelected,
+    super.key,
+  });
+
+  final bool hasRequestedJoin;
+  final LocalAudioTrack? previewAudioTrack;
+  final Future<void> Function() onToggleMic;
+  final bool isSpeakerOn;
+  final void Function() onToggleSpeaker;
+  final bool isCameraOn;
+  final VoidCallback onToggleCamera;
+  final CameraPosition cameraPosition;
+  final String? selectedCameraDeviceId;
+  final void Function(CameraPosition) onCameraPositionChanged;
+  final void Function(MediaDevice) onCameraDeviceSelected;
+
+  @override
+  State<PrejoinActionBar> createState() => _PrejoinActionBarState();
+}
+
+class _PrejoinActionBarState extends State<PrejoinActionBar> {
+  List<MediaDevice> _availableCameraDevices = [];
+  StreamSubscription<List<MediaDevice>>? _cameraDevicesSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToCameraDevices();
+  }
+
+  @override
+  void dispose() {
+    _cameraDevicesSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _listenToCameraDevices() {
+    _cameraDevicesSubscription = Hardware.instance.onDeviceChange.stream.listen(
+      (devices) {
+        if (!mounted) return;
+        setState(() {
+          _availableCameraDevices = devices
+              .where((device) => device.kind == 'videoinput')
+              .toList();
+        });
+      },
+    );
+
+    Hardware.instance.videoInputs().then((devices) {
+      if (!mounted) return;
+      setState(() {
+        _availableCameraDevices = devices;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionBar(
+      key: SessionActionBar.actionBarKey,
+      children: [
+        ActionBarMicButton(
+          participant: null,
+          audioTrack: widget.previewAudioTrack,
+          onToggle: !widget.hasRequestedJoin
+              ? (v) async => widget.onToggleMic()
+              : null,
+        ),
+        ActionBarSpeakerButton(
+          isSpeakerOn: widget.isSpeakerOn,
+          onSpeakerToggled: widget.hasRequestedJoin
+              ? null
+              : (v) => widget.onToggleSpeaker(),
+        ),
+        ActionBarCameraSwitcherButton(
+          isCameraOn: widget.isCameraOn,
+          onToggle: widget.hasRequestedJoin ? null : widget.onToggleCamera,
+          cameraPosition: widget.cameraPosition,
+          availableCameraDevices: _availableCameraDevices,
+          selectedCameraDeviceId: widget.selectedCameraDeviceId,
+          onCameraPositionChanged: widget.onCameraPositionChanged,
+          onCameraDeviceSelected: widget.onCameraDeviceSelected,
+        ),
+      ],
     );
   }
 }
