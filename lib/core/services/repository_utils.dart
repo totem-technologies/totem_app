@@ -31,7 +31,6 @@ class RepositoryUtils {
     int maxRetries = 1,
     Duration? timeout,
   }) async {
-    // TODO(sessions): Getting State has changed since your last read. Re-fetch state and try again. after a few times of session,
     final totalAttempts = maxRetries + 1;
 
     for (int attempt = 0; attempt < totalAttempts; attempt++) {

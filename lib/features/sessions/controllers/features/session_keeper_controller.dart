@@ -185,7 +185,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   Future<bool> startSession() async {
     if (!session.isCurrentUserKeeper()) return false;
     try {
-      await _run<void>(
+      final roomState = await _run(
         action: () => ref.read(
           startSessionProvider(
             _eventSlug,
@@ -195,6 +195,7 @@ class SessionKeeperController extends _$SessionKeeperController {
         errorMessage: 'Error starting session',
         timeout: const Duration(seconds: 10),
       );
+      session.applyRoomState(roomState);
       return true;
     } catch (_) {
       return false;
@@ -223,7 +224,7 @@ class SessionKeeperController extends _$SessionKeeperController {
 
   Future<void> banParticipant(String participantSlug) async {
     if (!session.isCurrentUserKeeper()) return;
-    await _run<void>(
+    final roomState = await _run(
       action: () => ref.read(
         banParticipantProvider(
           _eventSlug,
@@ -234,13 +235,15 @@ class SessionKeeperController extends _$SessionKeeperController {
       errorMessage: 'Error banning participant $participantSlug',
       timeout: const Duration(seconds: 20),
     );
+    session.applyRoomState(roomState);
+
     logger.i('Banned participant $participantSlug successfully');
   }
 
   Future<void> unbanParticipant(String participantSlug) async {
     if (!session.isCurrentUserKeeper()) return;
 
-    await _run<void>(
+    final roomState = await _run(
       action: () => ref.read(
         unbanParticipantProvider(
           _eventSlug,
@@ -251,6 +254,7 @@ class SessionKeeperController extends _$SessionKeeperController {
       errorMessage: 'Error unbanning participant $participantSlug',
       timeout: const Duration(seconds: 20),
     );
+    session.applyRoomState(roomState);
     logger.i('Unbanned participant $participantSlug successfully');
   }
 
