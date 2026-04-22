@@ -14,7 +14,6 @@ import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
-import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
@@ -191,9 +190,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   Future<void> _initializeLocalVideo() async {
-    if (_previewVideoTrack != null) {
-      await _disposePreviewVideoTrack();
-    }
+    await _disposePreviewVideoTrack();
 
     try {
       _previewVideoTrack = await widget.previewTrackFactory.createVideoTrack(
@@ -213,9 +210,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   Future<LocalAudioTrack?> _initializeLocalAudio() async {
-    if (_previewAudioTrack != null) {
-      await _disposePreviewAudioTrack();
-    }
+    await _disposePreviewAudioTrack();
 
     try {
       _previewAudioTrack = await widget.previewTrackFactory.createAudioTrack();
@@ -233,6 +228,51 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       if (mounted) setState(() {});
     }
     return null;
+  }
+
+  Future<void> _disposePreviewVideoTrack() async {
+    if (_previewVideoTrack != null) {
+      try {
+        await _previewVideoTrack?.stop();
+      } catch (e) {
+        ErrorHandler.logError(e, message: 'Failed to stop preview track');
+      }
+
+      try {
+        await _previewVideoTrack?.dispose();
+      } catch (e) {
+        ErrorHandler.logError(e, message: 'Failed to dispose preview track');
+      } finally {
+        _previewVideoTrack = null;
+      }
+    }
+  }
+
+  Future<void> _disposePreviewAudioTrack() async {
+    if (_previewAudioTrack != null) {
+      try {
+        await _previewAudioTrack?.stop();
+      } catch (e) {
+        ErrorHandler.logError(e, message: 'Failed to stop preview audio track');
+      }
+      try {
+        await _previewAudioTrack?.dispose();
+      } catch (e) {
+        ErrorHandler.logError(
+          e,
+          message: 'Failed to dispose preview audio track',
+        );
+      } finally {
+        _previewAudioTrack = null;
+      }
+    }
+  }
+
+  Future<void> _disposePreviewTracks() async {
+    await Future.wait([
+      _disposePreviewVideoTrack(),
+      _disposePreviewAudioTrack(),
+    ]);
   }
 
   // ===== Local controls =====
@@ -325,7 +365,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   Future<void> _handleToken(
     JoinResponse response, {
-    bool shouldShowAlreadyPresentDialog = true,
+    bool mayShowAlreadyPresentDialog = true,
   }) async {
     _sessionOptions = SessionOptions(
       eventSlug: widget.sessionSlug,
@@ -338,12 +378,17 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     if (mounted) setState(() {});
 
     if (hasRequestedJoin || !mounted) return;
-    if (response.isAlreadyPresent &&
-        shouldShowAlreadyPresentDialog &&
-        !_showingAlreadyPresentDialog) {
+
+    final shouldShowAlreadyPresentDialog =
+        mayShowAlreadyPresentDialog &&
+        response.isAlreadyPresent &&
+        widget.sessionSlug.isNotEmpty;
+
+    if (shouldShowAlreadyPresentDialog && !_showingAlreadyPresentDialog) {
       _showingAlreadyPresentDialog = true;
       final join = await showAlreadyPresentDialog(context);
       _showingAlreadyPresentDialog = false;
+
       if (join) {
         await _joinRoom(showAlreadyPresentDialog: false);
       } else {
@@ -359,7 +404,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       );
       await _handleToken(
         response,
-        shouldShowAlreadyPresentDialog: showAlreadyPresentDialog,
+        mayShowAlreadyPresentDialog: showAlreadyPresentDialog,
       );
 
       if (_sessionOptions == null ||
@@ -373,7 +418,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         _isLoading = true;
       });
 
+      // precache event data to speed up join process and avoid showing loading screen if the
       await ref.read(eventProvider(widget.sessionSlug).future);
+
       final session =
           ref.read(sessionControllerProvider(_sessionOptions!).notifier)
             ..configureJoinPreferences(
@@ -381,7 +428,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
               microphoneEnabled: _isMicOn,
             );
       await session.join();
-      ref.read(sessionCuesServiceProvider).playSessionTransitionCue();
+
       _hasHandledConnectedState = _isLoading = false;
     } catch (error, stackTrace) {
       _hasRequestedJoin = false;
@@ -404,53 +451,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       sessionTokenProvider(widget.sessionSlug).future,
     );
     final _ = await ref.refresh(eventProvider(widget.sessionSlug).future);
-  }
-
-  // ===== Track disposal =====
-
-  Future<void> _disposePreviewVideoTrack() async {
-    if (_previewVideoTrack != null) {
-      try {
-        await _previewVideoTrack?.stop();
-      } catch (e) {
-        ErrorHandler.logError(e, message: 'Failed to stop preview track');
-      }
-
-      try {
-        await _previewVideoTrack?.dispose();
-      } catch (e) {
-        ErrorHandler.logError(e, message: 'Failed to dispose preview track');
-      } finally {
-        _previewVideoTrack = null;
-      }
-    }
-  }
-
-  Future<void> _disposePreviewAudioTrack() async {
-    if (_previewAudioTrack != null) {
-      try {
-        await _previewAudioTrack?.stop();
-      } catch (e) {
-        ErrorHandler.logError(e, message: 'Failed to stop preview audio track');
-      }
-      try {
-        await _previewAudioTrack?.dispose();
-      } catch (e) {
-        ErrorHandler.logError(
-          e,
-          message: 'Failed to dispose preview audio track',
-        );
-      } finally {
-        _previewAudioTrack = null;
-      }
-    }
-  }
-
-  Future<void> _disposePreviewTracks() async {
-    await Future.wait([
-      _disposePreviewVideoTrack(),
-      _disposePreviewAudioTrack(),
-    ]);
   }
 
   // ===== Provider listeners =====

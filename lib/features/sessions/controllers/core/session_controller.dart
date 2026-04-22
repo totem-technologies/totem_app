@@ -20,6 +20,7 @@ import 'package:totem_app/features/sessions/controllers/features/session_keeper_
 import 'package:totem_app/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_app/features/sessions/controllers/utils.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
+import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart'
     show sessionScopeProvider;
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
@@ -389,6 +390,8 @@ class SessionController extends _$SessionController {
       );
       _onError(error is LiveKitException ? error : null);
     }
+
+    ref.read(sessionCuesServiceProvider).playSessionTransitionCue();
   }
 
   Future<void> leave() async {
