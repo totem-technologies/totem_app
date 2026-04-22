@@ -433,94 +433,6 @@ class _CameraDeviceTile extends StatelessWidget {
   }
 }
 
-class ActionBarCameraButton extends StatefulWidget {
-  const ActionBarCameraButton({
-    required this.participant,
-    required this.onToggle,
-    super.key,
-  });
-
-  final LocalParticipant? participant;
-  final ActionBarButtonToggleCallback onToggle;
-
-  @override
-  State<ActionBarCameraButton> createState() => _ActionBarCameraButtonState();
-}
-
-class _ActionBarCameraButtonState extends State<ActionBarCameraButton> {
-  EventsListener<ParticipantEvent>? _participantListener;
-  bool _busy = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _bindListener();
-  }
-
-  @override
-  void didUpdateWidget(covariant ActionBarCameraButton oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.participant?.sid != widget.participant?.sid) {
-      _bindListener();
-    }
-  }
-
-  void _bindListener() {
-    _participantListener?.dispose();
-    _participantListener = widget.participant?.createListener()
-      ?..on<ParticipantEvent>((_) {
-        if (mounted) setState(() {});
-      });
-  }
-
-  @override
-  void dispose() {
-    _participantListener?.dispose();
-    super.dispose();
-  }
-
-  TrackPublication<Track>? get _cameraPublication {
-    return widget.participant?.getTrackPublicationBySource(TrackSource.camera);
-  }
-
-  bool get _isCameraEnabled {
-    final publication = _cameraPublication;
-    if (publication == null) return false;
-
-    final track = publication.track;
-    final isMuted = track?.muted ?? publication.muted;
-    final isActive = track?.isActive ?? true;
-    return isActive && !isMuted;
-  }
-
-  Future<void> _toggleCamera() async {
-    if (_busy) return;
-
-    setState(() => _busy = true);
-    try {
-      await widget.onToggle(!_isCameraEnabled);
-    } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isEnabled = _isCameraEnabled;
-
-    return ActionBarButton(
-      semanticsLabel: 'Camera ${isEnabled ? 'on' : 'off'}',
-      active: isEnabled,
-      onPressed: _busy ? null : _toggleCamera,
-      child: TotemIcon(
-        isEnabled ? TotemIcons.cameraOn : TotemIcons.cameraOff,
-      ),
-    );
-  }
-}
-
 class SessionActionBarCameraButton extends StatefulWidget {
   const SessionActionBarCameraButton({
     required this.session,
@@ -538,19 +450,39 @@ class SessionActionBarCameraButton extends StatefulWidget {
 
 class _SessionActionBarCameraButtonState
     extends State<SessionActionBarCameraButton> {
+  bool _busy = false;
   List<MediaDevice> _availableCameraDevices = [];
   StreamSubscription<List<MediaDevice>>? _cameraDevicesSubscription;
+  EventsListener<ParticipantEvent>? _participantListener;
 
   @override
   void initState() {
     super.initState();
     _listenToCameraDevices();
+    _bindParticipantListener();
+  }
+
+  @override
+  void didUpdateWidget(covariant SessionActionBarCameraButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.participant.sid != widget.participant.sid) {
+      _bindParticipantListener();
+    }
   }
 
   @override
   void dispose() {
     _cameraDevicesSubscription?.cancel();
+    _participantListener?.dispose();
     super.dispose();
+  }
+
+  void _bindParticipantListener() {
+    _participantListener?.dispose();
+    _participantListener = widget.participant.createListener()
+      ..on<ParticipantEvent>((_) {
+        if (mounted) setState(() {});
+      });
   }
 
   void _listenToCameraDevices() {
@@ -572,28 +504,57 @@ class _SessionActionBarCameraButtonState
     });
   }
 
+  TrackPublication<Track>? get _cameraPublication {
+    return widget.participant.getTrackPublicationBySource(TrackSource.camera);
+  }
+
+  bool get _isCameraEnabled {
+    final publication = _cameraPublication;
+    if (publication == null) return false;
+
+    final track = publication.track;
+    final isMuted = track?.muted ?? publication.muted;
+    final isActive = track?.isActive ?? true;
+    return isActive && !isMuted;
+  }
+
+  Future<void> _toggleCamera() async {
+    final session = widget.session;
+    final shouldEnable = !_isCameraEnabled;
+
+    setState(() => _busy = true);
+
+    if (shouldEnable) {
+      await session.devices.enableCamera();
+    } else {
+      await session.devices.disableCamera();
+    }
+
+    _busy = false;
+
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = widget.session;
     final isDesktopPicker = kIsWeb || lkPlatformIsDesktop();
 
     if (!isDesktopPicker) {
-      return ActionBarCameraButton(
-        participant: widget.participant,
-        onToggle: (shouldEnable) async {
-          if (shouldEnable) {
-            await session.devices.enableCamera();
-          } else {
-            await session.devices.disableCamera();
-          }
-        },
+      return ActionBarButton(
+        semanticsLabel: 'Camera ${_isCameraEnabled ? 'on' : 'off'}',
+        active: _isCameraEnabled,
+        onPressed: _busy ? null : _toggleCamera,
+        child: TotemIcon(
+          _isCameraEnabled ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+        ),
       );
     }
 
     return ActionBarCameraSwitcherButton(
-      isCameraOn: session.devices.isCameraEnabled,
+      isCameraOn: _isCameraEnabled,
       onToggle: () async {
-        if (session.devices.isCameraEnabled) {
+        if (_isCameraEnabled) {
           await session.devices.disableCamera();
         } else {
           await session.devices.enableCamera();
