@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 typedef OnActionPerformed = Future<bool> Function();
 
@@ -14,6 +15,7 @@ class ActionSliderButton extends StatefulWidget {
     this.keepLoadingOnSuccess = false,
     this.isLoading,
     this.backgroundColor,
+    this.autofocus = true,
     super.key,
   });
 
@@ -22,6 +24,7 @@ class ActionSliderButton extends StatefulWidget {
   final bool keepLoadingOnSuccess;
   final bool? isLoading;
   final Color? backgroundColor;
+  final bool autofocus;
 
   @override
   State<ActionSliderButton> createState() => _ActionSliderButtonState();
@@ -65,6 +68,7 @@ class _ActionSliderButtonState extends State<ActionSliderButton> {
         keepLoadingOnSuccess: widget.keepLoadingOnSuccess,
         isLoading: widget.isLoading,
         backgroundColor: widget.backgroundColor,
+        autofocus: widget.autofocus,
       );
     }
 
@@ -74,6 +78,7 @@ class _ActionSliderButtonState extends State<ActionSliderButton> {
       keepLoadingOnSuccess: widget.keepLoadingOnSuccess,
       isLoading: widget.isLoading,
       backgroundColor: widget.backgroundColor,
+      autofocus: widget.autofocus,
     );
   }
 }
@@ -86,6 +91,7 @@ class ActionButton extends StatefulWidget {
     this.keepLoadingOnSuccess = false,
     this.isLoading,
     this.backgroundColor,
+    this.autofocus = true,
     super.key,
   });
 
@@ -94,6 +100,7 @@ class ActionButton extends StatefulWidget {
   final bool keepLoadingOnSuccess;
   final bool? isLoading;
   final Color? backgroundColor;
+  final bool autofocus;
 
   @override
   State<ActionButton> createState() => _ActionButtonState();
@@ -135,6 +142,7 @@ class _ActionButtonState extends State<ActionButton> {
     return SizedBox(
       height: 50,
       child: ElevatedButton(
+        autofocus: widget.autofocus,
         onPressed: effectiveLoading ? null : _onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
@@ -166,6 +174,7 @@ class ActionSlider extends StatefulWidget {
     this.keepLoadingOnSuccess = false,
     this.isLoading,
     this.backgroundColor,
+    this.autofocus = true,
     super.key,
   });
 
@@ -174,6 +183,7 @@ class ActionSlider extends StatefulWidget {
   final bool keepLoadingOnSuccess;
   final bool? isLoading;
   final Color? backgroundColor;
+  final bool autofocus;
 
   @override
   State<ActionSlider> createState() => _ActionSliderState();
@@ -285,75 +295,94 @@ class _ActionSliderState extends State<ActionSlider> {
         final textStyle = (baseTextStyle ?? theme.textTheme.labelLarge)
             ?.copyWith(color: foregroundColor);
 
-        return GestureDetector(
-          onPanUpdate: (details) => _onPanUpdate(details, maxSlideDistance),
-          onPanEnd: (details) => _onPanEnd(details, maxSlideDistance),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 50),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: AlignmentDirectional.center,
-              children: [
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: thumbSize * 1.25,
-                    ),
-                    child: AutoSizeText(
-                      widget.text,
-                      style: textStyle?.copyWith(
-                        color: foregroundColor.withValues(
-                          alpha: 1.0 - progress,
+        return CallbackShortcuts(
+          bindings: <ShortcutActivator, VoidCallback>{
+            const SingleActivator(LogicalKeyboardKey.space): () {
+              if (!_isCompleted && !_isLoading && widget.isLoading != true) {
+                setState(() {
+                  _dragPosition = maxSlideDistance;
+                  _isCompleted = true;
+                  _isLoading = true;
+                });
+                FocusManager.instance.primaryFocus?.unfocus();
+                _completeAction(maxSlideDistance);
+              }
+            },
+          },
+          child: Focus(
+            autofocus: widget.autofocus,
+            child: GestureDetector(
+              onPanUpdate: (details) => _onPanUpdate(details, maxSlideDistance),
+              onPanEnd: (details) => _onPanEnd(details, maxSlideDistance),
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 50),
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: AlignmentDirectional.center,
+                  children: [
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.symmetric(
+                          horizontal: thumbSize * 1.25,
+                        ),
+                        child: AutoSizeText(
+                          widget.text,
+                          style: textStyle?.copyWith(
+                            color: foregroundColor.withValues(
+                              alpha: 1.0 - progress,
+                            ),
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
                         ),
                       ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
                     ),
-                  ),
-                ),
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOut,
-                  left: padding + _dragPosition,
-                  top: padding,
-                  bottom: padding,
-                  child: Container(
-                    width: thumbSize,
-                    decoration: BoxDecoration(
-                      color: foregroundColor,
-                      borderRadius: BorderRadius.circular(25),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: widget.isLoading == true || _isLoading
-                        ? Center(
-                            child: Container(
-                              width: 24,
-                              height: 24,
-                              alignment: AlignmentDirectional.center,
-                              child: const CircularProgressIndicator.adaptive(
-                                strokeWidth: 1.5,
-                                strokeCap: StrokeCap.round,
-                              ),
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                      left: padding + _dragPosition,
+                      top: padding,
+                      bottom: padding,
+                      child: Container(
+                        width: thumbSize,
+                        decoration: BoxDecoration(
+                          color: foregroundColor,
+                          borderRadius: BorderRadius.circular(25),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
                             ),
-                          )
-                        : Icon(
-                            Icons.arrow_forward_ios,
-                            size: 20,
-                            color: backgroundColor,
-                          ),
-                  ),
+                          ],
+                        ),
+                        child: widget.isLoading == true || _isLoading
+                            ? Center(
+                                child: Container(
+                                  width: 24,
+                                  height: 24,
+                                  alignment: AlignmentDirectional.center,
+                                  child:
+                                      const CircularProgressIndicator.adaptive(
+                                        strokeWidth: 1.5,
+                                        strokeCap: StrokeCap.round,
+                                      ),
+                                ),
+                              )
+                            : Icon(
+                                Icons.arrow_forward_ios,
+                                size: 20,
+                                color: backgroundColor,
+                              ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         );

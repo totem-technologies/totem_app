@@ -1,4 +1,5 @@
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:totem_app/features/sessions/widgets/action_slider_button.dart';
@@ -79,12 +80,17 @@ class TransitionCard extends StatefulWidget {
 class _TransitionCardState extends State<TransitionCard> {
   late final MouseTracker _mouseTracker;
   late bool _hasMouseConnected;
+  late bool _hasKeyboardConnected;
 
   @override
   void initState() {
     super.initState();
     _mouseTracker = RendererBinding.instance.mouseTracker;
     _hasMouseConnected = _mouseTracker.mouseIsConnected;
+    _hasKeyboardConnected =
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
     _mouseTracker.addListener(_handleMouseConnectionChanged);
   }
 
@@ -138,7 +144,7 @@ class _TransitionCardState extends State<TransitionCard> {
           )
         : null;
 
-    return TransitionCardContainer(
+    final card = TransitionCardContainer(
       margin: widget.margin,
       constraints: switch (widget.type) {
         TotemCardTransitionType.join => const BoxConstraints(maxWidth: 366),
@@ -198,5 +204,31 @@ class _TransitionCardState extends State<TransitionCard> {
           actionButton,
       ],
     );
+
+    if (_hasKeyboardConnected &&
+        widget.type != TotemCardTransitionType.waitingReceive &&
+        widget.type != TotemCardTransitionType.join) {
+      return Column(
+        spacing: 6,
+        children: [
+          card,
+          Text(
+            switch (widget.type) {
+              TotemCardTransitionType.join => 'press space bar to join',
+              TotemCardTransitionType.pass => 'press space bar to pass',
+              TotemCardTransitionType.receive => 'press space bar to receive',
+              TotemCardTransitionType.start => 'press space bar to start',
+              TotemCardTransitionType.waitingReceive =>
+                throw UnimplementedError(),
+            },
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: const Color(0xFF787D7E),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return card;
   }
 }

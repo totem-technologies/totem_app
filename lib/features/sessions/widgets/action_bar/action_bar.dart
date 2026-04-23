@@ -212,13 +212,26 @@ class _PrejoinActionBarState extends State<PrejoinActionBar> {
   }
 }
 
-class SessionActionBar extends ConsumerWidget {
+class SessionActionBar extends ConsumerStatefulWidget {
   const SessionActionBar({super.key});
 
   static final GlobalKey actionBarKey = GlobalKey();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SessionActionBar> createState() => _SessionActionBarState();
+}
+
+class _SessionActionBarState extends ConsumerState<SessionActionBar> {
+  final moreFocusNode = FocusNode(canRequestFocus: false);
+
+  @override
+  void dispose() {
+    moreFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final session = ref.watch(currentSessionProvider);
     final currentScreen = ref.watch(resolveCurrentScreenProvider);
     final user = session?.room?.localParticipant;
@@ -257,6 +270,7 @@ class SessionActionBar extends ConsumerWidget {
         maxHeight: 40,
       ),
       child: IconButton(
+        focusNode: moreFocusNode,
         padding: EdgeInsetsDirectional.zero,
         onPressed: () => showOptionsSheet(
           context,
