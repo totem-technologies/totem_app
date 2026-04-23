@@ -10,7 +10,7 @@ import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/chat.dart';
-import 'package:totem_app/features/sessions/screens/options_sheet.dart';
+import 'package:totem_app/features/sessions/screens/more_options_popup.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
@@ -298,7 +298,7 @@ void main() {
       await tester.tap(find.byType(IconButton));
       await tester.pumpAndSettle();
 
-      expect(find.byType(OptionsSheet), findsOneWidget);
+      expect(find.byType(MoreOptions), findsOneWidget);
     });
 
     testWidgets('shows pending badge and notification on new chat message', (

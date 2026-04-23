@@ -34,15 +34,15 @@ class SessionInfraController extends _$SessionInfraController {
   static const _notificationPeriod = Duration(minutes: 1);
 
   Future<void> activate({SessionDetailSchema? event}) async {
+    _enableWakelock();
     _applyScreenCapturePolicy();
     _setupBackgroundMode(event);
-    _enableWakelock();
   }
 
   Future<void> deactivate() async {
+    _disableWakelock();
     _disableScreenProtection();
     _endBackgroundMode();
-    _disableWakelock();
   }
 
   Future<void> _enableWakelock() async {
@@ -173,8 +173,8 @@ class SessionInfraController extends _$SessionInfraController {
       // Infra permissions aren't relevant on web, so we can skip requesting them.
       return true;
     }
-    if (Platform.isAndroid || Platform.isIOS) {
-      try {
+    try {
+      if (Platform.isAndroid || Platform.isIOS) {
         var notificationPermission =
             await FlutterForegroundTask.checkNotificationPermission();
         if (notificationPermission != NotificationPermission.granted) {
@@ -190,13 +190,13 @@ class SessionInfraController extends _$SessionInfraController {
             !await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
           return FlutterForegroundTask.requestIgnoreBatteryOptimization();
         }
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Error requesting notification permission',
-        );
       }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error requesting notification permission',
+      );
     }
 
     return false;

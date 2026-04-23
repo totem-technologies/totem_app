@@ -43,33 +43,54 @@ Future<void> showOptionsSheet(
   SessionRoomState state,
   mobile_api.SessionDetailSchema session,
 ) {
+  final renderBox =
+      SessionActionBar.actionBarKey.currentContext?.findRenderObject()
+          as RenderBox?;
+  final offset = renderBox?.localToGlobal(Offset.zero);
+  final bottomInset = offset != null
+      ? MediaQuery.heightOf(context) - offset.dy + 12
+      : 120.0;
+
   return showResponsiveModal<void>(
     context: context,
     showDragHandle: false,
     useRootNavigator: false,
     bottomSheetBackgroundColor: const Color(0xFFF3F1E9),
+    dialogBarrierColor: Colors.black12,
     dialogBackgroundColor: const Color(0xFFF3F1E9),
+    dialogAlignment: Alignment.bottomCenter,
+    dialogInsetPadding: EdgeInsets.only(
+      bottom: bottomInset,
+      top: 24,
+      left: 24,
+      right: 24,
+    ),
     isScrollControlled: true,
     smallScreenBuilder: (context) {
       return SafeArea(
-        child: OptionsSheet(session: session),
+        child: MoreOptions(session: session, isDialog: false),
       );
     },
     largeScreenBuilder: (context) {
       return SizedBox(
         width: 400,
         child: SafeArea(
-          child: OptionsSheet(session: session),
+          child: MoreOptions(session: session, isDialog: true),
         ),
       );
     },
   );
 }
 
-class OptionsSheet extends ConsumerWidget {
-  const OptionsSheet({required this.session, super.key});
+class MoreOptions extends ConsumerWidget {
+  const MoreOptions({
+    required this.session,
+    this.isDialog = false,
+    super.key,
+  });
 
   final mobile_api.SessionDetailSchema session;
+  final bool isDialog;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -82,23 +103,22 @@ class OptionsSheet extends ConsumerWidget {
 
     final isKeeper = currentSession.isCurrentUserKeeper();
 
-    // TODO(web): This does not look good on big screen
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const SheetDragHandle(),
+        if (!isDialog) const SheetDragHandle(),
         Flexible(
           child: ListView(
-            padding: const EdgeInsetsDirectional.only(
+            padding: EdgeInsetsDirectional.only(
               start: 20,
               end: 20,
-              bottom: 36,
+              bottom: isDialog ? 20 : 36,
+              top: isDialog ? 24 : 0,
             ),
             shrinkWrap: true,
             physics: const ClampingScrollPhysics(),
             children: <Widget>[
-              ?OptionsSheetTile.camera(
+              ?MoreOptionsTile.camera(
                 currentSession.devices.localVideoTrack?.currentOptions
                     as CameraCaptureOptions?,
                 () {
@@ -106,7 +126,7 @@ class OptionsSheet extends ConsumerWidget {
                   Navigator.of(context).pop();
                 },
               ),
-              ?OptionsSheetTile.output(
+              ?MoreOptionsTile.output(
                 AudioOutputOptions(
                   speakerOn: deviceState.isSpeakerphoneEnabled,
                   deviceId: deviceState.selectedAudioOutputDeviceId,
@@ -120,16 +140,16 @@ class OptionsSheet extends ConsumerWidget {
                 },
                 currentSession.devices.selectAudioOutputDevice,
               ),
-              OptionsSheetTile<void>(
+              MoreOptionsTile<void>(
                 title: 'Leave Session',
                 icon: TotemIcons.leaveCall,
-                type: OptionsSheetTileType.destructive,
+                type: MoreOptionsTileType.destructive,
                 onTap: () async {
                   final navigator = Navigator.of(context)..pop();
                   final shouldLeave = await showLeaveDialog(context) ?? false;
                   if (shouldLeave && navigator.mounted) {
-                    currentSession.leave();
                     popOrHome(navigator.context);
+                    currentSession.leave();
                   }
                 },
               ),
@@ -141,18 +161,7 @@ class OptionsSheet extends ConsumerWidget {
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
-                // TODO(totem): Consider re-enabling this in the future.
-                // The session can be started from the waiting room.
-                // if (state.roomState.status == mobile_api.RoomStatus.waitingRoom)
-                //   OptionsSheetTile<void>(
-                //     title: 'Start session',
-                //     icon: TotemIcons.feedback,
-                //     onTap: () {
-                //       Navigator.of(context).pop();
-                //       _onStartSession(context, currentSession);
-                //     },
-                //   ),
-                OptionsSheetTile<void>(
+                MoreOptionsTile<void>(
                   title: 'Reorder Participants',
                   icon: TotemIcons.reorderParticipants,
                   onTap: () {
@@ -165,7 +174,7 @@ class OptionsSheet extends ConsumerWidget {
                     );
                   },
                 ),
-                OptionsSheetTile<void>(
+                MoreOptionsTile<void>(
                   title:
                       'Banned Participants'
                       '${state.roomState.bannedParticipants.isNotEmpty ? ' (${state.roomState.bannedParticipants.length})' : ''}',
@@ -175,10 +184,10 @@ class OptionsSheet extends ConsumerWidget {
                     showBannedParticipantsModal(context, currentSession, state);
                   },
                 ),
-                OptionsSheetTile<void>(
+                MoreOptionsTile<void>(
                   title: 'Mute everyone',
                   icon: TotemIcons.microphoneOff,
-                  type: OptionsSheetTileType.destructive,
+                  type: MoreOptionsTileType.destructive,
                   onTap: () {
                     Navigator.of(context).pop();
                     _onMuteEveryone(currentSession);
@@ -194,11 +203,11 @@ class OptionsSheet extends ConsumerWidget {
                                 .firstWhereOrNull((p) => p.identity == next)
                                 ?.name
                           : null;
-                      return OptionsSheetTile<void>(
+                      return MoreOptionsTile<void>(
                         title:
                             'Force pass to ${nextParticipantName ?? 'the next'}',
                         icon: TotemIcons.passToNext,
-                        type: OptionsSheetTileType.destructive,
+                        type: MoreOptionsTileType.destructive,
                         onTap:
                             state.roomState.turnState !=
                                 mobile_api.TurnState.idle
@@ -215,10 +224,10 @@ class OptionsSheet extends ConsumerWidget {
                     },
                   ),
                 if (state.roomState.status != mobile_api.RoomStatus.ended)
-                  OptionsSheetTile<void>(
+                  MoreOptionsTile<void>(
                     title: 'End Session',
                     icon: TotemIcons.cameraOff,
-                    type: OptionsSheetTileType.destructive,
+                    type: MoreOptionsTileType.destructive,
                     onTap:
                         state.roomState.status == mobile_api.RoomStatus.active
                         ? () {
@@ -233,7 +242,7 @@ class OptionsSheet extends ConsumerWidget {
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
-                OptionsSheetTile<void>(
+                MoreOptionsTile<void>(
                   title: switch (state.roomState.status) {
                     mobile_api.RoomStatus.waitingRoom =>
                       'Session Status: Waiting Room',
@@ -243,7 +252,7 @@ class OptionsSheet extends ConsumerWidget {
                   },
                   icon: TotemIcons.checkboxOutlined,
                 ),
-                OptionsSheetTile<void>(
+                MoreOptionsTile<void>(
                   title:
                       'Totem Status: '
                       '${state.roomState.turnState.value.uppercaseFirst()}',
@@ -261,7 +270,7 @@ class OptionsSheet extends ConsumerWidget {
                               )
                               ?.name
                         : null;
-                    return OptionsSheetTile<void>(
+                    return MoreOptionsTile<void>(
                       title:
                           'Speaking now: '
                           '${userName ?? 'None'}',
@@ -270,7 +279,7 @@ class OptionsSheet extends ConsumerWidget {
                   },
                 ),
               ],
-            ].expand((child) => [child, const SizedBox(height: 10)]).toList(),
+            ].expand((child) => [const SizedBox(height: 10), child]).skip(1).toList(),
           ),
         ),
       ],
@@ -377,14 +386,14 @@ class OptionsSheet extends ConsumerWidget {
   }
 }
 
-enum OptionsSheetTileType { destructive, normal }
+enum MoreOptionsTileType { destructive, normal }
 
-class OptionsSheetTile<T> extends StatelessWidget {
-  OptionsSheetTile({
+class MoreOptionsTile<T> extends StatelessWidget {
+  MoreOptionsTile({
     required this.title,
     required this.icon,
     this.onTap,
-    this.type = OptionsSheetTileType.normal,
+    this.type = MoreOptionsTileType.normal,
     this.selectedOption,
     this.options,
     this.onOptionChanged,
@@ -414,7 +423,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
   final String title;
   final TotemIconData icon;
   final VoidCallback? onTap;
-  final OptionsSheetTileType type;
+  final MoreOptionsTileType type;
 
   final T? selectedOption;
   final Iterable<T>? options;
@@ -429,7 +438,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
   /// See [SessionActionBar]
   static Widget? camera(CameraCaptureOptions? options, VoidCallback onSwitch) {
     if (lkPlatformIsMobile()) {
-      return OptionsSheetTile<MediaDevice>(
+      return MoreOptionsTile<MediaDevice>(
         title: switch (options?.cameraPosition) {
           CameraPosition.front => 'Front',
           CameraPosition.back => 'Back',
@@ -459,7 +468,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
     ValueChanged<MediaDevice> onDeviceSelect,
   ) {
     if (lkPlatformIsMobile()) {
-      return OptionsSheetTile<MediaDevice>(
+      return MoreOptionsTile<MediaDevice>(
         title: 'Speaker',
         icon: TotemIcons.speakerOn,
         trailing: IgnorePointer(
@@ -488,7 +497,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
     required ValueChanged<MediaDevice?> onOptionChanged,
     required TotemIconData icon,
   }) {
-    return OptionsSheetTile<MediaDevice>(
+    return MoreOptionsTile<MediaDevice>(
       title:
           device?.humanReadableLabel ??
           (options.isEmpty ? 'No Connected Device' : 'Default Device'),
@@ -505,7 +514,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
     final theme = Theme.of(context);
     if (options != null && options!.isNotEmpty && options!.length > 1) {
       return Material(
-        color: type == OptionsSheetTileType.destructive
+        color: type == MoreOptionsTileType.destructive
             ? theme.colorScheme.errorContainer
             : Colors.white,
         borderRadius: BorderRadius.circular(30),
@@ -539,7 +548,7 @@ class OptionsSheetTile<T> extends StatelessWidget {
                   underline: const SizedBox.shrink(),
                   borderRadius: BorderRadius.circular(30),
                   style: const TextStyle(fontSize: 16, color: Colors.black),
-                  iconEnabledColor: type == OptionsSheetTileType.destructive
+                  iconEnabledColor: type == MoreOptionsTileType.destructive
                       ? theme.colorScheme.onErrorContainer
                       : null,
                   dropdownColor: Colors.white,
@@ -567,13 +576,13 @@ class OptionsSheetTile<T> extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(30),
       ),
-      tileColor: type == OptionsSheetTileType.destructive
+      tileColor: type == MoreOptionsTileType.destructive
           ? theme.colorScheme.errorContainer
           : Colors.white,
-      textColor: type == OptionsSheetTileType.destructive
+      textColor: type == MoreOptionsTileType.destructive
           ? theme.colorScheme.onErrorContainer
           : null,
-      iconColor: type == OptionsSheetTileType.destructive
+      iconColor: type == MoreOptionsTileType.destructive
           ? theme.colorScheme.onErrorContainer
           : null,
       trailing:
@@ -649,7 +658,7 @@ class _DesktopAudioOutputTileState extends State<_DesktopAudioOutputTile> {
         ) ??
         _audioOutputs.firstOrNull;
 
-    return OptionsSheetTile.fromMediaDevice(
+    return MoreOptionsTile.fromMediaDevice(
       device: selected,
       options: _audioOutputs,
       onOptionChanged: (value) {

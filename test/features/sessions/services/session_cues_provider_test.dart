@@ -70,7 +70,7 @@ void main() {
         final service = SessionCuesService(audioPlayer: fakePlayer);
 
         await service.playSessionTransitionCue();
-        await service.playTotemArrivedCue();
+        await service.playTotemReceivedCue();
 
         expect(fakePlayer.playerModes, [PlayerMode.lowLatency]);
         expect(fakePlayer.releaseModes, [ReleaseMode.stop]);

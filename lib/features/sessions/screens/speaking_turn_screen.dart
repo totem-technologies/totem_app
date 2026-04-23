@@ -196,6 +196,8 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
   }
 }
 
+// TODO(totem): Update Speaking Turn Grid on large screen
+
 class _SpeakingTurnGrid extends ConsumerWidget {
   const _SpeakingTurnGrid({
     required this.isLandscape,

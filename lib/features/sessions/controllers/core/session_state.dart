@@ -1,5 +1,4 @@
 import 'package:collection/collection.dart';
-import 'package:flutter/widgets.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions, logger;
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
@@ -183,17 +182,17 @@ class SessionOptions {
     required this.token,
     required this.cameraEnabled,
     required this.microphoneEnabled,
+    required this.speakerEnabled,
     required this.cameraOptions,
-    required this.audioOutputOptions,
   });
 
   final String eventSlug;
   final String token;
   final bool cameraEnabled;
   final bool microphoneEnabled;
+  final bool speakerEnabled;
 
   final CameraCaptureOptions cameraOptions;
-  final AudioOutputOptions audioOutputOptions;
 
   @override
   bool operator ==(Object other) {

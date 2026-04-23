@@ -16,7 +16,7 @@ import 'package:totem_app/features/sessions/providers/session_cues_provider.dart
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/listening_turn_screen.dart';
-import 'package:totem_app/features/sessions/screens/options_sheet.dart';
+import 'package:totem_app/features/sessions/screens/more_options_popup.dart';
 import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_app/features/sessions/screens/speaking_turn_screen.dart';
@@ -248,17 +248,19 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   }
 
   void _setKeeperDisconnectedNotification(bool hasKeeperDisconnected) {
-    if (!mounted) return;
+    if (!mounted || !hasKeeperDisconnected) {
+      _closeKeeperDisconnectedNotification();
+      return;
+    }
 
     final roomStatus = ref.read(roomStatusProvider);
-    final shouldShow = hasKeeperDisconnected && roomStatus == RoomStatus.active;
-
-    if (!shouldShow) {
+    if (roomStatus != RoomStatus.active) {
       _closeKeeperDisconnectedNotification();
       return;
     }
 
     if (_closeKeeperLeftNotification != null) {
+      // do not show again
       return;
     }
 
@@ -341,9 +343,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       )
       ..listen(
         hasKeeperDisconnectedProvider,
-        (previous, next) {
-          if (previous == next) return;
-          _setKeeperDisconnectedNotification(next);
+        (previous, disconnected) {
+          _setKeeperDisconnectedNotification(disconnected);
         },
       )
       ..listen(
@@ -351,7 +352,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         (previous, next) {
           if (previous != RoomScreen.receiving &&
               next == RoomScreen.receiving) {
-            ref.read(sessionCuesServiceProvider).playTotemArrivedCue();
+            ref.read(sessionCuesServiceProvider).playTotemReceivedCue();
           }
 
           if (next == RoomScreen.disconnected || next == RoomScreen.error) {

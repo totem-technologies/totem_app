@@ -190,10 +190,7 @@ extension on BuildContext {
   void launchSession(SessionDetailSchema session) {
     switch (session.meetingProvider) {
       case MeetingProviderEnum.livekit:
-        pushNamed(
-          RouteNames.videoSessionPrejoin,
-          extra: session.slug,
-        );
+        go(RouteNames.session(session.slug));
       case MeetingProviderEnum.googleMeet:
         launchUrl(
           Uri.parse(session.calLink),

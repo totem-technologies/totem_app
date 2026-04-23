@@ -14,6 +14,8 @@ import 'package:totem_app/shared/widgets/responsive_modal.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
+// TODO(totem): Improve Chat UX on Large Screens
+
 Future<void> showSessionChat(BuildContext context) {
   return showResponsiveModal<void>(
     context: context,

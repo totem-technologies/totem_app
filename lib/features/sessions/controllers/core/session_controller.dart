@@ -20,6 +20,7 @@ import 'package:totem_app/features/sessions/controllers/features/session_keeper_
 import 'package:totem_app/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_app/features/sessions/controllers/utils.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
+import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart'
     show sessionScopeProvider;
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
@@ -223,8 +224,7 @@ class SessionController extends _$SessionController {
 
     _onRoomChanges();
 
-    unawaited(_applyJoinMediaState());
-    // context.room.localParticipant?.setMicrophoneEnabled(_options.microphoneEnabled)
+    _applyJoinMediaState();
     _dispatch(
       const ConnectionChanged(
         RoomConnectionState.connected,
@@ -232,13 +232,17 @@ class SessionController extends _$SessionController {
       ),
     );
 
-    // _userSpeakerPreference is always true: when no external audio device
-    // is connected, the app should default to speaker (not earpiece).
-    devices.resetSpeakerRoutingDefaults();
-    unawaited(devices.setSpeakerphone(true));
+    final speakerPref = options.speakerEnabled;
+    devices.resetSpeakerRoutingDefaults(speakerPref);
+    // Delay setting up the listener and applying the initial routing up to a bit.
+    // This allows LiveKit's FastConnect and incoming WebRTC streams to settle,
+    // avoiding the earpiece/default audio routing from overriding our preference.
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (!ref.mounted) return;
+      devices.setupDeviceChangeListener();
+    });
 
     _updateParticipantsList();
-    devices.setupDeviceChangeListener();
   }
 
   void _onDisconnected() {
@@ -320,7 +324,9 @@ class SessionController extends _$SessionController {
       roomOptions: RoomOptions(
         defaultCameraCaptureOptions: options.cameraOptions,
         defaultAudioCaptureOptions: const AudioCaptureOptions(),
-        defaultAudioOutputOptions: options.audioOutputOptions,
+        defaultAudioOutputOptions: AudioOutputOptions(
+          speakerOn: options.speakerEnabled,
+        ),
         dynacast: true,
         defaultVideoPublishOptions: const VideoPublishOptions(
           // simulcast: true,
@@ -381,6 +387,7 @@ class SessionController extends _$SessionController {
           camera: TrackOption(enabled: cameraEnabled),
         ),
       );
+      ref.read(sessionCuesServiceProvider).playSessionTransitionCue();
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,

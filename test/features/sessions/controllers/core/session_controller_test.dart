@@ -74,7 +74,7 @@ void main() {
             cameraEnabled: true,
             microphoneEnabled: true,
             cameraOptions: SessionController.defaultCameraCaptureOptions,
-            audioOutputOptions: AudioOutputOptions(speakerOn: true),
+            speakerEnabled: true,
           );
 
           final sub = container.listen(
@@ -92,7 +92,9 @@ void main() {
             roomOptions: RoomOptions(
               defaultCameraCaptureOptions: options.cameraOptions,
               defaultAudioCaptureOptions: const AudioCaptureOptions(),
-              defaultAudioOutputOptions: options.audioOutputOptions,
+              defaultAudioOutputOptions: AudioOutputOptions(
+                speakerOn: options.speakerEnabled,
+              ),
             ),
             url: 'wss://example.livekit.cloud',
             token: options.token,
@@ -114,7 +116,7 @@ void main() {
           cameraEnabled: true,
           microphoneEnabled: true,
           cameraOptions: SessionController.defaultCameraCaptureOptions,
-          audioOutputOptions: AudioOutputOptions(speakerOn: true),
+          speakerEnabled: true,
         );
 
         final sub = container.listen(
@@ -132,7 +134,9 @@ void main() {
           roomOptions: RoomOptions(
             defaultCameraCaptureOptions: options.cameraOptions,
             defaultAudioCaptureOptions: const AudioCaptureOptions(),
-            defaultAudioOutputOptions: options.audioOutputOptions,
+            defaultAudioOutputOptions: AudioOutputOptions(
+              speakerOn: options.speakerEnabled,
+            ),
           ),
           url: 'wss://example.livekit.cloud',
           token: options.token,
@@ -152,7 +156,7 @@ void main() {
         cameraEnabled: true,
         microphoneEnabled: true,
         cameraOptions: SessionController.defaultCameraCaptureOptions,
-        audioOutputOptions: AudioOutputOptions(speakerOn: true),
+        speakerEnabled: true,
       );
 
       test('sortedParticipants returns empty when room is null', () {
@@ -244,7 +248,7 @@ void main() {
         cameraEnabled: true,
         microphoneEnabled: true,
         cameraOptions: SessionController.defaultCameraCaptureOptions,
-        audioOutputOptions: AudioOutputOptions(speakerOn: true),
+        speakerEnabled: true,
       );
 
       test('setKeeperDisconnected updates hasKeeperDisconnected', () {

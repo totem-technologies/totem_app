@@ -4,7 +4,6 @@ import 'dart:async';
 
 import 'package:audio_session/audio_session.dart' as audio;
 import 'package:collection/collection.dart';
-import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
@@ -131,8 +130,8 @@ class SessionDeviceController extends _$SessionDeviceController {
   /// true, even if there are external outputs present.
   bool get audioRouteNotificationsEnabled => _audioRouteNotificationsEnabled;
 
-  void resetSpeakerRoutingDefaults() {
-    _userSpeakerPreference = true;
+  void resetSpeakerRoutingDefaults([bool preference = true]) {
+    _userSpeakerPreference = preference;
     _hasExternalOutput = false;
   }
 
@@ -148,7 +147,7 @@ class SessionDeviceController extends _$SessionDeviceController {
         _hasExternalOutput = true;
         await _autoSetSpeakerphone(false);
       } else {
-        _emitState();
+        await _autoSetSpeakerphone(_userSpeakerPreference);
       }
 
       _becomingNoisySubscription = session.becomingNoisyEventStream.listen((_) {
@@ -260,7 +259,18 @@ class SessionDeviceController extends _$SessionDeviceController {
   }
 
   Future<void> _autoSetSpeakerphone(bool enabled) async {
-    await _room?.setSpeakerOn(enabled);
+    if (_room == null) return;
+    // There is a bug in the livekit library that doesn't effectively turn the speakerphone
+    // on when requested.
+    // A workaround is to first turn it off, then set the desired state.
+    await Hardware.instance.setSpeakerphoneOn(false);
+    await _room?.setSpeakerOn(false);
+
+    if (enabled) {
+      await Hardware.instance.setSpeakerphoneOn(enabled);
+      await _room?.setSpeakerOn(enabled);
+    }
+
     _emitState();
   }
 

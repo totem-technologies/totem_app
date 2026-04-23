@@ -11,6 +11,7 @@ Future<T?> showResponsiveModal<T>({
   bool useSafeArea = true,
   Color bottomSheetBackgroundColor = Colors.white,
   Color dialogBackgroundColor = Colors.white,
+  Color? dialogBarrierColor,
   ShapeBorder? dialogShape,
   AlignmentGeometry dialogAlignment = Alignment.center,
   EdgeInsetsGeometry dialogInsetPadding = const EdgeInsets.all(24),
@@ -31,6 +32,7 @@ Future<T?> showResponsiveModal<T>({
       return showDialog<T>(
         context: context,
         useRootNavigator: useRootNavigator,
+        barrierColor: dialogBarrierColor,
         builder: (context) => Dialog(
           alignment: dialogAlignment,
           insetPadding: dialogInsetPadding.resolve(Directionality.of(context)),

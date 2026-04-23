@@ -41,7 +41,7 @@ class AudioplayersSessionCuesAudioPlayer implements SessionCuesAudioPlayer {
 
   @override
   Future<void> playAsset(String assetSourcePath) {
-    return _player.play(AssetSource(assetSourcePath));
+    return _player.play(AssetSource(assetSourcePath), volume: 0.5);
   }
 
   @override
@@ -65,7 +65,7 @@ class SessionCuesService {
     return _playAsset(TotemAudioAssets.enterLeaveSessionRingtone);
   }
 
-  Future<void> playTotemArrivedCue() {
+  Future<void> playTotemReceivedCue() {
     return _playAsset(TotemAudioAssets.totemReceivedRingtone);
   }
 
@@ -102,8 +102,9 @@ class SessionCuesService {
           category: AVAudioSessionCategory.ambient,
         ),
         android: const AudioContextAndroid(
-          usageType: AndroidUsageType.notification,
-          contentType: AndroidContentType.sonification,
+          // TODO(totem): Investigate if this can be a typed as Notification.
+          usageType: AndroidUsageType.voiceCommunication,
+          contentType: AndroidContentType.speech,
           audioFocus: AndroidAudioFocus.none,
         ),
       ),
