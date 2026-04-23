@@ -87,6 +87,9 @@ class _TransitionCardState extends State<TransitionCard> {
     super.initState();
     _mouseTracker = RendererBinding.instance.mouseTracker;
     _hasMouseConnected = _mouseTracker.mouseIsConnected;
+
+    // TODO(totem): Properly check for hardware keyboard.
+    // Update this check when https://github.com/flutter/flutter/issues/185479 is addressed
     _hasKeyboardConnected =
         defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.windows ||
