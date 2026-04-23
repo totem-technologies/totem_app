@@ -349,7 +349,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       ..listen(
         resolveCurrentScreenProvider,
         (previous, next) {
-          if (next == RoomScreen.receiving) {
+          if (previous != RoomScreen.receiving &&
+              next == RoomScreen.receiving) {
             ref.read(sessionCuesServiceProvider).playTotemReceivedCue();
           }
 

@@ -387,6 +387,7 @@ class SessionController extends _$SessionController {
           camera: TrackOption(enabled: cameraEnabled),
         ),
       );
+      ref.read(sessionCuesServiceProvider).playSessionTransitionCue();
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -395,8 +396,6 @@ class SessionController extends _$SessionController {
       );
       _onError(error is LiveKitException ? error : null);
     }
-
-    ref.read(sessionCuesServiceProvider).playSessionTransitionCue();
   }
 
   Future<void> leave() async {
