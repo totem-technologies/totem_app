@@ -422,11 +422,12 @@ GoRouter createRouter(WidgetRef ref) {
       ),
 
       GoRoute(
-        path: RouteNames.videoSessionPrejoin,
-        name: RouteNames.videoSessionPrejoin,
+        path: RouteNames.session(':slug'),
+        name: RouteNames.session(':slug'),
         builder: (context, state) {
+          final slug = state.pathParameters['slug'] ?? '';
           return SentryDisplayWidget(
-            child: PreJoinScreen(sessionSlug: state.extra! as String),
+            child: PreJoinScreen(sessionSlug: slug),
           );
         },
       ),

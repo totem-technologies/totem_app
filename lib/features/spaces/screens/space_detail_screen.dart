@@ -771,10 +771,10 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     }
   }
 
-  Future<void> _joinLivekit(SessionDetailSchema event) async {
+  void _joinLivekit(SessionDetailSchema event) {
     logger.d('Joining livekit session: ${event.slug}');
-    setState(() => _joined = true);
-    await context.pushNamed(RouteNames.videoSessionPrejoin, extra: event.slug);
+    if (mounted) setState(() => _joined = true);
+    context.go(RouteNames.session(event.slug));
   }
 
   Future<void> _joinGoogleMeet(SessionDetailSchema event) async {

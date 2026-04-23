@@ -30,7 +30,7 @@ class RouteNames {
   static const blogDetail = '/blog/detail';
   static String blogPost(String slug) => '/blog/$slug';
 
-  static const videoSessionPrejoin = '/video-session/join';
+  static String session(String slug) => '/session/$slug';
 
   static const allRoutes = <String>[
     login,
@@ -44,6 +44,5 @@ class RouteNames {
     sessionHistory,
     blog,
     blogDetail,
-    videoSessionPrejoin,
   ];
 }
