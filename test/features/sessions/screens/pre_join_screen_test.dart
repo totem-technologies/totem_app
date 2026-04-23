@@ -85,8 +85,8 @@ session_state.SessionOptions _createSessionOptions() {
     token: 'test-token',
     cameraEnabled: true,
     microphoneEnabled: true,
+    speakerEnabled: true,
     cameraOptions: sessions.SessionController.defaultCameraCaptureOptions,
-    audioOutputOptions: AudioOutputOptions(speakerOn: true),
   );
 }
 

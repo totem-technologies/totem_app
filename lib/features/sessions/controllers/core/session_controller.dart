@@ -224,8 +224,7 @@ class SessionController extends _$SessionController {
 
     _onRoomChanges();
 
-    unawaited(_applyJoinMediaState());
-    // context.room.localParticipant?.setMicrophoneEnabled(_options.microphoneEnabled)
+    _applyJoinMediaState();
     _dispatch(
       const ConnectionChanged(
         RoomConnectionState.connected,
@@ -233,13 +232,17 @@ class SessionController extends _$SessionController {
       ),
     );
 
-    // _userSpeakerPreference is always true: when no external audio device
-    // is connected, the app should default to speaker (not earpiece).
-    devices.resetSpeakerRoutingDefaults();
-    unawaited(devices.setSpeakerphone(true));
+    final speakerPref = options.speakerEnabled;
+    devices.resetSpeakerRoutingDefaults(speakerPref);
+    // Delay setting up the listener and applying the initial routing up to a bit.
+    // This allows LiveKit's FastConnect and incoming WebRTC streams to settle,
+    // avoiding the earpiece/default audio routing from overriding our preference.
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (!ref.mounted) return;
+      devices.setupDeviceChangeListener();
+    });
 
     _updateParticipantsList();
-    devices.setupDeviceChangeListener();
   }
 
   void _onDisconnected() {
@@ -321,7 +324,9 @@ class SessionController extends _$SessionController {
       roomOptions: RoomOptions(
         defaultCameraCaptureOptions: options.cameraOptions,
         defaultAudioCaptureOptions: const AudioCaptureOptions(),
-        defaultAudioOutputOptions: options.audioOutputOptions,
+        defaultAudioOutputOptions: AudioOutputOptions(
+          speakerOn: options.speakerEnabled,
+        ),
         dynacast: true,
         defaultVideoPublishOptions: const VideoPublishOptions(
           // simulcast: true,

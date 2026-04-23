@@ -9,6 +9,7 @@ clean:
 	flutter clean
 	rm -rf build/
 	rm -rf .dart_tool/build/
+	rm -rf ~/.gradle/caches/*
 
 run-chrome:
 	@echo "Running app in Chrome..."

@@ -379,9 +379,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       token: response.token,
       cameraEnabled: _isCameraOn,
       microphoneEnabled: _isMicOn,
+      speakerEnabled: _isSpeakerOn,
       cameraOptions: _cameraOptions,
-      audioOutputOptions: _audioOutputOptions,
     );
+
     if (mounted) setState(() {});
 
     if (hasRequestedJoin || !mounted) return;
