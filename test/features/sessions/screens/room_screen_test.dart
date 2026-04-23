@@ -300,7 +300,7 @@ class _TestSessionDeviceController extends SessionDeviceController {
 
 class _TestSessionCuesService extends SessionCuesService {
   int sessionTransitionCueCount = 0;
-  int totemArrivedCueCount = 0;
+  int totemReceivedCueCount = 0;
 
   @override
   Future<void> playSessionTransitionCue() async {
@@ -308,8 +308,8 @@ class _TestSessionCuesService extends SessionCuesService {
   }
 
   @override
-  Future<void> playTotemArrivedCue() async {
-    totemArrivedCueCount += 1;
+  Future<void> playTotemReceivedCue() async {
+    totemReceivedCueCount += 1;
   }
 
   @override
@@ -1252,21 +1252,21 @@ void main() {
         ],
       );
 
-      expect(feedbackService.totemArrivedCueCount, 0);
+      expect(feedbackService.totemReceivedCueCount, 0);
 
       harness.container
           .read(harness.roomScreenProvider.notifier)
           .set(RoomScreen.receiving);
       await tester.pump();
 
-      expect(feedbackService.totemArrivedCueCount, 1);
+      expect(feedbackService.totemReceivedCueCount, 1);
 
       harness.container
           .read(harness.roomScreenProvider.notifier)
           .set(RoomScreen.receiving);
       await tester.pump();
 
-      expect(feedbackService.totemArrivedCueCount, 1);
+      expect(feedbackService.totemReceivedCueCount, 1);
     });
   });
 }

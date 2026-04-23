@@ -39,7 +39,7 @@ class _TestSessionCuesService extends SessionCuesService {
   Future<void> playSessionTransitionCue() async {}
 
   @override
-  Future<void> playTotemArrivedCue() async {}
+  Future<void> playTotemReceivedCue() async {}
 
   @override
   void dispose() {}
