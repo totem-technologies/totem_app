@@ -277,8 +277,15 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   // ===== Local controls =====
 
-  void _toggleCamera() {
-    setState(() => _isCameraOn = !_isCameraOn);
+  Future<void> _toggleCamera() async {
+    if (_isCameraOn) {
+      setState(() => _isCameraOn = false);
+      await _disposePreviewVideoTrack();
+      if (mounted) setState(() {});
+    } else {
+      await _initializeLocalVideo();
+      if (mounted) setState(() => _isCameraOn = true);
+    }
   }
 
   Future<void> _toggleMic() async {

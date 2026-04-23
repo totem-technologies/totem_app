@@ -577,7 +577,7 @@ class ParticipantControlButton extends ConsumerWidget {
   }
 }
 
-class LocalParticipantCard extends ConsumerWidget {
+class LocalParticipantCard extends ConsumerStatefulWidget {
   const LocalParticipantCard({
     this.isCameraOn = true,
     this.audioTrack,
@@ -590,14 +590,74 @@ class LocalParticipantCard extends ConsumerWidget {
   final VideoTrack? videoTrack;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LocalParticipantCard> createState() =>
+      _LocalParticipantCardState();
+}
+
+class _LocalParticipantCardState extends ConsumerState<LocalParticipantCard> {
+  Timer? _timer;
+  late bool _showAvatar;
+
+  bool get _isVideoTrackVisible =>
+      widget.videoTrack != null &&
+      widget.videoTrack!.isActive &&
+      !widget.videoTrack!.muted;
+
+  @override
+  void initState() {
+    super.initState();
+    _showAvatar = !widget.isCameraOn || !_isVideoTrackVisible;
+  }
+
+  @override
+  void didUpdateWidget(LocalParticipantCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // TODO(totem): Investigate better ways to display the video only when the video is initialized
+    // This delay is necessary because the native video view needs a moment to initialize and display
+    // the first frame after the track is unmuted or becomes active. Without this, we might see a brief
+    // flash of the avatar before the video appears.
+
+    final wasVisible =
+        oldWidget.isCameraOn &&
+        (oldWidget.videoTrack != null &&
+            oldWidget.videoTrack!.isActive &&
+            !oldWidget.videoTrack!.muted);
+    final isVisible = widget.isCameraOn && _isVideoTrackVisible;
+
+    if (!wasVisible && isVisible) {
+      _timer?.cancel();
+      _timer = Timer(const Duration(milliseconds: 750), () {
+        if (mounted) {
+          setState(() {
+            _showAvatar = false;
+          });
+        }
+      });
+    } else if (!isVisible) {
+      _timer?.cancel();
+      if (!_showAvatar) {
+        setState(() {
+          _showAvatar = true;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final user = ref.watch(
       authControllerProvider.select((auth) => auth.user),
     );
 
-    final isVideoTrackVisible =
-        videoTrack != null && videoTrack!.isActive && !videoTrack!.muted;
+    final isVideoTrackVisible = _isVideoTrackVisible;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(30),
@@ -610,7 +670,7 @@ class LocalParticipantCard extends ConsumerWidget {
             if (isVideoTrackVisible)
               IgnorePointer(
                 child: VideoTrackRenderer(
-                  videoTrack!,
+                  widget.videoTrack!,
                   fit: VideoViewFit.cover,
                   renderMode: VideoRenderMode.platformView,
                 ),
@@ -618,8 +678,8 @@ class LocalParticipantCard extends ConsumerWidget {
             else
               const LoadingVideoPlaceholder(),
             AnimatedOpacity(
-              opacity: (!isCameraOn || !isVideoTrackVisible) ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 10),
+              opacity: _showAvatar ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 250),
               child: Stack(
                 children: [
                   Positioned.fill(
