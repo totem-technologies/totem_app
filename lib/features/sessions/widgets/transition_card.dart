@@ -1,5 +1,6 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:totem_app/features/sessions/widgets/action_slider_button.dart';
 
 enum TotemCardTransitionType { join, pass, receive, start, waitingReceive }
@@ -52,7 +53,7 @@ class TransitionCardContainer extends StatelessWidget {
   }
 }
 
-class TransitionCard extends StatelessWidget {
+class TransitionCard extends StatefulWidget {
   const TransitionCard({
     required this.type,
     required this.onActionPressed,
@@ -72,14 +73,47 @@ class TransitionCard extends StatelessWidget {
   final String? actionText;
 
   @override
+  State<TransitionCard> createState() => _TransitionCardState();
+}
+
+class _TransitionCardState extends State<TransitionCard> {
+  late final MouseTracker _mouseTracker;
+  late bool _hasMouseConnected;
+
+  @override
+  void initState() {
+    super.initState();
+    _mouseTracker = RendererBinding.instance.mouseTracker;
+    _hasMouseConnected = _mouseTracker.mouseIsConnected;
+    _mouseTracker.addListener(_handleMouseConnectionChanged);
+  }
+
+  @override
+  void dispose() {
+    _mouseTracker.removeListener(_handleMouseConnectionChanged);
+    super.dispose();
+  }
+
+  void _handleMouseConnectionChanged() {
+    final hasMouseConnected = _mouseTracker.mouseIsConnected;
+    if (_hasMouseConnected == hasMouseConnected || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _hasMouseConnected = hasMouseConnected;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final shouldShowActionButton =
-        type != TotemCardTransitionType.waitingReceive;
+        widget.type != TotemCardTransitionType.waitingReceive;
 
     final buttonText =
-        actionText ??
-        switch (type) {
+        widget.actionText ??
+        switch (widget.type) {
           TotemCardTransitionType.join => 'Join',
           TotemCardTransitionType.pass => 'Pass',
           TotemCardTransitionType.receive => 'Receive',
@@ -96,22 +130,22 @@ class TransitionCard extends StatelessWidget {
               ),
               child: ActionSliderButton(
                 text: buttonText,
-                onActionCompleted: onActionPressed,
-                keepLoadingOnSuccess: keepActionLoadingOnSuccess,
-                isLoading: isSliderLoading,
+                onActionCompleted: widget.onActionPressed,
+                keepLoadingOnSuccess: widget.keepActionLoadingOnSuccess,
+                isLoading: widget.isSliderLoading,
               ),
             ),
           )
         : null;
 
     return TransitionCardContainer(
-      margin: margin,
-      constraints: switch (type) {
+      margin: widget.margin,
+      constraints: switch (widget.type) {
         TotemCardTransitionType.join => const BoxConstraints(maxWidth: 366),
         _ => const BoxConstraints(maxWidth: 650),
       },
       children: [
-        if (type == TotemCardTransitionType.join)
+        if (widget.type == TotemCardTransitionType.join)
           Flexible(
             child: Column(
               spacing: 10,
@@ -135,10 +169,15 @@ class TransitionCard extends StatelessWidget {
         else
           Flexible(
             child: AutoSizeText(
-              switch (type) {
-                TotemCardTransitionType.join => 'Swipe to join the session.',
+              switch (widget.type) {
+                TotemCardTransitionType.join =>
+                  _hasMouseConnected
+                      ? 'Click to join the session.'
+                      : 'Swipe to join the session.',
                 TotemCardTransitionType.pass =>
-                  'When done, slide to pass the Totem to the next person.',
+                  _hasMouseConnected
+                      ? 'When done, click to pass the Totem to the next person.'
+                      : 'When done, slide to pass the Totem to the next person.',
                 TotemCardTransitionType.receive =>
                   'The Totem is being passed to you.',
                 TotemCardTransitionType.start =>
@@ -155,7 +194,7 @@ class TransitionCard extends StatelessWidget {
               maxLines: 2,
             ),
           ),
-        if (actionButton != null && type != TotemCardTransitionType.join)
+        if (actionButton != null && widget.type != TotemCardTransitionType.join)
           actionButton,
       ],
     );
