@@ -6,7 +6,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_app/core/config/theme.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/screens/options_sheet.dart';
+import 'package:totem_app/features/sessions/screens/more_options_popup.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_chat_button.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';

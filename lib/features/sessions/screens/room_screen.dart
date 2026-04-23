@@ -16,7 +16,7 @@ import 'package:totem_app/features/sessions/providers/session_cues_provider.dart
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/listening_turn_screen.dart';
-import 'package:totem_app/features/sessions/screens/options_sheet.dart';
+import 'package:totem_app/features/sessions/screens/more_options_popup.dart';
 import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_app/features/sessions/screens/speaking_turn_screen.dart';
