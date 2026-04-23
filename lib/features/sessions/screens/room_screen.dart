@@ -248,17 +248,19 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   }
 
   void _setKeeperDisconnectedNotification(bool hasKeeperDisconnected) {
-    if (!mounted) return;
+    if (!mounted || !hasKeeperDisconnected) {
+      _closeKeeperDisconnectedNotification();
+      return;
+    }
 
     final roomStatus = ref.read(roomStatusProvider);
-    final shouldShow = hasKeeperDisconnected && roomStatus == RoomStatus.active;
-
-    if (!shouldShow) {
+    if (roomStatus != RoomStatus.active) {
       _closeKeeperDisconnectedNotification();
       return;
     }
 
     if (_closeKeeperLeftNotification != null) {
+      // do not show again
       return;
     }
 
@@ -341,9 +343,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       )
       ..listen(
         hasKeeperDisconnectedProvider,
-        (previous, next) {
-          if (previous == next) return;
-          _setKeeperDisconnectedNotification(next);
+        (previous, disconnected) {
+          _setKeeperDisconnectedNotification(disconnected);
         },
       )
       ..listen(
