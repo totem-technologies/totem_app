@@ -23,6 +23,7 @@ import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_app/shared/extensions.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confetti.dart';
+import 'package:totem_app/shared/widgets/viewport_resolver.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Resolves the [SessionDisconnectedReason] from the given
@@ -163,213 +164,317 @@ class _SessionDisconnectedScreenState
 
   @override
   Widget build(BuildContext context) {
-    // TODO(bdlukaa): Implement a landscape version of this screen.
-
     return RoomBackground(
       status: RoomStatus.ended,
-      child: Builder(
-        builder: (context) {
-          final theme = Theme.of(context);
-          final recommended = ref.watch(getRecommendedSessionsProvider());
-          final sessionState = ref.watch(currentSessionStateProvider);
-          final disconnectReason =
-              widget.disconnectReason ?? sessionState?.disconnectReason;
-          final sessionReason = resolveDisconnectedReason(
-            disconnectReason: disconnectReason,
-            sessionState: sessionState,
-          );
+      child: PopScope(
+        canPop: false,
+        child: SafeArea(
+          child: ViewportResolver(
+            builder: (context, viewportKind) {
+              final theme = Theme.of(context);
+              final recommended = ref.watch(getRecommendedSessionsProvider());
+              final sessionState = ref.watch(currentSessionStateProvider);
+              final disconnectReason =
+                  widget.disconnectReason ?? sessionState?.disconnectReason;
+              final sessionReason = resolveDisconnectedReason(
+                disconnectReason: disconnectReason,
+                sessionState: sessionState,
+              );
 
-          final nextEvents = widget.session.space.nextEvents
-              .where((e) => e.slug != widget.session.slug)
-              .take(2)
-              .toList();
-          return PopScope(
-            canPop: false,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsetsDirectional.symmetric(
-                  horizontal: 20,
-                  vertical: 8,
+              final nextEvents = widget.session.space.nextEvents
+                  .where((e) => e.slug != widget.session.slug)
+                  .take(2)
+                  .toList();
+
+              final header = Semantics(
+                header: true,
+                child: Text(
+                  switch (sessionReason) {
+                    SessionDisconnectedReason.keeperAbsent =>
+                      'Session will be rescheduled',
+                    SessionDisconnectedReason.movedToAnotherDevice =>
+                      'Session moved to another device',
+                    SessionDisconnectedReason.removed =>
+                      "You've been removed from this session.",
+                    SessionDisconnectedReason.roomEmpty ||
+                    SessionDisconnectedReason.keeperEnded => 'Session Ended',
+                  },
+                  style: theme.textTheme.headlineMedium,
+                  textAlign: TextAlign.center,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  spacing: 20,
-                  children: [
-                    Semantics(
-                      header: true,
-                      child: Text(
-                        switch (sessionReason) {
-                          SessionDisconnectedReason.keeperAbsent =>
-                            'Session will be rescheduled',
-                          SessionDisconnectedReason.movedToAnotherDevice =>
-                            'Session moved to another device',
-                          SessionDisconnectedReason.removed =>
-                            "You've been removed from this session.",
-                          SessionDisconnectedReason.roomEmpty ||
-                          SessionDisconnectedReason.keeperEnded =>
-                            'Session Ended',
-                        },
-                        style: theme.textTheme.headlineMedium,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    Text.rich(
-                      switch (sessionReason) {
-                        SessionDisconnectedReason.keeperAbsent => const TextSpan(
-                          text:
-                              'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
-                        ),
-                        SessionDisconnectedReason.movedToAnotherDevice =>
-                          const TextSpan(
-                            text:
-                                'This account joined the same session on another device. Continue there or rejoin from this device.',
-                          ),
-                        SessionDisconnectedReason.removed => TextSpan(
-                          text: 'Please take a moment to review our ',
-                          children: [
-                            TextSpan(
-                              text: 'Community Guidelines',
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                fontWeight: FontWeight.w500,
-                              ),
-                              recognizer: _communityGuidelinesRecognizer,
-                            ),
-                            const TextSpan(text: '. '),
-                            const TextSpan(
-                              text:
-                                  'If you believe this was a mistake, reach out to us at ',
-                            ),
-                            TextSpan(
-                              text: 'help@totem.org',
-                              style: TextStyle(
-                                color: Colors.blue.shade200,
-                              ),
-                              recognizer: _helpEmailRecognizer,
-                            ),
-                            const TextSpan(text: '.'),
-                          ],
-                        ),
-                        SessionDisconnectedReason.keeperEnded ||
-                        SessionDisconnectedReason.roomEmpty => const TextSpan(
-                          text:
-                              'Thank you for joining!\nWe hope you found the session enjoyable.',
-                        ),
-                      },
-                      textAlign: TextAlign.center,
-                    ),
-                    if (sessionReason == SessionDisconnectedReason.keeperEnded)
-                      _SessionFeedbackWidget(
-                        state: _thumbState,
-                        onThumbUpPressed: () async {
-                          setState(() => _thumbState = ThumbState.up);
-                          ConfettiController.showConfetti(context);
-                          await ref.read(
-                            sessionFeedbackProvider(
-                              widget.session.slug,
-                              SessionFeedbackOptions.up,
-                            ).future,
-                          );
-                          await SessionDisconnectedScreen.incrementSessionLikedCount();
-                        },
-                        onThumbDownPressed: () async {
-                          await showUserFeedbackDialog(
-                            context,
-                            onFeedbackSubmitted: (message) {
-                              _thumbState = ThumbState.down;
-                              if (mounted) setState(() {});
-                              return ref.read(
-                                sessionFeedbackProvider(
-                                  widget.session.slug,
-                                  SessionFeedbackOptions.down,
-                                  message,
-                                ).future,
-                              );
-                            },
-                          );
-                        },
-                      ),
+              );
 
-                    if (nextEvents.isNotEmpty) ...[
-                      Text(
-                        nextEvents.length == 1
-                            ? 'Join this upcoming session'
-                            : 'Join these upcoming sessions',
-                        style: theme.textTheme.titleMedium,
-                        textAlign: TextAlign.start,
-                      ),
-                      for (final nextEvent in nextEvents)
-                        Flexible(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxHeight: MediaQuery.textScalerOf(
-                                context,
-                              ).scale(140),
-                            ),
-                            child: SmallSpaceCard(
-                              space: MobileSpaceDetailSchemaExtension.copyWith(
-                                widget.session.space,
-                                nextEvents: [nextEvent],
-                              ),
-                              onTap: () {
-                                _refreshHome();
-                                return context.pushReplacement(
-                                  RouteNames.spaceSession(
-                                    widget.session.space.slug,
-                                    nextEvent.slug,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
+              final subheader = Text.rich(
+                switch (sessionReason) {
+                  SessionDisconnectedReason.keeperAbsent => const TextSpan(
+                    text:
+                        'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
+                  ),
+                  SessionDisconnectedReason.movedToAnotherDevice =>
+                    const TextSpan(
+                      text:
+                          'This account joined the same session on another device. Continue there or rejoin from this device.',
+                    ),
+                  SessionDisconnectedReason.removed => TextSpan(
+                    text: 'Please take a moment to review our ',
+                    children: [
+                      TextSpan(
+                        text: 'Community Guidelines',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w500,
                         ),
-                    ] else
-                      ...recommended.when(
-                        data: (data) sync* {
-                          if (data.isNotEmpty) {
-                            yield Text(
-                              'You may enjoy these spaces',
-                              style: theme.textTheme.titleMedium,
-                              textAlign: TextAlign.start,
+                        recognizer: _communityGuidelinesRecognizer,
+                      ),
+                      const TextSpan(text: '. '),
+                      const TextSpan(
+                        text:
+                            'If you believe this was a mistake, reach out to us at ',
+                      ),
+                      TextSpan(
+                        text: 'help@totem.org',
+                        style: TextStyle(
+                          color: Colors.blue.shade200,
+                        ),
+                        recognizer: _helpEmailRecognizer,
+                      ),
+                      const TextSpan(text: '.'),
+                    ],
+                  ),
+                  SessionDisconnectedReason.keeperEnded ||
+                  SessionDisconnectedReason.roomEmpty => const TextSpan(
+                    text:
+                        'Thank you for joining!\nWe hope you found the session enjoyable.',
+                  ),
+                },
+                textAlign: TextAlign.center,
+              );
+
+              final feedback =
+                  sessionReason == SessionDisconnectedReason.keeperEnded
+                  ? _SessionFeedbackWidget(
+                      state: _thumbState,
+                      onThumbUpPressed: () async {
+                        setState(() => _thumbState = ThumbState.up);
+                        ConfettiController.showConfetti(context);
+                        await ref.read(
+                          sessionFeedbackProvider(
+                            widget.session.slug,
+                            SessionFeedbackOptions.up,
+                          ).future,
+                        );
+                        await SessionDisconnectedScreen.incrementSessionLikedCount();
+                      },
+                      onThumbDownPressed: () async {
+                        await showUserFeedbackDialog(
+                          context,
+                          onFeedbackSubmitted: (message) {
+                            _thumbState = ThumbState.down;
+                            if (mounted) setState(() {});
+                            return ref.read(
+                              sessionFeedbackProvider(
+                                widget.session.slug,
+                                SessionFeedbackOptions.down,
+                                message,
+                              ).future,
                             );
-                            for (final event in data.take(2)) {
-                              yield Flexible(
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    maxHeight: MediaQuery.textScalerOf(
-                                      context,
-                                    ).scale(140),
-                                  ),
-                                  child: SmallSpaceCard.fromSessionDetailSchema(
-                                    event,
-                                    onTap: () {
-                                      _refreshHome();
-                                      return context.pushReplacement(
-                                        RouteNames.space(event.space.slug),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                        error: (error, _) => [],
-                        loading: () => [],
-                      ),
-                    ElevatedButton(
-                      onPressed: () {
-                        _refreshHome();
-                        toHome(HomeRoutes.initialRoute);
+                          },
+                        );
                       },
-                      child: const Text('Explore More'),
+                    )
+                  : null;
+
+              final nextEventsList = <Widget>[
+                if (nextEvents.isNotEmpty) ...[
+                  Text(
+                    nextEvents.length == 1
+                        ? 'Join this upcoming session'
+                        : 'Join these upcoming sessions',
+                    style: theme.textTheme.titleMedium,
+                    textAlign: TextAlign.start,
+                  ),
+                  for (final nextEvent in nextEvents)
+                    Flexible(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.textScalerOf(
+                            context,
+                          ).scale(140),
+                        ),
+                        child: SmallSpaceCard(
+                          space: MobileSpaceDetailSchemaExtension.copyWith(
+                            widget.session.space,
+                            nextEvents: [nextEvent],
+                          ),
+                          onTap: () {
+                            _refreshHome();
+                            return context.pushReplacement(
+                              RouteNames.spaceSession(
+                                widget.session.space.slug,
+                                nextEvent.slug,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
+                ] else
+                  ...recommended.when(
+                    data: (data) sync* {
+                      if (data.isNotEmpty) {
+                        yield Text(
+                          'You may enjoy these spaces',
+                          style: theme.textTheme.titleMedium,
+                          textAlign: TextAlign.start,
+                        );
+                        for (final event in data.take(2)) {
+                          yield Flexible(
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxHeight: MediaQuery.textScalerOf(
+                                  context,
+                                ).scale(140),
+                              ),
+                              child: SmallSpaceCard.fromSessionDetailSchema(
+                                event,
+                                onTap: () {
+                                  _refreshHome();
+                                  return context.pushReplacement(
+                                    RouteNames.space(
+                                      event.space.slug,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    error: (error, _) => [],
+                    loading: () => [],
+                  ),
+              ];
+
+              final exploreMoreButton = ElevatedButton(
+                onPressed: () {
+                  _refreshHome();
+                  toHome(HomeRoutes.initialRoute);
+                },
+                child: const Text('Explore More'),
+              );
+
+              switch (viewportKind) {
+                case ViewportKind.smallPortrait:
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.symmetric(
+                        horizontal: 20,
+                        vertical: 8,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        spacing: 20,
+                        children: [
+                          header,
+                          subheader,
+                          ?feedback,
+                          ...nextEventsList,
+                          exploreMoreButton,
+                        ],
+                      ),
+                    ),
+                  );
+                case ViewportKind.smallLandscape:
+                  return Padding(
+                    padding: const EdgeInsetsDirectional.all(40.0),
+                    child: Row(
+                      spacing: 20,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            spacing: 20,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              header,
+                              subheader,
+                              ?feedback,
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            spacing: 20,
+                            children: [...nextEventsList, exploreMoreButton],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                case ViewportKind.mediumPlus:
+                  final titleWidget = nextEventsList.isNotEmpty
+                      ? nextEventsList.first
+                      : const SizedBox.shrink();
+                  // We remove Flexible wrappers for GridView compatibility
+                  final cardWidgets = nextEventsList.length > 1
+                      ? nextEventsList
+                            .sublist(1)
+                            .map((w) => w is Flexible ? w.child : w)
+                            .toList()
+                      : <Widget>[];
+
+                  final crossAxisCount = (MediaQuery.widthOf(context) / 450)
+                      .floor()
+                      .clamp(2, 6);
+
+                  return Padding(
+                    padding: const EdgeInsetsDirectional.all(40.0),
+                    child: Column(
+                      spacing: 10,
+                      children: [
+                        FractionallySizedBox(
+                          widthFactor: 0.4,
+                          child: Column(
+                            spacing: 20,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              header,
+                              subheader,
+                              ?feedback,
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            spacing: 20,
+                            children: [
+                              titleWidget,
+                              Expanded(
+                                child: GridView.count(
+                                  crossAxisCount: crossAxisCount,
+                                  crossAxisSpacing: 20,
+                                  mainAxisSpacing: 20,
+                                  childAspectRatio: 3,
+                                  children: cardWidgets,
+                                ),
+                              ),
+                              Align(
+                                alignment: AlignmentDirectional.centerEnd,
+                                child: exploreMoreButton,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+              }
+            },
+          ),
+        ),
       ),
     );
   }
@@ -401,6 +506,7 @@ class _SessionFeedbackWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(30),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Flexible(
             fit: switch (state) {
