@@ -14,8 +14,6 @@ import 'package:totem_app/shared/widgets/responsive_modal.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
 
-// TODO(totem): Improve Chat UX on Large Screens
-
 Future<void> showSessionChat(BuildContext context) {
   return showResponsiveModal<void>(
     context: context,
@@ -24,11 +22,13 @@ Future<void> showSessionChat(BuildContext context) {
     bottomSheetBackgroundColor: Colors.white,
     dialogBackgroundColor: Colors.white,
     dialogAlignment: AlignmentDirectional.centerEnd,
+    dialogInsetPadding: const EdgeInsetsDirectional.only(end: 40, top: 20),
     dialogShape: const RoundedRectangleBorder(
-      borderRadius: BorderRadiusDirectional.horizontal(
-        start: Radius.circular(20),
+      borderRadius: BorderRadiusDirectional.vertical(
+        top: Radius.circular(20),
       ),
     ),
+    dialogBarrierColor: Colors.black26,
     smallScreenBuilder: (context) {
       return DraggableScrollableSheet(
         maxChildSize: 0.9,
