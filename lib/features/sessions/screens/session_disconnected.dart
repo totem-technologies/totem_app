@@ -265,7 +265,7 @@ class _SessionDisconnectedScreenState
                         await SessionDisconnectedScreen.incrementSessionLikedCount();
                       },
                       onThumbDownPressed: () async {
-                        await showUserFeedbackDialog(
+                        await showUserFeedbackPopup(
                           context,
                           onFeedbackSubmitted: (message) {
                             _thumbState = ThumbState.down;

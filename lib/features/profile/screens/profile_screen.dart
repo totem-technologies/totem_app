@@ -134,7 +134,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ProfileTile(
                 icon: const TotemIcon(TotemIcons.feedback),
                 title: 'Feedback',
-                onTap: () => showUserFeedbackDialog(context),
+                onTap: () => showUserFeedbackPopup(context),
               ),
               Link(
                 target: LinkTarget.blank,
