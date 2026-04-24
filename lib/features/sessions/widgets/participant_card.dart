@@ -741,9 +741,12 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   }
 
   bool _initialized = false;
+  Timer? _initTimer;
+
   void initialize() {
     _initialized = false;
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    _initTimer?.cancel();
+    _initTimer = Timer(const Duration(milliseconds: 1500), () {
       _initialized = true;
       if (mounted) {
         setState(() {});
@@ -875,6 +878,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
   @override
   void dispose() {
+    _initTimer?.cancel();
     _listener?.dispose();
     _trackListener?.dispose();
     super.dispose();
