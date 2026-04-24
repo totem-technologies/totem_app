@@ -740,6 +740,17 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     fps = 0;
   }
 
+  bool _initialized = false;
+  void initialize() {
+    _initialized = false;
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      _initialized = true;
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
   TrackPublication<Track>? get videoTrack {
     if (widget.participant is RemoteParticipant) {
       return widget.participant.getTrackPublicationBySource(TrackSource.camera);
@@ -794,11 +805,13 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   void initState() {
     super.initState();
     _setupListeners();
+    initialize();
   }
 
   void _onTrackMuted(TrackMutedEvent event) {
     if (event.publication.source != TrackSource.camera) return;
     if (!mounted) return;
+    initialize();
     _bindTrackListener();
     setState(() {});
   }
@@ -806,6 +819,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   void _onTrackUnmuted(TrackUnmutedEvent event) {
     if (event.publication.source != TrackSource.camera) return;
     if (!mounted) return;
+    initialize();
     _bindTrackListener();
     setState(() {});
   }
@@ -873,62 +887,77 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     final user = ref.watch(userProfileProvider(widget.participant.identity));
     final track = videoTrack;
 
-    Widget content;
-
-    if (track != null &&
-        track.subscribed &&
-        !track.muted &&
-        !_isTrackInactive) {
-      content = IgnorePointer(
-        child: ColoredBox(
-          color: Colors.black,
-          child: VideoTrackRenderer(
-            key: ValueKey(track.track!.sid),
-            track.track! as VideoTrack,
-            fit: VideoViewFit.cover,
-            renderMode: VideoRenderMode.platformView,
-          ),
-        ),
-      );
-    } else {
-      final localUserSlug = ref.watch(
-        authControllerProvider.select((auth) => auth.user?.slug),
-      );
-      if (widget.participant.identity == localUserSlug) {
-        content = IgnorePointer(
-          child: UserAvatar.currentUser(
-            radius: 0,
-            borderRadius: BorderRadius.zero,
-            borderWidth: 0,
-          ),
-        );
-      } else {
-        content = IgnorePointer(
-          child: user.when(
-            data: (user) {
-              return UserAvatar.fromUserSchema(
-                user,
-                borderRadius: BorderRadius.zero,
-                borderWidth: 0,
-              );
-            },
-            error: (error, stackTrace) {
-              return const ColoredBox(
-                color: AppTheme.mauve,
-                child: Center(
-                  child: TotemIcon(
-                    TotemIcons.person,
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                ),
-              );
-            },
-            loading: () => const LoadingVideoPlaceholder(borderRadius: 0),
-          ),
-        );
+    final shouldShowAvatar = () {
+      if (track == null || track.muted || _isTrackInactive || !_initialized) {
+        return true;
       }
-    }
+      return false;
+    }();
+
+    final content = Stack(
+      children: [
+        if (track != null &&
+            track.subscribed &&
+            !track.muted &&
+            !_isTrackInactive)
+          IgnorePointer(
+            child: ColoredBox(
+              color: Colors.black,
+              child: VideoTrackRenderer(
+                key: ValueKey(track.track!.sid),
+                track.track! as VideoTrack,
+                fit: VideoViewFit.cover,
+                renderMode: VideoRenderMode.platformView,
+              ),
+            ),
+          ),
+        if (shouldShowAvatar)
+          Positioned.fill(
+            child: Builder(
+              builder: (context) {
+                final localUserSlug = ref.watch(
+                  authControllerProvider.select((auth) => auth.user?.slug),
+                );
+                if (widget.participant.identity == localUserSlug) {
+                  return IgnorePointer(
+                    child: UserAvatar.currentUser(
+                      radius: 0,
+                      borderRadius: BorderRadius.zero,
+                      borderWidth: 0,
+                    ),
+                  );
+                } else {
+                  return IgnorePointer(
+                    child: user.when(
+                      data: (user) {
+                        return UserAvatar.fromUserSchema(
+                          user,
+                          borderRadius: BorderRadius.zero,
+                          borderWidth: 0,
+                        );
+                      },
+                      error: (error, stackTrace) {
+                        return const ColoredBox(
+                          color: AppTheme.mauve,
+                          child: Center(
+                            child: TotemIcon(
+                              TotemIcons.person,
+                              size: 24,
+                              color: Colors.white,
+                            ),
+                          ),
+                        );
+                      },
+                      loading: () =>
+                          const LoadingVideoPlaceholder(borderRadius: 0),
+                    ),
+                  );
+                }
+              },
+            ),
+          ),
+      ],
+    );
 
     if (kDebugMode || user.value?.isStaff == true) {
       return GestureDetector(
