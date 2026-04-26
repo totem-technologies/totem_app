@@ -1,10 +1,30 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
 
+import '../../controllers/core/session_controller_mock.dart';
+import '../../controllers/features/session_device_controller_mock.dart';
+import '../../livekit_mocks.dart';
+
 void main() {
+  late FakeSessionController sessionController;
+  late LocalParticipant participant;
+  late FakeSessionDeviceController devices;
+
+  setUp(() {
+    sessionController = FakeSessionController();
+    participant = MockLocalParticipant();
+    devices = sessionController.devices as FakeSessionDeviceController;
+
+    when(
+      participant.createListener,
+    ).thenReturn(MockParticipantEventsListener());
+  });
+
   group('ActionBarCameraSwitcherButton', () {
     testWidgets('shows adaptive camera options overlay', (tester) async {
       await tester.binding.setSurfaceSize(const Size(800, 1000));
@@ -227,31 +247,42 @@ void main() {
     });
   });
 
-  // TODO(tests): SessionActionBarCameraButton
-  // Improve mocks that this widget uses.
-  // group('SessionActionBarCameraButton', () {
-  //   late final FakeSessionController fakeSessionState = FakeSessionController();
-  //   late final LocalParticipant participant = MockLocalParticipant();
-  //   testWidgets('calls onToggle with enabled=true when currently off', (
-  //     tester,
-  //   ) async {
-  //     bool? requested;
+  group('SessionActionBarCameraButton', () {
+    tearDown(() {
+      debugDefaultTargetPlatformOverride = null;
+    });
 
-  //     await tester.pumpWidget(
-  //       MaterialApp(
-  //         home: Scaffold(
-  //           body: SessionActionBarCameraButton(
-  //             session: fakeSessionState,
-  //             participant: participant,
-  //           ),
-  //         ),
-  //       ),
-  //     );
+    testWidgets('toggling camera when tapped', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SessionActionBarCameraButton(
+              session: sessionController,
+              participant: participant,
+            ),
+          ),
+        ),
+      );
 
-  //     await tester.tap(find.byType(ActionBarButton));
-  //     await tester.pump();
+      await tester.tap(find.byType(ActionBarButton));
+      await tester.pumpAndSettle();
 
-  //     expect(requested, isTrue);
-  //   });
-  // });
+      expect(devices.enableCameraCalled, isTrue);
+      expect(devices.disableCameraCalled, isFalse);
+
+      // force disabled state
+      when(
+        () => participant.getTrackPublicationBySource(TrackSource.camera),
+      ).thenAnswer(
+        (_) => MockLocalTrackPublication(muted: false, isActive: true),
+      );
+
+      await tester.tap(find.byType(ActionBarButton));
+      await tester.pumpAndSettle();
+
+      expect(devices.disableCameraCalled, isTrue);
+    });
+  });
 }

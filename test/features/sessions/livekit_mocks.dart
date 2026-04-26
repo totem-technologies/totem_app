@@ -199,6 +199,18 @@ class MockParticipantEventsListener extends Mock
 class MockRemoteTrackPublication extends Mock
     implements RemoteTrackPublication<RemoteVideoTrack> {}
 
+class MockLocalTrackPublication extends Mock
+    implements LocalTrackPublication<LocalVideoTrack> {
+  MockLocalTrackPublication({
+    bool muted = false,
+    bool isActive = true,
+  }) {
+    when(
+      () => track,
+    ).thenAnswer((_) => MockLocalVideoTrack(muted: muted, isActive: isActive));
+  }
+}
+
 // Default stubs for the VideoTrack mixin methods the SDK calls during
 // VideoTrackRenderer initState/dispose. Returning sane values here keeps
 // individual tests from having to repeat these three lines.
