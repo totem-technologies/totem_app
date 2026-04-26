@@ -318,19 +318,19 @@ class _SessionDisconnectedScreenState
                               maxHeight: MediaQuery.textScalerOf(
                                 context,
                               ).scale(140),
-                              ),
-                              child: SmallSpaceCard.fromSessionDetailSchema(
-                                event,
-                                onTap: () {
-                                  _refreshHome();
-                                  return context.pushReplacement(
-                                    RouteNames.space(
-                                      event.space.slug,
-                                    ),
-                                  );
-                                },
-                              ),
-                            );
+                            ),
+                            child: SmallSpaceCard.fromSessionDetailSchema(
+                              event,
+                              onTap: () {
+                                _refreshHome();
+                                return context.pushReplacement(
+                                  RouteNames.space(
+                                    event.space.slug,
+                                  ),
+                                );
+                              },
+                            ),
+                          );
                         }
                       }
                     },
