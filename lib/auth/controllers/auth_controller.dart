@@ -74,16 +74,25 @@ class AuthController extends Notifier<AuthState> {
 
   void _initialize() {
     checkExistingAuth();
-    _fcmTokenSubscription ??= FirebaseMessaging.instance.onTokenRefresh.listen(
-      (_) => _updateFCMToken(),
-      onError: (dynamic error, StackTrace stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'FCM token refresh failed',
-        );
-      },
-    );
+    try {
+      _fcmTokenSubscription ??= FirebaseMessaging.instance.onTokenRefresh
+          .listen(
+            (_) => _updateFCMToken(),
+            onError: (dynamic error, StackTrace stackTrace) {
+              ErrorHandler.logError(
+                error,
+                stackTrace: stackTrace,
+                message: 'FCM token refresh failed',
+              );
+            },
+          );
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to initialize FCM token listener',
+      );
+    }
   }
 
   Future<void> requestPin(String email) async {

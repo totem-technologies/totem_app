@@ -58,6 +58,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _listenToBatteryChanges();
     _warmEmojiGlyphs();
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   _applyScreenCapturePolicy();
+    // });
   }
 
   @override
@@ -65,9 +68,39 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     _closeKeeperDisconnectedNotification();
     _clearSessionPopups();
     _clearTimeRemainingWarningTimer();
+    _disableScreenProtection();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _batterySubscription?.cancel();
     super.dispose();
+  }
+
+  // void _applyScreenCapturePolicy() {
+  // if (!mounted) return;
+
+  // try {
+  //   final email = ref.read(authControllerProvider).user?.email;
+  //   final shouldProtect =
+  //       !ScreenProtectionService.shouldAllowScreenCaptureForEmail(email);
+  //   ScreenProtectionService.setCaptureProtectionEnabled(shouldProtect);
+  // } catch (error, stackTrace) {
+  //   ErrorHandler.logError(
+  //     error,
+  //     stackTrace: stackTrace,
+  //     message: 'Error applying screen capture policy',
+  //   );
+  // }
+  // }
+
+  void _disableScreenProtection() {
+    // try {
+    //   ScreenProtectionService.setCaptureProtectionEnabled(false);
+    // } catch (error, stackTrace) {
+    //   ErrorHandler.logError(
+    //     error,
+    //     stackTrace: stackTrace,
+    //     message: 'Error disabling screen capture policy',
+    //   );
+    // }
   }
 
   void _warmEmojiGlyphs() {

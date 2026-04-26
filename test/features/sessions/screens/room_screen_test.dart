@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide ConnectionState;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
@@ -352,6 +353,20 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        // authControllerProvider.overrideWith(
+        //   () => FakeAuthController(
+        //     AuthState.authenticated(
+        //       user: UserSchema(
+        //         profileAvatarType: ProfileAvatarTypeEnum.im,
+        //         circleCount: 0,
+        //         email: 'test@totem.org',
+        //         name: 'Test User',
+        //         slug: 'user-1',
+        //         dateCreated: DateTime(2024),
+        //       ),
+        //     ),
+        //   ),
+        // ),
         currentSessionProvider.overrideWith((ref) => null),
         currentSessionEventProvider.overrideWith(
           (ref) => ref.watch(eventStateProvider),
@@ -379,7 +394,7 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
       ),
     ),
   );
-  await tester.pump();
+  await tester.pumpAndSettle();
 
   final container = ProviderScope.containerOf(
     tester.element(find.byType(VideoSessionScreen)),
@@ -401,8 +416,11 @@ void main() {
     late MockSessionController session;
     late MockSessionDeviceController devices;
 
-    setUpAll(() {
+    setUpAll(() async {
       registerFallbackValue(TrackSource.camera);
+      dotenv.loadFromString(
+        isOptional: true,
+      );
     });
 
     setUp(() {

@@ -1,10 +1,5 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:screen_protector/screen_protector.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-
-final screenProtectionProvider = Provider<ScreenProtectionService>((ref) {
-  return const ScreenProtectionService();
-}, name: 'Screen Protection Provider');
 
 class ScreenProtectionService {
   const ScreenProtectionService();
@@ -21,7 +16,7 @@ class ScreenProtectionService {
     return normalized.endsWith(_totemCaptureDomain);
   }
 
-  Future<void> setCaptureProtectionEnabled(bool enabled) async {
+  static Future<void> setCaptureProtectionEnabled(bool enabled) async {
     if (_captureProtectionEnabled == enabled) return;
     try {
       if (enabled) {
