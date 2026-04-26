@@ -228,72 +228,69 @@ class ParticipantCard extends ConsumerWidget {
     const borderRadius = 20.0;
 
     return RepaintBoundary(
-      child: AspectRatio(
-        aspectRatio: 16 / 21,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(borderRadius),
-          clipBehavior: Clip.hardEdge,
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: ParticipantVideo(participant: participant),
-              ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        clipBehavior: Clip.hardEdge,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: ParticipantVideo(participant: participant),
+            ),
+            PositionedDirectional(
+              top: overlayPadding,
+              start: overlayPadding,
+              child: SpeakingIndicatorOrEmoji(participant: participant),
+            ),
+            if (session != null &&
+                currentUserIsKeeper &&
+                currentUserSlug != participant.identity)
+              PositionedDirectional(
+                end: overlayPadding,
+                top: overlayPadding,
+                child: ParticipantControlButton(
+                  participant: participant,
+                  overlayPadding: overlayPadding,
+                ),
+              )
+            else if (isKeeper)
               PositionedDirectional(
                 top: overlayPadding,
-                start: overlayPadding,
-                child: SpeakingIndicatorOrEmoji(participant: participant),
-              ),
-              if (session != null &&
-                  currentUserIsKeeper &&
-                  currentUserSlug != participant.identity)
-                PositionedDirectional(
-                  end: overlayPadding,
-                  top: overlayPadding,
-                  child: ParticipantControlButton(
-                    participant: participant,
-                    overlayPadding: overlayPadding,
+                end: overlayPadding,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.black54,
+                    boxShadow: kElevationToShadow[6],
                   ),
-                )
-              else if (isKeeper)
-                PositionedDirectional(
-                  top: overlayPadding,
-                  end: overlayPadding,
-                  child: Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.black54,
-                      boxShadow: kElevationToShadow[6],
-                    ),
-                    padding: const EdgeInsetsDirectional.all(4),
-                    child: const TotemIconLogo(
-                      color: AppTheme.white,
-                      size: 16,
-                    ),
-                  ),
-                ),
-              PositionedDirectional(
-                bottom: 8,
-                start: 8,
-                end: 8,
-                child: SmartNameText(
-                  name: participant.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    shadows: [
-                      Shadow(
-                        offset: Offset(0, 1),
-                        blurRadius: 4,
-                      ),
-                    ],
+                  padding: const EdgeInsetsDirectional.all(4),
+                  child: const TotemIconLogo(
+                    color: AppTheme.white,
+                    size: 16,
                   ),
                 ),
               ),
-            ],
-          ),
+            PositionedDirectional(
+              bottom: 8,
+              start: 8,
+              end: 8,
+              child: SmartNameText(
+                name: participant.name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  shadows: [
+                    Shadow(
+                      offset: Offset(0, 1),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
