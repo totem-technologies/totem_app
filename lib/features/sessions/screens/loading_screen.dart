@@ -1,22 +1,235 @@
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:livekit_client/livekit_client.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
+import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/circle_icon_button.dart';
 
-class PrejoinRoomBaseScreen extends StatelessWidget {
-  const PrejoinRoomBaseScreen({
-    required this.video,
-    required this.actionBar,
-    this.joinCard,
-    super.key,
-  });
+abstract class PreJoinPreviewTrackFactory {
+  const PreJoinPreviewTrackFactory();
 
-  final Widget video;
+  Future<LocalVideoTrack?> createVideoTrack(
+    CameraCaptureOptions cameraOptions,
+  );
+
+  Future<LocalAudioTrack?> createAudioTrack();
+}
+
+class _LiveKitPreJoinPreviewTrackFactory extends PreJoinPreviewTrackFactory {
+  const _LiveKitPreJoinPreviewTrackFactory();
+
+  @override
+  Future<LocalVideoTrack?> createVideoTrack(
+    CameraCaptureOptions cameraOptions,
+  ) {
+    return LocalVideoTrack.createCameraTrack(cameraOptions);
+  }
+
+  @override
+  Future<LocalAudioTrack?> createAudioTrack() {
+    return LocalAudioTrack.create();
+  }
+}
+
+class PrejoinSessionScreen extends StatefulWidget {
+  const PrejoinSessionScreen({
+    this.joinCard,
+    PreJoinPreviewTrackFactory? previewTrackFactory,
+    this.locked = false,
+    super.key,
+  }) : previewTrackFactory =
+           previewTrackFactory ?? const _LiveKitPreJoinPreviewTrackFactory();
+
   final Widget? joinCard;
-  final Widget actionBar;
+
+  final PreJoinPreviewTrackFactory previewTrackFactory;
+
+  /// Whether the buttons should not perform any actions;
+  final bool locked;
+
+  @override
+  State<PrejoinSessionScreen> createState() => PrejoinSessionScreenState();
+}
+
+class PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
+  // Preview media state
+  LocalVideoTrack? _previewVideoTrack;
+  var _isCameraOn = true;
+
+  LocalAudioTrack? _previewAudioTrack;
+  var _isMicOn = true;
+
+  // Join configuration state
+  CameraCaptureOptions _cameraOptions =
+      SessionController.defaultCameraCaptureOptions;
+  var _audioOutputOptions = const AudioOutputOptions(speakerOn: true);
+  bool get isSpeakerOn => _audioOutputOptions.speakerOn ?? false;
+  bool get isCameraOn => _isCameraOn;
+  bool get isMicOn => _isMicOn;
+  CameraCaptureOptions get cameraOptions => _cameraOptions;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeLocalVideo();
+    _initializeLocalAudio();
+    _detectHeadphones();
+  }
+
+  @override
+  void dispose() {
+    _disposePreviewTracks();
+    super.dispose();
+  }
+
+  Future<void> _detectHeadphones() async {
+    try {
+      final session = await AudioSession.instance;
+      final devices = await session.getDevices(includeInputs: false);
+      final hasExternalOutput = devices.any(
+        (d) =>
+            SessionDeviceController.externalAudioOutputTypes.contains(d.type),
+      );
+      final speakerOn = !hasExternalOutput;
+
+      if (!mounted) return;
+      setState(() {
+        _audioOutputOptions = AudioOutputOptions(speakerOn: speakerOn);
+      });
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to detect audio output devices',
+      );
+    }
+  }
+
+  // ===== Preview Tracks =====
+
+  Future<void> _initializeLocalVideo() async {
+    await _disposePreviewVideoTrack();
+
+    try {
+      _previewVideoTrack = await widget.previewTrackFactory.createVideoTrack(
+        _cameraOptions,
+      );
+      await _previewVideoTrack?.start();
+    } catch (error, stackTrace) {
+      _isCameraOn = false;
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to create local video track',
+      );
+    } finally {
+      if (mounted) setState(() {});
+    }
+  }
+
+  Future<LocalAudioTrack?> _initializeLocalAudio() async {
+    await _disposePreviewAudioTrack();
+
+    try {
+      _previewAudioTrack = await widget.previewTrackFactory.createAudioTrack();
+      await _previewAudioTrack?.enable();
+      await _previewAudioTrack?.start();
+      return _previewAudioTrack;
+    } catch (error, stackTrace) {
+      _isMicOn = false;
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to create local audio track',
+      );
+    } finally {
+      if (mounted) setState(() {});
+    }
+    return null;
+  }
+
+  Future<void> _disposePreviewVideoTrack() async {
+    if (_previewVideoTrack != null) {
+      try {
+        await _previewVideoTrack?.stop();
+      } catch (e) {
+        ErrorHandler.logError(e, message: 'Failed to stop preview track');
+      }
+
+      try {
+        await _previewVideoTrack?.dispose();
+      } catch (e) {
+        ErrorHandler.logError(e, message: 'Failed to dispose preview track');
+      } finally {
+        _previewVideoTrack = null;
+      }
+    }
+  }
+
+  Future<void> _disposePreviewAudioTrack() async {
+    if (_previewAudioTrack != null) {
+      try {
+        await _previewAudioTrack?.stop();
+      } catch (e) {
+        ErrorHandler.logError(e, message: 'Failed to stop preview audio track');
+      }
+      try {
+        await _previewAudioTrack?.dispose();
+      } catch (e) {
+        ErrorHandler.logError(
+          e,
+          message: 'Failed to dispose preview audio track',
+        );
+      } finally {
+        _previewAudioTrack = null;
+      }
+    }
+  }
+
+  Future<void> _disposePreviewTracks() async {
+    await Future.wait([
+      _disposePreviewVideoTrack(),
+      _disposePreviewAudioTrack(),
+    ]);
+  }
+
+  // ===== Local controls =====
+
+  Future<void> _toggleCamera() async {
+    if (_isCameraOn) {
+      setState(() => _isCameraOn = false);
+      await _disposePreviewVideoTrack();
+      if (mounted) setState(() {});
+    } else {
+      await _initializeLocalVideo();
+      if (mounted) setState(() => _isCameraOn = true);
+    }
+  }
+
+  Future<void> _toggleMic() async {
+    setState(() => _isMicOn = !_isMicOn);
+    final track = await _initializeLocalAudio();
+    switch (_isMicOn) {
+      case true:
+        await track?.unmute(stopOnMute: false);
+      case false:
+        await track?.mute(stopOnMute: false);
+    }
+  }
+
+  void _toggleSpeaker() {
+    setState(() {
+      _audioOutputOptions = AudioOutputOptions(speakerOn: !isSpeakerOn);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,12 +265,47 @@ class PrejoinRoomBaseScreen extends StatelessWidget {
                           // vertical: 10,
                         ),
                         alignment: AlignmentDirectional.center,
-                        child: video,
+                        child: Semantics(
+                          label:
+                              'Your video preview, camera ${_isCameraOn ? 'on' : 'off'}',
+                          image: true,
+                          child: LocalParticipantCard(
+                            isCameraOn: _isCameraOn,
+                            audioTrack: _previewAudioTrack,
+                            videoTrack: _previewVideoTrack,
+                          ),
+                        ),
                       ),
                     ),
                     // SizedBox needed to maintain padding with and without it.
-                    joinCard ?? const SizedBox(),
-                    actionBar,
+                    widget.joinCard ?? const SizedBox(),
+                    PrejoinActionBar(
+                      locked: widget.locked,
+                      previewAudioTrack: _previewAudioTrack,
+                      onToggleMic: _toggleMic,
+                      isSpeakerOn: isSpeakerOn,
+                      onToggleSpeaker: _toggleSpeaker,
+                      isCameraOn: _isCameraOn,
+                      onToggleCamera: _toggleCamera,
+                      cameraPosition: _cameraOptions.cameraPosition,
+                      selectedCameraDeviceId: _cameraOptions.deviceId,
+                      onCameraPositionChanged: (position) {
+                        setState(() {
+                          _cameraOptions = _cameraOptions.copyWith(
+                            cameraPosition: position,
+                          );
+                        });
+                        _initializeLocalVideo();
+                      },
+                      onCameraDeviceSelected: (device) {
+                        setState(() {
+                          _cameraOptions = _cameraOptions.copyWith(
+                            deviceId: device.deviceId,
+                          );
+                        });
+                        _initializeLocalVideo();
+                      },
+                    ),
                   ],
                 ),
               ),

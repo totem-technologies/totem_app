@@ -86,8 +86,8 @@ class SessionController extends _$SessionController {
   Timer? _syncTimer;
   static const syncTimerDuration = Duration(seconds: 20);
 
-  bool? _cameraEnabledOverride;
-  bool? _microphoneEnabledOverride;
+  // bool? _cameraEnabledOverride;
+  // bool? _microphoneEnabledOverride;
   String? _lastMetadata;
   SessionDetailSchema? event;
   static const SessionStateReducer _stateReducer = SessionStateReducer();
@@ -298,14 +298,6 @@ class SessionController extends _$SessionController {
     await leave();
   }
 
-  void configureJoinPreferences({
-    required bool cameraEnabled,
-    required bool microphoneEnabled,
-  }) {
-    _cameraEnabledOverride = cameraEnabled;
-    _microphoneEnabledOverride = microphoneEnabled;
-  }
-
   Future<void> join() async {
     if (room != null) {
       if (state.connectionState == RoomConnectionState.connected) return;
@@ -317,8 +309,6 @@ class SessionController extends _$SessionController {
         SessionPhase.connecting,
       ),
     );
-
-    final cameraEnabled = _cameraEnabledOverride ?? options.cameraEnabled;
 
     await initializeConnection(
       roomOptions: RoomOptions(
@@ -384,7 +374,7 @@ class SessionController extends _$SessionController {
         token: options.token,
         fastConnectOptions: FastConnectOptions(
           microphone: TrackOption(enabled: options.microphoneEnabled),
-          camera: TrackOption(enabled: cameraEnabled),
+          camera: TrackOption(enabled: options.cameraEnabled),
         ),
       );
       ref.read(sessionCuesServiceProvider).playSessionTransitionCue();
@@ -466,7 +456,9 @@ class SessionController extends _$SessionController {
         }
         _onDisconnected();
       })
-      ..on<DataReceivedEvent>(messaging.handleDataReceived)
+      ..on<DataReceivedEvent>((data) {
+        if (ref.mounted) messaging.handleDataReceived(data);
+      })
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
       ..on<ParticipantConnectedEvent>(_onParticipantConnected);
 
@@ -538,20 +530,19 @@ class SessionController extends _$SessionController {
     final currentRoom = room;
     if (currentRoom == null) return;
 
-    final cameraEnabled = _cameraEnabledOverride ?? options.cameraEnabled;
+    final cameraEnabled = options.cameraEnabled;
     currentRoom.localParticipant?.setCameraEnabled(cameraEnabled);
 
     final shouldEnableMicrophone = () {
       if (state.roomState.status == RoomStatus.waitingRoom &&
           !state.hasKeeper) {
-        return _microphoneEnabledOverride ?? options.microphoneEnabled;
+        return options.microphoneEnabled;
       }
       if (state.roomState.status == RoomStatus.active &&
           state.speakingNow == currentRoom.localParticipant?.identity) {
-        return _microphoneEnabledOverride ?? options.microphoneEnabled;
+        return options.microphoneEnabled;
       }
-      return isCurrentUserKeeper() &&
-          (_microphoneEnabledOverride ?? options.microphoneEnabled);
+      return isCurrentUserKeeper() && options.microphoneEnabled;
     }();
 
     if (shouldEnableMicrophone) {

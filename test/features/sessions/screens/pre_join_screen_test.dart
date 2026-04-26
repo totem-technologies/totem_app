@@ -13,6 +13,7 @@ import 'package:totem_app/features/sessions/controllers/core/session_controller.
 import 'package:totem_app/features/sessions/controllers/core/session_state.dart'
     as session_state;
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
+import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
@@ -149,12 +150,6 @@ class _NoOpSessionController extends sessions.SessionController {
   session_state.SessionRoomState build(session_state.SessionOptions options) {
     return _createConnectedSessionState();
   }
-
-  @override
-  void configureJoinPreferences({
-    required bool cameraEnabled,
-    required bool microphoneEnabled,
-  }) {}
 
   @override
   Future<void> join() async {}
