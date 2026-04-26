@@ -521,59 +521,57 @@ class MoreOptionsTile<T> extends StatelessWidget {
                 ? theme.colorScheme.errorContainer
                 : Colors.white,
             borderRadius: BorderRadius.circular(30),
-            child: Expanded(
-              child: DropdownButton<T>(
-                padding: const EdgeInsetsDirectional.only(start: 0, end: 30),
-                isExpanded: true,
-                value: selectedOption,
-                items: options!
-                    .map(
-                      (e) => DropdownMenuItem<T>(
-                        value: e,
+            child: DropdownButton<T>(
+              padding: const EdgeInsetsDirectional.only(start: 0, end: 30),
+              isExpanded: true,
+              value: selectedOption,
+              items: options!
+                  .map(
+                    (e) => DropdownMenuItem<T>(
+                      value: e,
+                      child: AutoSizeText(
+                        optionToString?.call(e) ?? e.toString(),
+                        maxLines: 1,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              selectedItemBuilder: (context) {
+                return options!.map((e) {
+                  return Row(
+                    spacing: 12,
+                    children: [
+                      SizedBox.square(
+                        dimension: 24,
+                        child: TotemIcon(icon, size: 24),
+                      ),
+                      Flexible(
                         child: AutoSizeText(
                           optionToString?.call(e) ?? e.toString(),
                           maxLines: 1,
-                        ),
-                      ),
-                    )
-                    .toList(),
-                selectedItemBuilder: (context) {
-                  return options!.map((e) {
-                    return Row(
-                      spacing: 12,
-                      children: [
-                        SizedBox.square(
-                          dimension: 24,
-                          child: TotemIcon(icon, size: 24),
-                        ),
-                        Flexible(
-                          child: AutoSizeText(
-                            optionToString?.call(e) ?? e.toString(),
-                            maxLines: 1,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.black,
-                            ),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.black,
                           ),
                         ),
-                      ],
-                    );
-                  }).toList();
-                },
-                onChanged: onOptionChanged,
-                borderRadius: BorderRadius.circular(30),
-                style: const TextStyle(fontSize: 16, color: Colors.black),
-                iconEnabledColor: type == MoreOptionsTileType.destructive
-                    ? theme.colorScheme.onErrorContainer
-                    : null,
-                dropdownColor: Colors.white,
-                icon: const SizedBox.square(
-                  dimension: 16,
-                  child: TotemIcon(
-                    TotemIcons.chevronDown,
-                    size: 16,
-                    color: Colors.black,
-                  ),
+                      ),
+                    ],
+                  );
+                }).toList();
+              },
+              onChanged: onOptionChanged,
+              borderRadius: BorderRadius.circular(30),
+              style: const TextStyle(fontSize: 16, color: Colors.black),
+              iconEnabledColor: type == MoreOptionsTileType.destructive
+                  ? theme.colorScheme.onErrorContainer
+                  : null,
+              dropdownColor: Colors.white,
+              icon: const SizedBox.square(
+                dimension: 16,
+                child: TotemIcon(
+                  TotemIcons.chevronDown,
+                  size: 16,
+                  color: Colors.black,
                 ),
               ),
             ),

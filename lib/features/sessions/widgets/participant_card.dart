@@ -889,10 +889,14 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(userProfileProvider(widget.participant.identity));
-    final track = videoTrack;
+    final trackPublication = videoTrack;
 
     final shouldShowAvatar = () {
-      if (track == null || track.muted || _isTrackInactive || !_initialized) {
+      if (trackPublication == null ||
+          !trackPublication.subscribed ||
+          trackPublication.muted ||
+          _isTrackInactive ||
+          !_initialized) {
         return true;
       }
       return false;
@@ -900,16 +904,16 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
     final content = Stack(
       children: [
-        if (track != null &&
-            track.subscribed &&
-            !track.muted &&
+        if (trackPublication != null &&
+            trackPublication.subscribed &&
+            !trackPublication.muted &&
             !_isTrackInactive)
           IgnorePointer(
             child: ColoredBox(
               color: Colors.black,
               child: VideoTrackRenderer(
-                key: ValueKey(track.track!.sid),
-                track.track! as VideoTrack,
+                key: ValueKey(trackPublication.track!.sid),
+                trackPublication.track! as VideoTrack,
                 fit: VideoViewFit.cover,
                 renderMode: VideoRenderMode.platformView,
               ),
