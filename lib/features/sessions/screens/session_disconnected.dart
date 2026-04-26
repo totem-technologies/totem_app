@@ -285,13 +285,6 @@ class _SessionDisconnectedScreenState
 
               final nextEventsList = <Widget>[
                 if (nextEvents.isNotEmpty) ...[
-                  Text(
-                    nextEvents.length == 1
-                        ? 'Join this upcoming session'
-                        : 'Join these upcoming sessions',
-                    style: theme.textTheme.titleMedium,
-                    textAlign: TextAlign.start,
-                  ),
                   for (final nextEvent in nextEvents)
                     Flexible(
                       child: ConstrainedBox(
@@ -321,11 +314,6 @@ class _SessionDisconnectedScreenState
                   ...recommended.when(
                     data: (data) sync* {
                       if (data.isNotEmpty) {
-                        yield Text(
-                          'You may enjoy these spaces',
-                          style: theme.textTheme.titleMedium,
-                          textAlign: TextAlign.start,
-                        );
                         for (final event in data.take(2)) {
                           yield Flexible(
                             child: ConstrainedBox(
@@ -354,6 +342,17 @@ class _SessionDisconnectedScreenState
                     loading: () => [],
                   ),
               ];
+              final nextEventsHeader = nextEvents.isEmpty
+                  ? null
+                  : Text(
+                      nextEvents.isNotEmpty
+                          ? nextEvents.length == 1
+                                ? 'Join this upcoming session'
+                                : 'Join these upcoming sessions'
+                          : 'You may enjoy these spaces',
+                      style: theme.textTheme.titleMedium,
+                      textAlign: TextAlign.start,
+                    );
 
               final exploreMoreButton = ElevatedButton(
                 onPressed: () {
@@ -379,6 +378,7 @@ class _SessionDisconnectedScreenState
                           header,
                           subheader,
                           ?feedback,
+                          ?nextEventsHeader,
                           ...nextEventsList,
                           exploreMoreButton,
                         ],
@@ -406,24 +406,17 @@ class _SessionDisconnectedScreenState
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             spacing: 20,
-                            children: [...nextEventsList, exploreMoreButton],
+                            children: [
+                              ?nextEventsHeader,
+                              ...nextEventsList,
+                              exploreMoreButton,
+                            ],
                           ),
                         ),
                       ],
                     ),
                   );
                 case ViewportKind.mediumPlus:
-                  final titleWidget = nextEventsList.isNotEmpty
-                      ? nextEventsList.first
-                      : const SizedBox.shrink();
-                  // We remove Flexible wrappers for GridView compatibility
-                  final cardWidgets = nextEventsList.length > 1
-                      ? nextEventsList
-                            .sublist(1)
-                            .map((w) => w is Flexible ? w.child : w)
-                            .toList()
-                      : <Widget>[];
-
                   final crossAxisCount = (MediaQuery.widthOf(context) / 450)
                       .floor()
                       .clamp(2, 6);
@@ -445,29 +438,30 @@ class _SessionDisconnectedScreenState
                             ],
                           ),
                         ),
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            spacing: 20,
-                            children: [
-                              titleWidget,
-                              Expanded(
-                                child: GridView.count(
-                                  crossAxisCount: crossAxisCount,
-                                  crossAxisSpacing: 20,
-                                  mainAxisSpacing: 20,
-                                  childAspectRatio: 3,
-                                  children: cardWidgets,
+                        if (nextEventsList.isNotEmpty)
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              spacing: 20,
+                              children: [
+                                ?nextEventsHeader,
+                                Expanded(
+                                  child: GridView.count(
+                                    crossAxisCount: crossAxisCount,
+                                    crossAxisSpacing: 20,
+                                    mainAxisSpacing: 20,
+                                    childAspectRatio: 3,
+                                    children: nextEventsList,
+                                  ),
                                 ),
-                              ),
-                              Align(
-                                alignment: AlignmentDirectional.centerEnd,
-                                child: exploreMoreButton,
-                              ),
-                            ],
+                                Align(
+                                  alignment: AlignmentDirectional.centerEnd,
+                                  child: exploreMoreButton,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   );

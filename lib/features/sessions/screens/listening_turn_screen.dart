@@ -316,9 +316,7 @@ class _ListeningTurnGrid extends ConsumerWidget {
           crossAxisCount = 5;
         }
       case ViewportKind.smallLandscape:
-        if (itemCount <= 2) {
-          crossAxisCount = 2;
-        } else if (itemCount <= 4) {
+        if (itemCount <= 4) {
           crossAxisCount = 2;
         } else if (itemCount <= 6) {
           crossAxisCount = 3;
@@ -361,10 +359,9 @@ class _ListeningTurnGrid extends ConsumerWidget {
                 crossAxisCount,
                 (colIndex) {
                   final itemIndex = startIndex + colIndex;
-                  final hasIndex = itemIndex < itemCount;
-                  if (hasIndex && itemIndex < itemCount) {
+                  if (itemIndex < itemCount) {
                     final participant = sortedParticipants[itemIndex];
-                    return Flexible(
+                    return Expanded(
                       child: ParticipantCard(
                         key: participantKeys.getKey(participant.sid),
                         participant: participant,
