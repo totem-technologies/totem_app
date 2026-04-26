@@ -341,11 +341,11 @@ class _SessionDisconnectedScreenState
               final nextEventsHeader = nextEvents.isEmpty
                   ? null
                   : Text(
-                      nextEvents.isNotEmpty
-                          ? nextEvents.length == 1
-                                ? 'Join this upcoming session'
-                                : 'Join these upcoming sessions'
-                          : 'You may enjoy these spaces',
+                      recommended.hasValue && recommended.value!.isNotEmpty
+                          ? 'You may enjoy these spaces'
+                          : nextEvents.length == 1
+                          ? 'Join this upcoming session'
+                          : 'Join these upcoming sessions',
                       style: theme.textTheme.titleMedium,
                       textAlign: TextAlign.start,
                     );
