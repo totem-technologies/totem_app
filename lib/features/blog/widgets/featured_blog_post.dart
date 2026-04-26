@@ -84,6 +84,7 @@ class FeaturedBlogPost extends StatelessWidget {
                       stops: [startStop, 1.0],
                     ).createShader(
                       Rect.fromLTRB(0, 0, rect.width, rect.height),
+                      textDirection: Directionality.of(context),
                     );
                   },
                   blendMode: BlendMode.darken,

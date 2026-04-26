@@ -82,7 +82,10 @@ class _CardScreenState extends State<CardScreen>
                             colors: [gradientColor, gradientColor],
                             stops: [0.3, 1.0],
                             transform: GradientRotation(168.14 * math.pi / 180),
-                          ).createShader(rect);
+                          ).createShader(
+                            rect,
+                            textDirection: Directionality.of(context),
+                          );
                         },
                         blendMode: BlendMode.darken,
                         child: Image.asset(
