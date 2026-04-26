@@ -7,6 +7,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
@@ -17,6 +18,7 @@ import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/room_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_app/features/sessions/screens/speaking_turn_screen.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
@@ -167,6 +169,25 @@ Future<void> _pumpRoomScreenForResolvedScreen(
         sessionMessagesProvider.overrideWith((ref) => const []),
         lastSessionMessageProvider.overrideWith((ref) => null),
         disconnectionReasonProvider.overrideWith((ref) => null),
+        userProfileProvider('user-1').overrideWith(
+          (ref) => PublicUserSchema(
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+        userProfileProvider('user-2').overrideWith(
+          (ref) => PublicUserSchema(
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+        userProfileProvider('keeper-1').overrideWith(
+          (ref) => PublicUserSchema(
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+        getRecommendedSessionsProvider().overrideWith((ref) => []),
         ...extraOverrides.cast(),
       ],
       child: const MaterialApp(
@@ -481,7 +502,7 @@ void main() {
       );
 
       expect(find.byType(SessionDisconnectedScreen), findsOneWidget);
-      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(seconds: 10));
     });
 
     testWidgets('renders error screen for RoomScreen.error', (tester) async {
@@ -937,7 +958,7 @@ void main() {
           isCameraEnabled: false,
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Audio route changed'), findsOneWidget);
       expect(
@@ -978,7 +999,7 @@ void main() {
           isCameraEnabled: false,
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Audio route changed'), findsNothing);
     });
