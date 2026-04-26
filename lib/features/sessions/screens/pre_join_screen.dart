@@ -21,12 +21,14 @@ import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/screens/room_screen.dart';
 import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
+import 'package:totem_app/features/sessions/widgets/download_mobile_app_dialog.dart';
 import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/permissions_popups.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 @visibleForTesting
 abstract class PreJoinPreviewTrackFactory {
@@ -127,6 +129,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   @override
   void initState() {
     super.initState();
+    WakelockPlus.enable();
     _initializeAndCheckPermissions();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
@@ -137,11 +140,15 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     if (!hasRequestedJoin) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
+    WakelockPlus.disable();
     super.dispose();
   }
 
   void _initializeAndCheckPermissions() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+
+      await showDownloadMobileAppDialog(context);
       if (!mounted) return;
 
       final granted = await showPermissionsRequestSheet(context);

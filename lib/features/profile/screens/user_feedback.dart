@@ -4,22 +4,28 @@ import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_app/shared/widgets/loading_indicator.dart';
+import 'package:totem_app/shared/widgets/responsive_modal.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 
 typedef OnFeedbackSubmitted = Future<void> Function(String feedback);
 
-Future<void> showUserFeedbackDialog(
+Future<void> showUserFeedbackPopup(
   BuildContext context, {
   OnFeedbackSubmitted? onFeedbackSubmitted,
 }) async {
-  return showModalBottomSheet(
+  return showResponsiveModal<void>(
     context: context,
     showDragHandle: false,
     useRootNavigator: true,
     isScrollControlled: true,
-    useSafeArea: true,
-    builder: (context) => UserFeedback(
+    smallScreenBuilder: (context) => UserFeedback(
       onFeedbackSubmitted: onFeedbackSubmitted,
+    ),
+    largeScreenBuilder: (context) => SizedBox(
+      width: 400,
+      child: UserFeedback(
+        onFeedbackSubmitted: onFeedbackSubmitted,
+      ),
     ),
   );
 }

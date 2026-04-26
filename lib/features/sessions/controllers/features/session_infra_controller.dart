@@ -4,21 +4,15 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/core/services/screen_protection_service.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
 
 part 'session_infra_controller.g.dart';
 
 @riverpod
 class SessionInfraController extends _$SessionInfraController {
-  late final ScreenProtectionService _screenProtectionService;
-
   @override
   void build() {
-    _screenProtectionService = ref.read(screenProtectionProvider);
     ref.onDispose(dispose);
   }
 
@@ -27,48 +21,16 @@ class SessionInfraController extends _$SessionInfraController {
   }
 
   Timer? _notificationTimer;
-  bool _wakelockEnabled = false;
   bool _backgroundModeEnabled = false;
-  bool _screenProtectionEnabled = false;
 
   static const _notificationPeriod = Duration(minutes: 1);
 
   Future<void> activate({SessionDetailSchema? event}) async {
-    _enableWakelock();
-    _applyScreenCapturePolicy();
     _setupBackgroundMode(event);
   }
 
   Future<void> deactivate() async {
-    _disableWakelock();
-    _disableScreenProtection();
     _endBackgroundMode();
-  }
-
-  Future<void> _enableWakelock() async {
-    try {
-      await WakelockPlus.enable();
-      _wakelockEnabled = true;
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error enabling wakelock',
-      );
-    }
-  }
-
-  Future<void> _disableWakelock() async {
-    try {
-      await WakelockPlus.disable();
-      _wakelockEnabled = false;
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error disabling wakelock',
-      );
-    }
   }
 
   Future<void> _setupBackgroundMode(SessionDetailSchema? event) async {
@@ -202,40 +164,9 @@ class SessionInfraController extends _$SessionInfraController {
     return false;
   }
 
-  void _applyScreenCapturePolicy() {
-    try {
-      final email = ref.read(authControllerProvider).user?.email;
-      final shouldProtect =
-          !ScreenProtectionService.shouldAllowScreenCaptureForEmail(email);
-      _screenProtectionService.setCaptureProtectionEnabled(shouldProtect);
-      _screenProtectionEnabled = shouldProtect;
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error applying screen capture policy',
-      );
-    }
-  }
-
-  void _disableScreenProtection() {
-    try {
-      _screenProtectionService.setCaptureProtectionEnabled(false);
-      _screenProtectionEnabled = false;
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error disabling screen capture policy',
-      );
-    }
-  }
-
   void dispose() {
     _notificationTimer?.cancel();
-    if (_backgroundModeEnabled ||
-        _wakelockEnabled ||
-        _screenProtectionEnabled) {
+    if (_backgroundModeEnabled) {
       deactivate();
     }
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide ConnectionState;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
@@ -6,6 +7,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/auth/models/auth_state.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
@@ -16,6 +18,7 @@ import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_app/features/sessions/screens/room_screen.dart';
 import 'package:totem_app/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_app/features/sessions/screens/speaking_turn_screen.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/widgets/popups.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
@@ -88,6 +91,9 @@ Future<void> _pumpRoomScreen(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        authControllerProvider.overrideWith(
+          () => FakeAuthController(AuthState.unauthenticated()),
+        ),
         currentSessionProvider.overrideWith((ref) => null),
         currentSessionEventProvider.overrideWith((ref) => event),
         resolveCurrentScreenProvider.overrideWith((ref) => RoomScreen.loading),
@@ -166,6 +172,25 @@ Future<void> _pumpRoomScreenForResolvedScreen(
         sessionMessagesProvider.overrideWith((ref) => const []),
         lastSessionMessageProvider.overrideWith((ref) => null),
         disconnectionReasonProvider.overrideWith((ref) => null),
+        userProfileProvider('user-1').overrideWith(
+          (ref) => PublicUserSchema(
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+        userProfileProvider('user-2').overrideWith(
+          (ref) => PublicUserSchema(
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+        userProfileProvider('keeper-1').overrideWith(
+          (ref) => PublicUserSchema(
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+        getRecommendedSessionsProvider().overrideWith((ref) => []),
         ...extraOverrides.cast(),
       ],
       child: const MaterialApp(
@@ -352,6 +377,20 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        authControllerProvider.overrideWith(
+          () => FakeAuthController(
+            AuthState.authenticated(
+              user: UserSchema(
+                profileAvatarType: ProfileAvatarTypeEnum.im,
+                circleCount: 0,
+                email: 'test@totem.org',
+                name: 'Test User',
+                slug: 'user-1',
+                dateCreated: DateTime(2024),
+              ),
+            ),
+          ),
+        ),
         currentSessionProvider.overrideWith((ref) => null),
         currentSessionEventProvider.overrideWith(
           (ref) => ref.watch(eventStateProvider),
@@ -379,7 +418,7 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
       ),
     ),
   );
-  await tester.pump();
+  await tester.pumpAndSettle();
 
   final container = ProviderScope.containerOf(
     tester.element(find.byType(VideoSessionScreen)),
@@ -401,8 +440,11 @@ void main() {
     late MockSessionController session;
     late MockSessionDeviceController devices;
 
-    setUpAll(() {
+    setUpAll(() async {
       registerFallbackValue(TrackSource.camera);
+      dotenv.loadFromString(
+        isOptional: true,
+      );
     });
 
     setUp(() {
@@ -463,7 +505,7 @@ void main() {
       );
 
       expect(find.byType(SessionDisconnectedScreen), findsOneWidget);
-      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(seconds: 10));
     });
 
     testWidgets('renders error screen for RoomScreen.error', (tester) async {
@@ -919,7 +961,7 @@ void main() {
           isCameraEnabled: false,
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Audio route changed'), findsOneWidget);
       expect(
@@ -960,7 +1002,7 @@ void main() {
           isCameraEnabled: false,
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Audio route changed'), findsNothing);
     });

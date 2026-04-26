@@ -199,46 +199,52 @@ class ListeningTurnScreen extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: Padding(
-                        padding: const EdgeInsetsDirectional.all(10.0),
+                        padding: const EdgeInsetsDirectional.symmetric(
+                          horizontal: 60.0,
+                          vertical: 20.0,
+                        ),
                         child: Column(
                           spacing: 10,
                           children: [
-                            const SizedBox.shrink(),
                             Expanded(
-                              child: AspectRatio(
-                                aspectRatio: 16 / 9,
-                                child: Row(
-                                  spacing: 20,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    // TODO(web): The featured card should have the same height as the grid
-                                    // Currently, when there are 5 participants, for example, the grid is at
-                                    // the middle of the tile, causing a weird effect.
-                                    if (roomStatus == RoomStatus.active &&
-                                        activeSpeaker != null)
-                                      ParticipantCard(
-                                        key: participantKeys.getKey(
-                                          activeSpeaker.sid,
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxHeight: 460,
+                                  ),
+                                  child: Row(
+                                    spacing: 20,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      if (roomStatus == RoomStatus.active &&
+                                          activeSpeaker != null)
+                                        Flexible(
+                                          child: ParticipantCard(
+                                            key: participantKeys.getKey(
+                                              activeSpeaker.sid,
+                                            ),
+                                            session: event,
+                                            participant: activeSpeaker,
+                                            participantIdentity:
+                                                activeSpeaker.identity,
+                                          ),
                                         ),
-                                        session: event,
-                                        participant: activeSpeaker,
-                                        participantIdentity:
-                                            activeSpeaker.identity,
+                                      Expanded(
+                                        flex: 2,
+                                        child: _ListeningTurnGrid(
+                                          event: event,
+                                          speakingNow: activeSpeaker?.identity,
+                                          // Only show the speaking now participant in waiting room.
+                                          // In active room, the speaking now participant is already featured.
+                                          showSpeakingNowParticipant:
+                                              roomStatus ==
+                                              RoomStatus.waitingRoom,
+                                          gap: 20,
+                                          viewportKind: viewportKind,
+                                        ),
                                       ),
-                                    Flexible(
-                                      child: _ListeningTurnGrid(
-                                        event: event,
-                                        speakingNow: activeSpeaker?.identity,
-                                        // Only show the speaking now participant in waiting room.
-                                        // In active room, the speaking now participant is already featured.
-                                        showSpeakingNowParticipant:
-                                            roomStatus ==
-                                            RoomStatus.waitingRoom,
-                                        gap: 20,
-                                        viewportKind: viewportKind,
-                                      ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -290,12 +296,18 @@ class _ListeningTurnGrid extends ConsumerWidget {
       speakingNow: speakingNow,
       showSpeakingNow: showSpeakingNowParticipant,
     );
+
+    // debug:
+    // sortedParticipants = [for (var i = 0; i < 8; i++) ...sortedParticipants];
+
     final itemCount = sortedParticipants.length;
     if (itemCount == 0) return const SizedBox.shrink();
 
+    int minRowCount = 1;
     late final int crossAxisCount;
     switch (viewportKind) {
       case ViewportKind.smallPortrait:
+        minRowCount = 2;
         if (itemCount <= 6) {
           crossAxisCount = 3;
         } else if (itemCount <= 12) {
@@ -304,9 +316,7 @@ class _ListeningTurnGrid extends ConsumerWidget {
           crossAxisCount = 5;
         }
       case ViewportKind.smallLandscape:
-        if (itemCount <= 2) {
-          crossAxisCount = 2;
-        } else if (itemCount <= 4) {
+        if (itemCount <= 4) {
           crossAxisCount = 2;
         } else if (itemCount <= 6) {
           crossAxisCount = 3;
@@ -318,16 +328,22 @@ class _ListeningTurnGrid extends ConsumerWidget {
           crossAxisCount = 1;
         } else if (itemCount <= 2) {
           crossAxisCount = 2;
-        } else if (itemCount <= 8) {
+        } else if (itemCount <= 6) {
           crossAxisCount = 3;
+        } else if (itemCount <= 12) {
+          crossAxisCount = 4;
         } else {
           crossAxisCount = math.sqrt(itemCount).ceil();
         }
     }
 
-    final rowCount = (itemCount / crossAxisCount).ceil();
+    final rowCount = (itemCount / crossAxisCount).ceil().clamp(
+      minRowCount,
+      100,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisAlignment: MainAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       spacing: gap,
       children: List.generate(
@@ -335,11 +351,11 @@ class _ListeningTurnGrid extends ConsumerWidget {
         (rowIndex) {
           final startIndex = rowIndex * crossAxisCount;
 
-          return Flexible(
+          return Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: gap,
-              children: List.generate(
+              children: List<Widget>.generate(
                 crossAxisCount,
                 (colIndex) {
                   final itemIndex = startIndex + colIndex;

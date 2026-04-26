@@ -513,52 +513,68 @@ class MoreOptionsTile<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     if (options != null && options!.isNotEmpty && options!.length > 1) {
-      return Material(
-        color: type == MoreOptionsTileType.destructive
-            ? theme.colorScheme.errorContainer
-            : Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        child: Padding(
-          padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              SizedBox.square(
-                dimension: 24,
-                child: TotemIcon(icon, size: 24),
-              ),
-              Expanded(
-                child: DropdownButton<T>(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: 12,
-                  ),
-                  isExpanded: true,
-                  value: selectedOption,
-                  items: options
-                      ?.map(
-                        (e) => DropdownMenuItem<T>(
-                          value: e,
-                          child: AutoSizeText(
-                            optionToString?.call(e) ?? e.toString(),
-                            maxLines: 1,
+      return ButtonTheme(
+        alignedDropdown: true,
+        child: DropdownButtonHideUnderline(
+          child: Material(
+            color: type == MoreOptionsTileType.destructive
+                ? theme.colorScheme.errorContainer
+                : Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            child: DropdownButton<T>(
+              padding: const EdgeInsetsDirectional.only(start: 0, end: 30),
+              isExpanded: true,
+              value: selectedOption,
+              items: options!
+                  .map(
+                    (e) => DropdownMenuItem<T>(
+                      value: e,
+                      child: AutoSizeText(
+                        optionToString?.call(e) ?? e.toString(),
+                        maxLines: 1,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              selectedItemBuilder: (context) {
+                return options!.map((e) {
+                  return Row(
+                    spacing: 12,
+                    children: [
+                      SizedBox.square(
+                        dimension: 24,
+                        child: TotemIcon(icon, size: 24),
+                      ),
+                      Flexible(
+                        child: AutoSizeText(
+                          optionToString?.call(e) ?? e.toString(),
+                          maxLines: 1,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.black,
                           ),
                         ),
-                      )
-                      .toList(),
-                  onChanged: onOptionChanged,
-                  underline: const SizedBox.shrink(),
-                  borderRadius: BorderRadius.circular(30),
-                  style: const TextStyle(fontSize: 16, color: Colors.black),
-                  iconEnabledColor: type == MoreOptionsTileType.destructive
-                      ? theme.colorScheme.onErrorContainer
-                      : null,
-                  dropdownColor: Colors.white,
-                  icon: const SizedBox.square(
-                    dimension: 16,
-                    child: TotemIcon(TotemIcons.chevronDown, size: 16),
-                  ),
+                      ),
+                    ],
+                  );
+                }).toList();
+              },
+              onChanged: onOptionChanged,
+              borderRadius: BorderRadius.circular(30),
+              style: const TextStyle(fontSize: 16, color: Colors.black),
+              iconEnabledColor: type == MoreOptionsTileType.destructive
+                  ? theme.colorScheme.onErrorContainer
+                  : null,
+              dropdownColor: Colors.white,
+              icon: const SizedBox.square(
+                dimension: 16,
+                child: TotemIcon(
+                  TotemIcons.chevronDown,
+                  size: 16,
+                  color: Colors.black,
                 ),
               ),
-            ],
+            ),
           ),
         ),
       );

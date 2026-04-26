@@ -5,8 +5,11 @@ class MockSessionDeviceController extends Mock
     implements SessionDeviceController {}
 
 class FakeSessionDeviceController implements SessionDeviceController {
-  bool disableMicrophoneCalled = false;
   bool enableMicrophoneCalled = false;
+  bool disableMicrophoneCalled = false;
+
+  bool enableCameraCalled = false;
+  bool disableCameraCalled = false;
 
   @override
   Future<void> disableMicrophone() async {
@@ -16,6 +19,22 @@ class FakeSessionDeviceController implements SessionDeviceController {
   @override
   Future<void> enableMicrophone() async {
     enableMicrophoneCalled = true;
+  }
+
+  @override
+  bool get isMicrophoneEnabled => true;
+
+  @override
+  String get selectedCameraDeviceId => 'camera-1';
+
+  @override
+  Future<void> enableCamera() async {
+    enableCameraCalled = true;
+  }
+
+  @override
+  Future<void> disableCamera() async {
+    disableCameraCalled = true;
   }
 
   @override

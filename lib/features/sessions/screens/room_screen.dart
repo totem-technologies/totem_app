@@ -8,7 +8,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
+import 'package:totem_app/auth/controllers/auth_controller.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_app/core/services/screen_protection_service.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
@@ -58,6 +61,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _listenToBatteryChanges();
     _warmEmojiGlyphs();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _applyScreenCapturePolicy();
+    });
   }
 
   @override
@@ -65,9 +71,39 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     _closeKeeperDisconnectedNotification();
     _clearSessionPopups();
     _clearTimeRemainingWarningTimer();
+    _disableScreenProtection();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _batterySubscription?.cancel();
     super.dispose();
+  }
+
+  void _applyScreenCapturePolicy() {
+    if (!mounted) return;
+
+    try {
+      final email = ref.read(authControllerProvider).user?.email;
+      final shouldProtect =
+          !ScreenProtectionService.shouldAllowScreenCaptureForEmail(email);
+      ScreenProtectionService.setCaptureProtectionEnabled(shouldProtect);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error applying screen capture policy',
+      );
+    }
+  }
+
+  void _disableScreenProtection() {
+    try {
+      ScreenProtectionService.setCaptureProtectionEnabled(false);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error disabling screen capture policy',
+      );
+    }
   }
 
   void _warmEmojiGlyphs() {

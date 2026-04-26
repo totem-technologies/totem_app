@@ -16,6 +16,10 @@ Future<T?> showResponsiveModal<T>({
   AlignmentGeometry dialogAlignment = Alignment.center,
   EdgeInsetsGeometry dialogInsetPadding = const EdgeInsets.all(24),
 }) {
+  assert(
+    debugCheckHasDirectionality(context),
+    'A Directionality widget is required to show a responsive modal.',
+  );
   switch (ViewportResolver.getViewportKind(context)) {
     case ViewportKind.smallPortrait:
     case ViewportKind.smallLandscape:
@@ -33,6 +37,7 @@ Future<T?> showResponsiveModal<T>({
         context: context,
         useRootNavigator: useRootNavigator,
         barrierColor: dialogBarrierColor,
+        fullscreenDialog: true,
         builder: (context) => Dialog(
           alignment: dialogAlignment,
           insetPadding: dialogInsetPadding.resolve(Directionality.of(context)),
@@ -40,7 +45,7 @@ Future<T?> showResponsiveModal<T>({
           shape:
               dialogShape ??
               RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(25),
               ),
           child: largeScreenBuilder(context),
         ),

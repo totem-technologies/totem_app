@@ -171,8 +171,8 @@ final shellNavigatorKey = GlobalKey<StatefulNavigationShellState>();
 void toHome([HomeRoutes route = HomeRoutes.home]) async {
   if (shellNavigatorKey.currentState != null) {
     shellNavigatorKey.currentState?.goBranch(route.index);
-  } else if (navigatorKey.currentState != null) {
-    navigatorKey.currentState!.pushReplacementNamed(RouteNames.welcome);
+  } else if (navigatorKey.currentContext != null) {
+    navigatorKey.currentContext!.pushReplacement(RouteNames.welcome);
   }
 }
 

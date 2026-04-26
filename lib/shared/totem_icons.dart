@@ -581,6 +581,16 @@ class TotemIcons {
   <path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"/>
 </svg>
 ''';
+
+  static const downloadApp = '''
+<svg width="47" height="53" viewBox="0 0 47 53" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M34.1667 21.25C34.1667 29.2638 34.1667 41.7709 32.1652 44.2604C30.1639 46.75 26.9425 46.75 20.5 46.75C14.0575 46.75 10.8363 46.75 8.83481 44.2604C6.83337 41.7709 6.83337 37.7638 6.83337 29.75V21.25C6.83337 13.2361 6.83337 9.22919 8.83481 6.73959C10.8363 4.25 14.0575 4.25 20.5 4.25C26.9425 4.25 30.1639 4.25 32.1652 6.73959C34.1667 9.22919 34.1667 13.2361 34.1667 21.25Z" stroke="#987AA5" stroke-width="1.75" stroke-linecap="round"/>
+<path d="M25.625 10.625H15.375" stroke="#987AA5" stroke-width="0.75" stroke-linecap="round"/>
+<path d="M21 44C22.6569 44 24 42.6569 24 41C24 39.3431 22.6569 38 21 38C19.3431 38 18 39.3431 18 41C18 42.6569 19.3431 44 21 44Z" stroke="#987AA5" stroke-width="0.75"/>
+<circle cx="37" cy="43" r="10" fill="#987AA5"/>
+<path d="M37.4335 37.1136L37.4783 48.4942M37.4783 48.4942L34.2111 44.677M37.4783 48.4942L40.7154 44.6514" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+''';
 }
 
 typedef TotemIconData = String;

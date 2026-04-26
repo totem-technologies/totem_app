@@ -228,72 +228,69 @@ class ParticipantCard extends ConsumerWidget {
     const borderRadius = 20.0;
 
     return RepaintBoundary(
-      child: AspectRatio(
-        aspectRatio: 16 / 21,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(borderRadius),
-          clipBehavior: Clip.hardEdge,
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: ParticipantVideo(participant: participant),
-              ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        clipBehavior: Clip.hardEdge,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: ParticipantVideo(participant: participant),
+            ),
+            PositionedDirectional(
+              top: overlayPadding,
+              start: overlayPadding,
+              child: SpeakingIndicatorOrEmoji(participant: participant),
+            ),
+            if (session != null &&
+                currentUserIsKeeper &&
+                currentUserSlug != participant.identity)
+              PositionedDirectional(
+                end: overlayPadding,
+                top: overlayPadding,
+                child: ParticipantControlButton(
+                  participant: participant,
+                  overlayPadding: overlayPadding,
+                ),
+              )
+            else if (isKeeper)
               PositionedDirectional(
                 top: overlayPadding,
-                start: overlayPadding,
-                child: SpeakingIndicatorOrEmoji(participant: participant),
-              ),
-              if (session != null &&
-                  currentUserIsKeeper &&
-                  currentUserSlug != participant.identity)
-                PositionedDirectional(
-                  end: overlayPadding,
-                  top: overlayPadding,
-                  child: ParticipantControlButton(
-                    participant: participant,
-                    overlayPadding: overlayPadding,
+                end: overlayPadding,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.black54,
+                    boxShadow: kElevationToShadow[6],
                   ),
-                )
-              else if (isKeeper)
-                PositionedDirectional(
-                  top: overlayPadding,
-                  end: overlayPadding,
-                  child: Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.black54,
-                      boxShadow: kElevationToShadow[6],
-                    ),
-                    padding: const EdgeInsetsDirectional.all(4),
-                    child: const TotemIconLogo(
-                      color: AppTheme.white,
-                      size: 16,
-                    ),
-                  ),
-                ),
-              PositionedDirectional(
-                bottom: 8,
-                start: 8,
-                end: 8,
-                child: SmartNameText(
-                  name: participant.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    shadows: [
-                      Shadow(
-                        offset: Offset(0, 1),
-                        blurRadius: 4,
-                      ),
-                    ],
+                  padding: const EdgeInsetsDirectional.all(4),
+                  child: const TotemIconLogo(
+                    color: AppTheme.white,
+                    size: 16,
                   ),
                 ),
               ),
-            ],
-          ),
+            PositionedDirectional(
+              bottom: 8,
+              start: 8,
+              end: 8,
+              child: SmartNameText(
+                name: participant.name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  shadows: [
+                    Shadow(
+                      offset: Offset(0, 1),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -740,6 +737,20 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     fps = 0;
   }
 
+  bool _initialized = false;
+  Timer? _initTimer;
+
+  void initialize() {
+    _initialized = false;
+    _initTimer?.cancel();
+    _initTimer = Timer(const Duration(milliseconds: 1500), () {
+      _initialized = true;
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
   TrackPublication<Track>? get videoTrack {
     if (widget.participant is RemoteParticipant) {
       return widget.participant.getTrackPublicationBySource(TrackSource.camera);
@@ -794,11 +805,13 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   void initState() {
     super.initState();
     _setupListeners();
+    initialize();
   }
 
   void _onTrackMuted(TrackMutedEvent event) {
     if (event.publication.source != TrackSource.camera) return;
     if (!mounted) return;
+    initialize();
     _bindTrackListener();
     setState(() {});
   }
@@ -806,6 +819,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   void _onTrackUnmuted(TrackUnmutedEvent event) {
     if (event.publication.source != TrackSource.camera) return;
     if (!mounted) return;
+    initialize();
     _bindTrackListener();
     setState(() {});
   }
@@ -861,6 +875,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
   @override
   void dispose() {
+    _initTimer?.cancel();
     _listener?.dispose();
     _trackListener?.dispose();
     super.dispose();
@@ -871,64 +886,83 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(userProfileProvider(widget.participant.identity));
-    final track = videoTrack;
+    final trackPublication = videoTrack;
 
-    Widget content;
-
-    if (track != null &&
-        track.subscribed &&
-        !track.muted &&
-        !_isTrackInactive) {
-      content = IgnorePointer(
-        child: ColoredBox(
-          color: Colors.black,
-          child: VideoTrackRenderer(
-            key: ValueKey(track.track!.sid),
-            track.track! as VideoTrack,
-            fit: VideoViewFit.cover,
-            renderMode: VideoRenderMode.platformView,
-          ),
-        ),
-      );
-    } else {
-      final localUserSlug = ref.watch(
-        authControllerProvider.select((auth) => auth.user?.slug),
-      );
-      if (widget.participant.identity == localUserSlug) {
-        content = IgnorePointer(
-          child: UserAvatar.currentUser(
-            radius: 0,
-            borderRadius: BorderRadius.zero,
-            borderWidth: 0,
-          ),
-        );
-      } else {
-        content = IgnorePointer(
-          child: user.when(
-            data: (user) {
-              return UserAvatar.fromUserSchema(
-                user,
-                borderRadius: BorderRadius.zero,
-                borderWidth: 0,
-              );
-            },
-            error: (error, stackTrace) {
-              return const ColoredBox(
-                color: AppTheme.mauve,
-                child: Center(
-                  child: TotemIcon(
-                    TotemIcons.person,
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                ),
-              );
-            },
-            loading: () => const LoadingVideoPlaceholder(borderRadius: 0),
-          ),
-        );
+    final shouldShowAvatar = () {
+      if (trackPublication == null ||
+          !trackPublication.subscribed ||
+          trackPublication.muted ||
+          _isTrackInactive ||
+          !_initialized) {
+        return true;
       }
-    }
+      return false;
+    }();
+
+    final content = Stack(
+      children: [
+        if (trackPublication != null &&
+            trackPublication.subscribed &&
+            !trackPublication.muted &&
+            !_isTrackInactive)
+          IgnorePointer(
+            child: ColoredBox(
+              color: Colors.black,
+              child: VideoTrackRenderer(
+                key: ValueKey(trackPublication.track!.sid),
+                trackPublication.track! as VideoTrack,
+                fit: VideoViewFit.cover,
+                renderMode: VideoRenderMode.platformView,
+              ),
+            ),
+          ),
+        if (shouldShowAvatar)
+          Positioned.fill(
+            child: Builder(
+              builder: (context) {
+                final localUserSlug = ref.watch(
+                  authControllerProvider.select((auth) => auth.user?.slug),
+                );
+                if (widget.participant.identity == localUserSlug) {
+                  return IgnorePointer(
+                    child: UserAvatar.currentUser(
+                      radius: 0,
+                      borderRadius: BorderRadius.zero,
+                      borderWidth: 0,
+                    ),
+                  );
+                } else {
+                  return IgnorePointer(
+                    child: user.when(
+                      data: (user) {
+                        return UserAvatar.fromUserSchema(
+                          user,
+                          borderRadius: BorderRadius.zero,
+                          borderWidth: 0,
+                        );
+                      },
+                      error: (error, stackTrace) {
+                        return const ColoredBox(
+                          color: AppTheme.mauve,
+                          child: Center(
+                            child: TotemIcon(
+                              TotemIcons.person,
+                              size: 24,
+                              color: Colors.white,
+                            ),
+                          ),
+                        );
+                      },
+                      loading: () =>
+                          const LoadingVideoPlaceholder(borderRadius: 0),
+                    ),
+                  );
+                }
+              },
+            ),
+          ),
+      ],
+    );
 
     if (kDebugMode || user.value?.isStaff == true) {
       return GestureDetector(
