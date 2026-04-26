@@ -83,6 +83,7 @@ class SessionController extends _$SessionController {
 
   /// The sync timer periodically checks for changes in the room state
   /// and participants list, to keep the UI up to date.
+  dynamic _keepAliveLink;
   Timer? _syncTimer;
   static const syncTimerDuration = Duration(seconds: 20);
 
@@ -253,6 +254,15 @@ class SessionController extends _$SessionController {
       ),
     );
     _cleanUp();
+  }
+
+  void preventAutoDispose() {
+    _keepAliveLink ??= ref.keepAlive();
+  }
+
+  void allowAutoDispose() {
+    _keepAliveLink?.close();
+    _keepAliveLink = null;
   }
 
   void _onError(LiveKitException? error) {
@@ -613,7 +623,7 @@ class SessionController extends _$SessionController {
   }
 }
 
-@Riverpod(keepAlive: true)
+@riverpod
 SessionRoomState session(Ref ref, SessionOptions options) {
   return ref.watch(sessionControllerProvider(options));
 }

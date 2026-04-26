@@ -108,6 +108,15 @@ RoomScreen? resolveCurrentScreen(Ref ref) {
     case RoomConnectionState.error:
       return RoomScreen.error;
     case RoomConnectionState.disconnected:
+      if (sessionState.phase == SessionPhase.idle) {
+        return RoomScreen.loading;
+      }
+      if (<DisconnectReason>[
+        DisconnectReason.joinFailure,
+        DisconnectReason.signalingConnectionFailure,
+      ].contains(sessionState.disconnectReason)) {
+        return RoomScreen.error;
+      }
       return RoomScreen.disconnected;
     case RoomConnectionState.connected:
       if (session.room == null) {

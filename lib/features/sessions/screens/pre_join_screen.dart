@@ -221,7 +221,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
       final session = ref.read(
         sessionControllerProvider(_sessionOptions!).notifier,
-      );
+      )..preventAutoDispose();
+
       await session.join();
 
       _isLoading = false;
@@ -236,6 +237,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         message: 'Failed to join room',
       );
     } finally {
+      if (_sessionOptions != null) {
+        ref
+            .read(sessionControllerProvider(_sessionOptions!).notifier)
+            .allowAutoDispose();
+      }
       _isLoading = false;
       if (mounted) {
         setState(() {});

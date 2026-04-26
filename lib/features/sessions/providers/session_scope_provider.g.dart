@@ -497,7 +497,7 @@ final class ResolveCurrentScreenProvider
 }
 
 String _$resolveCurrentScreenHash() =>
-    r'7430dfbb9482bb92d3ae01b1d427d792c05e96e0';
+    r'ea88382d907d01061975f6674f1b21cb4e8f0906';
 
 /// The list of participants in the session.
 
@@ -1258,7 +1258,7 @@ final class IsMyTurnProvider extends $FunctionalProvider<bool, bool, bool>
   }
 }
 
-String _$isMyTurnHash() => r'503507e6413231eeca020a5b684a3ab8484dc5b8';
+String _$isMyTurnHash() => r'3185a48fd2c924c5f5dbdb5dcbc3714f350e23e9';
 
 /// Whether the current user is next to speak.
 

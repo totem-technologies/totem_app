@@ -60,7 +60,7 @@ final class SessionKeeperControllerProvider
 }
 
 String _$sessionKeeperControllerHash() =>
-    r'b5e7bc549c3ef1d13f3ff0febfe7c9d69388ff0d';
+    r'215e7a0256ec56038d64771e41a031127bd96701';
 
 final class SessionKeeperControllerFamily extends $Family
     with
