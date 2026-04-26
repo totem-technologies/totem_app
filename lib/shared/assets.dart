@@ -11,6 +11,9 @@ class TotemImageAssets {
 
   static const logoLarge = 'assets/logo/logo-square-black-512.png';
   static const logoSmall = 'assets/logo/logo-black-small.png';
+
+  static const downloadAppStore = 'assets/images/download_app_store.png';
+  static const downloadPlayStore = 'assets/images/download_google_play.png';
 }
 
 class TotemAudioAssets {
