@@ -91,6 +91,9 @@ Future<void> _pumpRoomScreen(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        authControllerProvider.overrideWith(
+          () => FakeAuthController(AuthState.unauthenticated()),
+        ),
         currentSessionProvider.overrideWith((ref) => null),
         currentSessionEventProvider.overrideWith((ref) => event),
         resolveCurrentScreenProvider.overrideWith((ref) => RoomScreen.loading),
@@ -374,20 +377,20 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        // authControllerProvider.overrideWith(
-        //   () => FakeAuthController(
-        //     AuthState.authenticated(
-        //       user: UserSchema(
-        //         profileAvatarType: ProfileAvatarTypeEnum.im,
-        //         circleCount: 0,
-        //         email: 'test@totem.org',
-        //         name: 'Test User',
-        //         slug: 'user-1',
-        //         dateCreated: DateTime(2024),
-        //       ),
-        //     ),
-        //   ),
-        // ),
+        authControllerProvider.overrideWith(
+          () => FakeAuthController(
+            AuthState.authenticated(
+              user: UserSchema(
+                profileAvatarType: ProfileAvatarTypeEnum.im,
+                circleCount: 0,
+                email: 'test@totem.org',
+                name: 'Test User',
+                slug: 'user-1',
+                dateCreated: DateTime(2024),
+              ),
+            ),
+          ),
+        ),
         currentSessionProvider.overrideWith((ref) => null),
         currentSessionEventProvider.overrideWith(
           (ref) => ref.watch(eventStateProvider),

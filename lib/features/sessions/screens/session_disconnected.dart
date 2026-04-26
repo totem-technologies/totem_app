@@ -286,28 +286,26 @@ class _SessionDisconnectedScreenState
               final nextEventsList = <Widget>[
                 if (nextEvents.isNotEmpty) ...[
                   for (final nextEvent in nextEvents)
-                    Flexible(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxHeight: MediaQuery.textScalerOf(
-                            context,
-                          ).scale(140),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.textScalerOf(
+                          context,
+                        ).scale(140),
+                      ),
+                      child: SmallSpaceCard(
+                        space: MobileSpaceDetailSchemaExtension.copyWith(
+                          widget.session.space,
+                          nextEvents: [nextEvent],
                         ),
-                        child: SmallSpaceCard(
-                          space: MobileSpaceDetailSchemaExtension.copyWith(
-                            widget.session.space,
-                            nextEvents: [nextEvent],
-                          ),
-                          onTap: () {
-                            _refreshHome();
-                            return context.pushReplacement(
-                              RouteNames.spaceSession(
-                                widget.session.space.slug,
-                                nextEvent.slug,
-                              ),
-                            );
-                          },
-                        ),
+                        onTap: () {
+                          _refreshHome();
+                          return context.pushReplacement(
+                            RouteNames.spaceSession(
+                              widget.session.space.slug,
+                              nextEvent.slug,
+                            ),
+                          );
+                        },
                       ),
                     ),
                 ] else
@@ -315,12 +313,11 @@ class _SessionDisconnectedScreenState
                     data: (data) sync* {
                       if (data.isNotEmpty) {
                         for (final event in data.take(2)) {
-                          yield Flexible(
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxHeight: MediaQuery.textScalerOf(
-                                  context,
-                                ).scale(140),
+                          yield ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: MediaQuery.textScalerOf(
+                                context,
+                              ).scale(140),
                               ),
                               child: SmallSpaceCard.fromSessionDetailSchema(
                                 event,
@@ -333,8 +330,7 @@ class _SessionDisconnectedScreenState
                                   );
                                 },
                               ),
-                            ),
-                          );
+                            );
                         }
                       }
                     },
@@ -379,7 +375,7 @@ class _SessionDisconnectedScreenState
                           subheader,
                           ?feedback,
                           ?nextEventsHeader,
-                          ...nextEventsList,
+                          ...nextEventsList.map((e) => Flexible(child: e)),
                           exploreMoreButton,
                         ],
                       ),
@@ -408,7 +404,7 @@ class _SessionDisconnectedScreenState
                             spacing: 20,
                             children: [
                               ?nextEventsHeader,
-                              ...nextEventsList,
+                              ...nextEventsList.map((e) => Flexible(child: e)),
                               exploreMoreButton,
                             ],
                           ),
@@ -461,6 +457,11 @@ class _SessionDisconnectedScreenState
                                 ),
                               ],
                             ),
+                          )
+                        else
+                          Padding(
+                            padding: const EdgeInsets.only(top: 20),
+                            child: exploreMoreButton,
                           ),
                       ],
                     ),
