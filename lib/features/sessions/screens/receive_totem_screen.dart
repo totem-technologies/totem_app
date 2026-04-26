@@ -147,18 +147,23 @@ class ReceiveTotemScreen extends ConsumerWidget {
                   ],
                 );
               case ViewportKind.mediumPlus:
-                return Column(
-                  spacing: 20,
-                  children: [
-                    Expanded(child: videoCard),
-                    ?roundPromptText,
-                    TransitionCard(
-                      type: TotemCardTransitionType.receive,
-                      onActionPressed: onAccept,
-                      keepActionLoadingOnSuccess: true,
-                    ),
-                    const SessionActionBar(),
-                  ],
+                return Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    vertical: 40.0,
+                  ),
+                  child: Column(
+                    spacing: 40,
+                    children: [
+                      Expanded(child: videoCard),
+                      roundPromptText ?? const SizedBox.shrink(),
+                      TransitionCard(
+                        type: TotemCardTransitionType.receive,
+                        onActionPressed: onAccept,
+                        keepActionLoadingOnSuccess: true,
+                      ),
+                      const SessionActionBar(),
+                    ],
+                  ),
                 );
             }
           },
