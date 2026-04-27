@@ -77,7 +77,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   bool _showingAlreadyPresentDialog = false;
   bool? _isLoading;
 
-  final _loadingScreenKey = GlobalKey<PrejoinSessionScreenState>();
+  MediaPreferences _mediaPreferences = const MediaPreferences();
+
+  final GlobalKey _loadingScreenKey = GlobalKey();
 
   @override
   void initState() {
@@ -128,6 +130,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     return PrejoinSessionScreen(
       key: _loadingScreenKey,
       previewTrackFactory: widget.previewTrackFactory,
+      onMediaPreferencesChanged: (prefs) {
+        _mediaPreferences = prefs;
+      },
       joinCard: TransitionCard(
         margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
         type: TotemCardTransitionType.join,
@@ -157,12 +162,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     JoinResponse response, {
     bool mayShowAlreadyPresentDialog = true,
   }) async {
-    final isSpeakerOn = _loadingScreenKey.currentState?.isSpeakerOn ?? true;
-    final isCameraOn = _loadingScreenKey.currentState?.isCameraOn ?? true;
-    final isMicOn = _loadingScreenKey.currentState?.isMicOn ?? true;
-    final cameraOptions =
-        _loadingScreenKey.currentState?.cameraOptions ??
-        SessionController.defaultCameraCaptureOptions;
+    final isSpeakerOn = _mediaPreferences.isSpeakerOn;
+    final isCameraOn = _mediaPreferences.isCameraOn;
+    final isMicOn = _mediaPreferences.isMicOn;
+    final cameraOptions = _mediaPreferences.cameraOptions;
 
     _sessionOptions = SessionOptions(
       eventSlug: widget.sessionSlug,

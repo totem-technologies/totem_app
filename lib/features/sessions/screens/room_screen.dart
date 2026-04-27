@@ -284,6 +284,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   }
 
   void _setKeeperDisconnectedNotification(bool hasKeeperDisconnected) {
+    debugPrint('_setKeeperDisconnectedNotification: $hasKeeperDisconnected, mounted=$mounted, roomStatus=${ref.read(roomStatusProvider)}');
     if (!mounted || !hasKeeperDisconnected) {
       _closeKeeperDisconnectedNotification();
       return;
@@ -380,6 +381,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       ..listen(
         hasKeeperDisconnectedProvider,
         (previous, disconnected) {
+          debugPrint('hasKeeperDisconnectedProvider listener: previous=$previous, disconnected=$disconnected');
           _setKeeperDisconnectedNotification(disconnected);
         },
       )
@@ -408,10 +410,6 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
           if (isRoomOpeningTransition || isRoomClosingTransition) {
             ref.read(sessionCuesServiceProvider).playSessionTransitionCue();
           }
-
-          _setKeeperDisconnectedNotification(
-            ref.read(hasKeeperDisconnectedProvider),
-          );
 
           if (next == RoomStatus.ended) {
             _clearSessionPopups();

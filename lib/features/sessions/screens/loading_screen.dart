@@ -39,11 +39,27 @@ class _LiveKitPreJoinPreviewTrackFactory extends PreJoinPreviewTrackFactory {
   }
 }
 
+/// Holds the user's media preferences selected on the pre-join screen.
+class MediaPreferences {
+  const MediaPreferences({
+    this.isSpeakerOn = true,
+    this.isCameraOn = true,
+    this.isMicOn = true,
+    this.cameraOptions = SessionController.defaultCameraCaptureOptions,
+  });
+
+  final bool isSpeakerOn;
+  final bool isCameraOn;
+  final bool isMicOn;
+  final CameraCaptureOptions cameraOptions;
+}
+
 class PrejoinSessionScreen extends StatefulWidget {
   const PrejoinSessionScreen({
     this.joinCard,
     PreJoinPreviewTrackFactory? previewTrackFactory,
     this.locked = false,
+    this.onMediaPreferencesChanged,
     super.key,
   }) : previewTrackFactory =
            previewTrackFactory ?? const _LiveKitPreJoinPreviewTrackFactory();
@@ -55,11 +71,15 @@ class PrejoinSessionScreen extends StatefulWidget {
   /// Whether the buttons should not perform any actions;
   final bool locked;
 
+  /// Called whenever the user changes their media preferences (camera, mic,
+  /// speaker, or camera options).
+  final ValueChanged<MediaPreferences>? onMediaPreferencesChanged;
+
   @override
-  State<PrejoinSessionScreen> createState() => PrejoinSessionScreenState();
+  State<PrejoinSessionScreen> createState() => _PrejoinSessionScreenState();
 }
 
-class PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
+class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
   // Preview media state
   LocalVideoTrack? _previewVideoTrack;
   var _isCameraOn = true;
@@ -71,10 +91,18 @@ class PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
   CameraCaptureOptions _cameraOptions =
       SessionController.defaultCameraCaptureOptions;
   var _audioOutputOptions = const AudioOutputOptions(speakerOn: true);
-  bool get isSpeakerOn => _audioOutputOptions.speakerOn ?? false;
-  bool get isCameraOn => _isCameraOn;
-  bool get isMicOn => _isMicOn;
-  CameraCaptureOptions get cameraOptions => _cameraOptions;
+  bool get _isSpeakerOn => _audioOutputOptions.speakerOn ?? false;
+
+  void _notifyMediaPreferencesChanged() {
+    widget.onMediaPreferencesChanged?.call(
+      MediaPreferences(
+        isSpeakerOn: _isSpeakerOn,
+        isCameraOn: _isCameraOn,
+        isMicOn: _isMicOn,
+        cameraOptions: _cameraOptions,
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -104,6 +132,7 @@ class PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
       setState(() {
         _audioOutputOptions = AudioOutputOptions(speakerOn: speakerOn);
       });
+      _notifyMediaPreferencesChanged();
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -206,16 +235,21 @@ class PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
   Future<void> _toggleCamera() async {
     if (_isCameraOn) {
       setState(() => _isCameraOn = false);
+      _notifyMediaPreferencesChanged();
       await _disposePreviewVideoTrack();
       if (mounted) setState(() {});
     } else {
       await _initializeLocalVideo();
-      if (mounted) setState(() => _isCameraOn = true);
+      if (mounted) {
+        setState(() => _isCameraOn = true);
+        _notifyMediaPreferencesChanged();
+      }
     }
   }
 
   Future<void> _toggleMic() async {
     setState(() => _isMicOn = !_isMicOn);
+    _notifyMediaPreferencesChanged();
     final track = await _initializeLocalAudio();
     switch (_isMicOn) {
       case true:
@@ -227,8 +261,9 @@ class PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
 
   void _toggleSpeaker() {
     setState(() {
-      _audioOutputOptions = AudioOutputOptions(speakerOn: !isSpeakerOn);
+      _audioOutputOptions = AudioOutputOptions(speakerOn: !_isSpeakerOn);
     });
+    _notifyMediaPreferencesChanged();
   }
 
   @override
@@ -283,7 +318,7 @@ class PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
                       locked: widget.locked,
                       previewAudioTrack: _previewAudioTrack,
                       onToggleMic: _toggleMic,
-                      isSpeakerOn: isSpeakerOn,
+                      isSpeakerOn: _isSpeakerOn,
                       onToggleSpeaker: _toggleSpeaker,
                       isCameraOn: _isCameraOn,
                       onToggleCamera: _toggleCamera,
@@ -295,6 +330,7 @@ class PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
                             cameraPosition: position,
                           );
                         });
+                        _notifyMediaPreferencesChanged();
                         _initializeLocalVideo();
                       },
                       onCameraDeviceSelected: (device) {
@@ -303,6 +339,7 @@ class PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
                             deviceId: device.deviceId,
                           );
                         });
+                        _notifyMediaPreferencesChanged();
                         _initializeLocalVideo();
                       },
                     ),

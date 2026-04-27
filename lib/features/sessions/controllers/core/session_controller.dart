@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions, logger;
 import 'package:meta/meta.dart';
@@ -83,12 +84,10 @@ class SessionController extends _$SessionController {
 
   /// The sync timer periodically checks for changes in the room state
   /// and participants list, to keep the UI up to date.
-  dynamic _keepAliveLink;
+  KeepAliveLink? _keepAliveLink;
   Timer? _syncTimer;
   static const syncTimerDuration = Duration(seconds: 20);
 
-  // bool? _cameraEnabledOverride;
-  // bool? _microphoneEnabledOverride;
   String? _lastMetadata;
   SessionDetailSchema? event;
   static const SessionStateReducer _stateReducer = SessionStateReducer();
@@ -132,7 +131,13 @@ class SessionController extends _$SessionController {
   }
 
   void setKeeperDisconnected(bool hasKeeperDisconnected) {
+    logger.d(
+      'setKeeperDisconnected: $hasKeeperDisconnected (current: ${state.hasKeeperDisconnected})',
+    );
     _dispatch(KeeperDisconnectedChanged(hasKeeperDisconnected));
+    logger.d(
+      'setKeeperDisconnected dispatched. New state: ${state.hasKeeperDisconnected}',
+    );
   }
 
   void addSessionChatMessage(SessionChatMessage message) {
@@ -198,8 +203,17 @@ class SessionController extends _$SessionController {
       final hasKeeper = participantsSorted.any(
         (p) => state.isKeeper(p.identity),
       );
+
+      logger.d(
+        '_updateParticipantsList: hasKeeper=$hasKeeper, hasKeeperDisconnected=${state.hasKeeperDisconnected}, roomStatus=${state.roomState.status}, participants=${participantsSorted.map((p) => p.identity).toList()}',
+      );
+
       if (state.hasKeeperDisconnected && hasKeeper) {
         _onKeeperConnected();
+      } else if (!state.hasKeeperDisconnected &&
+          !hasKeeper &&
+          state.roomState.status == RoomStatus.active) {
+        _onKeeperDisconnected();
       }
 
       _dispatch(ParticipantsChanged(participantsSorted));
