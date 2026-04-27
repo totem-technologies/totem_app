@@ -284,7 +284,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   }
 
   void _setKeeperDisconnectedNotification(bool hasKeeperDisconnected) {
-    debugPrint('_setKeeperDisconnectedNotification: $hasKeeperDisconnected, mounted=$mounted, roomStatus=${ref.read(roomStatusProvider)}');
+    debugPrint(
+      '_setKeeperDisconnectedNotification: $hasKeeperDisconnected, mounted=$mounted, roomStatus=${ref.read(roomStatusProvider)}',
+    );
     if (!mounted || !hasKeeperDisconnected) {
       _closeKeeperDisconnectedNotification();
       return;
@@ -381,7 +383,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       ..listen(
         hasKeeperDisconnectedProvider,
         (previous, disconnected) {
-          debugPrint('hasKeeperDisconnectedProvider listener: previous=$previous, disconnected=$disconnected');
+          debugPrint(
+            'hasKeeperDisconnectedProvider listener: previous=$previous, disconnected=$disconnected',
+          );
           _setKeeperDisconnectedNotification(disconnected);
         },
       )
