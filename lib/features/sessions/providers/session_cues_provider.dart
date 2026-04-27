@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/shared/assets.dart';
@@ -55,7 +58,19 @@ class SessionCuesService {
     SessionCuesAudioPlayer? audioPlayer,
     SessionCuesHapticPulseCallback? pulseHaptic,
   }) : _audioPlayer = audioPlayer ?? AudioplayersSessionCuesAudioPlayer(),
-       _pulseHaptic = pulseHaptic ?? HapticFeedback.lightImpact;
+       _pulseHaptic = pulseHaptic ?? defaultHapticPulse;
+
+  static Future<void> defaultHapticPulse() {
+    // https://github.com/flutter/flutter/issues/157442
+    if (kIsWeb) {
+      return HapticFeedback.lightImpact();
+    }
+    if (Platform.isIOS) {
+      return HapticFeedback.vibrate();
+    }
+
+    return HapticFeedback.lightImpact();
+  }
 
   final SessionCuesAudioPlayer _audioPlayer;
   final SessionCuesHapticPulseCallback _pulseHaptic;
@@ -99,10 +114,12 @@ class SessionCuesService {
     await _audioPlayer.setAudioContext(
       AudioContext(
         iOS: AudioContextIOS(
-          category: AVAudioSessionCategory.ambient,
+          category: AVAudioSessionCategory.playback,
+          options: const {
+            AVAudioSessionOptions.mixWithOthers,
+          },
         ),
         android: const AudioContextAndroid(
-          // TODO(totem): Investigate if this can be a typed as Notification.
           usageType: AndroidUsageType.voiceCommunication,
           contentType: AndroidContentType.speech,
           audioFocus: AndroidAudioFocus.none,
