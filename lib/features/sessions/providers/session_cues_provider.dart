@@ -114,14 +114,14 @@ class SessionCuesService {
     await _audioPlayer.setAudioContext(
       AudioContext(
         iOS: AudioContextIOS(
-          category: AVAudioSessionCategory.playback,
+          category: AVAudioSessionCategory.playAndRecord,
           options: const {
             AVAudioSessionOptions.mixWithOthers,
           },
         ),
         android: const AudioContextAndroid(
-          usageType: AndroidUsageType.voiceCommunication,
-          contentType: AndroidContentType.speech,
+          usageType: AndroidUsageType.media,
+          contentType: AndroidContentType.sonification,
           audioFocus: AndroidAudioFocus.none,
         ),
       ),
