@@ -60,7 +60,7 @@ final class SessionMessagingControllerProvider
 }
 
 String _$sessionMessagingControllerHash() =>
-    r'b6678dfe8a9152ee20a76b40afaadd59b0581871';
+    r'2155105787da2c927cb975c6158126a84a99b9ae';
 
 final class SessionMessagingControllerFamily extends $Family
     with

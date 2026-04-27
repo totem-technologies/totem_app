@@ -379,7 +379,7 @@ final class PassTotemProvider
   }
 }
 
-String _$passTotemHash() => r'bec56778c53c2830efd5b2cff3a7ea2de7d1866e';
+String _$passTotemHash() => r'593e00f8e8a3d077339f8387063387b707a8ea4b';
 
 final class PassTotemFamily extends $Family
     with
@@ -463,7 +463,7 @@ final class AcceptTotemProvider
   }
 }
 
-String _$acceptTotemHash() => r'a42dab5885d2d618608399aace2abe2e39599127';
+String _$acceptTotemHash() => r'81ec85653c7fa85a3e989bc54400ddbba4133d0d';
 
 final class AcceptTotemFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
@@ -540,7 +540,7 @@ final class ForcePassTotemProvider
   }
 }
 
-String _$forcePassTotemHash() => r'098b856a7a64d41a32bceb2e652aef8af45b17dc';
+String _$forcePassTotemHash() => r'2f3e59a6eb5cee2141fbad992cd442fde52afa11';
 
 final class ForcePassTotemFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
@@ -618,7 +618,7 @@ final class ReorderParticipantsProvider
 }
 
 String _$reorderParticipantsHash() =>
-    r'6d18a35a8f74dde5d55069a15a2a4065e764ffb5';
+    r'ad95ecc6d38e81ef3158ed783c1e2779e59efa35';
 
 final class ReorderParticipantsFamily extends $Family
     with
@@ -702,7 +702,7 @@ final class StartSessionProvider
   }
 }
 
-String _$startSessionHash() => r'3e5cf6a4ad5c0113e3677f22aaab64e3ce99e8ff';
+String _$startSessionHash() => r'b5f8284af3f9a8a48527dc896833857c66bc7026';
 
 final class StartSessionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
@@ -779,7 +779,7 @@ final class EndSessionProvider
   }
 }
 
-String _$endSessionHash() => r'32dc792a5ecce382021036e3eb7737a6db8837af';
+String _$endSessionHash() => r'25af2b573634f84e4819c257ebb059d9e0793af2';
 
 final class EndSessionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
@@ -856,7 +856,7 @@ final class BanParticipantProvider
   }
 }
 
-String _$banParticipantHash() => r'5ef016ab602c346c720922498dfe5830bb382e28';
+String _$banParticipantHash() => r'b4d8387f1a4e8c9363cfc2169c8a6894ad7670d8';
 
 final class BanParticipantFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, String, int)> {
@@ -936,7 +936,7 @@ final class UnbanParticipantProvider
   }
 }
 
-String _$unbanParticipantHash() => r'c11957da27f8554b5417ef93d97f809c60ad882d';
+String _$unbanParticipantHash() => r'e42e920921c9cf9e71c2f565f29153e8b48c3e31';
 
 final class UnbanParticipantFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, String, int)> {

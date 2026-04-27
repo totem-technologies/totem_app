@@ -1,61 +1,28 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:livekit_client/livekit_client.dart'
-    hide Session, SessionOptions;
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/core/errors/error_handler.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_app/features/sessions/repositories/session_repository.dart';
 import 'package:totem_app/features/sessions/screens/error_screen.dart';
 import 'package:totem_app/features/sessions/screens/loading_screen.dart';
 import 'package:totem_app/features/sessions/screens/room_screen.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_app/features/sessions/widgets/background.dart';
 import 'package:totem_app/features/sessions/widgets/download_mobile_app_dialog.dart';
-import 'package:totem_app/features/sessions/widgets/participant_card.dart';
 import 'package:totem_app/features/sessions/widgets/permissions_popups.dart';
 import 'package:totem_app/features/sessions/widgets/transition_card.dart';
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_app/shared/totem_icons.dart';
 import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-
-@visibleForTesting
-abstract class PreJoinPreviewTrackFactory {
-  const PreJoinPreviewTrackFactory();
-
-  Future<LocalVideoTrack?> createVideoTrack(
-    CameraCaptureOptions cameraOptions,
-  );
-
-  Future<LocalAudioTrack?> createAudioTrack();
-}
-
-class _LiveKitPreJoinPreviewTrackFactory extends PreJoinPreviewTrackFactory {
-  const _LiveKitPreJoinPreviewTrackFactory();
-
-  @override
-  Future<LocalVideoTrack?> createVideoTrack(
-    CameraCaptureOptions cameraOptions,
-  ) {
-    return LocalVideoTrack.createCameraTrack(cameraOptions);
-  }
-
-  @override
-  Future<LocalAudioTrack?> createAudioTrack() {
-    return LocalAudioTrack.create();
-  }
-}
 
 /// Shows a dialog when the user tries to join a session they are already
 /// in on another device, asking if they want to leave the other session
@@ -91,38 +58,26 @@ Future<bool> showAlreadyPresentDialog(BuildContext context) async {
 class PreJoinScreen extends ConsumerStatefulWidget {
   const PreJoinScreen({
     required this.sessionSlug,
-    this.previewTrackFactory = const _LiveKitPreJoinPreviewTrackFactory(),
+    this.previewTrackFactory,
     super.key,
   });
 
   final String sessionSlug;
-  final PreJoinPreviewTrackFactory previewTrackFactory;
+  final PreJoinPreviewTrackFactory? previewTrackFactory;
 
   @override
   ConsumerState<PreJoinScreen> createState() => _PreJoinScreenState();
 }
 
 class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
-  // Preview media state
-  LocalVideoTrack? _previewVideoTrack;
-  var _isCameraOn = true;
-
-  LocalAudioTrack? _previewAudioTrack;
-  var _isMicOn = true;
-
-  // Join configuration state
-  CameraCaptureOptions _cameraOptions =
-      SessionController.defaultCameraCaptureOptions;
-  var _audioOutputOptions = const AudioOutputOptions(speakerOn: true);
-  bool get _isSpeakerOn => _audioOutputOptions.speakerOn ?? false;
-
   // Session/join lifecycle state
   SessionOptions? _sessionOptions;
   bool _hasRequestedJoin = false;
   bool get hasRequestedJoin => _hasRequestedJoin;
-  bool _hasHandledConnectedState = false;
   bool _showingAlreadyPresentDialog = false;
   bool? _isLoading;
+
+  MediaPreferences _mediaPreferences = const MediaPreferences();
 
   final GlobalKey _loadingScreenKey = GlobalKey();
 
@@ -136,7 +91,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   @override
   void dispose() {
-    _disposePreviewTracks();
     if (!hasRequestedJoin) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
@@ -164,168 +118,21 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         await showBackgroundActivityDialog(context);
       }
 
-      if (!mounted) return;
-      await _detectHeadphones();
-      await Future.wait([_initializeLocalVideo(), _initializeLocalAudio()]);
       if (mounted) {
         SentryDisplayWidget.of(context).reportFullyDisplayed();
       }
     });
   }
 
-  Future<void> _detectHeadphones() async {
-    try {
-      final session = await AudioSession.instance;
-      final devices = await session.getDevices(includeInputs: false);
-      final hasExternalOutput = devices.any(
-        (d) =>
-            SessionDeviceController.externalAudioOutputTypes.contains(d.type),
-      );
-      final speakerOn = !hasExternalOutput;
-
-      if (!mounted) return;
-      setState(() {
-        _audioOutputOptions = AudioOutputOptions(speakerOn: speakerOn);
-      });
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to detect audio output devices',
-      );
-    }
-  }
-
-  Future<void> _initializeLocalVideo() async {
-    await _disposePreviewVideoTrack();
-
-    try {
-      _previewVideoTrack = await widget.previewTrackFactory.createVideoTrack(
-        _cameraOptions,
-      );
-      await _previewVideoTrack?.start();
-    } catch (error, stackTrace) {
-      _isCameraOn = false;
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to create local video track',
-      );
-    } finally {
-      if (mounted) setState(() {});
-    }
-  }
-
-  Future<LocalAudioTrack?> _initializeLocalAudio() async {
-    await _disposePreviewAudioTrack();
-
-    try {
-      _previewAudioTrack = await widget.previewTrackFactory.createAudioTrack();
-      await _previewAudioTrack?.enable();
-      await _previewAudioTrack?.start();
-      return _previewAudioTrack;
-    } catch (error, stackTrace) {
-      _isMicOn = false;
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to create local audio track',
-      );
-    } finally {
-      if (mounted) setState(() {});
-    }
-    return null;
-  }
-
-  Future<void> _disposePreviewVideoTrack() async {
-    if (_previewVideoTrack != null) {
-      try {
-        await _previewVideoTrack?.stop();
-      } catch (e) {
-        ErrorHandler.logError(e, message: 'Failed to stop preview track');
-      }
-
-      try {
-        await _previewVideoTrack?.dispose();
-      } catch (e) {
-        ErrorHandler.logError(e, message: 'Failed to dispose preview track');
-      } finally {
-        _previewVideoTrack = null;
-      }
-    }
-  }
-
-  Future<void> _disposePreviewAudioTrack() async {
-    if (_previewAudioTrack != null) {
-      try {
-        await _previewAudioTrack?.stop();
-      } catch (e) {
-        ErrorHandler.logError(e, message: 'Failed to stop preview audio track');
-      }
-      try {
-        await _previewAudioTrack?.dispose();
-      } catch (e) {
-        ErrorHandler.logError(
-          e,
-          message: 'Failed to dispose preview audio track',
-        );
-      } finally {
-        _previewAudioTrack = null;
-      }
-    }
-  }
-
-  Future<void> _disposePreviewTracks() async {
-    await Future.wait([
-      _disposePreviewVideoTrack(),
-      _disposePreviewAudioTrack(),
-    ]);
-  }
-
-  // ===== Local controls =====
-
-  Future<void> _toggleCamera() async {
-    if (_isCameraOn) {
-      setState(() => _isCameraOn = false);
-      await _disposePreviewVideoTrack();
-      if (mounted) setState(() {});
-    } else {
-      await _initializeLocalVideo();
-      if (mounted) setState(() => _isCameraOn = true);
-    }
-  }
-
-  Future<void> _toggleMic() async {
-    setState(() => _isMicOn = !_isMicOn);
-    final track = await _initializeLocalAudio();
-    switch (_isMicOn) {
-      case true:
-        await track?.unmute(stopOnMute: false);
-      case false:
-        await track?.mute(stopOnMute: false);
-    }
-  }
-
-  void _toggleSpeaker() {
-    setState(() {
-      _audioOutputOptions = AudioOutputOptions(speakerOn: !_isSpeakerOn);
-    });
-  }
-
   // ===== UI =====
 
   Widget _buildPrejoinUI() {
-    return PrejoinRoomBaseScreen(
+    return PrejoinSessionScreen(
       key: _loadingScreenKey,
-      video: Semantics(
-        label: 'Your video preview, camera ${_isCameraOn ? 'on' : 'off'}',
-        image: true,
-        child: LocalParticipantCard(
-          isCameraOn: _isCameraOn,
-          audioTrack: _previewAudioTrack,
-          videoTrack: _previewVideoTrack,
-        ),
-      ),
+      previewTrackFactory: widget.previewTrackFactory,
+      onMediaPreferencesChanged: (prefs) {
+        _mediaPreferences = prefs;
+      },
       joinCard: TransitionCard(
         margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
         type: TotemCardTransitionType.join,
@@ -336,33 +143,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         },
         isSliderLoading: _isLoading,
       ),
-      actionBar: PrejoinActionBar(
-        hasRequestedJoin: hasRequestedJoin,
-        previewAudioTrack: _previewAudioTrack,
-        onToggleMic: _toggleMic,
-        isSpeakerOn: _isSpeakerOn,
-        onToggleSpeaker: _toggleSpeaker,
-        isCameraOn: _isCameraOn,
-        onToggleCamera: _toggleCamera,
-        cameraPosition: _cameraOptions.cameraPosition,
-        selectedCameraDeviceId: _cameraOptions.deviceId,
-        onCameraPositionChanged: (position) {
-          setState(() {
-            _cameraOptions = _cameraOptions.copyWith(
-              cameraPosition: position,
-            );
-          });
-          _initializeLocalVideo();
-        },
-        onCameraDeviceSelected: (device) {
-          setState(() {
-            _cameraOptions = _cameraOptions.copyWith(
-              deviceId: device.deviceId,
-            );
-          });
-          _initializeLocalVideo();
-        },
-      ),
+      locked: hasRequestedJoin,
     );
   }
 
@@ -381,13 +162,18 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     JoinResponse response, {
     bool mayShowAlreadyPresentDialog = true,
   }) async {
+    final isSpeakerOn = _mediaPreferences.isSpeakerOn;
+    final isCameraOn = _mediaPreferences.isCameraOn;
+    final isMicOn = _mediaPreferences.isMicOn;
+    final cameraOptions = _mediaPreferences.cameraOptions;
+
     _sessionOptions = SessionOptions(
       eventSlug: widget.sessionSlug,
       token: response.token,
-      cameraEnabled: _isCameraOn,
-      microphoneEnabled: _isMicOn,
-      speakerEnabled: _isSpeakerOn,
-      cameraOptions: _cameraOptions,
+      cameraEnabled: isCameraOn,
+      microphoneEnabled: isMicOn,
+      speakerEnabled: isSpeakerOn,
+      cameraOptions: cameraOptions,
     );
 
     if (mounted) setState(() {});
@@ -436,23 +222,29 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       // precache event data to speed up join process and avoid showing loading screen if the
       await ref.read(eventProvider(widget.sessionSlug).future);
 
-      final session =
-          ref.read(sessionControllerProvider(_sessionOptions!).notifier)
-            ..configureJoinPreferences(
-              cameraEnabled: _isCameraOn,
-              microphoneEnabled: _isMicOn,
-            );
+      final session = ref.read(
+        sessionControllerProvider(_sessionOptions!).notifier,
+      )..preventAutoDispose();
+
       await session.join();
 
-      _hasHandledConnectedState = _isLoading = false;
+      _isLoading = false;
     } catch (error, stackTrace) {
-      _hasRequestedJoin = false;
+      _hasRequestedJoin = _isLoading = false;
+      if (mounted) {
+        setState(() {});
+      }
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Failed to join room',
       );
     } finally {
+      if (_sessionOptions != null) {
+        ref
+            .read(sessionControllerProvider(_sessionOptions!).notifier)
+            .allowAutoDispose();
+      }
       _isLoading = false;
       if (mounted) {
         setState(() {});
@@ -481,30 +273,12 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     );
   }
 
-  void _listenForConnectedState() {
-    final options = _sessionOptions;
-    if (options == null) return;
-
-    ref.listen(
-      sessionProvider(options).select((s) => s.connectionState),
-      (previous, next) {
-        if (_hasHandledConnectedState) return;
-        if (next != RoomConnectionState.connected) return;
-
-        _hasHandledConnectedState = true;
-        _disposePreviewTracks();
-        SentryDisplayWidget.of(context).reportFullyDisplayed();
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final tokenData = ref.watch(sessionTokenProvider(widget.sessionSlug));
     final sessionData = ref.watch(eventProvider(widget.sessionSlug));
 
     _listenForTokenUpdates();
-    _listenForConnectedState();
 
     if (tokenData.hasError) {
       return _buildErrorScreen(tokenData.error);

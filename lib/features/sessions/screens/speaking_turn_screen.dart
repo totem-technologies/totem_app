@@ -140,7 +140,12 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                 return Column(
                   spacing: 20,
                   children: [
-                    Expanded(child: participantGrid),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.all(40.0),
+                        child: participantGrid,
+                      ),
+                    ),
                     Transform.translate(
                       offset: Offset(0, yOffset),
                       child: passCard,
@@ -156,7 +161,15 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                       child: Row(
                         spacing: 16,
                         children: [
-                          Expanded(child: participantGrid),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsetsDirectional.symmetric(
+                                vertical: 40.0,
+                                horizontal: 12.0,
+                              ),
+                              child: participantGrid,
+                            ),
+                          ),
                           Flexible(
                             child: Column(
                               spacing: 16,

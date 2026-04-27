@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -114,7 +115,7 @@ class ActionBar extends StatelessWidget {
 /// The action bar displayed in the pre join screen.
 class PrejoinActionBar extends StatefulWidget {
   const PrejoinActionBar({
-    required this.hasRequestedJoin,
+    required this.locked,
     required this.previewAudioTrack,
     required this.onToggleMic,
     required this.isSpeakerOn,
@@ -128,17 +129,17 @@ class PrejoinActionBar extends StatefulWidget {
     super.key,
   });
 
-  final bool hasRequestedJoin;
+  final bool locked;
   final LocalAudioTrack? previewAudioTrack;
-  final Future<void> Function() onToggleMic;
+  final AsyncCallback onToggleMic;
   final bool isSpeakerOn;
-  final void Function() onToggleSpeaker;
+  final VoidCallback onToggleSpeaker;
   final bool isCameraOn;
   final VoidCallback onToggleCamera;
   final CameraPosition cameraPosition;
   final String? selectedCameraDeviceId;
-  final void Function(CameraPosition) onCameraPositionChanged;
-  final void Function(MediaDevice) onCameraDeviceSelected;
+  final ValueChanged<CameraPosition> onCameraPositionChanged;
+  final ValueChanged<MediaDevice> onCameraDeviceSelected;
 
   @override
   State<PrejoinActionBar> createState() => _PrejoinActionBarState();
@@ -188,19 +189,17 @@ class _PrejoinActionBarState extends State<PrejoinActionBar> {
         ActionBarMicButton(
           participant: null,
           audioTrack: widget.previewAudioTrack,
-          onToggle: !widget.hasRequestedJoin
-              ? (v) async => widget.onToggleMic()
-              : null,
+          onToggle: !widget.locked ? (v) async => widget.onToggleMic() : null,
         ),
         ActionBarSpeakerButton(
           isSpeakerOn: widget.isSpeakerOn,
-          onSpeakerToggled: widget.hasRequestedJoin
+          onSpeakerToggled: widget.locked
               ? null
               : (v) => widget.onToggleSpeaker(),
         ),
         ActionBarCameraSwitcherButton(
           isCameraOn: widget.isCameraOn,
-          onToggle: widget.hasRequestedJoin ? null : widget.onToggleCamera,
+          onToggle: widget.locked ? null : widget.onToggleCamera,
           cameraPosition: widget.cameraPosition,
           availableCameraDevices: _availableCameraDevices,
           selectedCameraDeviceId: widget.selectedCameraDeviceId,
