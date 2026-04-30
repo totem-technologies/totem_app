@@ -92,7 +92,6 @@ SessionRoomState _buildState({
   String? nextSpeaker = 'user-2',
   List<String> talkingOrder = const [],
   List<Participant>? participants,
-  bool hasKeeperDisconnected = false,
 }) {
   final defaultParticipants =
       participants ??
@@ -110,7 +109,6 @@ SessionRoomState _buildState({
     ),
     participants: ParticipantsState(
       participants: defaultParticipants,
-      hasKeeperDisconnected: hasKeeperDisconnected,
     ),
     chat: const ChatState(),
     turn: SessionTurnState(

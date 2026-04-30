@@ -3,6 +3,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
+
 import '../../livekit_mocks.dart';
 import '../features/session_device_controller_mock.dart';
 
@@ -47,7 +48,6 @@ class FakeSessionController implements SessionController {
   SessionRoomState mockState = _createSessionState();
   SessionDeviceController mockDevices = FakeSessionDeviceController();
   bool disconnectFromRoomCalled = false;
-  bool? lastKeeperDisconnectedValue;
   List<SessionChatMessage> addedChatMessages = [];
   bool isCurrentUserKeeperValue = false;
   Room? mockRoom;
@@ -64,11 +64,6 @@ class FakeSessionController implements SessionController {
   @override
   Future<void> disconnectFromRoom() async {
     disconnectFromRoomCalled = true;
-  }
-
-  @override
-  void setKeeperDisconnected(bool hasKeeperDisconnected) {
-    lastKeeperDisconnectedValue = hasKeeperDisconnected;
   }
 
   @override

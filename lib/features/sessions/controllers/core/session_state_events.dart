@@ -26,12 +26,6 @@ class ParticipantsChanged extends SessionEvent {
   final List<Participant> participants;
 }
 
-class KeeperDisconnectedChanged extends SessionEvent {
-  const KeeperDisconnectedChanged(this.hasKeeperDisconnected);
-
-  final bool hasKeeperDisconnected;
-}
-
 class ParticipantRemoved extends SessionEvent {
   const ParticipantRemoved();
 }

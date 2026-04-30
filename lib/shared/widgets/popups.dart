@@ -85,8 +85,8 @@ class AnimatedPopupState extends State<AnimatedPopup>
   }
 }
 
-class _PopupRequest {
-  _PopupRequest({
+class PopupRequest {
+  PopupRequest({
     required this.overlay,
     required this.popup,
     required this.onClosed,
@@ -149,8 +149,8 @@ class _PopupRequest {
 }
 
 class PopupController {
-  final List<_PopupRequest> _queue = <_PopupRequest>[];
-  _PopupRequest? _activeRequest;
+  final List<PopupRequest> _queue = <PopupRequest>[];
+  PopupRequest? _activeRequest;
   bool _isBulkDismissing = false;
 
   bool _hasDuplicate(Object? dedupeKey) {
@@ -163,7 +163,7 @@ class PopupController {
     return _queue.any((request) => request.dedupeKey == dedupeKey);
   }
 
-  void _enqueue(_PopupRequest request) {
+  void _enqueue(PopupRequest request) {
     if (_hasDuplicate(request.dedupeKey)) {
       return;
     }
@@ -187,7 +187,7 @@ class PopupController {
     }
   }
 
-  void _handleRequestClosed(_PopupRequest request) {
+  void _handleRequestClosed(PopupRequest request) {
     if (_activeRequest == request) {
       _activeRequest = null;
     } else {
@@ -199,20 +199,8 @@ class PopupController {
     }
   }
 
-  void _dismissRequest(_PopupRequest request) {
-    if (_activeRequest == request) {
-      request.dismissActive();
-      return;
-    }
-
-    final wasQueued = _queue.remove(request);
-    if (wasQueued) {
-      request.cancelQueued();
-    }
-  }
-
   void dismissAll() {
-    final requests = <_PopupRequest>[
+    final requests = <PopupRequest>[
       ..._queue,
       ?_activeRequest,
     ];
@@ -233,7 +221,7 @@ class PopupController {
   }
 }
 
-VoidCallback showPopup(
+PopupRequest showPopup(
   BuildContext context, {
   required WidgetBuilder builder,
   PopupController? controller,
@@ -245,7 +233,7 @@ VoidCallback showPopup(
   final overlay = Overlay.of(context);
 
   late OverlayEntry popup;
-  late final _PopupRequest request;
+  late final PopupRequest request;
 
   popup = OverlayEntry(
     builder: (context) => PositionedDirectional(
@@ -269,7 +257,7 @@ VoidCallback showPopup(
     ),
   );
 
-  request = _PopupRequest(
+  request = PopupRequest(
     overlay: overlay,
     popup: popup,
     dedupeKey: dedupeKey,
@@ -279,22 +267,13 @@ VoidCallback showPopup(
     onShown: onShown,
   );
 
-  Null dismiss() {
-    if (controller != null) {
-      controller._dismissRequest(request);
-      return;
-    }
-
-    request.dismissActive();
-  }
-
   if (controller != null) {
     controller._enqueue(request);
   } else {
     request.show();
   }
 
-  return dismiss;
+  return request;
 }
 
 void showNotificationPopup(
@@ -326,7 +305,7 @@ void showNotificationPopup(
   );
 }
 
-VoidCallback showDismissiblePopup(
+PopupRequest showDismissiblePopup(
   BuildContext context, {
   required WidgetBuilder builder,
   PopupController? controller,
@@ -339,7 +318,7 @@ VoidCallback showDismissiblePopup(
   );
 }
 
-VoidCallback showPermanentNotificationPopup(
+PopupRequest showPermanentNotificationPopup(
   BuildContext context, {
   required TotemIconData icon,
   required String title,
