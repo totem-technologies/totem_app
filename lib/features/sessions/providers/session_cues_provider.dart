@@ -92,10 +92,15 @@ class SessionCuesService {
     }
   }
 
+  bool _isPlaying = false;
+
   Future<void> _playAsset(String assetPath) async {
+    if (_isPlaying) return;
+
     try {
       await _configurePlayer();
       await _audioPlayer.stop();
+      _isPlaying = true;
       await _audioPlayer.playAsset(_toAssetSourcePath(assetPath));
     } catch (error, stackTrace) {
       logger.e(
@@ -103,6 +108,8 @@ class SessionCuesService {
         error: error,
         stackTrace: stackTrace,
       );
+    } finally {
+      _isPlaying = false;
     }
   }
 
