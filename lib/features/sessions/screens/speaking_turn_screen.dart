@@ -191,9 +191,11 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                 );
               case ViewportKind.mediumPlus:
                 return Padding(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    vertical: 60.0,
-                    horizontal: 60.0,
+                  padding: const EdgeInsetsDirectional.only(
+                    top: 40.0,
+                    bottom: 28,
+                    start: 60.0,
+                    end: 60.0,
                   ),
                   child: Column(
                     spacing: 40,
@@ -282,7 +284,9 @@ class _SpeakingTurnGrid extends ConsumerWidget {
               .clamp(3, maxPerLineCount);
         }
       case ViewportKind.mediumPlus:
-        if (itemCount <= 8) {
+        if (itemCount <= 3) {
+          crossAxisCount = 3;
+        } else if (itemCount <= 8) {
           crossAxisCount = 4;
         } else if (itemCount <= 10) {
           crossAxisCount = 5;
