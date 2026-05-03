@@ -1,6 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart' show Participant;
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/features/profile/repositories/user_repository.dart';
@@ -10,6 +11,7 @@ import 'package:totem_app/shared/widgets/loading_indicator.dart';
 import 'package:totem_app/shared/widgets/responsive_modal.dart';
 import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_app/shared/widgets/user_avatar.dart';
+import 'package:totem_app/shared/widgets/viewport_resolver.dart';
 
 Future<void> showParticipantReorderModals(
   BuildContext context,
@@ -20,7 +22,6 @@ Future<void> showParticipantReorderModals(
   return showResponsiveModal<void>(
     context: context,
     useRootNavigator: false,
-    showDragHandle: true,
     bottomSheetBackgroundColor: const Color(0xFFF3F1E9),
     dialogBackgroundColor: const Color(0xFFF3F1E9),
     smallScreenBuilder: (context) => ParticipantReorderWidget(
@@ -29,7 +30,7 @@ Future<void> showParticipantReorderModals(
       event: event,
     ),
     largeScreenBuilder: (context) => SizedBox(
-      width: 400,
+      width: 600,
       child: ParticipantReorderWidget(
         session: session,
         state: state,
@@ -58,6 +59,8 @@ class ParticipantReorderWidget extends ConsumerStatefulWidget {
 
 class _ParticipantReorderWidgetState
     extends ConsumerState<ParticipantReorderWidget> {
+  String? _selectedIdentity;
+
   late List<String> _localOrder;
   var _loading = false;
 
@@ -91,123 +94,194 @@ class _ParticipantReorderWidgetState
       canPop: !_loading,
       child: Material(
         type: MaterialType.transparency,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SheetDragHandle(),
-            Flexible(
-              child: CustomScrollView(
-                shrinkWrap: true,
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsetsDirectional.only(
-                        start: 20,
-                        end: 20,
-                        bottom: 6,
-                      ),
-                      child: Text(
-                        'Reorder Participants',
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsetsDirectional.only(
-                        start: 20,
-                        end: 20,
-                        bottom: 20,
-                      ),
-                      child: Text(
-                        'Drag to set participant order',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.black,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                  SliverPadding(
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: 20,
-                    ),
-                    sliver: SliverReorderableList(
-                      itemCount: participants.length,
-                      onReorder: (oldIndex, newIndex) {
-                        _handleReorder(context, ref, oldIndex, newIndex);
-                      },
-                      itemBuilder: (context, index) {
-                        final participantIdentity = participants[index];
-
-                        final participant = widget.state.participantsList
-                            .firstWhereOrNull(
-                              (p) => p.identity == participantIdentity,
-                            );
-
-                        return _ParticipantReorderItem(
-                          key: ValueKey(participantIdentity),
-                          participantIdentity: participantIdentity,
-                          participant: participant,
-                          index: index,
-                          isSpeakingNow:
-                              participantIdentity == widget.state.speakingNow,
-                        );
-                      },
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsetsDirectional.all(20),
-                      child: Row(
-                        spacing: 16,
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: const Text('Cancel'),
+        child: ViewportResolver(
+          builder: (context, viewportKind) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  flex: 2,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SheetDragHandle(),
+                      Flexible(
+                        child: CustomScrollView(
+                          shrinkWrap: true,
+                          slivers: [
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsetsDirectional.only(
+                                  start: 20,
+                                  end: 20,
+                                  bottom: 6,
+                                ),
+                                child: Text(
+                                  'Reorder Participants',
+                                  style: theme.textTheme.headlineSmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
+                                      ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
                             ),
-                          ),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                if (_loading) return;
-                                setState(() => _loading = true);
-                                await _updateParticipantOrder(
-                                  context,
-                                  ref,
-                                  _localOrder,
-                                );
-                                if (mounted && context.mounted) {
-                                  setState(() => _loading = false);
-                                  Navigator.of(context).pop();
-                                }
-                              },
-                              child: _loading
-                                  ? const LoadingIndicator(
-                                      color: Colors.white,
-                                      size: 24,
-                                    )
-                                  : const Text('Save'),
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsetsDirectional.only(
+                                  start: 20,
+                                  end: 20,
+                                  bottom: 20,
+                                ),
+                                child: Text(
+                                  'Drag to set participant order',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: Colors.black,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                            SliverPadding(
+                              padding: const EdgeInsetsDirectional.symmetric(
+                                horizontal: 20,
+                              ),
+                              sliver: SliverReorderableList(
+                                itemCount: participants.length,
+                                onReorder: (oldIndex, newIndex) {
+                                  _handleReorder(
+                                    context,
+                                    ref,
+                                    oldIndex,
+                                    newIndex,
+                                  );
+                                },
+                                itemBuilder: (context, index) {
+                                  final participantIdentity =
+                                      participants[index];
+
+                                  final participant = widget
+                                      .state
+                                      .participantsList
+                                      .firstWhereOrNull(
+                                        (p) =>
+                                            p.identity == participantIdentity,
+                                      );
+
+                                  return _ParticipantReorderItem(
+                                    key: ValueKey(participantIdentity),
+                                    participantIdentity: participantIdentity,
+                                    participant: participant,
+                                    index: index,
+                                    isSpeakingNow:
+                                        participantIdentity ==
+                                        widget.state.speakingNow,
+                                    onTap: () {
+                                      switch (viewportKind) {
+                                        case ViewportKind.mediumPlus:
+                                          setState(() {
+                                            if (_selectedIdentity ==
+                                                participantIdentity) {
+                                              _selectedIdentity = null;
+                                            } else {
+                                              _selectedIdentity =
+                                                  participantIdentity;
+                                            }
+                                          });
+
+                                        default:
+                                          showResponsiveModal<void>(
+                                            context: context,
+                                            useRootNavigator: false,
+                                            showDragHandle: true,
+                                            smallScreenBuilder: (context) =>
+                                                Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: _ParticipantInfo(
+                                                        participant:
+                                                            participantIdentity,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                            largeScreenBuilder: (context) =>
+                                                _ParticipantInfo(
+                                                  participant:
+                                                      participantIdentity,
+                                                ),
+                                          );
+                                      }
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsetsDirectional.symmetric(
+                                  vertical: 20,
+                                  horizontal: 40,
+                                ),
+                                child: Row(
+                                  spacing: 16,
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(),
+                                        child: const Text('Cancel'),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        onPressed: () async {
+                                          if (_loading) return;
+                                          setState(() => _loading = true);
+                                          await _updateParticipantOrder(
+                                            context,
+                                            ref,
+                                            _localOrder,
+                                          );
+                                          if (mounted && context.mounted) {
+                                            setState(() => _loading = false);
+                                            Navigator.of(context).pop();
+                                          }
+                                        },
+                                        child: _loading
+                                            ? const LoadingIndicator(
+                                                color: Colors.white,
+                                                size: 24,
+                                              )
+                                            : const Text('Save'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SliverSafeArea(
+                              top: false,
+                              bottom: true,
+                              sliver: SliverToBoxAdapter(),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  const SliverSafeArea(
-                    top: false,
-                    bottom: true,
-                    sliver: SliverToBoxAdapter(),
+                ),
+                if (_selectedIdentity != null) ...[
+                  // const VerticalDivider(width: 1, color: Colors.grey),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: _ParticipantInfo(participant: _selectedIdentity!),
                   ),
                 ],
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );
@@ -261,12 +335,97 @@ class _ParticipantReorderWidgetState
   }
 }
 
+class _ParticipantInfo extends ConsumerWidget {
+  const _ParticipantInfo({required this.participant});
+
+  final String participant;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final participant = ref.watch(
+      userProfileProvider(this.participant),
+    );
+    return DefaultTextStyle.merge(
+      style: theme.textTheme.bodyMedium?.copyWith(
+        color: Colors.black,
+      ),
+      child: IntrinsicWidth(
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: participant.when(
+              data: (user) => Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: UserAvatar.fromUserSchema(
+                      user,
+                      radius: 42,
+                      borderWidth: 0,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    user.name ?? user.slug ?? 'Participant',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '${user.circleCount}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const Text(
+                    'Sessions joined',
+                    style: TextStyle(color: Colors.black),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    DateFormat(
+                      'MMM, yyyy',
+                    ).format(user.dateCreated),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const Text(
+                    'Member Since',
+                    style: TextStyle(color: Colors.black),
+                  ),
+                  // const SizedBox(height: 4),
+                  // Text(
+                  //   'ID: $participant',
+                  //   style: theme.textTheme.bodySmall,
+                  // ),
+                ],
+              ),
+              error: (error, stackTrace) =>
+                  const Text('Error loading user info'),
+              loading: () => const LoadingIndicator(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ParticipantReorderItem extends ConsumerWidget {
   const _ParticipantReorderItem({
     required this.participantIdentity,
     required this.participant,
     required this.index,
     required this.isSpeakingNow,
+    required this.onTap,
     super.key,
   });
 
@@ -274,6 +433,7 @@ class _ParticipantReorderItem extends ConsumerWidget {
   final Participant? participant;
   final int index;
   final bool isSpeakingNow;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -284,19 +444,18 @@ class _ParticipantReorderItem extends ConsumerWidget {
         ? theme.colorScheme.onPrimaryContainer
         : theme.colorScheme.onPrimary;
 
-    // TODO(totem): When tapping on a participant, show a modal with their info
-
-    return Container(
-      margin: const EdgeInsetsDirectional.only(bottom: 8),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(bottom: 8),
+      child: Material(
+        type: MaterialType.card,
         color: !isSpeakingNow
             ? theme.colorScheme.primaryContainer
             : theme.colorScheme.primaryFixedDim,
         borderRadius: BorderRadius.circular(20),
-      ),
-      child: Material(
-        type: MaterialType.transparency,
         child: ListTile(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           leading: SizedBox(
             width: 32,
             height: 32,
@@ -352,6 +511,7 @@ class _ParticipantReorderItem extends ConsumerWidget {
             ),
           ),
           contentPadding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
+          onTap: onTap,
         ),
       ),
     );

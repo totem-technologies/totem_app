@@ -9,8 +9,8 @@ Future<T?> showResponsiveModal<T>({
   bool showDragHandle = false,
   bool isScrollControlled = true,
   bool useSafeArea = true,
-  Color bottomSheetBackgroundColor = Colors.white,
-  Color dialogBackgroundColor = Colors.white,
+  Color bottomSheetBackgroundColor = const Color(0xFFF3F1E9),
+  Color dialogBackgroundColor = const Color(0xFFF3F1E9),
   Color? dialogBarrierColor,
   ShapeBorder? dialogShape,
   AlignmentGeometry dialogAlignment = Alignment.center,
@@ -40,6 +40,7 @@ Future<T?> showResponsiveModal<T>({
         fullscreenDialog: true,
         builder: (context) => Dialog(
           alignment: dialogAlignment,
+          constraints: const BoxConstraints(maxWidth: 600),
           insetPadding: dialogInsetPadding.resolve(Directionality.of(context)),
           backgroundColor: dialogBackgroundColor,
           shape:
