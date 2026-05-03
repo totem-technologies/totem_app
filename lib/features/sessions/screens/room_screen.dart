@@ -50,10 +50,12 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   final _roomNavigatorKey = GlobalKey<NavigatorState>();
   final _notificationController = PopupController();
 
-  VoidCallback? _closeKeeperLeftNotification;
+  PopupRequest? _closeKeeperLeftNotification;
   Timer? _timeRemainingWarningTimer;
   String? _timeRemainingWarningSessionSlug;
   bool _hasShownTimeRemainingWarning = false;
+  bool? _lastKeeperDisconnectedState;
+  RoomStatus? _lastKeeperDisconnectedRoomStatus;
 
   @override
   void initState() {
@@ -145,12 +147,11 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   }
 
   void _closeKeeperDisconnectedNotification() {
-    _closeKeeperLeftNotification?.call();
+    _closeKeeperLeftNotification?.dismissActive();
     _closeKeeperLeftNotification = null;
   }
 
   void _clearSessionPopups() {
-    _closeKeeperDisconnectedNotification();
     _notificationController.dismissAll();
   }
 
@@ -283,17 +284,11 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     );
   }
 
-  void _setKeeperDisconnectedNotification(bool hasKeeperDisconnected) {
-    debugPrint(
-      '_setKeeperDisconnectedNotification: $hasKeeperDisconnected, mounted=$mounted, roomStatus=${ref.read(roomStatusProvider)}',
-    );
-    if (!mounted || !hasKeeperDisconnected) {
-      _closeKeeperDisconnectedNotification();
-      return;
-    }
-
-    final roomStatus = ref.read(roomStatusProvider);
-    if (roomStatus != RoomStatus.active) {
+  void _setKeeperDisconnectedNotification(
+    bool hasKeeperDisconnected,
+    RoomStatus roomStatus,
+  ) {
+    if (!mounted || !hasKeeperDisconnected || roomStatus != RoomStatus.active) {
       _closeKeeperDisconnectedNotification();
       return;
     }
@@ -303,7 +298,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       return;
     }
 
-    _closeKeeperLeftNotification?.call();
+    _closeKeeperLeftNotification?.dismissActive();
+    _closeKeeperLeftNotification = null;
     _closeKeeperLeftNotification = showPermanentNotificationPopup(
       context,
       icon: TotemIcons.pause,
@@ -313,11 +309,36 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     );
   }
 
+  void _syncKeeperDisconnectedNotification(
+    bool hasKeeperDisconnected,
+    RoomStatus roomStatus,
+    RoomConnectionState connectionState,
+  ) {
+    if (connectionState != RoomConnectionState.connected) {
+      _closeKeeperDisconnectedNotification();
+      return;
+    }
+
+    if (_lastKeeperDisconnectedState == hasKeeperDisconnected &&
+        _lastKeeperDisconnectedRoomStatus == roomStatus) {
+      return;
+    }
+
+    _lastKeeperDisconnectedState = hasKeeperDisconnected;
+    _lastKeeperDisconnectedRoomStatus = roomStatus;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _setKeeperDisconnectedNotification(hasKeeperDisconnected, roomStatus);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentSession = ref.watch(currentSessionProvider);
     final currentRoomScreen = ref.watch(resolveCurrentScreenProvider)!;
     final currentSessionEvent = ref.watch(currentSessionEventProvider);
+    final hasKeeperDisconnected = ref.watch(hasKeeperDisconnectedProvider);
     final connectionState = ref.watch(connectionStateProvider);
     final roomStatus = ref.watch(roomStatusProvider);
     final disconnectReason = ref.watch(disconnectionReasonProvider);
@@ -354,6 +375,12 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       roomStatus,
     );
 
+    _syncKeeperDisconnectedNotification(
+      hasKeeperDisconnected,
+      roomStatus,
+      connectionState,
+    );
+
     ref
       ..listen(
         emojiReactionsProvider,
@@ -378,15 +405,6 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
           if (next == null) return;
           if (previous?.toString() == next.toString()) return;
           _onLivekitError(next);
-        },
-      )
-      ..listen(
-        hasKeeperDisconnectedProvider,
-        (previous, disconnected) {
-          debugPrint(
-            'hasKeeperDisconnectedProvider listener: previous=$previous, disconnected=$disconnected',
-          );
-          _setKeeperDisconnectedNotification(disconnected);
         },
       )
       ..listen(

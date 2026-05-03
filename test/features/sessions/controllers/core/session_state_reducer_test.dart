@@ -146,6 +146,25 @@ void main() {
         });
       });
 
+      test(
+        'clears existing error when transitioning to connecting (retry)',
+        () {
+          final current = _initialState();
+
+          final next = reducer.reduceState(
+            current,
+            const ConnectionChanged(
+              RoomConnectionState.connecting,
+              SessionPhase.connecting,
+            ),
+          );
+
+          expect(next.connection.state, RoomConnectionState.connecting);
+          expect(next.connection.phase, SessionPhase.connecting);
+          expect(next.connection.error, isNull);
+        },
+      );
+
       group('SessionErrorChanged event', () {
         test('sets error state for livekit errors', () {
           final current = _initialState();
@@ -317,54 +336,6 @@ void main() {
           );
 
           expect(next.participantsList, isEmpty);
-        });
-      });
-
-      group('KeeperDisconnectedChanged event', () {
-        test('updates keeper disconnected flag', () {
-          final current = _initialState();
-
-          final next = reducer.reduceState(
-            current,
-            const KeeperDisconnectedChanged(true),
-          );
-
-          expect(next.hasKeeperDisconnected, isTrue);
-        });
-
-        test('dispatches event correctly', () {
-          final state = _initialState();
-
-          var newState = reducer.reduceState(
-            state,
-            const KeeperDisconnectedChanged(true),
-          );
-
-          expect(newState.hasKeeperDisconnected, isTrue);
-
-          newState = reducer.reduceState(
-            newState,
-            const KeeperDisconnectedChanged(false),
-          );
-
-          expect(newState.hasKeeperDisconnected, isFalse);
-        });
-
-        test('toggles keeper disconnection status', () {
-          var state = _initialState();
-          expect(state.hasKeeperDisconnected, isFalse);
-
-          state = reducer.reduceState(
-            state,
-            const KeeperDisconnectedChanged(true),
-          );
-          expect(state.hasKeeperDisconnected, isTrue);
-
-          state = reducer.reduceState(
-            state,
-            const KeeperDisconnectedChanged(false),
-          );
-          expect(state.hasKeeperDisconnected, isFalse);
         });
       });
     });

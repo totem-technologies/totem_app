@@ -180,7 +180,7 @@ DisconnectReason? disconnectionReason(Ref ref) {
 bool hasKeeperDisconnected(Ref ref) {
   return ref.watch(
         currentSessionStateProvider.select(
-          (s) => s?.participants.hasKeeperDisconnected,
+          (s) => s?.hasKeeper == false,
         ),
       ) ??
       false;

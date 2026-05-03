@@ -49,7 +49,6 @@ class ReceiveTotemScreen extends ConsumerWidget {
 
     return RoomBackground(
       status: sessionStatus,
-      padding: const EdgeInsetsDirectional.all(20),
       child: SafeArea(
         child: ViewportResolver(
           builder: (context, viewportKind) {
@@ -118,44 +117,51 @@ class ReceiveTotemScreen extends ConsumerWidget {
 
             switch (viewportKind) {
               case ViewportKind.smallPortrait:
-                return Column(
-                  spacing: 40,
-                  children: [
-                    titleWidget,
-                    Expanded(child: videoCard),
-                    receiveSlider,
-                    const SessionActionBar(),
-                  ],
+                return Padding(
+                  padding: const EdgeInsetsDirectional.all(20),
+                  child: Column(
+                    spacing: 40,
+                    children: [
+                      titleWidget,
+                      Expanded(child: videoCard),
+                      receiveSlider,
+                      const SessionActionBar(),
+                    ],
+                  ),
                 );
               case ViewportKind.smallLandscape:
-                return Row(
-                  spacing: 16,
-                  children: [
-                    Expanded(child: videoCard),
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        spacing: 20,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          titleWidget,
-                          receiveSlider,
-                          const SessionActionBar(),
-                        ],
+                return Padding(
+                  padding: const EdgeInsetsDirectional.all(20),
+                  child: Row(
+                    spacing: 16,
+                    children: [
+                      Expanded(child: videoCard),
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          spacing: 20,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            titleWidget,
+                            receiveSlider,
+                            const SessionActionBar(),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 );
               case ViewportKind.mediumPlus:
                 return Padding(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    vertical: 40.0,
+                  padding: const EdgeInsetsDirectional.only(
+                    top: 40.0,
+                    bottom: 28,
                   ),
                   child: Column(
                     spacing: 40,
                     children: [
                       Expanded(child: videoCard),
-                      roundPromptText ?? const SizedBox.shrink(),
+                      roundPromptText ?? const SizedBox(height: 10),
                       TransitionCard(
                         type: TotemCardTransitionType.receive,
                         onActionPressed: onAccept,

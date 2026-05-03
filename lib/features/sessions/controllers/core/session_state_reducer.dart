@@ -12,7 +12,12 @@ class SessionStateReducer {
           connection: current.connection.copyWith(
             state: event.connectionState,
             phase: event.phase,
-            clearError: event.connectionState == RoomConnectionState.connected,
+            // Clear any prior error when transitioning to connecting or
+            // connected (e.g. a retry), so the UI reflects the current
+            // attempt instead of showing a stale error.
+            clearError:
+                event.connectionState == RoomConnectionState.connected ||
+                event.connectionState == RoomConnectionState.connecting,
           ),
           participants: event.connectionState == RoomConnectionState.connected
               ? current.participants.copyWith(removed: false)
@@ -35,15 +40,6 @@ class SessionStateReducer {
           connection: current.connection,
           participants: current.participants.copyWith(
             participants: event.participants,
-          ),
-          chat: current.chat,
-          turn: current.turn,
-        );
-      case KeeperDisconnectedChanged():
-        return SessionRoomState(
-          connection: current.connection,
-          participants: current.participants.copyWith(
-            hasKeeperDisconnected: event.hasKeeperDisconnected,
           ),
           chat: current.chat,
           turn: current.turn,

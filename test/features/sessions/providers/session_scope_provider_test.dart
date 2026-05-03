@@ -41,7 +41,6 @@ SessionRoomState _state({
   RoomStatus roomStatus = RoomStatus.waitingRoom,
   TurnState turnState = TurnState.idle,
   List<Participant> participants = const <Participant>[],
-  bool hasKeeperDisconnected = false,
   List<SessionChatMessage> messages = const [],
   String keeper = 'keeper',
   String? currentSpeaker,
@@ -56,7 +55,6 @@ SessionRoomState _state({
     ),
     participants: ParticipantsState(
       participants: participants,
-      hasKeeperDisconnected: hasKeeperDisconnected,
     ),
     chat: ChatState(messages: messages),
     turn: SessionTurnState(
@@ -179,7 +177,6 @@ void main() {
               roomStatus: RoomStatus.active,
               turnState: TurnState.passing,
               participants: participants,
-              hasKeeperDisconnected: true,
               messages: const [chatMessage],
               keeper: 'keeper',
               currentSpeaker: 'alice',

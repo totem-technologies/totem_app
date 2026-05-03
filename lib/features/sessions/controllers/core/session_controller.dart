@@ -21,7 +21,6 @@ import 'package:totem_app/features/sessions/controllers/features/session_keeper_
 import 'package:totem_app/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_app/features/sessions/controllers/utils.dart';
 import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
-import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_app/features/sessions/providers/session_scope_provider.dart'
     show sessionScopeProvider;
 import 'package:totem_app/features/spaces/repositories/space_repository.dart';
@@ -122,24 +121,6 @@ class SessionController extends _$SessionController {
     return state.isKeeper(currentUserSlug);
   }
 
-  void _onKeeperDisconnected() {
-    keeper.onKeeperDisconnected(state.roomState.status);
-  }
-
-  void _onKeeperConnected() {
-    keeper.onKeeperConnected();
-  }
-
-  void setKeeperDisconnected(bool hasKeeperDisconnected) {
-    logger.d(
-      'setKeeperDisconnected: $hasKeeperDisconnected (current: ${state.hasKeeperDisconnected})',
-    );
-    _dispatch(KeeperDisconnectedChanged(hasKeeperDisconnected));
-    logger.d(
-      'setKeeperDisconnected dispatched. New state: ${state.hasKeeperDisconnected}',
-    );
-  }
-
   void addSessionChatMessage(SessionChatMessage message) {
     _dispatch(SessionChatMessageAdded(message));
   }
@@ -198,22 +179,24 @@ class SessionController extends _$SessionController {
 
   void _updateParticipantsList() {
     try {
-      final participantsSorted = sortedParticipants();
+      final previousParticipants = state.participantsList;
+      final hadKeeper = previousParticipants.any(
+        (p) => state.isKeeper(p.identity),
+      );
 
+      final participantsSorted = sortedParticipants();
       final hasKeeper = participantsSorted.any(
         (p) => state.isKeeper(p.identity),
       );
 
       logger.d(
-        '_updateParticipantsList: hasKeeper=$hasKeeper, hasKeeperDisconnected=${state.hasKeeperDisconnected}, roomStatus=${state.roomState.status}, participants=${participantsSorted.map((p) => p.identity).toList()}',
+        '_updateParticipantsList: hasKeeper=$hasKeeper, roomStatus=${state.roomState.status}, participants=${participantsSorted.map((p) => p.identity).toList()}',
       );
 
-      if (state.hasKeeperDisconnected && hasKeeper) {
-        _onKeeperConnected();
-      } else if (!state.hasKeeperDisconnected &&
-          !hasKeeper &&
-          state.roomState.status == RoomStatus.active) {
-        _onKeeperDisconnected();
+      if (!hadKeeper && hasKeeper) {
+        keeper.onKeeperConnected();
+      } else if (hadKeeper && !hasKeeper) {
+        keeper.onKeeperDisconnected(state.roomState.status);
       }
 
       _dispatch(ParticipantsChanged(participantsSorted));
@@ -306,15 +289,11 @@ class SessionController extends _$SessionController {
   }
 
   void _onParticipantDisconnected(ParticipantDisconnectedEvent event) {
-    if (state.isKeeper(event.participant.identity)) {
-      _onKeeperDisconnected();
-    }
+    _updateParticipantsList();
   }
 
   void _onParticipantConnected(ParticipantConnectedEvent event) {
-    if (state.isKeeper(event.participant.identity)) {
-      _onKeeperConnected();
-    }
+    _updateParticipantsList();
   }
 
   Future<void> _onSessionEnd() async {
@@ -401,7 +380,6 @@ class SessionController extends _$SessionController {
           camera: TrackOption(enabled: options.cameraEnabled),
         ),
       );
-      ref.read(sessionCuesServiceProvider).playSessionTransitionCue();
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,

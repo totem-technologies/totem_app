@@ -37,15 +37,11 @@ class SessionKeeperController extends _$SessionKeeperController {
     keeperDisconnectedTimer = Timer(keeperDisconnectionTimeout, () {
       unawaited(onKeeperDisconnectedTimeout());
     });
-
-    session.setKeeperDisconnected(true);
   }
 
   void onKeeperConnected() {
     keeperDisconnectedTimer?.cancel();
     keeperDisconnectedTimer = null;
-
-    session.setKeeperDisconnected(false);
   }
 
   Future<void> onKeeperDisconnectedTimeout() async {

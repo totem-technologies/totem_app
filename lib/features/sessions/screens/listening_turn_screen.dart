@@ -190,75 +190,62 @@ class ListeningTurnScreen extends ConsumerWidget {
             case ViewportKind.mediumPlus:
               final participantKeys = ref.watch(sessionParticipantKeysProvider);
               return Padding(
-                padding: const EdgeInsetsDirectional.symmetric(
-                  vertical: 40,
-                  horizontal: 20,
+                padding: const EdgeInsetsDirectional.only(
+                  top: 40,
+                  bottom: 28,
+                  start: 100,
+                  end: 100,
                 ),
                 child: Column(
                   spacing: 10,
                   children: [
                     Expanded(
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.symmetric(
-                          horizontal: 60.0,
-                          vertical: 20.0,
-                        ),
-                        child: Column(
-                          spacing: 10,
-                          children: [
-                            Expanded(
-                              child: Center(
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxHeight: 460,
-                                  ),
-                                  child: Row(
-                                    spacing: 20,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      if (roomStatus == RoomStatus.active &&
-                                          activeSpeaker != null)
-                                        Flexible(
-                                          child: ParticipantCard(
-                                            key: participantKeys.getKey(
-                                              activeSpeaker.sid,
-                                            ),
-                                            session: event,
-                                            participant: activeSpeaker,
-                                            participantIdentity:
-                                                activeSpeaker.identity,
-                                          ),
-                                        ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: _ListeningTurnGrid(
-                                          event: event,
-                                          speakingNow: activeSpeaker?.identity,
-                                          // Only show the speaking now participant in waiting room.
-                                          // In active room, the speaking now participant is already featured.
-                                          showSpeakingNowParticipant:
-                                              roomStatus ==
-                                              RoomStatus.waitingRoom,
-                                          gap: 20,
-                                          viewportKind: viewportKind,
-                                        ),
-                                      ),
-                                    ],
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxHeight: 460,
+                          ),
+                          child: Row(
+                            spacing: 20,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (roomStatus == RoomStatus.active &&
+                                  activeSpeaker != null)
+                                Flexible(
+                                  child: ParticipantCard(
+                                    key: participantKeys.getKey(
+                                      activeSpeaker.sid,
+                                    ),
+                                    session: event,
+                                    participant: activeSpeaker,
+                                    participantIdentity: activeSpeaker.identity,
                                   ),
                                 ),
+                              Expanded(
+                                flex: 2,
+                                child: _ListeningTurnGrid(
+                                  event: event,
+                                  speakingNow: activeSpeaker?.identity,
+                                  // Only show the speaking now participant in waiting room.
+                                  // In active room, the speaking now participant is already featured.
+                                  showSpeakingNowParticipant:
+                                      roomStatus == RoomStatus.waitingRoom,
+                                  gap: 20,
+                                  viewportKind: viewportKind,
+                                ),
                               ),
-                            ),
-                            if (roomStatus == RoomStatus.waitingRoom) ...[
-                              const SizedBox.shrink(),
-                              const GroundingMarquee(),
-                              ?startCard,
                             ],
-                            const SizedBox.shrink(),
-                            const Center(child: SessionActionBar()),
-                          ],
+                          ),
                         ),
                       ),
                     ),
+                    if (roomStatus == RoomStatus.waitingRoom) ...[
+                      const SizedBox.shrink(),
+                      const GroundingMarquee(),
+                      ?startCard,
+                      const SizedBox.shrink(),
+                    ],
+                    const Center(child: SessionActionBar()),
                   ],
                 ),
               );

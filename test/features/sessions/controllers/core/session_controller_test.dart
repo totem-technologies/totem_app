@@ -251,24 +251,6 @@ void main() {
         speakerEnabled: true,
       );
 
-      test('setKeeperDisconnected updates hasKeeperDisconnected', () {
-        final container = _createContainerWithEventOverride(eventSlug);
-        addTearDown(container.dispose);
-        final sub = container.listen(
-          sessionControllerProvider(options),
-          (_, _) {},
-          fireImmediately: true,
-        );
-        addTearDown(sub.close);
-
-        final _ = container.read(
-          sessionControllerProvider(options).notifier,
-        )..setKeeperDisconnected(true);
-
-        final state = container.read(sessionControllerProvider(options));
-        expect(state.hasKeeperDisconnected, isTrue);
-      });
-
       test('addSessionChatMessage appends message', () {
         final container = _createContainerWithEventOverride(eventSlug);
         addTearDown(container.dispose);

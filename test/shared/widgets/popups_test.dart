@@ -73,7 +73,7 @@ void main() {
       await tester.pump(const Duration(seconds: 10));
       expect(find.text('No timer'), findsOneWidget);
 
-      dismiss();
+      dismiss.dismissActive();
       await tester.pumpAndSettle();
       expect(find.text('No timer'), findsNothing);
     });
@@ -130,7 +130,7 @@ void main() {
       await tester.pump(const Duration(seconds: 8));
       expect(find.text('Dismissible'), findsOneWidget);
 
-      dismiss();
+      dismiss.dismissActive();
       await tester.pumpAndSettle();
       expect(find.text('Dismissible'), findsNothing);
     });
@@ -179,7 +179,7 @@ void main() {
       await tester.pump(const Duration(seconds: 10));
       expect(find.text('Permanent'), findsOneWidget);
 
-      dismiss();
+      dismiss.dismissActive();
       await tester.pumpAndSettle();
       expect(find.text('Permanent'), findsNothing);
     });
@@ -201,7 +201,7 @@ void main() {
         await tester.pump();
         expect(find.text('Early dismiss'), findsOneWidget);
 
-        dismiss();
+        dismiss.dismissActive();
         await tester.pumpAndSettle();
         expect(find.text('Early dismiss'), findsNothing);
       },
@@ -226,8 +226,8 @@ void main() {
         await tester.pump();
         expect(find.text('Idempotent'), findsOneWidget);
 
-        dismiss();
-        dismiss();
+        dismiss.dismissActive();
+        dismiss.dismissActive();
         controller.dismissAll();
         await tester.pumpAndSettle();
 
@@ -461,9 +461,9 @@ void main() {
       await tester.pump();
       expect(find.text('Race safe'), findsOneWidget);
 
-      dismiss();
+      dismiss.dismissActive();
       controller.dismissAll();
-      dismiss();
+      dismiss.dismissActive();
       await tester.pumpAndSettle();
 
       expect(find.text('Race safe'), findsNothing);

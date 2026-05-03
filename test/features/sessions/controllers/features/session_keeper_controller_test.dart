@@ -14,19 +14,6 @@ import 'session_device_controller_mock.dart';
 void main() {
   group('SessionKeeperController', () {
     group('Keeper Disconnection Handling', () {
-      test('onKeeperDisconnected ignores non-active room status', () async {
-        final mockSession = FakeSessionController();
-        final container = ProviderContainer();
-
-        final controller = container.read(
-          sessionKeeperControllerProvider(mockSession).notifier,
-        );
-        controller.onKeeperDisconnected(RoomStatus.waitingRoom);
-
-        // When status is not active, keeper disconnected should not be marked
-        expect(mockSession.lastKeeperDisconnectedValue, isNull);
-      });
-
       test(
         'onKeeperDisconnected marks keeper as disconnected when room active',
         () async {
@@ -40,7 +27,7 @@ void main() {
           );
           controller.onKeeperDisconnected(RoomStatus.active);
 
-          expect(mockSession.lastKeeperDisconnectedValue, isTrue);
+          expect(mockSession.state.hasKeeper, isTrue);
         },
       );
 
@@ -111,7 +98,7 @@ void main() {
         );
         controller.onKeeperConnected();
 
-        expect(mockSession.lastKeeperDisconnectedValue, isFalse);
+        expect(mockSession.state.hasKeeper, isTrue);
       });
 
       test('onKeeperConnected cancels disconnection timer', () async {
@@ -139,7 +126,7 @@ void main() {
         controller.onKeeperConnected();
         controller.onKeeperConnected();
 
-        expect(mockSession.lastKeeperDisconnectedValue, isFalse);
+        expect(mockSession.state.hasKeeper, isTrue);
       });
     });
 

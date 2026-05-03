@@ -78,23 +78,18 @@ class ConnectionState {
 class ParticipantsState {
   const ParticipantsState({
     this.participants = const [],
-    this.hasKeeperDisconnected = false,
     this.removed = false,
   });
 
   final List<Participant> participants;
-  final bool hasKeeperDisconnected;
   final bool removed;
 
   ParticipantsState copyWith({
     List<Participant>? participants,
-    bool? hasKeeperDisconnected,
     bool? removed,
   }) {
     return ParticipantsState(
       participants: participants ?? this.participants,
-      hasKeeperDisconnected:
-          hasKeeperDisconnected ?? this.hasKeeperDisconnected,
       removed: removed ?? this.removed,
     );
   }
@@ -104,17 +99,15 @@ class ParticipantsState {
     if (identical(this, other)) return true;
     return other is ParticipantsState &&
         const DeepCollectionEquality().equals(
-          other.participants.map((p) => p.identity),
-          participants.map((p) => p.identity),
+          other.participants.map((p) => p.sid),
+          participants.map((p) => p.sid),
         ) &&
-        other.hasKeeperDisconnected == hasKeeperDisconnected &&
         other.removed == removed;
   }
 
   @override
   int get hashCode =>
-      const DeepCollectionEquality().hash(participants.map((p) => p.identity)) ^
-      hasKeeperDisconnected.hashCode ^
+      const DeepCollectionEquality().hash(participants.map((p) => p.sid)) ^
       removed.hashCode;
 }
 
@@ -223,7 +216,6 @@ class SessionRoomState {
   SessionPhase get phase => connection.phase;
   RoomConnectionState get connectionState => connection.state;
   RoomState get roomState => turn.roomState;
-  bool get hasKeeperDisconnected => participants.hasKeeperDisconnected;
   List<Participant> get participantsList => participants.participants;
   bool get removed => participants.removed;
   List<SessionChatMessage> get messages => chat.messages;

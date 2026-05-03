@@ -1009,6 +1009,27 @@ void main() {
   });
 
   group('VideoRoomScreen - keeper disconnect popup lifecycle', () {
+    testWidgets('shows keeper paused popup when starting disconnected', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 1)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+        hasKeeperDisconnected: true,
+      );
+
+      expect(find.byType(NotificationPopup), findsOneWidget);
+      expect(find.text('The session has been paused.'), findsOneWidget);
+      expect(find.text('The keeper will be right back.'), findsOneWidget);
+    });
+
     testWidgets('shows keeper paused popup when keeper disconnects in active', (
       tester,
     ) async {
