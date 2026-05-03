@@ -329,8 +329,6 @@ class _SpacesDiscoveryScreenState extends ConsumerState<SpacesDiscoveryScreen> {
       // On large screens, intentionally skip date grouping in favour of a
       // compact 2-column grid. The sticky date column would consume too much
       // horizontal space at wide widths.
-      // TODO(totem): Consider a two-column layout within each date group
-      //   to preserve date grouping on tablets if that UX becomes a priority.
       final allSessions = groupedSessions.expand((g) => g.sessions).toList();
       return GridView.builder(
         padding: const EdgeInsetsDirectional.symmetric(
