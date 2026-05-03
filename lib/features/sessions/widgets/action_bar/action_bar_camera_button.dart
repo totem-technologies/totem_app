@@ -559,6 +559,7 @@ class _SessionActionBarCameraButtonState
         } else {
           await session.devices.enableCamera();
         }
+        if (mounted) setState(() {});
       },
       cameraPosition: CameraPosition.front,
       availableCameraDevices: _availableCameraDevices,
@@ -566,6 +567,7 @@ class _SessionActionBarCameraButtonState
       onCameraPositionChanged: (_) {},
       onCameraDeviceSelected: (device) async {
         await session.devices.selectCameraDevice(device);
+        if (mounted) setState(() {});
       },
     );
   }
