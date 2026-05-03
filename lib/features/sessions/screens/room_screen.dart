@@ -343,32 +343,6 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     final roomStatus = ref.watch(roomStatusProvider);
     final disconnectReason = ref.watch(disconnectionReasonProvider);
 
-    if (currentSession != null) {
-      ref.listen(
-        sessionDeviceControllerProvider(currentSession),
-        (previous, next) {
-          if (!mounted || previous == null) return;
-
-          final audioRouteController = ref.read(
-            sessionDeviceControllerProvider(currentSession).notifier,
-          );
-          if (!audioRouteController.audioRouteNotificationsEnabled) return;
-
-          final currentConnectionState = ref.read(connectionStateProvider);
-          if (currentConnectionState != RoomConnectionState.connected) return;
-
-          final routeChanged =
-              previous.isSpeakerphoneEnabled != next.isSpeakerphoneEnabled ||
-              previous.selectedAudioOutputDeviceId !=
-                  next.selectedAudioOutputDeviceId;
-
-          if (!routeChanged) return;
-
-          _onAudioRouteChanged(next);
-        },
-      );
-    }
-
     _scheduleTimeRemainingWarning(
       currentSessionEvent,
       connectionState,
@@ -405,6 +379,16 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
           if (next == null) return;
           if (previous?.toString() == next.toString()) return;
           _onLivekitError(next);
+        },
+      )
+      ..listen(
+        hasKeeperDisconnectedProvider,
+        (previous, next) {
+          _syncKeeperDisconnectedNotification(
+            next,
+            ref.read(roomStatusProvider),
+            ref.read(connectionStateProvider),
+          );
         },
       )
       ..listen(
@@ -449,6 +433,32 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
           }
         },
       );
+
+    if (currentSession != null) {
+      ref.listen(
+        sessionDeviceControllerProvider(currentSession),
+        (previous, next) {
+          if (!mounted || previous == null) return;
+
+          final audioRouteController = ref.read(
+            sessionDeviceControllerProvider(currentSession).notifier,
+          );
+          if (!audioRouteController.audioRouteNotificationsEnabled) return;
+
+          final currentConnectionState = ref.read(connectionStateProvider);
+          if (currentConnectionState != RoomConnectionState.connected) return;
+
+          final routeChanged =
+              previous.isSpeakerphoneEnabled != next.isSpeakerphoneEnabled ||
+              previous.selectedAudioOutputDeviceId !=
+                  next.selectedAudioOutputDeviceId;
+
+          if (!routeChanged) return;
+
+          _onAudioRouteChanged(next);
+        },
+      );
+    }
 
     if (currentSession == null || currentSessionEvent == null) {
       return widget.loadingScreen;
