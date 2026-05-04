@@ -71,7 +71,6 @@ class ErrorHandler {
     logError(
       details.exception,
       stackTrace: details.stack,
-      // reason: details.exceptionAsString(),
       message: 'Flutter Error in ${details.library ?? "unknown"}',
     );
   }
