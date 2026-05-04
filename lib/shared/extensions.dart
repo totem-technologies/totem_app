@@ -1,3 +1,4 @@
+import 'package:characters/characters.dart';
 import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
 
 extension ListExtension<T> on List<T> {
@@ -9,7 +10,9 @@ extension ListExtension<T> on List<T> {
 extension StringExtension on String {
   String uppercaseFirst() {
     if (isEmpty) return this;
-    return '${this[0].toUpperCase()}${substring(1)}';
+    final chars = characters;
+    final first = chars.firstOrNull ?? '';
+    return '${first.toUpperCase()}${chars.skip(1)}';
   }
 }
 
