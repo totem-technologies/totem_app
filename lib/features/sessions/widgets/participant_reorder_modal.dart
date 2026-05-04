@@ -272,13 +272,11 @@ class _ParticipantReorderWidgetState
                     ],
                   ),
                 ),
-                if (_selectedIdentity != null) ...[
-                  // const VerticalDivider(width: 1, color: Colors.grey),
+                if (_selectedIdentity != null)
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: _ParticipantInfo(participant: _selectedIdentity!),
                   ),
-                ],
               ],
             );
           },
@@ -401,11 +399,6 @@ class _ParticipantInfo extends ConsumerWidget {
                     'Member Since',
                     style: TextStyle(color: Colors.black),
                   ),
-                  // const SizedBox(height: 4),
-                  // Text(
-                  //   'ID: $participant',
-                  //   style: theme.textTheme.bodySmall,
-                  // ),
                 ],
               ),
               error: (error, stackTrace) =>
