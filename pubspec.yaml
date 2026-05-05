@@ -49,9 +49,9 @@ dependencies:
       ref: main
     # path: ../client-sdk-flutter
     # git:
-      # url: https://github.com/livekit/client-sdk-flutter/
-      # ref: hiroshi/fix-local-audio # Fixes Local Audio visualizer
-      # ref: hiroshi/better-track-settings # Fixes manually setting quality
+    # url: https://github.com/livekit/client-sdk-flutter/
+    # ref: hiroshi/fix-local-audio # Fixes Local Audio visualizer
+    # ref: hiroshi/better-track-settings # Fixes manually setting quality
   flutter_foreground_task: ^9.2.0
   wakelock_plus: ^1.4.0
   audio_session: ^0.2.1
@@ -75,6 +75,7 @@ dependencies:
   flutter_confetti: ^0.5.1
   shimmer: ^3.0.0
   collection: ^1.19.1
+  characters: any
   meta: any
 
 dev_dependencies:
@@ -158,6 +159,7 @@ flutter_native_splash:
 
     # Splash screen background color.
     color: "#F4DC92" # yellow
+
 
     # App icon background color.
     #icon_background_color: "#111111"
