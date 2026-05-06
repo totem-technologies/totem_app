@@ -66,6 +66,7 @@ class SmartNameText extends StatelessWidget {
   String _abbreviate(String input) {
     final parts = input.trim().split(RegExp(r'\s+'));
     if (parts.length <= 1) return input;
-    return '${parts.first} ${parts.last[0].toUpperCase()}.';
+    final firstChar = parts.last.characters.firstOrNull ?? '';
+    return '${parts.first} ${firstChar.toUpperCase()}.';
   }
 }
