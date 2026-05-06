@@ -1,0 +1,305 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
+import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/utils.dart';
+import 'package:totem_core/shared/widgets/empty_indicator.dart';
+import 'package:totem_core/shared/widgets/error_screen.dart';
+
+import '../../blog/repositories/blog_repository.dart';
+import '../models/upcoming_session_data.dart';
+import '../repositories/home_screen_repository.dart';
+import '../widgets/home_blog_card.dart';
+import '../widgets/next_session_card.dart';
+import '../widgets/upcoming_session_card.dart';
+import '../widgets/welcome_card.dart';
+import 'home_loading_screen.dart';
+
+class HomeScreen extends ConsumerWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final summary = ref.watch(spacesSummaryProvider);
+    ref.sentryReportFullyDisplayed(spacesSummaryProvider);
+
+    // Get the user's circle count to determine if they're a new user
+    final circleCount = ref.watch(
+      authControllerProvider.select((auth) => auth.user?.circleCount ?? 0),
+    );
+
+    return Scaffold(
+      body: SafeArea(
+        bottom: false,
+        child: summary.when(
+          data: (summary) {
+            final nextSession = summary.upcoming
+                .where((session) => !session.ended)
+                .firstOrNull;
+            final isNewUser = circleCount == 0 && nextSession == null;
+
+            if (summary.explore.isEmpty && nextSession == null && !isNewUser) {
+              return EmptyIndicator(
+                icon: TotemIcons.home,
+                onRetry: () => ref.refresh(spacesSummaryProvider.future),
+              );
+            }
+
+            return RefreshIndicator.adaptive(
+              onRefresh: () => ref.refresh(spacesSummaryProvider.future),
+              child: CustomScrollView(
+                slivers: [
+                  if (isNewUser) ...[
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsetsDirectional.only(
+                          start: 16,
+                          end: 16,
+                          top: 16,
+                          bottom: 16,
+                        ),
+                        child: WelcomeCard(),
+                      ),
+                    ),
+                  ] else if (nextSession != null) ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.only(
+                          start: 20,
+                          end: 20,
+                          top: 16,
+                          bottom: 16,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Semantics(
+                              header: true,
+                              child: Text(
+                                'Your Next Session',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const _ViewAllButton(filterMySessions: true),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.symmetric(
+                          horizontal: 16,
+                        ),
+                        child: NextSessionCard(session: nextSession),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                  ],
+                  if (summary.explore.isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.only(
+                          start: 20,
+                          end: 20,
+                          top: 8,
+                          bottom: 16,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Semantics(
+                              header: true,
+                              child: Text(
+                                'Upcoming Sessions',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const _ViewAllButton(),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Builder(
+                      builder: (context) {
+                        final screenWidth = MediaQuery.sizeOf(context).width;
+                        final isTablet = screenWidth >= 600;
+                        final sessionLimit = isTablet ? 10 : 5;
+                        final upcomingSessions =
+                            UpcomingSessionData.fromSummary(
+                              summary,
+                              limit: sessionLimit,
+                            );
+
+                        if (isTablet) {
+                          return SliverPadding(
+                            padding: const EdgeInsetsDirectional.only(
+                              start: 16,
+                              end: 16,
+                              bottom: 16,
+                            ),
+                            sliver: SliverGrid(
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    mainAxisSpacing: 20,
+                                    crossAxisSpacing: 16,
+                                    mainAxisExtent: 140,
+                                  ),
+                              delegate: SliverChildBuilderDelegate((
+                                context,
+                                index,
+                              ) {
+                                final sessionData = upcomingSessions[index];
+                                return UpcomingSessionCard(data: sessionData);
+                              }, childCount: upcomingSessions.length),
+                            ),
+                          );
+                        }
+
+                        return SliverPadding(
+                          padding: const EdgeInsetsDirectional.only(
+                            start: 16,
+                            end: 16,
+                            bottom: 16,
+                          ),
+                          sliver: SliverList.separated(
+                            itemCount: upcomingSessions.length,
+                            itemBuilder: (context, index) {
+                              final sessionData = upcomingSessions[index];
+                              return UpcomingSessionCard(data: sessionData);
+                            },
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 20),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                  // Blog section at bottom (Figma: "Blogs" header + single card + View All)
+                  const _BlogSection(),
+                  const SliverSafeArea(
+                    top: false,
+                    sliver: SliverToBoxAdapter(),
+                  ),
+                ],
+              ),
+            );
+          },
+          loading: () => const HomeLoadingScreen(),
+          error: (error, stackTrace) {
+            return ErrorScreen(
+              error: error,
+              showHomeButton: false,
+              onRetry: () => ref.refresh(spacesSummaryProvider.future),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ViewAllButton extends ConsumerWidget {
+  const _ViewAllButton({this.filterMySessions = false, this.destination});
+
+  /// When true, sets "My Sessions" filter before navigating to Spaces.
+  final bool filterMySessions;
+
+  /// When set, navigates to this tab instead of Spaces (e.g. HomeRoutes.blog).
+  final HomeRoutes? destination;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final route = destination ?? HomeRoutes.spaces;
+
+    return TextButton(
+      onPressed: () {
+        if (route == HomeRoutes.spaces && filterMySessions) {
+          ref.read(mySessionsFilterProvider.notifier).mySessionFilter = true;
+        }
+        toHome(route);
+      },
+      style: TextButton.styleFrom(
+        padding: EdgeInsetsDirectional.zero,
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'View All',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppTheme.gray,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const Icon(Icons.chevron_right, size: 18, color: AppTheme.gray),
+        ],
+      ),
+    );
+  }
+}
+
+/// Renders the Blogs section slivers when blog posts are available.
+class _BlogSection extends ConsumerWidget {
+  const _BlogSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final blogAsync = ref.watch(listBlogPostsProvider);
+    final items = blogAsync.maybeWhen(
+      data: (page) => page.items,
+      orElse: () => <BlogPostListSchema>[],
+    );
+    if (items.isEmpty) return const SliverToBoxAdapter();
+
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsetsDirectional.only(
+              start: 20,
+              end: 20,
+              top: 24,
+              bottom: 16,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text(
+                    'Blogs',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const _ViewAllButton(destination: HomeRoutes.blog),
+              ],
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
+            child: HomeBlogCard(data: items.first),
+          ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
+      ],
+    );
+  }
+}

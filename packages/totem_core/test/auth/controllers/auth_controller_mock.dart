@@ -1,5 +1,5 @@
-import 'package:totem_app/auth/controllers/auth_controller.dart';
-import 'package:totem_app/auth/models/auth_state.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/auth/models/auth_state.dart';
 
 class FakeAuthController extends AuthController {
   FakeAuthController(this.fakeState);

@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/shared/totem_icons.dart';
-import 'package:totem_app/shared/widgets/loading_indicator.dart';
-import 'package:totem_app/shared/widgets/viewport_resolver.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/loading_indicator.dart';
+import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 enum ConfirmationDialogType { destructive, standard }
 

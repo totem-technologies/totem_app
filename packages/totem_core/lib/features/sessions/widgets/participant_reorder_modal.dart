@@ -3,15 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart' show Participant;
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/features/profile/repositories/user_repository.dart';
-import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_app/shared/totem_icons.dart';
-import 'package:totem_app/shared/widgets/loading_indicator.dart';
-import 'package:totem_app/shared/widgets/responsive_modal.dart';
-import 'package:totem_app/shared/widgets/sheet_drag_handle.dart';
-import 'package:totem_app/shared/widgets/user_avatar.dart';
-import 'package:totem_app/shared/widgets/viewport_resolver.dart';
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/loading_indicator.dart';
+import 'package:totem_core/shared/widgets/responsive_modal.dart';
+import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
+import 'package:totem_core/shared/widgets/user_avatar.dart';
+import 'package:totem_core/shared/widgets/viewport_resolver.dart';
+
+import '../../../../../totem_app/lib/features/profile/repositories/user_repository.dart';
 
 Future<void> showParticipantReorderModals(
   BuildContext context,

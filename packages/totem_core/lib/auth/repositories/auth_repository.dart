@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/core/services/api_service.dart';
-import 'package:totem_app/core/services/repository_utils.dart';
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/services/api_service.dart';
+import 'package:totem_core/core/services/repository_utils.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final apiService = ref.read(mobileApiServiceProvider);

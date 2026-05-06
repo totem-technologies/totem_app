@@ -1,9 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_app/core/config/app_config.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_core/core/config/app_config.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import '../../../totem_app/lib/navigation/route_names.dart';
 
 class RoutingUtils {
   const RoutingUtils._();

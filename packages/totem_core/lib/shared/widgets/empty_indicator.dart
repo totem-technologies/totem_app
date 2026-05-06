@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 class EmptyIndicator extends StatelessWidget {
   const EmptyIndicator({

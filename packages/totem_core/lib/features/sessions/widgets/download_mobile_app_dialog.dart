@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:totem_app/shared/assets.dart';
-import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_core/shared/assets.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 import 'package:url_launcher/link.dart';
 
 Future<void> showDownloadMobileAppDialog(BuildContext context) {

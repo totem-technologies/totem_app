@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:permission_handler/permission_handler.dart';
 // ignore: depend_on_referenced_packages
 import 'package:riverpod/riverpod.dart';
-import 'package:totem_app/features/sessions/controllers/features/permissions_controller.dart';
+import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
 
 import '../../../../setup.dart';
 

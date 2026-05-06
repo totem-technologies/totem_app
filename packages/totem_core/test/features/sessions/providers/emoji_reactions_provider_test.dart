@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
+import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 
 void main() {
   group('EmojiReactions Provider', () {

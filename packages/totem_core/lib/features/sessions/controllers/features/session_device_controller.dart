@@ -6,10 +6,10 @@ import 'package:audio_session/audio_session.dart' as audio;
 import 'package:collection/collection.dart';
 import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_app/shared/logger.dart';
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/shared/logger.dart';
 
 part 'session_device_controller.g.dart';
 

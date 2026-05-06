@@ -2,14 +2,14 @@ import 'package:degenerate_dio/degenerate_dio.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_dio/sentry_dio.dart';
-import 'package:totem_app/auth/repositories/auth_repository.dart';
-import 'package:totem_app/core/api/lib/src/client/totem_mobile_api_api.dart';
-import 'package:totem_app/core/config/app_config.dart';
-import 'package:totem_app/core/config/consts.dart';
-import 'package:totem_app/core/errors/app_exceptions.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/core/services/secure_storage.dart';
-import 'package:totem_app/shared/logger.dart';
+import 'package:totem_core/auth/repositories/auth_repository.dart';
+import 'package:totem_core/core/api/lib/src/client/totem_mobile_api_api.dart';
+import 'package:totem_core/core/config/app_config.dart';
+import 'package:totem_core/core/config/consts.dart';
+import 'package:totem_core/core/errors/app_exceptions.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/core/services/secure_storage.dart';
+import 'package:totem_core/shared/logger.dart';
 
 /// Provider for secure storage
 final secureStorageProvider = Provider<SecureStorage>((ref) {

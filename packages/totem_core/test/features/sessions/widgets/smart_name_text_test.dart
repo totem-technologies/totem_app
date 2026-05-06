@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:totem_app/features/sessions/widgets/smart_name_text.dart';
+import 'package:totem_core/features/sessions/widgets/smart_name_text.dart';
 
 void main() {
   group('SmartNameText', () {

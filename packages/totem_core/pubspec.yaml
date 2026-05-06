@@ -1,4 +1,4 @@
-name: totem_app
+name: totem_core
 description: "Guided introspection groups."
 publish_to: "none"
 version: 0.0.57+57
@@ -9,6 +9,9 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
+
+  totem_app:
+    path: ../totem_app
 
   # State Management
   flutter_riverpod: ^3.2.1
@@ -103,9 +106,6 @@ dev_dependencies:
   # App Icon and Splash Screens
   flutter_launcher_icons: ^0.14.3
   flutter_native_splash: ^2.4.7
-
-dependency_overrides:
-  flutter_webrtc: 1.4.1
 
 flutter:
   default-flavor: production

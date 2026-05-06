@@ -4,3 +4,7 @@ environment:
   sdk: ^3.6.0
 workspace:
   - packages/totem_core
+  - packages/totem_app
+
+dependency_overrides:
+  flutter_webrtc: 1.4.1

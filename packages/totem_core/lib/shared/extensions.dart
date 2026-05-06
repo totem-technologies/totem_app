@@ -1,5 +1,5 @@
 import 'package:characters/characters.dart';
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 
 extension ListExtension<T> on List<T> {
   List<T> reversedIf(bool condition) {

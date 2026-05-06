@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 
 part 'permissions_controller.g.dart';
 

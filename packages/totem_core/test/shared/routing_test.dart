@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:totem_app/shared/routing.dart';
+import 'package:totem_core/shared/routing.dart';
 
 void main() {
   group('RoutingUtils.parseTotemDeepLink', () {

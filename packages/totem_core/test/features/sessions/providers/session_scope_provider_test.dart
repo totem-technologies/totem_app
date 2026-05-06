@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/features/sessions/controllers/core/session_controller.dart'
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart'
     show RoomScreen;
-import 'package:totem_app/features/sessions/controllers/core/session_state.dart';
-import 'package:totem_app/features/sessions/controllers/features/session_messaging_controller.dart';
-import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 
 import '../controllers/core/session_controller_mock.dart';
 import '../livekit_mocks.dart';

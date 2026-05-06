@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:totem_app/features/sessions/widgets/audio_visualizer.dart';
+import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
 
 void main() {
   group('AudioVisualizerWidgetOptions Tests', () {

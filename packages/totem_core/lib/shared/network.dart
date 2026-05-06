@@ -1,4 +1,4 @@
-import 'package:totem_app/core/config/app_config.dart';
+import 'package:totem_core/core/config/app_config.dart';
 
 String getFullUrl(String url) {
   if (url.isEmpty) {

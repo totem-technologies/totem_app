@@ -2,15 +2,15 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
-import 'package:totem_app/features/sessions/widgets/background.dart';
-import 'package:totem_app/features/sessions/widgets/grounding_marquee.dart';
-import 'package:totem_app/features/sessions/widgets/participant_card.dart';
-import 'package:totem_app/features/sessions/widgets/transition_card.dart';
-import 'package:totem_app/shared/widgets/viewport_resolver.dart';
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_core/features/sessions/widgets/background.dart';
+import 'package:totem_core/features/sessions/widgets/grounding_marquee.dart';
+import 'package:totem_core/features/sessions/widgets/participant_card.dart';
+import 'package:totem_core/features/sessions/widgets/transition_card.dart';
+import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class ListeningTurnScreen extends ConsumerWidget {
   const ListeningTurnScreen({required this.event, super.key});

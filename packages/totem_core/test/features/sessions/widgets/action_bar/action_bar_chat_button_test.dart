@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:totem_app/auth/controllers/auth_controller.dart';
-import 'package:totem_app/auth/models/auth_state.dart';
-import 'package:totem_app/core/config/theme.dart';
-import 'package:totem_app/features/sessions/controllers/features/session_messaging_controller.dart';
-import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/screens/chat.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_chat_button.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/auth/models/auth_state.dart';
+import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/screens/chat.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_chat_button.dart';
 
 import '../../../../auth/controllers/auth_controller_mock.dart';
 

@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
-import 'package:totem_app/shared/widgets/loading_indicator.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
+import 'package:totem_core/shared/widgets/loading_indicator.dart';
 
 void main() {
   Future<void> pumpDialog(

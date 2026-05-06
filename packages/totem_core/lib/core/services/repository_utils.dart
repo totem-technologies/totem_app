@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/core/errors/app_exceptions.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/shared/logger.dart';
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/errors/app_exceptions.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/shared/logger.dart';
 
 /// Shared utility functions for repository error handling.
 ///

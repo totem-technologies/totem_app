@@ -2,7 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 import 'package:uuid/uuid.dart';
 
 part 'emoji_reactions_provider.g.dart';

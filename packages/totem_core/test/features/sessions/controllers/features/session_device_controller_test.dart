@@ -3,7 +3,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:mocktail/mocktail.dart';
 // ignore: depend_on_referenced_packages
 import 'package:riverpod/riverpod.dart';
-import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 
 import '../../livekit_mocks.dart';
 import '../core/session_controller_mock.dart';

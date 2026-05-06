@@ -8,27 +8,28 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
-import 'package:totem_app/auth/controllers/auth_controller.dart';
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/core/services/screen_protection_service.dart';
-import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
-import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
-import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
-import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/screens/error_screen.dart';
-import 'package:totem_app/features/sessions/screens/listening_turn_screen.dart';
-import 'package:totem_app/features/sessions/screens/more_options_popup.dart';
-import 'package:totem_app/features/sessions/screens/receive_totem_screen.dart';
-import 'package:totem_app/features/sessions/screens/session_disconnected.dart';
-import 'package:totem_app/features/sessions/screens/speaking_turn_screen.dart';
-import 'package:totem_app/features/sessions/widgets/background.dart';
-import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
-import 'package:totem_app/navigation/app_router.dart';
-import 'package:totem_app/shared/totem_icons.dart';
-import 'package:totem_app/shared/widgets/error_screen.dart';
-import 'package:totem_app/shared/widgets/popups.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/core/services/screen_protection_service.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
+import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/screens/error_screen.dart';
+import 'package:totem_core/features/sessions/screens/listening_turn_screen.dart';
+import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
+import 'package:totem_core/features/sessions/screens/receive_totem_screen.dart';
+import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
+import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
+import 'package:totem_core/features/sessions/widgets/background.dart';
+import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/error_screen.dart';
+import 'package:totem_core/shared/widgets/popups.dart';
+
+import '../../../../../totem_app/lib/navigation/app_router.dart';
 
 class VideoSessionScreen extends ConsumerStatefulWidget {
   const VideoSessionScreen({

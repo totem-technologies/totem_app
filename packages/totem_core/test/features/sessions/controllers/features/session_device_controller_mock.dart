@@ -1,5 +1,5 @@
 import 'package:mocktail/mocktail.dart';
-import 'package:totem_app/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 
 class MockSessionDeviceController extends Mock
     implements SessionDeviceController {}

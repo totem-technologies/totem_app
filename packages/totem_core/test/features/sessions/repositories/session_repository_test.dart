@@ -4,9 +4,9 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 // ignore: depend_on_referenced_packages
 import 'package:riverpod/riverpod.dart';
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/core/services/api_service.dart';
-import 'package:totem_app/features/sessions/repositories/session_repository.dart';
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/services/api_service.dart';
+import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 
 import '../../../setup.dart';
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 class CircleIconButton extends StatelessWidget {
   const CircleIconButton({

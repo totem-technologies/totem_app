@@ -10,8 +10,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:platform/platform.dart';
-import 'package:totem_app/features/sessions/controllers/features/permissions_controller.dart';
-import 'package:totem_app/features/sessions/widgets/permissions_popups.dart';
+import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
+import 'package:totem_core/features/sessions/widgets/permissions_popups.dart';
 
 class FakePermissionsController extends PermissionsController {
   static PermissionsState initialState = const PermissionsState();

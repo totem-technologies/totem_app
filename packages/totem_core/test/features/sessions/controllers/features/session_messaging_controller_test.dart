@@ -5,8 +5,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:riverpod/riverpod.dart';
-import 'package:totem_app/features/sessions/controllers/features/session_messaging_controller.dart';
-import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
+import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 
 import '../core/session_controller_mock.dart';
 

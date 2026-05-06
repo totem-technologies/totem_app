@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:totem_app/core/config/theme.dart';
+import 'package:totem_core/core/config/theme.dart';
 
 class GroundingMarquee extends StatefulWidget {
   const GroundingMarquee({super.key});

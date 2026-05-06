@@ -1,6 +1,6 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:totem_app/features/sessions/providers/session_cues_provider.dart';
+import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 
 class _FakeSessionCuesAudioPlayer implements SessionCuesAudioPlayer {
   final List<PlayerMode> playerModes = <PlayerMode>[];

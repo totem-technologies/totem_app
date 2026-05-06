@@ -8,11 +8,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart' show LiveKitException;
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:totem_app/core/config/app_config.dart';
-import 'package:totem_app/core/errors/app_exceptions.dart';
-import 'package:totem_app/navigation/app_router.dart';
-import 'package:totem_app/shared/logger.dart';
-import 'package:totem_app/shared/widgets/confirmation_dialog.dart';
+import 'package:totem_core/core/config/app_config.dart';
+import 'package:totem_core/core/errors/app_exceptions.dart';
+import 'package:totem_core/shared/logger.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
+
+import '../../../../totem_app/lib/navigation/app_router.dart';
 
 /// Centralized error handling for the Totem App.
 class ErrorHandler {

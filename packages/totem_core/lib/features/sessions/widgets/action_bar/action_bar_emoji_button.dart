@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
-import 'package:totem_app/features/sessions/widgets/emoji_bar.dart';
-import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 class ActionBarEmojiButton extends StatefulWidget {
   const ActionBarEmojiButton({required this.onEmojiSelected, super.key});

@@ -4,15 +4,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, logger;
 import 'package:mocktail/mocktail.dart';
-import 'package:totem_app/auth/controllers/auth_controller.dart';
-import 'package:totem_app/auth/models/auth_state.dart';
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/features/sessions/controllers/core/session_state.dart';
-import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/widgets/participant_card.dart';
-import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
-import 'package:totem_app/shared/totem_icons.dart';
-import 'package:totem_app/shared/widgets/totem_icon.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/auth/models/auth_state.dart';
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/widgets/participant_card.dart';
+import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/totem_icon.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';

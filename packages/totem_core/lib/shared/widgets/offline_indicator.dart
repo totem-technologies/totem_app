@@ -4,11 +4,12 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/core/services/connectivity_service.dart';
-import 'package:totem_app/features/blog/repositories/blog_repository.dart';
-import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
-import 'package:totem_app/features/spaces/repositories/space_repository.dart';
-import 'package:totem_app/shared/logger.dart';
+import 'package:totem_core/core/services/connectivity_service.dart';
+import 'package:totem_core/shared/logger.dart';
+
+import '../../../../totem_app/lib/features/blog/repositories/blog_repository.dart';
+import '../../../../totem_app/lib/features/home/repositories/home_screen_repository.dart';
+import '../../../../totem_app/lib/features/spaces/repositories/space_repository.dart';
 
 enum ConnectivityStatus { offline, online, recentlyReconnected }
 

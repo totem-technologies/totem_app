@@ -1,0 +1,101 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_core/shared/assets.dart';
+import 'package:totem_core/shared/widgets/user_avatar.dart';
+
+class BlogDetailAppBar extends StatelessWidget {
+  const BlogDetailAppBar({required this.post, super.key});
+
+  final BlogPostSchema post;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: () async {
+        await Scrollable.ensureVisible(
+          context,
+          duration: const Duration(milliseconds: 180),
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+        );
+      },
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(25),
+              ),
+              child: CachedNetworkImage(
+                imageUrl: post.headerImageUrl!,
+                fit: BoxFit.cover,
+                color: Colors.black38,
+                colorBlendMode: BlendMode.darken,
+                errorWidget: (context, url, error) {
+                  return Image.asset(
+                    TotemImageAssets.genericBackground,
+                    fit: BoxFit.cover,
+                  );
+                },
+              ),
+            ),
+          ),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsetsDirectional.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                spacing: 8,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          post.title,
+                          style: theme.textTheme.headlineLarge?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        RichText(
+                          text: TextSpan(
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: Colors.white,
+                            ),
+                            children: <TextSpan>[
+                              const TextSpan(text: 'by '),
+                              TextSpan(
+                                text: post.author?.name ?? 'Unknown Author',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  UserAvatar.fromUserSchema(
+                    post.author,
+                    onTap: post.author?.slug != null
+                        ? () => context.push(
+                            RouteNames.keeperProfile(post.author!.slug!),
+                          )
+                        : null,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

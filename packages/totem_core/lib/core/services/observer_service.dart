@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/shared/logger.dart';
+import 'package:totem_core/shared/logger.dart';
 
 final class ObserverService extends ProviderObserver {
   @override

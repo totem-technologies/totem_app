@@ -6,7 +6,7 @@ import 'dart:math' show max, min;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart' as sdk;
-import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 
 enum VisualizerState { thinking, listening, active }
 

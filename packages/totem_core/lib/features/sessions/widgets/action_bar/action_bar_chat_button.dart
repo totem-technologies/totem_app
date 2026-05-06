@@ -1,11 +1,11 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/core/config/theme.dart';
-import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/screens/chat.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
-import 'package:totem_app/shared/totem_icons.dart';
-import 'package:totem_app/shared/widgets/popups.dart';
+import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/screens/chat.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/popups.dart';
 
 class ActionBarChatButton extends ConsumerStatefulWidget {
   const ActionBarChatButton({super.key});

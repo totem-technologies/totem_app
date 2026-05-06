@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/shared/widgets/viewport_resolver.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 /// Displays an emoji bar above the given button context and calls
 /// [onEmojiSelected] with the selected emoji.

@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar/action_bar.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
 
 import '../../controllers/core/session_controller_mock.dart';
 import '../../controllers/features/session_device_controller_mock.dart';

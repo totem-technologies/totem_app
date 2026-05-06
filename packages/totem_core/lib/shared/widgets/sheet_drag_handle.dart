@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:totem_app/shared/widgets/viewport_resolver.dart';
+import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class SheetDragHandle extends StatelessWidget {
   const SheetDragHandle({

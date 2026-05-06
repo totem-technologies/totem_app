@@ -1,5 +1,5 @@
 import 'package:screen_protector/screen_protector.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 
 class ScreenProtectionService {
   const ScreenProtectionService();

@@ -2,7 +2,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:totem_app/features/sessions/widgets/action_slider_button.dart';
+import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 
 enum TotemCardTransitionType { join, pass, receive, start, waitingReceive }
 

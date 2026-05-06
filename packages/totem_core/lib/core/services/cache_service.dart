@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/core/config/consts.dart';
-import 'package:totem_app/core/services/secure_storage.dart';
-import 'package:totem_app/shared/logger.dart';
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/config/consts.dart';
+import 'package:totem_core/core/services/secure_storage.dart';
+import 'package:totem_core/shared/logger.dart';
 
 final cacheServiceProvider = Provider<CacheService>((ref) {
   final secureStorage = ref.read(secureStorageProvider);

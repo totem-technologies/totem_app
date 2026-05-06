@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:totem_app/shared/assets.dart';
+import 'package:totem_core/shared/assets.dart';
 
 class TotemIconLogo extends StatelessWidget {
   const TotemIconLogo({super.key, this.size, this.color});

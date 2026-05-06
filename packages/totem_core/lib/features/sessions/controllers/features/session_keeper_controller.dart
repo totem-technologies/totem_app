@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/core/errors/app_exceptions.dart';
-import 'package:totem_app/core/errors/error_handler.dart';
-import 'package:totem_app/features/sessions/controllers/core/session_controller.dart'
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/errors/app_exceptions.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart'
     hide session;
-import 'package:totem_app/features/sessions/repositories/session_repository.dart';
-import 'package:totem_app/shared/logger.dart';
+import 'package:totem_core/features/sessions/repositories/session_repository.dart';
+import 'package:totem_core/shared/logger.dart';
 
 part 'session_keeper_controller.g.dart';
 

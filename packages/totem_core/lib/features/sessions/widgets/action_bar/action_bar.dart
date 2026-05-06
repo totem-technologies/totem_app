@@ -4,16 +4,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
-import 'package:totem_app/core/config/theme.dart';
-import 'package:totem_app/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_app/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_app/features/sessions/screens/more_options_popup.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_chat_button.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
-import 'package:totem_app/features/sessions/widgets/action_bar/action_bar_speaker_button.dart';
-import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_chat_button.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_speaker_button.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 typedef ActionBarButtonToggleCallback =
     Future<void> Function(bool shouldEnable);

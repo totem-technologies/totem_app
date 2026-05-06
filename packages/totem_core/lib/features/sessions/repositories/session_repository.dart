@@ -1,8 +1,8 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/core/errors/app_exceptions.dart';
-import 'package:totem_app/core/services/api_service.dart';
-import 'package:totem_app/core/services/repository_utils.dart';
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/errors/app_exceptions.dart';
+import 'package:totem_core/core/services/api_service.dart';
+import 'package:totem_core/core/services/repository_utils.dart';
 
 part 'session_repository.g.dart';
 

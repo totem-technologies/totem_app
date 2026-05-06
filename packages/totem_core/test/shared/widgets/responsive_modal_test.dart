@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:totem_app/shared/widgets/responsive_modal.dart';
+import 'package:totem_core/shared/widgets/responsive_modal.dart';
 
 void main() {
   Future<void> pumpHost(

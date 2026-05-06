@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:totem_app/shared/assets.dart';
+import 'package:totem_core/shared/assets.dart';
 
 class CardScreen extends StatefulWidget {
   /// Creates a card screen.

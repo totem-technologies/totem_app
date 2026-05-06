@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
-import 'package:totem_app/core/config/theme.dart';
-import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 const _defaultPopupAnimationDuration = Duration(milliseconds: 600);
 const _defaultPopupDuration = Duration(milliseconds: 2800);

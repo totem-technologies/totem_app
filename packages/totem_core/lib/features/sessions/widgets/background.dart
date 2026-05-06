@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:totem_app/core/api/lib/totem_mobile_api.dart';
-import 'package:totem_app/core/config/theme.dart';
-import 'package:totem_app/shared/widgets/viewport_resolver.dart';
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class RoomBackground extends StatelessWidget {
   const RoomBackground({

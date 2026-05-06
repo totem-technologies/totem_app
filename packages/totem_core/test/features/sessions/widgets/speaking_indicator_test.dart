@@ -5,10 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, logger;
 import 'package:mocktail/mocktail.dart';
-import 'package:totem_app/features/sessions/providers/emoji_reactions_provider.dart';
-import 'package:totem_app/features/sessions/widgets/audio_visualizer.dart';
-import 'package:totem_app/features/sessions/widgets/speaking_indicator.dart';
-import 'package:totem_app/shared/totem_icons.dart';
+import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
+import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
+import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 import '../livekit_mocks.dart';
 
