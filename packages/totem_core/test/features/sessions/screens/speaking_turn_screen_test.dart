@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
+import 'package:totem_app/features/profile/repositories/user_repository.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
@@ -17,7 +18,6 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart'
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 
-import '../../../../../totem_app/lib/features/profile/repositories/user_repository.dart';
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../setup.dart';
 import '../controllers/core/session_controller_mock.dart';

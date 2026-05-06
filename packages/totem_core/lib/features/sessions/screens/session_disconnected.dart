@@ -8,6 +8,12 @@ import 'package:go_router/go_router.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
+import 'package:totem_app/features/profile/screens/user_feedback.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
+import 'package:totem_app/features/spaces/widgets/space_card.dart';
+import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -19,13 +25,6 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confetti.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-import '../../../../../totem_app/lib/features/home/repositories/home_screen_repository.dart';
-import '../../../../../totem_app/lib/features/profile/screens/user_feedback.dart';
-import '../../../../../totem_app/lib/features/spaces/repositories/space_repository.dart';
-import '../../../../../totem_app/lib/features/spaces/widgets/space_card.dart';
-import '../../../../../totem_app/lib/navigation/app_router.dart';
-import '../../../../../totem_app/lib/navigation/route_names.dart';
 
 /// Resolves the [SessionDisconnectedReason] from the given
 /// [disconnectReason] and [sessionState].

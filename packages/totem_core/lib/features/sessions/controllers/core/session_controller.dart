@@ -7,6 +7,8 @@ import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions, logger;
 import 'package:meta/meta.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/config/app_config.dart';
@@ -23,9 +25,6 @@ import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart'
     show sessionScopeProvider;
 import 'package:totem_core/shared/logger.dart';
-
-import '../../../../../../totem_app/lib/features/home/repositories/home_screen_repository.dart';
-import '../../../../../../totem_app/lib/features/spaces/repositories/space_repository.dart';
 
 export 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 export 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart'

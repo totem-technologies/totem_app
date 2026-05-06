@@ -5,6 +5,7 @@ import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions;
 import 'package:mocktail/mocktail.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
@@ -20,7 +21,6 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camer
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 
-import '../../../../../totem_app/lib/features/spaces/repositories/space_repository.dart';
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../mocks/flutter_foreground_task_mock.dart';
 import '../../../mocks/permission_handler_mock.dart';

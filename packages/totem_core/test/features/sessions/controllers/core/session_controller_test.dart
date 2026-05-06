@@ -4,10 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions;
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-
-import '../../../../../../totem_app/lib/features/spaces/repositories/space_repository.dart';
 
 SessionDetailSchema _createSessionEvent(String eventSlug) {
   return SessionDetailSchema(

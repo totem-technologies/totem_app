@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:totem_app/features/profile/screens/user_feedback.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
-
-import '../../../../lib/features/profile/screens/user_feedback.dart';
 
 void main() {
   Future<void> pumpPopup(
@@ -106,9 +105,8 @@ void main() {
       await tester.enterText(find.byType(TextFormField), 'Some text');
 
       // Trigger pop by using the navigator
-      final _ = tester.state<NavigatorState>(
-        find.byType(Navigator).last,
-      )..maybePop();
+      final _ = tester.state<NavigatorState>(find.byType(Navigator).last)
+        ..maybePop();
       await tester.pumpAndSettle();
 
       expect(find.byType(ConfirmationDialog), findsOneWidget);
@@ -127,9 +125,8 @@ void main() {
     (tester) async {
       await pumpPopup(tester);
 
-      final _ = tester.state<NavigatorState>(
-        find.byType(Navigator).last,
-      )..maybePop();
+      final _ = tester.state<NavigatorState>(find.byType(Navigator).last)
+        ..maybePop();
       await tester.pumpAndSettle();
 
       expect(find.byType(ConfirmationDialog), findsNothing);

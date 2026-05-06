@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/popups.dart';
-
-import '../../../../totem_app/lib/navigation/route_names.dart';
 
 class ErrorScreen extends StatefulWidget {
   const ErrorScreen({

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:totem_app/features/spaces/repositories/space_repository.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -22,8 +23,6 @@ import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-
-import '../../../../../totem_app/lib/features/spaces/repositories/space_repository.dart';
 
 /// Shows a dialog when the user tries to join a session they are already
 /// in on another device, asking if they want to leave the other session

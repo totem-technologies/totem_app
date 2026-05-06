@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:totem_app/features/spaces/widgets/sessions_calendar.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/config/theme.dart';
-
-import '../../../../lib/features/spaces/widgets/sessions_calendar.dart';
 
 void main() {
   // Helper function to create a NextSessionSchema with default values

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:totem_app/features/blog/repositories/blog_repository.dart';
+import 'package:totem_app/features/blog/screens/blog_list_screen.dart';
+import 'package:totem_app/features/blog/widgets/featured_blog_post.dart';
+import 'package:totem_app/features/home/widgets/home_blog_card.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 
 import '../../../../totem_core/test/auth/controllers/auth_controller_mock.dart';
-import '../../../lib/features/blog/repositories/blog_repository.dart';
-import '../../../lib/features/blog/screens/blog_list_screen.dart';
-import '../../../lib/features/blog/widgets/featured_blog_post.dart';
-import '../../../lib/features/home/widgets/home_blog_card.dart';
 
 void main() {
   group('BlogListScreen', () {

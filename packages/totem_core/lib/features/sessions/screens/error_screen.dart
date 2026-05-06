@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/circle_icon_button.dart';
-
-import '../../../../../totem_app/lib/navigation/app_router.dart';
 
 class SessionErrorScreen extends StatelessWidget {
   const SessionErrorScreen({this.onRetry, this.error, super.key});
@@ -51,6 +50,7 @@ class SessionErrorScreen extends StatelessWidget {
           tooltip: MaterialLocalizations.of(
             context,
           ).backButtonTooltip,
+          // TODO(totem): On web, this should go to totem.org
           onPressed: () => popOrHome(context),
         ),
       ),
