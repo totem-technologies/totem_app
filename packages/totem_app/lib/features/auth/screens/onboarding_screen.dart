@@ -62,7 +62,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// Called from didChangeDependencies to ensure MediaQuery is available
   void _preloadImages() {
     for (final onboarding in onboardingData) {
-      precacheImage(AssetImage(onboarding.image), context);
+      precacheImage(
+        AssetImage(onboarding.image, package: 'totem_core'),
+        context,
+      );
     }
   }
 
@@ -138,6 +141,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 return Image.asset(
                   onboardingData[index].image,
                   fit: BoxFit.cover,
+                  package: 'totem_core',
                 );
               },
             ),

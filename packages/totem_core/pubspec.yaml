@@ -111,12 +111,6 @@ flutter:
   default-flavor: production
   uses-material-design: true
 
-  assets:
-    - .env
-    - assets/audio/
-    - assets/images/
-    - assets/logo/
-
 flutter_launcher_icons:
   android: true
   ios: false

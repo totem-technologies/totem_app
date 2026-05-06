@@ -50,7 +50,6 @@ class SessionErrorScreen extends StatelessWidget {
           tooltip: MaterialLocalizations.of(
             context,
           ).backButtonTooltip,
-          // TODO(totem): On web, this should go to totem.org
           onPressed: () => popOrHome(context),
         ),
       ),

@@ -153,6 +153,7 @@ class BottomNavScaffold extends ConsumerWidget {
   }
 }
 
+// TODO(totem): On web, this should go to totem.org
 void popOrHome([BuildContext? context]) {
   if (context != null) {
     final router = GoRouter.of(context);

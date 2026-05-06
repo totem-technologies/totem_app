@@ -2,10 +2,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
-import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/network.dart';
@@ -161,9 +161,14 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
               errorWidget: (context, url, error) => Image.asset(
                 TotemImageAssets.genericBackground,
                 fit: BoxFit.cover,
+                package: 'totem_core',
               ),
             )
-          : Image.asset(TotemImageAssets.genericBackground, fit: BoxFit.cover),
+          : Image.asset(
+              TotemImageAssets.genericBackground,
+              fit: BoxFit.cover,
+              package: 'totem_core',
+            ),
     );
   }
 

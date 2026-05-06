@@ -13,6 +13,8 @@ dependencies:
   totem_core:
     path: ../totem_core
 
+  go_router: ^17.2.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -20,3 +22,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - .env

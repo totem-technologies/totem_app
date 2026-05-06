@@ -457,8 +457,11 @@ class _SpaceHeaderImage extends StatelessWidget {
         height: double.infinity,
         placeholder: (context, url) =>
             ColoredBox(color: Colors.black.withValues(alpha: 0.5)),
-        errorWidget: (context, url, error) =>
-            Image.asset(TotemImageAssets.genericBackground, fit: BoxFit.cover),
+        errorWidget: (context, url, error) => Image.asset(
+          TotemImageAssets.genericBackground,
+          fit: BoxFit.cover,
+          package: 'totem_core',
+        ),
       );
     }
     return Image.asset(
@@ -466,6 +469,7 @@ class _SpaceHeaderImage extends StatelessWidget {
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,
+      package: 'totem_core',
     );
   }
 }
@@ -1050,11 +1054,13 @@ class _UpcomingSessionCard extends StatelessWidget {
                         errorWidget: (context, url, error) => Image.asset(
                           TotemImageAssets.genericBackground,
                           fit: BoxFit.cover,
+                          package: 'totem_core',
                         ),
                       )
                     : Image.asset(
                         TotemImageAssets.genericBackground,
                         fit: BoxFit.cover,
+                        package: 'totem_core',
                       ),
               ),
 

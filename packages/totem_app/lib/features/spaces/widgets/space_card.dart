@@ -3,8 +3,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/extensions.dart';
@@ -156,12 +156,14 @@ class SpaceCard extends StatelessWidget {
                                 return Image.asset(
                                   TotemImageAssets.genericBackground,
                                   fit: BoxFit.cover,
+                                  package: 'totem_core',
                                 );
                               },
                             )
                           : Image.asset(
                               TotemImageAssets.genericBackground,
                               fit: BoxFit.cover,
+                              package: 'totem_core',
                             ),
                     ),
                   ),
@@ -359,11 +361,13 @@ class SmallSpaceCard extends StatelessWidget {
                         errorWidget: (context, url, error) => Image.asset(
                           TotemImageAssets.genericBackground,
                           fit: BoxFit.cover,
+                          package: 'totem_core',
                         ),
                       )
                     : Image.asset(
                         TotemImageAssets.genericBackground,
                         fit: BoxFit.cover,
+                        package: 'totem_core',
                       ),
               ),
             ),

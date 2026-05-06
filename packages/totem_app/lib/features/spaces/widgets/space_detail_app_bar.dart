@@ -2,8 +2,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/network.dart';
 import 'package:totem_core/shared/widgets/space_gradient_mask.dart';
@@ -47,6 +47,7 @@ class SpaceDetailAppBar extends StatelessWidget {
                           return Image.asset(
                             TotemImageAssets.genericBackground,
                             fit: BoxFit.cover,
+                            package: 'totem_core',
                           );
                         },
                         placeholder: (context, url) => ColoredBox(
@@ -56,6 +57,7 @@ class SpaceDetailAppBar extends StatelessWidget {
                     : Image.asset(
                         TotemImageAssets.genericBackground,
                         fit: BoxFit.cover,
+                        package: 'totem_core',
                       ),
               ),
             ),

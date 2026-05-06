@@ -53,7 +53,11 @@ class WelcomeCard extends StatelessWidget {
   }
 
   Widget _buildBackgroundImage() {
-    return Image.asset(TotemImageAssets.welcomeCardImage, fit: BoxFit.cover);
+    return Image.asset(
+      TotemImageAssets.welcomeCardImage,
+      fit: BoxFit.cover,
+      package: 'totem_core',
+    );
   }
 
   Widget _buildGradientOverlay() {

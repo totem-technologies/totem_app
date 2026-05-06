@@ -45,7 +45,7 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
           TotemImageAssets.onboarding2,
           TotemImageAssets.onboarding3,
         ]) {
-          precacheImage(AssetImage(path), context);
+          precacheImage(AssetImage(path, package: 'totem_core'), context);
         }
       }
     }

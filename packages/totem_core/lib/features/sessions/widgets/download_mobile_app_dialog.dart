@@ -32,6 +32,7 @@ class DownloadMobileAppDialog extends StatelessWidget {
           child: Image.asset(
             TotemImageAssets.downloadAppStore,
             height: 52,
+            package: 'totem_core',
           ),
         );
       },
@@ -46,6 +47,7 @@ class DownloadMobileAppDialog extends StatelessWidget {
           child: Image.asset(
             TotemImageAssets.downloadPlayStore,
             height: 52,
+            package: 'totem_core',
           ),
         );
       },

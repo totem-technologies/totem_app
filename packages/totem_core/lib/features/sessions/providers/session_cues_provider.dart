@@ -44,7 +44,10 @@ class AudioplayersSessionCuesAudioPlayer implements SessionCuesAudioPlayer {
 
   @override
   Future<void> playAsset(String assetSourcePath) {
-    return _player.play(AssetSource(assetSourcePath), volume: 0.5);
+    return _player.play(
+      AssetSource('packages/totem_core/assets/$assetSourcePath'),
+      volume: 0.5,
+    );
   }
 
   @override

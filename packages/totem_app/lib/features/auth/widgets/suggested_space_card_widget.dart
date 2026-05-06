@@ -39,7 +39,10 @@ class SuggestedSpaceCard extends StatelessWidget {
         image: DecorationImage(
           image: backgroundImage != null
               ? CachedNetworkImageProvider(backgroundImage)
-              : const AssetImage(TotemImageAssets.genericBackground),
+              : const AssetImage(
+                  TotemImageAssets.genericBackground,
+                  package: 'totem_core',
+                ),
           fit: BoxFit.cover,
         ),
         color: backgroundImage == null
@@ -96,10 +99,7 @@ class SuggestedSpaceCard extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: AlignmentDirectional.topCenter,
                   end: AlignmentDirectional.bottomCenter,
-                  colors: [
-                    AppTheme.slate.withValues(alpha: 0),
-                    AppTheme.slate,
-                  ],
+                  colors: [AppTheme.slate.withValues(alpha: 0), AppTheme.slate],
                   stops: const [0, 1],
                 ),
               ),
