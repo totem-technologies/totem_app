@@ -1,0 +1,22 @@
+name: totem_web
+description: "Guided introspection groups."
+publish_to: "none"
+version: 0.0.57+57
+resolution: workspace
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  totem_core:
+    path: ../totem_core
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
