@@ -22,18 +22,12 @@ dependencies:
   url_launcher: ^6.3.1
   share_plus: ^12.0.1
 
-  # Environment and Storage
-  flutter_secure_storage: 10.0.0
-  shared_preferences: ^2.5.3
-
   # Networking & Serialization
   cached_network_image: ^3.4.1
   connectivity_plus: ^7.0.0
   uuid: ^4.5.1
 
   # Messaging
-  firebase_core: ^4.0.0
-  firebase_messaging: ^16.0.0
   flutter_local_notifications: ^21.0.0
   posthog_flutter: ^5.24.1
   intl: ^0.20.2
@@ -43,18 +37,13 @@ dependencies:
   # UI & Utilities
   auto_size_text: ^3.0.0
   flutter_html: ^3.0.0
-  markdown: ^7.3.0
   # flutter_native_splash: ^2.4.6
   pinput: ^6.0.1
-  flutter_boring_avatars: ^2.1.0
   flutter_svg: ^2.2.4
   image_picker: ^1.2.2
   timeago: ^3.7.1
-  sliver_tools: ^0.2.12
-  flutter_confetti: ^0.5.1
   shimmer: ^3.0.0
   collection: ^1.19.1
-  characters: any
   meta: any
 
 dev_dependencies:

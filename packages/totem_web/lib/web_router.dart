@@ -7,6 +7,7 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/features/keeper/repositories/keeper_repository.dart';
 import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 class WebTotemRouter extends TotemRouter {
@@ -90,8 +91,7 @@ class WebTotemRouter extends TotemRouter {
           },
         ),
       ],
-      errorBuilder: (context, state) =>
-          const Scaffold(body: Center(child: Text('Page not found'))),
+      errorBuilder: (context, state) => const ErrorScreen(),
     );
   }
 
