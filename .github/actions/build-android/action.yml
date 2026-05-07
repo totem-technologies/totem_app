@@ -70,8 +70,8 @@ runs:
         # Decode google-services.json in totem_app
         echo "$GOOGLE_SERVICES_JSON_B64" | base64 --decode > android/app/google-services.json
         # Decode firebase_options.dart in totem_core
-        mkdir -p ../../totem_core/lib
-        echo "$FIREBASE_OPTIONS_B64" | base64 --decode > ../../totem_core/lib/firebase_options.dart
+        mkdir -p ${{ github.workspace }}/packages/totem_core/lib
+        echo "$FIREBASE_OPTIONS_B64" | base64 --decode > ${{ github.workspace }}/packages/totem_core/lib/firebase_options.dart
       env:
         FIREBASE_OPTIONS_B64: ${{ inputs.firebase-options-b64 }}
         GOOGLE_SERVICES_JSON_B64: ${{ inputs.google-services-json-b64 }}

@@ -64,9 +64,6 @@ dev_dependencies:
   riverpod_generator: ^4.0.0
   build_runner: ^2.15.0
 
-  # curl -L https://totem.org/api/mobile/openapi.json | dart run degenerate -i - -o lib/core/api --verbose; dart format .
-  degenerate: ^0.4.1
-
   # App Icon and Splash Screens
   flutter_launcher_icons: ^0.14.3
   flutter_native_splash: ^2.4.7

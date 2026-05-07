@@ -68,8 +68,8 @@ runs:
       run: |
         echo "$GOOGLE_SERVICE_INFO_PLIST_B64" | base64 --decode > ios/Runner/GoogleService-Info.plist
         # Decode firebase_options.dart in totem_core
-        mkdir -p ../../totem_core/lib
-        echo "$FIREBASE_OPTIONS_B64" | base64 --decode > ../../totem_core/lib/firebase_options.dart
+        mkdir -p ${{ github.workspace }}/packages/totem_core/lib
+        echo "$FIREBASE_OPTIONS_B64" | base64 --decode > ${{ github.workspace }}/packages/totem_core/lib/firebase_options.dart
       env:
         FIREBASE_OPTIONS_B64: ${{ inputs.firebase-options-b64 }}
         GOOGLE_SERVICE_INFO_PLIST_B64: ${{ inputs.google-service-info-plist-b64 }}
@@ -128,3 +128,4 @@ runs:
     - name: Build
       run: ${{ inputs.build-cmd }}
       shell: bash
+      working-directory: ${{ inputs.working-directory }}

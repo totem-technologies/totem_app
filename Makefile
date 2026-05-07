@@ -34,7 +34,7 @@ build-runner:
 	@echo "Running build_runner for code generation..."
 	cd $(CORE_DIR) && dart run build_runner build --delete-conflicting-outputs
 	cd $(APP_DIR) && dart run build_runner build --delete-conflicting-outputs
-	cd $(WEB_DIR) && dart run build_runner build --delete-conflicting-outputs
+# 	cd $(WEB_DIR) && dart run build_runner build --delete-conflicting-outputs
 
 build-runner-watch:
 	@echo "Running build_runner in watch mode..."
