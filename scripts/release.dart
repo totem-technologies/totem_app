@@ -12,6 +12,12 @@ void main(List<String> args) {
   }
 }
 
+const List<String> _packagePubspecs = [
+  'packages/totem_app/pubspec.yaml',
+  'packages/totem_core/pubspec.yaml',
+  'packages/totem_web/pubspec.yaml',
+];
+
 void _runRelease() {
   _ensureInGitRepo();
   _ensureOnMainBranch();
@@ -19,20 +25,36 @@ void _runRelease() {
   _ensureWorkingTreeClean();
   _ensureLocalMainUpToDate();
 
-  final pubspec = File('pubspec.yaml');
-  if (!pubspec.existsSync()) {
-    throw Exception('pubspec.yaml not found in current directory.');
+  final contents = <String, String>{};
+  final versions = <String, _Version>{};
+  for (final path in _packagePubspecs) {
+    final file = File(path);
+    if (!file.existsSync()) {
+      throw Exception('$path not found.');
+    }
+    final content = file.readAsStringSync();
+    final parsed = _Version.fromPubspec(content);
+    if (parsed == null) {
+      throw Exception(
+        "Could not find a valid 'version: x.y.z(+build)' line in $path.",
+      );
+    }
+    contents[path] = content;
+    versions[path] = parsed;
   }
 
-  final content = pubspec.readAsStringSync();
-  final parsed = _Version.fromPubspec(content);
-  if (parsed == null) {
+  final distinct = versions.values.toSet();
+  if (distinct.length > 1) {
+    final summary = versions.entries
+        .map((e) => '  ${e.key}: ${e.value.asString()}')
+        .join('\n');
     throw Exception(
-      "Could not find a valid 'version: x.y.z(+build)' line in pubspec.yaml.",
+      'Workspace package versions are out of sync:\n$summary\n'
+      'Align them before releasing.',
     );
   }
 
-  final current = parsed;
+  final current = distinct.first;
   final defaultSuggestion = _Version(
     major: current.major,
     minor: current.minor,
@@ -67,21 +89,23 @@ void _runRelease() {
     );
   }
 
-  // Update pubspec.yaml
-  final updated = _Version.replaceInPubspec(content, unique);
-  if (updated == content) {
-    throw Exception(
-      'Failed to update pubspec.yaml with new version (${unique.asString()}).',
+  // Update each workspace package pubspec.yaml
+  for (final path in _packagePubspecs) {
+    final original = contents[path]!;
+    final updated = _Version.replaceInPubspec(original, unique);
+    if (updated == original) {
+      throw Exception(
+        'Failed to update $path with new version (${unique.asString()}).',
+      );
+    }
+    stdout.writeln(
+      '[release] Updating $path -> version: ${unique.asString()}',
     );
+    File(path).writeAsStringSync(updated);
   }
 
-  stdout.writeln(
-    '[release] Updating pubspec.yaml -> version: ${unique.asString()}',
-  );
-  pubspec.writeAsStringSync(updated);
-
   // Commit and tag
-  _runGit(['add', 'pubspec.yaml']);
+  _runGit(['add', ..._packagePubspecs]);
   _runGit(['commit', '-m', 'chore(release): v${unique.asString()}']);
 
   final tag = _tagFor(unique);
