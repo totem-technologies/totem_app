@@ -80,29 +80,29 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/logo/ig_logo.jpg"
+  image_path: "../totem_core/assets/logo/ig_logo.jpg"
   min_sdk_android: 21 # android min sdk min:16, default 21
 
   adaptive_icon_background: "#FFF4DC92" # yellow
-  adaptive_icon_foreground: "assets/logo/Icon_black_square.png"
-  adaptive_icon_monochrome: "assets/logo/Icon_colored_square.png"
+  adaptive_icon_foreground: "../totem_core/assets/logo/Icon_black_square.png"
+  adaptive_icon_monochrome: "../totem_core/assets/logo/Icon_colored_square.png"
 
-  image_path_ios: "assets/logo/Icon_colored_square.png"
+  image_path_ios: "../totem_core/assets/logo/Icon_colored_square.png"
   # image_path_ios_dark_transparent: "assets/logo/Icon_white_square.png"
   remove_alpha_ios: true
   # background_color_ios: "#F4DC92" # yellow
 
   web:
     generate: false
-    image_path: "assets/logo/logo-square-black-512.png"
+    image_path: "../totem_core/assets/logo/logo-square-black-512.png"
     background_color: "#FFF4DC92" # yellow
     theme_color: "#FF987AA5" # purple
 
 flutter_native_splash:
   # dart run flutter_native_splash:create
-  background_image: "assets/images/splash_bg.png"
+  background_image: "../totem_core/assets/images/splash_bg.png"
 
-  image: "assets/logo/Icon_black_square.png"
+  image: "../totem_core/assets/logo/Icon_black_square.png"
 
   # Please visit https://developer.android.com/guide/topics/ui/splash-screen
   # Following are specific parameters for Android 12+.
@@ -116,7 +116,7 @@ flutter_native_splash:
     # 768 pixels in diameter.  To fit a 1152x1152 image within a circle with a 768 diameter, simply
     # ensure that the most important design elements of your image are placed within a circular area
     # with a 768 diameter at the center of the 1152x1152 canvas.
-    image: "assets/logo/Icon_black_square.png"
+    image: "../totem_core/assets/logo/Icon_black_square.png"
 
     # Splash screen background color.
     color: "#F4DC92" # yellow

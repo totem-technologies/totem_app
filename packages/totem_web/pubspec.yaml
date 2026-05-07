@@ -12,6 +12,8 @@ dependencies:
     sdk: flutter
   totem_core:
     path: ../totem_core
+
+  # TODO(web): Remove dependency on totem_app
   totem_app:
     path: ../totem_app
 
