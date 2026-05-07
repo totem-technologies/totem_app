@@ -35,7 +35,7 @@ jobs:
       #     dart pub global activate flutterfire_cli
 
       - name: Decode firebase_options.dart
-        working-directory: packages/totem_core
+        working-directory: ./packages/totem_core
         run: |
           mkdir -p lib
           echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
@@ -48,7 +48,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./build/web
+          publish_dir: .packages/totem_web/build/web
           force_orphan: true
           user_name: "github-ci[bot]"
           user_email: "github-actions[bot]@users.noreply.github.com"

@@ -125,4 +125,3 @@ runs:
     - name: Build
       run: ${{ inputs.build-cmd }}
       shell: bash
-      working-directory: ${{ inputs.working-directory }}

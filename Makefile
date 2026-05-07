@@ -54,7 +54,7 @@ lint:
 
 format:
 	@echo "Formatting code..."
-	dart foramt .
+	dart format .
 
 generate_api_models:
 	cd $(CORE_DIR) && curl -L https://totem.org/api/mobile/openapi.json | dart run degenerate -i - -o lib/core/api --verbose; dart format .

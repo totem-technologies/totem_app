@@ -43,6 +43,7 @@ runs:
     - name: Decode Android Config
       if: ${{ inputs.google_services_json != '' }}
       shell: bash
+      working-directory: ./packages/totem_app
       run: |
         echo "${{ inputs.google_services_json }}" | base64 -d > android/app/google-services.json
 

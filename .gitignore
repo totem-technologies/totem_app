@@ -60,8 +60,8 @@ android/app/release
 .fvmrc
 
 # Xcode
-ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
-ios/Runner.xcworkspace/xcshareddata/swiftpm/
+*/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+*/ios/Runner.xcworkspace/xcshareddata/swiftpm/
 
 *.secrets
 

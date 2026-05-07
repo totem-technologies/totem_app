@@ -9,6 +9,9 @@ jobs:
   validate_ios_signing:
     name: Validate iOS Signing Config
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./packages/totem_app
     steps:
       - name: Checkout
         uses: actions/checkout@v4
