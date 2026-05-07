@@ -3,10 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/network.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 import 'badge.dart';

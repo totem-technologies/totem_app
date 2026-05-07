@@ -5,7 +5,7 @@
 // import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 // import 'package:totem_core/core/config/theme.dart';
 // import 'package:totem_core/features/blog/widgets/badge.dart';
-// import 'package:totem_app/navigation/route_names.dart';
+//
 // import 'package:totem_core/shared/assets.dart';
 // import 'package:totem_core/shared/network.dart';
 // import 'package:totem_core/shared/widgets/user_avatar.dart';

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
-class MeetUserCard extends StatelessWidget {
-  const MeetUserCard({
+class MeetKeeperCard extends StatelessWidget {
+  const MeetKeeperCard({
     required this.user,
     super.key,
     this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 16),
@@ -44,7 +43,10 @@ class MeetUserCard extends StatelessWidget {
               UserAvatar.fromUserSchema(
                 user,
                 onTap: user.slug != null
-                    ? () => context.push(RouteNames.keeperProfile(user.slug!))
+                    ? () => TotemRouter.instance.toKeeperProfile(
+                        context,
+                        user.slug!,
+                      )
                     : null,
               ),
               Column(

@@ -7,6 +7,7 @@ import 'package:sentry_flutter/sentry_flutter.dart' show Sentry;
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
+import 'package:totem_core/core/services/notifications_service.dart';
 import 'package:totem_core/core/services/observer_service.dart';
 import 'package:totem_core/firebase_options.dart';
 
@@ -14,10 +15,10 @@ Future<void> sharedMain(Widget app, AsyncCallback init) async {
   await Sentry.runZonedGuarded(
     () async {
       await dotenv.load();
+      await init();
+
       await ErrorHandler.initialize();
       await _initializeServices();
-
-      await init();
 
       final container = ProviderContainer(observers: [ObserverService()]);
       await container.read(authControllerProvider.notifier).checkExistingAuth();
@@ -45,6 +46,7 @@ Future<void> _initializeServices() async {
 
   try {
     AnalyticsService.instance.initialize();
+    NotificationsService.instance.initialize();
   } catch (e, stackTrace) {
     ErrorHandler.logError(
       e,

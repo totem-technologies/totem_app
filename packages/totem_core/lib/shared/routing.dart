@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class RoutingUtils {
@@ -63,9 +63,7 @@ class RoutingUtils {
           }
 
         case 'keeper':
-          if (segments.length >= 2) {
-            return RouteNames.keeperProfile(segments[1]);
-          }
+          if (segments.length >= 2) {}
       }
 
       return null;

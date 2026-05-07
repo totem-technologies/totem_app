@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:totem_app/features/spaces/widgets/space_card.dart';
+import 'package:totem_core/shared/widgets/space_card.dart';
 
 class HomeLoadingScreen extends StatelessWidget {
   const HomeLoadingScreen({super.key});

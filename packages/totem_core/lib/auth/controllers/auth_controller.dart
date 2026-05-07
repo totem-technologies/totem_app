@@ -7,7 +7,6 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:totem_app/services/notifications_service.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/auth/repositories/auth_repository.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
@@ -17,6 +16,7 @@ import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/cache_service.dart';
 import 'package:totem_core/core/services/local_storage_service.dart';
+import 'package:totem_core/core/services/notifications_service.dart';
 import 'package:totem_core/core/services/secure_storage.dart';
 import 'package:totem_core/shared/logger.dart';
 

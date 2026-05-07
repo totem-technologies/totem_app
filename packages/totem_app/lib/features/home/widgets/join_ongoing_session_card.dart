@@ -3,13 +3,13 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_app/features/spaces/widgets/space_card.dart';
-import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/extensions.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
+import 'package:totem_core/shared/widgets/space_card.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 

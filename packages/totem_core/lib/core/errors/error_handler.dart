@@ -8,10 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart' show LiveKitException;
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/shared/logger.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 /// Centralized error handling for the Totem App.
@@ -26,7 +26,7 @@ class ErrorHandler {
         (options) {
           options
             ..dsn = AppConfig.sentryDsn
-            ..navigatorKey = navigatorKey
+            ..navigatorKey = TotemRouter.instance.navigatorKey
             // Adds request headers and IP for users, for more info visit:
             // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
             ..sendDefaultPii = true

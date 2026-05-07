@@ -4,12 +4,12 @@ import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
-import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/keeper/screens/meet_user_card.dart';
+import 'package:totem_core/features/keeper/widget/keeper_spaces.dart';
 import 'package:totem_core/shared/html.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/routing.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';
@@ -61,7 +61,7 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                       tooltip: MaterialLocalizations.of(
                         context,
                       ).backButtonTooltip,
-                      onPressed: () => popOrHome(context),
+                      onPressed: () => TotemRouter.instance.popOrHome(context),
                     ),
                     leadingWidth: 50,
                     actionsPadding: const EdgeInsetsDirectional.only(end: 20),
@@ -202,7 +202,7 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                                         ?.copyWith(fontWeight: FontWeight.bold),
                                   ),
                                 ),
-                                MeetUserCard(
+                                MeetKeeperCard(
                                   user: blog.author!,
                                   margin: EdgeInsetsDirectional.zero,
                                 ),

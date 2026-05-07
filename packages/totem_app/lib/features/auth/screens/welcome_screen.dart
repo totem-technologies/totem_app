@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/card_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {

@@ -5,7 +5,6 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' hide Session;
-import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart'
     as mobile_api
     show RoomStatus, SessionDetailSchema, TurnState;
@@ -18,6 +17,7 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart'
 import 'package:totem_core/features/sessions/widgets/banned_participants_modal.dart';
 import 'package:totem_core/features/sessions/widgets/participant_reorder_modal.dart';
 import 'package:totem_core/shared/extensions.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
@@ -148,7 +148,7 @@ class MoreOptions extends ConsumerWidget {
                   final navigator = Navigator.of(context)..pop();
                   final shouldLeave = await showLeaveDialog(context) ?? false;
                   if (shouldLeave && navigator.mounted) {
-                    popOrHome(navigator.context);
+                    TotemRouter.instance.popOrHome(navigator.context);
                     currentSession.leave();
                   }
                 },

@@ -4,15 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/navigation/app_router.dart';
-import 'package:totem_app/services/notifications_service.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/services/notifications_service.dart';
 import 'package:totem_core/shared/assets.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared_main.dart';
 
 Future<void> main() async {
   sharedMain(TotemApp(), () async {
-    await NotificationsService.instance.initialize();
+    TotemRouter.instance = AppTotemRouter();
   });
 }
 
@@ -31,7 +32,7 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _router = createRouter(ref);
+    _router = TotemRouter.instance.createRouter(ref);
     ref.read(notificationsProvider).requestPermissions();
   }
 

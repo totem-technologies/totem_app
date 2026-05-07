@@ -10,12 +10,11 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/logger.dart';
-
-import '../navigation/app_router.dart';
-import '../navigation/route_names.dart';
+import 'package:totem_core/shared/router.dart';
 
 final notificationsProvider = Provider<NotificationsService>((ref) {
   return NotificationsService.instance;
@@ -184,7 +183,7 @@ class NotificationsService {
     if (path != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         logger.i('⏰ Handled path: $path');
-        await navigatorKey.currentContext?.push(path);
+        await TotemRouter.instance.navigatorKey.currentContext?.push(path);
       });
     }
   }

@@ -1,14 +1,13 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/extensions.dart';
 import 'package:totem_core/shared/network.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';
 import 'package:totem_core/shared/widgets/space_gradient_mask.dart';
@@ -130,13 +129,11 @@ class SpaceCard extends StatelessWidget {
               onTap:
                   onTap ??
                   () async {
-                    if (nextSession != null) {
-                      await context.push(
-                        RouteNames.spaceSession(space.slug, nextSession.slug),
-                      );
-                    } else {
-                      await context.push(RouteNames.space(space.slug));
-                    }
+                    TotemRouter.instance.toSpaceSession(
+                      context,
+                      space.slug,
+                      nextSession?.slug,
+                    );
                   },
               borderRadius: BorderRadius.circular(8),
               child: Stack(
@@ -344,7 +341,13 @@ class SmallSpaceCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       highlightColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
-      onTap: onTap ?? () => context.push(RouteNames.space(space.slug)),
+      onTap:
+          onTap ??
+          () => TotemRouter.instance.toSpaceSession(
+            context,
+            space.slug,
+            nextSession?.slug,
+          ),
       child: Stack(
         children: [
           Positioned.fill(

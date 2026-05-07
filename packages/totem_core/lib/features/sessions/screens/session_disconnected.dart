@@ -4,13 +4,9 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:totem_app/features/spaces/widgets/space_card.dart';
-import 'package:totem_app/navigation/app_router.dart';
-import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
@@ -19,8 +15,10 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/shared/extensions.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confetti.dart';
+import 'package:totem_core/shared/widgets/space_card.dart';
 import 'package:totem_core/shared/widgets/user_feedback.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -296,13 +294,13 @@ class _SessionDisconnectedScreenState
                           widget.session.space,
                           nextEvents: [nextEvent],
                         ),
-                        onTap: () {
+                        onTap: () async {
                           _refreshHome();
-                          return context.pushReplacement(
-                            RouteNames.spaceSession(
-                              widget.session.space.slug,
-                              nextEvent.slug,
-                            ),
+                          return TotemRouter.instance.toSpaceSession(
+                            context,
+                            widget.session.space.slug,
+                            nextEvent.slug,
+                            true,
                           );
                         },
                       ),
@@ -320,12 +318,13 @@ class _SessionDisconnectedScreenState
                             ),
                             child: SmallSpaceCard.fromSessionDetailSchema(
                               event,
-                              onTap: () {
+                              onTap: () async {
                                 _refreshHome();
-                                return context.pushReplacement(
-                                  RouteNames.space(
-                                    event.space.slug,
-                                  ),
+                                return TotemRouter.instance.toSpaceSession(
+                                  context,
+                                  event.space.slug,
+                                  event.slug,
+                                  true,
                                 );
                               },
                             ),
@@ -352,7 +351,7 @@ class _SessionDisconnectedScreenState
               final exploreMoreButton = ElevatedButton(
                 onPressed: () {
                   _refreshHome();
-                  toHome(HomeRoutes.initialRoute);
+                  TotemRouter.instance.toHome();
                 },
                 child: const Text('Explore More'),
               );

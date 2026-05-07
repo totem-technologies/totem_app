@@ -10,8 +10,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import 'package:totem_app/navigation/app_router.dart';
-import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/config/app_config.dart';
@@ -27,6 +25,7 @@ import 'package:totem_core/shared/extensions.dart';
 import 'package:totem_core/shared/html.dart';
 import 'package:totem_core/shared/logger.dart';
 import 'package:totem_core/shared/network.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/routing.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';
@@ -160,7 +159,8 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                           tooltip: MaterialLocalizations.of(
                             context,
                           ).backButtonTooltip,
-                          onPressed: () => popOrHome(context),
+                          onPressed: () =>
+                              TotemRouter.instance.popOrHome(context),
                         ),
                         leadingWidth: 50,
                         actionsPadding: const EdgeInsetsDirectional.only(
@@ -414,7 +414,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                       ),
                                   ],
                                 ),
-                                MeetUserCard(
+                                MeetKeeperCard(
                                   user: space.author,
                                   margin: EdgeInsetsDirectional.zero,
                                 ),
@@ -612,7 +612,8 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
                   onAddToCalendar: () => _addToCalendar(event),
                   onJoinLivekit: () => _joinLivekit(event),
                   onJoinGoogleMeet: () => _joinGoogleMeet(event),
-                  onExplore: () => toHome(HomeRoutes.spaces),
+                  onExplore: () =>
+                      TotemRouter.instance.toHome(HomeRoutes.spaces),
                 );
               },
               loading: () => const SizedBox(height: 44),

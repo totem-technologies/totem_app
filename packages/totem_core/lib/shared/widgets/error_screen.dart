@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:go_router/go_router.dart';
-import 'package:totem_app/navigation/app_router.dart';
-import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/assets.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/popups.dart';
@@ -46,7 +44,9 @@ class _ErrorScreenState extends State<ErrorScreen> {
           : AppBar(
               leading: showHomeButton
                   ? null
-                  : BackButton(onPressed: () => popOrHome(context)),
+                  : BackButton(
+                      onPressed: () => TotemRouter.instance.popOrHome(context),
+                    ),
             ),
       extendBodyBehindAppBar: true,
       body: Center(
@@ -124,7 +124,7 @@ class _ErrorScreenState extends State<ErrorScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      context.go(RouteNames.spaces);
+                      TotemRouter.instance.toHome(HomeRoutes.spaces);
                     },
                     child: const Text('Return to Home'),
                   ),

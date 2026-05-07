@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
-import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/keeper/repositories/keeper_repository.dart';
+import 'package:totem_core/features/keeper/widget/keeper_spaces.dart';
 import 'package:totem_core/shared/html.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/routing.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';
@@ -34,7 +34,9 @@ class KeeperProfileScreen extends ConsumerWidget {
     return Scaffold(
       appBar: showAppBar
           ? AppBar(
-              leading: BackButton(onPressed: () => popOrHome(context)),
+              leading: BackButton(
+                onPressed: () => TotemRouter.instance.popOrHome(context),
+              ),
               title: const TotemLogo(size: 24),
             )
           : null,

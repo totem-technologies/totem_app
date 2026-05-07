@@ -8,7 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
-import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -26,6 +25,7 @@ import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/popups.dart';
@@ -493,7 +493,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         // If the session is not connected or connecting, leave the session.
         if (connectionState != RoomConnectionState.connecting &&
             connectionState != RoomConnectionState.connected) {
-          popOrHome(context);
+          TotemRouter.instance.popOrHome(context);
           return;
         }
 
@@ -502,7 +502,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         if (context.mounted && shouldPop) {
           await currentSession.leave();
           if (!context.mounted) return;
-          popOrHome(context);
+          TotemRouter.instance.popOrHome(context);
         }
       },
       child: RoomBackground(

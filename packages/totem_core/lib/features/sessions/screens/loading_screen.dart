@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/circle_icon_button.dart';
 
@@ -283,7 +283,7 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
                   tooltip: MaterialLocalizations.of(
                     context,
                   ).backButtonTooltip,
-                  onPressed: () => popOrHome(context),
+                  onPressed: () => TotemRouter.instance.popOrHome(context),
                 ),
               ),
               extendBodyBehindAppBar: false,

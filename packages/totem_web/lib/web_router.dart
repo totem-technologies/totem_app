@@ -1,0 +1,165 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:totem_app/features/auth/screens/login_screen.dart';
+import 'package:totem_app/features/auth/screens/pin_entry_screen.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/features/keeper/repositories/keeper_repository.dart';
+import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
+import 'package:totem_core/shared/router.dart';
+import 'package:url_launcher/url_launcher_string.dart';
+
+class WebTotemRouter extends TotemRouter {
+  final _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  GlobalKey<NavigatorState> get navigatorKey => _navigatorKey;
+
+  @override
+  GoRouter createRouter(WidgetRef ref) {
+    final authController = ref.read(authControllerProvider.notifier);
+    return GoRouter(
+      initialLocation: '/',
+      refreshListenable: GoRouterRefreshStream(authController.authStateChanges),
+      redirect: (context, state) {
+        final isLoggedIn = authController.isAuthenticated;
+        final isLoginRoute = state.matchedLocation == RouteNames.login;
+        final isPinRoute = state.matchedLocation == RouteNames.pinEntry;
+        final isSessionRoute = state.matchedLocation.startsWith('/session/');
+
+        // TODO(web): Better way to handle redirect
+
+        if (!isLoggedIn && isSessionRoute) {
+          return '${RouteNames.login}?next=${Uri.encodeComponent(state.uri.toString())}';
+        }
+
+        if (isLoggedIn && isLoginRoute) {
+          final nextRoute = state.uri.queryParameters['next'];
+          if (nextRoute != null && nextRoute.isNotEmpty) {
+            return nextRoute;
+          }
+
+          return '/';
+        }
+
+        if (isLoggedIn && isPinRoute) {
+          final nextRoute = state.uri.queryParameters['next'];
+          if (nextRoute != null && nextRoute.isNotEmpty) {
+            return nextRoute;
+          }
+        }
+
+        return null;
+      },
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const Scaffold(
+            body: Center(
+              child: Text(
+                'Open a session URL, for example: /session/my-session',
+              ),
+            ),
+          ),
+        ),
+        // TODO(web): Remove pin login. Should get credentials from totem.org website
+        GoRoute(
+          path: RouteNames.login,
+          builder: (context, state) {
+            final nextRoute = state.uri.queryParameters['next'];
+            return LoginScreen(nextRoute: nextRoute);
+          },
+        ),
+        GoRoute(
+          path: RouteNames.pinEntry,
+          builder: (context, state) {
+            final email =
+                state.uri.queryParameters['email'] ??
+                ((state.extra as Map?)?['email'] as String? ?? '');
+            final nextRoute =
+                state.uri.queryParameters['next'] ??
+                ((state.extra as Map?)?['nextRoute'] as String?);
+            return PinEntryScreen(email: email, nextRoute: nextRoute);
+          },
+        ),
+        GoRoute(
+          path: RouteNames.session(':slug'),
+          builder: (context, state) {
+            final slug = state.pathParameters['slug'] ?? '';
+            return PreJoinScreen(sessionSlug: slug);
+          },
+        ),
+      ],
+      errorBuilder: (context, state) =>
+          const Scaffold(body: Center(child: Text('Page not found'))),
+    );
+  }
+
+  @override
+  void popOrHome([BuildContext? context]) {
+    if (context != null) {
+      if (context.canPop()) {
+        context.pop();
+        return;
+      }
+    }
+
+    launchUrlString('https://www.totem.org/', webOnlyWindowName: '_self');
+  }
+
+  @override
+  void toHome([HomeRoutes route = HomeRoutes.initialRoute]) {
+    switch (route) {
+      case HomeRoutes.home:
+        launchUrlString('https://www.totem.org/', webOnlyWindowName: '_self');
+        break;
+      case HomeRoutes.spaces:
+        launchUrlString(
+          'https://www.totem.org/spaces/',
+          webOnlyWindowName: '_self',
+        );
+        break;
+      case HomeRoutes.blog:
+        launchUrlString(
+          'https://www.totem.org/blog/',
+          webOnlyWindowName: '_self',
+        );
+        break;
+      case HomeRoutes.profile:
+        launchUrlString(
+          'https://www.totem.org/users/profile/',
+          webOnlyWindowName: '_self',
+        );
+        break;
+    }
+  }
+
+  @override
+  Future<void> toKeeperProfile(BuildContext context, String userSlug) async {
+    final container = ProviderScope.containerOf(context);
+    final profile = await container.read(
+      keeperProfileProvider(userSlug).future,
+    );
+    if (profile.username != null) {
+      launchUrlString(
+        'https://www.totem.org/keeper/${profile.username!}/',
+        webOnlyWindowName: '_self',
+      );
+    }
+  }
+
+  @override
+  Future<void> toSpaceSession(
+    BuildContext context,
+    String spaceSlug,
+    String? sessionSlug, [
+    bool replacement = false,
+  ]) async {
+    if (sessionSlug != null) {
+      launchUrlString(
+        'https://www.totem.org/spaces/session/$sessionSlug',
+        webOnlyWindowName: '_self',
+      );
+    }
+  }
+}

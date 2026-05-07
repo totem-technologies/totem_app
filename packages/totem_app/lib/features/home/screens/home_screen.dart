@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
-import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';
 import 'package:totem_core/shared/widgets/empty_indicator.dart';
@@ -227,7 +227,7 @@ class _ViewAllButton extends ConsumerWidget {
         if (route == HomeRoutes.spaces && filterMySessions) {
           ref.read(mySessionsFilterProvider.notifier).mySessionFilter = true;
         }
-        toHome(route);
+        TotemRouter.instance.toHome(route);
       },
       style: TextButton.styleFrom(
         padding: EdgeInsetsDirectional.zero,

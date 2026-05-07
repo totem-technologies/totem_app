@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_core/shared/assets.dart';
+import 'package:totem_core/shared/router.dart';
 
 /// A welcome card displayed to new users who haven't attended any sessions.
 class WelcomeCard extends StatelessWidget {
@@ -22,7 +22,7 @@ class WelcomeCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(_borderRadius),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => toHome(HomeRoutes.spaces),
+          onTap: () => TotemRouter.instance.toHome(HomeRoutes.spaces),
           child: Stack(
             fit: StackFit.expand,
             children: [
