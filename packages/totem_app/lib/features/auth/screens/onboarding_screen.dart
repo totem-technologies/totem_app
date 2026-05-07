@@ -360,6 +360,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           BlendMode.srcIn,
                         ),
                         width: 100,
+                        package: 'totem_core',
                       ),
                     ),
                     const Spacer(),

@@ -66,6 +66,7 @@ class _ErrorScreenState extends State<ErrorScreen> {
                     child: SvgPicture.asset(
                       TotemImageAssets.errorIndicatorSvg,
                       semanticsLabel: 'Error Indicator',
+                      package: 'totem_core',
                     ),
                   ),
                 ),
