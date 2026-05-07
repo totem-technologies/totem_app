@@ -7,10 +7,12 @@ import 'dart:io';
 
 void main(List<String> args) async {
   // Get list of staged .dart files
-  final gitResult = await Process.run(
-    'git',
-    ['diff', '--cached', '--name-only', '--diff-filter=ACMR'],
-  );
+  final gitResult = await Process.run('git', [
+    'diff',
+    '--cached',
+    '--name-only',
+    '--diff-filter=ACMR',
+  ]);
 
   if (gitResult.exitCode != 0) {
     print('Error: Failed to get staged files from git');
@@ -35,10 +37,11 @@ void main(List<String> args) async {
   }
 
   // Run dart format check on the files
-  final formatResult = await Process.run(
-    'dart',
-    ['format', '--set-exit-if-changed', ...stagedFiles],
-  );
+  final formatResult = await Process.run('dart', [
+    'format',
+    '--set-exit-if-changed',
+    ...stagedFiles,
+  ]);
 
   if (formatResult.exitCode != 0) {
     print('❌ Code formatting issues detected in staged files!');

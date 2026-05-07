@@ -1,0 +1,397 @@
+import 'dart:async';
+
+import 'package:auto_size_text/auto_size_text.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/svg.dart';
+import 'package:go_router/go_router.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/shared/assets.dart';
+import 'package:totem_core/shared/router.dart';
+
+class OnboardingScreen extends ConsumerStatefulWidget {
+  const OnboardingScreen({super.key});
+
+  @override
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
+  final onboardingData = [
+    const _OnboardingData(
+      title: 'Welcome',
+      description: 'Totem is where you find your people, and share your story.',
+      image: TotemImageAssets.onboarding1,
+    ),
+    const _OnboardingData(
+      title: 'Our Promise',
+      description:
+          'We provide a moderated space you can safely express '
+          'yourself and learn from others.',
+      image: TotemImageAssets.onboarding2,
+    ),
+    const _OnboardingData(
+      title: 'Our Ask',
+      description:
+          'Keep everything confidential, and speak only from your own experience.',
+      image: TotemImageAssets.onboarding3,
+    ),
+  ];
+
+  int currentPage = 0;
+  final PageController _backgroundPageController = PageController();
+  final PageController _contentPageController = PageController();
+
+  /// Flag to ensure images are preloaded only once
+  bool _imagesPreloaded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Preload images only once when dependencies are available
+    if (!_imagesPreloaded) {
+      _preloadImages();
+      _imagesPreloaded = true;
+    }
+  }
+
+  /// Preloads all onboarding images into memory for smooth transitions
+  /// Called from didChangeDependencies to ensure MediaQuery is available
+  void _preloadImages() {
+    for (final onboarding in onboardingData) {
+      precacheImage(
+        AssetImage(onboarding.image, package: 'totem_core'),
+        context,
+      );
+    }
+  }
+
+  void _onPrevious() {
+    if (currentPage > 0) {
+      _contentPageController.animateToPage(
+        currentPage - 1,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+      _backgroundPageController.animateToPage(
+        currentPage - 1,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void _onNext() {
+    if (currentPage < onboardingData.length - 1) {
+      _contentPageController.animateToPage(
+        currentPage + 1,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+      _backgroundPageController.animateToPage(
+        currentPage + 1,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      _onSkip();
+    }
+  }
+
+  /// Complete the welcome onboarding and navigate to login
+  /// This marks that the user has seen the intro screens
+  Future<void> _onSkip() async {
+    // Mark welcome onboarding as completed so user won't see it again
+    await ref
+        .read(authControllerProvider.notifier)
+        .markWelcomeOnboardingCompleted();
+
+    if (mounted) {
+      context.go(RouteNames.login);
+    }
+  }
+
+  @override
+  void dispose() {
+    _backgroundPageController.dispose();
+    _contentPageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isLastPage = currentPage >= onboardingData.length - 1;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Material(
+        // Use a Stack to layer the fixed top bar and the paged content
+        child: Stack(
+          alignment: AlignmentDirectional.topCenter,
+          children: [
+            PageView.builder(
+              hitTestBehavior: HitTestBehavior.translucent,
+              itemCount: onboardingData.length,
+              controller: _backgroundPageController,
+              onPageChanged: (index) => setState(() => currentPage = index),
+              itemBuilder: (context, index) {
+                return Image.asset(
+                  onboardingData[index].image,
+                  fit: BoxFit.cover,
+                  package: 'totem_core',
+                );
+              },
+            ),
+
+            Align(
+              alignment: AlignmentDirectional.bottomCenter,
+              child: Container(
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
+                constraints: const BoxConstraints(
+                  minHeight: 200,
+                  maxWidth: double.infinity,
+                ),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment(
+                      0,
+                      -0.5, // center-top pos
+                    ),
+                    end: AlignmentDirectional.bottomCenter,
+                    colors: [Colors.transparent, AppTheme.slate],
+                  ),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Onboarding title
+                      Expanded(
+                        child: IgnorePointer(
+                          child: PageView.builder(
+                            itemCount: onboardingData.length,
+                            controller: _contentPageController,
+                            onPageChanged: (index) =>
+                                setState(() => currentPage = index),
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemBuilder: (context, index) {
+                              final onboarding = onboardingData[index];
+                              final textTheme = Theme.of(context).textTheme;
+                              return Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Semantics(
+                                    label: 'Onboarding title',
+                                    child: Text(
+                                      onboarding.title,
+                                      style: textTheme.headlineMedium?.copyWith(
+                                        color: AppTheme.white,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  // Onboarding description
+                                  Semantics(
+                                    label: 'Onboarding description',
+                                    child: Text(
+                                      onboarding.description,
+                                      textAlign: TextAlign.center,
+                                      style: textTheme.bodyMedium?.copyWith(
+                                        color: AppTheme.white,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          ...List.generate(
+                            onboardingData.length,
+                            (index) => IgnorePointer(
+                              child: AnimatedContainer(
+                                key: ValueKey(index),
+                                duration: const Duration(milliseconds: 200),
+                                margin: const EdgeInsetsDirectional.symmetric(
+                                  horizontal: 4,
+                                ),
+                                width: index == currentPage ? 30 : 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: index == currentPage
+                                      ? AppTheme.mauve
+                                      : AppTheme.white,
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              spacing: 10,
+                              children: [
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Visibility(
+                                    key: ValueKey(currentPage > 0),
+                                    visible: currentPage > 0,
+                                    child: Semantics(
+                                      label: 'Previous page',
+                                      child: GestureDetector(
+                                        onTap: _onPrevious,
+                                        child: const CircleAvatar(
+                                          radius: 27,
+                                          backgroundColor: AppTheme.mauve,
+                                          child: Icon(
+                                            Icons.arrow_back_ios_new,
+                                            color: AppTheme.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Flexible(
+                                  child: Semantics(
+                                    label: isLastPage
+                                        ? 'Create account'
+                                        : 'Next page',
+                                    button: true,
+                                    child: Material(
+                                      color: AppTheme.mauve,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(27),
+                                      ),
+                                      clipBehavior: Clip.antiAlias,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(27),
+                                        onTap: isLastPage ? _onSkip : _onNext,
+                                        child: AnimatedSize(
+                                          duration: const Duration(
+                                            milliseconds: 400,
+                                          ),
+                                          curve: Curves.easeInOutCubic,
+                                          alignment: Alignment.centerRight,
+                                          child: SizedBox(
+                                            height: 54,
+                                            child: Padding(
+                                              padding:
+                                                  EdgeInsetsDirectional.symmetric(
+                                                    horizontal: isLastPage
+                                                        ? 24
+                                                        : 15,
+                                                  ),
+                                              child: Center(
+                                                widthFactor: 1,
+                                                child: isLastPage
+                                                    ? const AutoSizeText(
+                                                        'Create account',
+                                                        style: TextStyle(
+                                                          fontFamily: AppTheme
+                                                              .fontFamilySans,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          fontSize: 21,
+                                                          height: 1.2,
+                                                          letterSpacing: 0,
+                                                          color: AppTheme.white,
+                                                        ),
+                                                        maxLines: 1,
+                                                      )
+                                                    : const Icon(
+                                                        Icons.arrow_forward_ios,
+                                                        color: AppTheme.white,
+                                                      ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            /// Fixed Top Container (logo, skip button, gradient)
+            Container(
+              constraints: const BoxConstraints(minHeight: 150),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: AlignmentDirectional.topCenter,
+                  end: AlignmentDirectional.bottomCenter,
+                  colors: [
+                    AppTheme.slate.withValues(alpha: 0.6),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: SafeArea(
+                minimum: const EdgeInsets.symmetric(horizontal: 20),
+                bottom: false,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IgnorePointer(
+                      child: SvgPicture.asset(
+                        'assets/logo/logo-black.svg',
+                        colorFilter: const ColorFilter.mode(
+                          AppTheme.white,
+                          BlendMode.srcIn,
+                        ),
+                        width: 100,
+                        package: 'totem_core',
+                      ),
+                    ),
+                    const Spacer(),
+                    Semantics(
+                      label: 'Sign in button',
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.white,
+                        ),
+                        onPressed: _onSkip,
+                        child: const Text('Sign in'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OnboardingData {
+  const _OnboardingData({
+    required this.title,
+    required this.description,
+    required this.image,
+  });
+  final String title;
+  final String description;
+  final String image;
+}

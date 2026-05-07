@@ -1,0 +1,1335 @@
+import 'package:flutter/material.dart' hide ConnectionState;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
+import 'package:mocktail/mocktail.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/auth/models/auth_state.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/core/repositories/user_repository.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/screens/error_screen.dart';
+import 'package:totem_core/features/sessions/screens/listening_turn_screen.dart';
+import 'package:totem_core/features/sessions/screens/receive_totem_screen.dart';
+import 'package:totem_core/features/sessions/screens/room_screen.dart';
+import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
+import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
+import 'package:totem_core/shared/widgets/popups.dart';
+
+import '../../../auth/controllers/auth_controller_mock.dart';
+import '../controllers/core/session_controller_mock.dart';
+import '../controllers/features/session_device_controller_mock.dart';
+import '../livekit_mocks.dart';
+
+MockLocalParticipant _buildMockParticipant(String id) {
+  final participant = MockLocalParticipant(id);
+  when(
+    participant.createListener,
+  ).thenReturn(MockParticipantEventsListener());
+  when(participant.isMicrophoneEnabled).thenAnswer((_) => false);
+  when(participant.isCameraEnabled).thenAnswer((_) => false);
+  when(() => participant.getTrackPublicationBySource(any())).thenReturn(null);
+  return participant;
+}
+
+SessionDetailSchema _createSessionEvent({
+  required DateTime start,
+  required int duration,
+  String slug = 'test-session',
+  bool ended = false,
+}) {
+  return SessionDetailSchema(
+    slug: slug,
+    title: 'Test Session',
+    space: MobileSpaceDetailSchema(
+      slug: 'test-space',
+      title: 'Test Space',
+      imageLink: null,
+      shortDescription: 'A test space.',
+      content: '',
+      author: PublicUserSchema(
+        profileAvatarType: ProfileAvatarTypeEnum.td,
+        dateCreated: DateTime(2024),
+      ),
+      category: null,
+      subscribers: 0,
+      recurring: null,
+      price: 0,
+      nextEvents: const [],
+    ),
+    content: '',
+    seatsLeft: 10,
+    duration: duration,
+    start: start,
+    attending: true,
+    open: true,
+    started: true,
+    cancelled: false,
+    joinable: true,
+    ended: ended,
+    rsvpUrl: '',
+    joinUrl: null,
+    subscribeUrl: '',
+    calLink: '',
+    subscribed: false,
+    userTimezone: null,
+    meetingProvider: MeetingProviderEnum.livekit,
+  );
+}
+
+Future<void> _pumpRoomScreen(
+  WidgetTester tester, {
+  required SessionDetailSchema event,
+  required RoomConnectionState connectionState,
+  required RoomStatus roomStatus,
+}) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        authControllerProvider.overrideWith(
+          () => FakeAuthController(AuthState.unauthenticated()),
+        ),
+        currentSessionProvider.overrideWith((ref) => null),
+        currentSessionEventProvider.overrideWith((ref) => event),
+        resolveCurrentScreenProvider.overrideWith((ref) => RoomScreen.loading),
+        connectionStateProvider.overrideWith((ref) => connectionState),
+        roomStatusProvider.overrideWith((ref) => roomStatus),
+        disconnectionReasonProvider.overrideWith((ref) => null),
+      ],
+      child: const MaterialApp(
+        home: VideoSessionScreen(
+          sessionSlug: 'test-session',
+          loadingScreen: SizedBox.shrink(),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+}
+
+Future<void> _pumpRoomScreenForResolvedScreen(
+  WidgetTester tester, {
+  required MockSessionController session,
+  required SessionDetailSchema event,
+  required RoomScreen screen,
+  RoomConnectionState connectionState = RoomConnectionState.connected,
+  RoomStatus roomStatus = RoomStatus.active,
+  List<Object?> extraOverrides = const [],
+}) async {
+  final p1 = _buildMockParticipant('user-1');
+  final p2 = _buildMockParticipant('user-2');
+  final keeper = _buildMockParticipant('keeper-1');
+
+  final sessionState = SessionRoomState(
+    connection: const ConnectionState(
+      phase: SessionPhase.connected,
+      state: RoomConnectionState.connected,
+    ),
+    participants: ParticipantsState(
+      participants: [
+        p1,
+        p2,
+        keeper,
+      ],
+    ),
+    chat: const ChatState(),
+    turn: const SessionTurnState(
+      roomState: RoomState(
+        keeper: 'keeper-1',
+        nextSpeaker: 'user-2',
+        currentSpeaker: 'user-1',
+        status: RoomStatus.active,
+        turnState: TurnState.idle,
+        sessionSlug: 'test-session',
+        statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+        talkingOrder: [],
+        version: 1,
+        roundNumber: 1,
+      ),
+    ),
+  );
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        authControllerProvider.overrideWith(
+          () => FakeAuthController(AuthState.unauthenticated()),
+        ),
+        currentSessionProvider.overrideWith((ref) => session),
+        currentSessionStateProvider.overrideWithValue(sessionState),
+        currentSessionEventProvider.overrideWith((ref) => event),
+        resolveCurrentScreenProvider.overrideWith((ref) => screen),
+        connectionStateProvider.overrideWith((ref) => connectionState),
+        roomStatusProvider.overrideWith((ref) => roomStatus),
+        isCurrentUserKeeperProvider.overrideWith((ref) => false),
+        isCameraOnProvider.overrideWith((ref) => false),
+        roundMessageProvider.overrideWith((ref) => null),
+        sessionMessagesProvider.overrideWith((ref) => const []),
+        lastSessionMessageProvider.overrideWith((ref) => null),
+        disconnectionReasonProvider.overrideWith((ref) => null),
+        userProfileProvider('user-1').overrideWith(
+          (ref) => PublicUserSchema(
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+        userProfileProvider('user-2').overrideWith(
+          (ref) => PublicUserSchema(
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+        userProfileProvider('keeper-1').overrideWith(
+          (ref) => PublicUserSchema(
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+        getRecommendedSessionsProvider().overrideWith((ref) => []),
+        ...extraOverrides.cast(),
+      ],
+      child: const MaterialApp(
+        home: VideoSessionScreen(
+          sessionSlug: 'test-session',
+          loadingScreen: SizedBox(key: ValueKey('loading-screen')),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+}
+
+class _MutableRoomScreenHarness {
+  const _MutableRoomScreenHarness({
+    required this.container,
+    required this.eventProvider,
+    required this.roomScreenProvider,
+    required this.connectionStateProvider,
+    required this.roomStatusProvider,
+    required this.hasKeeperDisconnectedProvider,
+  });
+
+  final ProviderContainer container;
+  final NotifierProvider<_SessionEventOverrideNotifier, SessionDetailSchema?>
+  eventProvider;
+  final NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>
+  roomScreenProvider;
+  final NotifierProvider<_ConnectionStateOverrideNotifier, RoomConnectionState>
+  connectionStateProvider;
+  final NotifierProvider<_RoomStatusOverrideNotifier, RoomStatus>
+  roomStatusProvider;
+  final NotifierProvider<_KeeperDisconnectedOverrideNotifier, bool>
+  hasKeeperDisconnectedProvider;
+}
+
+class _SessionEventOverrideNotifier extends Notifier<SessionDetailSchema?> {
+  _SessionEventOverrideNotifier(this._initial);
+
+  final SessionDetailSchema? _initial;
+
+  @override
+  SessionDetailSchema? build() => _initial;
+
+  // ignore: use_setters_to_change_properties
+  void set(SessionDetailSchema? value) {
+    state = value;
+  }
+}
+
+class _ConnectionStateOverrideNotifier extends Notifier<RoomConnectionState> {
+  _ConnectionStateOverrideNotifier(this._initial);
+
+  final RoomConnectionState _initial;
+
+  @override
+  RoomConnectionState build() => _initial;
+
+  // ignore: use_setters_to_change_properties
+  void set(RoomConnectionState value) {
+    state = value;
+  }
+}
+
+class _RoomScreenOverrideNotifier extends Notifier<RoomScreen> {
+  _RoomScreenOverrideNotifier(this._initial);
+
+  final RoomScreen _initial;
+
+  @override
+  RoomScreen build() => _initial;
+
+  // ignore: use_setters_to_change_properties
+  void set(RoomScreen value) {
+    state = value;
+  }
+}
+
+class _RoomStatusOverrideNotifier extends Notifier<RoomStatus> {
+  _RoomStatusOverrideNotifier(this._initial);
+
+  final RoomStatus _initial;
+
+  @override
+  RoomStatus build() => _initial;
+
+  // ignore: use_setters_to_change_properties
+  void set(RoomStatus value) {
+    state = value;
+  }
+}
+
+class _KeeperDisconnectedOverrideNotifier extends Notifier<bool> {
+  _KeeperDisconnectedOverrideNotifier(this._initial);
+
+  final bool _initial;
+
+  @override
+  bool build() => _initial;
+
+  // ignore: use_setters_to_change_properties
+  void set(bool value) {
+    state = value;
+  }
+}
+
+class _TestSessionDeviceController extends SessionDeviceController {
+  static SessionDeviceState initialState = const SessionDeviceState(
+    selectedCameraDeviceId: null,
+    selectedAudioDeviceId: null,
+    selectedAudioOutputDeviceId: null,
+    isSpeakerphoneEnabled: true,
+    isMicrophoneEnabled: false,
+    isCameraEnabled: false,
+  );
+  static _TestSessionDeviceController? lastInstance;
+
+  @override
+  SessionDeviceState build(SessionController session) {
+    lastInstance = this;
+    return initialState;
+  }
+
+  @override
+  bool get audioRouteNotificationsEnabled => true;
+
+  // ignore: use_setters_to_change_properties
+  void emit(SessionDeviceState value) {
+    state = value;
+  }
+}
+
+class _TestSessionCuesService extends SessionCuesService {
+  int sessionTransitionCueCount = 0;
+  int totemReceivedCueCount = 0;
+
+  @override
+  Future<void> playSessionTransitionCue() async {
+    sessionTransitionCueCount += 1;
+  }
+
+  @override
+  Future<void> playTotemReceivedCue() async {
+    totemReceivedCueCount += 1;
+  }
+
+  @override
+  Future<void> pulseSwipeCompletion() async {}
+
+  @override
+  void dispose() {}
+}
+
+Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
+  WidgetTester tester, {
+  required SessionDetailSchema event,
+  required RoomConnectionState connectionState,
+  required RoomStatus roomStatus,
+  bool hasKeeperDisconnected = false,
+  RoomScreen roomScreen = RoomScreen.listening,
+  List<Object?> extraOverrides = const [],
+}) async {
+  final eventStateProvider =
+      NotifierProvider<_SessionEventOverrideNotifier, SessionDetailSchema?>(
+        () => _SessionEventOverrideNotifier(event),
+      );
+  final roomScreenStateProvider =
+      NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
+        () => _RoomScreenOverrideNotifier(roomScreen),
+      );
+  final connectionStateStateProvider =
+      NotifierProvider<_ConnectionStateOverrideNotifier, RoomConnectionState>(
+        () => _ConnectionStateOverrideNotifier(connectionState),
+      );
+  final roomStatusStateProvider =
+      NotifierProvider<_RoomStatusOverrideNotifier, RoomStatus>(
+        () => _RoomStatusOverrideNotifier(roomStatus),
+      );
+  final hasKeeperDisconnectedStateProvider =
+      NotifierProvider<_KeeperDisconnectedOverrideNotifier, bool>(
+        () => _KeeperDisconnectedOverrideNotifier(hasKeeperDisconnected),
+      );
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        authControllerProvider.overrideWith(
+          () => FakeAuthController(
+            AuthState.authenticated(
+              user: UserSchema(
+                profileAvatarType: ProfileAvatarTypeEnum.im,
+                circleCount: 0,
+                email: 'test@totem.org',
+                name: 'Test User',
+                slug: 'user-1',
+                dateCreated: DateTime(2024),
+              ),
+            ),
+          ),
+        ),
+        currentSessionProvider.overrideWith((ref) => null),
+        currentSessionEventProvider.overrideWith(
+          (ref) => ref.watch(eventStateProvider),
+        ),
+        resolveCurrentScreenProvider.overrideWith(
+          (ref) => ref.watch(roomScreenStateProvider),
+        ),
+        connectionStateProvider.overrideWith(
+          (ref) => ref.watch(connectionStateStateProvider),
+        ),
+        roomStatusProvider.overrideWith(
+          (ref) => ref.watch(roomStatusStateProvider),
+        ),
+        hasKeeperDisconnectedProvider.overrideWith(
+          (ref) => ref.watch(hasKeeperDisconnectedStateProvider),
+        ),
+        disconnectionReasonProvider.overrideWith((ref) => null),
+        ...extraOverrides.cast(),
+      ],
+      child: const MaterialApp(
+        home: VideoSessionScreen(
+          sessionSlug: 'test-session',
+          loadingScreen: SizedBox.shrink(),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+
+  final container = ProviderScope.containerOf(
+    tester.element(find.byType(VideoSessionScreen)),
+    listen: false,
+  );
+
+  return _MutableRoomScreenHarness(
+    container: container,
+    eventProvider: eventStateProvider,
+    roomScreenProvider: roomScreenStateProvider,
+    connectionStateProvider: connectionStateStateProvider,
+    roomStatusProvider: roomStatusStateProvider,
+    hasKeeperDisconnectedProvider: hasKeeperDisconnectedStateProvider,
+  );
+}
+
+void main() {
+  group('VideoRoomScreen - screen rendering', () {
+    late MockSessionController session;
+    late MockSessionDeviceController devices;
+
+    setUpAll(() async {
+      registerFallbackValue(TrackSource.camera);
+      dotenv.loadFromString(
+        isOptional: true,
+      );
+    });
+
+    setUp(() {
+      session = MockSessionController();
+      devices = MockSessionDeviceController();
+      final localParticipant = _buildMockParticipant('user-1');
+
+      when(() => session.room).thenReturn(FakeRoom(localParticipant));
+      when(() => session.devices).thenReturn(devices);
+      when(() => devices.isCameraEnabled).thenReturn(false);
+      when(() => devices.isMicrophoneEnabled).thenReturn(false);
+      when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
+      when(() => devices.selectedCameraDeviceId).thenReturn(null);
+      when(() => devices.selectedAudioDeviceId).thenReturn(null);
+      when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
+      when(() => devices.localVideoTrack).thenReturn(null);
+      when(() => session.isCurrentUserKeeper()).thenReturn(false);
+      when(() => session.event).thenReturn(
+        _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 5)),
+          duration: 10,
+        ),
+      );
+      when(() => session.join()).thenAnswer((_) async {});
+    });
+
+    testWidgets('renders loading screen for RoomScreen.loading', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.loading,
+      );
+
+      expect(find.byKey(const ValueKey('loading-screen')), findsOneWidget);
+    });
+
+    testWidgets('renders disconnected screen for RoomScreen.disconnected', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.disconnected,
+      );
+
+      expect(find.byType(SessionDisconnectedScreen), findsOneWidget);
+      await tester.pump(const Duration(seconds: 10));
+    });
+
+    testWidgets('renders error screen for RoomScreen.error', (tester) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.error,
+      );
+
+      expect(find.byType(SessionErrorScreen), findsOneWidget);
+    });
+
+    testWidgets('renders receive totem screen for RoomScreen.receiving', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.receiving,
+      );
+
+      expect(find.byType(ReceiveTotemScreen), findsOneWidget);
+    });
+
+    testWidgets('renders my turn screen for RoomScreen.myTurn', (tester) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.speaking,
+      );
+
+      expect(find.byType(SpeakingTurnScreen), findsOneWidget);
+    });
+
+    testWidgets('renders my turn screen for RoomScreen.passing', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.passing,
+      );
+
+      expect(find.byType(SpeakingTurnScreen), findsOneWidget);
+    });
+
+    testWidgets('renders not my turn screen for RoomScreen.listening', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.listening,
+      );
+
+      expect(find.byType(ListeningTurnScreen), findsOneWidget);
+    });
+  });
+
+  group('VideoRoomScreen - 5 minute warning', () {
+    testWidgets('shows the warning popup when 5 minutes remain', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final event = _createSessionEvent(
+        start: now.subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreen(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Time Remaining 5 min'), findsOneWidget);
+      expect(
+        find.text('Thanks for your participation in this session today'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('does not show the warning when room is not active', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final event = _createSessionEvent(
+        start: now.subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreen(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.waitingRoom,
+      );
+
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+      expect(
+        find.text('Thanks for your participation in this session today'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('shows the warning only once for the same session', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final event = _createSessionEvent(
+        start: now.subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreen(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Time Remaining 5 min'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 8));
+      await tester.pumpAndSettle();
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+    });
+
+    testWidgets(
+      'does not re-show warning after room rebuilds for same session slug',
+      (tester) async {
+        final now = DateTime.now();
+        final event = _createSessionEvent(
+          slug: 'stable-session',
+          start: now.subtract(const Duration(minutes: 9)),
+          duration: 10,
+        );
+
+        final harness = await _pumpRoomScreenWithMutableState(
+          tester,
+          event: event,
+          connectionState: RoomConnectionState.connected,
+          roomStatus: RoomStatus.active,
+        );
+
+        await tester.pump(const Duration(seconds: 1));
+        expect(find.text('Time Remaining 5 min'), findsOneWidget);
+
+        await tester.pump(const Duration(seconds: 8));
+        await tester.pumpAndSettle();
+        expect(find.text('Time Remaining 5 min'), findsNothing);
+
+        harness.container
+            .read(harness.roomStatusProvider.notifier)
+            .set(RoomStatus.waitingRoom);
+        await tester.pump();
+        harness.container
+            .read(harness.roomStatusProvider.notifier)
+            .set(RoomStatus.active);
+        await tester.pump(const Duration(seconds: 2));
+
+        expect(find.text('Time Remaining 5 min'), findsNothing);
+      },
+    );
+
+    testWidgets('schedules warning and shows it only after threshold', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final event = _createSessionEvent(
+        start: now.subtract(const Duration(minutes: 2)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreen(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      await tester.pump(const Duration(minutes: 2, seconds: 50));
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+
+      await tester.pump(const Duration(seconds: 15));
+      expect(find.text('Time Remaining 5 min'), findsOneWidget);
+    });
+
+    testWidgets('shows warning immediately when threshold already passed', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final event = _createSessionEvent(
+        start: now.subtract(const Duration(minutes: 9)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreen(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Time Remaining 5 min'), findsOneWidget);
+    });
+
+    testWidgets('does not show warning when event has ended', (tester) async {
+      final now = DateTime.now();
+      final event = _createSessionEvent(
+        start: now.subtract(const Duration(minutes: 9)),
+        duration: 10,
+        ended: true,
+      );
+
+      await _pumpRoomScreen(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+    });
+
+    testWidgets('cancels scheduled warning when connection disconnects', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final event = _createSessionEvent(
+        start: now.subtract(const Duration(minutes: 4)),
+        duration: 10,
+      );
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      await tester.pump(const Duration(seconds: 30));
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+
+      harness.container
+          .read(harness.connectionStateProvider.notifier)
+          .set(RoomConnectionState.disconnected);
+      await tester.pump();
+
+      await tester.pump(const Duration(seconds: 45));
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+    });
+
+    testWidgets('cancels scheduled warning when room ends before threshold', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final event = _createSessionEvent(
+        start: now.subtract(const Duration(minutes: 4)),
+        duration: 10,
+      );
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      await tester.pump(const Duration(seconds: 30));
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+
+      harness.container
+          .read(harness.roomStatusProvider.notifier)
+          .set(RoomStatus.ended);
+      await tester.pump();
+
+      await tester.pump(const Duration(seconds: 45));
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+    });
+
+    testWidgets('resets one-shot guard when session slug changes', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final eventA = _createSessionEvent(
+        slug: 'session-a',
+        start: now.subtract(const Duration(minutes: 9)),
+        duration: 10,
+      );
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: eventA,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Time Remaining 5 min'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 8));
+      await tester.pumpAndSettle();
+      expect(find.text('Time Remaining 5 min'), findsNothing);
+
+      final eventB = _createSessionEvent(
+        slug: 'session-b',
+        start: DateTime.now().subtract(const Duration(minutes: 9)),
+        duration: 10,
+      );
+
+      harness.container.read(harness.eventProvider.notifier).set(eventB);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Time Remaining 5 min'), findsOneWidget);
+    });
+
+    testWidgets('clears 5 minute warning popup when leaving room screen', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final event = _createSessionEvent(
+        start: now.subtract(const Duration(minutes: 9)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreen(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byType(NotificationPopup), findsOneWidget);
+      expect(find.text('Time Remaining 5 min'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NotificationPopup), findsNothing);
+    });
+  });
+
+  group('VideoRoomScreen - audio route popup', () {
+    late MockSessionController session;
+    late MockSessionDeviceController devices;
+
+    setUp(() {
+      session = MockSessionController();
+      devices = MockSessionDeviceController();
+      _TestSessionDeviceController.lastInstance = null;
+      _TestSessionDeviceController.initialState = const SessionDeviceState(
+        selectedCameraDeviceId: null,
+        selectedAudioDeviceId: null,
+        selectedAudioOutputDeviceId: null,
+        isSpeakerphoneEnabled: true,
+        isMicrophoneEnabled: false,
+        isCameraEnabled: false,
+      );
+
+      final localParticipant = _buildMockParticipant('user-1');
+      when(() => session.room).thenReturn(FakeRoom(localParticipant));
+      when(() => session.devices).thenReturn(devices);
+      when(() => devices.isCameraEnabled).thenReturn(false);
+      when(() => devices.isMicrophoneEnabled).thenReturn(false);
+      when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
+      when(() => devices.selectedCameraDeviceId).thenReturn(null);
+      when(() => devices.selectedAudioDeviceId).thenReturn(null);
+      when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
+      when(() => devices.localVideoTrack).thenReturn(null);
+      when(() => session.isCurrentUserKeeper()).thenReturn(false);
+      when(() => session.event).thenReturn(
+        _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 5)),
+          duration: 10,
+        ),
+      );
+    });
+
+    testWidgets('shows popup when audio route changes', (tester) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.listening,
+        extraOverrides: [
+          sessionDeviceControllerProvider(
+            session,
+          ).overrideWith(_TestSessionDeviceController.new),
+        ],
+      );
+
+      expect(find.text('Audio route changed'), findsNothing);
+
+      final controller = _TestSessionDeviceController.lastInstance;
+      expect(controller, isNotNull);
+
+      controller?.emit(
+        const SessionDeviceState(
+          selectedCameraDeviceId: null,
+          selectedAudioDeviceId: null,
+          selectedAudioOutputDeviceId: 'headphones',
+          isSpeakerphoneEnabled: false,
+          isMicrophoneEnabled: false,
+          isCameraEnabled: false,
+        ),
+      );
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Audio route changed'), findsOneWidget);
+      expect(
+        find.text('Audio is now routed to another output device.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('does not show popup while disconnected', (tester) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.listening,
+        connectionState: RoomConnectionState.disconnected,
+        extraOverrides: [
+          sessionDeviceControllerProvider(
+            session,
+          ).overrideWith(_TestSessionDeviceController.new),
+        ],
+      );
+
+      final controller = _TestSessionDeviceController.lastInstance;
+      expect(controller, isNotNull);
+
+      controller?.emit(
+        const SessionDeviceState(
+          selectedCameraDeviceId: null,
+          selectedAudioDeviceId: null,
+          selectedAudioOutputDeviceId: 'headphones',
+          isSpeakerphoneEnabled: false,
+          isMicrophoneEnabled: false,
+          isCameraEnabled: false,
+        ),
+      );
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Audio route changed'), findsNothing);
+    });
+  });
+
+  group('VideoRoomScreen - keeper disconnect popup lifecycle', () {
+    testWidgets('shows keeper paused popup when starting disconnected', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 1)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+        hasKeeperDisconnected: true,
+      );
+
+      expect(find.byType(NotificationPopup), findsOneWidget);
+      expect(find.text('The session has been paused.'), findsOneWidget);
+      expect(find.text('The keeper will be right back.'), findsOneWidget);
+    });
+
+    testWidgets('shows keeper paused popup when keeper disconnects in active', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 1)),
+        duration: 10,
+      );
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      harness.container
+          .read(harness.hasKeeperDisconnectedProvider.notifier)
+          .set(true);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NotificationPopup), findsOneWidget);
+      expect(find.text('The session has been paused.'), findsOneWidget);
+      expect(find.text('The keeper will be right back.'), findsOneWidget);
+    });
+
+    testWidgets('hides keeper paused popup when keeper reconnects', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 1)),
+        duration: 10,
+      );
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      harness.container
+          .read(harness.hasKeeperDisconnectedProvider.notifier)
+          .set(true);
+      await tester.pumpAndSettle();
+      expect(find.byType(NotificationPopup), findsOneWidget);
+
+      harness.container
+          .read(harness.hasKeeperDisconnectedProvider.notifier)
+          .set(false);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NotificationPopup), findsNothing);
+    });
+
+    testWidgets('clears keeper paused popup when room ends', (tester) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 1)),
+        duration: 10,
+      );
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      harness.container
+          .read(harness.hasKeeperDisconnectedProvider.notifier)
+          .set(true);
+      await tester.pumpAndSettle();
+      expect(find.byType(NotificationPopup), findsOneWidget);
+
+      harness.container
+          .read(harness.roomStatusProvider.notifier)
+          .set(
+            RoomStatus.ended,
+          );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NotificationPopup), findsNothing);
+    });
+
+    testWidgets('clears keeper paused popup when connection disconnects', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 1)),
+        duration: 10,
+      );
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+      );
+
+      harness.container
+          .read(harness.hasKeeperDisconnectedProvider.notifier)
+          .set(true);
+      await tester.pumpAndSettle();
+      expect(find.byType(NotificationPopup), findsOneWidget);
+
+      harness.container
+          .read(harness.connectionStateProvider.notifier)
+          .set(
+            RoomConnectionState.disconnected,
+          );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NotificationPopup), findsNothing);
+    });
+
+    testWidgets(
+      'clears keeper paused popup when entering disconnected sub screen',
+      (
+        tester,
+      ) async {
+        final event = _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 1)),
+          duration: 10,
+        );
+
+        final harness = await _pumpRoomScreenWithMutableState(
+          tester,
+          event: event,
+          connectionState: RoomConnectionState.connected,
+          roomStatus: RoomStatus.active,
+          roomScreen: RoomScreen.listening,
+        );
+
+        harness.container
+            .read(harness.hasKeeperDisconnectedProvider.notifier)
+            .set(true);
+        await tester.pumpAndSettle();
+        expect(find.byType(NotificationPopup), findsOneWidget);
+
+        harness.container
+            .read(harness.roomScreenProvider.notifier)
+            .set(RoomScreen.disconnected);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(NotificationPopup), findsNothing);
+      },
+    );
+
+    testWidgets('clears keeper paused popup when entering error sub screen', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 1)),
+        duration: 10,
+      );
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+        roomScreen: RoomScreen.listening,
+      );
+
+      harness.container
+          .read(harness.hasKeeperDisconnectedProvider.notifier)
+          .set(true);
+      await tester.pumpAndSettle();
+      expect(find.byType(NotificationPopup), findsOneWidget);
+
+      harness.container
+          .read(harness.roomScreenProvider.notifier)
+          .set(RoomScreen.error);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NotificationPopup), findsNothing);
+    });
+
+    testWidgets('clears keeper paused popup when leaving room screen', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 1)),
+        duration: 10,
+      );
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+        roomScreen: RoomScreen.listening,
+      );
+
+      harness.container
+          .read(harness.hasKeeperDisconnectedProvider.notifier)
+          .set(true);
+      await tester.pumpAndSettle();
+      expect(find.byType(NotificationPopup), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NotificationPopup), findsNothing);
+    });
+  });
+
+  group('VideoRoomScreen - session feedback cues', () {
+    testWidgets('plays transition cue for waiting room to active', (
+      tester,
+    ) async {
+      final feedbackService = _TestSessionCuesService();
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 2)),
+          duration: 10,
+        ),
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.waitingRoom,
+        extraOverrides: [
+          sessionCuesServiceProvider.overrideWithValue(feedbackService),
+        ],
+      );
+
+      expect(feedbackService.sessionTransitionCueCount, 0);
+
+      harness.container
+          .read(harness.roomStatusProvider.notifier)
+          .set(RoomStatus.active);
+      await tester.pump();
+
+      expect(feedbackService.sessionTransitionCueCount, 1);
+
+      harness.container
+          .read(harness.roomStatusProvider.notifier)
+          .set(RoomStatus.active);
+      await tester.pump();
+
+      expect(feedbackService.sessionTransitionCueCount, 1);
+    });
+
+    testWidgets('plays transition cue for active to ended', (tester) async {
+      final feedbackService = _TestSessionCuesService();
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 2)),
+          duration: 10,
+        ),
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+        extraOverrides: [
+          sessionCuesServiceProvider.overrideWithValue(feedbackService),
+        ],
+      );
+
+      harness.container
+          .read(harness.roomStatusProvider.notifier)
+          .set(RoomStatus.ended);
+      await tester.pump();
+
+      expect(feedbackService.sessionTransitionCueCount, 1);
+    });
+
+    testWidgets('plays totem arrived cue when receiving screen appears', (
+      tester,
+    ) async {
+      final feedbackService = _TestSessionCuesService();
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 2)),
+          duration: 10,
+        ),
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+        roomScreen: RoomScreen.listening,
+        extraOverrides: [
+          sessionCuesServiceProvider.overrideWithValue(feedbackService),
+        ],
+      );
+
+      expect(feedbackService.totemReceivedCueCount, 0);
+
+      harness.container
+          .read(harness.roomScreenProvider.notifier)
+          .set(RoomScreen.receiving);
+      await tester.pump();
+
+      expect(feedbackService.totemReceivedCueCount, 1);
+
+      harness.container
+          .read(harness.roomScreenProvider.notifier)
+          .set(RoomScreen.receiving);
+      await tester.pump();
+
+      expect(feedbackService.totemReceivedCueCount, 1);
+    });
+  });
+}

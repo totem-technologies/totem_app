@@ -1,0 +1,93 @@
+import 'package:flutter/widgets.dart';
+import 'package:go_router/go_router.dart';
+import 'package:totem_core/core/config/app_config.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/shared/router.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+class RoutingUtils {
+  const RoutingUtils._();
+
+  /// Parses a URL and converts it to an app route if it's a Totem deep link.
+  ///
+  /// Returns the app route path if the URL is a Totem domain link, or null if
+  /// it's an external link.
+  static String? parseTotemDeepLink(String urlString) {
+    try {
+      final uri = Uri.parse(urlString);
+      final host = uri.host.toLowerCase();
+      final isTotemDomain =
+          host == 'totem.org' ||
+          host == 'www.totem.org' ||
+          host == 'totem.kbl.io' ||
+          host == Uri.parse(AppConfig.mobileApiUrl).host.toLowerCase();
+
+      if (!isTotemDomain) {
+        return null;
+      }
+
+      final path = uri.path;
+      if (path.isEmpty || path == '/') {
+        return null;
+      }
+
+      final segments = path.split('/').where((s) => s.isNotEmpty).toList();
+      if (segments.isEmpty) {
+        return null;
+      }
+
+      final firstSegment = segments[0];
+
+      switch (firstSegment) {
+        case 'blog':
+          if (segments.length >= 2) {
+            return RouteNames.blogPost(segments[1]);
+          }
+
+        case 'spaces':
+          if (segments.length == 2) {
+            return RouteNames.space(segments[1]);
+          }
+          // Handle share link format: /spaces/event/{slug}
+          if (segments.length == 3 &&
+              segments[1] == 'event' &&
+              segments[2].isNotEmpty) {
+            return RouteNames.spaceEvent(segments[2]);
+          }
+          // Handle full format: /spaces/{spaceSlug}/event/{eventSlug}
+          if (segments.length >= 4 &&
+              segments[1].isNotEmpty &&
+              segments[2] == 'event' &&
+              segments[3].isNotEmpty) {
+            return RouteNames.spaceSession(segments[1], segments[3]);
+          }
+
+        case 'keeper':
+          if (segments.length >= 2) {
+            return RouteNames.keeperProfile(segments[1]);
+          }
+      }
+
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static void handleLinkTap(BuildContext context, String? url) async {
+    if (url == null) return;
+    try {
+      final appRoute = parseTotemDeepLink(url);
+      if (appRoute != null && context.mounted) {
+        await context.push(appRoute);
+      } else {
+        await launchUrl(
+          Uri.parse(url),
+          mode: LaunchMode.externalApplication,
+        );
+      }
+    } catch (e) {
+      ErrorHandler.logError(e, message: 'Failed to handle link tap: $url');
+    }
+  }
+}

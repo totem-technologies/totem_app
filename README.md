@@ -15,7 +15,7 @@
 Totem is a space for guided group introspection. This Flutter app is the **official open-source mobile client** for the Totem platform.
 It connects people through structured group sessions and authentic conversations, powered by a thoughtfully crafted UI and backend.
 
-This client targets both **iOS** and **Android**, using **Flutter** and **Riverpod** for a fast, modern, and scalable development experience.
+This client targets **iOS**, **Android** and the **Web**, using **Flutter** and **Riverpod** for a fast, modern, and scalable development experience.
 
 ---
 
@@ -26,8 +26,7 @@ Make sure you have [Flutter installed](https://docs.flutter.dev/get-started/inst
 ```bash
 git clone https://github.com/totem-technologies/totem_app.git
 flutter config --enable-swift-package-manager
-cd totem_app
-flutter pub get
+make install
 make githooks  # Install git hooks for code formatting
 ```
 
@@ -41,9 +40,8 @@ make githooks  # Install git hooks for code formatting
 For development:
 
 ```bash
-flutter run -d android    # Android
-flutter run -d ios        # iOS
-flutter run -d chrome --web-browser-flag "--disable-web-security" --wasm     # Web (temporary testing)
+make run
+make run-chrome
 ```
 
 If testing on an iOS device, ensure you're using macOS and have Xcode installed.
@@ -60,7 +58,7 @@ flutter attach
 or
 
 ```bash
-flutter run --use-application-binary=build\app\outputs\apk\debug\app-debug.apk
+flutter run --use-application-binary=packages\totem_app\build\app\outputs\apk\debug\app-debug.apk
 ```
 
 ### 🧪 Testing
@@ -68,30 +66,28 @@ flutter run --use-application-binary=build\app\outputs\apk\debug\app-debug.apk
 Run all tests:
 
 ```bash
-flutter test
+make test
 ```
-
-_Coming soon: Widget tests and CI-integrated integration tests._
 
 ### Deep Linking
 
-To test deep linking, you can use the following commands:
+To test deep linking, with the app running, you can use the following commands:
 
 For Android:
 
 ```bash
-adb shell 'am start -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d "https://totem.org/spaces/event/doa689fvb"' org.totem.app
+adb shell 'am start -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d "https://totem.org/spaces/session/doa689fvb"' org.totem.app
 ```
 
 For iOS:
 
 ```bash
-xcrun simctl openurl booted "https://totem.org/spaces/event/doa689fvb"
+xcrun simctl openurl booted "https://totem.org/spaces/session/doa689fvb"
 ```
 
 ### Local Server
 
-To run the app with a local server, you can set the `TOTEM_API_URL` environment variable at the `.env` file in the root directory of the project. This allows you to connect to a local instance of the Totem API.
+To run the app with a local server, you can set the `TOTEM_API_URL` environment variable at the `.env` file in the `packages/totem_app` or `packages/totem_web` directory of the project. This allows you to connect to a local instance of the Totem API.
 
 ```bash
 API_URL="http://localhost:8000/"
@@ -100,20 +96,25 @@ MOBILE_API_URL="http://localhost:8000/"
 
 ## ✍️ Project Structure
 
+This repository is organized as a multi-package Flutter workspace.
+
 ```
-lib/
-├── api/             # API clients & models (generated with Retrofit)
-├── auth/            # Auth flow: login, profile setup, state
-├── core/            # Config, theme, services, errors
-├── features/        # Feature modules (spaces, profile, video_sessions, etc.)
-├── navigation/      # Centralized routing and guards
-├── shared/          # Reusable widgets
-└── main.dart        # Entry point, app root
+.
+├── packages/
+│   ├── totem_core/    # Shared library: firebase_options.dart, common logic, models
+│   │   └── lib/
+│   ├── totem_app/     # Mobile app (iOS / Android)
+│   │   └── lib/
+│   └── totem_web/     # Web client
+│       └── lib/
+├── scripts/
+├── specs/
+└── README.md
 ```
 
 ### 🔔 Notifications
 
-Notifications are handled using Firebase Cloud Messaging (FCM). In the notification data, one may include a `path` key to specify the route to navigate to when the user taps on the notification. Check all the available routes [here](./lib/navigation/route_names.dart).
+Notifications are handled using Firebase Cloud Messaging (FCM). In the notification data, one may include a `path` key to specify the route to navigate to when the user taps on the notification.
 
 ## 🚢 Release (for developers)
 

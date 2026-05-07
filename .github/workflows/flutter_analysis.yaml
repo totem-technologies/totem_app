@@ -22,7 +22,9 @@ jobs:
         run: flutter --version
 
       - name: Create .env file
-        run: echo 'API_URL="https://totem.kbl.io"' > .env
+        run: |
+          echo 'API_URL="https://totem.kbl.io"' > ./packages/totem_app/.env
+          echo 'API_URL="https://totem.kbl.io"' > ./packages/totem_web/.env
 
       # - name: Install Firebase CLI
       #   run: |
@@ -30,6 +32,7 @@ jobs:
       #     dart pub global activate flutterfire_cli
 
       - name: Decode firebase_options.dart
+        working-directory: packages/totem_core
         run: |
           mkdir -p lib
           echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
@@ -44,5 +47,14 @@ jobs:
       - name: Run analysis
         run: flutter analyze
 
-      - name: Run tests
+      - name: Run core tests
+        working-directory: packages/totem_core
         run: flutter test
+
+      - name: Run app tests
+        working-directory: packages/totem_app
+        run: flutter test
+
+      # - name: Run web tests
+      #   working-directory: packages/totem_web
+      #   run: flutter test

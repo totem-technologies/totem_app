@@ -1,7 +1,7 @@
 name: Build Flutter Client
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -9,6 +9,9 @@ jobs:
   validate_ios_signing:
     name: Validate iOS Signing Config
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./packages/totem_app
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,7 +40,11 @@ jobs:
   build_android_apk:
     name: Android ABI (${{ matrix.flavor }})
     runs-on: ubuntu-latest
-    
+
+    defaults:
+      run:
+        working-directory: ./packages/totem_app
+
     strategy:
       fail-fast: false
       matrix:
@@ -70,17 +77,26 @@ jobs:
           google_services_json: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
           flavor: ${{ matrix.flavor }}
 
-      - name: Flutter pub get
+      - name: Install dependencies for totem_core
+        working-directory: ./packages/totem_core
+        run: flutter pub get
+
+      - name: Install dependencies for totem_app
+        working-directory: ./packages/totem_app
         run: flutter pub get
 
       - name: Build ABI
+        working-directory: ./packages/totem_app
         run: flutter build appbundle --verbose --flavor ${{ matrix.flavor }}
-
 
   build_ios_ipa:
     name: iOS IPA (${{ matrix.flavor }})
     runs-on: macos-26
     needs: validate_ios_signing
+
+    defaults:
+      run:
+        working-directory: ./packages/totem_app
 
     strategy:
       fail-fast: false
@@ -107,8 +123,14 @@ jobs:
           google_service_plist: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
           flavor: ${{ matrix.flavor }}
 
-      - name: Flutter pub get
+      - name: Install dependencies for totem_core
+        working-directory: ./packages/totem_core
+        run: flutter pub get
+
+      - name: Install dependencies for totem_app
+        working-directory: ./packages/totem_app
         run: flutter pub get
 
       - name: Build IPA
+        working-directory: ./packages/totem_app
         run: flutter build ipa --verbose --no-codesign --flavor ${{ matrix.flavor }}

@@ -1,0 +1,45 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/api/**/**.dart"
+
+linter:
+  rules:
+    # Style and Consistency
+    prefer_single_quotes: true
+    sort_child_properties_last: true
+    unnecessary_this: true
+    sort_pub_dependencies: false
+    document_ignores: false
+    avoid_redundant_argument_values: false
+    prefer_int_literals: false
+
+    # Safety and Best Practices
+    avoid_print: true
+    avoid_unnecessary_containers: true
+    avoid_empty_else: true
+    prefer_const_constructors: true
+    prefer_const_literals_to_create_immutables: true
+    use_super_parameters: true
+    prefer_final_locals: true
+    avoid_field_initializers_in_const_classes: true
+    avoid_catches_without_on_clauses: false
+    use_colored_box: true
+    use_decorated_box: true
+
+    # Readability
+    omit_local_variable_types: false
+    require_trailing_commas: true
+    public_member_api_docs: false
+    avoid_positional_boolean_parameters: false
+
+    # Null safety and defensive coding
+    no_leading_underscores_for_local_identifiers: true
+    always_specify_types: false # (optional — depends if you want verbose code)
+    no_default_cases: false
+    avoid_void_async: false
+    lines_longer_than_80_chars: false
+    unawaited_futures: false
+    discarded_futures: false

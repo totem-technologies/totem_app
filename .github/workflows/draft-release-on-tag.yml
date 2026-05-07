@@ -28,6 +28,9 @@ jobs:
     name: Android (${{ matrix.flavor }})
     runs-on: ubuntu-latest
     needs: create_draft_release
+    defaults:
+      run:
+        working-directory: ./packages/totem_app
 
     strategy:
       fail-fast: false
@@ -68,6 +71,9 @@ jobs:
     name: iOS (${{ matrix.flavor }})
     runs-on: macos-26
     needs: create_draft_release
+    defaults:
+      run:
+        working-directory: ./packages/totem_app
 
     strategy:
       fail-fast: false

@@ -1,0 +1,104 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/circle_icon_button.dart';
+
+class SessionErrorScreen extends StatelessWidget {
+  const SessionErrorScreen({this.onRetry, this.error, super.key});
+
+  final VoidCallback? onRetry;
+  final Object? error;
+
+  @override
+  Widget build(BuildContext context) {
+    var title = 'Something went wrong';
+    var subtitle =
+        "We couldn't connect you to this session. "
+        'Please check your internet connection or try again.';
+    var canRetry = true;
+
+    if (error is RoomErrorResponse) {
+      switch ((error! as RoomErrorResponse).code) {
+        case ErrorCode.banned:
+          title = "You've been removed from this session";
+          subtitle =
+              "You can still join other sessions, but you won't be able to access this one.";
+          canRetry = false;
+        case ErrorCode.roomAlreadyEnded:
+          title = 'This session has ended';
+          subtitle =
+              'This session has already ended. You can still join other sessions.';
+        case ErrorCode.notJoinable:
+          title = 'This session cannot be joined';
+          subtitle =
+              'You cannot join the session at this time. Please try again later.';
+        default:
+          break;
+      }
+    }
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        leading: CircleIconButton(
+          margin: const EdgeInsetsDirectional.only(start: 20, top: 20),
+          icon: TotemIcons.arrowBack,
+          tooltip: MaterialLocalizations.of(
+            context,
+          ).backButtonTooltip,
+          onPressed: () => TotemRouter.instance.popOrHome(context),
+        ),
+      ),
+      extendBodyBehindAppBar: true,
+      body: Padding(
+        padding: const EdgeInsetsDirectional.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          spacing: 20,
+          children: [
+            const Spacer(),
+            TotemIcon(
+              TotemIcons.errorOutlined,
+              size: 100,
+              color: theme.textTheme.headlineMedium?.color,
+            ),
+            Text(
+              title,
+              style: theme.textTheme.headlineMedium,
+              textAlign: TextAlign.center,
+            ),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+            ),
+            const Spacer(),
+            if (canRetry && onRetry != null)
+              OutlinedButton(
+                onPressed: onRetry,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(120, 50),
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 20,
+                    vertical: 8,
+                  ),
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(
+                      color: theme.colorScheme.onPrimary,
+                    ),
+                  ),
+                ),
+                child: const Text('Retry'),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

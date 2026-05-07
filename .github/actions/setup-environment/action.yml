@@ -23,11 +23,11 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Create .env & Common Files
+    - name: Create .env in totem_app
       shell: bash
       env:
         FLAVOR: ${{ inputs.flavor }}
-        FIREBASE_OPTS: ${{ inputs.firebase_options }}
+      working-directory: ./packages/totem_app
       run: |
         {
           echo "ENVIRONMENT=\"$FLAVOR\""
@@ -37,18 +37,25 @@ runs:
             echo 'API_URL="https://www.totem.org"'
           fi
         } > .env
+
+    - name: Create Firebase options in totem_core
+      shell: bash
+      working-directory: ./packages/totem_core
+      run: |
         mkdir -p lib
         echo "${{ inputs.firebase_options }}" | base64 -d > lib/firebase_options.dart
 
     - name: Decode Android Config
       if: ${{ inputs.google_services_json != '' }}
       shell: bash
+      working-directory: ./packages/totem_app
       run: |
         echo "${{ inputs.google_services_json }}" | base64 -d > android/app/google-services.json
 
     - name: Decode iOS Config
       if: ${{ inputs.google_service_plist != '' }}
       shell: bash
+      working-directory: ./packages/totem_app
       run: |
         mkdir -p ios/Runner
         echo "${{ inputs.google_service_plist }}" | base64 -d > ios/Runner/GoogleService-Info.plist
