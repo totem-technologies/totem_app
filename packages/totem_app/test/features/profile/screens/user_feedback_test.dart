@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:totem_app/features/profile/screens/user_feedback.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
+import 'package:totem_core/shared/widgets/user_feedback.dart';
 
 void main() {
   Future<void> pumpPopup(

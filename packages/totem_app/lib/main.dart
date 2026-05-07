@@ -11,7 +11,9 @@ import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared_main.dart';
 
 Future<void> main() async {
-  sharedMain(TotemApp());
+  sharedMain(TotemApp(), () async {
+    await NotificationsService.instance.initialize();
+  });
 }
 
 class TotemApp extends ConsumerStatefulWidget {

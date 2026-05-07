@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 
-import '../repositories/space_repository.dart';
 import '../widgets/space_card.dart';
 
 class SessionHistoryScreen extends ConsumerWidget {

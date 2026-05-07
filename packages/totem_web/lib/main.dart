@@ -12,7 +12,7 @@ import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_core/shared_main.dart';
 
 void main() {
-  sharedMain(const TotemWebApp());
+  sharedMain(const TotemWebApp(), () async {});
 }
 
 class TotemWebApp extends ConsumerWidget {

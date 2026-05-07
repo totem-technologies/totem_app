@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 class MeetUserCard extends StatelessWidget {

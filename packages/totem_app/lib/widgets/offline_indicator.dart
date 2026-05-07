@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
-import 'package:totem_app/features/home/repositories/home_screen_repository.dart';
-import 'package:totem_app/features/spaces/repositories/space_repository.dart';
+import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/shared/logger.dart';
 

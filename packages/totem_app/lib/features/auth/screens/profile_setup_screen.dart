@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
-import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/card_screen.dart';
 import 'package:totem_core/shared/widgets/info_text.dart';
@@ -16,7 +17,6 @@ import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../profile/screens/profile_image_picker.dart';
-import '../../spaces/repositories/space_repository.dart';
 import '../widgets/referral_source_modal.dart';
 import '../widgets/suggested_space_card_widget.dart';
 

@@ -5,6 +5,7 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';
 import 'package:totem_core/shared/widgets/empty_indicator.dart';
@@ -12,7 +13,6 @@ import 'package:totem_core/shared/widgets/error_screen.dart';
 
 import '../../blog/repositories/blog_repository.dart';
 import '../models/upcoming_session_data.dart';
-import '../repositories/home_screen_repository.dart';
 import '../widgets/home_blog_card.dart';
 import '../widgets/next_session_card.dart';
 import '../widgets/upcoming_session_card.dart';

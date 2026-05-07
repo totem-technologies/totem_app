@@ -17,8 +17,10 @@ import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/calendar_service.dart';
+import 'package:totem_core/features/keeper/screens/meet_user_card.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/extensions.dart';
@@ -36,9 +38,6 @@ import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../home/repositories/home_screen_repository.dart';
-import '../../keeper/screens/meet_user_card.dart';
-import '../repositories/space_repository.dart';
 import '../widgets/info_text.dart';
 
 enum SpaceJoinCardState {

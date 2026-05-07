@@ -8,6 +8,7 @@ import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/keeper/screens/meet_user_card.dart';
 import 'package:totem_core/shared/html.dart';
 import 'package:totem_core/shared/routing.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -17,7 +18,6 @@ import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
-import '../../keeper/screens/meet_user_card.dart';
 import '../repositories/blog_repository.dart';
 
 class BlogScreen extends ConsumerStatefulWidget {

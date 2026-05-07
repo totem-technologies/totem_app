@@ -5,11 +5,10 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
-
-import '../repositories/space_repository.dart';
 
 class SubscribedSpacesScreen extends ConsumerWidget {
   const SubscribedSpacesScreen({super.key});

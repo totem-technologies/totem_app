@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/spaces/widgets/keeper_spaces.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/keeper/repositories/keeper_repository.dart';
 import 'package:totem_core/shared/html.dart';
 import 'package:totem_core/shared/routing.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -13,8 +14,6 @@ import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/totem_icon.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/link.dart';
-
-import '../repositories/keeper_repository.dart';
 
 class KeeperProfileScreen extends ConsumerWidget {
   const KeeperProfileScreen({

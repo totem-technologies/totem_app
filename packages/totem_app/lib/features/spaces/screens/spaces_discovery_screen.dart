@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';
 import 'package:totem_core/shared/widgets/empty_indicator.dart';
@@ -8,7 +9,6 @@ import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 
 import '../../home/models/upcoming_session_data.dart';
-import '../../home/repositories/home_screen_repository.dart';
 import '../widgets/filter.dart';
 import '../widgets/session_card.dart';
 import '../widgets/session_date_group.dart';

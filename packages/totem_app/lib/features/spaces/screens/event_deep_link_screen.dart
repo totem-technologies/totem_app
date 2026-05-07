@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_app/navigation/route_names.dart';
+import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
-
-import '../repositories/space_repository.dart';
 
 class EventDeepLinkScreen extends ConsumerWidget {
   const EventDeepLinkScreen({required this.eventSlug, super.key});
