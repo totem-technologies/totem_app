@@ -167,9 +167,8 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                                 ProfileAvatarTypeEnum.im => const TotemIcon(
                                   TotemIcons.upload,
                                 ),
-                                ProfileAvatarTypeEnum.td || _ => const Icon(
-                                  Icons.shuffle,
-                                ),
+                                ProfileAvatarTypeEnum.td ||
+                                _ => const Icon(Icons.shuffle),
                               },
                             ),
                           ),
@@ -255,10 +254,7 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
               ElevatedButton(
                 onPressed: _loading ? () {} : _onSave,
                 child: _loading
-                    ? const LoadingIndicator(
-                        size: 24,
-                        color: Colors.white,
-                      )
+                    ? const LoadingIndicator(size: 24, color: Colors.white)
                     : const Text('Save'),
               ),
             ],

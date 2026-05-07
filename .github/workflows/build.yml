@@ -1,7 +1,7 @@
 name: Build Flutter Client
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -37,7 +37,11 @@ jobs:
   build_android_apk:
     name: Android ABI (${{ matrix.flavor }})
     runs-on: ubuntu-latest
-    
+
+    defaults:
+      run:
+        working-directory: ./packages/totem_app
+
     strategy:
       fail-fast: false
       matrix:
@@ -76,11 +80,14 @@ jobs:
       - name: Build ABI
         run: flutter build appbundle --verbose --flavor ${{ matrix.flavor }}
 
-
   build_ios_ipa:
     name: iOS IPA (${{ matrix.flavor }})
     runs-on: macos-26
     needs: validate_ios_signing
+
+    defaults:
+      run:
+        working-directory: ./packages/totem_app
 
     strategy:
       fail-fast: false

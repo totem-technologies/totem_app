@@ -17,11 +17,7 @@ class SpacesFilterBar extends StatelessWidget {
     return Container(
       height: 56,
       constraints: const BoxConstraints(maxWidth: 500),
-      margin: const EdgeInsetsDirectional.only(
-        top: 8,
-        bottom: 8,
-        start: 16,
-      ),
+      margin: const EdgeInsetsDirectional.only(top: 8, bottom: 8, start: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -41,9 +37,7 @@ class SpacesFilterBar extends StatelessWidget {
               type: MaterialType.transparency,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsetsDirectional.symmetric(
-                  horizontal: 16,
-                ),
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
                 children: [
                   SpacesFilterChip(
                     label: 'All',
@@ -72,11 +66,7 @@ class SpacesFilterBar extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: AlignmentDirectional.centerEnd,
                     end: AlignmentDirectional.centerStart,
-                    stops: const [
-                      0,
-                      0.2,
-                      1,
-                    ],
+                    stops: const [0, 0.2, 1],
                     colors: [
                       Colors.white,
                       Colors.white,
@@ -98,14 +88,8 @@ class SpacesFilterBar extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: AlignmentDirectional.centerStart,
                     end: AlignmentDirectional.centerEnd,
-                    stops: const [
-                      0.5,
-                      1,
-                    ],
-                    colors: [
-                      Colors.white,
-                      Colors.white.withValues(alpha: 0),
-                    ],
+                    stops: const [0.5, 1],
+                    colors: [Colors.white, Colors.white.withValues(alpha: 0)],
                   ),
                 ),
               ),

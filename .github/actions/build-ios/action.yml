@@ -7,7 +7,7 @@ branding:
 inputs:
   working-directory:
     description: The root directory of the flutter app within this repository
-    default: ./
+    default: ./packages/totem_app
   build-cmd:
     description: The full build command, can be used to add arguments
     default: flutter build ipa --release

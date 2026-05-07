@@ -35,10 +35,7 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
     super.initState();
     final firstEvent = widget.nextEvents.firstOrNull;
     if (firstEvent != null) {
-      _currentMonth = DateTime(
-        firstEvent.start.year,
-        firstEvent.start.month,
-      );
+      _currentMonth = DateTime(firstEvent.start.year, firstEvent.start.month);
     } else {
       _currentMonth = DateTime.now();
     }
@@ -250,10 +247,7 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
     } else if (_isEventOpen(day)) {
       dayCellContent = DecoratedBox(
         decoration: BoxDecoration(
-          border: Border.all(
-            color: AppTheme.mauve,
-            width: 2,
-          ),
+          border: Border.all(color: AppTheme.mauve, width: 2),
           shape: BoxShape.circle,
         ),
         child: Center(
@@ -276,9 +270,7 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
         child: Center(
           child: Text(
             '${day.day}',
-            style: const TextStyle(
-              color: AppTheme.white,
-            ),
+            style: const TextStyle(color: AppTheme.white),
           ),
         ),
       );

@@ -146,14 +146,11 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(
-      connectivityStreamProvider,
-      (previous, next) {
-        if (next.hasValue) {
-          _updateConnectivityStatus(next.value!);
-        }
-      },
-    );
+    ref.listen(connectivityStreamProvider, (previous, next) {
+      if (next.hasValue) {
+        _updateConnectivityStatus(next.value!);
+      }
+    });
 
     return Stack(
       fit: StackFit.expand,
@@ -169,10 +166,7 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
                   begin: const Offset(0, 1.5),
                   end: Offset.zero,
                 ).animate(animation),
-                child: FadeTransition(
-                  opacity: animation,
-                  child: child,
-                ),
+                child: FadeTransition(opacity: animation, child: child),
               );
             },
             child: _status != ConnectivityStatus.online

@@ -17,11 +17,7 @@ class SessionMetadataIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TotemIcon(
-      icon,
-      size: size,
-      color: color,
-    );
+    return TotemIcon(icon, size: size, color: color);
   }
 }
 

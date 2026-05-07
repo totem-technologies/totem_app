@@ -80,11 +80,7 @@ class MySessionsButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TotemIcon(
-                TotemIcons.mySessions,
-                size: 16,
-                color: contentColor,
-              ),
+              TotemIcon(TotemIcons.mySessions, size: 16, color: contentColor),
               AnimatedSize(
                 duration: const Duration(milliseconds: 250),
                 curve: Curves.easeInOut,

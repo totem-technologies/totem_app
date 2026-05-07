@@ -51,12 +51,19 @@ jobs:
         run: flutter --version
 
       - name: Create .env file
+        working-directory: ./packages/totem_app
         run: echo 'API_URL="https://totem.kbl.io"' > .env
 
-      - name: Decode google-services.json and firebase_options.dart
+      - name: Decode firebase_options.dart
+        working-directory: ./packages/totem_core
         run: |
           mkdir -p lib
-          echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 -d > android/app/google-services.json
+
+      - name: Decode google-services.json
+        working-directory: ./packages/totem_app
+        run: |
+          mkdir -p lib
           echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 -d > android/app/google-services.json
 
       - name: Run Claude Code

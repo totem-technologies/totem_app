@@ -3,10 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class BlogPostCardBadge extends StatelessWidget {
-  const BlogPostCardBadge({
-    required this.text,
-    super.key,
-  });
+  const BlogPostCardBadge({required this.text, super.key});
 
   final String text;
 
