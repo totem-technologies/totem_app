@@ -3,18 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
+import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
-import 'package:totem_app/navigation/route_names.dart';
 import 'package:totem_core/shared/widgets/card_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 
 class PinEntryScreen extends ConsumerStatefulWidget {
-  const PinEntryScreen({required this.email, super.key});
+  const PinEntryScreen({required this.email, this.nextRoute, super.key});
 
   final String email;
+  final String? nextRoute;
 
   @override
   ConsumerState<PinEntryScreen> createState() => _PinEntryScreenState();
@@ -64,7 +65,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
           .verifyPin(_pinController.text.trim());
       Future<void>.delayed(const Duration(seconds: 2), () {
         if (mounted) {
-          context.go('/');
+          context.go(widget.nextRoute ?? '/');
         }
       });
       // If we reach here, PIN verification was successful
@@ -91,7 +92,11 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
           // Navigate back to login screen after max attempts
           Future<void>.delayed(const Duration(seconds: 2), () {
             if (mounted) {
-              context.go(RouteNames.login);
+              context.go(
+                widget.nextRoute == null
+                    ? RouteNames.login
+                    : '${RouteNames.login}?next=${Uri.encodeComponent(widget.nextRoute!)}',
+              );
             }
           });
         }
@@ -101,7 +106,11 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
 
   // Request a new magic link
   void _requestNewPin() {
-    context.go(RouteNames.login);
+    context.go(
+      widget.nextRoute == null
+          ? RouteNames.login
+          : '${RouteNames.login}?next=${Uri.encodeComponent(widget.nextRoute!)}',
+    );
   }
 
   @override

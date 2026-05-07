@@ -91,6 +91,7 @@ class _CardScreenState extends State<CardScreen>
                         child: Image.asset(
                           TotemImageAssets.genericBackground,
                           fit: BoxFit.cover,
+                          package: 'totem_core',
                         ),
                       ),
                     ),
@@ -109,6 +110,7 @@ class _CardScreenState extends State<CardScreen>
                                 fit: BoxFit.fitHeight,
                                 color: Colors.white,
                                 height: 70,
+                                package: 'totem_core',
                               ),
                               const Text(
                                 'Turn Conversations Into Community',

@@ -238,7 +238,10 @@ GoRouter createRouter(WidgetRef ref) {
       GoRoute(
         path: RouteNames.login,
         name: RouteNames.login,
-        builder: (context, state) => const LoginScreen(),
+        builder: (context, state) {
+          final nextRoute = state.uri.queryParameters['next'];
+          return LoginScreen(nextRoute: nextRoute);
+        },
       ),
       GoRoute(
         path: RouteNames.pinEntry,
@@ -248,7 +251,10 @@ GoRouter createRouter(WidgetRef ref) {
               (state.uri.queryParameters['email']) ??
               ((state.extra as Map?)?['email'] as String?) ??
               '';
-          return PinEntryScreen(email: email);
+          final nextRoute =
+              state.uri.queryParameters['next'] ??
+              ((state.extra as Map?)?['nextRoute'] as String?);
+          return PinEntryScreen(email: email, nextRoute: nextRoute);
         },
       ),
       // Onboarding (no bottom nav)

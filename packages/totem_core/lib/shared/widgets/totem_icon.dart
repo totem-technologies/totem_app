@@ -17,6 +17,7 @@ class TotemIconLogo extends StatelessWidget {
         width: size,
         height: size,
         color: color,
+        package: 'totem_core',
       ),
     );
   }
@@ -40,6 +41,7 @@ class TotemLogo extends StatelessWidget {
         TotemImageAssets.logoSmall,
         fit: BoxFit.contain,
         color: color,
+        package: 'totem_core',
       ),
     );
   }

@@ -12,7 +12,7 @@ class WelcomeScreen extends StatelessWidget {
       showBackground: true,
       showLogoOnLargeScreens: false,
       children: [
-        Image.asset('assets/logo/logo-black.png'),
+        Image.asset('assets/logo/logo-black.png', package: 'totem_core'),
         const Text('Turn Conversations Into Community'),
         const SizedBox(height: 20),
         ElevatedButton(

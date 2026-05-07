@@ -12,7 +12,9 @@ import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({this.nextRoute, super.key});
+
+  final String? nextRoute;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -61,7 +63,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // Navigate to PIN entry screen
         context.go(
           RouteNames.pinEntry,
-          extra: {'email': _emailController.text.trim()},
+          extra: {
+            'email': _emailController.text.trim(),
+            'nextRoute': widget.nextRoute,
+          },
         );
       }
     } catch (error, stackTrace) {
