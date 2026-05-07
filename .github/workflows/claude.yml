@@ -52,10 +52,10 @@ jobs:
 
       - name: Create .env file
         working-directory: ./packages/totem_app
-        run: echo 'API_URL="https://totem.kbl.io"' > .env
+        run: echo 'MOBILE_API_URL="https://totem.kbl.io"' > .env
 
       - name: Decode firebase_options.dart
-        working-directory: ./packages/totem_core
+        working-directory: ./packages/totem_app
         run: |
           mkdir -p lib
           echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart

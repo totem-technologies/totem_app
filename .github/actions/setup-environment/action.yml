@@ -12,12 +12,8 @@ inputs:
     description: "Base64 encoded GoogleService-Info.plist (iOS)"
     required: false
   flavor:
-    type: choice
     required: true
-    description: "The flavor"
-    options:
-      - "staging"
-      - "production"
+    description: "The flavor. Options: staging, production"
     default: "production"
 
 runs:
@@ -32,15 +28,15 @@ runs:
         {
           echo "ENVIRONMENT=\"$FLAVOR\""
           if [ "$FLAVOR" = "staging" ]; then
-            echo 'API_URL="https://totem.kbl.io"'
+            echo 'MOBILE_API_URL="https://totem.kbl.io"'
           else
-            echo 'API_URL="https://www.totem.org"'
+            echo 'MOBILE_API_URL="https://www.totem.org"'
           fi
         } > .env
 
-    - name: Create Firebase options in totem_core
+    - name: Create Firebase options in totem_app
       shell: bash
-      working-directory: ./packages/totem_core
+      working-directory: ./packages/totem_app
       run: |
         mkdir -p lib
         echo "${{ inputs.firebase_options }}" | base64 -d > lib/firebase_options.dart
@@ -59,3 +55,10 @@ runs:
       run: |
         mkdir -p ios/Runner
         echo "${{ inputs.google_service_plist }}" | base64 -d > ios/Runner/GoogleService-Info.plist
+
+    - name: Create Firebase options in totem_web
+      shell: bash
+      working-directory: ./packages/totem_web
+      run: |
+        mkdir -p lib
+        echo "${{ inputs.firebase_options }}" | base64 -d > lib/firebase_options.dart

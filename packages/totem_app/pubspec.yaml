@@ -13,6 +13,9 @@ dependencies:
   totem_core:
     path: ../totem_core
 
+  # Firebase (used by generated firebase_options.dart)
+  firebase_core: ^4.0.0
+
   # State Management
   flutter_riverpod: ^3.2.1
   riverpod_annotation: ^4.0.0

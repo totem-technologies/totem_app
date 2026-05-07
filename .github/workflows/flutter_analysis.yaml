@@ -23,8 +23,8 @@ jobs:
 
       - name: Create .env file
         run: |
-          echo 'API_URL="https://totem.kbl.io"' > ./packages/totem_app/.env
-          echo 'API_URL="https://totem.kbl.io"' > ./packages/totem_web/.env
+          echo 'MOBILE_API_URL="https://totem.kbl.io"' > ./packages/totem_app/.env
+          echo 'MOBILE_API_URL="https://totem.kbl.io"' > ./packages/totem_web/.env
 
       # - name: Install Firebase CLI
       #   run: |
@@ -32,7 +32,13 @@ jobs:
       #     dart pub global activate flutterfire_cli
 
       - name: Decode firebase_options.dart
-        working-directory: packages/totem_core
+        working-directory: packages/totem_app
+        run: |
+          mkdir -p lib
+          echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
+
+      - name: Decode firebase_options.dart
+        working-directory: packages/totem_web
         run: |
           mkdir -p lib
           echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
