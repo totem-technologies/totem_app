@@ -2,8 +2,8 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/models/upcoming_session_data.dart';
 
-import '../../home/models/upcoming_session_data.dart';
 import 'session_card.dart';
 
 class SessionDateGroup {

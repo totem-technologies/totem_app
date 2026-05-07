@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/core/models/upcoming_session_data.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/date.dart';
@@ -13,10 +14,8 @@ import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
+import 'package:totem_core/shared/widgets/session_metadata.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
-
-import '../models/upcoming_session_data.dart';
-import 'session_metadata.dart';
 
 /// A card widget displaying an upcoming session with its details.
 class UpcomingSessionCard extends ConsumerStatefulWidget {

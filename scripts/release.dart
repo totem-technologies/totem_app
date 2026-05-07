@@ -278,14 +278,16 @@ ProcessResult _runGit(List<String> args, {bool check = true}) {
   final res = Process.runSync('git', args, runInShell: true);
   if (check && res.exitCode != 0) {
     final cmd = 'git ${args.join(' ')}';
-    final out = (res.stdout is String
-            ? res.stdout as String
-            : utf8.decode(res.stdout as List<int>))
-        .trim();
-    final err = (res.stderr is String
-            ? res.stderr as String
-            : utf8.decode(res.stderr as List<int>))
-        .trim();
+    final out =
+        (res.stdout is String
+                ? res.stdout as String
+                : utf8.decode(res.stdout as List<int>))
+            .trim();
+    final err =
+        (res.stderr is String
+                ? res.stderr as String
+                : utf8.decode(res.stderr as List<int>))
+            .trim();
     throw Exception('Command failed ($cmd): ${err.isNotEmpty ? err : out}');
   }
   return res;

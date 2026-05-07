@@ -4,18 +4,18 @@ import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/models/upcoming_session_data.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';
 import 'package:totem_core/shared/widgets/empty_indicator.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
+import 'package:totem_core/shared/widgets/upcoming_session_card.dart';
 
 import '../../blog/repositories/blog_repository.dart';
-import '../models/upcoming_session_data.dart';
 import '../widgets/home_blog_card.dart';
 import '../widgets/next_session_card.dart';
-import '../widgets/upcoming_session_card.dart';
 import '../widgets/welcome_card.dart';
 import 'home_loading_screen.dart';
 

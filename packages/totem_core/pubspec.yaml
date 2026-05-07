@@ -10,9 +10,6 @@ dependencies:
   flutter:
     sdk: flutter
 
-  totem_app:
-    path: ../totem_app
-
   # State Management
   flutter_riverpod: ^3.2.1
   riverpod_annotation: ^4.0.0

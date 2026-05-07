@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:totem_app/features/home/models/upcoming_session_data.dart';
-import 'package:totem_app/features/home/widgets/upcoming_session_card.dart';
+import 'package:totem_core/core/models/upcoming_session_data.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/shared/widgets/upcoming_session_card.dart';
 
 class KeeperSpaces extends ConsumerWidget {
   const KeeperSpaces({

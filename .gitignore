@@ -11,8 +11,8 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
-.env
-GoogleService-Info.plist
+**/.env
+**/GoogleService-Info.plist
 
 # IntelliJ related
 *.iml
@@ -43,9 +43,9 @@ app.*.symbols
 app.*.map.json
 
 # Android Studio will place build artifacts here
-android/app/debug
-android/app/profile
-android/app/release
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
 
 # Firebase
 **/google-services.json
@@ -60,8 +60,8 @@ android/app/release
 .fvmrc
 
 # Xcode
-*/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
-*/ios/Runner.xcworkspace/xcshareddata/swiftpm/
+**/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+**/ios/Runner.xcworkspace/xcshareddata/swiftpm/
 
 *.secrets
 

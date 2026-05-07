@@ -8,9 +8,8 @@ import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/network.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/session_metadata.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
-
-import 'session_metadata.dart';
 
 /// A card widget displaying the user's next session with vertical layout.
 class NextSessionCard extends StatelessWidget {
