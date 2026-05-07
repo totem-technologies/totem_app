@@ -20,11 +20,14 @@ class _TotemWebAppState extends State<TotemWebApp> {
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) => const Scaffold(
-          body: Center(
-            child: Text('Open a session URL, for example: /my-session'),
-          ),
-        ),
+        builder: (context, state) {
+          print(state.fullPath);
+          return const Scaffold(
+            body: Center(
+              child: Text('Open a session URL, for example: /my-session'),
+            ),
+          );
+        },
       ),
       GoRoute(
         path: '/:sessionSlug',
