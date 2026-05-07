@@ -14,23 +14,19 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Create .env file
-        working-directory: packages/totem_web
-        run: echo 'MOBILE_API_URL="https://totem.kbl.io"' > .env
-
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2.23.0
         with:
           channel: stable
 
-      - name: Decode firebase_options.dart
-        working-directory: ./packages/totem_web
-        run: |
-          mkdir -p lib
-          echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
+      - name: Setup Environment
+        uses: ./.github/actions/setup-environment
+        with:
+          firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
+          flavor: staging
 
       - name: Install dependencies for totem_core
         working-directory: packages/totem_core
@@ -39,11 +35,6 @@ jobs:
       - name: Install dependencies for totem_web
         working-directory: packages/totem_web
         run: flutter pub get
-
-      # - name: Install Firebase CLI
-      #   run: |
-      #     curl -sL https://firebase.tools | bash
-      #     dart pub global activate flutterfire_cli
 
       - name: Build
         working-directory: packages/totem_web

@@ -16,12 +16,6 @@ inputs:
   keystore-password:
     description: "The password for the playstore key used to sign the app"
     required: true
-  firebase-options-b64:
-    description: "Base64 encoded firebase_options.dart file"
-    required: true
-  google-services-json-b64:
-    description: "Base64 encoded google-services.json file"
-    required: true
 
 runs:
   using: "composite"
@@ -56,26 +50,13 @@ runs:
 
     - name: Setup flutter
       if: steps.check_flutter.outputs.installed == 'false'
-      uses: subosito/flutter-action@v2
+      uses: subosito/flutter-action@v2.23.0
       with:
         channel: "stable"
         cache: true
 
     - run: flutter --version
       shell: bash
-
-    - name: Decode google-services.json and firebase_options.dart
-      shell: bash
-      run: |
-        # Decode google-services.json in totem_app
-        echo "$GOOGLE_SERVICES_JSON_B64" | base64 --decode > android/app/google-services.json
-        # Decode firebase_options.dart in totem_app
-        mkdir -p ${{ github.workspace }}/packages/totem_app/lib
-        echo "$FIREBASE_OPTIONS_B64" | base64 --decode > ${{ github.workspace }}/packages/totem_app/lib/firebase_options.dart
-      env:
-        FIREBASE_OPTIONS_B64: ${{ inputs.firebase-options-b64 }}
-        GOOGLE_SERVICES_JSON_B64: ${{ inputs.google-services-json-b64 }}
-      working-directory: ${{ inputs.working-directory }}
 
     - name: Decode keystore and create jks and properties file for signing the app
       shell: bash
