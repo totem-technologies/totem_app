@@ -7,13 +7,9 @@ import 'package:totem_web/firebase_options.dart';
 import 'package:totem_web/web_router.dart';
 
 void main() {
-  sharedMain(
-    const TotemWebApp(),
-    () async {
-      TotemRouter.instance = WebTotemRouter();
-    },
-    firebaseOptions: DefaultFirebaseOptions.currentPlatform,
-  );
+  sharedMain(const TotemWebApp(), () async {
+    TotemRouter.instance = WebTotemRouter();
+  }, firebaseOptions: DefaultFirebaseOptions.currentPlatform);
 }
 
 class TotemWebApp extends ConsumerWidget {

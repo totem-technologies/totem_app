@@ -98,9 +98,7 @@ void _runRelease() {
         'Failed to update $path with new version (${unique.asString()}).',
       );
     }
-    stdout.writeln(
-      '[release] Updating $path -> version: ${unique.asString()}',
-    );
+    stdout.writeln('[release] Updating $path -> version: ${unique.asString()}');
     File(path).writeAsStringSync(updated);
   }
 

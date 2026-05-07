@@ -13,13 +13,9 @@ import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared_main.dart';
 
 Future<void> main() async {
-  sharedMain(
-    TotemApp(),
-    () async {
-      TotemRouter.instance = AppTotemRouter();
-    },
-    firebaseOptions: DefaultFirebaseOptions.currentPlatform,
-  );
+  sharedMain(TotemApp(), () async {
+    TotemRouter.instance = AppTotemRouter();
+  }, firebaseOptions: DefaultFirebaseOptions.currentPlatform);
 }
 
 class TotemApp extends ConsumerStatefulWidget {
