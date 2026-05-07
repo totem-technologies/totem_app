@@ -9,7 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:totem_core/auth/controllers/auth_controller.dart';
-import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/screen_protection_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';

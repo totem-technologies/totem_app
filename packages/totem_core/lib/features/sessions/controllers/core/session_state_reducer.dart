@@ -1,4 +1,4 @@
-import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_events.dart';
 

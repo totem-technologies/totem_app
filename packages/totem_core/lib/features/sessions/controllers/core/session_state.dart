@@ -1,7 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions, logger;
-import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 
 enum RoomConnectionState { connecting, connected, disconnected, error }

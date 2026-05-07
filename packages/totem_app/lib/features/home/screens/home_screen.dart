@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
-import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/models/upcoming_session_data.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';

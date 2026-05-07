@@ -1,0 +1,48 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+import 'package:degenerate_runtime/degenerate_runtime.dart';
+
+@immutable
+final class RefreshTokenSchema {
+  const RefreshTokenSchema({required this.refreshToken});
+
+  factory RefreshTokenSchema.fromJson(Map<String, dynamic> json) {
+    return RefreshTokenSchema(
+      refreshToken: json['refresh_token'] as String,
+    );
+  }
+
+  final String refreshToken;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'refresh_token': refreshToken,
+    };
+  }
+
+  static bool canParse(Map<String, dynamic> json) {
+    return json.containsKey('refresh_token') && json['refresh_token'] is String;
+  }
+
+  RefreshTokenSchema copyWith({String? refreshToken}) {
+    return RefreshTokenSchema(
+      refreshToken: refreshToken ?? this.refreshToken,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is RefreshTokenSchema && refreshToken == other.refreshToken;
+  }
+
+  @override
+  int get hashCode {
+    return refreshToken.hashCode;
+  }
+
+  @override
+  String toString() {
+    return 'RefreshTokenSchema(refreshToken: $refreshToken)';
+  }
+}

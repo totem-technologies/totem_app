@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/core/services/repository_utils.dart';
 
@@ -15,7 +15,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 class AuthRepository {
   const AuthRepository({required this.apiService});
 
-  final TotemMobileApi apiService;
+  final ClientApi apiService;
 
   Future<UserSchema> get currentUser async {
     return RepositoryUtils.handleApiCall<UserSchema>(

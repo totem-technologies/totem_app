@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 // ignore: depend_on_referenced_packages
 import 'package:riverpod/riverpod.dart';
-import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 
@@ -76,8 +76,8 @@ ApiResponse _staleVersionResponse() {
   );
 }
 
-TotemMobileApi _createApi(_ScriptedApiClient client) {
-  return TotemMobileApi(ApiConfig(client: client));
+ClientApi _createApi(_ScriptedApiClient client) {
+  return ClientApi(ApiConfig(client: client));
 }
 
 void main() {

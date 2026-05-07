@@ -8,7 +8,7 @@ import 'package:livekit_client/livekit_client.dart'
 import 'package:meta/meta.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
-import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
@@ -158,7 +158,7 @@ class SessionController extends _$SessionController {
       statusDetail: const RoomStateStatusDetailWaitingRoom(
         WaitingRoomDetail(),
       ),
-      talkingOrder: [],
+      talkingOrder: const [],
       version: 0,
       roundNumber: 0,
     );

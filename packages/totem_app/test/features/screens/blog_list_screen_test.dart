@@ -7,7 +7,7 @@ import 'package:totem_app/features/blog/widgets/featured_blog_post.dart';
 import 'package:totem_app/features/home/widgets/home_blog_card.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
-import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 
 import '../../../../totem_core/test/auth/controllers/auth_controller_mock.dart';
 

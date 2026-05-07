@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_dio/sentry_dio.dart';
 import 'package:totem_core/auth/repositories/auth_repository.dart';
-import 'package:totem_core/core/api/lib/src/client/totem_mobile_api_api.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
@@ -17,9 +17,9 @@ final secureStorageProvider = Provider<SecureStorage>((ref) {
 }, name: 'Secure Storage Provider');
 
 /// Provider for the API service
-final mobileApiServiceProvider = Provider<TotemMobileApi>((ref) {
+final mobileApiServiceProvider = Provider<ClientApi>((ref) {
   final dio = _initDio(ref);
-  return TotemMobileApi(
+  return ClientApi(
     ApiConfig(
       client: DioApiClient(
         baseUrl: Uri.parse(AppConfig.mobileApiUrl),

@@ -1,4 +1,4 @@
-import 'package:totem_core/core/api/lib/totem_mobile_api.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 
 /// Data holder for upcoming session card display.
 class UpcomingSessionData {
