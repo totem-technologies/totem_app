@@ -63,7 +63,9 @@ class RoutingUtils {
           }
 
         case 'keeper':
-          if (segments.length >= 2) {}
+          if (segments.length >= 2) {
+            return RouteNames.keeperProfile(segments[1]);
+          }
       }
 
       return null;

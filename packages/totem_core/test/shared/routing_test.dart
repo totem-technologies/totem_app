@@ -42,21 +42,21 @@ void main() {
       final result = RoutingUtils.parseTotemDeepLink(
         'https://totem.kbl.io/spaces/event/abc123',
       );
-      expect(result, '/spaces/event/abc123');
+      expect(result, equals('/spaces/event/abc123'));
     });
 
     test('parses blog link', () {
       final result = RoutingUtils.parseTotemDeepLink(
         'https://totem.org/blog/my-post',
       );
-      expect(result, '/blog/my-post');
+      expect(result, equals('/blog/my-post'));
     });
 
     test('parses keeper link', () {
       final result = RoutingUtils.parseTotemDeepLink(
         'https://totem.org/keeper/john',
       );
-      expect(result, '/keeper/john');
+      expect(result, equals('/keeper/john'));
     });
 
     test('returns null for root path', () {
