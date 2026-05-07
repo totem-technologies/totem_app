@@ -9,16 +9,19 @@ import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/notifications_service.dart';
 import 'package:totem_core/core/services/observer_service.dart';
-import 'package:totem_core/firebase_options.dart';
 
-Future<void> sharedMain(Widget app, AsyncCallback init) async {
+Future<void> sharedMain(
+  Widget app,
+  AsyncCallback init, {
+  required FirebaseOptions firebaseOptions,
+}) async {
   await Sentry.runZonedGuarded(
     () async {
       await dotenv.load();
       await init();
 
       await ErrorHandler.initialize();
-      await _initializeServices();
+      await _initializeServices(firebaseOptions);
 
       final container = ProviderContainer(observers: [ObserverService()]);
       await container.read(authControllerProvider.notifier).checkExistingAuth();
@@ -40,9 +43,9 @@ Future<void> sharedMain(Widget app, AsyncCallback init) async {
 /// Initializes services.
 ///
 /// Awaited services are required by the app to function correctly.
-Future<void> _initializeServices() async {
+Future<void> _initializeServices(FirebaseOptions firebaseOptions) async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp(options: firebaseOptions);
 
   try {
     AnalyticsService.instance.initialize();

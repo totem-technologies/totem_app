@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared_main.dart';
+import 'package:totem_web/firebase_options.dart';
 import 'package:totem_web/web_router.dart';
 
 void main() {
   sharedMain(const TotemWebApp(), () async {
     TotemRouter.instance = WebTotemRouter();
-  });
+  }, firebaseOptions: DefaultFirebaseOptions.currentPlatform);
 }
 
 class TotemWebApp extends ConsumerWidget {

@@ -33,7 +33,7 @@ make githooks  # Install git hooks for code formatting
 > \[!NOTE]
 >
 > You must setup firebase locally.
-> ⚠️ You must run `flutterfire configure` to generate firebase_options.dart and add your own Firebase config files (google-services.json, GoogleService-Info.plist) locally. These files are not committed to the repo. [Learn more](https://firebase.google.com/docs/flutter/setup)
+> ⚠️ You must run `make flutterfire` to generate firebase_options.dart and add your own Firebase config files (google-services.json, GoogleService-Info.plist) locally. This runs `flutterfire configure` inside both the `totem_app` (android + ios) and `totem_web` (web) packages. These files are not committed to the repo. [Learn more](https://firebase.google.com/docs/flutter/setup)
 
 ### 📲 Running on Devices
 
@@ -43,6 +43,8 @@ For development:
 make run
 make run-chrome
 ```
+
+For web and app development, copy `.env.example` to `.env` for using the staging server. See `.env.full-example` for all options.
 
 If testing on an iOS device, ensure you're using macOS and have Xcode installed.
 
@@ -87,10 +89,9 @@ xcrun simctl openurl booted "https://totem.org/spaces/session/doa689fvb"
 
 ### Local Server
 
-To run the app with a local server, you can set the `TOTEM_API_URL` environment variable at the `.env` file in the `packages/totem_app` or `packages/totem_web` directory of the project. This allows you to connect to a local instance of the Totem API.
+To run the app with a local server, you can set the `MOBILE_API_URL` environment variable at the `.env` file in the `packages/totem_app` or `packages/totem_web` directory of the project. This allows you to connect to a local instance of the Totem API.
 
 ```bash
-API_URL="http://localhost:8000/"
 MOBILE_API_URL="http://localhost:8000/"
 ```
 

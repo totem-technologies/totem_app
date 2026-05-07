@@ -12,35 +12,43 @@ inputs:
     description: "Base64 encoded GoogleService-Info.plist (iOS)"
     required: false
   flavor:
-    type: choice
     required: true
-    description: "The flavor"
-    options:
-      - "staging"
-      - "production"
+    description: "The flavor. Options: staging, production"
     default: "production"
 
 runs:
   using: "composite"
   steps:
-    - name: Create .env in totem_app
+    - name: Resolve API URL
+      id: api_url
       shell: bash
       env:
         FLAVOR: ${{ inputs.flavor }}
+      run: |
+        if [ "$FLAVOR" = "staging" ]; then
+          echo 'url=https://totem.kbl.io' >> "$GITHUB_OUTPUT"
+        else
+          echo 'url=https://www.totem.org' >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Create .env in totem_app
+      shell: bash
       working-directory: ./packages/totem_app
       run: |
         {
-          echo "ENVIRONMENT=\"$FLAVOR\""
-          if [ "$FLAVOR" = "staging" ]; then
-            echo 'API_URL="https://totem.kbl.io"'
-          else
-            echo 'API_URL="https://www.totem.org"'
-          fi
+          echo "ENVIRONMENT=\"${{ inputs.flavor }}\""
+          echo 'MOBILE_API_URL="${{ steps.api_url.outputs.url }}"'
         } > .env
 
-    - name: Create Firebase options in totem_core
+    - name: Create .env in totem_web
       shell: bash
-      working-directory: ./packages/totem_core
+      working-directory: ./packages/totem_web
+      run: |
+        echo 'MOBILE_API_URL="${{ steps.api_url.outputs.url }}"' > .env
+
+    - name: Create Firebase options in totem_app
+      shell: bash
+      working-directory: ./packages/totem_app
       run: |
         mkdir -p lib
         echo "${{ inputs.firebase_options }}" | base64 -d > lib/firebase_options.dart
@@ -59,3 +67,10 @@ runs:
       run: |
         mkdir -p ios/Runner
         echo "${{ inputs.google_service_plist }}" | base64 -d > ios/Runner/GoogleService-Info.plist
+
+    - name: Create Firebase options in totem_web
+      shell: bash
+      working-directory: ./packages/totem_web
+      run: |
+        mkdir -p lib
+        echo "${{ inputs.firebase_options }}" | base64 -d > lib/firebase_options.dart

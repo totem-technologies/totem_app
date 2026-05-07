@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Create/Update Draft Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           draft: true
@@ -38,12 +38,16 @@ jobs:
         flavor: [staging, production]
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Create .env file
-        run: echo 'ENVIRONMENT="${{ matrix.flavor }}"' > .env
+      - name: Setup Environment
+        uses: ./.github/actions/setup-environment
+        with:
+          firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
+          google_services_json: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+          flavor: ${{ matrix.flavor }}
 
       - name: Build Android AppBundle
         uses: ./.github/actions/build-android
@@ -51,8 +55,6 @@ jobs:
           build-cmd: flutter build appbundle --release --flavor ${{ matrix.flavor }}
           keystore-base64: ${{ secrets.ANDROID_KEYSTORE_FILE_BASE64 }}
           keystore-password: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
-          firebase-options-b64: ${{ secrets.FIREBASE_OPTIONS_B64 }}
-          google-services-json-b64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
 
       - name: Rename AAB for clarity
         run: |
@@ -61,7 +63,7 @@ jobs:
              artifacts/totem-${{ matrix.flavor }}-${{ github.ref_name }}.aab
 
       - name: Upload AAB to Draft Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           draft: true
@@ -87,12 +89,16 @@ jobs:
             provisioning_profile_secret: IOS_STAGING_PROVISIONING_PROFILE_BASE64
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Create .env file
-        run: echo 'ENVIRONMENT="${{ matrix.flavor }}"' > .env
+      - name: Setup Environment
+        uses: ./.github/actions/setup-environment
+        with:
+          firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
+          google_service_plist: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
+          flavor: ${{ matrix.flavor }}
 
       - uses: ./.github/actions/build-ios
         with:
@@ -101,8 +107,6 @@ jobs:
           certificate-password: ${{ secrets.IOS_BUILD_CERTIFICATE_PASSWORD }}
           provisioning-profile-base64: ${{ secrets[matrix.provisioning_profile_secret] }}
           keychain-password: ${{ secrets.IOS_GITHUB_KEYCHAIN_PASSWORD }}
-          firebase-options-b64: ${{ secrets.FIREBASE_OPTIONS_B64 }}
-          google-service-info-plist-b64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
 
       - name: Rename IPA for clarity
         run: |
@@ -112,7 +116,7 @@ jobs:
           done
 
       - name: Upload IPA to Draft Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           draft: true

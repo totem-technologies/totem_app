@@ -27,12 +27,6 @@ inputs:
   keychain-password:
     description: "random string in secrets"
     required: true
-  firebase-options-b64:
-    description: "Base64 encoded firebase_options.dart file"
-    required: true
-  google-service-info-plist-b64:
-    description: "Base64 encoded GoogleService-Info.plist file"
-    required: true
 
 runs:
   using: "composite"
@@ -53,7 +47,7 @@ runs:
 
     - name: Setup flutter
       if: steps.check_flutter.outputs.installed == 'false'
-      uses: subosito/flutter-action@v2
+      uses: subosito/flutter-action@v2.23.0
       with:
         channel: "stable"
         cache: true
@@ -62,18 +56,6 @@ runs:
       if: ${{ inputs.flutterfire }} == 'true'
       run: dart pub global activate flutterfire_cli --overwrite
       shell: bash
-
-    - name: Decode GoogleService-Info.plist and firebase_options.dart
-      shell: bash
-      run: |
-        echo "$GOOGLE_SERVICE_INFO_PLIST_B64" | base64 --decode > ios/Runner/GoogleService-Info.plist
-        # Decode firebase_options.dart in totem_core
-        mkdir -p ${{ github.workspace }}/packages/totem_core/lib
-        echo "$FIREBASE_OPTIONS_B64" | base64 --decode > ${{ github.workspace }}/packages/totem_core/lib/firebase_options.dart
-      env:
-        FIREBASE_OPTIONS_B64: ${{ inputs.firebase-options-b64 }}
-        GOOGLE_SERVICE_INFO_PLIST_B64: ${{ inputs.google-service-info-plist-b64 }}
-      working-directory: ${{ inputs.working-directory }}
 
     # see https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development for more info
     - name: Install the Apple certificate and provisioning profile
