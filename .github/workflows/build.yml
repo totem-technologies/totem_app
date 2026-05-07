@@ -77,10 +77,16 @@ jobs:
           google_services_json: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
           flavor: ${{ matrix.flavor }}
 
-      - name: Flutter pub get
+      - name: Install dependencies for totem_core
+        working-directory: ./packages/totem_core
+        run: flutter pub get
+
+      - name: Install dependencies for totem_app
+        working-directory: ./packages/totem_app
         run: flutter pub get
 
       - name: Build ABI
+        working-directory: ./packages/totem_app
         run: flutter build appbundle --verbose --flavor ${{ matrix.flavor }}
 
   build_ios_ipa:
@@ -117,8 +123,14 @@ jobs:
           google_service_plist: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
           flavor: ${{ matrix.flavor }}
 
-      - name: Flutter pub get
+      - name: Install dependencies for totem_core
+        working-directory: ./packages/totem_core
+        run: flutter pub get
+
+      - name: Install dependencies for totem_app
+        working-directory: ./packages/totem_app
         run: flutter pub get
 
       - name: Build IPA
+        working-directory: ./packages/totem_app
         run: flutter build ipa --verbose --no-codesign --flavor ${{ matrix.flavor }}

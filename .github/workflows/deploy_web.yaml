@@ -26,19 +26,24 @@ jobs:
         with:
           channel: stable
 
-      - name: Download Dependencies
+      - name: Decode firebase_options.dart
+        working-directory: ./packages/totem_core
+        run: |
+          mkdir -p lib
+          echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
+
+      - name: Install dependencies for totem_core
+        working-directory: packages/totem_core
+        run: flutter pub get
+
+      - name: Install dependencies for totem_web
+        working-directory: packages/totem_web
         run: flutter pub get
 
       # - name: Install Firebase CLI
       #   run: |
       #     curl -sL https://firebase.tools | bash
       #     dart pub global activate flutterfire_cli
-
-      - name: Decode firebase_options.dart
-        working-directory: ./packages/totem_core
-        run: |
-          mkdir -p lib
-          echo "${{ secrets.FIREBASE_OPTIONS_B64 }}" | base64 -d > lib/firebase_options.dart
 
       - name: Build
         working-directory: packages/totem_web
@@ -48,7 +53,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .packages/totem_web/build/web
+          publish_dir: ./packages/totem_web/build/web
           force_orphan: true
           user_name: "github-ci[bot]"
           user_email: "github-actions[bot]@users.noreply.github.com"
