@@ -67,7 +67,7 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           draft: true
-          files: artifacts/*.aab
+          files: packages/totem_app/artifacts/*.aab
 
   ios:
     name: iOS (${{ matrix.flavor }})
@@ -120,4 +120,4 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           draft: true
-          files: artifacts/*.ipa
+          files: packages/totem_app/artifacts/*.ipa
