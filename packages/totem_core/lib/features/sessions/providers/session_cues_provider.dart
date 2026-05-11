@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -63,11 +61,8 @@ class SessionCuesService {
     if (kIsWeb) {
       return HapticFeedback.lightImpact();
     }
-    if (Platform.isIOS) {
-      return HapticFeedback.vibrate();
-    }
 
-    return HapticFeedback.lightImpact();
+    return HapticFeedback.heavyImpact();
   }
 
   SessionCuesAudioPlayer? _audioPlayer;
@@ -119,18 +114,6 @@ class SessionCuesService {
 
     await _audioPlayer?.setPlayerMode(PlayerMode.lowLatency);
     await _audioPlayer?.setReleaseMode(ReleaseMode.stop);
-    if (!kIsWeb && Platform.isIOS) {
-      await _audioPlayer?.setAudioContext(
-        AudioContext(
-          iOS: AudioContextIOS(
-            category: AVAudioSessionCategory.playback,
-            options: const {
-              AVAudioSessionOptions.mixWithOthers,
-            },
-          ),
-        ),
-      );
-    }
 
     _configured = true;
   }
