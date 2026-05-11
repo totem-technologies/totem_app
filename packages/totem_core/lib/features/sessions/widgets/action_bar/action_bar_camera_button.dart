@@ -147,6 +147,7 @@ class _ActionBarCameraSwitcherButtonState
         children: [
           GestureDetector(
             onTap: () async {
+              if (widget.onToggle == null) return closeCameraPositionOptions();
               _menuController.forward();
               await showCameraPositionOptions(context);
               _menuController.reverse();
