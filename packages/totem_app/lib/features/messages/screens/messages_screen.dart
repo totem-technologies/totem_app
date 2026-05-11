@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/core/config/theme.dart';
 
+import '../widgets/chat_card.dart';
+import '../widgets/message_search_field.dart';
+
 class MessagesScreen extends ConsumerWidget {
   const MessagesScreen({super.key});
 
@@ -97,7 +100,7 @@ class MessagesScreen extends ConsumerWidget {
                   horizontal: 20,
                   vertical: 10,
                 ),
-                child: _SearchField(),
+                child: MessageSearchField(),
               ),
             ),
             SliverPadding(
@@ -105,160 +108,21 @@ class MessagesScreen extends ConsumerWidget {
               sliver: SliverList.separated(
                 itemCount: _mockChats.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, index) =>
-                    _ChatCard(chat: _mockChats[index]),
+                itemBuilder: (context, index) {
+                  final chat = _mockChats[index];
+                  return ChatCard(
+                    name: chat.name,
+                    lastMessage: chat.lastMessage,
+                    timestamp: chat.timestamp,
+                    unreadCount: chat.unreadCount,
+                    avatarColor: chat.avatarColor,
+                    avatarSecondary: chat.avatarSecondary,
+                  );
+                },
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _SearchField extends StatelessWidget {
-  const _SearchField();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 44,
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
-      alignment: AlignmentDirectional.centerStart,
-      decoration: BoxDecoration(
-        color: const Color(0xFFD9D9D9),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Text(
-        'Search messages',
-        style: TextStyle(
-          color: Color(0xFFA2A2A2),
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-}
-
-class _ChatCard extends StatelessWidget {
-  const _ChatCard({required this.chat});
-
-  final _MockChat chat;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: 16,
-        vertical: 14,
-      ),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFAFAF7),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          _Avatar(color: chat.avatarColor, secondary: chat.avatarSecondary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      chat.name,
-                      style: const TextStyle(
-                        color: Color(0xFF1F293B),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      chat.timestamp,
-                      style: TextStyle(
-                        color: chat.unreadCount > 0
-                            ? AppTheme.mauve
-                            : const Color(0xFF8C8A82),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        chat.lastMessage,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: chat.unreadCount > 0
-                              ? const Color(0xFF1F293B)
-                              : const Color(0xFF8C8A82),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                    if (chat.unreadCount > 0) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 20,
-                        height: 20,
-                        alignment: Alignment.center,
-                        decoration: const BoxDecoration(
-                          color: AppTheme.mauve,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          '${chat.unreadCount}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.color, this.secondary});
-
-  final Color color;
-  final Color? secondary;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: secondary != null
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [color, secondary!],
-              )
-            : null,
-        color: secondary == null ? color : null,
       ),
     );
   }
