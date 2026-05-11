@@ -8,8 +8,6 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/widgets/participant_reorder_modal.dart';
 
-import '../livekit_mocks.dart';
-
 class MockSessionController extends Mock implements SessionController {}
 
 class MockSessionKeeperController extends Mock
@@ -55,45 +53,6 @@ SessionDetailSchema _createSessionEvent() {
   );
 }
 
-MockRemoteParticipant _mockRemote(String id, String name) {
-  final participant = MockRemoteParticipant(id, name);
-  when(participant.createListener).thenReturn(MockParticipantEventsListener());
-  when(() => participant.getTrackPublicationBySource(any())).thenReturn(null);
-  return participant;
-}
-
-SessionRoomState _buildState() {
-  final participants = [
-    _mockRemote('keeper-1', 'Keeper'),
-    _mockRemote('user-1', 'User One'),
-    _mockRemote('user-2', 'User Two'),
-    _mockRemote('user-3', 'User Three'),
-  ];
-
-  return SessionRoomState(
-    connection: const ConnectionState(
-      phase: SessionPhase.connected,
-      state: RoomConnectionState.connected,
-    ),
-    participants: ParticipantsState(participants: participants),
-    chat: const ChatState(),
-    turn: const SessionTurnState(
-      roomState: RoomState(
-        keeper: 'keeper-1',
-        nextSpeaker: 'user-1',
-        currentSpeaker: 'keeper-1',
-        status: RoomStatus.active,
-        turnState: TurnState.idle,
-        sessionSlug: 'test-session',
-        statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
-        talkingOrder: ['keeper-1', 'user-1', 'user-2', 'user-3'],
-        version: 1,
-        roundNumber: 1,
-      ),
-    ),
-  );
-}
-
 void main() {
   setUpAll(() {
     registerFallbackValue(TrackSource.camera);
@@ -105,7 +64,6 @@ void main() {
   ) async {
     final session = MockSessionController();
     final keeper = MockSessionKeeperController();
-    final state = _buildState();
     final event = _createSessionEvent();
 
     when(() => session.keeper).thenReturn(keeper);
@@ -115,11 +73,7 @@ void main() {
       ProviderScope(
         child: MaterialApp(
           home: Scaffold(
-            body: ParticipantReorderWidget(
-              session: session,
-              state: state,
-              event: event,
-            ),
+            body: ParticipantReorderWidget(event: event),
           ),
         ),
       ),
