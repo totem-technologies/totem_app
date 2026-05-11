@@ -36,6 +36,8 @@ class RouteNames {
   static const blogDetail = '/blog/detail';
   static String blogPost(String slug) => '/blog/$slug';
 
+  static const messages = '/messages';
+
   static String session(String slug) => '/session/$slug';
 
   static const allRoutes = <String>[
@@ -50,6 +52,7 @@ class RouteNames {
     sessionHistory,
     blog,
     blogDetail,
+    messages,
   ];
 }
 
@@ -57,8 +60,8 @@ enum HomeRoutes {
   home(RouteNames.home),
   spaces(RouteNames.spaces),
   blog(RouteNames.blog),
-  profile(RouteNames.profile)
-  ;
+  messages(RouteNames.messages),
+  profile(RouteNames.profile);
 
   const HomeRoutes(this.path);
 

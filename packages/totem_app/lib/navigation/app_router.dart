@@ -21,6 +21,7 @@ import '../features/blog/screens/blog_list_screen.dart';
 import '../features/blog/screens/blog_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/home/widgets/join_ongoing_session_card.dart';
+import '../features/messages/screens/messages_screen.dart';
 import '../features/profile/screens/profile_details_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../features/spaces/screens/event_deep_link_screen.dart';
@@ -118,6 +119,14 @@ class BottomNavScaffold extends ConsumerWidget {
                         fillColor: false,
                       ),
                       label: 'Blog',
+                    ),
+                    NavigationDestination(
+                      icon: TotemIcon(TotemIcons.messages),
+                      selectedIcon: TotemIcon(
+                        TotemIcons.messagesFilled,
+                        fillColor: false,
+                      ),
+                      label: 'Messages',
                     ),
                     NavigationDestination(
                       icon: TotemIcon(TotemIcons.profile),
@@ -347,6 +356,26 @@ class AppTotemRouter extends TotemRouter {
                   name: RouteNames.blog,
                   builder: (context, state) =>
                       const SentryDisplayWidget(child: BlogListScreen()),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: <RouteBase>[
+                GoRoute(
+                  path: RouteNames.messages,
+                  name: RouteNames.messages,
+                  pageBuilder: (context, state) => CustomTransitionPage(
+                    key: state.pageKey,
+                    child: const SentryDisplayWidget(child: MessagesScreen()),
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          );
+                        },
+                    transitionDuration: const Duration(milliseconds: 200),
+                  ),
                 ),
               ],
             ),
