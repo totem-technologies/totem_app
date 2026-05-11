@@ -54,15 +54,7 @@ void main() {
 
         expect(fakePlayer.playerModes, [PlayerMode.lowLatency]);
         expect(fakePlayer.releaseModes, [ReleaseMode.stop]);
-        expect(fakePlayer.audioContexts, hasLength(1));
-        expect(
-          fakePlayer.audioContexts.single.iOS.category,
-          AVAudioSessionCategory.playAndRecord,
-        );
-        expect(
-          fakePlayer.audioContexts.single.android.usageType,
-          AndroidUsageType.media,
-        );
+        expect(fakePlayer.audioContexts, isEmpty);
         expect(fakePlayer.stopCallCount, 1);
         expect(
           fakePlayer.playedAssets,
@@ -82,15 +74,7 @@ void main() {
 
         expect(fakePlayer.playerModes, [PlayerMode.lowLatency]);
         expect(fakePlayer.releaseModes, [ReleaseMode.stop]);
-        expect(fakePlayer.audioContexts, hasLength(1));
-        expect(
-          fakePlayer.audioContexts.single.iOS.category,
-          AVAudioSessionCategory.playAndRecord,
-        );
-        expect(
-          fakePlayer.audioContexts.single.android.usageType,
-          AndroidUsageType.media,
-        );
+        expect(fakePlayer.audioContexts, isEmpty);
         expect(fakePlayer.stopCallCount, 2);
         expect(
           fakePlayer.playedAssets,

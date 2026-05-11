@@ -44,10 +44,7 @@ class AudioplayersSessionCuesAudioPlayer implements SessionCuesAudioPlayer {
 
   @override
   Future<void> playAsset(String assetSourcePath) {
-    return _player.play(
-      AssetSource('packages/totem_core/assets/$assetSourcePath'),
-      volume: 0.5,
-    );
+    return _player.play(AssetSource(assetSourcePath), volume: 0.5);
   }
 
   @override
@@ -58,10 +55,8 @@ class AudioplayersSessionCuesAudioPlayer implements SessionCuesAudioPlayer {
 
 class SessionCuesService {
   SessionCuesService({
-    SessionCuesAudioPlayer? audioPlayer,
     SessionCuesHapticPulseCallback? pulseHaptic,
-  }) : _audioPlayer = audioPlayer ?? AudioplayersSessionCuesAudioPlayer(),
-       _pulseHaptic = pulseHaptic ?? defaultHapticPulse;
+  }) : _pulseHaptic = pulseHaptic ?? defaultHapticPulse;
 
   static Future<void> defaultHapticPulse() {
     // https://github.com/flutter/flutter/issues/157442
@@ -75,7 +70,7 @@ class SessionCuesService {
     return HapticFeedback.lightImpact();
   }
 
-  final SessionCuesAudioPlayer _audioPlayer;
+  SessionCuesAudioPlayer? _audioPlayer;
   final SessionCuesHapticPulseCallback _pulseHaptic;
   bool _configured = false;
 
@@ -102,9 +97,9 @@ class SessionCuesService {
 
     try {
       await _configurePlayer();
-      await _audioPlayer.stop();
+      await _audioPlayer?.stop();
       _isPlaying = true;
-      await _audioPlayer.playAsset(_toAssetSourcePath(assetPath));
+      await _audioPlayer?.playAsset(_toAssetSourcePath(assetPath));
     } catch (error, stackTrace) {
       logger.e(
         'Failed to play session feedback sound: $assetPath',
@@ -119,23 +114,23 @@ class SessionCuesService {
   Future<void> _configurePlayer() async {
     if (_configured) return;
 
-    await _audioPlayer.setPlayerMode(PlayerMode.lowLatency);
-    await _audioPlayer.setReleaseMode(ReleaseMode.stop);
-    await _audioPlayer.setAudioContext(
-      AudioContext(
-        iOS: AudioContextIOS(
-          category: AVAudioSessionCategory.playAndRecord,
-          options: const {
-            AVAudioSessionOptions.mixWithOthers,
-          },
+    AudioCache.instance = AudioCache(prefix: 'packages/totem_core/assets/');
+    _audioPlayer ??= AudioplayersSessionCuesAudioPlayer();
+
+    await _audioPlayer?.setPlayerMode(PlayerMode.lowLatency);
+    await _audioPlayer?.setReleaseMode(ReleaseMode.stop);
+    if (!kIsWeb && Platform.isIOS) {
+      await _audioPlayer?.setAudioContext(
+        AudioContext(
+          iOS: AudioContextIOS(
+            category: AVAudioSessionCategory.playback,
+            options: const {
+              AVAudioSessionOptions.mixWithOthers,
+            },
+          ),
         ),
-        android: const AudioContextAndroid(
-          usageType: AndroidUsageType.media,
-          contentType: AndroidContentType.sonification,
-          audioFocus: AndroidAudioFocus.none,
-        ),
-      ),
-    );
+      );
+    }
 
     _configured = true;
   }
@@ -149,6 +144,6 @@ class SessionCuesService {
   }
 
   void dispose() {
-    _audioPlayer.dispose();
+    _audioPlayer?.dispose();
   }
 }
