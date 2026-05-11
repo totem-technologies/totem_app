@@ -11,11 +11,12 @@ class MessageInputBar extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFFFAFAF7),
-        border: Border(
-          top: BorderSide(color: Color(0xFFE8E5E0)),
-        ),
+        border: Border(top: BorderSide(color: Color(0xFFE8E5E0))),
       ),
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 16, vertical: 9),
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 16,
+        vertical: 9,
+      ),
       child: SafeArea(
         top: false,
         child: Row(

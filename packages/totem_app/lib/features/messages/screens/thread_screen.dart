@@ -16,22 +16,26 @@ class ThreadScreen extends StatelessWidget {
       isOwn: false,
     ),
     _MockMessage(
-      text: "I hear you. I've been there so many times. You're not alone, I promise.",
+      text:
+          "I hear you. I've been there so many times. You're not alone, I promise.",
       timestamp: '10:33 AM',
       isOwn: false,
     ),
     _MockMessage(
-      text: "Honestly, today's been tough. But talking helps. It's nice not to feel alone in it.",
+      text:
+          "Honestly, today's been tough. But talking helps. It's nice not to feel alone in it.",
       timestamp: '10:31 AM',
       isOwn: true,
     ),
     _MockMessage(
-      text: 'Totally. Some days are harder than others. How are you doing today?',
+      text:
+          'Totally. Some days are harder than others. How are you doing today?',
       timestamp: '10:28 AM',
       isOwn: false,
     ),
     _MockMessage(
-      text: "Hi Vanessa! Thanks for reaching out. It's nice to connect with someone who gets it.",
+      text:
+          "Hi Vanessa! Thanks for reaching out. It's nice to connect with someone who gets it.",
       timestamp: '10:25 AM',
       isOwn: true,
     ),
@@ -58,7 +62,10 @@ class ThreadScreen extends StatelessWidget {
             Expanded(
               child: ListView.builder(
                 reverse: true,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
                 itemCount: _messages.length + 1,
                 itemBuilder: (context, index) {
                   if (index == _messages.length) {
@@ -99,10 +106,17 @@ class _ThreadHeader extends StatelessWidget {
     return Container(
       height: 56,
       color: const Color(0xFFFAFAF7),
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 20,
+        vertical: 12,
+      ),
       child: Row(
         children: [
-          MessageAvatar(color: avatarColor, secondary: avatarSecondary, size: 46),
+          MessageAvatar(
+            color: avatarColor,
+            secondary: avatarSecondary,
+            size: 46,
+          ),
           const SizedBox(width: 15),
           Expanded(
             child: Text(
