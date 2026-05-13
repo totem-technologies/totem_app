@@ -737,13 +737,21 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     fps = 0;
   }
 
-  // TODO(totem): This is causing a brief flash of the avatar when the user passes.
   bool _initialized = false;
   Timer? _initTimer;
 
   void initialize() {
-    _initialized = false;
     _initTimer?.cancel();
+
+    if (widget.participant is LocalParticipant) {
+      _initialized = true;
+      if (mounted) {
+        setState(() {});
+      }
+      return;
+    }
+
+    _initialized = false;
     _initTimer = Timer(const Duration(milliseconds: 1500), () {
       _initialized = true;
       if (mounted) {

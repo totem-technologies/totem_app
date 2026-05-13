@@ -64,7 +64,7 @@ void main() {
                   AVAudioSessionOptions.mixWithOthers,
                 },
               ),
-              android: AudioContextAndroid(
+              android: const AudioContextAndroid(
                 audioFocus: AndroidAudioFocus.gainTransient,
               ),
             ),
@@ -99,7 +99,7 @@ void main() {
                   AVAudioSessionOptions.mixWithOthers,
                 },
               ),
-              android: AudioContextAndroid(
+              android: const AudioContextAndroid(
                 audioFocus: AndroidAudioFocus.gainTransient,
               ),
             ),
