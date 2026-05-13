@@ -54,7 +54,22 @@ void main() {
 
         expect(fakePlayer.playerModes, [PlayerMode.lowLatency]);
         expect(fakePlayer.releaseModes, [ReleaseMode.stop]);
-        expect(fakePlayer.audioContexts, isEmpty);
+        expect(
+          fakePlayer.audioContexts,
+          [
+            AudioContext(
+              iOS: AudioContextIOS(
+                category: AVAudioSessionCategory.playback,
+                options: const {
+                  AVAudioSessionOptions.mixWithOthers,
+                },
+              ),
+              android: AudioContextAndroid(
+                audioFocus: AndroidAudioFocus.gainTransient,
+              ),
+            ),
+          ],
+        );
         expect(fakePlayer.stopCallCount, 1);
         expect(
           fakePlayer.playedAssets,
@@ -74,7 +89,22 @@ void main() {
 
         expect(fakePlayer.playerModes, [PlayerMode.lowLatency]);
         expect(fakePlayer.releaseModes, [ReleaseMode.stop]);
-        expect(fakePlayer.audioContexts, isEmpty);
+        expect(
+          fakePlayer.audioContexts,
+          [
+            AudioContext(
+              iOS: AudioContextIOS(
+                category: AVAudioSessionCategory.playback,
+                options: const {
+                  AVAudioSessionOptions.mixWithOthers,
+                },
+              ),
+              android: AudioContextAndroid(
+                audioFocus: AndroidAudioFocus.gainTransient,
+              ),
+            ),
+          ],
+        );
         expect(fakePlayer.stopCallCount, 2);
         expect(
           fakePlayer.playedAssets,

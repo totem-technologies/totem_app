@@ -65,6 +65,7 @@ githooks:
 	@echo "Git hooks installed successfully!"
 
 flutterfire:
+	dart pub global activate flutterfire_cli
 	@command -v flutterfire >/dev/null 2>&1 || { echo "Error: flutterfire CLI not found. Install with: dart pub global activate flutterfire_cli"; exit 1; }
 	@test -d $(APP_DIR) || { echo "Error: $(APP_DIR) not found."; exit 1; }
 	@test -d $(WEB_DIR) || { echo "Error: $(WEB_DIR) not found."; exit 1; }

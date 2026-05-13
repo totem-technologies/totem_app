@@ -21,6 +21,8 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
 
   @override
   Widget build(BuildContext context) {
+    // TODO(totem): if the keeper sent the message, do not show badge
+    // TODO(totem): When open chat sheet, clean ongoing chat notifications
     ref.listen(
       lastSessionMessageProvider,
       (previous, next) {

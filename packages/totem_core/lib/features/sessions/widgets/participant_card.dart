@@ -737,6 +737,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     fps = 0;
   }
 
+  // TODO(totem): This is causing a brief flash of the avatar when the user passes.
   bool _initialized = false;
   Timer? _initTimer;
 
@@ -885,6 +886,9 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = ref.watch(
+      authControllerProvider.select((auth) => auth.user),
+    );
     final user = ref.watch(userProfileProvider(widget.participant.identity));
     final trackPublication = videoTrack;
 
@@ -964,7 +968,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
       ],
     );
 
-    if (kDebugMode || user.value?.isStaff == true) {
+    if (kDebugMode || currentUser?.isStaff == true) {
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => setState(

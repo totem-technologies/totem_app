@@ -7,7 +7,6 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_core/shared/logger.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
@@ -233,14 +232,12 @@ class _ParticipantReorderWidgetState
                                         onPressed: _loading
                                             ? null
                                             : () async {
-                                                logger.i('reoder: loading');
                                                 setState(() => _loading = true);
                                                 await _updateParticipantOrder(
                                                   context,
                                                   session,
                                                   _localOrder,
                                                 );
-                                                print('reorder: done');
                                                 _loading = false;
                                                 setState(
                                                   () => _loading = false,
@@ -248,7 +245,6 @@ class _ParticipantReorderWidgetState
                                                 // if (context.mounted) {
                                                 //   Navigator.of(context).pop();
                                                 // }
-                                                print('reorder: pop');
                                               },
                                         child: _loading
                                             ? const LoadingIndicator(
