@@ -53,8 +53,10 @@ class AudioplayersSessionCuesAudioPlayer implements SessionCuesAudioPlayer {
 
 class SessionCuesService {
   SessionCuesService({
+    SessionCuesAudioPlayer? audioPlayer,
     SessionCuesHapticPulseCallback? pulseHaptic,
-  }) : _pulseHaptic = pulseHaptic ?? defaultHapticPulse;
+  }) : _pulseHaptic = pulseHaptic ?? defaultHapticPulse,
+       _audioPlayer = audioPlayer;
 
   static Future<void> defaultHapticPulse() {
     // https://github.com/flutter/flutter/issues/157442
@@ -114,6 +116,24 @@ class SessionCuesService {
 
     await _audioPlayer?.setPlayerMode(PlayerMode.lowLatency);
     await _audioPlayer?.setReleaseMode(ReleaseMode.stop);
+
+    // Set audio context to preserve existing audio routing (speaker/headphones state)
+    // during session join/leave transitions.
+    if (!kIsWeb) {
+      await _audioPlayer?.setAudioContext(
+        AudioContext(
+          iOS: AudioContextIOS(
+            category: AVAudioSessionCategory.playback,
+            options: const {
+              AVAudioSessionOptions.mixWithOthers,
+            },
+          ),
+          android: const AudioContextAndroid(
+            audioFocus: AndroidAudioFocus.gainTransient,
+          ),
+        ),
+      );
+    }
 
     _configured = true;
   }

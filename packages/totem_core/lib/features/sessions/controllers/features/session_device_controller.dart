@@ -1,9 +1,12 @@
 // ignore_for_file: experimental_member_use
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:audio_session/audio_session.dart' as audio;
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -106,6 +109,7 @@ class SessionDeviceController extends _$SessionDeviceController {
   bool _userSpeakerPreference = true;
   bool _hasExternalOutput = false;
   bool _audioRouteNotificationsEnabled = false;
+  bool? _systemSpeakerphoneEnabled;
 
   static const externalAudioOutputTypes = <audio.AudioDeviceType>{
     audio.AudioDeviceType.wiredHeadset,
@@ -138,6 +142,7 @@ class SessionDeviceController extends _$SessionDeviceController {
   Future<void> setupDeviceChangeListener() async {
     try {
       final session = await audio.AudioSession.instance;
+      await _refreshSpeakerphoneState();
 
       final devices = await session.getDevices(includeInputs: false);
       final hasExternalOutput = devices.any(
@@ -154,6 +159,7 @@ class SessionDeviceController extends _$SessionDeviceController {
         logger.i('Headphones unplugged, restoring to speaker.');
         _hasExternalOutput = false;
         unawaited(_autoSetSpeakerphone(true));
+        unawaited(_refreshSpeakerphoneState());
       });
 
       _devicesChangedSubscription = session.devicesChangedEventStream.listen((
@@ -171,11 +177,14 @@ class SessionDeviceController extends _$SessionDeviceController {
           _hasExternalOutput = true;
           // Remove speaker override so OS routes to the newly connected device.
           unawaited(_autoSetSpeakerphone(false));
+          unawaited(_refreshSpeakerphoneState());
         } else if (removedExternal) {
           logger.i('External audio output disconnected, switching to speaker.');
           _hasExternalOutput = false;
           unawaited(_autoSetSpeakerphone(true));
+          unawaited(_refreshSpeakerphoneState());
         } else {
+          unawaited(_refreshSpeakerphoneState());
           _emitState();
         }
       });
@@ -249,7 +258,47 @@ class SessionDeviceController extends _$SessionDeviceController {
     return _room?.localParticipant?.audioTrackPublications.firstOrNull?.track;
   }
 
-  bool get isSpeakerphoneEnabled => _room?.speakerOn ?? false;
+  bool get isSpeakerphoneEnabled =>
+      _systemSpeakerphoneEnabled ?? _room?.speakerOn ?? false;
+
+  bool get _isServicesBindingInitialized {
+    try {
+      ServicesBinding.instance;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _refreshSpeakerphoneState() async {
+    if (!_isServicesBindingInitialized || kIsWeb) return;
+
+    try {
+      bool? speakerEnabled;
+
+      if (Platform.isAndroid) {
+        speakerEnabled = await audio.AndroidAudioManager().isSpeakerphoneOn();
+      } else if (Platform.isIOS) {
+        final session = await audio.AudioSession.instance;
+        final outputs = await session.getDevices(includeInputs: false);
+        speakerEnabled = outputs.any(
+          (d) => d.isOutput && d.type == audio.AudioDeviceType.builtInSpeaker,
+        );
+      }
+
+      if (speakerEnabled != null &&
+          speakerEnabled != _systemSpeakerphoneEnabled) {
+        _systemSpeakerphoneEnabled = speakerEnabled;
+        _emitState();
+      }
+    } catch (error, stackTrace) {
+      logger.w(
+        'Failed to refresh speakerphone state from system',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
 
   Future<void> setSpeakerphone(bool enabled) async {
     if (!_hasExternalOutput) {
@@ -271,6 +320,7 @@ class SessionDeviceController extends _$SessionDeviceController {
       await _room?.setSpeakerOn(enabled);
     }
 
+    await _refreshSpeakerphoneState();
     _emitState();
   }
 
