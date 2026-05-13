@@ -276,7 +276,7 @@ PopupRequest showPopup(
   return request;
 }
 
-void showNotificationPopup(
+PopupRequest showNotificationPopup(
   BuildContext context, {
   required TotemIconData icon,
   required String title,
@@ -284,7 +284,7 @@ void showNotificationPopup(
   PopupController? controller,
 }) {
   final view = View.of(context);
-  showPopup(
+  return showPopup(
     context,
     controller: controller,
     dedupeKey: ('notification', icon, title, message),
