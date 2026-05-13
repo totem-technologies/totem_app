@@ -171,7 +171,7 @@ class _TransitionCardState extends State<TransitionCard> {
                   'Your session will start soon. Please check your audio and video before joining.',
                   textAlign: TextAlign.center,
                 ),
-                ?actionButton,
+                if (actionButton != null) Flexible(child: actionButton),
               ],
             ),
           )
@@ -204,7 +204,7 @@ class _TransitionCardState extends State<TransitionCard> {
             ),
           ),
         if (actionButton != null && widget.type != TotemCardTransitionType.join)
-          actionButton,
+          Flexible(child: actionButton),
       ],
     );
 
