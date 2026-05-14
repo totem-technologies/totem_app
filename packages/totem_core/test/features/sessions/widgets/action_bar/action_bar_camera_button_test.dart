@@ -41,7 +41,7 @@ void main() {
                 padding: const EdgeInsets.only(bottom: 120),
                 child: ActionBarCameraSwitcherButton(
                   isCameraOn: true,
-                  onToggle: null,
+                  onToggle: () {},
                   cameraPosition: CameraPosition.front,
                   availableCameraDevices: const [
                     MediaDevice('camera-1', 'Front Camera', 'videoinput', null),

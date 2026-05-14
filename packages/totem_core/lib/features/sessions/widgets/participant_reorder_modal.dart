@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart' show Participant;
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
@@ -15,8 +17,6 @@ import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 Future<void> showParticipantReorderModals(
   BuildContext context,
-  SessionController session,
-  SessionRoomState state,
   SessionDetailSchema event,
 ) {
   return showResponsiveModal<void>(
@@ -25,15 +25,11 @@ Future<void> showParticipantReorderModals(
     bottomSheetBackgroundColor: const Color(0xFFF3F1E9),
     dialogBackgroundColor: const Color(0xFFF3F1E9),
     smallScreenBuilder: (context) => ParticipantReorderWidget(
-      session: session,
-      state: state,
       event: event,
     ),
     largeScreenBuilder: (context) => SizedBox(
       width: 600,
       child: ParticipantReorderWidget(
-        session: session,
-        state: state,
         event: event,
       ),
     ),
@@ -42,14 +38,10 @@ Future<void> showParticipantReorderModals(
 
 class ParticipantReorderWidget extends ConsumerStatefulWidget {
   const ParticipantReorderWidget({
-    required this.session,
-    required this.state,
     required this.event,
     super.key,
   });
 
-  final SessionController session;
-  final SessionRoomState state;
   final SessionDetailSchema event;
 
   @override
@@ -61,27 +53,30 @@ class _ParticipantReorderWidgetState
     extends ConsumerState<ParticipantReorderWidget> {
   String? _selectedIdentity;
 
+  bool _initialized = false;
   late List<String> _localOrder;
   var _loading = false;
 
   @override
-  void initState() {
-    super.initState();
-    final roomParticipants = widget.state.participantsList
-        .map((p) => p.identity)
-        .toSet();
-    _localOrder = widget.state.roomState.talkingOrder.isEmpty
-        ? {widget.state.roomState.keeper, ...roomParticipants}.toList()
-        : Set<String>.from(
-            widget.state.roomState.talkingOrder.where(
-              roomParticipants.contains,
-            ),
-          ).toList();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final session = ref.watch(currentSessionProvider)!;
+    final sessionState = ref.watch(currentSessionStateProvider)!;
+
+    if (!_initialized) {
+      final roomParticipants = sessionState.participantsList
+          .map((p) => p.identity)
+          .toSet();
+      _localOrder = sessionState.roomState.talkingOrder.isEmpty
+          ? {sessionState.roomState.keeper, ...roomParticipants}.toList()
+          : Set<String>.from(
+              sessionState.roomState.talkingOrder.where(
+                roomParticipants.contains,
+              ),
+            ).toList();
+      _initialized = true;
+    }
+
     final participants = _localOrder;
 
     if (participants.isEmpty) {
@@ -152,7 +147,7 @@ class _ParticipantReorderWidgetState
                                 onReorder: (oldIndex, newIndex) {
                                   _handleReorder(
                                     context,
-                                    ref,
+                                    sessionState.roomState.keeper,
                                     oldIndex,
                                     newIndex,
                                   );
@@ -161,8 +156,7 @@ class _ParticipantReorderWidgetState
                                   final participantIdentity =
                                       participants[index];
 
-                                  final participant = widget
-                                      .state
+                                  final participant = sessionState
                                       .participantsList
                                       .firstWhereOrNull(
                                         (p) =>
@@ -176,7 +170,7 @@ class _ParticipantReorderWidgetState
                                     index: index,
                                     isSpeakingNow:
                                         participantIdentity ==
-                                        widget.state.speakingNow,
+                                        sessionState.speakingNow,
                                     onTap: () {
                                       switch (viewportKind) {
                                         case ViewportKind.mediumPlus:
@@ -236,19 +230,14 @@ class _ParticipantReorderWidgetState
                                     ),
                                     Expanded(
                                       child: ElevatedButton(
-                                        onPressed: () async {
-                                          if (_loading) return;
-                                          setState(() => _loading = true);
-                                          await _updateParticipantOrder(
-                                            context,
-                                            ref,
-                                            _localOrder,
-                                          );
-                                          if (mounted && context.mounted) {
-                                            setState(() => _loading = false);
-                                            Navigator.of(context).pop();
-                                          }
-                                        },
+                                        onPressed: _loading
+                                            ? null
+                                            : () {
+                                                _updateParticipantOrder(
+                                                  session,
+                                                  _localOrder,
+                                                );
+                                              },
                                         child: _loading
                                             ? const LoadingIndicator(
                                                 color: Colors.white,
@@ -287,7 +276,7 @@ class _ParticipantReorderWidgetState
 
   void _handleReorder(
     BuildContext context,
-    WidgetRef ref,
+    String keeperSlug,
     int oldIndex,
     int newIndex,
   ) {
@@ -297,7 +286,7 @@ class _ParticipantReorderWidgetState
 
     // ensure keeper is first always
     _localOrder = {
-      widget.state.roomState.keeper,
+      keeperSlug,
       ..._localOrder,
     }.toList();
 
@@ -305,29 +294,26 @@ class _ParticipantReorderWidgetState
   }
 
   Future<void> _updateParticipantOrder(
-    BuildContext context,
-    WidgetRef ref,
+    SessionController session,
     List<String> newOrder,
   ) async {
     try {
-      await widget.session.keeper.reorder(newOrder);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Participant order updated successfully'),
-            backgroundColor: Colors.green,
-          ),
+      setState(() => _loading = true);
+      await session.keeper.reorder(newOrder);
+    } catch (error) {
+      if (mounted) {
+        ErrorHandler.showErrorDialog(
+          context,
+          title: 'Error Reordering Participants',
+          message:
+              'An error occurred while reordering participants. Please try again.',
         );
       }
-    } catch (error) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update participant order: $error'),
-            backgroundColor: Colors.red,
-          ),
-        );
+    } finally {
+      _loading = false;
+      if (mounted) {
+        setState(() {});
+        Navigator.of(context).pop();
       }
     }
   }

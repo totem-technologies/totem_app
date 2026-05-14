@@ -157,6 +157,7 @@ class _TransitionCardState extends State<TransitionCard> {
         if (widget.type == TotemCardTransitionType.join)
           Flexible(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               spacing: 10,
               children: [
                 Text(
@@ -204,7 +205,7 @@ class _TransitionCardState extends State<TransitionCard> {
             ),
           ),
         if (actionButton != null && widget.type != TotemCardTransitionType.join)
-          actionButton,
+          Flexible(child: actionButton),
       ],
     );
 

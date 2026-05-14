@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
@@ -44,10 +44,7 @@ class AudioplayersSessionCuesAudioPlayer implements SessionCuesAudioPlayer {
 
   @override
   Future<void> playAsset(String assetSourcePath) {
-    return _player.play(
-      AssetSource('packages/totem_core/assets/$assetSourcePath'),
-      volume: 0.5,
-    );
+    return _player.play(AssetSource(assetSourcePath), volume: 0.5);
   }
 
   @override
@@ -60,27 +57,38 @@ class SessionCuesService {
   SessionCuesService({
     SessionCuesAudioPlayer? audioPlayer,
     SessionCuesHapticPulseCallback? pulseHaptic,
-  }) : _audioPlayer = audioPlayer ?? AudioplayersSessionCuesAudioPlayer(),
-       _pulseHaptic = pulseHaptic ?? defaultHapticPulse;
+  }) : _pulseHaptic = pulseHaptic ?? defaultHapticPulse,
+       _audioPlayer = audioPlayer;
 
   static Future<void> defaultHapticPulse() {
     // https://github.com/flutter/flutter/issues/157442
     if (kIsWeb) {
       return HapticFeedback.lightImpact();
     }
-    if (Platform.isIOS) {
-      return HapticFeedback.vibrate();
-    }
 
-    return HapticFeedback.lightImpact();
+    return HapticFeedback.heavyImpact();
   }
 
-  final SessionCuesAudioPlayer _audioPlayer;
+  SessionCuesAudioPlayer? _audioPlayer;
   final SessionCuesHapticPulseCallback _pulseHaptic;
   bool _configured = false;
+  Timer? _transitionCueDelayTimer;
 
-  Future<void> playSessionTransitionCue() {
-    return _playAsset(TotemAudioAssets.enterLeaveSessionRingtone);
+  Future<void> playSessionTransitionCue() async {
+    // Adding a delay before playing the session cue to ensure
+    // the audio plays isn't interfered with by any audio changes
+    //that may occur during session transitions.
+    _transitionCueDelayTimer?.cancel();
+    final completer = Completer<void>();
+    _transitionCueDelayTimer = Timer(const Duration(milliseconds: 1500), () {
+      _transitionCueDelayTimer = null;
+      _playAsset(TotemAudioAssets.enterLeaveSessionRingtone).whenComplete(() {
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      });
+    });
+    return completer.future;
   }
 
   Future<void> playTotemReceivedCue() {
@@ -102,9 +110,9 @@ class SessionCuesService {
 
     try {
       await _configurePlayer();
-      await _audioPlayer.stop();
+      await _audioPlayer?.stop();
       _isPlaying = true;
-      await _audioPlayer.playAsset(_toAssetSourcePath(assetPath));
+      await _audioPlayer?.playAsset(_toAssetSourcePath(assetPath));
     } catch (error, stackTrace) {
       logger.e(
         'Failed to play session feedback sound: $assetPath',
@@ -119,23 +127,29 @@ class SessionCuesService {
   Future<void> _configurePlayer() async {
     if (_configured) return;
 
-    await _audioPlayer.setPlayerMode(PlayerMode.lowLatency);
-    await _audioPlayer.setReleaseMode(ReleaseMode.stop);
-    await _audioPlayer.setAudioContext(
-      AudioContext(
-        iOS: AudioContextIOS(
-          category: AVAudioSessionCategory.playAndRecord,
-          options: const {
-            AVAudioSessionOptions.mixWithOthers,
-          },
+    AudioCache.instance = AudioCache(prefix: 'packages/totem_core/assets/');
+    _audioPlayer ??= AudioplayersSessionCuesAudioPlayer();
+
+    await _audioPlayer?.setPlayerMode(PlayerMode.lowLatency);
+    await _audioPlayer?.setReleaseMode(ReleaseMode.stop);
+
+    // Set audio context to preserve existing audio routing (speaker/headphones state)
+    // during session join/leave transitions.
+    if (!kIsWeb) {
+      await _audioPlayer?.setAudioContext(
+        AudioContext(
+          iOS: AudioContextIOS(
+            category: AVAudioSessionCategory.playback,
+            options: const {
+              AVAudioSessionOptions.mixWithOthers,
+            },
+          ),
+          android: const AudioContextAndroid(
+            audioFocus: AndroidAudioFocus.gainTransient,
+          ),
         ),
-        android: const AudioContextAndroid(
-          usageType: AndroidUsageType.media,
-          contentType: AndroidContentType.sonification,
-          audioFocus: AndroidAudioFocus.none,
-        ),
-      ),
-    );
+      );
+    }
 
     _configured = true;
   }
@@ -149,6 +163,8 @@ class SessionCuesService {
   }
 
   void dispose() {
-    _audioPlayer.dispose();
+    _transitionCueDelayTimer?.cancel();
+    _transitionCueDelayTimer = null;
+    _audioPlayer?.dispose();
   }
 }

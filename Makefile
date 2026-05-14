@@ -26,6 +26,10 @@ run-chrome:
 	@echo "Running app in Chrome..."
 	cd $(WEB_DIR) && flutter run -d chrome --web-browser-flag "--disable-web-security"
 
+run-web:
+	@echo "Running app in Web Server..."
+	cd $(WEB_DIR) && flutter run -d web-server
+
 build-runner:
 	@echo "Running build_runner for code generation..."
 	cd $(CORE_DIR) && dart run build_runner build --delete-conflicting-outputs
@@ -65,6 +69,7 @@ githooks:
 	@echo "Git hooks installed successfully!"
 
 flutterfire:
+	dart pub global activate flutterfire_cli
 	@command -v flutterfire >/dev/null 2>&1 || { echo "Error: flutterfire CLI not found. Install with: dart pub global activate flutterfire_cli"; exit 1; }
 	@test -d $(APP_DIR) || { echo "Error: $(APP_DIR) not found."; exit 1; }
 	@test -d $(WEB_DIR) || { echo "Error: $(WEB_DIR) not found."; exit 1; }

@@ -18,6 +18,13 @@ class ActionBarChatButton extends ConsumerStatefulWidget {
 class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
   bool _chatSheetOpen = false;
   bool _hasPendingSessionChatMessages = false;
+  PopupRequest? _notificationPopup;
+
+  @override
+  void dispose() {
+    _notificationPopup?.dismissActive();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,14 +33,15 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       (previous, next) {
         if (next == null || identical(previous, next)) return;
         if (!mounted || _chatSheetOpen) return;
-        setState(() => _hasPendingSessionChatMessages = true);
-        showNotificationPopup(
+        _notificationPopup?.dismissActive();
+        _notificationPopup = showNotificationPopup(
           context,
           icon: TotemIcons.chat,
           title: 'New message',
           message: next.message,
-          // controller: _notificationController,
         );
+        if (next.sender) return;
+        setState(() => _hasPendingSessionChatMessages = true);
       },
     );
     return ActionBarButton(
@@ -41,6 +49,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       active: _chatSheetOpen,
       onPressed: () async {
         if (!mounted) return;
+        _notificationPopup?.dismissActive();
         setState(() {
           _hasPendingSessionChatMessages = false;
           _chatSheetOpen = true;

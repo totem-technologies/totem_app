@@ -614,6 +614,7 @@ class _LocalParticipantCardState extends ConsumerState<LocalParticipantCard> {
     // This delay is necessary because the native video view needs a moment to initialize and display
     // the first frame after the track is unmuted or becomes active. Without this, we might see a brief
     // flash of the avatar before the video appears.
+    // https://github.com/livekit/client-sdk-flutter/issues/1061
 
     final wasVisible =
         oldWidget.isCameraOn &&
@@ -741,8 +742,17 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   Timer? _initTimer;
 
   void initialize() {
-    _initialized = false;
     _initTimer?.cancel();
+
+    if (widget.participant is LocalParticipant) {
+      _initialized = true;
+      if (mounted) {
+        setState(() {});
+      }
+      return;
+    }
+
+    _initialized = false;
     _initTimer = Timer(const Duration(milliseconds: 1500), () {
       _initialized = true;
       if (mounted) {
@@ -885,6 +895,9 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = ref.watch(
+      authControllerProvider.select((auth) => auth.user),
+    );
     final user = ref.watch(userProfileProvider(widget.participant.identity));
     final trackPublication = videoTrack;
 
@@ -964,7 +977,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
       ],
     );
 
-    if (kDebugMode || user.value?.isStaff == true) {
+    if (kDebugMode || currentUser?.isStaff == true) {
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => setState(
