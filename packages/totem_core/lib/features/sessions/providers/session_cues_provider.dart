@@ -71,7 +71,11 @@ class SessionCuesService {
   final SessionCuesHapticPulseCallback _pulseHaptic;
   bool _configured = false;
 
-  Future<void> playSessionTransitionCue() {
+  Future<void> playSessionTransitionCue() async {
+    // Adding a delay before playing the session cue to ensure
+    // the audio plays isn't interfered with by any audio changes
+    //that may occur during session transitions.
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
     return _playAsset(TotemAudioAssets.enterLeaveSessionRingtone);
   }
 

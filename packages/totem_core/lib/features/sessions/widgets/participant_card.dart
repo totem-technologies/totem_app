@@ -614,6 +614,7 @@ class _LocalParticipantCardState extends ConsumerState<LocalParticipantCard> {
     // This delay is necessary because the native video view needs a moment to initialize and display
     // the first frame after the track is unmuted or becomes active. Without this, we might see a brief
     // flash of the avatar before the video appears.
+    // https://github.com/livekit/client-sdk-flutter/issues/1061
 
     final wasVisible =
         oldWidget.isCameraOn &&
