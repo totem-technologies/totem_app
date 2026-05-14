@@ -6,7 +6,6 @@ import 'dart:io';
 import 'package:audio_session/audio_session.dart' as audio;
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -261,17 +260,8 @@ class SessionDeviceController extends _$SessionDeviceController {
   bool get isSpeakerphoneEnabled =>
       _systemSpeakerphoneEnabled ?? _room?.speakerOn ?? false;
 
-  bool get _isServicesBindingInitialized {
-    try {
-      ServicesBinding.instance;
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
   Future<void> _refreshSpeakerphoneState() async {
-    if (!_isServicesBindingInitialized || kIsWeb) return;
+    if (kIsWeb) return;
 
     try {
       bool? speakerEnabled;

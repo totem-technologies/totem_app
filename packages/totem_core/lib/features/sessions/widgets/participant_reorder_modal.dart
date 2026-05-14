@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart' show Participant;
-import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -17,32 +16,24 @@ import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 Future<void> showParticipantReorderModals(
   BuildContext context,
-  SessionDetailSchema event,
 ) {
   return showResponsiveModal<void>(
     context: context,
     useRootNavigator: false,
     bottomSheetBackgroundColor: const Color(0xFFF3F1E9),
     dialogBackgroundColor: const Color(0xFFF3F1E9),
-    smallScreenBuilder: (context) => ParticipantReorderWidget(
-      event: event,
-    ),
-    largeScreenBuilder: (context) => SizedBox(
+    smallScreenBuilder: (context) => const ParticipantReorderWidget(),
+    largeScreenBuilder: (context) => const SizedBox(
       width: 600,
-      child: ParticipantReorderWidget(
-        event: event,
-      ),
+      child: ParticipantReorderWidget(),
     ),
   );
 }
 
 class ParticipantReorderWidget extends ConsumerStatefulWidget {
   const ParticipantReorderWidget({
-    required this.event,
     super.key,
   });
-
-  final SessionDetailSchema event;
 
   @override
   ConsumerState<ParticipantReorderWidget> createState() =>
@@ -302,11 +293,10 @@ class _ParticipantReorderWidgetState
       await session.keeper.reorder(newOrder);
     } catch (error) {
       if (mounted) {
-        ErrorHandler.showErrorDialog(
+        await ErrorHandler.showErrorDialog(
           context,
           title: 'Error Reordering Participants',
-          message:
-              'An error occurred while reordering participants. Please try again.',
+          message: 'An error occurred while reordering participants',
         );
       }
     } finally {

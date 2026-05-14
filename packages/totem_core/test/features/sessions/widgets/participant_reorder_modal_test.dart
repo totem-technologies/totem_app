@@ -21,48 +21,9 @@ class MockSessionRoomState extends Mock implements SessionRoomState {}
 
 class MockParticipant extends Mock implements Participant {}
 
-SessionDetailSchema _createSessionEvent() {
-  return SessionDetailSchema(
-    slug: 'test-session',
-    title: 'Test Session',
-    space: MobileSpaceDetailSchema(
-      slug: 'test-space',
-      title: 'Test Space',
-      imageLink: null,
-      shortDescription: 'A test space.',
-      content: '',
-      author: PublicUserSchema(
-        profileAvatarType: ProfileAvatarTypeEnum.td,
-        dateCreated: DateTime(2024),
-      ),
-      category: null,
-      subscribers: 0,
-      recurring: null,
-      price: 0,
-      nextEvents: const [],
-    ),
-    content: '',
-    seatsLeft: 10,
-    duration: 60,
-    start: DateTime(2024, 1, 1, 10),
-    attending: true,
-    open: true,
-    started: true,
-    cancelled: false,
-    joinable: true,
-    ended: false,
-    rsvpUrl: '',
-    joinUrl: null,
-    subscribeUrl: '',
-    calLink: '',
-    subscribed: false,
-    userTimezone: null,
-    meetingProvider: MeetingProviderEnum.livekit,
-  );
-}
-
 void main() {
   setUpAll(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
     registerFallbackValue(TrackSource.camera);
     registerFallbackValue(<String>[]);
   });
@@ -87,7 +48,6 @@ void main() {
     final user1 = MockParticipant();
     final user2 = MockParticipant();
     final user3 = MockParticipant();
-    final event = _createSessionEvent();
 
     when(() => session.keeper).thenReturn(keeper);
     when(() => keeper.reorder(any())).thenAnswer((_) async {});
@@ -114,9 +74,9 @@ void main() {
           currentSessionProvider.overrideWith((ref) => session),
           currentSessionStateProvider.overrideWith((ref) => sessionState),
         ],
-        child: MaterialApp(
+        child: const MaterialApp(
           home: Scaffold(
-            body: ParticipantReorderWidget(event: event),
+            body: ParticipantReorderWidget(),
           ),
         ),
       ),
@@ -161,7 +121,6 @@ void main() {
     final keeperParticipant = MockParticipant();
     final user1 = MockParticipant();
     final user2 = MockParticipant();
-    final event = _createSessionEvent();
     final reorderCompleter = Completer<void>();
 
     when(() => session.keeper).thenReturn(keeper);
@@ -188,9 +147,9 @@ void main() {
           currentSessionProvider.overrideWith((ref) => session),
           currentSessionStateProvider.overrideWith((ref) => sessionState),
         ],
-        child: MaterialApp(
+        child: const MaterialApp(
           home: Scaffold(
-            body: ParticipantReorderWidget(event: event),
+            body: ParticipantReorderWidget(),
           ),
         ),
       ),
@@ -225,7 +184,6 @@ void main() {
     final keeperParticipant = MockParticipant();
     final user1 = MockParticipant();
     final user2 = MockParticipant();
-    final event = _createSessionEvent();
     final reorderCompleter = Completer<void>();
 
     when(() => session.keeper).thenReturn(keeper);
@@ -268,7 +226,7 @@ void main() {
                         return Center(
                           child: ElevatedButton(
                             onPressed: () {
-                              showParticipantReorderModals(context, event);
+                              showParticipantReorderModals(context);
                             },
                             child: const Text('Open reorder modal'),
                           ),
