@@ -172,7 +172,7 @@ class _TransitionCardState extends State<TransitionCard> {
                   'Your session will start soon. Please check your audio and video before joining.',
                   textAlign: TextAlign.center,
                 ),
-                if (actionButton != null) actionButton,
+                ?actionButton,
               ],
             ),
           )

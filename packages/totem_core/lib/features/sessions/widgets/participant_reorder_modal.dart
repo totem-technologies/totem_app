@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart' show Participant;
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -231,20 +232,11 @@ class _ParticipantReorderWidgetState
                                       child: ElevatedButton(
                                         onPressed: _loading
                                             ? null
-                                            : () async {
-                                                setState(() => _loading = true);
-                                                await _updateParticipantOrder(
-                                                  context,
+                                            : () {
+                                                _updateParticipantOrder(
                                                   session,
                                                   _localOrder,
                                                 );
-                                                _loading = false;
-                                                setState(
-                                                  () => _loading = false,
-                                                );
-                                                // if (context.mounted) {
-                                                //   Navigator.of(context).pop();
-                                                // }
                                               },
                                         child: _loading
                                             ? const LoadingIndicator(
@@ -302,29 +294,26 @@ class _ParticipantReorderWidgetState
   }
 
   Future<void> _updateParticipantOrder(
-    BuildContext context,
     SessionController session,
     List<String> newOrder,
   ) async {
     try {
-      session.keeper.reorder(newOrder);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Participant order updated successfully'),
-            backgroundColor: Colors.green,
-          ),
+      setState(() => _loading = true);
+      await session.keeper.reorder(newOrder);
+    } catch (error) {
+      if (mounted) {
+        ErrorHandler.showErrorDialog(
+          context,
+          title: 'Error Reordering Participants',
+          message:
+              'An error occurred while reordering participants. Please try again.',
         );
       }
-    } catch (error) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update participant order: $error'),
-            backgroundColor: Colors.red,
-          ),
-        );
+    } finally {
+      _loading = false;
+      if (mounted) {
+        setState(() {});
+        Navigator.of(context).pop();
       }
     }
   }
