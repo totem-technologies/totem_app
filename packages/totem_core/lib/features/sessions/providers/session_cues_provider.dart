@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -70,13 +72,23 @@ class SessionCuesService {
   SessionCuesAudioPlayer? _audioPlayer;
   final SessionCuesHapticPulseCallback _pulseHaptic;
   bool _configured = false;
+  Timer? _transitionCueDelayTimer;
 
   Future<void> playSessionTransitionCue() async {
     // Adding a delay before playing the session cue to ensure
     // the audio plays isn't interfered with by any audio changes
     //that may occur during session transitions.
-    await Future<void>.delayed(const Duration(milliseconds: 1500));
-    return _playAsset(TotemAudioAssets.enterLeaveSessionRingtone);
+    _transitionCueDelayTimer?.cancel();
+    final completer = Completer<void>();
+    _transitionCueDelayTimer = Timer(const Duration(milliseconds: 1500), () {
+      _transitionCueDelayTimer = null;
+      _playAsset(TotemAudioAssets.enterLeaveSessionRingtone).whenComplete(() {
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      });
+    });
+    return completer.future;
   }
 
   Future<void> playTotemReceivedCue() {
@@ -151,6 +163,8 @@ class SessionCuesService {
   }
 
   void dispose() {
+    _transitionCueDelayTimer?.cancel();
+    _transitionCueDelayTimer = null;
     _audioPlayer?.dispose();
   }
 }
