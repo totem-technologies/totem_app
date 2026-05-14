@@ -157,6 +157,7 @@ class _TransitionCardState extends State<TransitionCard> {
         if (widget.type == TotemCardTransitionType.join)
           Flexible(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               spacing: 10,
               children: [
                 Text(
@@ -171,7 +172,7 @@ class _TransitionCardState extends State<TransitionCard> {
                   'Your session will start soon. Please check your audio and video before joining.',
                   textAlign: TextAlign.center,
                 ),
-                if (actionButton != null) Flexible(child: actionButton),
+                if (actionButton != null) actionButton,
               ],
             ),
           )

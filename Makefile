@@ -26,6 +26,10 @@ run-chrome:
 	@echo "Running app in Chrome..."
 	cd $(WEB_DIR) && flutter run -d chrome --web-browser-flag "--disable-web-security"
 
+run-web:
+	@echo "Running app in Web Server..."
+	cd $(WEB_DIR) && flutter run -d web-server
+
 build-runner:
 	@echo "Running build_runner for code generation..."
 	cd $(CORE_DIR) && dart run build_runner build --delete-conflicting-outputs
