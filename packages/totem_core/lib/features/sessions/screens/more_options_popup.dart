@@ -227,8 +227,8 @@ class MoreOptions extends ConsumerWidget {
                       Navigator.of(context).pop();
                       _onStartSession(context, currentSession);
                     },
-                  ),
-                if (state.roomState.status != mobile_api.RoomStatus.ended)
+                  )
+                else if (state.roomState.status != mobile_api.RoomStatus.ended)
                   MoreOptionsTile<void>(
                     title: 'End Session',
                     icon: TotemIcons.cameraOff,

@@ -20,9 +20,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final sessionStatus = ref.watch(roomStatusProvider);
     final session = ref.watch(currentSessionProvider);
-    final sessionState = ref.watch(currentSessionStateProvider);
     final roundPrompt = ref.watch(roundMessageProvider);
-    final isCameraOn = ref.watch(isCameraOnProvider);
 
     Future<bool> onAccept() async {
       try {

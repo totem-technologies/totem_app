@@ -24,34 +24,55 @@ abstract class SessionCuesAudioPlayer {
   void dispose();
 }
 
-class AudioplayersSessionCuesAudioPlayer implements SessionCuesAudioPlayer {
-  AudioplayersSessionCuesAudioPlayer() : _player = AudioPlayer();
-
-  final AudioPlayer _player;
+// For now, we disabled audio player.
+class _UselessAudioPlayer implements SessionCuesAudioPlayer {
+  @override
+  Future<void> setAudioContext(AudioContext context) async {}
 
   @override
-  Future<void> setPlayerMode(PlayerMode mode) => _player.setPlayerMode(mode);
+  Future<void> setPlayerMode(PlayerMode mode) async {}
 
   @override
-  Future<void> setReleaseMode(ReleaseMode mode) => _player.setReleaseMode(mode);
+  Future<void> setReleaseMode(ReleaseMode mode) async {}
 
   @override
-  Future<void> setAudioContext(AudioContext context) =>
-      _player.setAudioContext(context);
+  Future<void> stop() async {}
 
   @override
-  Future<void> stop() => _player.stop();
+  Future<void> playAsset(String assetSourcePath) async {}
 
   @override
-  Future<void> playAsset(String assetSourcePath) {
-    return _player.play(AssetSource(assetSourcePath), volume: 0.5);
-  }
-
-  @override
-  void dispose() {
-    _player.dispose();
-  }
+  void dispose() {}
 }
+
+// class AudioplayersSessionCuesAudioPlayer implements SessionCuesAudioPlayer {
+//   AudioplayersSessionCuesAudioPlayer() : _player = AudioPlayer();
+
+//   final AudioPlayer _player;
+
+//   @override
+//   Future<void> setPlayerMode(PlayerMode mode) => _player.setPlayerMode(mode);
+
+//   @override
+//   Future<void> setReleaseMode(ReleaseMode mode) => _player.setReleaseMode(mode);
+
+//   @override
+//   Future<void> setAudioContext(AudioContext context) =>
+//       _player.setAudioContext(context);
+
+//   @override
+//   Future<void> stop() => _player.stop();
+
+//   @override
+//   Future<void> playAsset(String assetSourcePath) {
+//     return _player.play(AssetSource(assetSourcePath), volume: 0.5);
+//   }
+
+//   @override
+//   void dispose() {
+//     _player.dispose();
+//   }
+// }
 
 class SessionCuesService {
   SessionCuesService({
@@ -128,7 +149,7 @@ class SessionCuesService {
     if (_configured) return;
 
     AudioCache.instance = AudioCache(prefix: 'packages/totem_core/assets/');
-    _audioPlayer ??= AudioplayersSessionCuesAudioPlayer();
+    _audioPlayer ??= _UselessAudioPlayer();
 
     await _audioPlayer?.setPlayerMode(PlayerMode.lowLatency);
     await _audioPlayer?.setReleaseMode(ReleaseMode.stop);
