@@ -9,7 +9,6 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart'
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
-import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class ListeningTurnScreen extends ConsumerWidget {
@@ -21,11 +20,9 @@ class ListeningTurnScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final roomStatus = ref.watch(roomStatusProvider);
     final amNext = ref.watch(amNextSpeakerProvider);
-    final currentSession = ref.watch(currentSessionProvider)!;
     final activeSpeaker = ref.watch(featuredParticipantProvider);
     final nextUp = ref.watch(speakingNextParticipantProvider);
     final hasKeeper = ref.watch(hasKeeperProvider);
-    final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
 
     return RoomBackground(
       status: roomStatus,
@@ -84,25 +81,9 @@ class ListeningTurnScreen extends ConsumerWidget {
             viewportKind: viewportKind,
           );
 
-          final startCard = () {
-            if (roomStatus == RoomStatus.waitingRoom && isCurrentUserKeeper) {
-              return TransitionCard(
-                type: TotemCardTransitionType.start,
-                onActionPressed: currentSession.keeper.startSession,
-              );
-            }
-            return null;
-          }();
-
-          final Widget? marqueeOrStart = () {
-            if (roomStatus == RoomStatus.waitingRoom) {
-              if (isCurrentUserKeeper) {
-                return startCard;
-              } else {
-                return const GroundingMarquee();
-              }
-            }
-          }();
+          final Widget? marquee = roomStatus == RoomStatus.waitingRoom
+              ? const GroundingMarquee()
+              : null;
 
           switch (viewportKind) {
             case ViewportKind.smallPortrait:
@@ -132,7 +113,7 @@ class ListeningTurnScreen extends ConsumerWidget {
                         child: participantGrid,
                       ),
                     ),
-                    ?marqueeOrStart,
+                    ?marquee,
                     const Center(child: SessionActionBar()),
                   ],
                 ),
@@ -174,7 +155,7 @@ class ListeningTurnScreen extends ConsumerWidget {
                                     child: participantGrid,
                                   ),
                                 ),
-                                ?marqueeOrStart,
+                                ?marquee,
                                 const Center(
                                   child: SessionActionBar(),
                                 ),
@@ -242,7 +223,7 @@ class ListeningTurnScreen extends ConsumerWidget {
                     if (roomStatus == RoomStatus.waitingRoom) ...[
                       const SizedBox.shrink(),
                       const GroundingMarquee(),
-                      ?startCard,
+                      ?marquee,
                       const SizedBox.shrink(),
                     ],
                     const Center(child: SessionActionBar()),

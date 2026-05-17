@@ -218,6 +218,16 @@ class MoreOptions extends ConsumerWidget {
                       );
                     },
                   ),
+                if (state.roomState.status == mobile_api.RoomStatus.waitingRoom)
+                  MoreOptionsTile<void>(
+                    title: 'Start Session',
+                    icon: TotemIcons.arrowForward,
+                    type: MoreOptionsTileType.destructive,
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _onStartSession(context, currentSession);
+                    },
+                  ),
                 if (state.roomState.status != mobile_api.RoomStatus.ended)
                   MoreOptionsTile<void>(
                     title: 'End Session',
@@ -341,6 +351,28 @@ class MoreOptions extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<void> _onStartSession(
+    BuildContext context,
+    SessionController session,
+  ) async {
+    try {
+      await session.keeper.startSession();
+    } catch (error) {
+      if (!context.mounted) return;
+      await ErrorHandler.handleApiError(
+        context,
+        error,
+        onRetry: () async {
+          try {
+            await session.keeper.startSession();
+          } catch (e) {
+            // Error already handled by handleApiError
+          }
+        },
+      );
+    }
   }
 
   Future<void> _onEndSession(
