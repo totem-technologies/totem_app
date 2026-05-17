@@ -165,7 +165,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(
                               maxHeight: 460,
-                              maxWidth: 796,
+                              maxWidth: 896,
                             ),
                             child: Center(child: participantGrid),
                           ),
@@ -211,7 +211,7 @@ class _SpeakingTurnGrid extends ConsumerWidget {
     );
 
     // debug:
-    // sortedParticipants = [for (var i = 0; i < 9; i++) ...sortedParticipants];
+    // sortedParticipants = [for (var i = 0; i < 3; i++) ...sortedParticipants];
 
     final itemCount = sortedParticipants.length;
     if (itemCount == 0) return const SizedBox.shrink();
@@ -243,8 +243,12 @@ class _SpeakingTurnGrid extends ConsumerWidget {
               .clamp(3, maxPerLineCount);
         }
       case ViewportKind.mediumPlus:
-        if (itemCount <= 3) {
+        if (itemCount <= 2) {
+          crossAxisCount = 2;
+        } else if (itemCount <= 3) {
           crossAxisCount = 3;
+        } else if (itemCount <= 4) {
+          crossAxisCount = 2;
         } else if (itemCount <= 8) {
           crossAxisCount = 4;
         } else if (itemCount <= 10) {

@@ -163,6 +163,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
                   child: Column(
                     spacing: 40,
                     children: [
+                      const SizedBox(),
                       Expanded(child: videoCard),
                       roundPromptText ?? const SizedBox(height: 10),
                       ReceiveTransitionCard(

@@ -261,7 +261,7 @@ class _ListeningTurnGrid extends ConsumerWidget {
     );
 
     // debug:
-    // sortedParticipants = [for (var i = 0; i < 8; i++) ...sortedParticipants];
+    // sortedParticipants = [for (var i = 0; i < 3; i++) ...sortedParticipants];
 
     final itemCount = sortedParticipants.length;
     if (itemCount == 0) return const SizedBox.shrink();
@@ -289,7 +289,7 @@ class _ListeningTurnGrid extends ConsumerWidget {
       case ViewportKind.mediumPlus:
         if (itemCount == 1) {
           crossAxisCount = 1;
-        } else if (itemCount <= 2) {
+        } else if (itemCount <= 4) {
           crossAxisCount = 2;
         } else if (itemCount <= 6) {
           crossAxisCount = 3;
