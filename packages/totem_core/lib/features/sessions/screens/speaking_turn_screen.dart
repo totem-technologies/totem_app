@@ -10,7 +10,6 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
-import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
@@ -26,14 +25,6 @@ class SpeakingTurnScreen extends ConsumerStatefulWidget {
 }
 
 class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
-  final roundMessageController = TextEditingController();
-
-  @override
-  void dispose() {
-    roundMessageController.dispose();
-    super.dispose();
-  }
-
   Future<bool> _onPassTotem([String? roundMessage]) async {
     final session = ref.read(currentSessionProvider);
     try {
@@ -49,7 +40,6 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final roomStatus = ref.watch(roomStatusProvider);
     final turnState = ref.watch(turnStateProvider);
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
@@ -65,62 +55,32 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
               viewportKind: viewportKind,
             );
 
-            final transitionType = turnState == TurnState.passing
-                ? TotemCardTransitionType.waitingReceive
-                : TotemCardTransitionType.pass;
+            final isWaitingReceive = turnState == TurnState.passing;
 
-            final normalPassCard = TransitionCard(
-              type: transitionType,
-              onActionPressed: _onPassTotem,
-              actionText:
-                  nextUp != null &&
-                      transitionType == TotemCardTransitionType.pass
-                  ? 'Pass to ${nextUp.name}'
-                  : null,
-            );
-            Widget passCard;
-            switch (transitionType) {
-              case TotemCardTransitionType.pass:
-                if (isKeeper) {
-                  passCard = TransitionCardContainer(
-                    children: [
-                      Flexible(
-                        child: TextField(
-                          controller: roundMessageController,
-                          decoration: const InputDecoration(
-                            hintText: 'Your prompt for this round',
-                          ),
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
-                      ),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          minWidth: 160,
-                        ),
-                        child: ActionSliderButton(
-                          text:
-                              'Pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
-                                  .trim(),
-                          onActionCompleted: () {
-                            final roundMessage = roundMessageController.text
-                                .trim();
-                            return _onPassTotem(
-                              roundMessage.isEmpty ? null : roundMessage,
-                            );
-                          },
-                          keepLoadingOnSuccess: true,
-                        ),
-                      ),
-                    ],
+            final normalPassCard = isWaitingReceive
+                ? const WaitingReceiveTransitionCard()
+                : PassTransitionCard(
+                    onActionPressed: _onPassTotem,
+                    actionText: nextUp != null
+                        ? 'Pass to ${nextUp.name}'
+                        : 'Pass',
                   );
-                } else {
-                  passCard = normalPassCard;
-                }
-              case TotemCardTransitionType.waitingReceive:
-              default:
-                passCard = normalPassCard;
+
+            Widget passCard;
+            if (isWaitingReceive) {
+              passCard = normalPassCard;
+            } else if (isKeeper) {
+              passCard = PromptTransitionCard(
+                onActionPressed: (message) {
+                  return _onPassTotem(
+                    message.isEmpty ? null : message,
+                  );
+                },
+                actionText: 'Pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
+                    .trim(),
+              );
+            } else {
+              passCard = normalPassCard;
             }
             final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
             final restingBottom = switch (viewportKind.isLarge) {

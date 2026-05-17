@@ -162,8 +162,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
                     children: [
                       Expanded(child: videoCard),
                       roundPromptText ?? const SizedBox(height: 10),
-                      TransitionCard(
-                        type: TotemCardTransitionType.receive,
+                      ReceiveTransitionCard(
                         onActionPressed: onAccept,
                         keepActionLoadingOnSuccess: true,
                       ),

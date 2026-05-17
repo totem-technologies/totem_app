@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 
-enum TotemCardTransitionType { join, pass, receive, start, waitingReceive }
-
 class TransitionCardContainer extends StatelessWidget {
   const TransitionCardContainer({
     required this.children,
@@ -54,30 +52,22 @@ class TransitionCardContainer extends StatelessWidget {
   }
 }
 
-class TransitionCard extends StatefulWidget {
-  const TransitionCard({
-    required this.type,
-    required this.onActionPressed,
-    this.actionText,
-    this.keepActionLoadingOnSuccess = false,
-    this.isSliderLoading,
-    this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
+class TransitionCardBase extends StatefulWidget {
+  const TransitionCardBase({
+    required this.childBuilder,
+    this.keyboardShortcutText,
     super.key,
   });
 
-  final TotemCardTransitionType type;
-  final OnActionPerformed onActionPressed;
-  final bool keepActionLoadingOnSuccess;
-  final bool? isSliderLoading;
-
-  final EdgeInsetsGeometry margin;
-  final String? actionText;
+  final Widget Function(BuildContext context, bool hasMouseConnected)
+  childBuilder;
+  final String? keyboardShortcutText;
 
   @override
-  State<TransitionCard> createState() => _TransitionCardState();
+  State<TransitionCardBase> createState() => _TransitionCardBaseState();
 }
 
-class _TransitionCardState extends State<TransitionCard> {
+class _TransitionCardBaseState extends State<TransitionCardBase> {
   late final MouseTracker _mouseTracker;
   late bool _hasMouseConnected;
   late bool _hasKeyboardConnected;
@@ -117,114 +107,15 @@ class _TransitionCardState extends State<TransitionCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final shouldShowActionButton =
-        widget.type != TotemCardTransitionType.waitingReceive;
+    final card = widget.childBuilder(context, _hasMouseConnected);
 
-    final buttonText =
-        widget.actionText ??
-        switch (widget.type) {
-          TotemCardTransitionType.join => 'Join',
-          TotemCardTransitionType.pass => 'Pass',
-          TotemCardTransitionType.receive => 'Receive',
-          TotemCardTransitionType.start => 'Start Session',
-          TotemCardTransitionType.waitingReceive => '',
-        };
-
-    final actionButton = shouldShowActionButton
-        ? Padding(
-            padding: const EdgeInsetsDirectional.symmetric(horizontal: 14),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                minWidth: 160,
-              ),
-              child: ActionSliderButton(
-                text: buttonText,
-                onActionCompleted: widget.onActionPressed,
-                keepLoadingOnSuccess: widget.keepActionLoadingOnSuccess,
-                isLoading: widget.isSliderLoading,
-              ),
-            ),
-          )
-        : null;
-
-    final card = TransitionCardContainer(
-      margin: widget.margin,
-      constraints: switch (widget.type) {
-        TotemCardTransitionType.join => const BoxConstraints(maxWidth: 366),
-        _ => const BoxConstraints(maxWidth: 650),
-      },
-      children: [
-        if (widget.type == TotemCardTransitionType.join)
-          Flexible(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 10,
-              children: [
-                Text(
-                  'Welcome',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 28,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const Text(
-                  'Your session will start soon. Please check your audio and video before joining.',
-                  textAlign: TextAlign.center,
-                ),
-                ?actionButton,
-              ],
-            ),
-          )
-        else
-          Flexible(
-            child: AutoSizeText(
-              switch (widget.type) {
-                TotemCardTransitionType.join =>
-                  _hasMouseConnected
-                      ? 'Click to join the session.'
-                      : 'Swipe to join the session.',
-                TotemCardTransitionType.pass =>
-                  _hasMouseConnected
-                      ? 'When done, click to pass the Totem to the next person.'
-                      : 'When done, slide to pass the Totem to the next person.',
-                TotemCardTransitionType.receive =>
-                  'The Totem is being passed to you.',
-                TotemCardTransitionType.start =>
-                  'Bring participants out of the waiting room and begin '
-                      'the conversation.',
-                TotemCardTransitionType.waitingReceive =>
-                  'Waiting for the receiver to accept...\n'
-                      'It is still your turn',
-              },
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: Colors.black,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-            ),
-          ),
-        if (actionButton != null && widget.type != TotemCardTransitionType.join)
-          Flexible(child: actionButton),
-      ],
-    );
-
-    if (_hasKeyboardConnected &&
-        widget.type != TotemCardTransitionType.waitingReceive &&
-        widget.type != TotemCardTransitionType.join) {
+    if (_hasKeyboardConnected && widget.keyboardShortcutText != null) {
       return Column(
         spacing: 6,
         children: [
           card,
           Text(
-            switch (widget.type) {
-              TotemCardTransitionType.join => 'press space bar to join',
-              TotemCardTransitionType.pass => 'press space bar to pass',
-              TotemCardTransitionType.receive => 'press space bar to receive',
-              TotemCardTransitionType.start => 'press space bar to start',
-              TotemCardTransitionType.waitingReceive =>
-                throw UnimplementedError(),
-            },
+            widget.keyboardShortcutText!,
             style: theme.textTheme.bodySmall?.copyWith(
               color: const Color(0xFF787D7E),
             ),
@@ -234,5 +125,324 @@ class _TransitionCardState extends State<TransitionCard> {
     }
 
     return card;
+  }
+}
+
+class _GenericTransitionCard extends StatelessWidget {
+  const _GenericTransitionCard({
+    required this.actionText,
+    required this.onActionPressed,
+    required this.instructionTextClick,
+    required this.instructionTextSwipe,
+    this.keyboardShortcutText,
+    this.keepActionLoadingOnSuccess = false,
+    this.isSliderLoading,
+    this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
+  });
+
+  final String actionText;
+  final OnActionPerformed? onActionPressed;
+  final String instructionTextClick;
+  final String instructionTextSwipe;
+  final String? keyboardShortcutText;
+  final bool keepActionLoadingOnSuccess;
+  final bool? isSliderLoading;
+  final EdgeInsetsGeometry margin;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return TransitionCardBase(
+      keyboardShortcutText: keyboardShortcutText,
+      childBuilder: (context, hasMouseConnected) {
+        return TransitionCardContainer(
+          margin: margin,
+          children: [
+            Flexible(
+              child: AutoSizeText(
+                hasMouseConnected ? instructionTextClick : instructionTextSwipe,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+              ),
+            ),
+            if (onActionPressed != null)
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 14,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 160),
+                    child: ActionSliderButton(
+                      text: actionText,
+                      onActionCompleted: onActionPressed!,
+                      keepLoadingOnSuccess: keepActionLoadingOnSuccess,
+                      isLoading: isSliderLoading,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class JoinTransitionCard extends StatelessWidget {
+  const JoinTransitionCard({
+    required this.onActionPressed,
+    this.keepActionLoadingOnSuccess = false,
+    this.isSliderLoading,
+    this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
+    super.key,
+  });
+
+  final OnActionPerformed onActionPressed;
+  final bool keepActionLoadingOnSuccess;
+  final bool? isSliderLoading;
+  final EdgeInsetsGeometry margin;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return TransitionCardBase(
+      keyboardShortcutText: 'press space bar to join',
+      childBuilder: (context, hasMouseConnected) {
+        return TransitionCardContainer(
+          margin: margin,
+          constraints: const BoxConstraints(maxWidth: 366),
+          children: [
+            Flexible(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 10,
+                children: [
+                  Text(
+                    'Welcome',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 28,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const Text(
+                    'Your session will start soon. Please check your audio and video before joining.',
+                    textAlign: TextAlign.center,
+                  ),
+                  Padding(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 14,
+                    ),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minWidth: 160),
+                      child: ActionSliderButton(
+                        text: 'Join',
+                        onActionCompleted: onActionPressed,
+                        keepLoadingOnSuccess: keepActionLoadingOnSuccess,
+                        isLoading: isSliderLoading,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class PassTransitionCard extends StatelessWidget {
+  const PassTransitionCard({
+    required this.onActionPressed,
+    this.actionText = 'Pass',
+    this.keepActionLoadingOnSuccess = false,
+    this.isSliderLoading,
+    this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
+    super.key,
+  });
+
+  final OnActionPerformed onActionPressed;
+  final String actionText;
+  final bool keepActionLoadingOnSuccess;
+  final bool? isSliderLoading;
+  final EdgeInsetsGeometry margin;
+
+  @override
+  Widget build(BuildContext context) {
+    return _GenericTransitionCard(
+      actionText: actionText,
+      onActionPressed: onActionPressed,
+      instructionTextClick:
+          'When done, click to pass the Totem to the next person.',
+      instructionTextSwipe:
+          'When done, slide to pass the Totem to the next person.',
+      keyboardShortcutText: 'press space bar to pass',
+      keepActionLoadingOnSuccess: keepActionLoadingOnSuccess,
+      isSliderLoading: isSliderLoading,
+      margin: margin,
+    );
+  }
+}
+
+class ReceiveTransitionCard extends StatelessWidget {
+  const ReceiveTransitionCard({
+    required this.onActionPressed,
+    this.actionText = 'Receive',
+    this.keepActionLoadingOnSuccess = false,
+    this.isSliderLoading,
+    this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
+    super.key,
+  });
+
+  final OnActionPerformed onActionPressed;
+  final String actionText;
+  final bool keepActionLoadingOnSuccess;
+  final bool? isSliderLoading;
+  final EdgeInsetsGeometry margin;
+
+  @override
+  Widget build(BuildContext context) {
+    return _GenericTransitionCard(
+      actionText: actionText,
+      onActionPressed: onActionPressed,
+      instructionTextClick: 'The Totem is being passed to you.',
+      instructionTextSwipe: 'The Totem is being passed to you.',
+      keyboardShortcutText: 'press space bar to receive',
+      keepActionLoadingOnSuccess: keepActionLoadingOnSuccess,
+      isSliderLoading: isSliderLoading,
+      margin: margin,
+    );
+  }
+}
+
+class StartTransitionCard extends StatelessWidget {
+  const StartTransitionCard({
+    required this.onActionPressed,
+    this.actionText = 'Start Session',
+    this.keepActionLoadingOnSuccess = false,
+    this.isSliderLoading,
+    this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
+    super.key,
+  });
+
+  final OnActionPerformed onActionPressed;
+  final String actionText;
+  final bool keepActionLoadingOnSuccess;
+  final bool? isSliderLoading;
+  final EdgeInsetsGeometry margin;
+
+  @override
+  Widget build(BuildContext context) {
+    return _GenericTransitionCard(
+      actionText: actionText,
+      onActionPressed: onActionPressed,
+      instructionTextClick:
+          'Bring participants out of the waiting room and begin the conversation.',
+      instructionTextSwipe:
+          'Bring participants out of the waiting room and begin the conversation.',
+      keyboardShortcutText: 'press space bar to start',
+      keepActionLoadingOnSuccess: keepActionLoadingOnSuccess,
+      isSliderLoading: isSliderLoading,
+      margin: margin,
+    );
+  }
+}
+
+class WaitingReceiveTransitionCard extends StatelessWidget {
+  const WaitingReceiveTransitionCard({
+    this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
+    super.key,
+  });
+
+  final EdgeInsetsGeometry margin;
+
+  @override
+  Widget build(BuildContext context) {
+    return _GenericTransitionCard(
+      actionText: '',
+      onActionPressed: null,
+      instructionTextClick:
+          'Waiting for the receiver to accept...\nIt is still your turn',
+      instructionTextSwipe:
+          'Waiting for the receiver to accept...\nIt is still your turn',
+      keyboardShortcutText: null,
+      margin: margin,
+    );
+  }
+}
+
+class PromptTransitionCard extends StatefulWidget {
+  const PromptTransitionCard({
+    required this.onActionPressed,
+    this.actionText = 'Pass',
+    this.keepActionLoadingOnSuccess = true,
+    this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
+    super.key,
+  });
+
+  final Future<bool> Function(String message) onActionPressed;
+  final String actionText;
+  final bool keepActionLoadingOnSuccess;
+  final EdgeInsetsGeometry margin;
+
+  @override
+  State<PromptTransitionCard> createState() => _PromptTransitionCardState();
+}
+
+class _PromptTransitionCardState extends State<PromptTransitionCard> {
+  final roundMessageController = TextEditingController();
+
+  @override
+  void dispose() {
+    roundMessageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return TransitionCardBase(
+      keyboardShortcutText: null,
+      childBuilder: (context, hasMouseConnected) {
+        return TransitionCardContainer(
+          margin: widget.margin,
+          children: [
+            Flexible(
+              child: TextField(
+                controller: roundMessageController,
+                decoration: const InputDecoration(
+                  hintText: 'Your prompt for this round',
+                ),
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ),
+            Flexible(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minWidth: 160,
+                ),
+                child: ActionSliderButton(
+                  text: widget.actionText,
+                  onActionCompleted: () {
+                    return widget.onActionPressed(
+                      roundMessageController.text.trim(),
+                    );
+                  },
+                  keepLoadingOnSuccess: widget.keepActionLoadingOnSuccess,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
