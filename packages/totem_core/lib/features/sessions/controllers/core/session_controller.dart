@@ -471,6 +471,8 @@ class SessionController extends _$SessionController {
     required String token,
     required FastConnectOptions fastConnectOptions,
   }) async {
+    // TODO(totem): Ensure room.connect is being called only once
+    // https://github.com/livekit/client-sdk-flutter/issues/756
     await _room?.connect(
       url,
       token,

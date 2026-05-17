@@ -46,12 +46,15 @@ class RepositoryUtils {
           rethrow;
         }
 
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message:
-              'Error in $operationName (attempt ${attempt + 1}/$totalAttempts)',
-        );
+        final isLastAttempt = attempt >= maxRetries;
+        if (isLastAttempt) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message:
+                'Error in $operationName (attempt ${attempt + 1}/$totalAttempts)',
+          );
+        }
 
         if (error is DioException) {
           final statusCode = error.response?.statusCode;
@@ -60,7 +63,6 @@ class RepositoryUtils {
           }
         }
 
-        final isLastAttempt = attempt >= maxRetries;
         final isRetryableError =
             error is AppNetworkException ||
             error is DioException ||

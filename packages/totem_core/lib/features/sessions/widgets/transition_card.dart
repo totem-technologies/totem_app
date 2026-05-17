@@ -4,12 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 
-class TransitionCardContainer extends StatelessWidget {
-  const TransitionCardContainer({
+class _TransitionCardContainer extends StatelessWidget {
+  const _TransitionCardContainer({
     required this.children,
     this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
     this.constraints = const BoxConstraints(maxWidth: 650),
-    super.key,
   });
 
   final EdgeInsetsGeometry margin;
@@ -52,11 +51,10 @@ class TransitionCardContainer extends StatelessWidget {
   }
 }
 
-class TransitionCardBase extends StatefulWidget {
-  const TransitionCardBase({
+class _TransitionCardBase extends StatefulWidget {
+  const _TransitionCardBase({
     required this.childBuilder,
     this.keyboardShortcutText,
-    super.key,
   });
 
   final Widget Function(BuildContext context, bool hasMouseConnected)
@@ -64,10 +62,10 @@ class TransitionCardBase extends StatefulWidget {
   final String? keyboardShortcutText;
 
   @override
-  State<TransitionCardBase> createState() => _TransitionCardBaseState();
+  State<_TransitionCardBase> createState() => _TransitionCardBaseState();
 }
 
-class _TransitionCardBaseState extends State<TransitionCardBase> {
+class _TransitionCardBaseState extends State<_TransitionCardBase> {
   late final MouseTracker _mouseTracker;
   late bool _hasMouseConnected;
   late bool _hasKeyboardConnected;
@@ -152,10 +150,10 @@ class _GenericTransitionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return TransitionCardBase(
+    return _TransitionCardBase(
       keyboardShortcutText: keyboardShortcutText,
       childBuilder: (context, hasMouseConnected) {
-        return TransitionCardContainer(
+        return _TransitionCardContainer(
           margin: margin,
           children: [
             Flexible(
@@ -209,10 +207,10 @@ class JoinTransitionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return TransitionCardBase(
+    return _TransitionCardBase(
       keyboardShortcutText: 'press space bar to join',
       childBuilder: (context, hasMouseConnected) {
-        return TransitionCardContainer(
+        return _TransitionCardContainer(
           margin: margin,
           constraints: const BoxConstraints(maxWidth: 366),
           children: [
@@ -407,10 +405,10 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return TransitionCardBase(
+    return _TransitionCardBase(
       keyboardShortcutText: null,
       childBuilder: (context, hasMouseConnected) {
-        return TransitionCardContainer(
+        return _TransitionCardContainer(
           margin: widget.margin,
           children: [
             Flexible(
