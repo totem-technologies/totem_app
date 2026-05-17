@@ -202,7 +202,6 @@ class _SpeakingTurnGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final participantKeys = ref.watch(sessionParticipantKeysProvider);
     final participants = ref.watch(sessionParticipantsProvider);
     final sessionState = ref.watch(currentSessionStateProvider)!;
 
@@ -281,7 +280,7 @@ class _SpeakingTurnGrid extends ConsumerWidget {
                     final participant = sortedParticipants[itemIndex];
                     return Expanded(
                       child: ParticipantCard(
-                        key: participantKeys.getKey(participant.sid),
+                        key: ValueKey(participant.sid),
                         participant: participant,
                         session: event,
                         participantIdentity: participant.identity,

@@ -169,7 +169,6 @@ class ListeningTurnScreen extends ConsumerWidget {
                 ),
               );
             case ViewportKind.mediumPlus:
-              final participantKeys = ref.watch(sessionParticipantKeysProvider);
               return Padding(
                 padding: const EdgeInsetsDirectional.only(
                   top: 40,
@@ -194,9 +193,7 @@ class ListeningTurnScreen extends ConsumerWidget {
                                   activeSpeaker != null)
                                 Flexible(
                                   child: ParticipantCard(
-                                    key: participantKeys.getKey(
-                                      activeSpeaker.sid,
-                                    ),
+                                    key: ValueKey(activeSpeaker.sid),
                                     session: event,
                                     participant: activeSpeaker,
                                     participantIdentity: activeSpeaker.identity,
@@ -222,7 +219,6 @@ class ListeningTurnScreen extends ConsumerWidget {
                     ),
                     if (roomStatus == RoomStatus.waitingRoom) ...[
                       const SizedBox.shrink(),
-                      const GroundingMarquee(),
                       ?marquee,
                       const SizedBox.shrink(),
                     ],
@@ -254,7 +250,6 @@ class _ListeningTurnGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final participantKeys = ref.watch(sessionParticipantKeysProvider);
     final participants = ref.watch(sessionParticipantsProvider);
     final sessionState = ref.watch(currentSessionStateProvider)!;
 
@@ -331,7 +326,7 @@ class _ListeningTurnGrid extends ConsumerWidget {
                     final participant = sortedParticipants[itemIndex];
                     return Expanded(
                       child: ParticipantCard(
-                        key: participantKeys.getKey(participant.sid),
+                        key: ValueKey(participant.sid),
                         participant: participant,
                         session: event,
                         participantIdentity: participant.identity,

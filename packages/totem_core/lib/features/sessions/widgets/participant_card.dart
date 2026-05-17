@@ -221,6 +221,7 @@ class ParticipantCard extends ConsumerWidget {
     );
     final session = ref.watch(currentSessionStateProvider);
     final currentUserIsKeeper = session?.isKeeper(currentUserSlug) ?? false;
+    final participantKeys = ref.watch(sessionParticipantKeysProvider);
 
     const overlayPadding = 10.0;
     final isKeeper = session?.isKeeper(participant.identity) ?? false;
@@ -234,7 +235,10 @@ class ParticipantCard extends ConsumerWidget {
         child: Stack(
           children: [
             Positioned.fill(
-              child: ParticipantVideo(participant: participant),
+              child: ParticipantVideo(
+                key: participantKeys.getKey(participant.sid),
+                participant: participant,
+              ),
             ),
             PositionedDirectional(
               top: overlayPadding,
@@ -616,30 +620,28 @@ class _LocalParticipantCardState extends ConsumerState<LocalParticipantCard> {
     // flash of the avatar before the video appears.
     // https://github.com/livekit/client-sdk-flutter/issues/1061
 
-    final wasVisible =
-        oldWidget.isCameraOn &&
-        (oldWidget.videoTrack != null &&
-            oldWidget.videoTrack!.isActive &&
-            !oldWidget.videoTrack!.muted);
-    final isVisible = widget.isCameraOn && _isVideoTrackVisible;
+    // final wasVisible =
+    //     oldWidget.isCameraOn &&
+    //     (oldWidget.videoTrack != null &&
+    //         oldWidget.videoTrack!.isActive &&
+    //         !oldWidget.videoTrack!.muted);
+    // final isVisible = widget.isCameraOn && _isVideoTrackVisible;
 
-    if (!wasVisible && isVisible) {
-      _timer?.cancel();
-      _timer = Timer(const Duration(milliseconds: 750), () {
-        if (mounted) {
-          setState(() {
-            _showAvatar = false;
-          });
-        }
-      });
-    } else if (!isVisible) {
-      _timer?.cancel();
-      if (!_showAvatar) {
-        setState(() {
-          _showAvatar = true;
-        });
-      }
-    }
+    // if (!wasVisible && isVisible) {
+    //   _timer?.cancel();
+    //   _timer = Timer(const Duration(milliseconds: 750), () {
+    //     if (mounted) {
+    //       setState(() {
+    //         _showAvatar = false;
+    //       });
+    //     }
+    //   });
+    // } else if (!isVisible) {
+    //   _timer?.cancel();
+    //   if (!_showAvatar) {
+    //     _showAvatar = true;
+    //   }
+    // }
   }
 
   @override
@@ -669,11 +671,12 @@ class _LocalParticipantCardState extends ConsumerState<LocalParticipantCard> {
               IgnorePointer(
                 child: VideoTrackRenderer(
                   widget.videoTrack!,
+                  key: ValueKey(widget.videoTrack!.sid),
                   fit: VideoViewFit.cover,
                   renderMode: VideoRenderMode.platformView,
                 ),
               )
-            else
+            else if (!_showAvatar)
               const LoadingVideoPlaceholder(),
             AnimatedOpacity(
               opacity: _showAvatar ? 1.0 : 0.0,
@@ -738,29 +741,6 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     fps = 0;
   }
 
-  bool _initialized = false;
-  Timer? _initTimer;
-
-  void initialize() {
-    _initTimer?.cancel();
-
-    if (widget.participant is LocalParticipant) {
-      _initialized = true;
-      if (mounted) {
-        setState(() {});
-      }
-      return;
-    }
-
-    _initialized = false;
-    _initTimer = Timer(const Duration(milliseconds: 1500), () {
-      _initialized = true;
-      if (mounted) {
-        setState(() {});
-      }
-    });
-  }
-
   TrackPublication<Track>? get videoTrack {
     if (widget.participant is RemoteParticipant) {
       return widget.participant.getTrackPublicationBySource(TrackSource.camera);
@@ -815,13 +795,11 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   void initState() {
     super.initState();
     _setupListeners();
-    initialize();
   }
 
   void _onTrackMuted(TrackMutedEvent event) {
     if (event.publication.source != TrackSource.camera) return;
     if (!mounted) return;
-    initialize();
     _bindTrackListener();
     setState(() {});
   }
@@ -829,7 +807,6 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   void _onTrackUnmuted(TrackUnmutedEvent event) {
     if (event.publication.source != TrackSource.camera) return;
     if (!mounted) return;
-    initialize();
     _bindTrackListener();
     setState(() {});
   }
@@ -885,7 +862,6 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
   @override
   void dispose() {
-    _initTimer?.cancel();
     _listener?.dispose();
     _trackListener?.dispose();
     super.dispose();
@@ -905,8 +881,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
       if (trackPublication == null ||
           !trackPublication.subscribed ||
           trackPublication.muted ||
-          _isTrackInactive ||
-          !_initialized) {
+          _isTrackInactive) {
         return true;
       }
       return false;

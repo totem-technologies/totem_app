@@ -20,6 +20,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final sessionStatus = ref.watch(roomStatusProvider);
     final session = ref.watch(currentSessionProvider);
+    final sessionState = ref.watch(currentSessionStateProvider);
     final roundPrompt = ref.watch(roundMessageProvider);
     final isCameraOn = ref.watch(isCameraOnProvider);
 
@@ -80,9 +81,13 @@ class ReceiveTotemScreen extends ConsumerWidget {
 
             final videoCard = Padding(
               padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
-              child: LocalParticipantCard(
-                isCameraOn: isCameraOn,
-                videoTrack: session?.devices.localVideoTrack,
+              child: AspectRatio(
+                aspectRatio: 16 / 21,
+                child: ParticipantCard(
+                  participant: session!.room!.localParticipant!,
+                  session: session.event,
+                  participantIdentity: session.room!.localParticipant!.identity,
+                ),
               ),
             );
 
