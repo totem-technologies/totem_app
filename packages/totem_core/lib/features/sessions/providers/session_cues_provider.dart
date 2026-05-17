@@ -25,7 +25,11 @@ abstract class SessionCuesAudioPlayer {
 }
 
 // For now, we disabled audio player.
-class _UselessAudioPlayer implements SessionCuesAudioPlayer {
+class _SilentAudioPlayer implements SessionCuesAudioPlayer {
+  _SilentAudioPlayer() {
+    AudioCache.instance = AudioCache(prefix: 'packages/totem_core/assets/');
+  }
+
   @override
   Future<void> setAudioContext(AudioContext context) async {}
 
@@ -148,8 +152,7 @@ class SessionCuesService {
   Future<void> _configurePlayer() async {
     if (_configured) return;
 
-    AudioCache.instance = AudioCache(prefix: 'packages/totem_core/assets/');
-    _audioPlayer ??= _UselessAudioPlayer();
+    _audioPlayer ??= _SilentAudioPlayer();
 
     await _audioPlayer?.setPlayerMode(PlayerMode.lowLatency);
     await _audioPlayer?.setReleaseMode(ReleaseMode.stop);

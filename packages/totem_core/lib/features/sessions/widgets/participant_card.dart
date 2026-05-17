@@ -596,7 +596,6 @@ class LocalParticipantCard extends ConsumerStatefulWidget {
 }
 
 class _LocalParticipantCardState extends ConsumerState<LocalParticipantCard> {
-  Timer? _timer;
   late bool _showAvatar;
 
   bool get _isVideoTrackVisible =>
@@ -613,41 +612,12 @@ class _LocalParticipantCardState extends ConsumerState<LocalParticipantCard> {
   @override
   void didUpdateWidget(LocalParticipantCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-
-    // TODO(totem): Investigate better ways to display the video only when the video is initialized
+    // TODO(totem): Show a placeholder while video initializes
+    // Investigate better ways to display the video only when the video is initialized
     // This delay is necessary because the native video view needs a moment to initialize and display
     // the first frame after the track is unmuted or becomes active. Without this, we might see a brief
     // flash of the avatar before the video appears.
     // https://github.com/livekit/client-sdk-flutter/issues/1061
-
-    // final wasVisible =
-    //     oldWidget.isCameraOn &&
-    //     (oldWidget.videoTrack != null &&
-    //         oldWidget.videoTrack!.isActive &&
-    //         !oldWidget.videoTrack!.muted);
-    // final isVisible = widget.isCameraOn && _isVideoTrackVisible;
-
-    // if (!wasVisible && isVisible) {
-    //   _timer?.cancel();
-    //   _timer = Timer(const Duration(milliseconds: 750), () {
-    //     if (mounted) {
-    //       setState(() {
-    //         _showAvatar = false;
-    //       });
-    //     }
-    //   });
-    // } else if (!isVisible) {
-    //   _timer?.cancel();
-    //   if (!_showAvatar) {
-    //     _showAvatar = true;
-    //   }
-    // }
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
   }
 
   @override

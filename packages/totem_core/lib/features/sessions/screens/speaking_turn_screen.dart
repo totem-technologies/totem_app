@@ -248,6 +248,7 @@ class _SpeakingTurnGrid extends ConsumerWidget {
         } else if (itemCount <= 3) {
           crossAxisCount = 3;
         } else if (itemCount <= 4) {
+          // 2x2 reads better than 4x1
           crossAxisCount = 2;
         } else if (itemCount <= 8) {
           crossAxisCount = 4;
