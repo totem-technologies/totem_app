@@ -78,6 +78,11 @@ enum SessionDisconnectedReason {
 class SessionController extends _$SessionController {
   Room? _room;
   Room? get room => _room;
+  @visibleForTesting
+  set room(Room? value) {
+    _room = value;
+  }
+
   EventsListener<RoomEvent>? _listener;
 
   /// The sync timer periodically checks for changes in the room state
@@ -302,7 +307,10 @@ class SessionController extends _$SessionController {
 
   Future<void> join() async {
     if (room != null) {
-      if (state.connectionState == RoomConnectionState.connected) return;
+      if (state.connectionState == RoomConnectionState.connected ||
+          state.connectionState == RoomConnectionState.connecting) {
+        return;
+      }
     }
 
     _dispatch(
@@ -471,8 +479,6 @@ class SessionController extends _$SessionController {
     required String token,
     required FastConnectOptions fastConnectOptions,
   }) async {
-    // TODO(totem): Ensure room.connect is being called only once
-    // https://github.com/livekit/client-sdk-flutter/issues/756
     await _room?.connect(
       url,
       token,
