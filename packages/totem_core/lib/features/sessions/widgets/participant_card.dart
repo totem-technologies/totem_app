@@ -596,18 +596,10 @@ class LocalParticipantCard extends ConsumerStatefulWidget {
 }
 
 class _LocalParticipantCardState extends ConsumerState<LocalParticipantCard> {
-  late bool _showAvatar;
-
   bool get _isVideoTrackVisible =>
       widget.videoTrack != null &&
       widget.videoTrack!.isActive &&
       !widget.videoTrack!.muted;
-
-  @override
-  void initState() {
-    super.initState();
-    _showAvatar = !widget.isCameraOn || !_isVideoTrackVisible;
-  }
 
   @override
   void didUpdateWidget(LocalParticipantCard oldWidget) {
@@ -626,6 +618,8 @@ class _LocalParticipantCardState extends ConsumerState<LocalParticipantCard> {
     final user = ref.watch(
       authControllerProvider.select((auth) => auth.user),
     );
+
+    final showAvatar = !widget.isCameraOn || !_isVideoTrackVisible;
 
     final isVideoTrackVisible = _isVideoTrackVisible;
 
@@ -646,10 +640,10 @@ class _LocalParticipantCardState extends ConsumerState<LocalParticipantCard> {
                   renderMode: VideoRenderMode.platformView,
                 ),
               )
-            else if (!_showAvatar)
+            else if (!showAvatar)
               const LoadingVideoPlaceholder(),
             AnimatedOpacity(
-              opacity: _showAvatar ? 1.0 : 0.0,
+              opacity: showAvatar ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 250),
               child: Stack(
                 children: [

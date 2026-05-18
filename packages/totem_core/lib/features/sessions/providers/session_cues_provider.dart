@@ -26,9 +26,7 @@ abstract class SessionCuesAudioPlayer {
 
 // For now, we disabled audio player.
 class _SilentAudioPlayer implements SessionCuesAudioPlayer {
-  _SilentAudioPlayer() {
-    AudioCache.instance = AudioCache(prefix: 'packages/totem_core/assets/');
-  }
+  _SilentAudioPlayer();
 
   @override
   Future<void> setAudioContext(AudioContext context) async {}
@@ -50,7 +48,10 @@ class _SilentAudioPlayer implements SessionCuesAudioPlayer {
 }
 
 // class AudioplayersSessionCuesAudioPlayer implements SessionCuesAudioPlayer {
-//   AudioplayersSessionCuesAudioPlayer() : _player = AudioPlayer();
+//   AudioplayersSessionCuesAudioPlayer() {
+//    _player = AudioPlayer();
+//    AudioCache.instance = AudioCache(prefix: 'packages/totem_core/assets/');
+//   }
 
 //   final AudioPlayer _player;
 
