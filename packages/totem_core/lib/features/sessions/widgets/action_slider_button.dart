@@ -272,6 +272,9 @@ class _ActionSliderState extends State<ActionSlider> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final trackWidth = constraints.maxWidth;
+        assert(trackWidth > 0, 'ActionSlider must have a positive width');
+        assert(trackWidth.isFinite, 'ActionSlider width must be finite');
+
         const thumbSize = 48.0;
         const padding = 6.0;
         maxSlideDistance = trackWidth - thumbSize - (padding * 2);

@@ -21,7 +21,6 @@ class ReceiveTotemScreen extends ConsumerWidget {
     final sessionStatus = ref.watch(roomStatusProvider);
     final session = ref.watch(currentSessionProvider);
     final roundPrompt = ref.watch(roundMessageProvider);
-    final isCameraOn = ref.watch(isCameraOnProvider);
 
     Future<bool> onAccept() async {
       try {
@@ -80,9 +79,13 @@ class ReceiveTotemScreen extends ConsumerWidget {
 
             final videoCard = Padding(
               padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
-              child: LocalParticipantCard(
-                isCameraOn: isCameraOn,
-                videoTrack: session?.devices.localVideoTrack,
+              child: AspectRatio(
+                aspectRatio: 16 / 21,
+                child: ParticipantCard(
+                  participant: session!.room!.localParticipant!,
+                  session: session.event,
+                  participantIdentity: session.room!.localParticipant!.identity,
+                ),
               ),
             );
 
@@ -160,10 +163,10 @@ class ReceiveTotemScreen extends ConsumerWidget {
                   child: Column(
                     spacing: 40,
                     children: [
+                      const SizedBox(),
                       Expanded(child: videoCard),
                       roundPromptText ?? const SizedBox(height: 10),
-                      TransitionCard(
-                        type: TotemCardTransitionType.receive,
+                      ReceiveTransitionCard(
                         onActionPressed: onAccept,
                         keepActionLoadingOnSuccess: true,
                       ),

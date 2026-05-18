@@ -58,7 +58,7 @@ void main() {
 
     expect(
       find.text(
-        'Please provide more detailed feedback (at least 10 characters)',
+        'Please provide more detailed feedback (at least 8 characters)',
       ),
       findsOneWidget,
     );

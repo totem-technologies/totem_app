@@ -21,48 +21,90 @@ class MockSessionRoomState extends Mock implements SessionRoomState {}
 
 class MockParticipant extends Mock implements Participant {}
 
-SessionDetailSchema _createSessionEvent() {
-  return SessionDetailSchema(
-    slug: 'test-session',
-    title: 'Test Session',
-    space: MobileSpaceDetailSchema(
-      slug: 'test-space',
-      title: 'Test Space',
-      imageLink: null,
-      shortDescription: 'A test space.',
-      content: '',
-      author: PublicUserSchema(
-        profileAvatarType: ProfileAvatarTypeEnum.td,
-        dateCreated: DateTime(2024),
-      ),
-      category: null,
-      subscribers: 0,
-      recurring: null,
-      price: 0,
-      nextEvents: const [],
+class _ReorderTestHarness {
+  _ReorderTestHarness({
+    required this.session,
+    required this.keeper,
+    required this.sessionState,
+    required this.participants,
+  });
+
+  final MockSessionController session;
+  final MockSessionKeeperController keeper;
+  final MockSessionRoomState sessionState;
+  final Map<String, MockParticipant> participants;
+}
+
+void _stubParticipant(
+  MockParticipant participant, {
+  required String id,
+}) {
+  when(() => participant.identity).thenReturn(id);
+  when(() => participant.name).thenReturn(
+    switch (id) {
+      'keeper-1' => 'Keeper',
+      _ => 'User ${id.split('-').last}',
+    },
+  );
+}
+
+_ReorderTestHarness _createHarness({
+  required List<String> participantIds,
+  required RoomState roomState,
+  required String speakingNow,
+  Future<void> Function(List<String>)? reorderHandler,
+}) {
+  final session = MockSessionController();
+  final keeper = MockSessionKeeperController();
+  final sessionState = MockSessionRoomState();
+  final participants = <String, MockParticipant>{};
+  final participantList = <MockParticipant>[];
+
+  for (final id in participantIds) {
+    final participant = MockParticipant();
+    _stubParticipant(participant, id: id);
+    participants[id] = participant;
+    participantList.add(participant);
+  }
+
+  when(() => session.keeper).thenReturn(keeper);
+  when(() => sessionState.roomState).thenReturn(roomState);
+  when(() => sessionState.speakingNow).thenReturn(speakingNow);
+  when(() => sessionState.participantsList).thenReturn(participantList);
+  when(() => keeper.reorder(any())).thenAnswer((invocation) async {
+    final order = invocation.positionalArguments.first as List<String>;
+    if (reorderHandler != null) {
+      await reorderHandler(order);
+    }
+  });
+
+  return _ReorderTestHarness(
+    session: session,
+    keeper: keeper,
+    sessionState: sessionState,
+    participants: participants,
+  );
+}
+
+Future<void> _pumpReorderWidget(
+  WidgetTester tester,
+  _ReorderTestHarness harness, {
+  required Widget child,
+}) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        currentSessionProvider.overrideWith((ref) => harness.session),
+        currentSessionStateProvider.overrideWith((ref) => harness.sessionState),
+      ],
+      child: child,
     ),
-    content: '',
-    seatsLeft: 10,
-    duration: 60,
-    start: DateTime(2024, 1, 1, 10),
-    attending: true,
-    open: true,
-    started: true,
-    cancelled: false,
-    joinable: true,
-    ended: false,
-    rsvpUrl: '',
-    joinUrl: null,
-    subscribeUrl: '',
-    calLink: '',
-    subscribed: false,
-    userTimezone: null,
-    meetingProvider: MeetingProviderEnum.livekit,
   );
 }
 
 void main() {
   setUpAll(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
     registerFallbackValue(TrackSource.camera);
     registerFallbackValue(<String>[]);
   });
@@ -70,9 +112,6 @@ void main() {
   testWidgets('save sends reordered identities with keeper first', (
     tester,
   ) async {
-    final session = MockSessionController();
-    final keeper = MockSessionKeeperController();
-    final sessionState = MockSessionRoomState();
     const roomState = RoomState(
       sessionSlug: 'test-session',
       version: 1,
@@ -83,48 +122,25 @@ void main() {
       keeper: 'keeper-1',
       roundNumber: 1,
     );
-    final keeperParticipant = MockParticipant();
-    final user1 = MockParticipant();
-    final user2 = MockParticipant();
-    final user3 = MockParticipant();
-    final event = _createSessionEvent();
+    final harness = _createHarness(
+      participantIds: ['keeper-1', 'user-1', 'user-2', 'user-3'],
+      roomState: roomState,
+      speakingNow: 'keeper-1',
+    );
 
-    when(() => session.keeper).thenReturn(keeper);
-    when(() => keeper.reorder(any())).thenAnswer((_) async {});
-    when(() => keeperParticipant.identity).thenReturn('keeper-1');
-    when(() => keeperParticipant.name).thenReturn('Keeper');
-    when(() => user1.identity).thenReturn('user-1');
-    when(() => user1.name).thenReturn('User 1');
-    when(() => user2.identity).thenReturn('user-2');
-    when(() => user2.name).thenReturn('User 2');
-    when(() => user3.identity).thenReturn('user-3');
-    when(() => user3.name).thenReturn('User 3');
-    when(() => sessionState.participantsList).thenReturn([
-      keeperParticipant,
-      user1,
-      user2,
-      user3,
-    ]);
-    when(() => sessionState.roomState).thenReturn(roomState);
-    when(() => sessionState.speakingNow).thenReturn('keeper-1');
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          currentSessionProvider.overrideWith((ref) => session),
-          currentSessionStateProvider.overrideWith((ref) => sessionState),
-        ],
-        child: MaterialApp(
-          home: Scaffold(
-            body: ParticipantReorderWidget(event: event),
-          ),
+    await _pumpReorderWidget(
+      tester,
+      harness,
+      child: const MaterialApp(
+        home: Scaffold(
+          body: ParticipantReorderWidget(),
         ),
       ),
     );
 
     expect(find.text('Reorder Participants'), findsOneWidget);
 
-    final handle = find.byType(ReorderableDragStartListener).at(3);
+    final handle = find.byType(ReorderableDragStartListener).at(2);
     final gesture = await tester.startGesture(tester.getCenter(handle));
     await tester.pump(const Duration(milliseconds: 120));
     await gesture.moveBy(const Offset(0, -120));
@@ -136,7 +152,9 @@ void main() {
     await tester.pumpAndSettle();
 
     final captured =
-        verify(() => keeper.reorder(captureAny())).captured.single
+        verify(
+              () => harness.keeper.reorder(captureAny()),
+            ).captured.single
             as List<String>;
 
     expect(captured.first, 'keeper-1');
@@ -144,10 +162,57 @@ void main() {
     expect(captured, isNot(equals(['keeper-1', 'user-1', 'user-2', 'user-3'])));
   });
 
+  testWidgets('keeps the keeper visually pinned above reordered items', (
+    tester,
+  ) async {
+    const roomState = RoomState(
+      sessionSlug: 'test-session',
+      version: 1,
+      status: RoomStatus.waitingRoom,
+      turnState: TurnState.idle,
+      statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
+      talkingOrder: ['keeper-1', 'user-1', 'user-2', 'user-3'],
+      keeper: 'keeper-1',
+      roundNumber: 1,
+    );
+    final harness = _createHarness(
+      participantIds: ['keeper-1', 'user-1', 'user-2', 'user-3'],
+      roomState: roomState,
+      speakingNow: 'keeper-1',
+    );
+
+    await _pumpReorderWidget(
+      tester,
+      harness,
+      child: const MaterialApp(
+        home: Scaffold(
+          body: ParticipantReorderWidget(),
+        ),
+      ),
+    );
+
+    final handle = find.byType(ReorderableDragStartListener).at(0);
+    final gesture = await tester.startGesture(tester.getCenter(handle));
+    await tester.pump(const Duration(milliseconds: 120));
+    await gesture.moveBy(const Offset(0, -120));
+    await tester.pump(const Duration(milliseconds: 200));
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    final keeperFinder = find.text('Keeper').evaluate().isNotEmpty
+        ? find.text('Keeper')
+        : find.text('keeper-1');
+    final firstParticipantFinder = find.text('User 1').evaluate().isNotEmpty
+        ? find.text('User 1')
+        : find.text('user-1');
+
+    final keeperTop = tester.getTopLeft(keeperFinder).dy;
+    final firstParticipantTop = tester.getTopLeft(firstParticipantFinder).dy;
+
+    expect(keeperTop, lessThan(firstParticipantTop));
+  });
+
   testWidgets('save shows loading until reorder completes', (tester) async {
-    final session = MockSessionController();
-    final keeper = MockSessionKeeperController();
-    final sessionState = MockSessionRoomState();
     const roomState = RoomState(
       sessionSlug: 'test-session',
       version: 1,
@@ -158,40 +223,21 @@ void main() {
       keeper: 'keeper-1',
       roundNumber: 1,
     );
-    final keeperParticipant = MockParticipant();
-    final user1 = MockParticipant();
-    final user2 = MockParticipant();
-    final event = _createSessionEvent();
     final reorderCompleter = Completer<void>();
 
-    when(() => session.keeper).thenReturn(keeper);
-    when(
-      () => keeper.reorder(any()),
-    ).thenAnswer((_) => reorderCompleter.future);
-    when(() => keeperParticipant.identity).thenReturn('keeper-1');
-    when(() => keeperParticipant.name).thenReturn('Keeper');
-    when(() => user1.identity).thenReturn('user-1');
-    when(() => user1.name).thenReturn('User 1');
-    when(() => user2.identity).thenReturn('user-2');
-    when(() => user2.name).thenReturn('User 2');
-    when(() => sessionState.participantsList).thenReturn([
-      keeperParticipant,
-      user1,
-      user2,
-    ]);
-    when(() => sessionState.roomState).thenReturn(roomState);
-    when(() => sessionState.speakingNow).thenReturn('keeper-1');
+    final harness = _createHarness(
+      participantIds: ['keeper-1', 'user-1', 'user-2'],
+      roomState: roomState,
+      speakingNow: 'keeper-1',
+      reorderHandler: (order) => reorderCompleter.future,
+    );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          currentSessionProvider.overrideWith((ref) => session),
-          currentSessionStateProvider.overrideWith((ref) => sessionState),
-        ],
-        child: MaterialApp(
-          home: Scaffold(
-            body: ParticipantReorderWidget(event: event),
-          ),
+    await _pumpReorderWidget(
+      tester,
+      harness,
+      child: const MaterialApp(
+        home: Scaffold(
+          body: ParticipantReorderWidget(),
         ),
       ),
     );
@@ -205,13 +251,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(LoadingIndicator), findsNothing);
-    verify(() => keeper.reorder(any())).called(1);
+    verify(() => harness.keeper.reorder(any())).called(1);
   });
 
   testWidgets('save closes the modal after reorder completes', (tester) async {
-    final session = MockSessionController();
-    final keeper = MockSessionKeeperController();
-    final sessionState = MockSessionRoomState();
     const roomState = RoomState(
       sessionSlug: 'test-session',
       version: 1,
@@ -222,29 +265,14 @@ void main() {
       keeper: 'keeper-1',
       roundNumber: 1,
     );
-    final keeperParticipant = MockParticipant();
-    final user1 = MockParticipant();
-    final user2 = MockParticipant();
-    final event = _createSessionEvent();
     final reorderCompleter = Completer<void>();
 
-    when(() => session.keeper).thenReturn(keeper);
-    when(
-      () => keeper.reorder(any()),
-    ).thenAnswer((_) => reorderCompleter.future);
-    when(() => keeperParticipant.identity).thenReturn('keeper-1');
-    when(() => keeperParticipant.name).thenReturn('Keeper');
-    when(() => user1.identity).thenReturn('user-1');
-    when(() => user1.name).thenReturn('User 1');
-    when(() => user2.identity).thenReturn('user-2');
-    when(() => user2.name).thenReturn('User 2');
-    when(() => sessionState.participantsList).thenReturn([
-      keeperParticipant,
-      user1,
-      user2,
-    ]);
-    when(() => sessionState.roomState).thenReturn(roomState);
-    when(() => sessionState.speakingNow).thenReturn('keeper-1');
+    final harness = _createHarness(
+      participantIds: ['keeper-1', 'user-1', 'user-2'],
+      roomState: roomState,
+      speakingNow: 'keeper-1',
+      reorderHandler: (order) => reorderCompleter.future,
+    );
 
     await tester.binding.setSurfaceSize(const Size(900, 1000));
     addTearDown(() async {
@@ -254,8 +282,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          currentSessionProvider.overrideWith((ref) => session),
-          currentSessionStateProvider.overrideWith((ref) => sessionState),
+          currentSessionProvider.overrideWith((ref) => harness.session),
+          currentSessionStateProvider.overrideWith(
+            (ref) => harness.sessionState,
+          ),
         ],
         child: MaterialApp(
           home: Navigator(
@@ -268,7 +298,7 @@ void main() {
                         return Center(
                           child: ElevatedButton(
                             onPressed: () {
-                              showParticipantReorderModals(context, event);
+                              showParticipantReorderModals(context);
                             },
                             child: const Text('Open reorder modal'),
                           ),
@@ -298,6 +328,154 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Reorder Participants'), findsNothing);
-    verify(() => keeper.reorder(any())).called(1);
+    verify(() => harness.keeper.reorder(any())).called(1);
+  });
+
+  testWidgets('cancel closes the modal without saving', (tester) async {
+    const roomState = RoomState(
+      sessionSlug: 'test-session',
+      version: 1,
+      status: RoomStatus.waitingRoom,
+      turnState: TurnState.idle,
+      statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
+      talkingOrder: ['keeper-1', 'user-1', 'user-2'],
+      keeper: 'keeper-1',
+      roundNumber: 1,
+    );
+
+    final harness = _createHarness(
+      participantIds: ['keeper-1', 'user-1', 'user-2'],
+      roomState: roomState,
+      speakingNow: 'keeper-1',
+    );
+
+    await tester.binding.setSurfaceSize(const Size(900, 1000));
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentSessionProvider.overrideWith((ref) => harness.session),
+          currentSessionStateProvider.overrideWith(
+            (ref) => harness.sessionState,
+          ),
+        ],
+        child: MaterialApp(
+          home: Navigator(
+            onGenerateRoute: (settings) {
+              return MaterialPageRoute<void>(
+                builder: (routeContext) {
+                  return Scaffold(
+                    body: Builder(
+                      builder: (context) {
+                        return Center(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              showParticipantReorderModals(context);
+                            },
+                            child: const Text('Open reorder modal'),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open reorder modal'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reorder Participants'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reorder Participants'), findsNothing);
+    verifyNever(() => harness.keeper.reorder(any()));
+  });
+
+  testWidgets('save failure shows error dialog and keeps modal open', (
+    tester,
+  ) async {
+    const roomState = RoomState(
+      sessionSlug: 'test-session',
+      version: 1,
+      status: RoomStatus.waitingRoom,
+      turnState: TurnState.idle,
+      statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
+      talkingOrder: ['keeper-1', 'user-1', 'user-2'],
+      keeper: 'keeper-1',
+      roundNumber: 1,
+    );
+
+    final harness = _createHarness(
+      participantIds: ['keeper-1', 'user-1', 'user-2'],
+      roomState: roomState,
+      speakingNow: 'keeper-1',
+      reorderHandler: (order) async {
+        throw Exception('reorder failed');
+      },
+    );
+
+    await tester.binding.setSurfaceSize(const Size(900, 1000));
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+
+    await _pumpReorderWidget(
+      tester,
+      harness,
+      child: MaterialApp(
+        home: Navigator(
+          onGenerateRoute: (settings) {
+            return MaterialPageRoute<void>(
+              builder: (routeContext) {
+                return Scaffold(
+                  body: Builder(
+                    builder: (context) {
+                      return Center(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            showParticipantReorderModals(context);
+                          },
+                          child: const Text('Open reorder modal'),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open reorder modal'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reorder Participants'), findsOneWidget);
+
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Error Reordering Participants'), findsOneWidget);
+    expect(find.text('Reorder Participants'), findsOneWidget);
+
+    await tester.tap(find.text('OK'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Error Reordering Participants'), findsNothing);
+    expect(find.text('Reorder Participants'), findsOneWidget);
+    verify(() => harness.keeper.reorder(any())).called(1);
   });
 }

@@ -51,6 +51,9 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
     if (!_formKey.currentState!.validate()) return;
 
     final message = _feedbackController.text.trim();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     setState(() => _loading = true);
 
     try {
@@ -59,17 +62,16 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
       } else {
         await _submit(message);
       }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Thank you for your feedback!\nWe appreciate your input.',
-            ),
-            duration: Duration(seconds: 3),
+
+      navigator.pop();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Thank you for your feedback!\nWe appreciate your input.',
           ),
-        );
-        Navigator.of(context).pop();
-      }
+          duration: Duration(seconds: 3),
+        ),
+      );
     } catch (error, stackTrace) {
       if (mounted) {
         ErrorHandler.handleApiError(
@@ -174,8 +176,8 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
                       if (value == null || value.trim().isEmpty) {
                         return 'Please enter your feedback';
                       }
-                      if (value.trim().length < 10) {
-                        return 'Please provide more detailed feedback (at least 10 characters)';
+                      if (value.trim().length < 8) {
+                        return 'Please provide more detailed feedback (at least 8 characters)';
                       }
                       return null;
                     },

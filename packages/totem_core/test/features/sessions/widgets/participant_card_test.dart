@@ -7,6 +7,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
@@ -63,6 +64,17 @@ void main() {
         overrides: [
           authControllerProvider.overrideWith(
             () => FakeAuthController(authState),
+          ),
+          userProfileProvider.overrideWith(
+            (ref, slug) => Future.value(
+              PublicUserSchema(
+                slug: slug,
+                name: 'Mocked User $slug',
+                profileAvatarType: ProfileAvatarTypeEnum.td,
+                circleCount: 0,
+                dateCreated: DateTime.now(),
+              ),
+            ),
           ),
           ...overrides.cast(),
         ],

@@ -133,9 +133,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       onMediaPreferencesChanged: (prefs) {
         _mediaPreferences = prefs;
       },
-      joinCard: TransitionCard(
+      joinCard: JoinTransitionCard(
         margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
-        type: TotemCardTransitionType.join,
         keepActionLoadingOnSuccess: true,
         onActionPressed: () async {
           await _joinRoom();

@@ -32,7 +32,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       lastSessionMessageProvider,
       (previous, next) {
         if (next == null || identical(previous, next)) return;
-        if (!mounted || _chatSheetOpen) return;
+        if (!mounted || _chatSheetOpen || next.sender) return;
         _notificationPopup?.dismissActive();
         _notificationPopup = showNotificationPopup(
           context,
@@ -40,7 +40,6 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
           title: 'New message',
           message: next.message,
         );
-        if (next.sender) return;
         setState(() => _hasPendingSessionChatMessages = true);
       },
     );
