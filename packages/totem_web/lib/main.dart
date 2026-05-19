@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared_main.dart';
+import 'package:totem_web/core/services/web_api_service.dart';
 import 'package:totem_web/firebase_options.dart';
 import 'package:totem_web/web_router.dart';
 
 void main() {
-  sharedMain(const TotemWebApp(), () async {
-    TotemRouter.instance = WebTotemRouter();
-  }, firebaseOptions: DefaultFirebaseOptions.currentPlatform);
+  sharedMain(
+    const TotemWebApp(),
+    () async {
+      TotemRouter.instance = WebTotemRouter();
+      usePathUrlStrategy();
+    },
+    firebaseOptions: DefaultFirebaseOptions.currentPlatform,
+    providerOverrides: [
+      apiServiceProvider.overrideWith((ref) => ref.read(webApiServiceProvider)),
+    ],
+  );
 }
 
 class TotemWebApp extends ConsumerWidget {

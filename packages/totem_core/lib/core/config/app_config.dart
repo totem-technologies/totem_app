@@ -36,6 +36,29 @@ class AppConfig {
     // return dotenv.get('MOBILE_API_URL', fallback: 'http://localhost:8000/');
   }
 
+  /// Web API configuration.
+  ///
+  /// Defaults to the current origin so cookie-based auth can work with a
+  /// same-origin backend or reverse proxy.
+  static String get webApiUrl {
+    return dotenv.get(
+      'WEB_API_URL',
+      fallback: isDevelopment ? 'https://totem.kbl.io/' : null,
+    );
+  }
+
+  static String get apiBaseUrl {
+    return kIsWeb ? webApiUrl : mobileApiUrl;
+  }
+
+  static String get apiHost {
+    if (kIsWeb && webApiUrl.isEmpty) {
+      return Uri.base.host.toLowerCase();
+    }
+
+    return Uri.parse(apiBaseUrl).host.toLowerCase();
+  }
+
   /// Auth configuration
   static Duration get magicLinkExpiration {
     // Default 30 minutes

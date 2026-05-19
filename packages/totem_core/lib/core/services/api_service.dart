@@ -16,8 +16,11 @@ final secureStorageProvider = Provider<SecureStorage>((ref) {
   return SecureStorage();
 }, name: 'Secure Storage Provider');
 
-/// Provider for the API service
-final mobileApiServiceProvider = Provider<ClientApi>((ref) {
+/// Provider for the API service.
+///
+/// Mobile uses the default bearer-token + refresh-token flow. Web can override
+/// this provider at the app boundary with a cookie-based client.
+final apiServiceProvider = Provider<ClientApi>((ref) {
   final dio = _initDio(ref);
   return ClientApi(
     ApiConfig(
@@ -28,7 +31,9 @@ final mobileApiServiceProvider = Provider<ClientApi>((ref) {
       // timeout: Duration(seconds: 10), // or use a single overall deadline here
     ),
   );
-}, name: 'Mobile Totem API Service Provider');
+}, name: 'Totem API Service Provider');
+
+final Provider<ClientApi> mobileApiServiceProvider = apiServiceProvider;
 
 final _dio = Dio();
 
