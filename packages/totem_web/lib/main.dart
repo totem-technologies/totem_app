@@ -5,9 +5,9 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared_main.dart';
+import 'package:totem_web/core/navigation/web_router.dart';
 import 'package:totem_web/core/services/web_api_service.dart';
 import 'package:totem_web/firebase_options.dart';
-import 'package:totem_web/web_router.dart';
 
 void main() {
   sharedMain(

@@ -14,6 +14,8 @@ dependencies:
     sdk: flutter
   totem_core:
     path: ../totem_core
+  dio: ^5.8.0
+  degenerate_dio: ^0.4.1
   http: ^1.4.0
   web: ^1.1.1
 
