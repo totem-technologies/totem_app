@@ -43,7 +43,7 @@ class AppConfig {
   static String get webApiUrl {
     return dotenv.get(
       'WEB_API_URL',
-      fallback: isDevelopment ? 'https://totem.kbl.io/' : null,
+      fallback: isDevelopment ? '${Uri.base.origin}/' : null,
     );
   }
 

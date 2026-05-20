@@ -25,11 +25,11 @@ run:
 run-chrome:
 	@echo "Running app in Chrome..."
 # 	cd $(WEB_DIR) && flutter run -d chrome --web-browser-flag "--disable-web-security"
-	cd $(WEB_DIR) && flutter run -d chrome --web-port=5173
+	cd $(WEB_DIR) && flutter run -d chrome --web-port=5173 --web-hostname=0.0.0.0
 
 run-web:
 	@echo "Running app in Web Server..."
-	cd $(WEB_DIR) && flutter run -d web-server --web-port=5173
+	cd $(WEB_DIR) && flutter run -d web-server --web-port=5173 --web-hostname=0.0.0.0
 
 build-runner:
 	@echo "Running build_runner for code generation..."

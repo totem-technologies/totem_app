@@ -8,7 +8,7 @@ import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/core/services/repository_utils.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  final apiService = ref.read(mobileApiServiceProvider);
+  final apiService = ref.read(apiServiceProvider);
   return AuthRepository(apiService: apiService);
 }, name: 'Auth Repository Provider');
 

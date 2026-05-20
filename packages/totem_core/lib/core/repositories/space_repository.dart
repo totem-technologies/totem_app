@@ -13,7 +13,7 @@ part 'space_repository.g.dart';
 
 @Riverpod(keepAlive: true)
 Future<List<MobileSpaceDetailSchema>> listSpaces(Ref ref) async {
-  final mobileApiService = ref.read(mobileApiServiceProvider);
+  final mobileApiService = ref.read(apiServiceProvider);
   final cache = ref.read(cacheServiceProvider);
 
   try {
@@ -38,7 +38,7 @@ Future<List<MobileSpaceDetailSchema>> listSpaces(Ref ref) async {
 
 @riverpod
 Future<SessionDetailSchema> event(Ref ref, String eventSlug) async {
-  final mobileApiService = ref.read(mobileApiServiceProvider);
+  final mobileApiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<SessionDetailSchema>(
     apiCall: () => mobileApiService.spaces.totemSpacesMobileApiGetSessionDetail(
       eventSlug: eventSlug,
@@ -49,7 +49,7 @@ Future<SessionDetailSchema> event(Ref ref, String eventSlug) async {
 
 @riverpod
 Future<MobileSpaceDetailSchema> space(Ref ref, String spaceSlug) async {
-  final mobileApiService = ref.read(mobileApiServiceProvider);
+  final mobileApiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<MobileSpaceDetailSchema>(
     apiCall: () => mobileApiService.spaces.totemSpacesMobileApiGetSpaceDetail(
       spaceSlug: spaceSlug,
@@ -60,7 +60,7 @@ Future<MobileSpaceDetailSchema> space(Ref ref, String spaceSlug) async {
 
 @riverpod
 Future<List<SpaceSchema>> listSubscribedSpaces(Ref ref) async {
-  final mobileApiService = ref.read(mobileApiServiceProvider);
+  final mobileApiService = ref.read(apiServiceProvider);
   final cache = ref.read(cacheServiceProvider);
   try {
     final spaces = await RepositoryUtils.handleApiCall<List<SpaceSchema>>(
@@ -82,7 +82,7 @@ Future<List<SpaceSchema>> listSubscribedSpaces(Ref ref) async {
 
 @riverpod
 Future<bool> subscribeToSpace(Ref ref, String spaceSlug) async {
-  final mobileApiService = ref.read(mobileApiServiceProvider);
+  final mobileApiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<bool>(
     apiCall: () => mobileApiService.spaces.totemSpacesMobileApiSubscribeToSpace(
       spaceSlug: spaceSlug,
@@ -93,7 +93,7 @@ Future<bool> subscribeToSpace(Ref ref, String spaceSlug) async {
 
 @riverpod
 Future<bool> unsubscribeFromSpace(Ref ref, String spaceSlug) async {
-  final mobileApiService = ref.read(mobileApiServiceProvider);
+  final mobileApiService = ref.read(apiServiceProvider);
   final success = await RepositoryUtils.handleApiCall<bool>(
     apiCall: () =>
         mobileApiService.spaces.totemSpacesMobileApiUnsubscribeToSpace(
@@ -115,7 +115,7 @@ Future<List<MobileSpaceDetailSchema>> listSpacesByKeeper(
   Ref ref,
   String keeperSlug,
 ) async {
-  final mobileApiService = ref.read(mobileApiServiceProvider);
+  final mobileApiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<List<MobileSpaceDetailSchema>>(
     apiCall: () => mobileApiService.spaces.totemSpacesMobileApiGetKeeperSpaces(
       slug: keeperSlug,
@@ -126,7 +126,7 @@ Future<List<MobileSpaceDetailSchema>> listSpacesByKeeper(
 
 @riverpod
 Future<List<SessionDetailSchema>> listSessionsHistory(Ref ref) async {
-  final mobileApiService = ref.read(mobileApiServiceProvider);
+  final mobileApiService = ref.read(apiServiceProvider);
   final cache = ref.read(cacheServiceProvider);
 
   try {
@@ -153,7 +153,7 @@ Future<List<SessionDetailSchema>> getRecommendedSessions(
   Ref ref, [
   String? topicsKey,
 ]) {
-  final mobileApiService = ref.read(mobileApiServiceProvider);
+  final mobileApiService = ref.read(apiServiceProvider);
   final List<String>? body = topicsKey == null || topicsKey.isEmpty
       ? null
       : topicsKey.split('|').toList();
@@ -168,7 +168,7 @@ Future<List<SessionDetailSchema>> getRecommendedSessions(
 
 @Riverpod(keepAlive: true)
 Future<SummarySpacesSchema> spacesSummary(Ref ref) async {
-  final mobileApiService = ref.read(mobileApiServiceProvider);
+  final mobileApiService = ref.read(apiServiceProvider);
   final cache = ref.read(cacheServiceProvider);
 
   try {
@@ -199,7 +199,7 @@ Future<SummarySpacesSchema> spacesSummary(Ref ref) async {
 
 @riverpod
 Future<bool> rsvpConfirm(Ref ref, String eventSlug) async {
-  final mobileApiService = ref.read(mobileApiServiceProvider);
+  final mobileApiService = ref.read(apiServiceProvider);
 
   try {
     final session = await RepositoryUtils.handleApiCall<SessionDetailSchema>(
@@ -221,7 +221,7 @@ Future<bool> rsvpConfirm(Ref ref, String eventSlug) async {
 
 @riverpod
 Future<bool> rsvpCancel(Ref ref, String eventSlug) async {
-  final mobileApiService = ref.read(mobileApiServiceProvider);
+  final mobileApiService = ref.read(apiServiceProvider);
 
   try {
     final session = await RepositoryUtils.handleApiCall<SessionDetailSchema>(
