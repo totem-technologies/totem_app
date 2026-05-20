@@ -17,6 +17,7 @@ void main() {
       usePathUrlStrategy();
     },
     firebaseOptions: DefaultFirebaseOptions.currentPlatform,
+    runInitialAuthCheck: false,
     providerOverrides: [
       apiServiceProvider.overrideWith((ref) => ref.read(webApiServiceProvider)),
     ],
