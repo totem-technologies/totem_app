@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart' show Sentry;
 import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/notifications_service.dart';
@@ -21,6 +22,7 @@ Future<void> sharedMain(
   await Sentry.runZonedGuarded(
     () async {
       await dotenv.load();
+      AppConfig.check();
       await init();
 
       await ErrorHandler.initialize();

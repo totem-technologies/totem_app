@@ -31,7 +31,14 @@ class AnalyticsService {
     try {
       logger.i('📊 Initializing analytics service');
 
-      final config = PostHogConfig(AppConfig.posthogApiKey)
+      if (AppConfig.posthogApiKey == null || AppConfig.posthogApiKey!.isEmpty) {
+        logger.w(
+          '📊 PostHog API key is not set. Analytics will not be logged.',
+        );
+        return;
+      }
+
+      final config = PostHogConfig(AppConfig.posthogApiKey!)
         ..debug = kDebugMode
         ..captureApplicationLifecycleEvents = true
         ..host = AppConfig.posthogHost
@@ -126,6 +133,16 @@ class AnalyticsService {
 
   bool _shouldLog() {
     if (!_isInitialized || kDebugMode) {
+      return false;
+    }
+
+    if (!AppConfig.enableAnalytics) {
+      logger.i('📊 Analytics disabled by configuration');
+      return false;
+    }
+
+    if (AppConfig.posthogApiKey == null || AppConfig.posthogApiKey!.isEmpty) {
+      logger.w('📊 PostHog API key is not set. Analytics will not be logged.');
       return false;
     }
 

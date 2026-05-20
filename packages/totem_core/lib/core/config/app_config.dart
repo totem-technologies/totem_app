@@ -4,6 +4,13 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class AppConfig {
   const AppConfig._();
 
+  static void check() {
+    assert(
+      liveKitUrl != null,
+      'LIVEKIT_URL must be set in the environment variables',
+    );
+  }
+
   /// Get the current environment (development, staging, production)
   static String get environment {
     return dotenv.env['ENVIRONMENT'] ?? 'production';
@@ -47,6 +54,7 @@ class AppConfig {
     );
   }
 
+  /// Returns the appropriate API base URL based on the platform.
   static String get apiBaseUrl {
     return kIsWeb ? webApiUrl : mobileApiUrl;
   }
@@ -59,36 +67,14 @@ class AppConfig {
     return Uri.parse(apiBaseUrl).host.toLowerCase();
   }
 
-  /// Auth configuration
-  static Duration get magicLinkExpiration {
-    // Default 30 minutes
-    final minutes =
-        int.tryParse(dotenv.env['MAGIC_LINK_EXPIRATION_MINUTES'] ?? '30') ?? 30;
-    return Duration(minutes: minutes);
-  }
-
   /// LiveKit configuration
-  static String get liveKitUrl {
-    return dotenv.env['LIVEKIT_URL'] ?? 'wss://totem-d7esbgcp.livekit.cloud';
-  }
-
-  /// App version information
-  static String get appVersion {
-    return dotenv.env['APP_VERSION'] ?? '1.0.0';
-  }
-
-  /// App build number
-  static String get buildNumber {
-    return dotenv.env['BUILD_NUMBER'] ?? '1';
+  static String? get liveKitUrl {
+    return dotenv.env['LIVEKIT_URL'];
   }
 
   /// Maximum PIN attempts before reset
   static int get maxPinAttempts {
     return int.tryParse(dotenv.env['MAX_PIN_ATTEMPTS'] ?? '5') ?? 5;
-  }
-
-  static bool get enablePushNotifications {
-    return dotenv.env['ENABLE_PUSH_NOTIFICATIONS']?.toLowerCase() == 'true';
   }
 
   /// Vapid Key used for push notifications on the web.
@@ -101,14 +87,12 @@ class AppConfig {
     return dotenv.env['ENABLE_ANALYTICS']?.toLowerCase() != 'false';
   }
 
-  static String get sentryDsn {
-    return dotenv.env['SENTRY_DSN'] ??
-        'https://66cc97ae272344978f48840710f857a0@o1324443.ingest.us.sentry.io/6582849';
+  static String? get sentryDsn {
+    return dotenv.env['SENTRY_DSN'];
   }
 
-  static String get posthogApiKey {
-    return dotenv.env['POSTHOG_API_KEY'] ??
-        'phc_OJCztWvtlN5scoDe58jLipnOTCBugeidvZlni3FIy9z';
+  static String? get posthogApiKey {
+    return dotenv.env['POSTHOG_API_KEY'];
   }
 
   static String get posthogHost {

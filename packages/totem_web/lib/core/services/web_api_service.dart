@@ -37,14 +37,14 @@ class _CsrfInterceptor implements Interceptor {
     if (token == null) return next(req);
     return next(req.copyWith(headers: {...req.headers, 'X-CSRFToken': token}));
   }
-}
 
-String? _readCookie(String name) {
-  for (final part in web.document.cookie.split(';')) {
-    final t = part.trim();
-    if (t.startsWith('$name=')) {
-      return Uri.decodeComponent(t.substring(name.length + 1));
+  String? _readCookie(String name) {
+    for (final part in web.document.cookie.split(';')) {
+      final t = part.trim();
+      if (t.startsWith('$name=')) {
+        return Uri.decodeComponent(t.substring(name.length + 1));
+      }
     }
+    return null;
   }
-  return null;
 }

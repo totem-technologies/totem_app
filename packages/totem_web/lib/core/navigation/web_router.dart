@@ -26,7 +26,7 @@ class WebTotemRouter extends TotemRouter {
       routes: [
         GoRoute(
           path: '/',
-          builder: (context, state) => const _WebSignInRedirectScreen(),
+          builder: (context, state) => const _WebRedirectScreen(),
         ),
         GoRoute(
           path: '/:slug',
@@ -109,17 +109,17 @@ class WebTotemRouter extends TotemRouter {
   }
 }
 
-class _WebSignInRedirectScreen extends StatefulWidget {
-  const _WebSignInRedirectScreen({this.nextRoute});
+class _WebRedirectScreen extends StatefulWidget {
+  // ignore: unused_element_parameter
+  const _WebRedirectScreen({this.nextRoute});
 
   final String? nextRoute;
 
   @override
-  State<_WebSignInRedirectScreen> createState() =>
-      _WebSignInRedirectScreenState();
+  State<_WebRedirectScreen> createState() => _WebRedirectScreenState();
 }
 
-class _WebSignInRedirectScreenState extends State<_WebSignInRedirectScreen> {
+class _WebRedirectScreenState extends State<_WebRedirectScreen> {
   bool _redirected = false;
 
   @override
