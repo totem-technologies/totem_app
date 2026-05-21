@@ -64,7 +64,7 @@ final class SessionTokenProvider
   }
 }
 
-String _$sessionTokenHash() => r'a4a4f055cffb447c1aa6acefd76c72b864762c33';
+String _$sessionTokenHash() => r'212c0807291d25217b97ca9bfdfbfebf60bb00cd';
 
 final class SessionTokenFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<JoinResponse>, String> {
@@ -133,7 +133,7 @@ final class RemoveParticipantProvider
   }
 }
 
-String _$removeParticipantHash() => r'53bc1e4a0380a8a28f61a33309c19119fbea0047';
+String _$removeParticipantHash() => r'3791db04e888e43ee11791727578e9beb0e23bd6';
 
 final class RemoveParticipantFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, (String, String)> {
@@ -218,7 +218,7 @@ final class MuteParticipantProvider
   }
 }
 
-String _$muteParticipantHash() => r'd22a3a2438c3033ce363016a37acf250290e3e85';
+String _$muteParticipantHash() => r'352bdfacd9562d7082e33c83f437b2d8f491d82a';
 
 /// Mutes a participant.
 ///
@@ -300,7 +300,7 @@ final class MuteEveryoneProvider
   }
 }
 
-String _$muteEveryoneHash() => r'7e05f7a4182145923da5076aa6de2ac11a39ffb1';
+String _$muteEveryoneHash() => r'cf94b112925cc166b5526abd469b81f735acc626';
 
 final class MuteEveryoneFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, String> {
@@ -379,7 +379,7 @@ final class PassTotemProvider
   }
 }
 
-String _$passTotemHash() => r'593e00f8e8a3d077339f8387063387b707a8ea4b';
+String _$passTotemHash() => r'ad90e365d9c9833a0e012eba7b5e25d945c8eb53';
 
 final class PassTotemFamily extends $Family
     with
@@ -463,7 +463,7 @@ final class AcceptTotemProvider
   }
 }
 
-String _$acceptTotemHash() => r'81ec85653c7fa85a3e989bc54400ddbba4133d0d';
+String _$acceptTotemHash() => r'f3b295f5bdfa52ae18d512394cf52d5d9d55bd72';
 
 final class AcceptTotemFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
@@ -540,7 +540,7 @@ final class ForcePassTotemProvider
   }
 }
 
-String _$forcePassTotemHash() => r'2f3e59a6eb5cee2141fbad992cd442fde52afa11';
+String _$forcePassTotemHash() => r'00d5d9be991f70a28a8d896e395c36be6f1cef1f';
 
 final class ForcePassTotemFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
@@ -618,7 +618,7 @@ final class ReorderParticipantsProvider
 }
 
 String _$reorderParticipantsHash() =>
-    r'ad95ecc6d38e81ef3158ed783c1e2779e59efa35';
+    r'62d5971c6e18531e2722f0410d13da347508311b';
 
 final class ReorderParticipantsFamily extends $Family
     with
@@ -702,7 +702,7 @@ final class StartSessionProvider
   }
 }
 
-String _$startSessionHash() => r'b5f8284af3f9a8a48527dc896833857c66bc7026';
+String _$startSessionHash() => r'4180b185f2f0e62b074962baa840947447032494';
 
 final class StartSessionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
@@ -779,7 +779,7 @@ final class EndSessionProvider
   }
 }
 
-String _$endSessionHash() => r'25af2b573634f84e4819c257ebb059d9e0793af2';
+String _$endSessionHash() => r'344a5d52fbe2dc73d991a685ba7968fd874880f3';
 
 final class EndSessionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
@@ -856,7 +856,7 @@ final class BanParticipantProvider
   }
 }
 
-String _$banParticipantHash() => r'b4d8387f1a4e8c9363cfc2169c8a6894ad7670d8';
+String _$banParticipantHash() => r'20c1513b8d3fd84c68301dee0dff037d3d02f8e2';
 
 final class BanParticipantFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, String, int)> {
@@ -936,7 +936,7 @@ final class UnbanParticipantProvider
   }
 }
 
-String _$unbanParticipantHash() => r'e42e920921c9cf9e71c2f565f29153e8b48c3e31';
+String _$unbanParticipantHash() => r'b81ead4c121728589d929460e9caa062e64a0678';
 
 final class UnbanParticipantFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, String, int)> {
@@ -1011,7 +1011,7 @@ final class SessionFeedbackProvider
   }
 }
 
-String _$sessionFeedbackHash() => r'8807e946ec9f45977c0a87b09f8f314d233b1379';
+String _$sessionFeedbackHash() => r'796b36796876ef3d8f2a71f0d723c05ee71b3fe1';
 
 final class SessionFeedbackFamily extends $Family
     with

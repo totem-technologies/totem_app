@@ -33,8 +33,6 @@ final apiServiceProvider = Provider<ClientApi>((ref) {
   );
 }, name: 'Totem API Service Provider');
 
-final Provider<ClientApi> mobileApiServiceProvider = apiServiceProvider;
-
 final _dio = Dio();
 
 void addSharedApiInterceptors(Dio dio) {

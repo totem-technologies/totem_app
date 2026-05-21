@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_app/firebase_options.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
@@ -13,9 +14,17 @@ import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared_main.dart';
 
 Future<void> main() async {
-  sharedMain(TotemApp(), () async {
-    TotemRouter.instance = AppTotemRouter();
-  }, firebaseOptions: DefaultFirebaseOptions.currentPlatform);
+  sharedMain(
+    TotemApp(),
+    () async {
+      TotemRouter.instance = AppTotemRouter();
+    },
+    firebaseOptions: DefaultFirebaseOptions.currentPlatform,
+
+    providerOverrides: [
+      authControllerProvider.overrideWith(MobileAuthController.new),
+    ],
+  );
 }
 
 class TotemApp extends ConsumerStatefulWidget {
@@ -42,8 +51,12 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
     super.didChangeDependencies();
     if (!_imagesPrecached) {
       _imagesPrecached = true;
-      final authState = ref.read(authControllerProvider.notifier);
-      if (!authState.isOnboardingCompleted) {
+      final authController = ref.read(authControllerProvider.notifier);
+      final isOnboardingCompleted =
+          authController is MobileAuthController
+          ? authController.isOnboardingCompleted
+          : false;
+      if (!isOnboardingCompleted) {
         for (final path in <String>[
           TotemImageAssets.onboarding1,
           TotemImageAssets.onboarding2,

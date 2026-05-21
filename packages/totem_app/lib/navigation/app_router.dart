@@ -4,8 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:totem_app/widgets/offline_indicator.dart';
+import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_app/widgets/offline_indicator.dart';
 import 'package:totem_core/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_core/shared/logger.dart';
@@ -200,6 +201,8 @@ class AppTotemRouter extends TotemRouter {
   @override
   GoRouter createRouter(WidgetRef ref) {
     final authController = ref.read(authControllerProvider.notifier);
+    final mobileAuthController =
+        authController is MobileAuthController ? authController : null;
 
     return GoRouter(
       navigatorKey: navigatorKey,
@@ -211,7 +214,8 @@ class AppTotemRouter extends TotemRouter {
         logger.i('🛻 Router State Change: ${state.fullPath}');
 
         final isLoggedIn = authController.isAuthenticated;
-        final isOnboardingCompleted = authController.isOnboardingCompleted;
+        final isOnboardingCompleted =
+          mobileAuthController?.isOnboardingCompleted ?? false;
         final isAuthRoute = state.matchedLocation.startsWith('/auth');
         final isOnboardingRoute =
             state.matchedLocation == RouteNames.onboarding;
@@ -221,7 +225,9 @@ class AppTotemRouter extends TotemRouter {
         // Unauthenticated flow
         if (!isLoggedIn) {
           final hasSeenWelcomeOnboarding =
-              await authController.hasSeenWelcomeOnboarding;
+              mobileAuthController == null
+              ? false
+              : await mobileAuthController.hasSeenWelcomeOnboarding;
 
           if (isWelcomeRoute) {
             // First-time users stay on welcome; returning users go to login

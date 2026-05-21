@@ -23,10 +23,25 @@ class WebTotemRouter extends TotemRouter {
     return GoRouter(
       initialLocation: '/',
       refreshListenable: GoRouterRefreshStream(authController.authStateChanges),
+      redirect: (context, state) {
+        final isLoggedIn = authController.isAuthenticated;
+        final isSessionRoute =
+            state.matchedLocation.startsWith('/') &&
+            state.matchedLocation != '/';
+
+        if (!isLoggedIn && isSessionRoute) {
+          return '/?next=${Uri.encodeComponent(state.uri.toString())}';
+        }
+
+        return null;
+      },
       routes: [
         GoRoute(
           path: '/',
-          builder: (context, state) => const _WebRedirectScreen(),
+          builder: (context, state) {
+            final nextRoute = state.uri.queryParameters['next'];
+            return _WebRedirectScreen(nextRoute: nextRoute);
+          },
         ),
         GoRoute(
           path: '/:slug',
@@ -110,7 +125,6 @@ class WebTotemRouter extends TotemRouter {
 }
 
 class _WebRedirectScreen extends StatefulWidget {
-  // ignore: unused_element_parameter
   const _WebRedirectScreen({this.nextRoute});
 
   final String? nextRoute;

@@ -122,7 +122,7 @@ void main() {
       final container = ProviderContainer(
         retry: (_, _) => null,
         overrides: [
-          mobileApiServiceProvider.overrideWithValue(_createApi(client)),
+          apiServiceProvider.overrideWithValue(_createApi(client)),
         ],
       );
       addTearDown(container.dispose);
@@ -145,7 +145,7 @@ void main() {
       final container = ProviderContainer(
         retry: (_, _) => null,
         overrides: [
-          mobileApiServiceProvider.overrideWithValue(_createApi(client)),
+          apiServiceProvider.overrideWithValue(_createApi(client)),
         ],
       );
       final subscription = container.listen(

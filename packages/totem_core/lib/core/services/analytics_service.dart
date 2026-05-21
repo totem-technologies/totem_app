@@ -22,11 +22,11 @@ class AnalyticsService {
   static final AnalyticsService instance = AnalyticsService._();
 
   var _isInitialized = false;
-  final posthog = Posthog();
+  Posthog? posthog;
 
   /// Initialize the analytics service.
   Future<void> initialize() async {
-    if (_isInitialized) return;
+    if (_isInitialized || !AppConfig.enableAnalytics) return;
 
     try {
       logger.i('📊 Initializing analytics service');
@@ -38,12 +38,13 @@ class AnalyticsService {
         return;
       }
 
+      posthog = Posthog();
       final config = PostHogConfig(AppConfig.posthogApiKey!)
         ..debug = kDebugMode
         ..captureApplicationLifecycleEvents = true
         ..host = AppConfig.posthogHost
         ..sessionReplay = true;
-      await posthog.setup(config);
+      await posthog?.setup(config);
 
       _isInitialized = true;
 
@@ -67,14 +68,14 @@ class AnalyticsService {
       '${parameters != null ? '| Params: $parameters' : ''}',
     );
 
-    posthog.capture(eventName: eventName, properties: parameters ?? {});
+    posthog?.capture(eventName: eventName, properties: parameters ?? {});
   }
 
   Future<void> setUserId(UserSchema user) async {
     if (!_shouldLog()) return;
     logger.i('📊 Setting user ID: ${user.email}');
 
-    await posthog.identify(
+    await posthog?.identify(
       userId: user.email,
       userProperties: {
         'email': user.email,
@@ -112,7 +113,7 @@ class AnalyticsService {
   Future<void> logLogout() async {
     if (!_shouldLog()) return;
     logEvent('user_logged_out');
-    await posthog.reset();
+    await posthog?.reset();
     await Sentry.configureScope((scope) => scope.setUser(null));
   }
 

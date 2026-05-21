@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared_main.dart';
+import 'package:totem_web/auth/controllers/auth_controller.dart';
 import 'package:totem_web/core/navigation/web_router.dart';
 import 'package:totem_web/core/services/web_api_service.dart';
 import 'package:totem_web/firebase_options.dart';
@@ -19,6 +21,7 @@ void main() {
     firebaseOptions: DefaultFirebaseOptions.currentPlatform,
     runInitialAuthCheck: false,
     providerOverrides: [
+      authControllerProvider.overrideWith(() => WebAuthController()),
       apiServiceProvider.overrideWith((ref) => ref.read(webApiServiceProvider)),
     ],
   );

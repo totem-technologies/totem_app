@@ -2,8 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_app/main.dart' as app;
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/shared/router.dart';
 
+import '../../totem_core/test/auth/controllers/auth_controller_mock.dart';
 import '../../totem_core/test/setup.dart';
 
 void main() {
@@ -14,7 +17,16 @@ void main() {
   });
 
   testWidgets('App builds smoke test', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: app.TotemApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => FakeAuthController(AuthState.unauthenticated()),
+          ),
+        ],
+        child: app.TotemApp(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(app.TotemApp), findsOneWidget);

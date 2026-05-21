@@ -192,7 +192,7 @@ class _ParticipantReorderWidgetState
                           ),
                           sliver: SliverReorderableList(
                             itemCount: reorderableParticipants.length,
-                            onReorder: (oldIndex, newIndex) {
+                            onReorderItem: (oldIndex, newIndex) {
                               final adjustedNewIndex = oldIndex < newIndex
                                   ? newIndex - 1
                                   : newIndex;

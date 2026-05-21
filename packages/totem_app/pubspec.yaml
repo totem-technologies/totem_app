@@ -3,7 +3,7 @@ description: "Guided introspection groups."
 publish_to: "none"
 version: 0.0.61+61
 environment:
-  sdk: ^3.11.5
+  sdk: ^3.12.0
 resolution: workspace
 
 dependencies:
