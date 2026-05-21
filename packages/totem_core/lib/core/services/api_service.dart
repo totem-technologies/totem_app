@@ -37,6 +37,34 @@ final Provider<ClientApi> mobileApiServiceProvider = apiServiceProvider;
 
 final _dio = Dio();
 
+void addSharedApiInterceptors(Dio dio) {
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onError: (error, handler) {
+        final appException = _handleDioError(error);
+
+        return handler.reject(
+          DioException(
+            requestOptions: error.requestOptions,
+            error: appException,
+            response: error.response,
+            type: error.type,
+            message: appException.toString(),
+          ),
+        );
+      },
+    ),
+  );
+
+  if (AppConfig.isDevelopment) {
+    dio.interceptors.add(
+      LogInterceptor(requestBody: true, responseBody: true),
+    );
+  }
+
+  dio.addSentry();
+}
+
 /// Initialize Dio instance with interceptors and base configuration
 Dio _initDio(Ref ref) {
   _dio.options = BaseOptions(
@@ -125,30 +153,10 @@ Dio _initDio(Ref ref) {
 
         return handler.next(options);
       },
-      onError: (error, handler) {
-        // Convert to app-specific exception
-        final appException = _handleDioError(error);
-
-        return handler.reject(
-          DioException(
-            requestOptions: error.requestOptions,
-            error: appException,
-            response: error.response,
-            type: error.type,
-            message: appException.toString(),
-          ),
-        );
-      },
     ),
   );
 
-  if (AppConfig.isDevelopment) {
-    _dio.interceptors.add(
-      LogInterceptor(requestBody: true, responseBody: true),
-    );
-  }
-
-  _dio.addSentry();
+  addSharedApiInterceptors(_dio);
 
   return _dio;
 }

@@ -5,10 +5,15 @@ class AppConfig {
   const AppConfig._();
 
   static void check() {
-    assert(
-      liveKitUrl != null,
-      'LIVEKIT_URL must be set in the environment variables',
-    );
+    if (liveKitUrl == null || liveKitUrl!.isEmpty) {
+      throw StateError('LIVEKIT_URL must be set in the environment variables');
+    }
+
+    if (kIsWeb && !isDevelopment && webApiUrl.isEmpty) {
+      throw StateError(
+        'WEB_API_URL must be set for non-development web builds',
+      );
+    }
   }
 
   /// Get the current environment (development, staging, production)
@@ -48,10 +53,7 @@ class AppConfig {
   /// Defaults to the current origin so cookie-based auth can work with a
   /// same-origin backend or reverse proxy.
   static String get webApiUrl {
-    return dotenv.get(
-      'WEB_API_URL',
-      fallback: isDevelopment ? '${Uri.base.origin}/' : null,
-    );
+    return dotenv.env['WEB_API_URL'] ?? '';
   }
 
   /// Returns the appropriate API base URL based on the platform.

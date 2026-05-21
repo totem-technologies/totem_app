@@ -4,6 +4,7 @@ import 'package:dio/dio.dart' hide Interceptor;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/core/api/api_client/client/api_client_api.dart';
 import 'package:totem_core/core/config/app_config.dart';
+import 'package:totem_core/core/services/api_service.dart';
 import 'package:web/web.dart' as web;
 
 final webApiServiceProvider = Provider<ClientApi>((ref) {
@@ -15,6 +16,8 @@ final webApiServiceProvider = Provider<ClientApi>((ref) {
       sendTimeout: const Duration(seconds: 30),
     ),
   )..httpClientAdapter = (BrowserHttpClientAdapter()..withCredentials = true);
+
+  addSharedApiInterceptors(dio);
 
   return ClientApi(
     ApiConfig(
