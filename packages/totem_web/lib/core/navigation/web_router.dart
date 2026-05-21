@@ -23,18 +23,6 @@ class WebTotemRouter extends TotemRouter {
     return GoRouter(
       initialLocation: '/',
       refreshListenable: GoRouterRefreshStream(authController.authStateChanges),
-      redirect: (context, state) {
-        final isLoggedIn = authController.isAuthenticated;
-        final isSessionRoute =
-            state.matchedLocation.startsWith('/') &&
-            state.matchedLocation != '/';
-
-        if (!isLoggedIn && isSessionRoute) {
-          return '/?next=${Uri.encodeComponent(state.uri.toString())}';
-        }
-
-        return null;
-      },
       routes: [
         GoRoute(
           path: '/',

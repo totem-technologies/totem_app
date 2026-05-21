@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/core/api/api_client/client/api_client_api.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/services/api_service.dart';
-import 'package:web/web.dart' as web;
+import 'package:totem_web/auth/controllers/auth_controller.dart';
 
 final webApiServiceProvider = Provider<ClientApi>((ref) {
   final dio = Dio(
@@ -36,18 +36,8 @@ class _CsrfInterceptor implements Interceptor {
   @override
   Future<ApiResponse> intercept(ApiRequest req, Handler next) async {
     if (!_unsafeMethods.contains(req.method.toUpperCase())) return next(req);
-    final token = _readCookie('csrftoken');
+    final token = WebAuthController.readCookieValue('csrftoken');
     if (token == null) return next(req);
     return next(req.copyWith(headers: {...req.headers, 'X-CSRFToken': token}));
-  }
-
-  String? _readCookie(String name) {
-    for (final part in web.document.cookie.split(';')) {
-      final t = part.trim();
-      if (t.startsWith('$name=')) {
-        return Uri.decodeComponent(t.substring(name.length + 1));
-      }
-    }
-    return null;
   }
 }

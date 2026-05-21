@@ -61,8 +61,6 @@ class FakePermissionsController extends PermissionsController {
   }
 }
 
-final _testTheme = ThemeData(splashFactory: NoSplash.splashFactory);
-
 void main() {
   Future<BuildContext> pumpHost(
     WidgetTester tester, {
@@ -74,7 +72,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: overrides.cast(),
-        child: MaterialApp(theme: _testTheme, 
+        child: MaterialApp(
           home: Scaffold(
             body: Column(
               children: [

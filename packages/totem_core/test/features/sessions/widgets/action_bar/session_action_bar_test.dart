@@ -108,8 +108,6 @@ final _testLastMessageProvider =
       _TestLastMessageNotifier.new,
     );
 
-final _testTheme = ThemeData(splashFactory: NoSplash.splashFactory);
-
 void main() {
   Future<void> pumpWidget(
     WidgetTester tester, {
@@ -119,7 +117,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: overrides.cast(),
-        child: MaterialApp(theme: _testTheme, 
+        child: MaterialApp(
           home: Scaffold(body: child),
         ),
       ),

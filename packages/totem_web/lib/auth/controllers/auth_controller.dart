@@ -40,13 +40,6 @@ class WebAuthController extends AuthController {
 
       try {
         _setState(AuthState.loading());
-
-        if (!_hasSessionCookie()) {
-          _setState(AuthState.unauthenticated());
-          _checkExistingAuthCompleter?.complete();
-          return;
-        }
-
         final currentUser = await _authRepository.currentUser;
         _setState(AuthState.authenticated(user: currentUser));
         _checkExistingAuthCompleter?.complete();
@@ -76,10 +69,10 @@ class WebAuthController extends AuthController {
   }
 
   bool _hasSessionCookie() {
-    return _readCookieValue('sessionid')?.isNotEmpty ?? false;
+    return readCookieValue('sessionid')?.isNotEmpty ?? false;
   }
 
-  String? _readCookieValue(String cookieName) {
+  static String? readCookieValue(String cookieName) {
     final cookie = web.document.cookie;
     if (cookie.isEmpty) {
       return null;

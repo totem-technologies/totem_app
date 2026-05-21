@@ -17,7 +17,6 @@ Future<void> sharedMain(
   AsyncCallback init, {
   required FirebaseOptions firebaseOptions,
   List<Override> providerOverrides = const [],
-  bool runInitialAuthCheck = true,
 }) async {
   await Sentry.runZonedGuarded(
     () async {
@@ -33,11 +32,7 @@ Future<void> sharedMain(
         overrides: providerOverrides,
       );
 
-      if (runInitialAuthCheck) {
-        await container
-            .read(authControllerProvider.notifier)
-            .checkExistingAuth();
-      }
+      await container.read(authControllerProvider.notifier).checkExistingAuth();
 
       runApp(
         UncontrolledProviderScope(

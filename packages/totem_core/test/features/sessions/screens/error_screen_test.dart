@@ -3,8 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
 
-final _testTheme = ThemeData(splashFactory: NoSplash.splashFactory);
-
 void main() {
   Future<void> pumpErrorScreen(
     WidgetTester tester, {
@@ -12,7 +10,7 @@ void main() {
     Object? error,
   }) async {
     await tester.pumpWidget(
-      MaterialApp(theme: _testTheme, 
+      MaterialApp(
         home: SessionErrorScreen(
           onRetry: onRetry,
           error: error,
