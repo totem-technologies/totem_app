@@ -51,12 +51,8 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
     super.didChangeDependencies();
     if (!_imagesPrecached) {
       _imagesPrecached = true;
-      final authController = ref.read(authControllerProvider.notifier);
-      final isOnboardingCompleted =
-          authController is MobileAuthController
-          ? authController.isOnboardingCompleted
-          : false;
-      if (!isOnboardingCompleted) {
+      final authController = ref.read(mobileAuthControllerProvider);
+      if (!authController.isOnboardingCompleted) {
         for (final path in <String>[
           TotemImageAssets.onboarding1,
           TotemImageAssets.onboarding2,

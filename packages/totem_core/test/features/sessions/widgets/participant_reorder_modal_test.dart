@@ -102,6 +102,8 @@ Future<void> _pumpReorderWidget(
   );
 }
 
+final _testTheme = ThemeData(splashFactory: NoSplash.splashFactory);
+
 void main() {
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -131,7 +133,7 @@ void main() {
     await _pumpReorderWidget(
       tester,
       harness,
-      child: const MaterialApp(
+      child: const MaterialApp(theme: _testTheme, 
         home: Scaffold(
           body: ParticipantReorderWidget(),
         ),
@@ -184,7 +186,7 @@ void main() {
     await _pumpReorderWidget(
       tester,
       harness,
-      child: const MaterialApp(
+      child: const MaterialApp(theme: _testTheme, 
         home: Scaffold(
           body: ParticipantReorderWidget(),
         ),
@@ -235,7 +237,7 @@ void main() {
     await _pumpReorderWidget(
       tester,
       harness,
-      child: const MaterialApp(
+      child: const MaterialApp(theme: _testTheme, 
         home: Scaffold(
           body: ParticipantReorderWidget(),
         ),
@@ -287,7 +289,7 @@ void main() {
             (ref) => harness.sessionState,
           ),
         ],
-        child: MaterialApp(
+        child: MaterialApp(theme: _testTheme, 
           home: Navigator(
             onGenerateRoute: (settings) {
               return MaterialPageRoute<void>(
@@ -362,7 +364,7 @@ void main() {
             (ref) => harness.sessionState,
           ),
         ],
-        child: MaterialApp(
+        child: MaterialApp(theme: _testTheme, 
           home: Navigator(
             onGenerateRoute: (settings) {
               return MaterialPageRoute<void>(
@@ -432,7 +434,7 @@ void main() {
     await _pumpReorderWidget(
       tester,
       harness,
-      child: MaterialApp(
+      child: MaterialApp(theme: _testTheme, 
         home: Navigator(
           onGenerateRoute: (settings) {
             return MaterialPageRoute<void>(

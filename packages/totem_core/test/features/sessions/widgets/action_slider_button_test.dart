@@ -5,13 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 
+final _testTheme = ThemeData(splashFactory: NoSplash.splashFactory);
+
 void main() {
   Future<void> pumpTestWidget(
     WidgetTester tester, {
     required Widget child,
   }) async {
     await tester.pumpWidget(
-      MaterialApp(
+      MaterialApp(theme: _testTheme, 
         home: Scaffold(
           body: Center(
             child: SizedBox(

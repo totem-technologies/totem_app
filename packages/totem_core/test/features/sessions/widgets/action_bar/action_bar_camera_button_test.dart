@@ -10,6 +10,8 @@ import '../../controllers/core/session_controller_mock.dart';
 import '../../controllers/features/session_device_controller_mock.dart';
 import '../../livekit_mocks.dart';
 
+final _testTheme = ThemeData(splashFactory: NoSplash.splashFactory);
+
 void main() {
   late FakeSessionController sessionController;
   late LocalParticipant participant;
@@ -33,7 +35,7 @@ void main() {
       });
 
       await tester.pumpWidget(
-        MaterialApp(
+        MaterialApp(theme: _testTheme, 
           home: Scaffold(
             body: Align(
               alignment: Alignment.bottomCenter,
@@ -77,7 +79,7 @@ void main() {
       });
 
       await tester.pumpWidget(
-        MaterialApp(
+        MaterialApp(theme: _testTheme, 
           home: Scaffold(
             body: Align(
               alignment: Alignment.bottomCenter,
@@ -123,7 +125,7 @@ void main() {
       var dismissed = false;
 
       await tester.pumpWidget(
-        MaterialApp(
+        MaterialApp(theme: _testTheme, 
           home: Scaffold(
             body: ActionBarCameraSwitcherButtonOverlay(
               isDesktopPicker: true,
@@ -156,7 +158,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
+        MaterialApp(theme: _testTheme, 
           home: Scaffold(
             body: ActionBarCameraSwitcherButtonOverlay(
               isDesktopPicker: true,
@@ -182,7 +184,7 @@ void main() {
       var dismissed = false;
 
       await tester.pumpWidget(
-        MaterialApp(
+        MaterialApp(theme: _testTheme, 
           home: Scaffold(
             body: ActionBarCameraSwitcherButtonOverlay(
               isDesktopPicker: true,
@@ -220,7 +222,7 @@ void main() {
       final selectedPositions = <CameraPosition>[];
 
       await tester.pumpWidget(
-        MaterialApp(
+        MaterialApp(theme: _testTheme, 
           home: Scaffold(
             body: ActionBarCameraSwitcherButtonOverlay(
               isDesktopPicker: false,
@@ -256,7 +258,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
+        MaterialApp(theme: _testTheme, 
           home: Scaffold(
             body: SessionActionBarCameraButton(
               session: sessionController,

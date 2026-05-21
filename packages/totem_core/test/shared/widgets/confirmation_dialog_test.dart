@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 
+final _testTheme = ThemeData(splashFactory: NoSplash.splashFactory);
+
 void main() {
   Future<void> pumpDialog(
     WidgetTester tester, {
@@ -22,7 +24,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp.router(
+      MaterialApp.router(theme: _testTheme, 
         routerConfig: router,
       ),
     );

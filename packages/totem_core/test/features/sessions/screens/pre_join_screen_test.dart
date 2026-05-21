@@ -155,6 +155,8 @@ class _NoOpSessionController extends sessions.SessionController {
   Future<void> join() async {}
 }
 
+final _testTheme = ThemeData(splashFactory: NoSplash.splashFactory);
+
 void main() {
   late VoidCallback restoreWebRtcChannels;
 
@@ -226,7 +228,7 @@ void main() {
           }),
         ],
         child: SentryDisplayWidget(
-          child: MaterialApp(
+          child: MaterialApp(theme: _testTheme, 
             home: screen,
           ),
         ),
@@ -259,7 +261,7 @@ void main() {
 
     await tester.pumpWidget(
       withNavigator
-          ? MaterialApp(
+          ? MaterialApp(theme: _testTheme, 
               home: Builder(
                 builder: (context) {
                   capturedContext = context;
@@ -331,7 +333,7 @@ void main() {
               }),
             ],
             child: const SentryDisplayWidget(
-              child: MaterialApp(
+              child: MaterialApp(theme: _testTheme, 
                 home: PreJoinScreen(sessionSlug: sessionSlug),
               ),
             ),
