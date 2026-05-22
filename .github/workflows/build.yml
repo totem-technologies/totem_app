@@ -114,7 +114,7 @@ jobs:
         uses: subosito/flutter-action@v2.23.0
         with:
           channel: "stable"
-          cache: true
+          cache: false
 
       - name: Setup Environment
         uses: ./.github/actions/setup-environment
