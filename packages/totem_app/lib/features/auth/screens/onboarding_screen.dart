@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/router.dart';
@@ -106,7 +106,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _onSkip() async {
     // Mark welcome onboarding as completed so user won't see it again
     await ref
-        .read(authControllerProvider.notifier)
+        .read(mobileAuthControllerProvider)
         .markWelcomeOnboardingCompleted();
 
     if (mounted) {

@@ -10,8 +10,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
   totem_core:
     path: ../totem_core
+  dio: ^5.8.0
+  degenerate_dio: ^0.4.1
+  http: ^1.4.0
+  web: ^1.1.1
 
   # TODO(web): Remove dependency on totem_app
   totem_app:

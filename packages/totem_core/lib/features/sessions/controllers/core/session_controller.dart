@@ -306,6 +306,21 @@ class SessionController extends _$SessionController {
   }
 
   Future<void> join() async {
+    if (AppConfig.liveKitUrl == null || AppConfig.liveKitUrl!.isEmpty) {
+      logger.e('LIVEKIT_URL is not set. Cannot join session.');
+      _dispatch(
+        SessionErrorChanged(
+          RoomLiveKitError(
+            ConnectException(
+              'LIVEKIT_URL is not configured',
+              reason: ConnectionErrorReason.InternalError,
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
     if (room != null) {
       if (state.connectionState == RoomConnectionState.connected ||
           state.connectionState == RoomConnectionState.connecting) {
@@ -364,7 +379,7 @@ class SessionController extends _$SessionController {
         ),
         adaptiveStream: true,
       ),
-      url: AppConfig.liveKitUrl,
+      url: AppConfig.liveKitUrl!,
       token: options.token,
     );
 
@@ -380,7 +395,7 @@ class SessionController extends _$SessionController {
 
     try {
       await _connect(
-        url: AppConfig.liveKitUrl,
+        url: AppConfig.liveKitUrl!,
         token: options.token,
         fastConnectOptions: FastConnectOptions(
           microphone: TrackOption(enabled: options.microphoneEnabled),

@@ -20,7 +20,7 @@ class RoutingUtils {
           host == 'totem.org' ||
           host == 'www.totem.org' ||
           host == 'totem.kbl.io' ||
-          host == Uri.parse(AppConfig.mobileApiUrl).host.toLowerCase();
+          host == AppConfig.apiHost;
 
       if (!isTotemDomain) {
         return null;

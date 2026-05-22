@@ -1,9 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_app/features/auth/screens/login_screen.dart';
-import 'package:totem_app/features/auth/screens/pin_entry_screen.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/features/keeper/repositories/keeper_repository.dart';
 import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_core/shared/router.dart';
@@ -22,69 +23,16 @@ class WebTotemRouter extends TotemRouter {
     return GoRouter(
       initialLocation: '/',
       refreshListenable: GoRouterRefreshStream(authController.authStateChanges),
-      redirect: (context, state) {
-        final isLoggedIn = authController.isAuthenticated;
-        final isLoginRoute = state.matchedLocation == RouteNames.login;
-        final isPinRoute = state.matchedLocation == RouteNames.pinEntry;
-        final isSessionRoute = state.matchedLocation.startsWith('/session/');
-
-        // TODO(web): Better way to handle redirect
-
-        if (!isLoggedIn && isSessionRoute) {
-          return '${RouteNames.login}?next=${Uri.encodeComponent(state.uri.toString())}';
-        }
-
-        if (isLoggedIn && isLoginRoute) {
-          final nextRoute = state.uri.queryParameters['next'];
-          if (nextRoute != null && nextRoute.isNotEmpty) {
-            return nextRoute;
-          }
-
-          return '/';
-        }
-
-        if (isLoggedIn && isPinRoute) {
-          final nextRoute = state.uri.queryParameters['next'];
-          if (nextRoute != null && nextRoute.isNotEmpty) {
-            return nextRoute;
-          }
-        }
-
-        return null;
-      },
       routes: [
         GoRoute(
           path: '/',
-          builder: (context, state) => const Scaffold(
-            body: Center(
-              child: Text(
-                'Open a session URL, for example: /session/my-session',
-              ),
-            ),
-          ),
-        ),
-        // TODO(web): Remove pin login. Should get credentials from totem.org website
-        GoRoute(
-          path: RouteNames.login,
           builder: (context, state) {
             final nextRoute = state.uri.queryParameters['next'];
-            return LoginScreen(nextRoute: nextRoute);
+            return _WebRedirectScreen(nextRoute: nextRoute);
           },
         ),
         GoRoute(
-          path: RouteNames.pinEntry,
-          builder: (context, state) {
-            final email =
-                state.uri.queryParameters['email'] ??
-                ((state.extra as Map?)?['email'] as String? ?? '');
-            final nextRoute =
-                state.uri.queryParameters['next'] ??
-                ((state.extra as Map?)?['nextRoute'] as String?);
-            return PinEntryScreen(email: email, nextRoute: nextRoute);
-          },
-        ),
-        GoRoute(
-          path: RouteNames.session(':slug'),
+          path: '/:slug',
           builder: (context, state) {
             final slug = state.pathParameters['slug'] ?? '';
             return PreJoinScreen(sessionSlug: slug);
@@ -161,5 +109,46 @@ class WebTotemRouter extends TotemRouter {
         webOnlyWindowName: '_self',
       );
     }
+  }
+}
+
+class _WebRedirectScreen extends StatefulWidget {
+  const _WebRedirectScreen({this.nextRoute});
+
+  final String? nextRoute;
+
+  @override
+  State<_WebRedirectScreen> createState() => _WebRedirectScreenState();
+}
+
+class _WebRedirectScreenState extends State<_WebRedirectScreen> {
+  bool _redirected = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_redirected) {
+      return;
+    }
+    _redirected = true;
+    scheduleMicrotask(_redirectToSignIn);
+  }
+
+  Future<void> _redirectToSignIn() async {
+    final baseUri = Uri.parse(AppConfig.apiBaseUrl);
+    final nextRoute = widget.nextRoute;
+    final signInUri = baseUri.replace(
+      queryParameters: {
+        ...baseUri.queryParameters,
+        if (nextRoute != null && nextRoute.isNotEmpty) 'next': nextRoute,
+      },
+    );
+
+    await launchUrlString(signInUri.toString(), webOnlyWindowName: '_self');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

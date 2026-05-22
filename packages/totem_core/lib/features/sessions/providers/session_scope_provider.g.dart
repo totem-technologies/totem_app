@@ -497,7 +497,7 @@ final class ResolveCurrentScreenProvider
 }
 
 String _$resolveCurrentScreenHash() =>
-    r'ea88382d907d01061975f6674f1b21cb4e8f0906';
+    r'b04195422b950ffa50548f0b122ee6cf17a5d489';
 
 /// The list of participants in the session.
 
@@ -738,7 +738,7 @@ final class HasKeeperDisconnectedProvider
 }
 
 String _$hasKeeperDisconnectedHash() =>
-    r'c20d31da8e1761c56e8c9468346a7d5673aaa22b';
+    r'd4368b63194733d75c4d556997e6f84e2b4f399c';
 
 /// All chat messages for the current session.
 
