@@ -99,6 +99,17 @@ runs:
       run: cd ~/Library/MobileDevice/Provisioning\ Profiles && ls
       shell: bash
 
+    # Workaround for SPM "already exists in file system" failure when
+    # resolving Firebase's binary targets (grpcpp.zip, etc.). The macOS
+    # runner image ships a pre-populated SPM artifacts cache; stale entries
+    # collide with what xcodebuild tries to download.
+    # See https://github.com/firebase/firebase-ios-sdk/issues/16191
+    - name: Reset Swift Package Manager artifact cache
+      shell: bash
+      run: |
+        rm -rf ~/Library/Caches/org.swift.swiftpm/artifacts
+        rm -rf ~/Library/Developer/Xcode/DerivedData
+
     # - name: Flutter get
     #   run: flutter pub get
     #   shell: bash

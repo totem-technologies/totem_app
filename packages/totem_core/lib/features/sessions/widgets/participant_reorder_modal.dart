@@ -193,16 +193,10 @@ class _ParticipantReorderWidgetState
                           sliver: SliverReorderableList(
                             itemCount: reorderableParticipants.length,
                             onReorderItem: (oldIndex, newIndex) {
-                              final adjustedNewIndex = oldIndex < newIndex
-                                  ? newIndex - 1
-                                  : newIndex;
                               final updatedOrder = reorderableParticipants
                                   .toList();
                               final item = updatedOrder.removeAt(oldIndex);
-                              updatedOrder.insert(
-                                adjustedNewIndex,
-                                item,
-                              );
+                              updatedOrder.insert(newIndex, item);
 
                               setState(() {
                                 _localOrder = [
