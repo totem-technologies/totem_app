@@ -50,7 +50,7 @@ runs:
       uses: subosito/flutter-action@v2.23.0
       with:
         channel: "stable"
-        cache: false
+        cache: true
 
     - name: Activate flutterfire
       if: ${{ inputs.flutterfire }} == 'true'
@@ -98,14 +98,6 @@ runs:
     - name: List profiles
       run: cd ~/Library/MobileDevice/Provisioning\ Profiles && ls
       shell: bash
-
-    # - name: Flutter get
-    #   run: flutter pub get
-    #   shell: bash
-
-    # - name: update pod repos
-    #   run: cd ios && pod install --repo-update
-    #   shell: bash
 
     - name: Build
       run: ${{ inputs.build-cmd }}

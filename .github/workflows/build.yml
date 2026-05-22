@@ -77,14 +77,6 @@ jobs:
           google_services_json: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
           flavor: ${{ matrix.flavor }}
 
-      - name: Install dependencies for totem_core
-        working-directory: ./packages/totem_core
-        run: flutter pub get
-
-      - name: Install dependencies for totem_app
-        working-directory: ./packages/totem_app
-        run: flutter pub get
-
       - name: Build ABI
         working-directory: ./packages/totem_app
         run: flutter build appbundle --verbose --flavor ${{ matrix.flavor }}
@@ -114,7 +106,7 @@ jobs:
         uses: subosito/flutter-action@v2.23.0
         with:
           channel: "stable"
-          cache: false
+          cache: true
 
       - name: Setup Environment
         uses: ./.github/actions/setup-environment
@@ -122,14 +114,6 @@ jobs:
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           google_service_plist: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
           flavor: ${{ matrix.flavor }}
-
-      # - name: Install dependencies for totem_core
-      #   working-directory: ./packages/totem_core
-      #   run: flutter pub get
-
-      # - name: Install dependencies for totem_app
-      #   working-directory: ./packages/totem_app
-      #   run: flutter pub get
 
       - name: Build IPA
         working-directory: ./packages/totem_app
