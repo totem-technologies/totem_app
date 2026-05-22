@@ -53,8 +53,7 @@ class SessionChatMessage {
 enum SessionCommunicationTopics {
   emoji('lk-emoji-topic'),
   chat('lk-chat-topic'),
-  participantRemoved('lk-participant-removed-topic')
-  ;
+  participantRemoved('lk-participant-removed-topic');
 
   const SessionCommunicationTopics(this.topic);
   final String topic;
