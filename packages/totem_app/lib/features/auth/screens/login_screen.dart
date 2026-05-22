@@ -151,7 +151,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 recognizer: TapGestureRecognizer()
                   ..onTap = () => launchUrl(
-                    AppConfig.termsOfServiceUrl,
+                    AppConfig.instance.termsOfServiceUrl,
                     mode: LaunchMode.externalApplication,
                   ),
               ),
@@ -165,7 +165,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 recognizer: TapGestureRecognizer()
                   ..onTap = () => launchUrl(
-                    AppConfig.privacyPolicyUrl,
+                    AppConfig.instance.privacyPolicyUrl,
                     mode: LaunchMode.externalApplication,
                   ),
               ),

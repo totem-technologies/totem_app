@@ -179,7 +179,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                       context.findRenderObject() as RenderBox?;
                                   await SharePlus.instance.share(
                                     ShareParams(
-                                      uri: Uri.parse(AppConfig.apiBaseUrl)
+                                      uri: Uri.parse(AppConfig.instance.apiBaseUrl)
                                           .resolve(
                                             '/spaces/event/${space.slug}',
                                           )
@@ -630,7 +630,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   Future<void> _attend(SessionDetailSchema event) async {
     if (_attending ||
         _loading ||
-        (kDebugMode && AppConfig.isProduction) ||
+        (kDebugMode && AppConfig.instance.isProduction) ||
         !mounted) {
       return;
     }
@@ -1362,7 +1362,7 @@ class _AttendingDialogState extends State<AttendingDialog> {
                           final box = context.findRenderObject() as RenderBox?;
                           await SharePlus.instance.share(
                             ShareParams(
-                              uri: Uri.parse(AppConfig.apiBaseUrl)
+                              uri: Uri.parse(AppConfig.instance.apiBaseUrl)
                                   .resolve('/spaces/event/${widget.eventSlug}')
                                   .resolve('?utm_source=app&utm_medium=share'),
                               sharePositionOrigin: box != null
@@ -1456,7 +1456,7 @@ class _AttendingDialogState extends State<AttendingDialog> {
                     ),
                     recognizer: TapGestureRecognizer()
                       ..onTap = () => launchUrl(
-                        AppConfig.communityGuidelinesUrl,
+                        AppConfig.instance.communityGuidelinesUrl,
                         mode: LaunchMode.externalApplication,
                       ),
                   ),

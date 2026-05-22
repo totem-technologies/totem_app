@@ -135,7 +135,7 @@ class _WebRedirectScreenState extends State<_WebRedirectScreen> {
   }
 
   Future<void> _redirectToSignIn() async {
-    final baseUri = Uri.parse(AppConfig.apiBaseUrl);
+    final baseUri = Uri.parse(AppConfig.instance.apiBaseUrl);
     final nextRoute = widget.nextRoute;
     final signInUri = baseUri.replace(
       queryParameters: {

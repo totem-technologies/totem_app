@@ -4,16 +4,46 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_core_platform_interface/src/pigeon/mocks.dart'
     show setupFirebaseCoreMocks;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';
+import 'package:totem_core/core/config/app_config.dart';
 
-void setupDotenv() {
-  dotenv
-    ..clean()
-    ..loadFromString(
-      envString: '{}',
-    );
+/// Assigns [AppConfig.instance] to a test-friendly default. Any overrides
+/// passed in replace the defaults — required for tests that exercise code
+/// reading specific config values (e.g. `liveKitUrl`).
+void setupAppConfig({
+  Environment environment = Environment.production,
+  String mobileApiUrl = 'https://test.example.com/',
+  String webApiUrl = '',
+  String liveKitUrl = 'wss://test.livekit.cloud',
+  int maxPinAttempts = 5,
+  String? vapidKey,
+  bool analyticsEnabled = false,
+  String? sentryDsn,
+  String? posthogApiKey,
+  String posthogHost = 'https://us.i.posthog.com',
+  Uri? privacyPolicyUrl,
+  Uri? termsOfServiceUrl,
+  Uri? communityGuidelinesUrl,
+}) {
+  AppConfig.instance = AppConfig(
+    environment: environment,
+    mobileApiUrl: mobileApiUrl,
+    webApiUrl: webApiUrl,
+    liveKitUrl: liveKitUrl,
+    maxPinAttempts: maxPinAttempts,
+    vapidKey: vapidKey,
+    analyticsEnabled: analyticsEnabled,
+    sentryDsn: sentryDsn,
+    posthogApiKey: posthogApiKey,
+    posthogHost: posthogHost,
+    privacyPolicyUrl:
+        privacyPolicyUrl ?? Uri.parse('https://example.com/privacy'),
+    termsOfServiceUrl:
+        termsOfServiceUrl ?? Uri.parse('https://example.com/tos'),
+    communityGuidelinesUrl:
+        communityGuidelinesUrl ?? Uri.parse('https://example.com/guidelines'),
+  );
 }
 
 void silenceLogger() {

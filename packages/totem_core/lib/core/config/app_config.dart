@@ -1,123 +1,167 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-class AppConfig {
-  const AppConfig._();
+/// Thrown by [AppConfig.build] / [AppConfig.parse] when an environment
+/// variable is missing or invalid.
+///
+/// Fatal and non-recoverable: the build is broken, not the runtime. Entry
+/// points should let it crash the process (e.g. `exit(1)`) so CI smoke
+/// tests can detect it.
+class ConfigError extends Error {
+  ConfigError(this.message);
 
-  static void check() {
-    if (liveKitUrl == null || liveKitUrl!.isEmpty) {
-      throw StateError('LIVEKIT_URL must be set in the environment variables');
+  final String message;
+
+  @override
+  String toString() => 'ConfigError: $message';
+}
+
+/// Runtime environment the app is built for.
+enum Environment {
+  development,
+  staging,
+  production;
+
+  static Environment parse(String? value) {
+    if (value == null || value.isEmpty) return Environment.production;
+    for (final env in Environment.values) {
+      if (env.name == value) return env;
+    }
+    throw ConfigError(
+      "ENVIRONMENT='$value' is not one of: "
+      '${Environment.values.map((e) => e.name).join(', ')}',
+    );
+  }
+}
+
+/// Immutable, strongly-typed app configuration.
+///
+/// Built once at startup via [AppConfig.build]; access via
+/// [AppConfig.instance]. Tests can construct an instance directly (the
+/// public constructor) or via [AppConfig.parse] with a synthetic env
+/// string.
+@immutable
+class AppConfig {
+  const AppConfig({
+    required this.environment,
+    required this.mobileApiUrl,
+    required this.webApiUrl,
+    required this.liveKitUrl,
+    required this.maxPinAttempts,
+    required this.vapidKey,
+    required this.analyticsEnabled,
+    required this.sentryDsn,
+    required this.posthogApiKey,
+    required this.posthogHost,
+    required this.privacyPolicyUrl,
+    required this.termsOfServiceUrl,
+    required this.communityGuidelinesUrl,
+  });
+
+  /// Parses an `.env`-formatted string and builds a validated config.
+  /// Intended for tests and the CI .env validator.
+  factory AppConfig.parse(String envString) {
+    dotenv
+      ..clean()
+      ..loadFromString(envString: envString);
+    return AppConfig._fromMap(dotenv.env);
+  }
+
+  factory AppConfig._fromMap(Map<String, String> env) {
+    final environment = Environment.parse(env['ENVIRONMENT']);
+    final isDev = environment == Environment.development;
+
+    final liveKitUrl = env['LIVEKIT_URL'];
+    if (liveKitUrl == null || liveKitUrl.isEmpty) {
+      throw ConfigError('LIVEKIT_URL must be set');
     }
 
-    if (kIsWeb && !isDevelopment && webApiUrl.isEmpty) {
-      throw StateError(
+    final webApiUrl = env['WEB_API_URL'] ?? '';
+    if (kIsWeb && !isDev && webApiUrl.isEmpty) {
+      throw ConfigError(
         'WEB_API_URL must be set for non-development web builds',
       );
     }
-  }
 
-  /// Get the current environment (development, staging, production)
-  static String get environment {
-    return dotenv.env['ENVIRONMENT'] ?? 'production';
-  }
+    final mobileApiUrl =
+        env['MOBILE_API_URL'] ??
+        (environment == Environment.staging || isDev
+            ? 'https://totem.kbl.io/'
+            : 'https://www.totem.org/');
 
-  /// Check if the app is running in development mode
-  static bool get isDevelopment {
-    return environment == 'development' || kDebugMode;
-  }
-
-  /// Check if the app is running in staging mode
-  static bool get isStaging {
-    return environment == 'staging';
-  }
-
-  /// Check if the app is running in production mode
-  static bool get isProduction {
-    return environment == 'production';
-  }
-
-  /// API configuration
-  static String get mobileApiUrl {
-    return dotenv.get(
-      'MOBILE_API_URL',
-      // fallback: 'https://www.totem.org/',
-      fallback: isStaging || isDevelopment
-          ? 'https://totem.kbl.io/'
-          : 'https://www.totem.org/',
+    return AppConfig(
+      environment: environment,
+      mobileApiUrl: mobileApiUrl,
+      webApiUrl: webApiUrl,
+      liveKitUrl: liveKitUrl,
+      maxPinAttempts: int.tryParse(env['MAX_PIN_ATTEMPTS'] ?? '') ?? 5,
+      vapidKey: env['VAPID_KEY'],
+      analyticsEnabled:
+          !kDebugMode && env['ENABLE_ANALYTICS']?.toLowerCase() != 'false',
+      sentryDsn: env['SENTRY_DSN'],
+      posthogApiKey: env['POSTHOG_API_KEY'],
+      posthogHost: env['POSTHOG_HOST'] ?? 'https://us.i.posthog.com',
+      privacyPolicyUrl: Uri.parse(
+        env['PRIVACY_POLICY_URL'] ?? 'https://www.totem.org/privacy/',
+      ),
+      termsOfServiceUrl: Uri.parse(
+        env['TERMS_OF_SERVICE_URL'] ?? 'https://www.totem.org/tos/',
+      ),
+      communityGuidelinesUrl: Uri.parse(
+        env['COMMUNITY_GUIDELINES_URL'] ?? 'https://www.totem.org/guidelines/',
+      ),
     );
-    // return dotenv.get('MOBILE_API_URL', fallback: 'http://localhost:8000/');
   }
 
-  /// Web API configuration.
-  ///
-  /// Defaults to the current origin so cookie-based auth can work with a
-  /// same-origin backend or reverse proxy.
-  static String get webApiUrl {
-    return dotenv.env['WEB_API_URL'] ?? '';
-  }
+  final Environment environment;
+  final String mobileApiUrl;
+  final String webApiUrl;
+  final String liveKitUrl;
+  final int maxPinAttempts;
+  final String? vapidKey;
+  final bool analyticsEnabled;
+  final String? sentryDsn;
+  final String? posthogApiKey;
+  final String posthogHost;
+  final Uri privacyPolicyUrl;
+  final Uri termsOfServiceUrl;
+  final Uri communityGuidelinesUrl;
 
-  /// Returns the appropriate API base URL based on the platform.
-  static String get apiBaseUrl {
-    return kIsWeb ? webApiUrl : mobileApiUrl;
-  }
+  bool get isDevelopment =>
+      environment == Environment.development || kDebugMode;
+  bool get isStaging => environment == Environment.staging;
+  bool get isProduction => environment == Environment.production;
 
-  static String get apiHost {
+  /// Platform-appropriate API base URL.
+  String get apiBaseUrl => kIsWeb ? webApiUrl : mobileApiUrl;
+
+  String get apiHost {
     if (kIsWeb && webApiUrl.isEmpty) {
       return Uri.base.host.toLowerCase();
     }
-
     return Uri.parse(apiBaseUrl).host.toLowerCase();
   }
 
-  /// LiveKit configuration
-  static String? get liveKitUrl {
-    return dotenv.env['LIVEKIT_URL'];
+  static AppConfig? _instance;
+
+  /// The active app config. Must be assigned (via [build] or directly in
+  /// tests) before access.
+  static AppConfig get instance {
+    final i = _instance;
+    if (i == null) {
+      throw StateError(
+        'AppConfig.instance accessed before initialization. Call '
+        'AppConfig.build() at startup or assign a test instance.',
+      );
+    }
+    return i;
   }
 
-  /// Maximum PIN attempts before reset
-  static int get maxPinAttempts {
-    return int.tryParse(dotenv.env['MAX_PIN_ATTEMPTS'] ?? '5') ?? 5;
-  }
+  static set instance(AppConfig config) => _instance = config;
 
-  /// Vapid Key used for push notifications on the web.
-  static String? get vapidKey {
-    return dotenv.env['VAPID_KEY'];
-  }
-
-  static bool get enableAnalytics {
-    if (kDebugMode) return false;
-    return dotenv.env['ENABLE_ANALYTICS']?.toLowerCase() != 'false';
-  }
-
-  static String? get sentryDsn {
-    return dotenv.env['SENTRY_DSN'];
-  }
-
-  static String? get posthogApiKey {
-    return dotenv.env['POSTHOG_API_KEY'];
-  }
-
-  static String get posthogHost {
-    // or EU Host: 'https://eu.i.posthog.com'
-    return dotenv.env['POSTHOG_HOST'] ?? 'https://us.i.posthog.com';
-  }
-
-  static Uri get privacyPolicyUrl {
-    return Uri.parse(
-      dotenv.env['PRIVACY_POLICY_URL'] ?? 'https://www.totem.org/privacy/',
-    );
-  }
-
-  static Uri get termsOfServiceUrl {
-    return Uri.parse(
-      dotenv.env['TERMS_OF_SERVICE_URL'] ?? 'https://www.totem.org/tos/',
-    );
-  }
-
-  static Uri get communityGuidelinesUrl {
-    return Uri.parse(
-      dotenv.env['COMMUNITY_GUIDELINES_URL'] ??
-          'https://www.totem.org/guidelines/',
-    );
+  /// Loads `.env` from the asset bundle and builds a validated config.
+  static Future<AppConfig> build() async {
+    await dotenv.load();
+    return AppConfig._fromMap(dotenv.env);
   }
 }

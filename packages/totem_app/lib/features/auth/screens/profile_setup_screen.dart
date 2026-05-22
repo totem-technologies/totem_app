@@ -236,7 +236,7 @@ class _GuidelinesTab extends StatelessWidget {
                 ),
                 recognizer: TapGestureRecognizer()
                   ..onTap = () async {
-                    final url = AppConfig.communityGuidelinesUrl;
+                    final url = AppConfig.instance.communityGuidelinesUrl;
                     if (await canLaunchUrl(url)) {
                       await launchUrl(
                         url,
