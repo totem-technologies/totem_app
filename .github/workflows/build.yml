@@ -123,13 +123,13 @@ jobs:
           google_service_plist: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
           flavor: ${{ matrix.flavor }}
 
-      - name: Install dependencies for totem_core
-        working-directory: ./packages/totem_core
-        run: flutter pub get
+      # - name: Install dependencies for totem_core
+      #   working-directory: ./packages/totem_core
+      #   run: flutter pub get
 
-      - name: Install dependencies for totem_app
-        working-directory: ./packages/totem_app
-        run: flutter pub get
+      # - name: Install dependencies for totem_app
+      #   working-directory: ./packages/totem_app
+      #   run: flutter pub get
 
       - name: Build IPA
         working-directory: ./packages/totem_app
