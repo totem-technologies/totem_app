@@ -134,14 +134,8 @@ class AnalyticsService {
   }
 
   bool _shouldLog() {
-    if (!_isInitialized || kDebugMode) {
-      return false;
-    }
-
-    if (!AppConfig.instance.analyticsEnabled) {
-      logger.i('📊 Analytics disabled by configuration');
-      return false;
-    }
+    if (!_isInitialized) return false;
+    if (!AppConfig.instance.analyticsEnabled) return false;
 
     if (AppConfig.instance.posthogApiKey == null ||
         AppConfig.instance.posthogApiKey!.isEmpty) {

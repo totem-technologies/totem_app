@@ -23,13 +23,13 @@ enum Environment {
   production;
 
   static Environment parse(String? value) {
-    if (value == null || value.isEmpty) return Environment.production;
     for (final env in Environment.values) {
       if (env.name == value) return env;
     }
     throw ConfigError(
-      "ENVIRONMENT='$value' is not one of: "
-      '${Environment.values.map((e) => e.name).join(', ')}',
+      'ENVIRONMENT must be one of '
+      '${Environment.values.map((e) => e.name).join(', ')} '
+      '(got: ${value == null ? 'unset' : "'$value'"})',
     );
   }
 }
@@ -59,12 +59,10 @@ class AppConfig {
   });
 
   /// Parses an `.env`-formatted string and builds a validated config.
-  /// Intended for tests and the CI .env validator.
+  /// Uses a local [DotEnv] instance — does not touch the global singleton.
   factory AppConfig.parse(String envString) {
-    dotenv
-      ..clean()
-      ..loadFromString(envString: envString);
-    return AppConfig._fromMap(dotenv.env);
+    final env = DotEnv()..loadFromString(envString: envString);
+    return AppConfig._fromMap(env.env);
   }
 
   factory AppConfig._fromMap(Map<String, String> env) {
@@ -129,8 +127,6 @@ class AppConfig {
 
   bool get isDevelopment =>
       environment == Environment.development || kDebugMode;
-  bool get isStaging => environment == Environment.staging;
-  bool get isProduction => environment == Environment.production;
 
   /// Platform-appropriate API base URL.
   String get apiBaseUrl => kIsWeb ? webApiUrl : mobileApiUrl;
@@ -160,8 +156,10 @@ class AppConfig {
   static set instance(AppConfig config) => _instance = config;
 
   /// Loads `.env` from the asset bundle and builds a validated config.
+  /// Caller must ensure a `WidgetsBinding` is initialized first.
   static Future<AppConfig> build() async {
-    await dotenv.load();
-    return AppConfig._fromMap(dotenv.env);
+    final env = DotEnv();
+    await env.load();
+    return AppConfig._fromMap(env.env);
   }
 }

@@ -22,10 +22,14 @@ Future<void> sharedMain(
   required FirebaseOptions firebaseOptions,
   List<Override> providerOverrides = const [],
 }) async {
+  // Install Sentry's binding before anything else triggers binding init
+  // (e.g. AppConfig.build via rootBundle). SentryWidgetsFlutterBinding is
+  // a no-op if a different WidgetsBinding has already been created, so
+  // its frame-timing instrumentation requires being first.
+  SentryWidgetsFlutterBinding.ensureInitialized();
   AppConfig.instance = await AppConfig.build();
 
   try {
-    SentryWidgetsFlutterBinding.ensureInitialized();
     await Firebase.initializeApp(options: firebaseOptions);
     await init();
 

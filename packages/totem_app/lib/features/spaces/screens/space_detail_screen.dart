@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
@@ -631,10 +630,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   // ── Actions ──────────────────────────────────────────────────
 
   Future<void> _attend(SessionDetailSchema event) async {
-    if (_attending ||
-        _loading ||
-        (kDebugMode && AppConfig.instance.isProduction) ||
-        !mounted) {
+    if (_attending || _loading || !mounted) {
       return;
     }
     setState(() => _loading = true);
