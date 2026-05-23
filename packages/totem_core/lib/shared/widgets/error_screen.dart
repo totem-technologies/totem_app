@@ -45,7 +45,8 @@ class _ErrorScreenState extends State<ErrorScreen> {
         widget.showHomeButton ?? ErrorHandler.is404(widget.error);
 
     return Scaffold(
-      appBar: widget.hideAppBar || (Scaffold.maybeOf(context)?.hasAppBar ?? false)
+      appBar:
+          widget.hideAppBar || (Scaffold.maybeOf(context)?.hasAppBar ?? false)
           ? null
           : AppBar(
               leading: showHomeButton

@@ -24,7 +24,8 @@ class ErrorHandler {
       logger.e(message, error: error, stackTrace: stackTrace);
     }
 
-    if (AppConfig.instance.sentryDsn != null && AppConfig.instance.sentryDsn!.isNotEmpty) {
+    if (AppConfig.instance.sentryDsn != null &&
+        AppConfig.instance.sentryDsn!.isNotEmpty) {
       Sentry.captureException(
         error,
         stackTrace: stackTrace,

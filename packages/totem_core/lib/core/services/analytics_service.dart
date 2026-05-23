@@ -31,7 +31,8 @@ class AnalyticsService {
     try {
       logger.i('📊 Initializing analytics service');
 
-      if (AppConfig.instance.posthogApiKey == null || AppConfig.instance.posthogApiKey!.isEmpty) {
+      if (AppConfig.instance.posthogApiKey == null ||
+          AppConfig.instance.posthogApiKey!.isEmpty) {
         logger.w(
           '📊 PostHog API key is not set. Analytics will not be logged.',
         );
@@ -142,7 +143,8 @@ class AnalyticsService {
       return false;
     }
 
-    if (AppConfig.instance.posthogApiKey == null || AppConfig.instance.posthogApiKey!.isEmpty) {
+    if (AppConfig.instance.posthogApiKey == null ||
+        AppConfig.instance.posthogApiKey!.isEmpty) {
       logger.w('📊 PostHog API key is not set. Analytics will not be logged.');
       return false;
     }

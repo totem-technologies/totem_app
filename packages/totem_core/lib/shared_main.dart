@@ -35,9 +35,7 @@ Future<void> sharedMain(
         observers: [ObserverService()],
         overrides: providerOverrides,
       );
-      await container
-          .read(authControllerProvider.notifier)
-          .checkExistingAuth();
+      await container.read(authControllerProvider.notifier).checkExistingAuth();
       runApp(
         UncontrolledProviderScope(
           container: container,

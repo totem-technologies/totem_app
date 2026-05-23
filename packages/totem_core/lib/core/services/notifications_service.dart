@@ -225,7 +225,9 @@ class NotificationsService {
   }
 
   Future<String?> get fcmToken {
-    return FirebaseMessaging.instance.getToken(vapidKey: AppConfig.instance.vapidKey);
+    return FirebaseMessaging.instance.getToken(
+      vapidKey: AppConfig.instance.vapidKey,
+    );
   }
 
   Future<void> requestPermissions() {
