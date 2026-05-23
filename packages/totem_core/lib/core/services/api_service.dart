@@ -25,7 +25,7 @@ final apiServiceProvider = Provider<ClientApi>((ref) {
   return ClientApi(
     ApiConfig(
       client: DioApiClient(
-        baseUrl: Uri.parse(AppConfig.instance.mobileApiUrl),
+        baseUrl: Uri.parse(AppConfig.instance.apiUrl),
         inner: dio,
       ),
       // timeout: Duration(seconds: 10), // or use a single overall deadline here

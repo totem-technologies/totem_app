@@ -39,8 +39,10 @@ runs:
       run: |
         tee packages/totem_app/.env packages/totem_web/.env > /dev/null <<'EOF'
         ENVIRONMENT="staging"
-        MOBILE_API_URL="https://totem.kbl.io"
+        API_URL="https://totem.kbl.io"
         LIVEKIT_URL="wss://totem-d7esbgcp.livekit.cloud"
+        SENTRY_DSN="https://66cc97ae272344978f48840710f857a0@o1324443.ingest.us.sentry.io/6582849"
+        POSTHOG_API_KEY="phc_OJCztWvtlN5scoDe58jLipnOTCBugeidvZlni3FIy9z"
         EOF
 
     - name: Write .env (production)
@@ -49,8 +51,10 @@ runs:
       run: |
         tee packages/totem_app/.env packages/totem_web/.env > /dev/null <<'EOF'
         ENVIRONMENT="production"
-        MOBILE_API_URL="https://www.totem.org"
+        API_URL="https://www.totem.org"
         LIVEKIT_URL="wss://totem-d7esbgcp.livekit.cloud"
+        SENTRY_DSN="https://66cc97ae272344978f48840710f857a0@o1324443.ingest.us.sentry.io/6582849"
+        POSTHOG_API_KEY="phc_OJCztWvtlN5scoDe58jLipnOTCBugeidvZlni3FIy9z"
         EOF
 
     - name: Decode firebase_options.dart (totem_app)

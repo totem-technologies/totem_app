@@ -13,8 +13,7 @@ import 'package:totem_core/core/config/app_config.dart';
 /// reading specific config values (e.g. `liveKitUrl`).
 void setupAppConfig({
   Environment environment = Environment.production,
-  String mobileApiUrl = 'https://test.example.com/',
-  String webApiUrl = '',
+  String apiUrl = 'https://test.example.com/',
   String liveKitUrl = 'wss://test.livekit.cloud',
   int maxPinAttempts = 5,
   String? vapidKey,
@@ -28,8 +27,7 @@ void setupAppConfig({
 }) {
   AppConfig.instance = AppConfig(
     environment: environment,
-    mobileApiUrl: mobileApiUrl,
-    webApiUrl: webApiUrl,
+    apiUrl: apiUrl,
     liveKitUrl: liveKitUrl,
     maxPinAttempts: maxPinAttempts,
     vapidKey: vapidKey,

@@ -44,8 +44,7 @@ enum Environment {
 class AppConfig {
   const AppConfig({
     required this.environment,
-    required this.mobileApiUrl,
-    required this.webApiUrl,
+    required this.apiUrl,
     required this.liveKitUrl,
     required this.maxPinAttempts,
     required this.vapidKey,
@@ -67,30 +66,20 @@ class AppConfig {
 
   factory AppConfig._fromMap(Map<String, String> env) {
     final environment = Environment.parse(env['ENVIRONMENT']);
-    final isDev = environment == Environment.development;
+
+    final apiUrl = env['API_URL'];
+    if (apiUrl == null || apiUrl.isEmpty) {
+      throw ConfigError('API_URL must be set');
+    }
 
     final liveKitUrl = env['LIVEKIT_URL'];
     if (liveKitUrl == null || liveKitUrl.isEmpty) {
       throw ConfigError('LIVEKIT_URL must be set');
     }
 
-    final webApiUrl = env['WEB_API_URL'] ?? '';
-    if (kIsWeb && !isDev && webApiUrl.isEmpty) {
-      throw ConfigError(
-        'WEB_API_URL must be set for non-development web builds',
-      );
-    }
-
-    final mobileApiUrl =
-        env['MOBILE_API_URL'] ??
-        (environment == Environment.staging || isDev
-            ? 'https://totem.kbl.io/'
-            : 'https://www.totem.org/');
-
     return AppConfig(
       environment: environment,
-      mobileApiUrl: mobileApiUrl,
-      webApiUrl: webApiUrl,
+      apiUrl: apiUrl,
       liveKitUrl: liveKitUrl,
       maxPinAttempts: int.tryParse(env['MAX_PIN_ATTEMPTS'] ?? '') ?? 5,
       vapidKey: env['VAPID_KEY'],
@@ -112,8 +101,7 @@ class AppConfig {
   }
 
   final Environment environment;
-  final String mobileApiUrl;
-  final String webApiUrl;
+  final String apiUrl;
   final String liveKitUrl;
   final int maxPinAttempts;
   final String? vapidKey;
@@ -128,15 +116,7 @@ class AppConfig {
   bool get isDevelopment =>
       environment == Environment.development || kDebugMode;
 
-  /// Platform-appropriate API base URL.
-  String get apiBaseUrl => kIsWeb ? webApiUrl : mobileApiUrl;
-
-  String get apiHost {
-    if (kIsWeb && webApiUrl.isEmpty) {
-      return Uri.base.host.toLowerCase();
-    }
-    return Uri.parse(apiBaseUrl).host.toLowerCase();
-  }
+  String get apiHost => Uri.parse(apiUrl).host.toLowerCase();
 
   static AppConfig? _instance;
 

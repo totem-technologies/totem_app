@@ -180,7 +180,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                     ShareParams(
                                       uri:
                                           Uri.parse(
-                                                AppConfig.instance.apiBaseUrl,
+                                                AppConfig.instance.apiUrl,
                                               )
                                               .resolve(
                                                 '/spaces/event/${space.slug}',
@@ -1361,7 +1361,7 @@ class _AttendingDialogState extends State<AttendingDialog> {
                           final box = context.findRenderObject() as RenderBox?;
                           await SharePlus.instance.share(
                             ShareParams(
-                              uri: Uri.parse(AppConfig.instance.apiBaseUrl)
+                              uri: Uri.parse(AppConfig.instance.apiUrl)
                                   .resolve('/spaces/event/${widget.eventSlug}')
                                   .resolve('?utm_source=app&utm_medium=share'),
                               sharePositionOrigin: box != null
