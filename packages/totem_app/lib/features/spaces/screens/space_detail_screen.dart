@@ -178,17 +178,14 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                       context.findRenderObject() as RenderBox?;
                                   await SharePlus.instance.share(
                                     ShareParams(
-                                      uri:
-                                          Uri.parse(
-                                                AppConfig.instance.apiUrl,
-                                              )
-                                              .resolve(
-                                                '/spaces/event/${space.slug}',
-                                              )
-                                              .resolve(
-                                                '?utm_source=app'
-                                                '&utm_medium=share',
-                                              ),
+                                      uri: Uri.parse(AppConfig.instance.apiUrl)
+                                          .resolve(
+                                            '/spaces/event/${space.slug}',
+                                          )
+                                          .resolve(
+                                            '?utm_source=app'
+                                            '&utm_medium=share',
+                                          ),
                                       sharePositionOrigin: box != null
                                           ? box.localToGlobal(Offset.zero) &
                                                 box.size
