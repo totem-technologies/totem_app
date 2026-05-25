@@ -43,68 +43,72 @@ class _MessageInputBarState extends State<MessageInputBar> {
         color: Color(0xFFFAFAF7),
         border: Border(top: BorderSide(color: Color(0xFFE8E5E0))),
       ),
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: 16,
-        vertical: 9,
-      ),
       child: SafeArea(
         top: false,
-        child: Row(
-          children: [
-            Expanded(
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 45),
-                padding: const EdgeInsetsDirectional.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F0),
-                  border: Border.all(color: const Color(0xFFE8E5E0)),
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: TextField(
+        left: false,
+        right: false,
+        child: Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 8, 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: TextFormField(
                   controller: _controller,
-                  maxLines: null,
+                  maxLines: 1,
                   textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _submit(),
+                  onFieldSubmitted: (_) => _submit(),
                   style: const TextStyle(
                     color: Color(0xFF1F293B),
                     fontSize: 14.5,
                     fontWeight: FontWeight.w400,
                   ),
-                  decoration: const InputDecoration(
-                    isCollapsed: true,
-                    border: InputBorder.none,
+                  decoration: InputDecoration(
                     hintText: 'Type a message...',
-                    hintStyle: TextStyle(
+                    hintStyle: const TextStyle(
                       color: Color(0xFF8C8A82),
                       fontSize: 14.5,
                       fontWeight: FontWeight.w400,
                     ),
+                    filled: true,
+                    fillColor: const Color(0xFFF5F5F0),
+                    contentPadding: const EdgeInsetsDirectional.fromSTEB(
+                      20,
+                      12,
+                      16,
+                      12,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25),
+                      borderSide: const BorderSide(color: Color(0xFFE8E5E0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25),
+                      borderSide: const BorderSide(color: Color(0xFFE8E5E0)),
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: _hasText ? _submit : null,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                width: 45,
-                height: 45,
-                decoration: BoxDecoration(
-                  color: _hasText ? AppTheme.mauve : const Color(0xFFD0CDCA),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.arrow_forward_rounded,
-                  color: Colors.white,
-                  size: 22,
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _hasText ? _submit : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 45,
+                  height: 45,
+                  decoration: BoxDecoration(
+                    color: _hasText ? AppTheme.mauve : const Color(0xFFD0CDCA),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
