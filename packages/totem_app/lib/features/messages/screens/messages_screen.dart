@@ -6,6 +6,8 @@ import 'package:totem_core/features/messages/models/conversation.dart';
 import 'package:totem_core/features/messages/providers/conversations_provider.dart';
 import 'package:totem_core/shared/router.dart';
 
+import 'package:totem_core/shared/widgets/user_avatar.dart';
+
 import '../widgets/chat_card.dart';
 import '../widgets/message_search_field.dart';
 
@@ -78,8 +80,113 @@ class MessagesScreen extends ConsumerWidget {
               error: (_, __) => const Center(
                 child: Text('Could not load messages.'),
               ),
-              data: (conversations) => _ConversationList(
-                conversations: conversations,
+              data: (conversations) => conversations.isEmpty
+                  ? const _EmptyState()
+                  : _ConversationList(conversations: conversations),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
+  static const _keepers = [
+    (name: 'James Moreau', seed: 'james-moreau'),
+    (name: 'Sofia Reyes', seed: 'sofia-reyes'),
+    (name: 'Lena Fischer', seed: 'lena-fischer'),
+    (name: 'Omar Khalil', seed: 'omar-khalil'),
+    (name: 'Dr. Aisha Patel', seed: 'aisha-patel'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Column(
+              children: [
+                Text(
+                  'Start a conversation',
+                  style: TextStyle(
+                    color: Color(0xFF1F293B),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Recommended Keepers for you',
+                  style: TextStyle(
+                    color: Color(0xFF8C8C81),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 15),
+            ..._keepers.map(
+              (k) => _KeeperCard(name: k.name, seed: k.seed),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _KeeperCard extends StatelessWidget {
+  const _KeeperCard({required this.name, required this.seed});
+
+  final String name;
+  final String seed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        children: [
+          UserAvatar.custom(seed: seed, radius: 24, borderWidth: 0),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              name,
+              style: const TextStyle(
+                color: Color(0xFF1F293B),
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 14,
+              vertical: 7,
+            ),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF2EBF7),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              'Message',
+              style: TextStyle(
+                color: Color(0xFF987AA5),
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
