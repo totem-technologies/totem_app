@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/messages/models/conversation.dart';
+import 'package:totem_core/features/messages/providers/conversations_provider.dart';
+import 'package:totem_core/shared/router.dart';
 
 import '../widgets/chat_card.dart';
 import '../widgets/message_search_field.dart';
@@ -8,45 +12,10 @@ import '../widgets/message_search_field.dart';
 class MessagesScreen extends ConsumerWidget {
   const MessagesScreen({super.key});
 
-  static const List<_MockChat> _mockChats = [
-    _MockChat(
-      name: 'Vanessa',
-      lastMessage: 'That really means a lot to me, thank you...',
-      timestamp: '2m ago',
-      unreadCount: 2,
-      avatarColor: Color(0xFFB6E07A),
-      avatarSecondary: Color(0xFFE7E36A),
-    ),
-    _MockChat(
-      name: 'Marcus',
-      lastMessage: "You: I'll check in with you tomorrow",
-      timestamp: '1h ago',
-      avatarColor: Color(0xFF9BC0DD),
-    ),
-    _MockChat(
-      name: 'Sarah',
-      lastMessage: 'You: Take care of yourself this weekend',
-      timestamp: 'Yesterday',
-      avatarColor: Color(0xFFF5E3E8),
-    ),
-    _MockChat(
-      name: 'Jordan',
-      lastMessage: '3 months sober today! Wanted to share...',
-      timestamp: 'Mar 21',
-      avatarColor: Color(0xFFE85A2B),
-      avatarSecondary: Color(0xFFFFC857),
-    ),
-    _MockChat(
-      name: 'Alex',
-      lastMessage: 'Let me know if you ever want to talk again',
-      timestamp: 'Mar 18',
-      avatarColor: Color(0xFF8B5CF6),
-    ),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final asyncConversations = ref.watch(conversationsProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.cream,
@@ -103,22 +72,25 @@ class MessagesScreen extends ConsumerWidget {
                 child: MessageSearchField(),
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 20),
-              sliver: SliverList.separated(
-                itemCount: _mockChats.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final chat = _mockChats[index];
-                  return ChatCard(
-                    name: chat.name,
-                    lastMessage: chat.lastMessage,
-                    timestamp: chat.timestamp,
-                    unreadCount: chat.unreadCount,
-                    avatarColor: chat.avatarColor,
-                    avatarSecondary: chat.avatarSecondary,
-                  );
-                },
+            asyncConversations.when(
+              loading: () => const SliverToBoxAdapter(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+              ),
+              error: (_, __) => const SliverToBoxAdapter(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Text('Could not load messages.'),
+                  ),
+                ),
+              ),
+              data: (conversations) => _ConversationList(
+                conversations: conversations,
               ),
             ),
           ],
@@ -128,20 +100,40 @@ class MessagesScreen extends ConsumerWidget {
   }
 }
 
-class _MockChat {
-  const _MockChat({
-    required this.name,
-    required this.lastMessage,
-    required this.timestamp,
-    required this.avatarColor,
-    this.unreadCount = 0,
-    this.avatarSecondary,
-  });
+class _ConversationList extends StatelessWidget {
+  const _ConversationList({required this.conversations});
 
-  final String name;
-  final String lastMessage;
-  final String timestamp;
-  final int unreadCount;
-  final Color avatarColor;
-  final Color? avatarSecondary;
+  final List<Conversation> conversations;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverPadding(
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 20),
+      sliver: SliverList.separated(
+        itemCount: conversations.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final conv = conversations[index];
+          final lastMsg = conv.lastMessage;
+          final preview = lastMsg == null
+              ? ''
+              : lastMsg.isOwn
+              ? 'You: ${lastMsg.text}'
+              : lastMsg.text;
+
+          return ChatCard(
+            name: conv.peer.name ?? 'Unknown',
+            lastMessage: preview,
+            timestamp: conv.updatedAt,
+            avatarSeed: conv.peer.profileAvatarSeed,
+            unreadCount: conv.unreadCount,
+            onTap: () => context.push(
+              RouteNames.messageThread(conv.id),
+              extra: conv,
+            ),
+          );
+        },
+      ),
+    );
+  }
 }

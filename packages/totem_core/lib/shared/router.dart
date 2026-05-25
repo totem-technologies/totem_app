@@ -37,6 +37,8 @@ class RouteNames {
   static String blogPost(String slug) => '/blog/$slug';
 
   static const messages = '/messages';
+  static String messageThread(String conversationId) =>
+      '/messages/$conversationId';
 
   static String session(String slug) => '/session/$slug';
 

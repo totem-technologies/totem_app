@@ -6,6 +6,7 @@ import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/widgets/offline_indicator.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/features/messages/models/conversation.dart';
 import 'package:totem_core/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_core/shared/logger.dart';
@@ -22,6 +23,7 @@ import '../features/blog/screens/blog_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/home/widgets/join_ongoing_session_card.dart';
 import '../features/messages/screens/messages_screen.dart';
+import '../features/messages/screens/thread_screen.dart';
 import '../features/profile/screens/profile_details_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../features/spaces/screens/event_deep_link_screen.dart';
@@ -376,6 +378,20 @@ class AppTotemRouter extends TotemRouter {
                         },
                     transitionDuration: const Duration(milliseconds: 200),
                   ),
+                  routes: [
+                    GoRoute(
+                      path: ':conversationId',
+                      builder: (context, state) {
+                        final conversationId =
+                            state.pathParameters['conversationId'] ?? '';
+                        final conversation = state.extra as Conversation;
+                        return ThreadScreen(
+                          conversationId: conversationId,
+                          conversation: conversation,
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),

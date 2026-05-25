@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:timeago/timeago.dart' as timeago;
 import 'package:totem_core/core/config/theme.dart';
 
 import 'message_avatar.dart';
@@ -9,22 +10,23 @@ class ChatCard extends StatelessWidget {
     required this.name,
     required this.lastMessage,
     required this.timestamp,
-    required this.avatarColor,
+    required this.avatarSeed,
     this.unreadCount = 0,
-    this.avatarSecondary,
     this.onTap,
   });
 
   final String name;
   final String lastMessage;
-  final String timestamp;
+  final DateTime timestamp;
+  final String? avatarSeed;
   final int unreadCount;
-  final Color avatarColor;
-  final Color? avatarSecondary;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final avatarColor = MessageAvatar.colorFromSeed(avatarSeed);
+    final timestampLabel = timeago.format(timestamp, allowFromNow: true);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -39,7 +41,7 @@ class ChatCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            MessageAvatar(color: avatarColor, secondary: avatarSecondary),
+            MessageAvatar(color: avatarColor),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -58,7 +60,7 @@ class ChatCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        timestamp,
+                        timestampLabel,
                         style: TextStyle(
                           color: unreadCount > 0
                               ? AppTheme.mauve

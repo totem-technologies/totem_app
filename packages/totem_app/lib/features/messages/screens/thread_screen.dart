@@ -1,88 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/messages/models/conversation.dart';
+import 'package:totem_core/features/messages/models/message.dart';
+import 'package:totem_core/features/messages/providers/thread_provider.dart';
 
 import '../widgets/day_separator.dart';
 import '../widgets/message_avatar.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/message_input_bar.dart';
 
-class ThreadScreen extends StatelessWidget {
-  const ThreadScreen({super.key});
+class ThreadScreen extends ConsumerWidget {
+  const ThreadScreen({
+    super.key,
+    required this.conversationId,
+    required this.conversation,
+  });
 
-  static const _messages = [
-    _MockMessage(
-      text: 'That really means a lot to me, thank you for sharing',
-      timestamp: '10:34 AM',
-      isOwn: false,
-    ),
-    _MockMessage(
-      text:
-          "I hear you. I've been there so many times. You're not alone, I promise.",
-      timestamp: '10:33 AM',
-      isOwn: false,
-    ),
-    _MockMessage(
-      text:
-          "Honestly, today's been tough. But talking helps. It's nice not to feel alone in it.",
-      timestamp: '10:31 AM',
-      isOwn: true,
-    ),
-    _MockMessage(
-      text:
-          'Totally. Some days are harder than others. How are you doing today?',
-      timestamp: '10:28 AM',
-      isOwn: false,
-    ),
-    _MockMessage(
-      text:
-          "Hi Vanessa! Thanks for reaching out. It's nice to connect with someone who gets it.",
-      timestamp: '10:25 AM',
-      isOwn: true,
-    ),
-    _MockMessage(
-      text: 'Hey! I saw your profile and I think we have a lot in common.',
-      timestamp: '10:23 AM',
-      isOwn: false,
-    ),
-  ];
+  final String conversationId;
+  final Conversation conversation;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncMessages = ref.watch(threadNotifierProvider(conversationId));
+
     return Scaffold(
       backgroundColor: AppTheme.cream,
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
-            const _ThreadHeader(
-              name: 'Vanessa',
-              avatarColor: Color(0xFFB6E07A),
-              avatarSecondary: Color(0xFFE7E36A),
-            ),
+            _ThreadHeader(conversation: conversation),
             Expanded(
-              child: ListView.builder(
-                reverse: true,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 8,
+              child: asyncMessages.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (_, __) => const Center(
+                  child: Text('Could not load messages.'),
                 ),
-                itemCount: _messages.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == _messages.length) {
-                    return const DaySeparator(label: 'Today');
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: MessageBubble(
-                      text: _messages[index].text,
-                      timestamp: _messages[index].timestamp,
-                      isOwn: _messages[index].isOwn,
-                    ),
-                  );
-                },
+                data: (messages) => _MessageList(messages: messages),
               ),
             ),
-            const MessageInputBar(),
+            MessageInputBar(
+              onSend: (text) => ref
+                  .read(threadNotifierProvider(conversationId).notifier)
+                  .send(text),
+            ),
           ],
         ),
       ),
@@ -90,19 +53,45 @@ class ThreadScreen extends StatelessWidget {
   }
 }
 
-class _ThreadHeader extends StatelessWidget {
-  const _ThreadHeader({
-    required this.name,
-    required this.avatarColor,
-    this.avatarSecondary,
-  });
+class _MessageList extends StatelessWidget {
+  const _MessageList({required this.messages});
 
-  final String name;
-  final Color avatarColor;
-  final Color? avatarSecondary;
+  final List<Message> messages;
 
   @override
   Widget build(BuildContext context) {
+    return ListView.builder(
+      reverse: true,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      itemCount: messages.length + 1,
+      itemBuilder: (context, index) {
+        if (index == messages.length) {
+          return const DaySeparator(label: 'Today');
+        }
+        final msg = messages[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: MessageBubble(
+            text: msg.text,
+            timestamp: DateFormat.jm().format(msg.sentAt),
+            isOwn: msg.isOwn,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ThreadHeader extends StatelessWidget {
+  const _ThreadHeader({required this.conversation});
+
+  final Conversation conversation;
+
+  @override
+  Widget build(BuildContext context) {
+    final peer = conversation.peer;
+    final avatarColor = MessageAvatar.colorFromSeed(peer.profileAvatarSeed);
+
     return Container(
       height: 56,
       color: const Color(0xFFFAFAF7),
@@ -112,15 +101,20 @@ class _ThreadHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          MessageAvatar(
-            color: avatarColor,
-            secondary: avatarSecondary,
-            size: 46,
+          GestureDetector(
+            onTap: () => Navigator.of(context).maybePop(),
+            child: const Icon(
+              Icons.arrow_back_ios_new,
+              size: 18,
+              color: Color(0xFF1F293B),
+            ),
           ),
-          const SizedBox(width: 15),
+          const SizedBox(width: 12),
+          MessageAvatar(color: avatarColor, size: 34),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
-              name,
+              peer.name ?? 'Unknown',
               style: const TextStyle(
                 color: Color(0xFF1F293B),
                 fontSize: 17,
@@ -140,16 +134,4 @@ class _ThreadHeader extends StatelessWidget {
       ),
     );
   }
-}
-
-class _MockMessage {
-  const _MockMessage({
-    required this.text,
-    required this.timestamp,
-    required this.isOwn,
-  });
-
-  final String text;
-  final String timestamp;
-  final bool isOwn;
 }
