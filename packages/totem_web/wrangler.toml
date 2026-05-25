@@ -1,0 +1,47 @@
+# Cloudflare Workers config for the Totem web client.
+#
+# This is an assets-only Worker (no server script). It is the CDN for the web
+# app: it serves the compiled Flutter bundle (build/web) directly at its own
+# origin. The Flutter loader is pointed here via the ASSET_BASE web-define (see
+# .github/actions/build-web and web/flutter_bootstrap.js), so the browser fetches
+# main.dart.js / canvaskit / wasm / assets straight from this deployment.
+#
+# The Django origin owns the HTML document at /room/ (it proxies the page from
+# this Worker so it can be patched) and all client-side routing. The Worker only
+# serves static files, so not_found_handling is "none": a missing asset returns
+# 404 rather than masquerading index.html as e.g. a .js file.
+#
+# Deploy is handled by .github/workflows/web.yml:
+#   wrangler deploy --env staging      (on tag push)
+#   wrangler deploy --env production   (on release published)
+#
+# Local:
+#   cd packages/totem_web
+#   flutter build web --wasm --base-href /room/ --web-define=ASSET_BASE=<this-worker-url>/
+#   npx wrangler deploy --env staging
+#
+# The account id is supplied via the CLOUDFLARE_ACCOUNT_ID env var in CI.
+# For local use, either export it or uncomment account_id below.
+# account_id = "TODO_CLOUDFLARE_ACCOUNT_ID"
+
+name = "totem-web"
+compatibility_date = "2025-05-25"
+
+[assets]
+directory = "./build/web"
+# Django serves the HTML and owns SPA routing; the Worker only serves real files.
+not_found_handling = "none"
+
+[env.staging]
+name = "totem-web-staging"
+# TODO(cloudflare): set a custom domain / route once DNS is ready.
+# Until then this deploys to totem-web-staging.<subdomain>.workers.dev, which is
+# what ASSET_BASE (vars.WEB_ASSET_BASE_STAGING) should point at.
+# routes = [{ pattern = "totem-cdn-staging.totem.org", custom_domain = true }]
+
+[env.production]
+name = "totem-web-production"
+# TODO(cloudflare): set a custom domain / route once DNS is ready.
+# Until then this deploys to totem-web-production.<subdomain>.workers.dev, which
+# is what ASSET_BASE (vars.WEB_ASSET_BASE_PRODUCTION) should point at.
+# routes = [{ pattern = "totem-cdn.totem.org", custom_domain = true }]

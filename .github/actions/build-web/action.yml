@@ -1,0 +1,39 @@
+name: "Build Web"
+description: >-
+  Builds the totem_web Flutter web bundle for hosting on Cloudflare. The app is
+  mounted at /room/ on the Django origin (--base-href), while its assets are
+  fetched directly from the Cloudflare CDN via Flutter's assetBase loader option
+  (the ASSET_BASE web-define, consumed by web/flutter_bootstrap.js).
+  Run `setup-environment` (which writes .env + firebase_options.dart) before this.
+
+inputs:
+  asset_base:
+    description: >-
+      Absolute URL the Flutter loader fetches assets from (main.dart.js,
+      canvaskit, wasm, assets/...). Should point at the Cloudflare deployment,
+      e.g. https://totem-web-staging.example.workers.dev/ . When empty, assets
+      load relative to the page (no CDN) — fine for PR build checks, not deploys.
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2.23.0
+      with:
+        channel: stable
+        cache: true
+
+    - name: Install dependencies
+      shell: bash
+      run: flutter pub get
+
+    # --base-href /room/ : app is served from /room/ on the Django origin.
+    # --web-define ASSET_BASE : where flutter_bootstrap.js loads assets from.
+    - name: Build web
+      shell: bash
+      working-directory: packages/totem_web
+      env:
+        ASSET_BASE: ${{ inputs.asset_base }}
+      run: flutter build web --wasm --base-href /room/ --web-define=ASSET_BASE="$ASSET_BASE"

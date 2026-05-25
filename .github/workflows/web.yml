@@ -1,0 +1,98 @@
+name: Web
+
+# Web CI/CD for the totem_web package, hosted on Cloudflare Workers.
+#
+# The app is mounted at /room/ on the Django origin. Django proxies (and patches)
+# the HTML document; the Cloudflare Worker serves every other asset as a CDN.
+# The bundle is built with --base-href /room/ for routing, and its assets are
+# fetched directly from the Worker via Flutter's assetBase (the ASSET_BASE
+# web-define). See .github/actions/build-web and packages/totem_web/wrangler.toml.
+#
+#   PR / push to main  -> build the staging web bundle (validation only, no deploy)
+#   push tag v*        -> build + deploy the STAGING environment
+#   release published  -> build + deploy the PRODUCTION environment
+#
+# Required repository secrets:
+#   FIREBASE_OPTIONS_B64    (existing) base64 firebase_options.dart
+#   CLOUDFLARE_API_TOKEN    (new)      token with Workers Scripts:Edit
+#   CLOUDFLARE_ACCOUNT_ID   (new)      Cloudflare account id
+# Required repository variables (public URLs the loader fetches assets from):
+#   WEB_ASSET_BASE_STAGING      (new)  e.g. https://totem-web-staging.<sub>.workers.dev/
+#   WEB_ASSET_BASE_PRODUCTION   (new)  e.g. https://totem-web-production.<sub>.workers.dev/
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: web-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  staging:
+    name: Web (staging)
+    runs-on: ubuntu-latest
+    # Runs on PRs, main, tags and manual dispatch. Production is handled
+    # separately by the release-published job below.
+    if: github.event_name != 'release'
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-environment
+        with:
+          firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
+          flavor: staging
+
+      - name: Build web
+        uses: ./.github/actions/build-web
+        with:
+          asset_base: ${{ vars.WEB_ASSET_BASE_STAGING }}
+
+      # Only deploy when a release tag is pushed. PRs and main builds stop at the
+      # build step above (validation that the web bundle still compiles).
+      - name: Deploy to Cloudflare Workers (staging)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: packages/totem_web
+          command: deploy --env staging
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  production:
+    name: Web (production)
+    runs-on: ubuntu-latest
+    # Promoting a draft GitHub release to published triggers production.
+    if: github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Build the exact commit the release tag points at.
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-environment
+        with:
+          firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
+          flavor: production
+
+      - name: Build web
+        uses: ./.github/actions/build-web
+        with:
+          asset_base: ${{ vars.WEB_ASSET_BASE_PRODUCTION }}
+
+      - name: Deploy to Cloudflare Workers (production)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: packages/totem_web
+          command: deploy --env production
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
