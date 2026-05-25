@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
@@ -24,63 +24,97 @@ abstract class SessionCuesAudioPlayer {
   void dispose();
 }
 
-class AudioplayersSessionCuesAudioPlayer implements SessionCuesAudioPlayer {
-  AudioplayersSessionCuesAudioPlayer() : _player = AudioPlayer();
-
-  final AudioPlayer _player;
-
-  @override
-  Future<void> setPlayerMode(PlayerMode mode) => _player.setPlayerMode(mode);
+// For now, we disabled audio player.
+class _SilentAudioPlayer implements SessionCuesAudioPlayer {
+  _SilentAudioPlayer();
 
   @override
-  Future<void> setReleaseMode(ReleaseMode mode) => _player.setReleaseMode(mode);
+  Future<void> setAudioContext(AudioContext context) async {}
 
   @override
-  Future<void> setAudioContext(AudioContext context) =>
-      _player.setAudioContext(context);
+  Future<void> setPlayerMode(PlayerMode mode) async {}
 
   @override
-  Future<void> stop() => _player.stop();
+  Future<void> setReleaseMode(ReleaseMode mode) async {}
 
   @override
-  Future<void> playAsset(String assetSourcePath) {
-    return _player.play(
-      AssetSource('packages/totem_core/assets/$assetSourcePath'),
-      volume: 0.5,
-    );
-  }
+  Future<void> stop() async {}
 
   @override
-  void dispose() {
-    _player.dispose();
-  }
+  Future<void> playAsset(String assetSourcePath) async {}
+
+  @override
+  void dispose() {}
 }
+
+// class AudioplayersSessionCuesAudioPlayer implements SessionCuesAudioPlayer {
+//   AudioplayersSessionCuesAudioPlayer() {
+//    _player = AudioPlayer();
+//    AudioCache.instance = AudioCache(prefix: 'packages/totem_core/assets/');
+//   }
+
+//   final AudioPlayer _player;
+
+//   @override
+//   Future<void> setPlayerMode(PlayerMode mode) => _player.setPlayerMode(mode);
+
+//   @override
+//   Future<void> setReleaseMode(ReleaseMode mode) => _player.setReleaseMode(mode);
+
+//   @override
+//   Future<void> setAudioContext(AudioContext context) =>
+//       _player.setAudioContext(context);
+
+//   @override
+//   Future<void> stop() => _player.stop();
+
+//   @override
+//   Future<void> playAsset(String assetSourcePath) {
+//     return _player.play(AssetSource(assetSourcePath), volume: 0.5);
+//   }
+
+//   @override
+//   void dispose() {
+//     _player.dispose();
+//   }
+// }
 
 class SessionCuesService {
   SessionCuesService({
     SessionCuesAudioPlayer? audioPlayer,
     SessionCuesHapticPulseCallback? pulseHaptic,
-  }) : _audioPlayer = audioPlayer ?? AudioplayersSessionCuesAudioPlayer(),
-       _pulseHaptic = pulseHaptic ?? defaultHapticPulse;
+  }) : _pulseHaptic = pulseHaptic ?? defaultHapticPulse,
+       _audioPlayer = audioPlayer;
 
   static Future<void> defaultHapticPulse() {
     // https://github.com/flutter/flutter/issues/157442
     if (kIsWeb) {
       return HapticFeedback.lightImpact();
     }
-    if (Platform.isIOS) {
-      return HapticFeedback.vibrate();
-    }
 
-    return HapticFeedback.lightImpact();
+    return HapticFeedback.heavyImpact();
   }
 
-  final SessionCuesAudioPlayer _audioPlayer;
+  SessionCuesAudioPlayer? _audioPlayer;
   final SessionCuesHapticPulseCallback _pulseHaptic;
   bool _configured = false;
+  Timer? _transitionCueDelayTimer;
 
-  Future<void> playSessionTransitionCue() {
-    return _playAsset(TotemAudioAssets.enterLeaveSessionRingtone);
+  Future<void> playSessionTransitionCue() async {
+    // Adding a delay before playing the session cue to ensure
+    // the audio plays isn't interfered with by any audio changes
+    //that may occur during session transitions.
+    _transitionCueDelayTimer?.cancel();
+    final completer = Completer<void>();
+    _transitionCueDelayTimer = Timer(const Duration(milliseconds: 1500), () {
+      _transitionCueDelayTimer = null;
+      _playAsset(TotemAudioAssets.enterLeaveSessionRingtone).whenComplete(() {
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      });
+    });
+    return completer.future;
   }
 
   Future<void> playTotemReceivedCue() {
@@ -102,9 +136,9 @@ class SessionCuesService {
 
     try {
       await _configurePlayer();
-      await _audioPlayer.stop();
+      await _audioPlayer?.stop();
       _isPlaying = true;
-      await _audioPlayer.playAsset(_toAssetSourcePath(assetPath));
+      await _audioPlayer?.playAsset(_toAssetSourcePath(assetPath));
     } catch (error, stackTrace) {
       logger.e(
         'Failed to play session feedback sound: $assetPath',
@@ -119,23 +153,28 @@ class SessionCuesService {
   Future<void> _configurePlayer() async {
     if (_configured) return;
 
-    await _audioPlayer.setPlayerMode(PlayerMode.lowLatency);
-    await _audioPlayer.setReleaseMode(ReleaseMode.stop);
-    await _audioPlayer.setAudioContext(
-      AudioContext(
-        iOS: AudioContextIOS(
-          category: AVAudioSessionCategory.playAndRecord,
-          options: const {
-            AVAudioSessionOptions.mixWithOthers,
-          },
+    _audioPlayer ??= _SilentAudioPlayer();
+
+    await _audioPlayer?.setPlayerMode(PlayerMode.lowLatency);
+    await _audioPlayer?.setReleaseMode(ReleaseMode.stop);
+
+    // Set audio context to preserve existing audio routing (speaker/headphones state)
+    // during session join/leave transitions.
+    if (!kIsWeb) {
+      await _audioPlayer?.setAudioContext(
+        AudioContext(
+          iOS: AudioContextIOS(
+            category: AVAudioSessionCategory.playback,
+            options: const {
+              AVAudioSessionOptions.mixWithOthers,
+            },
+          ),
+          android: const AudioContextAndroid(
+            audioFocus: AndroidAudioFocus.gainTransient,
+          ),
         ),
-        android: const AudioContextAndroid(
-          usageType: AndroidUsageType.media,
-          contentType: AndroidContentType.sonification,
-          audioFocus: AndroidAudioFocus.none,
-        ),
-      ),
-    );
+      );
+    }
 
     _configured = true;
   }
@@ -149,6 +188,8 @@ class SessionCuesService {
   }
 
   void dispose() {
-    _audioPlayer.dispose();
+    _transitionCueDelayTimer?.cancel();
+    _transitionCueDelayTimer = null;
+    _audioPlayer?.dispose();
   }
 }

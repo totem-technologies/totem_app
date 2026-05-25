@@ -54,14 +54,21 @@ void main() {
 
         expect(fakePlayer.playerModes, [PlayerMode.lowLatency]);
         expect(fakePlayer.releaseModes, [ReleaseMode.stop]);
-        expect(fakePlayer.audioContexts, hasLength(1));
         expect(
-          fakePlayer.audioContexts.single.iOS.category,
-          AVAudioSessionCategory.playAndRecord,
-        );
-        expect(
-          fakePlayer.audioContexts.single.android.usageType,
-          AndroidUsageType.media,
+          fakePlayer.audioContexts,
+          [
+            AudioContext(
+              iOS: AudioContextIOS(
+                category: AVAudioSessionCategory.playback,
+                options: const {
+                  AVAudioSessionOptions.mixWithOthers,
+                },
+              ),
+              android: const AudioContextAndroid(
+                audioFocus: AndroidAudioFocus.gainTransient,
+              ),
+            ),
+          ],
         );
         expect(fakePlayer.stopCallCount, 1);
         expect(
@@ -82,14 +89,21 @@ void main() {
 
         expect(fakePlayer.playerModes, [PlayerMode.lowLatency]);
         expect(fakePlayer.releaseModes, [ReleaseMode.stop]);
-        expect(fakePlayer.audioContexts, hasLength(1));
         expect(
-          fakePlayer.audioContexts.single.iOS.category,
-          AVAudioSessionCategory.playAndRecord,
-        );
-        expect(
-          fakePlayer.audioContexts.single.android.usageType,
-          AndroidUsageType.media,
+          fakePlayer.audioContexts,
+          [
+            AudioContext(
+              iOS: AudioContextIOS(
+                category: AVAudioSessionCategory.playback,
+                options: const {
+                  AVAudioSessionOptions.mixWithOthers,
+                },
+              ),
+              android: const AudioContextAndroid(
+                audioFocus: AndroidAudioFocus.gainTransient,
+              ),
+            ),
+          ],
         );
         expect(fakePlayer.stopCallCount, 2);
         expect(

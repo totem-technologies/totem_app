@@ -58,7 +58,7 @@ final class SessionControllerProvider
   }
 }
 
-String _$sessionControllerHash() => r'3714c039dc9966ec8fcc5247ee53b7cece1a0d16';
+String _$sessionControllerHash() => r'360f4ef01d4000865e90edb9c949c8148386d53e';
 
 final class SessionControllerFamily extends $Family
     with
@@ -123,7 +123,7 @@ final class SessionProvider
   }) : super(
          retry: null,
          name: r'sessionProvider',
-         isAutoDispose: false,
+         isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
@@ -168,7 +168,7 @@ final class SessionProvider
   }
 }
 
-String _$sessionHash() => r'35dc3013679bce73810ca76eac0830f12a88ab49';
+String _$sessionHash() => r'4a4910aff712ffe1b5f76b89f8495c0149817822';
 
 final class SessionFamily extends $Family
     with $FunctionalFamilyOverride<SessionRoomState, SessionOptions> {
@@ -178,7 +178,7 @@ final class SessionFamily extends $Family
         name: r'sessionProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
-        isAutoDispose: false,
+        isAutoDispose: true,
       );
 
   SessionProvider call(SessionOptions options) =>

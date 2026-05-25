@@ -10,6 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
@@ -169,6 +170,17 @@ void main() {
             (ref) => RoomScreen.receiving,
           ),
           sessionCuesServiceProvider.overrideWithValue(testCuesService),
+          userProfileProvider.overrideWith(
+            (ref, slug) => Future.value(
+              PublicUserSchema(
+                slug: slug,
+                name: 'Mocked User $slug',
+                profileAvatarType: ProfileAvatarTypeEnum.td,
+                circleCount: 0,
+                dateCreated: DateTime.now(),
+              ),
+            ),
+          ),
         ],
         child: const MaterialApp(
           home: Scaffold(

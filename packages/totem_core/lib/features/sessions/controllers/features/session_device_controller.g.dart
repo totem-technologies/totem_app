@@ -60,7 +60,7 @@ final class SessionDeviceControllerProvider
 }
 
 String _$sessionDeviceControllerHash() =>
-    r'ace1b7088066e34c72c5df593201b7d11e12a3db';
+    r'da5fd5e2265af9286b03b75dc7bbf26a705e275f';
 
 final class SessionDeviceControllerFamily extends $Family
     with

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_app/widgets/offline_indicator.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/app_config.dart';
@@ -215,7 +216,7 @@ class AppTotemRouter extends TotemRouter {
 
   @override
   GoRouter createRouter(WidgetRef ref) {
-    final authController = ref.read(authControllerProvider.notifier);
+    final authController = ref.read(mobileAuthControllerProvider);
 
     return GoRouter(
       navigatorKey: navigatorKey,

@@ -48,7 +48,7 @@ final class ListBlogPostsProvider
   }
 }
 
-String _$listBlogPostsHash() => r'de52e2909f6ae4b747002bfb1b4af9c345124ca5';
+String _$listBlogPostsHash() => r'd2124444c7054eb6cddd596c93ad999966a5e61a';
 
 @ProviderFor(blogPost)
 final blogPostProvider = BlogPostFamily._();
@@ -105,7 +105,7 @@ final class BlogPostProvider
   }
 }
 
-String _$blogPostHash() => r'13d6afaca22d70c976bf110103f9004627af4a6e';
+String _$blogPostHash() => r'35746266e671f0e14b173c437793acc1aabe27bd';
 
 final class BlogPostFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<BlogPostSchema>, String> {

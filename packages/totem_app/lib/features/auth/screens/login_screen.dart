@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/config/app_config.dart';
@@ -56,7 +57,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       await ref
-          .read(authControllerProvider.notifier)
+          .read(mobileAuthControllerProvider)
           .requestPin(_emailController.text.trim());
 
       if (mounted) {

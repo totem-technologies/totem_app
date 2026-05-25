@@ -78,6 +78,11 @@ enum SessionDisconnectedReason {
 class SessionController extends _$SessionController {
   Room? _room;
   Room? get room => _room;
+  @visibleForTesting
+  set room(Room? value) {
+    _room = value;
+  }
+
   EventsListener<RoomEvent>? _listener;
 
   /// The sync timer periodically checks for changes in the room state
@@ -301,8 +306,26 @@ class SessionController extends _$SessionController {
   }
 
   Future<void> join() async {
+    if (AppConfig.liveKitUrl == null || AppConfig.liveKitUrl!.isEmpty) {
+      logger.e('LIVEKIT_URL is not set. Cannot join session.');
+      _dispatch(
+        SessionErrorChanged(
+          RoomLiveKitError(
+            ConnectException(
+              'LIVEKIT_URL is not configured',
+              reason: ConnectionErrorReason.InternalError,
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
     if (room != null) {
-      if (state.connectionState == RoomConnectionState.connected) return;
+      if (state.connectionState == RoomConnectionState.connected ||
+          state.connectionState == RoomConnectionState.connecting) {
+        return;
+      }
     }
 
     _dispatch(
@@ -356,7 +379,7 @@ class SessionController extends _$SessionController {
         ),
         adaptiveStream: true,
       ),
-      url: AppConfig.liveKitUrl,
+      url: AppConfig.liveKitUrl!,
       token: options.token,
     );
 
@@ -372,7 +395,7 @@ class SessionController extends _$SessionController {
 
     try {
       await _connect(
-        url: AppConfig.liveKitUrl,
+        url: AppConfig.liveKitUrl!,
         token: options.token,
         fastConnectOptions: FastConnectOptions(
           microphone: TrackOption(enabled: options.microphoneEnabled),

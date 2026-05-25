@@ -1,12 +1,17 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions;
+import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+
+import '../../livekit_mocks.dart';
 
 SessionDetailSchema _createSessionEvent(String eventSlug) {
   return SessionDetailSchema(
@@ -58,7 +63,91 @@ ProviderContainer _createContainerWithEventOverride(String eventSlug) {
   );
 }
 
+class _CountingRoomEventsListener implements EventsListener<RoomEvent> {
+  int onCount = 0;
+  int cancelAllCount = 0;
+  int disposeCount = 0;
+
+  @override
+  CancelListenFunc on<E>(
+    FutureOr<void> Function(E event) listener, {
+    bool Function(E)? filter,
+  }) {
+    onCount++;
+    return () async {};
+  }
+
+  @override
+  Future<void> cancelAll() async {
+    cancelAllCount++;
+  }
+
+  @override
+  Future<bool> dispose() async {
+    disposeCount++;
+    return true;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _CountingRoom implements Room {
+  _CountingRoom(this.participant);
+
+  final MockLocalParticipant participant;
+  final _CountingRoomEventsListener listener = _CountingRoomEventsListener();
+
+  int prepareConnectionCount = 0;
+  int connectCount = 0;
+  int disconnectCount = 0;
+  int disposeCount = 0;
+
+  @override
+  LocalParticipant get localParticipant => participant;
+
+  @override
+  Future<void> prepareConnection(String url, String? token) async {
+    prepareConnectionCount++;
+  }
+
+  @override
+  Future<void> connect(
+    String url,
+    String token, {
+    ConnectOptions? connectOptions,
+    FastConnectOptions? fastConnectOptions,
+    RoomOptions? roomOptions,
+  }) async {
+    connectCount++;
+  }
+
+  @override
+  EventsListener<RoomEvent> createListener({bool synchronized = true}) =>
+      listener;
+
+  @override
+  Future<void> disconnect() async {
+    disconnectCount++;
+  }
+
+  @override
+  Future<bool> dispose() async {
+    disposeCount++;
+    return true;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
+  setUpAll(() {
+    dotenv.loadFromString(
+      envString: 'LIVEKIT_URL=wss://example.livekit.cloud\nSENTRY_DSN=test',
+    );
+  });
+
   group('SessionController', () {
     group('Connection Lifecycle', () {
       test(
@@ -145,6 +234,50 @@ void main() {
         expect(controller.room, isNotNull);
         await controller.disposeConnection();
         expect(controller.room, isNull);
+      });
+
+      test('join only calls room.connect once while connecting', () async {
+        const eventSlug = 'test-session';
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+
+        const options = SessionOptions(
+          eventSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: true,
+          microphoneEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        final localParticipant = MockLocalParticipant();
+        when(() => localParticipant.setCameraEnabled(any())).thenAnswer(
+          (_) async => null,
+        );
+        when(() => localParticipant.setMicrophoneEnabled(any())).thenAnswer(
+          (_) async => null,
+        );
+
+        final room = _CountingRoom(localParticipant);
+        controller.room = room;
+
+        await controller.join();
+        await controller.join();
+        await controller.join();
+        await controller.join();
+
+        expect(room.prepareConnectionCount, 1);
+        expect(room.connectCount, 1);
       });
     });
 

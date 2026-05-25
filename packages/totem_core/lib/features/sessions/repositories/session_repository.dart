@@ -61,7 +61,7 @@ Future<RoomState> _postEvent({
 
 @riverpod
 Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) async {
-  final apiService = ref.read(mobileApiServiceProvider);
+  final apiService = ref.read(apiServiceProvider);
   try {
     final response = await apiService.rooms
         .totemRoomsApiJoinRoom(sessionSlug: sessionSlug)
@@ -78,7 +78,7 @@ Future<void> removeParticipant(
   String sessionSlug,
   String participantIdentity,
 ) {
-  final apiService = ref.read(mobileApiServiceProvider);
+  final apiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<void>(
     apiCall: () => apiService.rooms.totemRoomsApiRemove(
       sessionSlug: sessionSlug,
@@ -98,7 +98,7 @@ Future<void> muteParticipant(
   String sessionSlug,
   String participantIdentity,
 ) async {
-  final apiService = ref.read(mobileApiServiceProvider);
+  final apiService = ref.read(apiServiceProvider);
   await RepositoryUtils.handleApiCall<void>(
     apiCall: () => apiService.rooms.totemRoomsApiMute(
       sessionSlug: sessionSlug,
@@ -114,7 +114,7 @@ Future<void> muteEveryone(
   Ref ref,
   String sessionSlug,
 ) {
-  final apiService = ref.read(mobileApiServiceProvider);
+  final apiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<void>(
     apiCall: () =>
         apiService.rooms.totemRoomsApiMuteAll(sessionSlug: sessionSlug),
@@ -133,7 +133,7 @@ Future<RoomState> passTotem(
   int lastSeenVersion, {
   String? roundMessage,
 }) {
-  final apiService = ref.read(mobileApiServiceProvider);
+  final apiService = ref.read(apiServiceProvider);
   return _postEvent(
     apiService: apiService,
     sessionSlug: sessionSlug,
@@ -150,7 +150,7 @@ Future<RoomState> acceptTotem(
   String sessionSlug,
   int lastSeenVersion,
 ) {
-  final apiService = ref.read(mobileApiServiceProvider);
+  final apiService = ref.read(apiServiceProvider);
   return _postEvent(
     apiService: apiService,
     sessionSlug: sessionSlug,
@@ -167,7 +167,7 @@ Future<RoomState> forcePassTotem(
   String sessionSlug,
   int lastSeenVersion,
 ) {
-  final apiService = ref.read(mobileApiServiceProvider);
+  final apiService = ref.read(apiServiceProvider);
   return _postEvent(
     apiService: apiService,
     sessionSlug: sessionSlug,
@@ -185,7 +185,7 @@ Future<RoomState> reorderParticipants(
   List<String> order,
   int lastSeenVersion,
 ) {
-  final apiService = ref.read(mobileApiServiceProvider);
+  final apiService = ref.read(apiServiceProvider);
   return _postEvent(
     apiService: apiService,
     sessionSlug: sessionSlug,
@@ -204,7 +204,7 @@ Future<RoomState> startSession(
   String sessionSlug,
   int lastSeenVersion,
 ) {
-  final apiService = ref.read(mobileApiServiceProvider);
+  final apiService = ref.read(apiServiceProvider);
   return _postEvent(
     apiService: apiService,
     sessionSlug: sessionSlug,
@@ -220,7 +220,7 @@ Future<RoomState> endSession(
   String sessionSlug,
   int lastSeenVersion,
 ) {
-  final apiService = ref.read(mobileApiServiceProvider);
+  final apiService = ref.read(apiServiceProvider);
   return _postEvent(
     apiService: apiService,
     sessionSlug: sessionSlug,
@@ -239,7 +239,7 @@ Future<RoomState> banParticipant(
   String participantSlug,
   int lastSeenVersion,
 ) {
-  final apiService = ref.read(mobileApiServiceProvider);
+  final apiService = ref.read(apiServiceProvider);
   return _postEvent(
     apiService: apiService,
     sessionSlug: sessionSlug,
@@ -258,7 +258,7 @@ Future<RoomState> unbanParticipant(
   String participantSlug,
   int lastSeenVersion,
 ) {
-  final apiService = ref.read(mobileApiServiceProvider);
+  final apiService = ref.read(apiServiceProvider);
   return _postEvent(
     apiService: apiService,
     sessionSlug: sessionSlug,
@@ -277,7 +277,7 @@ Future<void> sessionFeedback(
   SessionFeedbackOptions feedback, [
   String? message,
 ]) {
-  final apiService = ref.read(mobileApiServiceProvider);
+  final apiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<void>(
     apiCall: () => apiService.spaces.totemSpacesMobileApiPostSessionFeedback(
       eventSlug: sessionSlug,
