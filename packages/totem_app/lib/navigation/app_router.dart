@@ -6,6 +6,7 @@ import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/widgets/offline_indicator.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/features/messages/models/conversation.dart';
 import 'package:totem_core/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
@@ -43,10 +44,15 @@ class BottomNavScaffold extends ConsumerWidget {
 
   static const double bottomNavHeight = 80;
 
+  static List<HomeRoutes> get _visibleRoutes => HomeRoutes.values
+      .where((r) => !AppConfig.isProduction || r != HomeRoutes.messages)
+      .toList();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final currentRoute = HomeRoutes.values.firstWhere(
+    final visibleRoutes = _visibleRoutes;
+    final currentRoute = visibleRoutes.firstWhere(
       (route) => currentPath.startsWith(route.path),
       orElse: () => HomeRoutes.initialRoute,
     );
@@ -82,23 +88,19 @@ class BottomNavScaffold extends ConsumerWidget {
                 child: NavigationBar(
                   height: bottomNavHeight,
                   onDestinationSelected: (index) {
-                    for (final route in HomeRoutes.values) {
-                      logger.i('🛻 Checking route: ${route.path}');
-                      if (index == route.index && currentRoute != route) {
-                        if (route == HomeRoutes.spaces) {
-                          ref
-                            ..invalidate(mySessionsFilterProvider)
-                            ..invalidate(selectedCategoryProvider);
-                        }
-                        logger.i('🛻 Navigating to: ${route.path}');
-                        context.go(route.path);
-                        return;
-                      }
+                    final route = visibleRoutes[index];
+                    if (currentRoute == route) return;
+                    if (route == HomeRoutes.spaces) {
+                      ref
+                        ..invalidate(mySessionsFilterProvider)
+                        ..invalidate(selectedCategoryProvider);
                     }
+                    logger.i('🛻 Navigating to: ${route.path}');
+                    context.go(route.path);
                   },
-                  selectedIndex: currentRoute.index,
-                  destinations: const [
-                    NavigationDestination(
+                  selectedIndex: visibleRoutes.indexOf(currentRoute),
+                  destinations: [
+                    const NavigationDestination(
                       icon: TotemIcon(TotemIcons.home),
                       selectedIcon: TotemIcon(
                         TotemIcons.homeFilled,
@@ -106,7 +108,7 @@ class BottomNavScaffold extends ConsumerWidget {
                       ),
                       label: 'Home',
                     ),
-                    NavigationDestination(
+                    const NavigationDestination(
                       icon: TotemIcon(TotemIcons.spaces),
                       selectedIcon: TotemIcon(
                         TotemIcons.spacesFilled,
@@ -114,7 +116,7 @@ class BottomNavScaffold extends ConsumerWidget {
                       ),
                       label: 'Sessions',
                     ),
-                    NavigationDestination(
+                    const NavigationDestination(
                       icon: TotemIcon(TotemIcons.blog),
                       selectedIcon: TotemIcon(
                         TotemIcons.blogFilled,
@@ -122,15 +124,16 @@ class BottomNavScaffold extends ConsumerWidget {
                       ),
                       label: 'Blog',
                     ),
-                    NavigationDestination(
-                      icon: TotemIcon(TotemIcons.messages),
-                      selectedIcon: TotemIcon(
-                        TotemIcons.messagesFilled,
-                        fillColor: false,
+                    if (!AppConfig.isProduction)
+                      const NavigationDestination(
+                        icon: TotemIcon(TotemIcons.messages),
+                        selectedIcon: TotemIcon(
+                          TotemIcons.messagesFilled,
+                          fillColor: false,
+                        ),
+                        label: 'Messages',
                       ),
-                      label: 'Messages',
-                    ),
-                    NavigationDestination(
+                    const NavigationDestination(
                       icon: TotemIcon(TotemIcons.profile),
                       selectedIcon: TotemIcon(
                         TotemIcons.profileFilled,
@@ -176,7 +179,9 @@ class AppTotemRouter extends TotemRouter {
   @override
   void toHome([HomeRoutes route = HomeRoutes.initialRoute]) {
     if (shellNavigatorKey.currentState != null) {
-      shellNavigatorKey.currentState?.goBranch(route.index);
+      shellNavigatorKey.currentState?.goBranch(
+        BottomNavScaffold._visibleRoutes.indexOf(route),
+      );
     } else if (navigatorKey.currentContext != null) {
       navigatorKey.currentContext!.pushReplacement(RouteNames.welcome);
     }
@@ -361,26 +366,27 @@ class AppTotemRouter extends TotemRouter {
                 ),
               ],
             ),
-            StatefulShellBranch(
-              routes: <RouteBase>[
-                GoRoute(
-                  path: RouteNames.messages,
-                  name: RouteNames.messages,
-                  pageBuilder: (context, state) => CustomTransitionPage(
-                    key: state.pageKey,
-                    child: const SentryDisplayWidget(child: MessagesScreen()),
-                    transitionsBuilder:
-                        (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: child,
-                          );
-                        },
-                    transitionDuration: const Duration(milliseconds: 200),
+            if (!AppConfig.isProduction)
+              StatefulShellBranch(
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: RouteNames.messages,
+                    name: RouteNames.messages,
+                    pageBuilder: (context, state) => CustomTransitionPage(
+                      key: state.pageKey,
+                      child: const SentryDisplayWidget(child: MessagesScreen()),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: child,
+                            );
+                          },
+                      transitionDuration: const Duration(milliseconds: 200),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
             StatefulShellBranch(
               routes: <RouteBase>[
                 GoRoute(
