@@ -162,7 +162,9 @@ serves everything the loader pulls.
 The Worker is assets-only and serves the bundle flat from its own origin. SPA
 fallback is **off** (`not_found_handling = "none"`) — Django owns the HTML and
 client-side routing, so a missing asset 404s instead of being masked by
-`index.html`.
+`index.html`. Because the assets are fetched cross-origin, they ship with CORS
+headers via `web/_headers` (honored by Workers Static Assets); `scripts/serve_web.py`
+mirrors those headers for local testing.
 
 Config lives in `packages/totem_web/wrangler.toml`; deploys are driven by
 `.github/workflows/web.yml`:
@@ -194,7 +196,7 @@ To build and deploy manually:
 cd packages/totem_web
 flutter build web --wasm --base-href /room/ \
   --web-define=ASSET_BASE=https://totem-web-staging.<sub>.workers.dev/
-npx wrangler deploy --env staging   # or --env production
+bunx wrangler deploy --env staging   # or --env production
 ```
 
 ## 👥 Community

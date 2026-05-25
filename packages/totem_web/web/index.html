@@ -18,10 +18,13 @@
     <meta content="IE=Edge" http-equiv="X-UA-Compatible">
     <meta name="description" content="Guided introspection groups">
 
-    <!-- This is an embedded view served under /room/ on the main site, not a
-         standalone web app: no PWA install, no app icons, no manifest, and no
-         service worker (the bootstrap intentionally omits serviceWorkerSettings).
-         The browser falls back to the parent site's favicon. -->
+    <!-- Embedded view served under /room/ on the main site, not a standalone web
+         app: no PWA install, no app manifest, and no service worker (the bootstrap
+         omits serviceWorkerSettings). The favicon is set with an ABSOLUTE URL: the
+         /favicon.ico origin fallback doesn't resolve and a relative href would
+         break under the /room/ base href. This is the same favicon the Django app
+         pages use (e.g. /spaces/); the unhashed path is stable across redeploys. -->
+    <link rel="icon" href="https://cdn.totem.org/static/images/favicons/favicon.ico">
 
     <title>Totem</title>
 

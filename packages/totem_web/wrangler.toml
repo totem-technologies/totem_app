@@ -11,6 +11,12 @@
 # serves static files, so not_found_handling is "none": a missing asset returns
 # 404 rather than masquerading index.html as e.g. a .js file.
 #
+# Assets are fetched cross-origin (the page lives on the Django host, the assets
+# here), so they ship with CORS headers via web/_headers. Alternative: serve the
+# assets from the SAME host as the page via a Worker route (e.g.
+# www.totem.org/room-static/* with ASSET_BASE=https://www.totem.org/room-static/)
+# -- same-origin, so no CORS needed and nothing user-visible / blockable.
+#
 # Deploy is handled by .github/workflows/web.yml:
 #   wrangler deploy --env staging      (on tag push)
 #   wrangler deploy --env production   (on release published)
@@ -18,7 +24,7 @@
 # Local:
 #   cd packages/totem_web
 #   flutter build web --wasm --base-href /room/ --web-define=ASSET_BASE=<this-worker-url>/
-#   npx wrangler deploy --env staging
+#   bunx wrangler deploy --env staging
 #
 # The account id is supplied via the CLOUDFLARE_ACCOUNT_ID env var in CI.
 # For local use, either export it or uncomment account_id below.
