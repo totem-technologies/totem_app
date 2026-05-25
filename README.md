@@ -179,16 +179,9 @@ Required repository **secrets** (in addition to the existing `FIREBASE_OPTIONS_B
 - `CLOUDFLARE_API_TOKEN` — a token with the *Workers Scripts: Edit* permission.
 - `CLOUDFLARE_ACCOUNT_ID` — the target Cloudflare account id.
 
-Required repository **variables** (the public CDN URL `ASSET_BASE` is set to):
-
-- `WEB_ASSET_BASE_STAGING` — e.g. `https://totem-web-staging.<sub>.workers.dev/`
-- `WEB_ASSET_BASE_PRODUCTION` — e.g. `https://totem-web-production.<sub>.workers.dev/`
-
-> \[!NOTE]
-> `wrangler.toml` ships with placeholder Worker names and commented-out custom
-> domain routes. Until they are configured, deploys land on the `*.workers.dev`
-> subdomain — set the `WEB_ASSET_BASE_*` variables to those URLs (or your CDN
-> domain once DNS is ready).
+`ASSET_BASE` (the public URL the loader fetches assets from) is hardcoded per
+environment in `.github/workflows/web.yml` — currently the `*.workers.dev`
+URLs. Update those values there if the Worker moves to a custom domain.
 
 To build and deploy manually:
 

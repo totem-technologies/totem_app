@@ -45,12 +45,16 @@ serve-web:
 
 # Build with the staging worker as ASSET_BASE and deploy it to Cloudflare.
 # Requires wrangler auth (bunx wrangler login, or CLOUDFLARE_API_TOKEN +
-# CLOUDFLARE_ACCOUNT_ID). Override STAGING_ASSET_BASE if the subdomain changes.
-STAGING_ASSET_BASE ?= https://totem-web-staging.lopkerk.workers.dev/
+# CLOUDFLARE_ACCOUNT_ID).
 deploy-web-staging:
-	@echo "Building web app (staging, ASSET_BASE=$(STAGING_ASSET_BASE))..."
-	cd $(WEB_DIR) && flutter build web --wasm --base-href "/room/" --web-define=ASSET_BASE="$(STAGING_ASSET_BASE)"
+	@echo "Building web app (staging)"
+	cd $(WEB_DIR) && flutter build web --wasm --base-href "/room/" --web-define=ASSET_BASE="https://totem-web-staging.lopkerk.workers.dev/"
 	cd $(WEB_DIR) && bunx wrangler deploy --env staging
+
+deploy-web-production:
+	@echo "Building web app (production)"
+	cd $(WEB_DIR) && flutter build web --wasm --base-href "/room/" --web-define=ASSET_BASE="https://totem-web-production.lopkerk.workers.dev/"
+	cd $(WEB_DIR) && bunx wrangler deploy --env production
 
 build-runner:
 	@echo "Running build_runner for code generation..."

@@ -16,9 +16,9 @@ name: Web
 #   FIREBASE_OPTIONS_B64    (existing) base64 firebase_options.dart
 #   CLOUDFLARE_API_TOKEN    (new)      token with Workers Scripts:Edit
 #   CLOUDFLARE_ACCOUNT_ID   (new)      Cloudflare account id
-# Required repository variables (public URLs the loader fetches assets from):
-#   WEB_ASSET_BASE_STAGING      (new)  e.g. https://totem-web-staging.<sub>.workers.dev/
-#   WEB_ASSET_BASE_PRODUCTION   (new)  e.g. https://totem-web-production.<sub>.workers.dev/
+#
+# ASSET_BASE (the public URL the loader fetches assets from) is hardcoded per
+# environment in the build steps below.
 
 on:
   push:
@@ -52,13 +52,13 @@ jobs:
       - name: Build web
         uses: ./.github/actions/build-web
         with:
-          asset_base: ${{ vars.WEB_ASSET_BASE_STAGING }}
+          asset_base: https://totem-web-staging.lopkerk.workers.dev/
 
       # Only deploy when a release tag is pushed. PRs and main builds stop at the
       # build step above (validation that the web bundle still compiles).
       - name: Deploy to Cloudflare Workers (staging)
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           workingDirectory: packages/totem_web
@@ -86,10 +86,10 @@ jobs:
       - name: Build web
         uses: ./.github/actions/build-web
         with:
-          asset_base: ${{ vars.WEB_ASSET_BASE_PRODUCTION }}
+          asset_base: https://totem-web-production.lopkerk.workers.dev/
 
       - name: Deploy to Cloudflare Workers (production)
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           workingDirectory: packages/totem_web

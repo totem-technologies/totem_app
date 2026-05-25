@@ -25,10 +25,6 @@ runs:
         channel: stable
         cache: true
 
-    - name: Install dependencies
-      shell: bash
-      run: flutter pub get
-
     # --base-href /room/ : app is served from /room/ on the Django origin.
     # --web-define ASSET_BASE : where flutter_bootstrap.js loads assets from.
     - name: Build web
