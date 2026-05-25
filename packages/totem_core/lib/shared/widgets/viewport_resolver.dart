@@ -3,7 +3,8 @@ import 'package:flutter/widgets.dart';
 enum ViewportKind {
   smallPortrait,
   smallLandscape,
-  mediumPlus;
+  mediumPlus
+  ;
 
   bool get isLarge => this == smallLandscape || this == mediumPlus;
 }

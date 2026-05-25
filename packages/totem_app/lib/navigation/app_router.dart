@@ -432,8 +432,7 @@ class AppTotemRouter extends TotemRouter {
         GoRoute(
           path: '/messages/:conversationId',
           builder: (context, state) {
-            final conversationId =
-                state.pathParameters['conversationId'] ?? '';
+            final conversationId = state.pathParameters['conversationId'] ?? '';
             final conversation = state.extra as Conversation;
             return ThreadScreen(
               conversationId: conversationId,

@@ -40,11 +40,7 @@ class ChatCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            UserAvatar.custom(
-              seed: avatarSeed,
-              radius: 22,
-              borderWidth: 0,
-            ),
+            UserAvatar.custom(seed: avatarSeed, radius: 22, borderWidth: 0),
             const SizedBox(width: 10),
             Expanded(
               child: Column(

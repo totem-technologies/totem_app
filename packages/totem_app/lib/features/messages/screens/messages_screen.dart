@@ -70,16 +70,18 @@ class MessagesScreen extends ConsumerWidget {
           const SizedBox(
             height: 80,
             child: Padding(
-              padding: EdgeInsetsDirectional.symmetric(horizontal: 20, vertical: 18),
+              padding: EdgeInsetsDirectional.symmetric(
+                horizontal: 20,
+                vertical: 18,
+              ),
               child: MessageSearchField(),
             ),
           ),
           Expanded(
             child: asyncConversations.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => const Center(
-                child: Text('Could not load messages.'),
-              ),
+              error: (_, __) =>
+                  const Center(child: Text('Could not load messages.')),
               data: (conversations) => conversations.isEmpty
                   ? const _EmptyState()
                   : _ConversationList(conversations: conversations),
@@ -137,9 +139,7 @@ class _EmptyState extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 15),
-            ..._keepers.map(
-              (k) => _KeeperCard(name: k.name, seed: k.seed),
-            ),
+            ..._keepers.map((k) => _KeeperCard(name: k.name, seed: k.seed)),
           ],
         ),
       ),
@@ -223,10 +223,8 @@ class _ConversationList extends StatelessWidget {
           avatarSeed: conv.peer.profileAvatarSeed,
           unreadCount: conv.unreadCount,
           isOwnLastMessage: lastMsg?.isOwn ?? false,
-          onTap: () => context.push(
-            RouteNames.messageThread(conv.id),
-            extra: conv,
-          ),
+          onTap: () =>
+              context.push(RouteNames.messageThread(conv.id), extra: conv),
         );
       },
     );

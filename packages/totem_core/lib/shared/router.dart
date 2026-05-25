@@ -63,7 +63,8 @@ enum HomeRoutes {
   spaces(RouteNames.spaces),
   blog(RouteNames.blog),
   messages(RouteNames.messages),
-  profile(RouteNames.profile);
+  profile(RouteNames.profile)
+  ;
 
   const HomeRoutes(this.path);
 

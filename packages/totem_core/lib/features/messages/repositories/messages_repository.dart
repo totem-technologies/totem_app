@@ -84,38 +84,74 @@ class _StubMessagesRepository implements MessagesRepository {
 
   static final _threads = <String, List<Message>>{
     'conv_1': [
-      _msg('conv_1', 'That really means a lot to me, thank you for sharing',
-          minutesAgo: 1, isOwn: false),
-      _msg('conv_1',
-          "I hear you. I've been there so many times. You're not alone, I promise.",
-          minutesAgo: 2, isOwn: false),
-      _msg('conv_1',
-          "Honestly, today's been tough. But talking helps. It's nice not to feel alone in it.",
-          minutesAgo: 4, isOwn: true),
-      _msg('conv_1',
-          'Totally. Some days are harder than others. How are you doing today?',
-          minutesAgo: 7, isOwn: false),
-      _msg('conv_1',
-          "Hi Vanessa! Thanks for reaching out. It's nice to connect with someone who gets it.",
-          minutesAgo: 10, isOwn: true),
-      _msg('conv_1', 'Hey! I saw your profile and I think we have a lot in common.',
-          minutesAgo: 12, isOwn: false),
+      _msg(
+        'conv_1',
+        'That really means a lot to me, thank you for sharing',
+        minutesAgo: 1,
+        isOwn: false,
+      ),
+      _msg(
+        'conv_1',
+        "I hear you. I've been there so many times. You're not alone, I promise.",
+        minutesAgo: 2,
+        isOwn: false,
+      ),
+      _msg(
+        'conv_1',
+        "Honestly, today's been tough. But talking helps. It's nice not to feel alone in it.",
+        minutesAgo: 4,
+        isOwn: true,
+      ),
+      _msg(
+        'conv_1',
+        'Totally. Some days are harder than others. How are you doing today?',
+        minutesAgo: 7,
+        isOwn: false,
+      ),
+      _msg(
+        'conv_1',
+        "Hi Vanessa! Thanks for reaching out. It's nice to connect with someone who gets it.",
+        minutesAgo: 10,
+        isOwn: true,
+      ),
+      _msg(
+        'conv_1',
+        'Hey! I saw your profile and I think we have a lot in common.',
+        minutesAgo: 12,
+        isOwn: false,
+      ),
     ],
     'conv_2': [
-      _msg('conv_2', "I'll check in with you tomorrow",
-          minutesAgo: 60, isOwn: true),
+      _msg(
+        'conv_2',
+        "I'll check in with you tomorrow",
+        minutesAgo: 60,
+        isOwn: true,
+      ),
     ],
     'conv_3': [
-      _msg('conv_3', 'Take care of yourself this weekend',
-          minutesAgo: 1440, isOwn: true),
+      _msg(
+        'conv_3',
+        'Take care of yourself this weekend',
+        minutesAgo: 1440,
+        isOwn: true,
+      ),
     ],
     'conv_4': [
-      _msg('conv_4', '3 months sober today! Wanted to share...',
-          minutesAgo: 2880, isOwn: false),
+      _msg(
+        'conv_4',
+        '3 months sober today! Wanted to share...',
+        minutesAgo: 2880,
+        isOwn: false,
+      ),
     ],
     'conv_5': [
-      _msg('conv_5', 'Let me know if you ever want to talk again',
-          minutesAgo: 4320, isOwn: false),
+      _msg(
+        'conv_5',
+        'Let me know if you ever want to talk again',
+        minutesAgo: 4320,
+        isOwn: false,
+      ),
     ],
   };
 
