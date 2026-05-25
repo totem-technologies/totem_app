@@ -378,20 +378,6 @@ class AppTotemRouter extends TotemRouter {
                         },
                     transitionDuration: const Duration(milliseconds: 200),
                   ),
-                  routes: [
-                    GoRoute(
-                      path: ':conversationId',
-                      builder: (context, state) {
-                        final conversationId =
-                            state.pathParameters['conversationId'] ?? '';
-                        final conversation = state.extra as Conversation;
-                        return ThreadScreen(
-                          conversationId: conversationId,
-                          conversation: conversation,
-                        );
-                      },
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -434,6 +420,19 @@ class AppTotemRouter extends TotemRouter {
               ],
             ),
           ],
+        ),
+
+        GoRoute(
+          path: '/messages/:conversationId',
+          builder: (context, state) {
+            final conversationId =
+                state.pathParameters['conversationId'] ?? '';
+            final conversation = state.extra as Conversation;
+            return ThreadScreen(
+              conversationId: conversationId,
+              conversation: conversation,
+            );
+          },
         ),
 
         GoRoute(
