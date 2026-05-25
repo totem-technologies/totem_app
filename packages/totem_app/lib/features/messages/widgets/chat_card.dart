@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import 'package:totem_core/core/config/theme.dart';
-
-import 'message_avatar.dart';
+import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 class ChatCard extends StatelessWidget {
   const ChatCard({
@@ -12,6 +10,7 @@ class ChatCard extends StatelessWidget {
     required this.timestamp,
     required this.avatarSeed,
     this.unreadCount = 0,
+    this.isOwnLastMessage = false,
     this.onTap,
   });
 
@@ -20,11 +19,11 @@ class ChatCard extends StatelessWidget {
   final DateTime timestamp;
   final String? avatarSeed;
   final int unreadCount;
+  final bool isOwnLastMessage;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final avatarColor = MessageAvatar.colorFromSeed(avatarSeed);
     final timestampLabel = timeago.format(timestamp, allowFromNow: true);
 
     return GestureDetector(
@@ -41,7 +40,11 @@ class ChatCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            MessageAvatar(color: avatarColor),
+            UserAvatar.custom(
+              seed: avatarSeed,
+              radius: 22,
+              borderWidth: 0,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -63,7 +66,7 @@ class ChatCard extends StatelessWidget {
                         timestampLabel,
                         style: TextStyle(
                           color: unreadCount > 0
-                              ? AppTheme.mauve
+                              ? const Color(0xFF8C7AA8)
                               : const Color(0xFF8C8A82),
                           fontSize: 11,
                           fontWeight: FontWeight.w400,
@@ -82,7 +85,9 @@ class ChatCard extends StatelessWidget {
                           style: TextStyle(
                             color: unreadCount > 0
                                 ? const Color(0xFF1F293B)
-                                : const Color(0xFF8C8A82),
+                                : isOwnLastMessage
+                                ? const Color(0xFF8C8A82)
+                                : const Color(0xFF5C5954),
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
                           ),
@@ -95,7 +100,7 @@ class ChatCard extends StatelessWidget {
                           height: 20,
                           alignment: Alignment.center,
                           decoration: const BoxDecoration(
-                            color: AppTheme.mauve,
+                            color: Color(0xFF8C7AA8),
                             shape: BoxShape.circle,
                           ),
                           child: Text(
