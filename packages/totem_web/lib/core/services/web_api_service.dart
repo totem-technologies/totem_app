@@ -10,7 +10,7 @@ import 'package:totem_web/auth/controllers/auth_controller.dart';
 final webApiServiceProvider = Provider<ClientApi>((ref) {
   final dio = Dio(
     BaseOptions(
-      baseUrl: AppConfig.apiBaseUrl,
+      baseUrl: AppConfig.instance.apiUrl,
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
       sendTimeout: const Duration(seconds: 30),
@@ -22,7 +22,7 @@ final webApiServiceProvider = Provider<ClientApi>((ref) {
   return ClientApi(
     ApiConfig(
       client: DioApiClient(
-        baseUrl: Uri.parse(AppConfig.apiBaseUrl),
+        baseUrl: Uri.parse(AppConfig.instance.apiUrl),
         inner: dio,
       ),
       interceptors: [_CsrfInterceptor()],

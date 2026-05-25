@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart' hide ConnectionState;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
@@ -22,6 +21,7 @@ import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/shared/widgets/popups.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
+import '../../../setup.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
@@ -442,9 +442,7 @@ void main() {
 
     setUpAll(() async {
       registerFallbackValue(TrackSource.camera);
-      dotenv.loadFromString(
-        isOptional: true,
-      );
+      setupAppConfig();
     });
 
     setUp(() {

@@ -26,12 +26,13 @@ class AnalyticsService {
 
   /// Initialize the analytics service.
   Future<void> initialize() async {
-    if (_isInitialized || !AppConfig.enableAnalytics) return;
+    if (_isInitialized || !AppConfig.instance.analyticsEnabled) return;
 
     try {
       logger.i('📊 Initializing analytics service');
 
-      if (AppConfig.posthogApiKey == null || AppConfig.posthogApiKey!.isEmpty) {
+      if (AppConfig.instance.posthogApiKey == null ||
+          AppConfig.instance.posthogApiKey!.isEmpty) {
         logger.w(
           '📊 PostHog API key is not set. Analytics will not be logged.',
         );
@@ -39,10 +40,10 @@ class AnalyticsService {
       }
 
       posthog = Posthog();
-      final config = PostHogConfig(AppConfig.posthogApiKey!)
+      final config = PostHogConfig(AppConfig.instance.posthogApiKey!)
         ..debug = kDebugMode
         ..captureApplicationLifecycleEvents = true
-        ..host = AppConfig.posthogHost
+        ..host = AppConfig.instance.posthogHost
         ..sessionReplay = true;
       await posthog?.setup(config);
 
@@ -133,16 +134,11 @@ class AnalyticsService {
   }
 
   bool _shouldLog() {
-    if (!_isInitialized || kDebugMode) {
-      return false;
-    }
+    if (!_isInitialized) return false;
+    if (!AppConfig.instance.analyticsEnabled) return false;
 
-    if (!AppConfig.enableAnalytics) {
-      logger.i('📊 Analytics disabled by configuration');
-      return false;
-    }
-
-    if (AppConfig.posthogApiKey == null || AppConfig.posthogApiKey!.isEmpty) {
+    if (AppConfig.instance.posthogApiKey == null ||
+        AppConfig.instance.posthogApiKey!.isEmpty) {
       logger.w('📊 PostHog API key is not set. Analytics will not be logged.');
       return false;
     }

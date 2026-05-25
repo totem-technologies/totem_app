@@ -14,7 +14,7 @@ import '../../totem_core/test/setup.dart';
 
 void main() {
   setUpAll(() async {
-    setupDotenv();
+    setupAppConfig();
     await setupFirebase();
     TotemRouter.instance = AppTotemRouter();
   });

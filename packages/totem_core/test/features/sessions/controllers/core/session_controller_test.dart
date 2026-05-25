@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
@@ -11,6 +10,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 
+import '../../../../setup.dart';
 import '../../livekit_mocks.dart';
 
 SessionDetailSchema _createSessionEvent(String eventSlug) {
@@ -143,8 +143,9 @@ class _CountingRoom implements Room {
 
 void main() {
   setUpAll(() {
-    dotenv.loadFromString(
-      envString: 'LIVEKIT_URL=wss://example.livekit.cloud\nSENTRY_DSN=test',
+    setupAppConfig(
+      liveKitUrl: 'wss://example.livekit.cloud',
+      sentryDsn: 'test',
     );
   });
 

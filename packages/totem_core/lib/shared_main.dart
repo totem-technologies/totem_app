@@ -1,16 +1,20 @@
+// ignore_for_file: experimental_member_use
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:sentry_flutter/sentry_flutter.dart' show Sentry;
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/app_config.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/notifications_service.dart';
 import 'package:totem_core/core/services/observer_service.dart';
+import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/widgets/error_screen.dart';
 
 Future<void> sharedMain(
   Widget app,
@@ -18,43 +22,74 @@ Future<void> sharedMain(
   required FirebaseOptions firebaseOptions,
   List<Override> providerOverrides = const [],
 }) async {
-  await Sentry.runZonedGuarded(
-    () async {
-      await dotenv.load();
-      AppConfig.check();
-      await init();
+  // Install Sentry's binding before anything else triggers binding init
+  // (e.g. AppConfig.build via rootBundle). SentryWidgetsFlutterBinding is
+  // a no-op if a different WidgetsBinding has already been created, so
+  // its frame-timing instrumentation requires being first.
+  SentryWidgetsFlutterBinding.ensureInitialized();
+  AppConfig.instance = await AppConfig.build();
 
-      await ErrorHandler.initialize();
-      await _initializeServices(firebaseOptions);
+  try {
+    await Firebase.initializeApp(options: firebaseOptions);
+    await init();
 
+    Future<void> launch(Widget rootChild) async {
+      _initializeBestEffortServices();
       final container = ProviderContainer(
         observers: [ObserverService()],
         overrides: providerOverrides,
       );
-
       await container.read(authControllerProvider.notifier).checkExistingAuth();
-
       runApp(
         UncontrolledProviderScope(
           container: container,
-          child: app,
+          child: rootChild,
         ),
       );
-    },
-    (exception, stackTrace) async {
-      // nothing to do here
-      // https://docs.sentry.io/platforms/dart/guides/flutter/usage/#platformdispatcheronerror--runzonedguarded
-    },
-  );
+    }
+
+    final dsn = AppConfig.instance.sentryDsn;
+    if (dsn != null && dsn.isNotEmpty) {
+      await SentryFlutter.init(
+        _configureSentry,
+        appRunner: () => launch(SentryWidget(child: app)),
+      );
+    } else {
+      await launch(app);
+    }
+  } catch (error, stackTrace) {
+    ErrorHandler.logError(
+      error,
+      stackTrace: stackTrace,
+      message: 'App startup failed',
+    );
+    runApp(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        debugShowCheckedModeBanner: false,
+        home: const ErrorScreen(hideAppBar: true),
+      ),
+    );
+  }
 }
 
-/// Initializes services.
-///
-/// Awaited services are required by the app to function correctly.
-Future<void> _initializeServices(FirebaseOptions firebaseOptions) async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: firebaseOptions);
+void _configureSentry(SentryFlutterOptions options) {
+  final config = AppConfig.instance;
+  options
+    ..dsn = config.sentryDsn
+    ..navigatorKey = TotemRouter.instance.navigatorKey
+    ..sendDefaultPii = true
+    ..tracesSampleRate = config.isDevelopment ? 1.0 : 0.1
+    ..profilesSampleRate = config.isDevelopment ? 1.0 : 0.1
+    ..enableLogs = true
+    ..attachScreenshot = true
+    ..attachViewHierarchy = true
+    ..enableAutoPerformanceTracing = true
+    ..enableTimeToFullDisplayTracing = true
+    ..enableTombstone = true;
+}
 
+void _initializeBestEffortServices() {
   try {
     AnalyticsService.instance.initialize();
     NotificationsService.instance.initialize();
