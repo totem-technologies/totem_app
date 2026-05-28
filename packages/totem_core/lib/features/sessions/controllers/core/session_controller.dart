@@ -506,6 +506,28 @@ class SessionController extends _$SessionController {
       ..on<RoomConnectedEvent>((_) => _onConnected())
       ..on<RoomDisconnectedEvent>((event) {
         logger.d('Disconnected from session. Reason: ${event.reason}');
+        // Handles transient disconnects that can occur during the joining process,
+        // to avoid showing the disconnected screen in those cases.
+        //
+        // Usually happens on iOS: https://github.com/livekit/client-sdk-flutter/issues/756
+        final isTransientJoinDisconnect =
+            state.connectionState == RoomConnectionState.connecting &&
+            <DisconnectReason?>[
+              DisconnectReason.joinFailure,
+              DisconnectReason.clientInitiated,
+              DisconnectReason.signalingConnectionFailure,
+            ].contains(event.reason);
+
+        if (isTransientJoinDisconnect) {
+          _dispatch(
+            const ConnectionChanged(
+              RoomConnectionState.disconnected,
+              SessionPhase.disconnected,
+            ),
+          );
+          return;
+        }
+
         if (event.reason != null) {
           _dispatch(
             SessionErrorChanged(RoomDisconnectionError(event.reason!)),

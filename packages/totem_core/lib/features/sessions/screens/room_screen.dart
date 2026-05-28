@@ -44,6 +44,15 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
   ConsumerState<VideoSessionScreen> createState() => _VideoSessionScreenState();
 }
 
+bool _isTransientJoinDisconnect(DisconnectReason? reason) {
+  return switch (reason) {
+    DisconnectReason.joinFailure ||
+    DisconnectReason.clientInitiated ||
+    DisconnectReason.signalingConnectionFailure => true,
+    _ => false,
+  };
+}
+
 class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   static var _didWarmEmojiGlyphs = false;
 
@@ -464,14 +473,13 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       return widget.loadingScreen;
     }
 
-    if (currentSessionEvent.ended || roomStatus == RoomStatus.ended) {
-      return RoomBackground(
-        status: roomStatus,
-        child: SessionDisconnectedScreen(
-          session: currentSessionEvent,
-          disconnectReason: disconnectReason,
-        ),
-      );
+    final isTransientJoinRecovery =
+        currentRoomScreen == RoomScreen.loading &&
+        connectionState == RoomConnectionState.disconnected &&
+        _isTransientJoinDisconnect(disconnectReason);
+
+    if (isTransientJoinRecovery) {
+      return widget.loadingScreen;
     }
 
     return PopScope(
@@ -545,12 +553,22 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     SessionDetailSchema sessionEvent,
     DisconnectReason? disconnectReason,
   ) {
+    // if (sessionEvent.ended || roomStatus == RoomStatus.ended) {
+    //   return RoomBackground(
+    //     status: roomStatus,
+    //     child: SessionDisconnectedScreen(
+    //       session: currentSessionEvent,
+    //       disconnectReason: disconnectReason,
+    //     ),
+    //   );
+    // }
     switch (screen) {
       case RoomScreen.error:
         return SessionErrorScreen(onRetry: session.join);
       case RoomScreen.loading:
         return widget.loadingScreen;
       case RoomScreen.disconnected:
+        print('Building SessionDisconnectedScreen');
         return SessionDisconnectedScreen(
           session: sessionEvent,
           disconnectReason: disconnectReason,

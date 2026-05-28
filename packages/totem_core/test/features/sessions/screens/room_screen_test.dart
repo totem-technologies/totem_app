@@ -119,6 +119,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
   required RoomScreen screen,
   RoomConnectionState connectionState = RoomConnectionState.connected,
   RoomStatus roomStatus = RoomStatus.active,
+  DisconnectReason? disconnectReason,
   List<Object?> extraOverrides = const [],
 }) async {
   final p1 = _buildMockParticipant('user-1');
@@ -171,7 +172,6 @@ Future<void> _pumpRoomScreenForResolvedScreen(
         roundMessageProvider.overrideWith((ref) => null),
         sessionMessagesProvider.overrideWith((ref) => const []),
         lastSessionMessageProvider.overrideWith((ref) => null),
-        disconnectionReasonProvider.overrideWith((ref) => null),
         userProfileProvider('user-1').overrideWith(
           (ref) => PublicUserSchema(
             profileAvatarType: ProfileAvatarTypeEnum.td,
@@ -191,6 +191,9 @@ Future<void> _pumpRoomScreenForResolvedScreen(
           ),
         ),
         getRecommendedSessionsProvider().overrideWith((ref) => []),
+        disconnectionReasonProvider.overrideWith(
+          (ref) => disconnectReason,
+        ),
         ...extraOverrides.cast(),
       ],
       child: const MaterialApp(
@@ -505,6 +508,29 @@ void main() {
       expect(find.byType(SessionDisconnectedScreen), findsOneWidget);
       await tester.pump(const Duration(seconds: 10));
     });
+
+    testWidgets(
+      'keeps loading screen visible while recovering from join failure',
+      (tester) async {
+        final event = _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 5)),
+          duration: 10,
+        );
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: event,
+          screen: RoomScreen.loading,
+          connectionState: RoomConnectionState.disconnected,
+          roomStatus: RoomStatus.ended,
+          disconnectReason: DisconnectReason.joinFailure,
+        );
+
+        expect(find.byKey(const ValueKey('loading-screen')), findsOneWidget);
+        expect(find.byType(SessionDisconnectedScreen), findsNothing);
+      },
+    );
 
     testWidgets('renders error screen for RoomScreen.error', (tester) async {
       final event = _createSessionEvent(

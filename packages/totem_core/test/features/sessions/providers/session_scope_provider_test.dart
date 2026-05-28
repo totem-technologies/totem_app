@@ -349,7 +349,7 @@ void main() {
       expect(
         containerForState(
           RoomConnectionState.disconnected,
-          RoomStatus.active,
+          RoomStatus.waitingRoom,
           TurnState.idle,
           'alice',
           'alice',
@@ -357,17 +357,30 @@ void main() {
         RoomScreen.disconnected,
       );
 
-      // disconnected with join-failure -> RoomScreen.disconnected
+      // disconnected with join-failure -> RoomScreen.loading
       expect(
         containerForState(
           RoomConnectionState.disconnected,
-          RoomStatus.active,
+          RoomStatus.waitingRoom,
           TurnState.idle,
           'alice',
           'alice',
           error: const RoomDisconnectionError(DisconnectReason.joinFailure),
         ).read(resolveCurrentScreenProvider),
-        RoomScreen.disconnected,
+        RoomScreen.loading,
+      );
+
+      // disconnected with clientInitiated -> RoomScreen.loading
+      expect(
+        containerForState(
+          RoomConnectionState.disconnected,
+          RoomStatus.waitingRoom,
+          TurnState.idle,
+          'alice',
+          'alice',
+          error: const RoomDisconnectionError(DisconnectReason.clientInitiated),
+        ).read(resolveCurrentScreenProvider),
+        RoomScreen.loading,
       );
 
       // connected, RoomStatus.ended -> RoomScreen.disconnected
