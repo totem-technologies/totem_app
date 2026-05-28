@@ -345,7 +345,8 @@ void main() {
         RoomScreen.loading,
       );
 
-      // disconnected -> RoomScreen.disconnected
+      // Transient disconnect
+      // disconnected -> RoomScreen.loading
       expect(
         containerForState(
           RoomConnectionState.disconnected,
@@ -354,7 +355,7 @@ void main() {
           'alice',
           'alice',
         ).read(resolveCurrentScreenProvider),
-        RoomScreen.disconnected,
+        RoomScreen.loading,
       );
 
       // disconnected with join-failure -> RoomScreen.loading

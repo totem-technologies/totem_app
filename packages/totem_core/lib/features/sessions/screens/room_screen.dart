@@ -568,7 +568,6 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       case RoomScreen.loading:
         return widget.loadingScreen;
       case RoomScreen.disconnected:
-        print('Building SessionDisconnectedScreen');
         return SessionDisconnectedScreen(
           session: sessionEvent,
           disconnectReason: disconnectReason,

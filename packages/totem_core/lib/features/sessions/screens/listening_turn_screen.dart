@@ -287,7 +287,7 @@ class _ListeningTurnGrid extends ConsumerWidget {
           crossAxisCount = 4;
         }
       case ViewportKind.mediumPlus:
-        if (itemCount == 1) {
+        if (itemCount < 2) {
           crossAxisCount = 1;
         } else if (itemCount <= 4) {
           crossAxisCount = 2;

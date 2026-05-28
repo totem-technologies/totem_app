@@ -85,7 +85,8 @@ class _CountingRoomEventsListener implements EventsListener<RoomEvent> {
   }
 
   Future<void> trigger<E>(E event) async {
-    for (final listener in _listeners[E] ?? const []) {
+    if (_listeners[E] == null) return;
+    for (final listener in _listeners[E]!) {
       await listener(event);
     }
   }
@@ -281,7 +282,9 @@ void main() {
           when(() => localParticipant.setCameraEnabled(any<bool>())).thenAnswer(
             (_) async => null,
           );
-          when(() => localParticipant.setMicrophoneEnabled(any<bool>())).thenAnswer(
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer(
             (_) async => null,
           );
 
@@ -307,8 +310,10 @@ void main() {
           expect(controller.room, same(room));
           expect(room.disposeCount, 0);
           expect(room.disconnectCount, 0);
-          expect(controller.state.connectionState,
-              RoomConnectionState.disconnected);
+          expect(
+            controller.state.connectionState,
+            RoomConnectionState.disconnected,
+          );
         },
       );
 
@@ -340,7 +345,9 @@ void main() {
         when(() => localParticipant.setCameraEnabled(any<bool>())).thenAnswer(
           (_) async => null,
         );
-        when(() => localParticipant.setMicrophoneEnabled(any<bool>())).thenAnswer(
+        when(
+          () => localParticipant.setMicrophoneEnabled(any<bool>()),
+        ).thenAnswer(
           (_) async => null,
         );
 
