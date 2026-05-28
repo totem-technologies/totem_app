@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions, logger;
-import 'package:meta/meta.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -379,6 +379,19 @@ class SessionController extends _$SessionController {
     );
 
     try {
+      final connectOptions = defaultTargetPlatform == TargetPlatform.iOS
+          ? const ConnectOptions(
+              timeouts: Timeouts(
+                connection: Duration(seconds: 30),
+                debounce: Duration(milliseconds: 20),
+                publish: Duration(seconds: 10),
+                subscribe: Duration(seconds: 10),
+                peerConnection: Duration(seconds: 10),
+                iceRestart: Duration(seconds: 10),
+              ),
+            )
+          : null;
+
       await _connect(
         url: AppConfig.instance.liveKitUrl,
         token: options.token,
@@ -386,14 +399,49 @@ class SessionController extends _$SessionController {
           microphone: TrackOption(enabled: options.microphoneEnabled),
           camera: TrackOption(enabled: options.cameraEnabled),
         ),
+        connectOptions: connectOptions,
       );
-    } catch (error, stackTrace) {
+    }
+    // For ConnectException and MediaConnectException, we log the error but don't
+    // necessarily want to show an error message to the user.
+    // https://github.com/livekit/client-sdk-flutter/issues/756#issuecomment-4565674372
+    on ConnectException catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message:
+            '(${error.statusCode}) Error connecting to LiveKit room: ${error.reason}',
+      );
+      switch (error.reason) {
+        case ConnectionErrorReason.NotAllowed:
+        case ConnectionErrorReason.InternalError:
+          // This error can occur when the token is invalid or doesn't have the right permissions.
+          // In this case, we want to show an error message to the user.
+          _onError(error);
+        case ConnectionErrorReason.Timeout:
+        // These errors can occur due to transient network issues or server problems.
+        // We can choose to retry the connection or show an error message.
+      }
+    } on MediaConnectException catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error establishing media connection to LiveKit room',
+      );
+      // _onError(error);
+    } on LiveKitException catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Error connecting to LiveKit room',
       );
-      _onError(error is LiveKitException ? error : null);
+      _onError(error);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Unexpected error occurred',
+      );
     }
   }
 
@@ -477,11 +525,13 @@ class SessionController extends _$SessionController {
   Future<void> _connect({
     required String url,
     required String token,
-    required FastConnectOptions fastConnectOptions,
+    FastConnectOptions? fastConnectOptions,
+    ConnectOptions? connectOptions,
   }) async {
     await _room?.connect(
       url,
       token,
+      connectOptions: connectOptions,
       fastConnectOptions: fastConnectOptions,
     );
   }

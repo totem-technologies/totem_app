@@ -263,6 +263,7 @@ void main() {
         String? nextSpeaker, {
         bool noRoom = false,
         bool noLocalParticipant = false,
+        RoomError? error,
       }) {
         if (noRoom) {
           fakeSession.mockRoom = null;
@@ -278,6 +279,7 @@ void main() {
             currentSessionStateProvider.overrideWithValue(
               _state(
                 connectionState: connState,
+                error: error,
                 roomStatus: status,
                 turnState: turnState,
                 participants: [alice],
@@ -351,6 +353,19 @@ void main() {
           TurnState.idle,
           'alice',
           'alice',
+        ).read(resolveCurrentScreenProvider),
+        RoomScreen.disconnected,
+      );
+
+      // disconnected with join-failure -> RoomScreen.disconnected
+      expect(
+        containerForState(
+          RoomConnectionState.disconnected,
+          RoomStatus.active,
+          TurnState.idle,
+          'alice',
+          'alice',
+          error: const RoomDisconnectionError(DisconnectReason.joinFailure),
         ).read(resolveCurrentScreenProvider),
         RoomScreen.disconnected,
       );
