@@ -45,7 +45,11 @@ class BottomNavScaffold extends ConsumerWidget {
   static const double bottomNavHeight = 80;
 
   static List<HomeRoutes> get _visibleRoutes => HomeRoutes.values
-      .where((r) => !AppConfig.isProduction || r != HomeRoutes.messages)
+      .where(
+        (r) =>
+            AppConfig.instance.environment != Environment.production ||
+            r != HomeRoutes.messages,
+      )
       .toList();
 
   @override
@@ -124,7 +128,8 @@ class BottomNavScaffold extends ConsumerWidget {
                       ),
                       label: 'Blog',
                     ),
-                    if (!AppConfig.isProduction)
+                    if (AppConfig.instance.environment !=
+                        Environment.production)
                       const NavigationDestination(
                         icon: TotemIcon(TotemIcons.messages),
                         selectedIcon: TotemIcon(
@@ -366,7 +371,7 @@ class AppTotemRouter extends TotemRouter {
                 ),
               ],
             ),
-            if (!AppConfig.isProduction)
+            if (AppConfig.instance.environment != Environment.production)
               StatefulShellBranch(
                 routes: <RouteBase>[
                   GoRoute(
