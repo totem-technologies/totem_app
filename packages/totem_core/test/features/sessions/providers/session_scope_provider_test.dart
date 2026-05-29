@@ -46,12 +46,14 @@ SessionRoomState _state({
   String? currentSpeaker,
   String? nextSpeaker,
   String? roundMessage,
+  bool wasJoining = false,
 }) {
   return SessionRoomState(
     connection: ConnectionState(
       phase: phase,
       state: connectionState,
       error: error,
+      wasJoining: wasJoining,
     ),
     participants: ParticipantsState(
       participants: participants,
@@ -264,6 +266,7 @@ void main() {
         bool noRoom = false,
         bool noLocalParticipant = false,
         RoomError? error,
+        bool wasJoining = false,
       }) {
         if (noRoom) {
           fakeSession.mockRoom = null;
@@ -286,6 +289,7 @@ void main() {
                 keeper: 'keeper',
                 currentSpeaker: currentSpeaker,
                 nextSpeaker: nextSpeaker,
+                wasJoining: wasJoining,
               ),
             ),
             currentSessionProvider.overrideWithValue(fakeSession),
@@ -354,6 +358,7 @@ void main() {
           TurnState.idle,
           'alice',
           'alice',
+          wasJoining: true,
         ).read(resolveCurrentScreenProvider),
         RoomScreen.loading,
       );
@@ -367,6 +372,7 @@ void main() {
           'alice',
           'alice',
           error: const RoomDisconnectionError(DisconnectReason.joinFailure),
+          wasJoining: true,
         ).read(resolveCurrentScreenProvider),
         RoomScreen.loading,
       );
@@ -380,6 +386,7 @@ void main() {
           'alice',
           'alice',
           error: const RoomDisconnectionError(DisconnectReason.clientInitiated),
+          wasJoining: true,
         ).read(resolveCurrentScreenProvider),
         RoomScreen.loading,
       );

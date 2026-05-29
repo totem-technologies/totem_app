@@ -44,14 +44,7 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
   ConsumerState<VideoSessionScreen> createState() => _VideoSessionScreenState();
 }
 
-bool _isTransientJoinDisconnect(DisconnectReason? reason) {
-  return switch (reason) {
-    DisconnectReason.joinFailure ||
-    DisconnectReason.clientInitiated ||
-    DisconnectReason.signalingConnectionFailure => true,
-    _ => false,
-  };
-}
+// Use shared helper to determine transient join disconnect reasons.
 
 class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   static var _didWarmEmojiGlyphs = false;
@@ -352,6 +345,20 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     final roomStatus = ref.watch(roomStatusProvider);
     final disconnectReason = ref.watch(disconnectionReasonProvider);
 
+    // Early transient join recovery check: keep showing the loading screen
+    // when a join attempt failed transiently (e.g. signaling hiccup). This
+    // must be evaluated before honoring a room-ended state so the UI
+    // doesn't prematurely show the disconnected screen while the client
+    // is still attempting to recover a join.
+    final isTransientJoinRecoveryEarly =
+        currentRoomScreen == RoomScreen.loading &&
+        connectionState == RoomConnectionState.disconnected &&
+        isTransientJoinDisconnectReason(disconnectReason);
+
+    if (isTransientJoinRecoveryEarly) {
+      return widget.loadingScreen;
+    }
+
     _scheduleTimeRemainingWarning(
       currentSessionEvent,
       connectionState,
@@ -483,14 +490,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       );
     }
 
-    final isTransientJoinRecovery =
-        currentRoomScreen == RoomScreen.loading &&
-        connectionState == RoomConnectionState.disconnected &&
-        _isTransientJoinDisconnect(disconnectReason);
-
-    if (isTransientJoinRecovery) {
-      return widget.loadingScreen;
-    }
+    // transient join recovery handled earlier
 
     return PopScope(
       canPop: false,

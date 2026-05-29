@@ -14,23 +14,18 @@ void main() {
     test(
       'converts FormatException into AppDataException.invalidFormat',
       () async {
-        expect(
-          () => RepositoryUtils.handleApiCall<String>(
+        try {
+          await RepositoryUtils.handleApiCall<String>(
             apiCall: () async {
               throw const FormatException('Unexpected character');
             },
             operationName: 'request PIN',
-          ),
-          throwsA(
-            isA<AppDataException>()
-                .having((error) => error.code, 'code', 'INVALID_FORMAT')
-                .having(
-                  (error) => error.message,
-                  'message',
-                  'Data is in an invalid format',
-                ),
-          ),
-        );
+          );
+          fail('Expected AppDataException.invalidFormat to be thrown');
+        } on AppDataException catch (error) {
+          expect(error.code, 'INVALID_FORMAT');
+          expect(error.message, 'Data is in an invalid format');
+        }
       },
     );
 
@@ -38,7 +33,7 @@ void main() {
       final authException = AppAuthException.invalidCredentials();
 
       expect(
-        () => RepositoryUtils.handleApiCall<String>(
+        RepositoryUtils.handleApiCall<String>(
           apiCall: () async {
             throw authException;
           },
@@ -50,7 +45,7 @@ void main() {
 
     test('converts DioException 401 into unauthenticated exception', () async {
       expect(
-        () => RepositoryUtils.handleApiCall<String>(
+        RepositoryUtils.handleApiCall<String>(
           apiCall: () async {
             throw DioException(
               requestOptions: RequestOptions(path: '/auth/request-pin'),
@@ -76,7 +71,7 @@ void main() {
 
     test('converts DioException 403 into forbidden exception', () async {
       expect(
-        () => RepositoryUtils.handleApiCall<String>(
+        RepositoryUtils.handleApiCall<String>(
           apiCall: () async {
             throw DioException(
               requestOptions: RequestOptions(path: '/auth/request-pin'),
@@ -100,7 +95,7 @@ void main() {
 
     test('converts DioException 400 into data exception', () async {
       expect(
-        () => RepositoryUtils.handleApiCall<String>(
+        RepositoryUtils.handleApiCall<String>(
           apiCall: () async {
             throw DioException(
               requestOptions: RequestOptions(path: '/auth/request-pin'),
@@ -128,7 +123,7 @@ void main() {
 
     test('converts DioException socket failures into no connection', () async {
       expect(
-        () => RepositoryUtils.handleApiCall<String>(
+        RepositoryUtils.handleApiCall<String>(
           apiCall: () async {
             throw DioException(
               requestOptions: RequestOptions(path: '/auth/request-pin'),

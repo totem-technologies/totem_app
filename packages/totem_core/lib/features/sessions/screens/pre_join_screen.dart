@@ -273,7 +273,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   void _listenForTokenUpdates() {
     ref.listen(
       sessionTokenProvider(widget.sessionSlug),
-      (previous, next) async {
+      (previous, next) {
         if (next case AsyncData(:final value)) {
           _handleToken(value);
         }

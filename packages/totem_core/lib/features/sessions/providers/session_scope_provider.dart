@@ -114,11 +114,9 @@ RoomScreen? resolveCurrentScreen(Ref ref) {
       final error = sessionState.connection.error;
       final isTransientJoinDisconnect =
           sessionState.roomState.status == RoomStatus.waitingRoom &&
+          sessionState.connection.wasJoining &&
           ((error is RoomDisconnectionError &&
-                  (error.reason == DisconnectReason.joinFailure ||
-                      error.reason == DisconnectReason.clientInitiated ||
-                      error.reason ==
-                          DisconnectReason.signalingConnectionFailure)) ||
+                  isTransientJoinDisconnectReason(error.reason)) ||
               error == null);
 
       if (isTransientJoinDisconnect) {

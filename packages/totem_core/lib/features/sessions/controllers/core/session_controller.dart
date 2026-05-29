@@ -428,6 +428,7 @@ class SessionController extends _$SessionController {
         stackTrace: stackTrace,
         message: 'Error establishing media connection to LiveKit room',
       );
+      // We may want to catch this error in the future.
       // _onError(error);
     } on LiveKitException catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -512,17 +513,14 @@ class SessionController extends _$SessionController {
         // Usually happens on iOS: https://github.com/livekit/client-sdk-flutter/issues/756
         final isTransientJoinDisconnect =
             state.connectionState == RoomConnectionState.connecting &&
-            <DisconnectReason?>[
-              DisconnectReason.joinFailure,
-              DisconnectReason.clientInitiated,
-              DisconnectReason.signalingConnectionFailure,
-            ].contains(event.reason);
+            isTransientJoinDisconnectReason(event.reason);
 
         if (isTransientJoinDisconnect) {
           _dispatch(
             const ConnectionChanged(
               RoomConnectionState.disconnected,
               SessionPhase.disconnected,
+              wasJoining: true,
             ),
           );
           return;

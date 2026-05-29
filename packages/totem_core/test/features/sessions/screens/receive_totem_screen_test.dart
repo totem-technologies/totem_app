@@ -264,7 +264,7 @@ void main() {
     testWidgets('shows error popup when accept totem fails', (tester) async {
       when(
         () => keeper.acceptTotem(),
-      ).thenThrow(Exception('accept failed'));
+      ).thenAnswer((_) async => throw Exception('accept failed'));
 
       final feedbackService = _TestSessionCuesService();
 

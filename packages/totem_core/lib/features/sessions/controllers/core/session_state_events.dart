@@ -8,10 +8,15 @@ sealed class SessionEvent {
 }
 
 class ConnectionChanged extends SessionEvent {
-  const ConnectionChanged(this.connectionState, this.phase);
+  const ConnectionChanged(
+    this.connectionState,
+    this.phase, {
+    this.wasJoining = false,
+  });
 
   final RoomConnectionState connectionState;
   final SessionPhase phase;
+  final bool wasJoining;
 }
 
 class RoomStateChanged extends SessionEvent {
