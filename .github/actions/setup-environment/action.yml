@@ -1,7 +1,10 @@
 name: "Setup Environment & Secrets"
-description: "Creates .env and decodes Firebase/Google secrets"
+description: "Generates the .env file in totem_app and totem_web, and decodes Firebase/Google service credentials"
 
 inputs:
+  flavor:
+    description: "Build flavor. Must be 'staging' or 'production'."
+    required: true
   firebase_options:
     description: "Base64 encoded firebase_options.dart"
     required: true
@@ -11,66 +14,74 @@ inputs:
   google_service_plist:
     description: "Base64 encoded GoogleService-Info.plist (iOS)"
     required: false
-  flavor:
-    required: true
-    description: "The flavor. Options: staging, production"
-    default: "production"
 
 runs:
   using: "composite"
   steps:
-    - name: Resolve API URL
-      id: api_url
+    - name: Validate flavor
       shell: bash
       env:
         FLAVOR: ${{ inputs.flavor }}
       run: |
-        if [ "$FLAVOR" = "staging" ]; then
-          echo 'url=https://totem.kbl.io' >> "$GITHUB_OUTPUT"
-        else
-          echo 'url=https://www.totem.org' >> "$GITHUB_OUTPUT"
-        fi
+        case "$FLAVOR" in
+          staging|production) ;;
+          *)
+            echo "::error::Unknown flavor '$FLAVOR'. Must be one of: staging, production."
+            exit 1
+            ;;
+        esac
 
-    - name: Create .env in totem_app
+    # totem_app and totem_web share the same runtime config, so each flavor
+    # writes one .env body to both packages via tee.
+    - name: Write .env (staging)
+      if: ${{ inputs.flavor == 'staging' }}
       shell: bash
-      working-directory: ./packages/totem_app
       run: |
-        {
-          echo "ENVIRONMENT=\"${{ inputs.flavor }}\""
-          echo 'MOBILE_API_URL="${{ steps.api_url.outputs.url }}"'
-        } > .env
+        tee packages/totem_app/.env packages/totem_web/.env > /dev/null <<'EOF'
+        ENVIRONMENT="staging"
+        API_URL="https://totem.kbl.io"
+        LIVEKIT_URL="wss://totem-d7esbgcp.livekit.cloud"
+        SENTRY_DSN="https://66cc97ae272344978f48840710f857a0@o1324443.ingest.us.sentry.io/6582849"
+        POSTHOG_API_KEY="phc_OJCztWvtlN5scoDe58jLipnOTCBugeidvZlni3FIy9z"
+        EOF
 
-    - name: Create .env in totem_web
+    - name: Write .env (production)
+      if: ${{ inputs.flavor == 'production' }}
       shell: bash
-      working-directory: ./packages/totem_web
       run: |
-        echo 'MOBILE_API_URL="${{ steps.api_url.outputs.url }}"' > .env
+        tee packages/totem_app/.env packages/totem_web/.env > /dev/null <<'EOF'
+        ENVIRONMENT="production"
+        API_URL="https://www.totem.org"
+        LIVEKIT_URL="wss://totem-d7esbgcp.livekit.cloud"
+        SENTRY_DSN="https://66cc97ae272344978f48840710f857a0@o1324443.ingest.us.sentry.io/6582849"
+        POSTHOG_API_KEY="phc_OJCztWvtlN5scoDe58jLipnOTCBugeidvZlni3FIy9z"
+        EOF
 
-    - name: Create Firebase options in totem_app
+    - name: Decode firebase_options.dart (totem_app)
       shell: bash
       working-directory: ./packages/totem_app
       run: |
         mkdir -p lib
         echo "${{ inputs.firebase_options }}" | base64 -d > lib/firebase_options.dart
 
-    - name: Decode Android Config
+    - name: Decode firebase_options.dart (totem_web)
+      shell: bash
+      working-directory: ./packages/totem_web
+      run: |
+        mkdir -p lib
+        echo "${{ inputs.firebase_options }}" | base64 -d > lib/firebase_options.dart
+
+    - name: Decode google-services.json (Android)
       if: ${{ inputs.google_services_json != '' }}
       shell: bash
       working-directory: ./packages/totem_app
       run: |
         echo "${{ inputs.google_services_json }}" | base64 -d > android/app/google-services.json
 
-    - name: Decode iOS Config
+    - name: Decode GoogleService-Info.plist (iOS)
       if: ${{ inputs.google_service_plist != '' }}
       shell: bash
       working-directory: ./packages/totem_app
       run: |
         mkdir -p ios/Runner
         echo "${{ inputs.google_service_plist }}" | base64 -d > ios/Runner/GoogleService-Info.plist
-
-    - name: Create Firebase options in totem_web
-      shell: bash
-      working-directory: ./packages/totem_web
-      run: |
-        mkdir -p lib
-        echo "${{ inputs.firebase_options }}" | base64 -d > lib/firebase_options.dart

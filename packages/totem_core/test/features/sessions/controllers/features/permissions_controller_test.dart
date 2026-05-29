@@ -12,7 +12,7 @@ import '../../../../setup.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setupDotenv();
+  setupAppConfig();
   silenceLogger();
 
   const channel = MethodChannel('flutter.baseflow.com/permissions/methods');

@@ -160,7 +160,7 @@ void main() {
 
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
-    setupDotenv();
+    setupAppConfig();
     silenceLogger();
     setupMockFlutterForegroundTask();
     setupMockPermissionHandler();

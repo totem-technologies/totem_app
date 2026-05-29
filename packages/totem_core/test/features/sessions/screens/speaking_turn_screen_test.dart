@@ -158,7 +158,7 @@ void main() {
   late FakeRoom room;
 
   setUpAll(() {
-    setupDotenv();
+    setupAppConfig();
     registerFallbackValue(TrackSource.camera);
   });
 

@@ -25,7 +25,7 @@ final apiServiceProvider = Provider<ClientApi>((ref) {
   return ClientApi(
     ApiConfig(
       client: DioApiClient(
-        baseUrl: Uri.parse(AppConfig.mobileApiUrl),
+        baseUrl: Uri.parse(AppConfig.instance.apiUrl),
         inner: dio,
       ),
       // timeout: Duration(seconds: 10), // or use a single overall deadline here
@@ -54,7 +54,7 @@ void addSharedApiInterceptors(Dio dio) {
     ),
   );
 
-  if (AppConfig.isDevelopment) {
+  if (AppConfig.instance.isDevelopment) {
     dio.interceptors.add(
       LogInterceptor(requestBody: true, responseBody: true),
     );

@@ -137,7 +137,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               Link(
                 target: LinkTarget.blank,
-                uri: AppConfig.privacyPolicyUrl,
+                uri: AppConfig.instance.privacyPolicyUrl,
                 builder: (context, launch) => ProfileTile(
                   icon: const TotemIcon(TotemIcons.lock),
                   title: 'Privacy Policy',
@@ -146,7 +146,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               Link(
                 target: LinkTarget.blank,
-                uri: AppConfig.termsOfServiceUrl,
+                uri: AppConfig.instance.termsOfServiceUrl,
                 builder: (context, launch) => ProfileTile(
                   icon: const TotemIcon(TotemIcons.safe),
                   title: 'Terms',
@@ -155,7 +155,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               Link(
                 target: LinkTarget.blank,
-                uri: AppConfig.communityGuidelinesUrl,
+                uri: AppConfig.instance.communityGuidelinesUrl,
                 builder: (context, launch) => ProfileTile(
                   icon: const TotemIcon(TotemIcons.community),
                   title: 'Community Guidelines',
