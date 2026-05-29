@@ -424,6 +424,22 @@ class TotemIcons {
 </svg>
 ''';
 
+  static const messages = '''
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M13 23.4166C18.7529 23.4166 23.4166 18.7529 23.4166 13C23.4166 7.24705 18.7529 2.58334 13 2.58334C7.247 2.58334 2.58331 7.24705 2.58331 13C2.58331 14.6664 2.97458 16.2413 3.67024 17.638C3.85512 18.0092 3.91665 18.4334 3.80947 18.834L3.18904 21.1528C2.91971 22.1594 3.84061 23.0802 4.84721 22.8109L7.166 22.1905C7.56657 22.0833 7.99082 22.1449 8.36198 22.3297C9.75869 23.0254 11.3336 23.4166 13 23.4166Z" stroke="#717171" stroke-width="1.5625"/>
+<path d="M8.83331 11.4375H17.1666" stroke="#717171" stroke-width="1.5625" stroke-linecap="round"/>
+<path d="M8.83331 15.0833H14.5625" stroke="#717171" stroke-width="1.5625" stroke-linecap="round"/>
+</svg>
+''';
+
+  static const messagesFilled = '''
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M13 23.4166C18.7529 23.4166 23.4166 18.7529 23.4166 13C23.4166 7.24705 18.7529 2.58334 13 2.58334C7.247 2.58334 2.58331 7.24705 2.58331 13C2.58331 14.6664 2.97458 16.2413 3.67024 17.638C3.85512 18.0092 3.91665 18.4334 3.80947 18.834L3.18904 21.1528C2.91971 22.1594 3.84061 23.0802 4.84721 22.8109L7.166 22.1905C7.56657 22.0833 7.99082 22.1449 8.36198 22.3297C9.75869 23.0254 11.3336 23.4166 13 23.4166Z" fill="#987AA5" stroke="#987AA5" stroke-width="1.5625"/>
+<path d="M8.83331 11.4375H17.1666" stroke="white" stroke-width="1.5625" stroke-linecap="round"/>
+<path d="M8.83331 15.0833H14.5625" stroke="white" stroke-width="1.5625" stroke-linecap="round"/>
+</svg>
+''';
+
   static const more = '''
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g clip-path="url(#clip0_1216_5286)">
