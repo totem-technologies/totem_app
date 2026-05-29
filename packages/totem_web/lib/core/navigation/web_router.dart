@@ -79,6 +79,8 @@ class WebTotemRouter extends TotemRouter {
           webOnlyWindowName: '_self',
         );
         break;
+      case HomeRoutes.messages:
+        throw UnimplementedError();
     }
   }
 

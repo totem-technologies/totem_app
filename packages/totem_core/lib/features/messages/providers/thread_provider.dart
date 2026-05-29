@@ -1,7 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_core/features/messages/models/message.dart';
 import 'package:totem_core/features/messages/repositories/messages_repository.dart';
-
-import '../models/message.dart';
 
 part 'thread_provider.g.dart';
 

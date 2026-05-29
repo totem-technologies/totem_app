@@ -1,10 +1,9 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/models/profile_avatar_type_enum.dart';
 import 'package:totem_core/core/api/api_client/models/public_user_schema.dart';
+import 'package:totem_core/features/messages/models/conversation.dart';
+import 'package:totem_core/features/messages/models/message.dart';
 import 'package:uuid/uuid.dart';
-
-import '../models/conversation.dart';
-import '../models/message.dart';
 
 part 'messages_repository.g.dart';
 

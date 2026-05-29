@@ -33,7 +33,7 @@ class ThreadScreen extends ConsumerWidget {
           Expanded(
             child: asyncMessages.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) =>
+              error: (_, _) =>
                   const Center(child: Text('Could not load messages.')),
               data: (messages) => _MessageList(messages: messages),
             ),

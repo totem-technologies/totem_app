@@ -5,7 +5,6 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/messages/models/conversation.dart';
 import 'package:totem_core/features/messages/providers/conversations_provider.dart';
 import 'package:totem_core/shared/router.dart';
-
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 import '../widgets/chat_card.dart';
@@ -80,7 +79,7 @@ class MessagesScreen extends ConsumerWidget {
           Expanded(
             child: asyncConversations.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) =>
+              error: (_, _) =>
                   const Center(child: Text('Could not load messages.')),
               data: (conversations) => conversations.isEmpty
                   ? const _EmptyState()
