@@ -21,6 +21,7 @@ dependencies:
 
   # Firebase (used by generated firebase_options.dart)
   firebase_core: ^4.9.0
+  sentry_flutter: ^9.21.0
 
   # State Management
   flutter_riverpod: ^3.3.1
