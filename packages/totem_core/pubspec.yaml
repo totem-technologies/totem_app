@@ -21,8 +21,7 @@ dependencies:
 
   # Environment and Storage
   flutter_dotenv: ^6.0.1
-  # flutter_secure_storage: ^10.0.0-beta.4
-  flutter_secure_storage: ^10.0.0
+  flutter_secure_storage: ^10.3.1
   logger: ^2.6.0
   shared_preferences: ^2.5.3
 
@@ -37,10 +36,10 @@ dependencies:
   firebase_core: ^4.0.0
   firebase_messaging: ^16.0.0
   flutter_local_notifications: ^21.0.0
-  posthog_flutter: ^5.24.1
+  posthog_flutter: ^5.25.1
   intl: ^0.20.2
-  sentry_flutter: ^9.19.0
-  sentry_dio: ^9.19.0
+  sentry_flutter: ^9.21.0
+  sentry_dio: ^9.21.0
 
   # Video Experience
   # livekit_client: ^2.7.0
@@ -56,11 +55,11 @@ dependencies:
   flutter_foreground_task: ^9.2.0
   wakelock_plus: ^1.4.0
   audio_session: ^0.2.1
-  audioplayers: ^6.5.1
+  audioplayers: ^6.7.0
   in_app_review: ^2.0.11
   battery_plus: ^7.0.0
-  permission_handler: ^12.0.1
-  screen_protector: ^1.5.1
+  permission_handler: ^12.0.2
+  screen_protector: 1.5.1
 
   # UI & Utilities
   auto_size_text: ^3.0.0

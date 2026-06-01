@@ -118,6 +118,13 @@ class AnalyticsService {
     await Sentry.configureScope((scope) => scope.setUser(null));
   }
 
+  Future<void> logAccountDeleted() async {
+    if (!_shouldLog()) return;
+    logEvent('account_deleted');
+    await posthog?.reset();
+    await Sentry.configureScope((scope) => scope.setUser(null));
+  }
+
   void logLogin({String? method}) {
     if (!_shouldLog()) return;
 

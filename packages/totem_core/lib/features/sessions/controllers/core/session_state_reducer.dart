@@ -18,6 +18,7 @@ class SessionStateReducer {
             clearError:
                 event.connectionState == RoomConnectionState.connected ||
                 event.connectionState == RoomConnectionState.connecting,
+            wasJoining: event.wasJoining,
           ),
           participants: event.connectionState == RoomConnectionState.connected
               ? current.participants.copyWith(removed: false)

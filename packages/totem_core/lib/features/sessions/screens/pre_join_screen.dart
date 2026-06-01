@@ -74,6 +74,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   SessionOptions? _sessionOptions;
   bool _hasRequestedJoin = false;
   bool get hasRequestedJoin => _hasRequestedJoin;
+  bool _isJoining = false;
   bool _showingAlreadyPresentDialog = false;
   bool? _isLoading;
 
@@ -192,13 +193,17 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       if (join) {
         await _joinRoom(showAlreadyPresentDialog: false);
       } else {
-        if (mounted) context.pop();
+        if (mounted && context.canPop()) context.pop();
       }
     }
   }
 
   Future<void> _joinRoom({bool showAlreadyPresentDialog = true}) async {
     try {
+      if (_isJoining) {
+        return;
+      }
+
       final response = await ref.read(
         sessionTokenProvider(widget.sessionSlug).future,
       );
@@ -209,12 +214,14 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
       if (_sessionOptions == null ||
           hasRequestedJoin ||
+          _isJoining ||
           _showingAlreadyPresentDialog) {
         return;
       }
 
       setState(() {
         _hasRequestedJoin = true;
+        _isJoining = true;
         _isLoading = true;
       });
 
@@ -230,6 +237,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       _isLoading = false;
     } catch (error, stackTrace) {
       _hasRequestedJoin = _isLoading = false;
+      _isJoining = false;
       if (mounted) {
         setState(() {});
       }
@@ -244,6 +252,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
             .read(sessionControllerProvider(_sessionOptions!).notifier)
             .allowAutoDispose();
       }
+      _isJoining = false;
       _isLoading = false;
       if (mounted) {
         setState(() {});
@@ -264,7 +273,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   void _listenForTokenUpdates() {
     ref.listen(
       sessionTokenProvider(widget.sessionSlug),
-      (previous, next) async {
+      (previous, next) {
         if (next case AsyncData(:final value)) {
           _handleToken(value);
         }

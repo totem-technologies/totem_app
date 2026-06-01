@@ -362,8 +362,7 @@ class WaitingReceiveTransitionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const message =
-        'Waiting for the receiver to accept...\nIt is still your turn';
+    const message = 'Waiting for the receiver to accept.';
     return _GenericTransitionCard(
       actionText: '',
       onActionPressed: null,

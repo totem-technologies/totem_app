@@ -5,7 +5,6 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 // ignore: depend_on_referenced_packages
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/auth/repositories/auth_repository.dart';
@@ -360,8 +359,7 @@ class MobileAuthController extends AuthController {
     try {
       await _authRepository.deleteAccount();
       _setState(AuthState.unauthenticated());
-      Sentry.configureScope((scope) => scope.setUser(null));
-      _analyticsService.logEvent('account_deleted');
+      _analyticsService.logAccountDeleted();
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
