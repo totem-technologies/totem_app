@@ -97,7 +97,9 @@ class SessionCuesService {
 
   SessionCuesAudioPlayer? _audioPlayer;
   final SessionCuesHapticPulseCallback _pulseHaptic;
-  bool _configured = false;
+  // bool _configured = false;
+  // TODO(totem): Re-enable audio cues once we have a better solution for the audio issues.
+  bool _configured = true;
   Timer? _transitionCueDelayTimer;
 
   Future<void> playSessionTransitionCue() async {
@@ -132,7 +134,7 @@ class SessionCuesService {
   bool _isPlaying = false;
 
   Future<void> _playAsset(String assetPath) async {
-    if (_isPlaying) return;
+    if (_isPlaying || !_configured) return;
 
     try {
       await _configurePlayer();

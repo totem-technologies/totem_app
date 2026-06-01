@@ -40,6 +40,7 @@ class _LiveKitPreJoinPreviewTrackFactory extends PreJoinPreviewTrackFactory {
 }
 
 /// Holds the user's media preferences selected on the pre-join screen.
+@immutable
 class MediaPreferences {
   const MediaPreferences({
     this.isSpeakerOn = true,
@@ -52,6 +53,44 @@ class MediaPreferences {
   final bool isCameraOn;
   final bool isMicOn;
   final CameraCaptureOptions cameraOptions;
+
+  MediaPreferences copyWith({
+    bool? isSpeakerOn,
+    bool? isCameraOn,
+    bool? isMicOn,
+    CameraCaptureOptions? cameraOptions,
+  }) {
+    return MediaPreferences(
+      isSpeakerOn: isSpeakerOn ?? this.isSpeakerOn,
+      isCameraOn: isCameraOn ?? this.isCameraOn,
+      isMicOn: isMicOn ?? this.isMicOn,
+      cameraOptions: cameraOptions ?? this.cameraOptions,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'MediaPreferences(isSpeakerOn: $isSpeakerOn, isCameraOn: $isCameraOn, isMicOn: $isMicOn, cameraOptions: $cameraOptions)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is MediaPreferences &&
+        other.isSpeakerOn == isSpeakerOn &&
+        other.isCameraOn == isCameraOn &&
+        other.isMicOn == isMicOn &&
+        other.cameraOptions == cameraOptions;
+  }
+
+  @override
+  int get hashCode {
+    return isSpeakerOn.hashCode ^
+        isCameraOn.hashCode ^
+        isMicOn.hashCode ^
+        cameraOptions.hashCode;
+  }
 }
 
 class PrejoinSessionScreen extends StatefulWidget {
