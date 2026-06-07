@@ -37,6 +37,24 @@ class AppTheme {
   static const Color transparent = Colors.transparent;
   static const Color grey = Colors.grey;
 
+  // --- Messaging surface & text tokens ---
+  // Slightly warmer/darker palette used across the messages feature (from Figma).
+  static const Color surfaceCard = Color(0xFFFAFAF7); // Cards & nav bar surface
+  static const Color textHeading = Color(0xFF1F293B); // Primary heading text
+  static const Color textMuted = Color(0xFF8C8A82); // Secondary / caption text
+  static const Color divider = Color(0xFFE8E5E0); // Hairline dividers
+  static const Color fieldFill = Color(0xFFEAE8E4); // Search / input fill
+  static const Color chevron = Color(0xFFD1D0CE); // Trailing chevron icon
+
+  // --- Avatar accent palette (decorative, cycled per user) ---
+  static const List<Color> avatarPalette = [
+    mauve,
+    Color(0xFF6699D1),
+    Color(0xFFE08C73),
+    Color(0xFFEEAF56),
+    Color(0xFF5AAE95),
+  ];
+
   // --- Font Families ---
   // Extracted from the @theme block in styles.css
   static const String fontFamilySans = 'Montserrat';

@@ -48,4 +48,4 @@ final class ConversationsProvider
   }
 }
 
-String _$conversationsHash() => r'b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1';
+String _$conversationsHash() => r'0579fdeb203cb819462bce09604c1c46fcdfe6b7';

@@ -10,7 +10,7 @@ part of 'thread_provider.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(ThreadNotifier)
-final threadNotifierProvider = ThreadNotifierFamily._();
+final threadProvider = ThreadNotifierFamily._();
 
 final class ThreadNotifierProvider
     extends $AsyncNotifierProvider<ThreadNotifier, List<Message>> {
@@ -19,7 +19,7 @@ final class ThreadNotifierProvider
     required String super.argument,
   }) : super(
          retry: null,
-         name: r'threadNotifierProvider',
+         name: r'threadProvider',
          isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
@@ -30,7 +30,7 @@ final class ThreadNotifierProvider
 
   @override
   String toString() {
-    return r'threadNotifierProvider'
+    return r'threadProvider'
         ''
         '($argument)';
   }
@@ -50,7 +50,7 @@ final class ThreadNotifierProvider
   }
 }
 
-String _$threadNotifierHash() => r'c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2';
+String _$threadNotifierHash() => r'bb55d2342514062699cf069a1a1304f5b729c7e5';
 
 final class ThreadNotifierFamily extends $Family
     with
@@ -64,7 +64,7 @@ final class ThreadNotifierFamily extends $Family
   ThreadNotifierFamily._()
     : super(
         retry: null,
-        name: r'threadNotifierProvider',
+        name: r'threadProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
         isAutoDispose: true,
@@ -74,7 +74,7 @@ final class ThreadNotifierFamily extends $Family
       ThreadNotifierProvider._(argument: conversationId, from: this);
 
   @override
-  String toString() => r'threadNotifierProvider';
+  String toString() => r'threadProvider';
 }
 
 abstract class _$ThreadNotifier extends $AsyncNotifier<List<Message>> {

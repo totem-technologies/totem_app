@@ -25,6 +25,7 @@ import '../features/blog/screens/blog_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/home/widgets/join_ongoing_session_card.dart';
 import '../features/messages/screens/messages_screen.dart';
+import '../features/messages/screens/new_message_screen.dart';
 import '../features/messages/screens/thread_screen.dart';
 import '../features/profile/screens/profile_details_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
@@ -427,6 +428,11 @@ class AppTotemRouter extends TotemRouter {
               ],
             ),
           ],
+        ),
+
+        GoRoute(
+          path: RouteNames.newMessage,
+          builder: (context, state) => const NewMessageScreen(),
         ),
 
         GoRoute(

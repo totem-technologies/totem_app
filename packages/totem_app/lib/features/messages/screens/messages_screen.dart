@@ -45,7 +45,7 @@ class MessagesScreen extends ConsumerWidget {
                       ),
                     ),
                     InkWell(
-                      onTap: () {},
+                      onTap: () => context.push(RouteNames.newMessage),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         width: 32,
