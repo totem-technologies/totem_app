@@ -41,7 +41,7 @@ run-web-release:
 # (e.g. Django at :8000) can fetch these assets via ASSET_BASE. Plain
 # `python3 -m http.server` can't set headers, so use the helper script.
 serve-web:
-	python3 scripts/serve_web.py 5173 $(WEB_DIR)/build/web
+	dart scripts/serve_web.dart 5173 $(WEB_DIR)/build/web
 
 # Build with the staging worker as ASSET_BASE and deploy it to Cloudflare.
 # Requires wrangler auth (bunx wrangler login, or CLOUDFLARE_API_TOKEN +

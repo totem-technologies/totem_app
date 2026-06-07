@@ -163,7 +163,7 @@ The Worker is assets-only and serves the bundle flat from its own origin. SPA
 fallback is **off** (`not_found_handling = "none"`) — Django owns the HTML and
 client-side routing, so a missing asset 404s instead of being masked by
 `index.html`. Because the assets are fetched cross-origin, they ship with CORS
-headers via `web/_headers` (honored by Workers Static Assets); `scripts/serve_web.py`
+headers via `web/_headers` (honored by Workers Static Assets); `scripts/serve_web.dart`
 mirrors those headers for local testing.
 
 Config lives in `packages/totem_web/wrangler.toml`; deploys are driven by
