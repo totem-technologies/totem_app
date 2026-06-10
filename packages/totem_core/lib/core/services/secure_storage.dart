@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -24,6 +25,22 @@ class SecureStorage {
   Future<void> write({required String key, required String value}) async {
     try {
       await _storage.write(key: key, value: value);
+    } on PlatformException catch (error, stackTrace) {
+      // iOS keychain items written by older builds with different
+      // attributes (e.g. accessibility) aren't matched by the plugin's
+      // update query, so the write fails with errSecDuplicateItem
+      // (-25299). Delete ignores those attributes, so remove the stale
+      // item and retry once.
+      try {
+        await _storage.delete(key: key);
+        await _storage.write(key: key, value: value);
+      } catch (_) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Error writing secure storage key: $key',
+        );
+      }
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,

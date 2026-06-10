@@ -9,6 +9,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:livekit_client/src/core/engine.dart';
 import 'package:livekit_client/src/stats/stats.dart' show VideoReceiverStats;
+import 'package:livekit_client/src/track/video_track_view_registration.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockMediaStream extends Mock implements webrtc.MediaStream {
@@ -220,6 +221,10 @@ dynamic _videoTrackDefaults(Invocation invocation) {
       return 'mock-view-id';
     case #unregisterVideoView:
       return null;
+    case #addViewRegistration:
+      return VideoTrackViewRegistration();
+    case #removeViewRegistration:
+      return null;
     case #source:
       return TrackSource.camera;
     case #mediaStream:
@@ -228,11 +233,17 @@ dynamic _videoTrackDefaults(Invocation invocation) {
   return null;
 }
 
+// Members that legitimately return null from the defaults above; without
+// this allowlist they would fall through to mocktail's noSuchMethod and
+// throw for being unstubbed.
+const _videoTrackVoidMembers = {#unregisterVideoView, #removeViewRegistration};
+
 class MockRemoteVideoTrack extends Mock implements RemoteVideoTrack {
   @override
   dynamic noSuchMethod(Invocation invocation) {
     final defaulted = _videoTrackDefaults(invocation);
-    if (defaulted != null || invocation.memberName == #unregisterVideoView) {
+    if (defaulted != null ||
+        _videoTrackVoidMembers.contains(invocation.memberName)) {
       return defaulted;
     }
     return super.noSuchMethod(invocation);
@@ -256,7 +267,8 @@ class MockLocalVideoTrack extends Mock implements LocalVideoTrack {
   @override
   dynamic noSuchMethod(Invocation invocation) {
     final defaulted = _videoTrackDefaults(invocation);
-    if (defaulted != null || invocation.memberName == #unregisterVideoView) {
+    if (defaulted != null ||
+        _videoTrackVoidMembers.contains(invocation.memberName)) {
       return defaulted;
     }
     return super.noSuchMethod(invocation);
