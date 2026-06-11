@@ -82,7 +82,7 @@ ClientApi _createApi(_ScriptedApiClient client) {
 
 void main() {
   setUpAll(() {
-    setupDotenv();
+    setupAppConfig();
     silenceLogger();
   });
 

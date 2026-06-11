@@ -1,5 +1,3 @@
-// ignore_for_file: experimental_member_use
-
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -11,43 +9,11 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/shared/logger.dart';
-import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 /// Centralized error handling for the Totem App.
 class ErrorHandler {
   const ErrorHandler._();
-
-  static Future<void> initialize() async {
-    if (AppConfig.sentryDsn != null && AppConfig.sentryDsn!.isNotEmpty) {
-      // https://docs.sentry.io/platforms/dart/guides/flutter/integrations/slow-and-frozen-frames-instrumentation/
-      SentryWidgetsFlutterBinding.ensureInitialized();
-      await SentryFlutter.init(
-        (options) {
-          options
-            ..dsn = AppConfig.sentryDsn
-            ..navigatorKey = TotemRouter.instance.navigatorKey
-            // Adds request headers and IP for users, for more info visit:
-            // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
-            ..sendDefaultPii = true
-            ..tracesSampleRate = AppConfig.isDevelopment ? 1.0 : 0.1
-            ..profilesSampleRate = AppConfig.isDevelopment ? 1.0 : 0.1
-            ..enableLogs = true
-            ..attachScreenshot = true
-            ..attachViewHierarchy = true
-            ..enableAutoPerformanceTracing = true
-            ..enableTimeToFullDisplayTracing = true
-            ..enableTombstone = true;
-        },
-        appRunner: () async {
-          FlutterError.onError = (details) {
-            FlutterError.presentError(details);
-            logFlutterError(details);
-          };
-        },
-      );
-    }
-  }
 
   static void logError(
     dynamic error, {
@@ -58,7 +24,8 @@ class ErrorHandler {
       logger.e(message, error: error, stackTrace: stackTrace);
     }
 
-    if (AppConfig.sentryDsn != null && AppConfig.sentryDsn!.isNotEmpty) {
+    if (AppConfig.instance.sentryDsn != null &&
+        AppConfig.instance.sentryDsn!.isNotEmpty) {
       Sentry.captureException(
         error,
         stackTrace: stackTrace,

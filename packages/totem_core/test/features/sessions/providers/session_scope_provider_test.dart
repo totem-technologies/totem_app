@@ -46,12 +46,14 @@ SessionRoomState _state({
   String? currentSpeaker,
   String? nextSpeaker,
   String? roundMessage,
+  bool wasJoining = false,
 }) {
   return SessionRoomState(
     connection: ConnectionState(
       phase: phase,
       state: connectionState,
       error: error,
+      wasJoining: wasJoining,
     ),
     participants: ParticipantsState(
       participants: participants,
@@ -263,6 +265,8 @@ void main() {
         String? nextSpeaker, {
         bool noRoom = false,
         bool noLocalParticipant = false,
+        RoomError? error,
+        bool wasJoining = false,
       }) {
         if (noRoom) {
           fakeSession.mockRoom = null;
@@ -278,12 +282,14 @@ void main() {
             currentSessionStateProvider.overrideWithValue(
               _state(
                 connectionState: connState,
+                error: error,
                 roomStatus: status,
                 turnState: turnState,
                 participants: [alice],
                 keeper: 'keeper',
                 currentSpeaker: currentSpeaker,
                 nextSpeaker: nextSpeaker,
+                wasJoining: wasJoining,
               ),
             ),
             currentSessionProvider.overrideWithValue(fakeSession),
@@ -343,16 +349,46 @@ void main() {
         RoomScreen.loading,
       );
 
-      // disconnected -> RoomScreen.disconnected
+      // Transient disconnect
+      // disconnected -> RoomScreen.loading
       expect(
         containerForState(
           RoomConnectionState.disconnected,
-          RoomStatus.active,
+          RoomStatus.waitingRoom,
           TurnState.idle,
           'alice',
           'alice',
+          wasJoining: true,
         ).read(resolveCurrentScreenProvider),
-        RoomScreen.disconnected,
+        RoomScreen.loading,
+      );
+
+      // disconnected with join-failure -> RoomScreen.loading
+      expect(
+        containerForState(
+          RoomConnectionState.disconnected,
+          RoomStatus.waitingRoom,
+          TurnState.idle,
+          'alice',
+          'alice',
+          error: const RoomDisconnectionError(DisconnectReason.joinFailure),
+          wasJoining: true,
+        ).read(resolveCurrentScreenProvider),
+        RoomScreen.loading,
+      );
+
+      // disconnected with clientInitiated -> RoomScreen.loading
+      expect(
+        containerForState(
+          RoomConnectionState.disconnected,
+          RoomStatus.waitingRoom,
+          TurnState.idle,
+          'alice',
+          'alice',
+          error: const RoomDisconnectionError(DisconnectReason.clientInitiated),
+          wasJoining: true,
+        ).read(resolveCurrentScreenProvider),
+        RoomScreen.loading,
       );
 
       // connected, RoomStatus.ended -> RoomScreen.disconnected

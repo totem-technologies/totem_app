@@ -6,7 +6,6 @@ plugins {
     // START: FlutterFire Configuration
     id("com.google.gms.google-services")
     // END: FlutterFire Configuration
-    id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -28,12 +27,6 @@ android {
         // Sets Java compatibility to Java 17
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        }
     }
 
     defaultConfig {
@@ -72,21 +65,17 @@ android {
     productFlavors {
         create("staging") {
             dimension = "default"
-            resValue(
-                type = "string",
-                name = "app_name",
-                value = "Totem Staging"
-            )
             applicationIdSuffix = ".dev"
         }
         create("production") {
             dimension = "default"
-            resValue(
-                type = "string",
-                name = "app_name",
-                value = "Totem"
-            )
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 

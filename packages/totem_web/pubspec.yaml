@@ -1,7 +1,7 @@
 name: totem_web
 description: "Guided introspection groups."
 publish_to: "none"
-version: 0.0.63+63
+version: 0.0.65+65
 resolution: workspace
 
 environment:
@@ -14,20 +14,17 @@ dependencies:
     sdk: flutter
   totem_core:
     path: ../totem_core
-  dio: ^5.8.0
+  dio: ^5.9.2
   degenerate_dio: ^0.4.1
-  http: ^1.4.0
+  http: ^1.6.0
   web: ^1.1.1
 
-  # TODO(web): Remove dependency on totem_app
-  totem_app:
-    path: ../totem_app
-
   # Firebase (used by generated firebase_options.dart)
-  firebase_core: ^4.0.0
+  firebase_core: ^4.9.0
+  sentry_flutter: ^9.21.0
 
   # State Management
-  flutter_riverpod: ^3.2.1
+  flutter_riverpod: ^3.3.1
 
   go_router: ^17.2.3
   url_launcher: ^6.3.2

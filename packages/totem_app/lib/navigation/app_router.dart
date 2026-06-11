@@ -6,10 +6,9 @@ import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_app/widgets/offline_indicator.dart';
-import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/app_config.dart';
-import 'package:totem_core/features/messages/models/conversation.dart';
 import 'package:totem_core/features/keeper/screens/keeper_profile_screen.dart';
+import 'package:totem_core/features/messages/models/conversation.dart';
 import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_core/shared/logger.dart';
 import 'package:totem_core/shared/router.dart';
@@ -47,7 +46,11 @@ class BottomNavScaffold extends ConsumerWidget {
   static const double bottomNavHeight = 80;
 
   static List<HomeRoutes> get _visibleRoutes => HomeRoutes.values
-      .where((r) => !AppConfig.isProduction || r != HomeRoutes.messages)
+      .where(
+        (r) =>
+            AppConfig.instance.environment != Environment.production ||
+            r != HomeRoutes.messages,
+      )
       .toList();
 
   @override
@@ -126,7 +129,8 @@ class BottomNavScaffold extends ConsumerWidget {
                       ),
                       label: 'Blog',
                     ),
-                    if (!AppConfig.isProduction)
+                    if (AppConfig.instance.environment !=
+                        Environment.production)
                       const NavigationDestination(
                         icon: TotemIcon(TotemIcons.messages),
                         selectedIcon: TotemIcon(
@@ -368,7 +372,7 @@ class AppTotemRouter extends TotemRouter {
                 ),
               ],
             ),
-            if (!AppConfig.isProduction)
+            if (AppConfig.instance.environment != Environment.production)
               StatefulShellBranch(
                 routes: <RouteBase>[
                   GoRoute(

@@ -23,7 +23,7 @@ void main() {
   late WakelockPlusPlatformInterface previousWakelockPlatform;
 
   setUpAll(() {
-    setupDotenv();
+    setupAppConfig();
 
     setupMockFlutterForegroundTask();
     previousWakelockPlatform = WakelockPlusPlatformInterface.instance;

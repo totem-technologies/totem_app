@@ -158,7 +158,7 @@ void main() {
   late FakeRoom room;
 
   setUpAll(() {
-    setupDotenv();
+    setupAppConfig();
     registerFallbackValue(TrackSource.camera);
   });
 
@@ -394,7 +394,7 @@ void main() {
       await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
       expect(
-        find.textContaining('Waiting for the receiver to accept...'),
+        find.textContaining('Waiting for the receiver to accept.'),
         findsOneWidget,
       );
       expect(find.byType(TextField), findsNothing);

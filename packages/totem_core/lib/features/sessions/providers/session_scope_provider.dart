@@ -20,9 +20,12 @@ class SessionParticipantKeys {
   }
 }
 
-final sessionParticipantKeysProvider = Provider<SessionParticipantKeys>((ref) {
-  return SessionParticipantKeys();
-});
+final sessionParticipantKeysProvider = Provider<SessionParticipantKeys>(
+  (ref) {
+    return SessionParticipantKeys();
+  },
+  name: 'Participant Video Keys',
+);
 
 /// Provider that will be overridden at room scope.
 /// Returns the current session options for the active room.
@@ -108,14 +111,20 @@ RoomScreen? resolveCurrentScreen(Ref ref) {
     case RoomConnectionState.error:
       return RoomScreen.error;
     case RoomConnectionState.disconnected:
-      if (sessionState.phase == SessionPhase.idle) {
+      final error = sessionState.connection.error;
+      final isTransientJoinDisconnect =
+          sessionState.roomState.status == RoomStatus.waitingRoom &&
+          sessionState.connection.wasJoining &&
+          ((error is RoomDisconnectionError &&
+                  isTransientJoinDisconnectReason(error.reason)) ||
+              error == null);
+
+      if (isTransientJoinDisconnect) {
         return RoomScreen.loading;
       }
-      if (<DisconnectReason>[
-        DisconnectReason.joinFailure,
-        DisconnectReason.signalingConnectionFailure,
-      ].contains(sessionState.disconnectReason)) {
-        return RoomScreen.error;
+
+      if (sessionState.phase == SessionPhase.idle) {
+        return RoomScreen.loading;
       }
       return RoomScreen.disconnected;
     case RoomConnectionState.connected:

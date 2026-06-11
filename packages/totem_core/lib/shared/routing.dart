@@ -20,7 +20,7 @@ class RoutingUtils {
           host == 'totem.org' ||
           host == 'www.totem.org' ||
           host == 'totem.kbl.io' ||
-          host == AppConfig.apiHost;
+          host == AppConfig.instance.apiHost;
 
       if (!isTotemDomain) {
         return null;

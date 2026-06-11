@@ -13,6 +13,7 @@ class ErrorScreen extends StatefulWidget {
     this.error,
     this.showHomeButton,
     this.onRetry,
+    this.hideAppBar = false,
     super.key,
   });
 
@@ -23,6 +24,11 @@ class ErrorScreen extends StatefulWidget {
   final bool? showHomeButton;
 
   final Future<void> Function()? onRetry;
+
+  /// Suppresses the internal [AppBar] (and its [BackButton]). Use when
+  /// rendering this screen in a context where [TotemRouter.instance] may
+  /// not be initialized — e.g. a fatal startup failure.
+  final bool hideAppBar;
 
   @override
   State<ErrorScreen> createState() => _ErrorScreenState();
@@ -39,7 +45,8 @@ class _ErrorScreenState extends State<ErrorScreen> {
         widget.showHomeButton ?? ErrorHandler.is404(widget.error);
 
     return Scaffold(
-      appBar: Scaffold.maybeOf(context)?.hasAppBar ?? false
+      appBar:
+          widget.hideAppBar || (Scaffold.maybeOf(context)?.hasAppBar ?? false)
           ? null
           : AppBar(
               leading: showHomeButton

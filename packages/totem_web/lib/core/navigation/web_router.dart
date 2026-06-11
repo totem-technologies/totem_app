@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/features/keeper/repositories/keeper_repository.dart';
@@ -23,6 +24,7 @@ class WebTotemRouter extends TotemRouter {
     return GoRouter(
       initialLocation: '/',
       refreshListenable: GoRouterRefreshStream(authController.authStateChanges),
+      observers: [SentryNavigatorObserver()],
       routes: [
         GoRoute(
           path: '/',
@@ -35,7 +37,7 @@ class WebTotemRouter extends TotemRouter {
           path: '/:slug',
           builder: (context, state) {
             final slug = state.pathParameters['slug'] ?? '';
-            return PreJoinScreen(sessionSlug: slug);
+            return SentryDisplayWidget(child: PreJoinScreen(sessionSlug: slug));
           },
         ),
       ],
@@ -79,6 +81,8 @@ class WebTotemRouter extends TotemRouter {
           webOnlyWindowName: '_self',
         );
         break;
+      case HomeRoutes.messages:
+        throw UnimplementedError();
     }
   }
 
@@ -135,7 +139,7 @@ class _WebRedirectScreenState extends State<_WebRedirectScreen> {
   }
 
   Future<void> _redirectToSignIn() async {
-    final baseUri = Uri.parse(AppConfig.apiBaseUrl);
+    final baseUri = Uri.parse(AppConfig.instance.apiUrl);
     final nextRoute = widget.nextRoute;
     final signInUri = baseUri.replace(
       queryParameters: {

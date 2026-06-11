@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart' hide ConnectionState;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
@@ -22,6 +21,7 @@ import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/shared/widgets/popups.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
+import '../../../setup.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
@@ -119,6 +119,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
   required RoomScreen screen,
   RoomConnectionState connectionState = RoomConnectionState.connected,
   RoomStatus roomStatus = RoomStatus.active,
+  DisconnectReason? disconnectReason,
   List<Object?> extraOverrides = const [],
 }) async {
   final p1 = _buildMockParticipant('user-1');
@@ -171,7 +172,6 @@ Future<void> _pumpRoomScreenForResolvedScreen(
         roundMessageProvider.overrideWith((ref) => null),
         sessionMessagesProvider.overrideWith((ref) => const []),
         lastSessionMessageProvider.overrideWith((ref) => null),
-        disconnectionReasonProvider.overrideWith((ref) => null),
         userProfileProvider('user-1').overrideWith(
           (ref) => PublicUserSchema(
             profileAvatarType: ProfileAvatarTypeEnum.td,
@@ -191,6 +191,9 @@ Future<void> _pumpRoomScreenForResolvedScreen(
           ),
         ),
         getRecommendedSessionsProvider().overrideWith((ref) => []),
+        disconnectionReasonProvider.overrideWith(
+          (ref) => disconnectReason,
+        ),
         ...extraOverrides.cast(),
       ],
       child: const MaterialApp(
@@ -442,9 +445,7 @@ void main() {
 
     setUpAll(() async {
       registerFallbackValue(TrackSource.camera);
-      dotenv.loadFromString(
-        isOptional: true,
-      );
+      setupAppConfig();
     });
 
     setUp(() {
@@ -507,6 +508,29 @@ void main() {
       expect(find.byType(SessionDisconnectedScreen), findsOneWidget);
       await tester.pump(const Duration(seconds: 10));
     });
+
+    testWidgets(
+      'keeps loading screen visible while recovering from join failure',
+      (tester) async {
+        final event = _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 5)),
+          duration: 10,
+        );
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: event,
+          screen: RoomScreen.loading,
+          connectionState: RoomConnectionState.disconnected,
+          roomStatus: RoomStatus.ended,
+          disconnectReason: DisconnectReason.joinFailure,
+        );
+
+        expect(find.byKey(const ValueKey('loading-screen')), findsOneWidget);
+        expect(find.byType(SessionDisconnectedScreen), findsNothing);
+      },
+    );
 
     testWidgets('renders error screen for RoomScreen.error', (tester) async {
       final event = _createSessionEvent(

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
@@ -11,6 +10,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 
+import '../../../../setup.dart';
 import '../../livekit_mocks.dart';
 
 SessionDetailSchema _createSessionEvent(String eventSlug) {
@@ -67,6 +67,7 @@ class _CountingRoomEventsListener implements EventsListener<RoomEvent> {
   int onCount = 0;
   int cancelAllCount = 0;
   int disposeCount = 0;
+  final Map<Type, List<FutureOr<void> Function(Object?)>> _listeners = {};
 
   @override
   CancelListenFunc on<E>(
@@ -74,7 +75,20 @@ class _CountingRoomEventsListener implements EventsListener<RoomEvent> {
     bool Function(E)? filter,
   }) {
     onCount++;
+    _listeners.putIfAbsent(E, () => []).add((event) async {
+      final typedEvent = event as E;
+      if (filter == null || filter(typedEvent)) {
+        await listener(typedEvent);
+      }
+    });
     return () async {};
+  }
+
+  Future<void> trigger<E>(E event) async {
+    if (_listeners[E] == null) return;
+    for (final listener in _listeners[E]!) {
+      await listener(event);
+    }
   }
 
   @override
@@ -89,7 +103,7 @@ class _CountingRoomEventsListener implements EventsListener<RoomEvent> {
   }
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(Invocation invocation) => null;
 }
 
 class _CountingRoom implements Room {
@@ -143,8 +157,9 @@ class _CountingRoom implements Room {
 
 void main() {
   setUpAll(() {
-    dotenv.loadFromString(
-      envString: 'LIVEKIT_URL=wss://example.livekit.cloud\nSENTRY_DSN=test',
+    setupAppConfig(
+      liveKitUrl: 'wss://example.livekit.cloud',
+      sentryDsn: 'test',
     );
   });
 
@@ -236,6 +251,72 @@ void main() {
         expect(controller.room, isNull);
       });
 
+      test(
+        'transient join disconnect keeps room available for retry',
+        () async {
+          const eventSlug = 'test-session';
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+
+          const options = SessionOptions(
+            eventSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: true,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+
+          final localParticipant = MockLocalParticipant();
+          when(() => localParticipant.setCameraEnabled(any<bool>())).thenAnswer(
+            (_) async => null,
+          );
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer(
+            (_) async => null,
+          );
+
+          final room = _CountingRoom(localParticipant);
+          controller.room = room;
+
+          await controller.initializeConnection(
+            roomOptions: RoomOptions(
+              defaultCameraCaptureOptions: options.cameraOptions,
+              defaultAudioCaptureOptions: const AudioCaptureOptions(),
+              defaultAudioOutputOptions: AudioOutputOptions(
+                speakerOn: options.speakerEnabled,
+              ),
+            ),
+            url: 'wss://example.livekit.cloud',
+            token: options.token,
+          );
+
+          await room.listener.trigger(
+            RoomDisconnectedEvent(reason: DisconnectReason.joinFailure),
+          );
+
+          expect(controller.room, same(room));
+          expect(room.disposeCount, 0);
+          expect(room.disconnectCount, 0);
+          expect(
+            controller.state.connectionState,
+            RoomConnectionState.disconnected,
+          );
+        },
+      );
+
       test('join only calls room.connect once while connecting', () async {
         const eventSlug = 'test-session';
         final container = _createContainerWithEventOverride(eventSlug);
@@ -261,10 +342,12 @@ void main() {
           sessionControllerProvider(options).notifier,
         );
         final localParticipant = MockLocalParticipant();
-        when(() => localParticipant.setCameraEnabled(any())).thenAnswer(
+        when(() => localParticipant.setCameraEnabled(any<bool>())).thenAnswer(
           (_) async => null,
         );
-        when(() => localParticipant.setMicrophoneEnabled(any())).thenAnswer(
+        when(
+          () => localParticipant.setMicrophoneEnabled(any<bool>()),
+        ).thenAnswer(
           (_) async => null,
         );
 

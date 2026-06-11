@@ -266,9 +266,12 @@ class SessionDeviceController extends _$SessionDeviceController {
     try {
       bool? speakerEnabled;
 
-      if (Platform.isAndroid) {
-        speakerEnabled = await audio.AndroidAudioManager().isSpeakerphoneOn();
-      } else if (Platform.isIOS) {
+      // TODO(totem): Properly check if speakerphone is enabled
+      // if (Platform.isAndroid) {
+      //   speakerEnabled = await audio.AndroidAudioManager().isSpeakerphoneOn();
+      // } else
+
+      if (Platform.isIOS) {
         final session = await audio.AudioSession.instance;
         final outputs = await session.getDevices(includeInputs: false);
         speakerEnabled = outputs.any(

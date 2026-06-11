@@ -80,7 +80,7 @@ class MessagesScreen extends ConsumerWidget {
           Expanded(
             child: asyncConversations.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) =>
+              error: (_, _) =>
                   const Center(child: Text('Could not load messages.')),
               data: (conversations) => conversations.isEmpty
                   ? const _EmptyState()

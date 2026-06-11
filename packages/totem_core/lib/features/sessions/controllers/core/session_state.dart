@@ -41,22 +41,26 @@ class ConnectionState {
     required this.phase,
     required this.state,
     this.error,
+    this.wasJoining = false,
   });
 
   final SessionPhase phase;
   final RoomConnectionState state;
   final RoomError? error;
+  final bool wasJoining;
 
   ConnectionState copyWith({
     SessionPhase? phase,
     RoomConnectionState? state,
     RoomError? error,
     bool clearError = false,
+    bool? wasJoining,
   }) {
     return ConnectionState(
       phase: phase ?? this.phase,
       state: state ?? this.state,
       error: clearError ? null : error ?? this.error,
+      wasJoining: wasJoining ?? this.wasJoining,
     );
   }
 
@@ -66,12 +70,16 @@ class ConnectionState {
     return other is ConnectionState &&
         other.phase == phase &&
         other.state == state &&
-        other.error?.toString() == error?.toString();
+        other.error?.toString() == error?.toString() &&
+        other.wasJoining == wasJoining;
   }
 
   @override
   int get hashCode =>
-      phase.hashCode ^ state.hashCode ^ error.toString().hashCode;
+      phase.hashCode ^
+      state.hashCode ^
+      error.toString().hashCode ^
+      wasJoining.hashCode;
 }
 
 @immutable
@@ -306,4 +314,15 @@ class SessionRoomState {
       participants.hashCode ^
       chat.hashCode ^
       turn.hashCode;
+}
+
+/// Returns true if the given [reason] represents a transient disconnect that
+/// commonly happens during the join process (e.g. signaling hiccups or
+/// transient join failures). These disconnects are recoverable and the UI
+/// typically should continue showing a loading/joining state rather than
+/// immediately showing a disconnected screen.
+bool isTransientJoinDisconnectReason(DisconnectReason? reason) {
+  return reason == DisconnectReason.joinFailure ||
+      reason == DisconnectReason.clientInitiated ||
+      reason == DisconnectReason.signalingConnectionFailure;
 }

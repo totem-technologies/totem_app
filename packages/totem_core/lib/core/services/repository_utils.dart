@@ -46,6 +46,15 @@ class RepositoryUtils {
           rethrow;
         }
 
+        if (error is FormatException) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Invalid API response while $operationName',
+          );
+          throw AppDataException.invalidFormat();
+        }
+
         final isLastAttempt = attempt >= maxRetries;
         if (isLastAttempt) {
           ErrorHandler.logError(
@@ -54,13 +63,6 @@ class RepositoryUtils {
             message:
                 'Error in $operationName (attempt ${attempt + 1}/$totalAttempts)',
           );
-        }
-
-        if (error is DioException) {
-          final statusCode = error.response?.statusCode;
-          if (statusCode != null && statusCode >= 400 && statusCode < 500) {
-            rethrow;
-          }
         }
 
         final isRetryableError =
