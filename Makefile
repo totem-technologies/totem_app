@@ -30,6 +30,32 @@ run-web:
 	@echo "Running app in Web Server..."
 	cd $(WEB_DIR) && flutter run -d web-server --web-port=5173 --web-hostname=0.0.0.0 --release
 
+# Build the web app the way it deploys: mounted at /room/, assets fetched from
+# a separate origin (here the local serve-web "CDN" on :5173) via ASSET_BASE.
+run-web-release:
+	@echo "Building web app..."
+	cd $(WEB_DIR) && flutter build web --wasm --base-href "/room/" --web-define=ASSET_BASE="http://localhost:5173/"
+	@echo "Built $(WEB_DIR)/build/web — serve it with: make serve-web"
+
+# Serve the built bundle with CORS headers so an HTML document on another origin
+# (e.g. Django at :8000) can fetch these assets via ASSET_BASE. Plain
+# `python3 -m http.server` can't set headers, so use the helper script.
+serve-web:
+	dart scripts/serve_web.dart 5173 $(WEB_DIR)/build/web
+
+# Build with the staging worker as ASSET_BASE and deploy it to Cloudflare.
+# Requires wrangler auth (bunx wrangler login, or CLOUDFLARE_API_TOKEN +
+# CLOUDFLARE_ACCOUNT_ID).
+deploy-web-staging:
+	@echo "Building web app (staging)"
+	cd $(WEB_DIR) && flutter build web --wasm --base-href "/room/" --web-define=ASSET_BASE="https://totem-web-staging.lopkerk.workers.dev/"
+	cd $(WEB_DIR) && bunx wrangler deploy --env staging
+
+deploy-web-production:
+	@echo "Building web app (production)"
+	cd $(WEB_DIR) && flutter build web --wasm --base-href "/room/" --web-define=ASSET_BASE="https://totem-web-production.lopkerk.workers.dev/"
+	cd $(WEB_DIR) && bunx wrangler deploy --env production
+
 build-runner:
 	@echo "Running build_runner for code generation..."
 	cd $(CORE_DIR) && dart run build_runner build --delete-conflicting-outputs

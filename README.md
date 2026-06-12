@@ -141,6 +141,56 @@ The script will:
 2. Suggest a default version (increments patch and build number)
 3. Prompt you to enter a new version
 
+## 🌐 Web hosting (Cloudflare Workers)
+
+The `totem_web` client is mounted at the **`/room/`** base route. The Django
+origin serves (and patches) the HTML document — it proxies the page from this
+deployment — while the Cloudflare Worker acts as a CDN, serving every other
+asset directly. Two build settings make this work:
+
+- **`--base-href /room/`** sets `<base href="/room/">` so the page and go_router
+  routing live under `/room/` on the Django origin.
+- **`--web-define=ASSET_BASE=<worker-url>`** points Flutter's loader
+  (`web/flutter_bootstrap.js`) at the Cloudflare deployment, so `main.dart.js`,
+  CanvasKit, the wasm runtime and `assets/` are fetched directly from the CDN.
+
+The bootstrap script is **inlined** into `index.html` (via the
+`{{flutter_bootstrap_js}}` token), so there is no separate
+`flutter_bootstrap.js` request: Django serves only the HTML document and the CDN
+serves everything the loader pulls.
+
+The Worker is assets-only and serves the bundle flat from its own origin. SPA
+fallback is **off** (`not_found_handling = "none"`) — Django owns the HTML and
+client-side routing, so a missing asset 404s instead of being masked by
+`index.html`. Because the assets are fetched cross-origin, they ship with CORS
+headers via `web/_headers` (honored by Workers Static Assets); `scripts/serve_web.dart`
+mirrors those headers for local testing.
+
+Config lives in `packages/totem_web/wrangler.toml`; deploys are driven by
+`.github/workflows/web.yml`:
+
+- **Pull request / push to `main`** — builds the web bundle as a check (no deploy).
+- **Push a release tag `v*`** — builds and deploys the **staging** environment.
+- **Publish the GitHub release** (move the draft out to latest) — builds and
+  deploys the **production** environment.
+
+Required repository **secrets** (in addition to the existing `FIREBASE_OPTIONS_B64`):
+
+- `CLOUDFLARE_API_TOKEN` — a token with the *Workers Scripts: Edit* permission.
+- `CLOUDFLARE_ACCOUNT_ID` — the target Cloudflare account id.
+
+`ASSET_BASE` (the public URL the loader fetches assets from) is hardcoded per
+environment in `.github/workflows/web.yml` — currently the `*.workers.dev`
+URLs. Update those values there if the Worker moves to a custom domain.
+
+To build and deploy manually:
+
+```bash
+cd packages/totem_web
+flutter build web --wasm --base-href /room/ \
+  --web-define=ASSET_BASE=https://totem-web-staging.<sub>.workers.dev/
+bunx wrangler deploy --env staging   # or --env production
+```
 
 ## 👥 Community
 

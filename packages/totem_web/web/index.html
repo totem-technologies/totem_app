@@ -12,21 +12,19 @@
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
-    <!-- <base href="$FLUTTER_BASE_HREF"> -->
-    <base href="/">
+    <base href="$FLUTTER_BASE_HREF">
 
     <meta charset="UTF-8">
     <meta content="IE=Edge" http-equiv="X-UA-Compatible">
     <meta name="description" content="Guided introspection groups">
 
-    <!-- iOS meta tags & icons -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-title" content="totem_app">
-    <link rel="apple-touch-icon" href="icons/Icon-192.png">
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Embedded view served under /room/ on the main site, not a standalone web
+         app: no PWA install, no app manifest, and no service worker (the bootstrap
+         omits serviceWorkerSettings). The favicon is set with an ABSOLUTE URL: the
+         /favicon.ico origin fallback doesn't resolve and a relative href would
+         break under the /room/ base href. This is the same favicon the Django app
+         pages use (e.g. /spaces/); the unhashed path is stable across redeploys. -->
+    <link rel="icon" href="https://cdn.totem.org/static/images/favicons/favicon.ico">
 
     <title>Totem</title>
 
@@ -94,16 +92,58 @@
       bottom: 0;
       right: 0;
     }
+
+    /* Totem-branded indeterminate loading bar at the top during load.
+       Positioned like the splash logo (absolute, no z-index) so the Flutter
+       view paints over it once the first frame renders. */
+    #splash-loader {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      overflow: hidden;
+      background-color: rgba(38, 47, 55, 0.10); /* faint slate track */
+    }
+
+    #splash-loader::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 45%;
+      border-radius: 3px;
+      background: linear-gradient(
+        90deg,
+        #987aa5, /* mauve  */
+        #9bc0dd, /* blue   */
+        #d999aa, /* pink   */
+        #8b5cf6  /* purple */
+      );
+      animation: splash-loader-slide 1.4s ease-in-out infinite;
+    }
+
+    @keyframes splash-loader-slide {
+      0%   { transform: translateX(-110%); }
+      100% { transform: translateX(330%); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #splash-loader::before { animation-duration: 3s; }
+    }
   </style>
   <script id="splash-screen-script">
     function removeSplashFromWeb() {
       document.getElementById("splash")?.remove();
       document.getElementById("splash-branding")?.remove();
+      document.getElementById("splash-loader")?.remove();
       document.body.style.background = "transparent";
     }
   </script>
 </head>
   <body>
+  <div id="splash-loader" aria-hidden="true"></div>
   <picture id="splash">
       <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
       <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
@@ -113,7 +153,10 @@
     
     
 
-    <script src="flutter_bootstrap.js" async=""></script>
+    <!-- Inline the bootstrap (incl. our custom flutter_bootstrap.js with
+         ASSET_BASE) so no separate /room/flutter_bootstrap.js request is needed:
+         Django serves only this HTML doc, the CDN serves everything else. -->
+    <script>{{flutter_bootstrap_js}}</script>
   
 
 </body></html>

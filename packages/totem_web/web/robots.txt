@@ -1,0 +1,5 @@
+# This Worker is an internal asset CDN, not a site users visit directly, so keep
+# the *.workers.dev / CDN hostname out of search indexes. The real site's
+# crawl rules live in the Django origin's own robots.txt.
+User-agent: *
+Disallow: /

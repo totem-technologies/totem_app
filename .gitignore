@@ -69,3 +69,7 @@ app.*.map.json
 review-*.md
 
 /scratch
+
+# Cloudflare Workers / wrangler
+**/.wrangler/
+**/node_modules/
