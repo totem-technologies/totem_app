@@ -19,8 +19,14 @@ class SessionErrorScreen extends StatelessWidget {
         'Please check your internet connection or try again.';
     var canRetry = true;
 
+    // API failures arrive wrapped: the structured body lives in ApiError.error.
+    var error = this.error;
+    if (error is ApiError && error.error is RoomErrorResponse) {
+      error = error.error as RoomErrorResponse;
+    }
+
     if (error is RoomErrorResponse) {
-      switch ((error! as RoomErrorResponse).code) {
+      switch (error.code) {
         case ErrorCode.banned:
           title = "You've been removed from this session";
           subtitle =

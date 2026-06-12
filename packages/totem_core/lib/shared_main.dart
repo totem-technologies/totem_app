@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -38,6 +39,7 @@ Future<void> sharedMain(
       final container = ProviderContainer(
         observers: [ObserverService()],
         overrides: providerOverrides,
+        retry: _retryPolicy,
       );
       await container.read(authControllerProvider.notifier).checkExistingAuth();
       runApp(
@@ -71,6 +73,15 @@ Future<void> sharedMain(
       ),
     );
   }
+}
+
+/// Riverpod retries failed providers by default (exponential backoff, up to
+/// 10 attempts). A 4xx is a definitive answer — e.g. joining a session that
+/// isn't joinable — so repeating the request only hammers the API and keeps
+/// the UI cycling. 5xx and network-level failures keep the default retry.
+Duration? _retryPolicy(int retryCount, Object error) {
+  if (error is ApiError && error.statusCode < 500) return null;
+  return ProviderContainer.defaultRetry(retryCount, error);
 }
 
 void _configureSentry(SentryFlutterOptions options) {

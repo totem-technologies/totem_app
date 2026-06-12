@@ -155,6 +155,26 @@ void main() {
       });
     });
 
+    group('RoomErrorResponse wrapped in ApiError', () {
+      const wrappedError = ApiError<JoinResponse, RoomErrorResponse>(
+        statusCode: 403,
+        error: RoomErrorResponse(
+          code: ErrorCode.notJoinable,
+          message: 'Session is not joinable at this time',
+        ),
+      );
+
+      testWidgets('unwraps and shows the specific copy', (tester) async {
+        await pumpErrorScreen(tester, error: wrappedError, onRetry: () {});
+
+        expect(
+          find.text('This session cannot be joined'),
+          findsOneWidget,
+        );
+        expect(find.text('Something went wrong'), findsNothing);
+      });
+    });
+
     group('unknown RoomErrorResponse code', () {
       const unknownError = RoomErrorResponse(
         code: ErrorCode.notInRoom,
