@@ -3,65 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/features/messages/models/conversation.dart';
 import 'package:totem_core/shared/router.dart';
 
-// Shared purple used for accents on this screen (accent bar, joined text, button).
-const _purple = Color(0xFF8C7AA8);
-
-// Mock participants — same data pool as new_message_screen.dart.
-// Swapped for real API data when the backend ships.
-typedef _Participant = ({
-  String id,
-  String name,
-  String email,
-  String joinedSessions,
-  int sessions,
-  int reviews,
-});
-
-const _mockParticipants = <_Participant>[
-  (
-    id: 'conv_emily',
-    name: 'Emily',
-    email: 'emily@gmail.com',
-    joinedSessions: 'Joined Mar 12 · 8 sessions',
-    sessions: 8,
-    reviews: 2,
-  ),
-  (
-    id: 'conv_rafael',
-    name: 'Rafael',
-    email: 'rafael@gmail.com',
-    joinedSessions: 'Joined Mar 5 · 12 sessions',
-    sessions: 12,
-    reviews: 4,
-  ),
-  (
-    id: 'conv_tanya',
-    name: 'Tanya',
-    email: 'tanya@gmail.com',
-    joinedSessions: 'Joined Feb 22 · 15 sessions',
-    sessions: 15,
-    reviews: 3,
-  ),
-  (
-    id: 'conv_derek',
-    name: 'Kai',
-    email: 'kai@gmail.com',
-    joinedSessions: 'Joined Mar 18 · 5 sessions',
-    sessions: 5,
-    reviews: 1,
-  ),
-  (
-    id: 'conv_leila',
-    name: 'Nina',
-    email: 'nina@gmail.com',
-    joinedSessions: 'Joined Feb 14 · 20 sessions',
-    sessions: 20,
-    reviews: 6,
-  ),
-];
+import '../mocks/message_mocks.dart';
 
 /// Keeper-only screen showing a session's registered participants.
 ///
@@ -76,7 +20,7 @@ class SessionParticipantsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const participants = _mockParticipants;
+    const participants = mockSessionParticipants;
     final date = DateFormat(
       "EEEE, MMM d · h:mm a",
     ).format(session.start.toLocal());
@@ -108,7 +52,7 @@ class SessionParticipantsScreen extends StatelessWidget {
                       width: 4,
                       height: 38,
                       decoration: BoxDecoration(
-                        color: _purple,
+                        color: AppTheme.messagePurple,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -163,7 +107,7 @@ class SessionParticipantsScreen extends StatelessWidget {
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.mauve,
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppTheme.white,
                       shape: const StadiumBorder(),
                       minimumSize: const Size.fromHeight(48),
                       elevation: 0,
@@ -204,14 +148,14 @@ class SessionParticipantsScreen extends StatelessWidget {
 
   void _showParticipantDialog(
     BuildContext context,
-    _Participant participant,
+    MockParticipant participant,
     Color color,
   ) {
     showDialog<void>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.4),
       builder: (_) => Dialog(
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 32),
         child: _ParticipantDialog(
@@ -219,26 +163,18 @@ class SessionParticipantsScreen extends StatelessWidget {
           color: color,
           onSendMessage: () {
             Navigator.of(context).pop();
-            _openThread(context, participant);
+            _navigateToThread(context, participant);
           },
         ),
       ),
     );
   }
 
-  void _openThread(BuildContext context, _Participant participant) {
-    final conversation = Conversation(
-      id: participant.id,
-      peer: PublicUserSchema(
-        profileAvatarType: ProfileAvatarTypeEnum.td,
-        dateCreated: DateTime.now(),
-        name: participant.name,
-        slug: participant.id,
-        profileAvatarSeed: '${participant.id}-seed',
-      ),
-      updatedAt: DateTime.now(),
+  void _navigateToThread(BuildContext context, MockParticipant participant) {
+    context.push(
+      RouteNames.messageThread(participant.id),
+      extra: conversationFromMockParticipant(participant),
     );
-    context.push(RouteNames.messageThread(participant.id), extra: conversation);
   }
 }
 
@@ -303,7 +239,7 @@ class _ParticipantCard extends StatelessWidget {
     required this.onTap,
   });
 
-  final _Participant participant;
+  final MockParticipant participant;
   final Color color;
   final VoidCallback onTap;
 
@@ -367,7 +303,7 @@ class _ParticipantCard extends StatelessWidget {
                     Text(
                       participant.joinedSessions,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: _purple,
+                        color: AppTheme.messagePurple,
                         fontSize: 12,
                       ),
                     ),
@@ -395,7 +331,7 @@ class _ParticipantDialog extends StatelessWidget {
     required this.onSendMessage,
   });
 
-  final _Participant participant;
+  final MockParticipant participant;
   final Color color;
   final VoidCallback onSendMessage;
 
@@ -484,12 +420,12 @@ class _ParticipantDialog extends StatelessWidget {
               icon: const Icon(Icons.chat_bubble_outline_rounded, size: 22),
               label: const Text('Send message'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _purple,
-                foregroundColor: Colors.white,
+                backgroundColor: AppTheme.messagePurple,
+                foregroundColor: AppTheme.white,
                 shape: const StadiumBorder(),
                 minimumSize: const Size.fromHeight(50),
                 elevation: 0,
-                shadowColor: _purple.withValues(alpha: 0.32),
+                shadowColor: AppTheme.messagePurple.withValues(alpha: 0.32),
                 textStyle: const TextStyle(
                   fontFamily: AppTheme.fontFamilySans,
                   fontWeight: FontWeight.w600,

@@ -1,48 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/messages/providers/compose_to_participants_provider.dart';
 import 'package:totem_core/shared/router.dart';
 
-const _purple = Color(0xFF8C7AA8);
-const _chipDefaultBg = Color(0xFFEDEBF5);
-const _chipDefaultText = Color(0xFF7D6B9C);
-
-// Mock participant names — replaced with real API data when backend ships.
-const _mockNames = [
-  'Emily',
-  'Rafael',
-  'Tanya',
-  'Derek',
-  'Leila',
-  'Kai',
-  'Nina',
-  'Omar',
-];
+import '../mocks/message_mocks.dart';
 
 /// Keeper-only compose screen for broadcasting a message to all (or a subset
 /// of) participants in a session. All data is mocked; the send action is a
 /// no-op until the backend ships the bulk-message endpoint.
-class ComposeToParticipantsScreen extends StatefulWidget {
+class ComposeToParticipantsScreen extends ConsumerStatefulWidget {
   const ComposeToParticipantsScreen({required this.session, super.key});
 
   final SessionDetailSchema session;
 
   @override
-  State<ComposeToParticipantsScreen> createState() =>
+  ConsumerState<ComposeToParticipantsScreen> createState() =>
       _ComposeToParticipantsScreenState();
 }
 
 class _ComposeToParticipantsScreenState
-    extends State<ComposeToParticipantsScreen> {
-  late final Set<String> _selected;
+    extends ConsumerState<ComposeToParticipantsScreen> {
   final _messageController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _selected = {..._mockNames};
-  }
 
   @override
   void dispose() {
@@ -50,44 +31,43 @@ class _ComposeToParticipantsScreenState
     super.dispose();
   }
 
-  void _toggleRecipient(String name) {
-    setState(() {
-      if (_selected.contains(name)) {
-        _selected.remove(name);
-      } else {
-        _selected.add(name);
-      }
-    });
-  }
-
   Future<void> _sendMessages(BuildContext context) async {
-    // TODO: replace with real API call when backend ships bulk-message endpoint.
-    // Simulates success for now.
-    const success = true;
+    final notifier = ref.read(
+      composeToParticipantsProvider(mockParticipantNames).notifier,
+    );
+    final success = await notifier.send(_messageController.text.trim());
     if (!context.mounted) return;
     await showDialog<void>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.5),
       barrierDismissible: false,
-      builder: (_) => _SendResultDialog(
-        success: success,
-        sentCount: _selected.length,
-        sessionName: widget.session.space.title,
-        onGoToMessages: () {
-          Navigator.of(context).pop();
-          context.go(RouteNames.messages);
-        },
-        onDismiss: () => Navigator.of(context).pop(),
-      ),
+      builder: (_) {
+        final selected = ref.read(
+          composeToParticipantsProvider(mockParticipantNames),
+        );
+        return _SendResultDialog(
+          success: success,
+          sentCount: selected.selected.length,
+          sessionName: widget.session.space.title,
+          onGoToMessages: () {
+            Navigator.of(context).pop();
+            context.go(RouteNames.messages);
+          },
+          onDismiss: () => Navigator.of(context).pop(),
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final selectedCount = _selected.length;
+    final composeState = ref.watch(
+      composeToParticipantsProvider(mockParticipantNames),
+    );
+    final selectedCount = composeState.selected.length;
     final sessionName = widget.session.space.title;
-    final totalCount = _mockNames.length;
+    final totalCount = mockParticipantNames.length;
 
     return Scaffold(
       backgroundColor: AppTheme.cream,
@@ -140,7 +120,7 @@ class _ComposeToParticipantsScreenState
                         const Text(
                           'TO',
                           style: TextStyle(
-                            color: _purple,
+                            color: AppTheme.messagePurple,
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
                             letterSpacing: 1.5,
@@ -151,12 +131,20 @@ class _ComposeToParticipantsScreenState
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: _mockNames
+                          children: mockParticipantNames
                               .map(
                                 (name) => _RecipientChip(
                                   label: name,
-                                  selected: _selected.contains(name),
-                                  onTap: () => _toggleRecipient(name),
+                                  selected: composeState.selected.contains(
+                                    name,
+                                  ),
+                                  onTap: () => ref
+                                      .read(
+                                        composeToParticipantsProvider(
+                                          mockParticipantNames,
+                                        ).notifier,
+                                      )
+                                      .toggleRecipient(name),
                                 ),
                               )
                               .toList(),
@@ -232,7 +220,7 @@ class _ComposeToParticipantsScreenState
                               : () => _sendMessages(context),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.mauve,
-                            foregroundColor: Colors.white,
+                            foregroundColor: AppTheme.white,
                             disabledBackgroundColor: AppTheme.mauve.withValues(
                               alpha: 0.4,
                             ),
@@ -320,7 +308,7 @@ class _SendResultDialog extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 20),
       child: Padding(
@@ -375,7 +363,7 @@ class _SendResultDialog extends StatelessWidget {
                 onPressed: success ? onGoToMessages : onDismiss,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.mauve,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppTheme.white,
                   shape: const StadiumBorder(),
                   minimumSize: const Size.fromHeight(50),
                   elevation: 0,
@@ -403,22 +391,19 @@ class _ResultIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const successBg = Color(0xFFE8F5EE);
-    const successFg = Color(0xFF3DAA6E);
-    const errorBg = Color(0xFFFDE8E8);
-    const errorFg = Color(0xFFD94040);
-
     return Container(
       width: 64,
       height: 64,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: success ? successBg : errorBg,
+        color: success ? AppTheme.messageSuccessBg : AppTheme.messageErrorBg,
         shape: BoxShape.circle,
       ),
       child: Icon(
         success ? Icons.check_rounded : Icons.close_rounded,
-        color: success ? successFg : errorFg,
+        color: success
+            ? AppTheme.messageSuccessIcon
+            : AppTheme.messageErrorIcon,
         size: 32,
       ),
     );
@@ -449,7 +434,7 @@ class _RecipientChip extends StatelessWidget {
           bottom: 6,
         ),
         decoration: BoxDecoration(
-          color: selected ? _purple : _chipDefaultBg,
+          color: selected ? AppTheme.messagePurple : AppTheme.messagePurpleBg,
           borderRadius: BorderRadius.circular(100),
         ),
         child: Row(
@@ -457,11 +442,11 @@ class _RecipientChip extends StatelessWidget {
           spacing: 5,
           children: [
             if (selected)
-              const Icon(Icons.check, color: Colors.white, size: 12),
+              const Icon(Icons.check, color: AppTheme.white, size: 12),
             Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.white : _chipDefaultText,
+                color: selected ? AppTheme.white : AppTheme.messageChipText,
                 fontSize: 12,
                 fontWeight: FontWeight.w400,
                 height: 1.5,

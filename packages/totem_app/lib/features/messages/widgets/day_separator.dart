@@ -14,7 +14,7 @@ class DaySeparator extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
           decoration: BoxDecoration(
-            color: const Color(0x80FFFFFF),
+            color: AppTheme.messageDaySeparatorBg,
             borderRadius: BorderRadius.circular(15),
           ),
           child: Text(

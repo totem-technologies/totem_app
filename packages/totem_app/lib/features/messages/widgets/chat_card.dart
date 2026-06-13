@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 class ChatCard extends StatelessWidget {
@@ -34,7 +35,7 @@ class ChatCard extends StatelessWidget {
           vertical: 14,
         ),
         decoration: BoxDecoration(
-          color: const Color(0xFFFAFAF7),
+          color: AppTheme.surfaceCard,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -53,7 +54,7 @@ class ChatCard extends StatelessWidget {
                       Text(
                         name,
                         style: const TextStyle(
-                          color: Color(0xFF1F293B),
+                          color: AppTheme.textHeading,
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
@@ -62,8 +63,8 @@ class ChatCard extends StatelessWidget {
                         timestampLabel,
                         style: TextStyle(
                           color: unreadCount > 0
-                              ? const Color(0xFF8C7AA8)
-                              : const Color(0xFF8C8A82),
+                              ? AppTheme.messagePurple
+                              : AppTheme.textMuted,
                           fontSize: 11,
                           fontWeight: FontWeight.w400,
                         ),
@@ -80,10 +81,10 @@ class ChatCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: unreadCount > 0
-                                ? const Color(0xFF1F293B)
+                                ? AppTheme.textHeading
                                 : isOwnLastMessage
-                                ? const Color(0xFF8C8A82)
-                                : const Color(0xFF5C5954),
+                                ? AppTheme.textMuted
+                                : AppTheme.messageReceivedText,
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
                           ),
@@ -96,13 +97,13 @@ class ChatCard extends StatelessWidget {
                           height: 20,
                           alignment: Alignment.center,
                           decoration: const BoxDecoration(
-                            color: Color(0xFF8C7AA8),
+                            color: AppTheme.messagePurple,
                             shape: BoxShape.circle,
                           ),
                           child: Text(
                             '$unreadCount',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppTheme.white,
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
                             ),

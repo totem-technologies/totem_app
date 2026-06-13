@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/messages/models/conversation.dart';
@@ -88,7 +89,7 @@ class _ThreadHeader extends StatelessWidget {
     final topPadding = MediaQuery.of(context).padding.top;
 
     return Container(
-      color: const Color(0xFFFAFAF7),
+      color: AppTheme.surfaceCard,
       padding: EdgeInsetsDirectional.only(top: topPadding),
       child: SizedBox(
         height: 56,
@@ -97,11 +98,11 @@ class _ThreadHeader extends StatelessWidget {
           child: Row(
             children: [
               GestureDetector(
-                onTap: () => Navigator.of(context).maybePop(),
+                onTap: () => context.pop(),
                 child: const Icon(
                   Icons.arrow_back_ios_new,
                   size: 18,
-                  color: Color(0xFF1F293B),
+                  color: AppTheme.textHeading,
                 ),
               ),
               const SizedBox(width: 10),
@@ -115,7 +116,7 @@ class _ThreadHeader extends StatelessWidget {
                 child: Text(
                   peer.name ?? 'Unknown',
                   style: const TextStyle(
-                    color: Color(0xFF1F293B),
+                    color: AppTheme.textHeading,
                     fontSize: 17,
                     fontWeight: FontWeight.w500,
                   ),
@@ -124,7 +125,7 @@ class _ThreadHeader extends StatelessWidget {
               const Text(
                 '⋮',
                 style: TextStyle(
-                  color: Color(0xFF8C8A82),
+                  color: AppTheme.textMuted,
                   fontSize: 20,
                   fontWeight: FontWeight.w500,
                 ),

@@ -12,16 +12,6 @@ class MessageInputBar extends StatefulWidget {
 
 class _MessageInputBarState extends State<MessageInputBar> {
   final _controller = TextEditingController();
-  bool _hasText = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller.addListener(() {
-      final hasText = _controller.text.trim().isNotEmpty;
-      if (hasText != _hasText) setState(() => _hasText = hasText);
-    });
-  }
 
   @override
   void dispose() {
@@ -40,8 +30,8 @@ class _MessageInputBarState extends State<MessageInputBar> {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFFFAFAF7),
-        border: Border(top: BorderSide(color: Color(0xFFE8E5E0))),
+        color: AppTheme.surfaceCard,
+        border: Border(top: BorderSide(color: AppTheme.divider)),
       ),
       child: SafeArea(
         top: false,
@@ -59,19 +49,19 @@ class _MessageInputBarState extends State<MessageInputBar> {
                   textInputAction: TextInputAction.send,
                   onFieldSubmitted: (_) => _submit(),
                   style: const TextStyle(
-                    color: Color(0xFF1F293B),
+                    color: AppTheme.textHeading,
                     fontSize: 14.5,
                     fontWeight: FontWeight.w400,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Type a message...',
                     hintStyle: const TextStyle(
-                      color: Color(0xFF8C8A82),
+                      color: AppTheme.textMuted,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w400,
                     ),
                     filled: true,
-                    fillColor: const Color(0xFFF5F5F0),
+                    fillColor: AppTheme.messageInputFill,
                     contentPadding: const EdgeInsetsDirectional.fromSTEB(
                       20,
                       12,
@@ -80,35 +70,71 @@ class _MessageInputBarState extends State<MessageInputBar> {
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(25),
-                      borderSide: const BorderSide(color: Color(0xFFE8E5E0)),
+                      borderSide: const BorderSide(color: AppTheme.divider),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(25),
-                      borderSide: const BorderSide(color: Color(0xFFE8E5E0)),
+                      borderSide: const BorderSide(color: AppTheme.divider),
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              GestureDetector(
-                onTap: _hasText ? _submit : null,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  width: 45,
-                  height: 45,
-                  decoration: BoxDecoration(
-                    color: _hasText ? AppTheme.mauve : const Color(0xFFD0CDCA),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.arrow_forward_rounded,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                ),
-              ),
+              _SendButton(controller: _controller, onSubmit: _submit),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SendButton extends StatefulWidget {
+  const _SendButton({required this.controller, required this.onSubmit});
+
+  final TextEditingController controller;
+  final VoidCallback onSubmit;
+
+  @override
+  State<_SendButton> createState() => _SendButtonState();
+}
+
+class _SendButtonState extends State<_SendButton> {
+  bool _hasText = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onTextChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onTextChanged);
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    final hasText = widget.controller.text.trim().isNotEmpty;
+    if (hasText != _hasText) setState(() => _hasText = hasText);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _hasText ? widget.onSubmit : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 45,
+        height: 45,
+        decoration: BoxDecoration(
+          color: _hasText ? AppTheme.mauve : AppTheme.messageGray,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.arrow_forward_rounded,
+          color: AppTheme.white,
+          size: 22,
         ),
       ),
     );
