@@ -42,6 +42,8 @@ class RouteNames {
       '/messages/$conversationId';
   static String sessionParticipants(String sessionSlug) =>
       '/messages/session/$sessionSlug/participants';
+  static String composeToParticipants(String sessionSlug) =>
+      '/messages/session/$sessionSlug/compose';
 
   static String session(String slug) => '/session/$slug';
 
