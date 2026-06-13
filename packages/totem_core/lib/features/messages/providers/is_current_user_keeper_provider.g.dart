@@ -8,30 +8,30 @@ part of 'is_current_user_keeper_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Mock role flag for the New Message screen until a backend exists.
+/// Whether the logged-in user is a keeper, used to pick which variant of the
+/// New Message screen to show.
 ///
-/// Flip the return value to `true` to preview the keeper variant of the
-/// New Message screen (session participants) instead of the normal-user
-/// variant (your keepers).
+/// Keepers are staff users, so this is derived from the `is_staff` field on
+/// the current user.
 
 @ProviderFor(isCurrentMessagingUserKeeper)
 final isCurrentMessagingUserKeeperProvider =
     IsCurrentMessagingUserKeeperProvider._();
 
-/// Mock role flag for the New Message screen until a backend exists.
+/// Whether the logged-in user is a keeper, used to pick which variant of the
+/// New Message screen to show.
 ///
-/// Flip the return value to `true` to preview the keeper variant of the
-/// New Message screen (session participants) instead of the normal-user
-/// variant (your keepers).
+/// Keepers are staff users, so this is derived from the `is_staff` field on
+/// the current user.
 
 final class IsCurrentMessagingUserKeeperProvider
     extends $FunctionalProvider<bool, bool, bool>
     with $Provider<bool> {
-  /// Mock role flag for the New Message screen until a backend exists.
+  /// Whether the logged-in user is a keeper, used to pick which variant of the
+  /// New Message screen to show.
   ///
-  /// Flip the return value to `true` to preview the keeper variant of the
-  /// New Message screen (session participants) instead of the normal-user
-  /// variant (your keepers).
+  /// Keepers are staff users, so this is derived from the `is_staff` field on
+  /// the current user.
   IsCurrentMessagingUserKeeperProvider._()
     : super(
         from: null,
@@ -66,4 +66,4 @@ final class IsCurrentMessagingUserKeeperProvider
 }
 
 String _$isCurrentMessagingUserKeeperHash() =>
-    r'3830d43efebc0eaadef7e655afc492c23906c182';
+    r'9eab48c5d3ea3b20a9dc67aaf2c37146c7c80d3b';
