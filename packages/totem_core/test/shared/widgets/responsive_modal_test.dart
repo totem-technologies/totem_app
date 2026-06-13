@@ -38,7 +38,7 @@ void main() {
         showResponsiveModal<void>(
           context: context,
           showDragHandle: true,
-          smallScreenBuilder: (context) => const Text('Small modal'),
+          bottomSheetBuilder: (context) => const Text('Small modal'),
           largeScreenBuilder: (context) => const Text('Large modal'),
         ),
       );
@@ -62,7 +62,7 @@ void main() {
       unawaited(
         showResponsiveModal<void>(
           context: context,
-          smallScreenBuilder: (context) => const Text('Small modal'),
+          bottomSheetBuilder: (context) => const Text('Small modal'),
           largeScreenBuilder: (context) => const Text('Large modal'),
         ),
       );

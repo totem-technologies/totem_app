@@ -29,7 +29,7 @@ Future<void> showSessionChat(BuildContext context) {
       ),
     ),
     dialogBarrierColor: Colors.black26,
-    smallScreenBuilder: (context) {
+    bottomSheetBuilder: (context) {
       return DraggableScrollableSheet(
         maxChildSize: 0.9,
         initialChildSize: 0.75,

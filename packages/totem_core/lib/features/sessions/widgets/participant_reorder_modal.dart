@@ -22,7 +22,7 @@ Future<void> showParticipantReorderModals(
     useRootNavigator: false,
     bottomSheetBackgroundColor: const Color(0xFFF3F1E9),
     dialogBackgroundColor: const Color(0xFFF3F1E9),
-    smallScreenBuilder: (context) => const ParticipantReorderWidget(),
+    bottomSheetBuilder: (context) => const ParticipantReorderWidget(),
     largeScreenBuilder: (context) => const SizedBox(
       width: 600,
       child: ParticipantReorderWidget(),
@@ -165,7 +165,7 @@ class _ParticipantReorderWidgetState
                                       context: context,
                                       useRootNavigator: false,
                                       showDragHandle: true,
-                                      smallScreenBuilder: (context) => Row(
+                                      bottomSheetBuilder: (context) => Row(
                                         children: [
                                           Expanded(
                                             child: _ParticipantInfo(
@@ -241,7 +241,7 @@ class _ParticipantReorderWidgetState
                                         context: context,
                                         useRootNavigator: false,
                                         showDragHandle: true,
-                                        smallScreenBuilder: (context) => Row(
+                                        bottomSheetBuilder: (context) => Row(
                                           children: [
                                             Expanded(
                                               child: _ParticipantInfo(

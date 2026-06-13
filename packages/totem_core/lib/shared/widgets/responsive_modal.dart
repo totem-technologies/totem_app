@@ -3,7 +3,7 @@ import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 Future<T?> showResponsiveModal<T>({
   required BuildContext context,
-  required WidgetBuilder smallScreenBuilder,
+  required WidgetBuilder bottomSheetBuilder,
   required WidgetBuilder largeScreenBuilder,
   bool useRootNavigator = false,
   bool showDragHandle = false,
@@ -30,7 +30,7 @@ Future<T?> showResponsiveModal<T>({
         useSafeArea: useSafeArea,
         backgroundColor: bottomSheetBackgroundColor,
         useRootNavigator: useRootNavigator,
-        builder: smallScreenBuilder,
+        builder: bottomSheetBuilder,
       );
     case ViewportKind.mediumPlus:
       return showDialog<T>(
