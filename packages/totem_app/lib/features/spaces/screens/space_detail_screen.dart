@@ -312,17 +312,20 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                           // Staging-only until the messaging backend ships.
                           if (AppConfig.instance.environment ==
                                   Environment.staging &&
-                              eventAsync != null &&
                               currentUserSlug != null &&
-                              space.author.slug == currentUserSlug) ...[
-                            const SizedBox(height: 24),
-                            const Padding(
-                              padding: EdgeInsetsDirectional.symmetric(
-                                horizontal: 20,
+                              space.author.slug == currentUserSlug)
+                            if (eventAsync?.value
+                                case final SessionDetailSchema event) ...[
+                              const SizedBox(height: 24),
+                              Padding(
+                                padding: const EdgeInsetsDirectional.symmetric(
+                                  horizontal: 20,
+                                ),
+                                child: KeeperMessageParticipantsCard(
+                                  session: event,
+                                ),
                               ),
-                              child: KeeperMessageParticipantsCard(),
-                            ),
-                          ],
+                            ],
 
                           const SizedBox(height: 24),
 

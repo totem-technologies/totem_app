@@ -40,6 +40,8 @@ class RouteNames {
   static const newMessage = '/messages/new';
   static String messageThread(String conversationId) =>
       '/messages/$conversationId';
+  static String sessionParticipants(String sessionSlug) =>
+      '/messages/session/$sessionSlug/participants';
 
   static String session(String slug) => '/session/$slug';
 

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/router.dart';
 
 /// Keeper-only card on the session details page that lets the space owner
 /// send a message to every participant registered for the session.
 class KeeperMessageParticipantsCard extends StatelessWidget {
-  const KeeperMessageParticipantsCard({super.key});
+  const KeeperMessageParticipantsCard({required this.session, super.key});
+
+  final SessionDetailSchema session;
 
   static const _darkNavy = Color(0xFF1F293B);
   static const _mutedGray = Color(0xFF8C8A82);
@@ -75,7 +78,10 @@ class KeeperMessageParticipantsCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () => context.push(RouteNames.newMessage),
+              onPressed: () => context.push(
+                RouteNames.sessionParticipants(session.slug),
+                extra: session,
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.mauve,
                 foregroundColor: Colors.white,
