@@ -37,6 +37,7 @@ import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../widgets/info_text.dart';
+import '../widgets/keeper_message_participants_card.dart';
 
 enum SpaceJoinCardState {
   ended,
@@ -111,6 +112,10 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
     final AsyncValue<SessionDetailSchema>? eventAsync = hasValidEventSlug
         ? ref.watch(eventProvider(effectiveEventSlug))
         : null;
+
+    final currentUserSlug = ref.watch(
+      authControllerProvider.select((auth) => auth.user?.slug),
+    );
 
     return spaceAsync.when(
       data: (space) {
@@ -302,6 +307,22 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                               eventAsync: eventAsync,
                             ),
                           ),
+
+                          // ── Message Participants (keeper only) ─────────
+                          // Staging-only until the messaging backend ships.
+                          if (AppConfig.instance.environment ==
+                                  Environment.staging &&
+                              eventAsync != null &&
+                              currentUserSlug != null &&
+                              space.author.slug == currentUserSlug) ...[
+                            const SizedBox(height: 24),
+                            const Padding(
+                              padding: EdgeInsetsDirectional.symmetric(
+                                horizontal: 20,
+                              ),
+                              child: KeeperMessageParticipantsCard(),
+                            ),
+                          ],
 
                           const SizedBox(height: 24),
 
