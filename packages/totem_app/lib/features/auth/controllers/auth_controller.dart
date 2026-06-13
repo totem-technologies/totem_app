@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 // ignore: depend_on_referenced_packages
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_app/features/auth/repositories/user_profile_repository.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/auth/repositories/auth_repository.dart';
@@ -29,6 +30,7 @@ class MobileAuthController extends AuthController {
   MobileAuthController();
 
   AuthRepository get _authRepository => ref.read(authRepositoryProvider);
+  UserRepository get _userRepository => ref.read(userRepositoryProvider);
   SecureStorage get _secureStorage => ref.read(secureStorageProvider);
   AnalyticsService get _analyticsService => ref.read(analyticsProvider);
   NotificationsService get _notificationsService =>
@@ -108,7 +110,7 @@ class MobileAuthController extends AuthController {
       final authResponse = await _authRepository.verifyPin(currentEmail, pin);
       await _storeTokens(authResponse.accessToken, authResponse.refreshToken);
 
-      final user = await _authRepository.currentUser;
+      final user = await _userRepository.currentUser;
       _setState(AuthState.authenticated(user: user));
 
       await _analyticsService.setUserId(user);
@@ -155,7 +157,7 @@ class MobileAuthController extends AuthController {
 
     _setState(AuthState.loading());
     try {
-      await _authRepository.deleteAccount();
+      await _userRepository.deleteAccount();
       _setState(AuthState.unauthenticated());
       _analyticsService.logAccountDeleted();
     } catch (error, stackTrace) {
@@ -255,7 +257,7 @@ class MobileAuthController extends AuthController {
       logger.i('🔑 Validating token with backend...');
 
       await (() async {
-        final user = await _authRepository.currentUser;
+        final user = await _userRepository.currentUser;
 
         // If we timed out while waiting for this, DO NOT update state to avoid
         // overwriting with potentially stale data.

@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -17,73 +15,6 @@ class AuthRepository {
 
   final ClientApi apiService;
 
-  Future<UserSchema> get currentUser async {
-    return RepositoryUtils.handleApiCall<UserSchema>(
-      apiCall: () => apiService.users.totemUsersMobileApiGetCurrentUser(),
-      operationName: 'fetch current user',
-    );
-  }
-
-  Future<bool> updateCurrentUserProfilePicture(File file) async {
-    final bytes = await file.readAsBytes();
-    return RepositoryUtils.handleApiCall<bool>(
-      apiCall: () => apiService.users.totemUsersMobileApiUpdateCurrentUserImage(
-        body: UpdateCurrentUserImageRequest(profileImage: bytes),
-      ),
-      operationName: 'update current user profile picture',
-    );
-  }
-
-  /// Update the current user's profile.
-  Future<UserSchema> updateCurrentUserProfile({
-    String? name,
-    String? email,
-    String? timezone,
-    bool? newsletterConsent,
-    ProfileAvatarTypeEnum? profileAvatarType,
-    String? avatarSeed,
-  }) async {
-    return RepositoryUtils.handleApiCall<UserSchema>(
-      apiCall: () => apiService.users.totemUsersMobileApiUpdateCurrentUser(
-        body: UserUpdateSchema(
-          name: name,
-          email: email,
-          timezone: timezone,
-          newsletterConsent: newsletterConsent,
-          profileAvatarType: profileAvatarType,
-          profileAvatarSeed: avatarSeed,
-        ),
-      ),
-      operationName: 'update current user profile',
-    );
-  }
-
-  Future<OnboardSchema> get onboardStatus async {
-    return RepositoryUtils.handleApiCall<OnboardSchema>(
-      apiCall: () => apiService.$default.totemOnboardMobileApiOnboardGet(),
-      operationName: 'fetch onboard status',
-    );
-  }
-
-  Future<OnboardSchema> completeOnboarding({
-    required ReferralChoices? referralSource,
-    required Set<String> interestTopics,
-    int? yearBorn,
-    String? referralOther,
-  }) async {
-    return RepositoryUtils.handleApiCall<OnboardSchema>(
-      apiCall: () => apiService.$default.totemOnboardMobileApiOnboardPost(
-        body: OnboardSchema(
-          referralSource: referralSource ?? ReferralChoices.$default,
-          referralOther: referralOther ?? '',
-          hopes: interestTopics.join(', '),
-          yearBorn: yearBorn,
-        ),
-      ),
-      operationName: 'complete onboarding',
-    );
-  }
-
   Future<MessageResponse> requestPin(
     String email,
     bool newsletterConsent,
@@ -99,7 +30,6 @@ class AuthRepository {
     );
   }
 
-  /// Verifcly a PIN code
   Future<TokenResponse> verifyPin(String email, String pin) async {
     return RepositoryUtils.handleApiCall<TokenResponse>(
       apiCall: () => apiService.$default.totemApiAuthValidatePin(
@@ -109,7 +39,6 @@ class AuthRepository {
     );
   }
 
-  /// Refresh access token using a refresh token
   Future<TokenResponse> refreshAccessToken(String refreshToken) async {
     return RepositoryUtils.handleApiCall<TokenResponse>(
       apiCall: () => apiService.$default.totemApiAuthRefreshToken(
@@ -119,20 +48,12 @@ class AuthRepository {
     );
   }
 
-  /// Logout by invalidating a refresh token
   Future<MessageResponse> logout(String refreshToken) async {
     return RepositoryUtils.handleApiCall<MessageResponse>(
       apiCall: () => apiService.$default.totemApiAuthLogout(
         body: RefreshTokenSchema(refreshToken: refreshToken),
       ),
       operationName: 'logout',
-    );
-  }
-
-  Future<void> deleteAccount() async {
-    return RepositoryUtils.handleApiCall<void>(
-      apiCall: () => apiService.users.totemUsersMobileApiDeleteCurrentUser(),
-      operationName: 'delete account',
     );
   }
 
@@ -158,7 +79,6 @@ class AuthRepository {
     }
   }
 
-  /// Update FCM token
   Future<void> updateFcmToken(String fcmToken) async {
     return RepositoryUtils.handleApiCall(
       apiCall: () => apiService.$default.totemApiMobileApiRegisterFcmToken(
@@ -168,7 +88,6 @@ class AuthRepository {
     );
   }
 
-  /// Unregister FCM token
   Future<void> unregisterFcmToken(String fcmToken) async {
     return RepositoryUtils.handleApiCall(
       apiCall: () => apiService.$default.totemApiMobileApiUnregisterFcmToken(

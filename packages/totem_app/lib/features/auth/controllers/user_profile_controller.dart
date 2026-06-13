@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
-import 'package:totem_core/auth/repositories/auth_repository.dart';
+import 'package:totem_app/features/auth/repositories/user_profile_repository.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
@@ -19,7 +19,7 @@ class UserProfileController extends _$UserProfileController {
     // Initial state is void, we just use this controller for mutations
   }
 
-  AuthRepository get _authRepository => ref.read(authRepositoryProvider);
+  UserRepository get _userRepository => ref.read(userRepositoryProvider);
   AnalyticsService get _analyticsService => ref.read(analyticsProvider);
   MobileAuthController get _authController =>
       ref.read(mobileAuthControllerProvider);
@@ -52,12 +52,12 @@ class UserProfileController extends _$UserProfileController {
     state = const AsyncLoading();
 
     try {
-      final updatedUser = await _authRepository.updateCurrentUserProfile(
+      final updatedUser = await _userRepository.updateCurrentUserProfile(
         name: firstName,
         newsletterConsent: newsletterConsent,
       );
 
-      await _authRepository.completeOnboarding(
+      await _userRepository.completeOnboarding(
         interestTopics: interestTopics,
         referralSource: referralSource,
         referralOther: referralOther,
@@ -119,7 +119,7 @@ class UserProfileController extends _$UserProfileController {
 
     if (profileImage != null) {
       try {
-        final bool imageUpdateSuccess = await _authRepository
+        final bool imageUpdateSuccess = await _userRepository
             .updateCurrentUserProfilePicture(profileImage);
         if (!imageUpdateSuccess) {
           overallSuccess = false;
@@ -161,7 +161,7 @@ class UserProfileController extends _$UserProfileController {
 
     if (shouldUpdateMetaProfile) {
       try {
-        final backendUpdatedUser = await _authRepository
+        final backendUpdatedUser = await _userRepository
             .updateCurrentUserProfile(
               name: newName,
               email: newEmail,
@@ -186,7 +186,7 @@ class UserProfileController extends _$UserProfileController {
     } else if (overallSuccess &&
         (profileImage != null || shouldUpdateMetaProfile)) {
       try {
-        final refreshedUser = await _authRepository.currentUser;
+        final refreshedUser = await _userRepository.currentUser;
         _authController.syncUser(refreshedUser);
       } catch (error, stackTrace) {
         overallSuccess = false;
