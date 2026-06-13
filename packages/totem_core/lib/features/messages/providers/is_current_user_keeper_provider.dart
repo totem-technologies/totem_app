@@ -1,11 +1,15 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
 
 part 'is_current_user_keeper_provider.g.dart';
 
-/// Mock role flag for the New Message screen until a backend exists.
+/// Whether the logged-in user is a keeper, used to pick which variant of the
+/// New Message screen to show.
 ///
-/// Flip the return value to `true` to preview the keeper variant of the
-/// New Message screen (session participants) instead of the normal-user
-/// variant (your keepers).
+/// Keepers are staff users, so this is derived from the `is_staff` field on
+/// the current user.
 @riverpod
-bool isCurrentMessagingUserKeeper(Ref ref) => false;
+bool isCurrentMessagingUserKeeper(Ref ref) {
+  final authState = ref.watch(authControllerProvider);
+  return authState.user?.isStaff ?? false;
+}
