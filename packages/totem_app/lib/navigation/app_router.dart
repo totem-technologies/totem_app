@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
+import 'package:totem_app/features/auth/controllers/user_profile_controller.dart';
 import 'package:totem_app/widgets/offline_indicator.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/features/keeper/screens/keeper_profile_screen.dart';
@@ -221,6 +222,7 @@ class AppTotemRouter extends TotemRouter {
   @override
   GoRouter createRouter(WidgetRef ref) {
     final authController = ref.read(mobileAuthControllerProvider);
+    final profileController = ref.read(userProfileControllerProvider.notifier);
 
     return GoRouter(
       navigatorKey: navigatorKey,
@@ -242,7 +244,7 @@ class AppTotemRouter extends TotemRouter {
         // Unauthenticated flow
         if (!isLoggedIn) {
           final hasSeenWelcomeOnboarding =
-              await authController.hasSeenWelcomeOnboarding;
+              await profileController.hasSeenWelcomeOnboarding;
 
           if (isWelcomeRoute) {
             // First-time users stay on welcome; returning users go to login

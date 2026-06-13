@@ -23,7 +23,7 @@ class ThreadScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncMessages = ref.watch(threadNotifierProvider(conversationId));
+    final asyncMessages = ref.watch(threadProvider(conversationId));
 
     return Scaffold(
       backgroundColor: AppTheme.cream,
@@ -39,9 +39,8 @@ class ThreadScreen extends ConsumerWidget {
             ),
           ),
           MessageInputBar(
-            onSend: (text) => ref
-                .read(threadNotifierProvider(conversationId).notifier)
-                .send(text),
+            onSend: (text) =>
+                ref.read(threadProvider(conversationId).notifier).send(text),
           ),
         ],
       ),

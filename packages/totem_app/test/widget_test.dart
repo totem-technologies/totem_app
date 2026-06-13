@@ -68,9 +68,6 @@ class _FakeMobileAuthController extends MobileAuthController {
   bool get isOnboardingCompleted => false;
 
   @override
-  Future<bool> get hasSeenWelcomeOnboarding async => false;
-
-  @override
   Future<void> checkExistingAuth() async {}
 
   @override
