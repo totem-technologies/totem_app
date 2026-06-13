@@ -336,6 +336,7 @@ class _ProfileTabState extends State<_ProfileTab>
         Center(
           child: Stack(
             alignment: AlignmentDirectional.center,
+            clipBehavior: Clip.none,
             children: [
               UserAvatar.currentUser(
                 radius: 50,
@@ -347,8 +348,8 @@ class _ProfileTabState extends State<_ProfileTab>
                 child: Container(
                   height: 40,
                   width: 40,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainer,
                     shape: BoxShape.circle,
                   ),
                   alignment: AlignmentDirectional.center,
@@ -422,33 +423,33 @@ class _ProfileTabState extends State<_ProfileTab>
             final value =
                 await showModalBottomSheet<(ReferralChoices, String?)>(
                   isScrollControlled: true,
+                  useSafeArea: true,
                   context: context,
-                  builder: (context) => const ReferralSourceModal(),
+                  clipBehavior: Clip.hardEdge,
+                  builder: (context) =>
+                      ReferralSourceModal(initialSource: widget.referralSource),
                 );
             if (value != null) {
-              widget.onReferralSourceSelected(value.$1, value.$2);
+              final (choice, text) = value;
+              widget.onReferralSourceSelected(choice, text);
             }
           },
           child: Container(
             height: 53,
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 15,
-              vertical: 16,
-            ),
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 15),
             decoration: BoxDecoration(
               color: const Color(0xffD9D9D9),
               borderRadius: BorderRadius.circular(20),
             ),
+            alignment: AlignmentDirectional.centerStart,
             child: Text(
+              widget.referralSource?.name ?? 'Tap to select',
               maxLines: 1,
               textAlign: TextAlign.left,
               overflow: TextOverflow.ellipsis,
-              widget.referralSource?.name ?? 'Tap to select',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: widget.referralSource == null
-                    ? const Color(0xffA2A2A2)
-                    : theme.textTheme.bodyLarge?.color,
-              ),
+              style: widget.referralSource == null
+                  ? theme.inputDecorationTheme.hintStyle
+                  : theme.textTheme.bodyLarge,
             ),
           ),
         ),

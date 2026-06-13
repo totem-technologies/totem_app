@@ -12,7 +12,7 @@ import 'package:totem_core/shared/logger.dart';
 
 part 'user_profile_controller.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 class UserProfileController extends _$UserProfileController {
   @override
   FutureOr<void> build() {
