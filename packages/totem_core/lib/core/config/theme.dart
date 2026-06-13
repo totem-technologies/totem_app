@@ -37,6 +37,65 @@ class AppTheme {
   static const Color transparent = Colors.transparent;
   static const Color grey = Colors.grey;
 
+  // --- Messaging surface & text tokens ---
+  // Slightly warmer/darker palette used across the messages feature (from Figma).
+  static const Color surfaceCard = Color(0xFFFAFAF7); // Cards & nav bar surface
+  static const Color textHeading = Color(0xFF1F293B); // Primary heading text
+  static const Color textMuted = Color(0xFF8C8A82); // Secondary / caption text
+  static const Color divider = Color(0xFFE8E5E0); // Hairline dividers
+  static const Color fieldFill = Color(0xFFEAE8E4); // Search / input fill
+  static const Color chevron = Color(0xFFD1D0CE); // Trailing chevron icon
+
+  // --- Messages feature accent palette ---
+  static const Color messagePurple = Color(
+    0xFF8C7AA8,
+  ); // primary accent buttons & unread badges
+  static const Color messagePurpleBg = Color(
+    0xFFEDEBF5,
+  ); // sent-bubble & chip background
+  static const Color messagePurpleText = Color(0xFF3B2E5C); // sent-bubble text
+  static const Color messagePurpleLight = Color(
+    0xFFF2EBF7,
+  ); // pill button background
+  static const Color messageGray = Color(0xFFD0CDCA); // disabled send button
+  static const Color messageSearchBg = Color(
+    0xFFD9D9D9,
+  ); // search field background
+  static const Color messageSearchText = Color(
+    0xFFA2A2A2,
+  ); // search field placeholder/text
+  static const Color messageSuccessBg = Color(
+    0xFFE8F5EE,
+  ); // send-success dialog background
+  static const Color messageSuccessIcon = Color(
+    0xFF3DAA6E,
+  ); // send-success icon
+  static const Color messageErrorBg = Color(
+    0xFFFDE8E8,
+  ); // send-error dialog background
+  static const Color messageErrorIcon = Color(0xFFD94040); // send-error icon
+  static const Color messageChipText = Color(
+    0xFF7D6B9C,
+  ); // unselected recipient chip text
+  static const Color messageReceivedText = Color(
+    0xFF5C5954,
+  ); // received message preview text
+  static const Color messageDaySeparatorBg = Color(
+    0x80FFFFFF,
+  ); // semi-transparent day separator pill
+  static const Color messageInputFill = Color(
+    0xFFF5F5F0,
+  ); // text input field fill
+
+  // --- Avatar accent palette (decorative, cycled per user) ---
+  static const List<Color> avatarPalette = [
+    mauve,
+    Color(0xFF6699D1),
+    Color(0xFFE08C73),
+    Color(0xFFEEAF56),
+    Color(0xFF5AAE95),
+  ];
+
   // --- Font Families ---
   // Extracted from the @theme block in styles.css
   static const String fontFamilySans = 'Montserrat';
