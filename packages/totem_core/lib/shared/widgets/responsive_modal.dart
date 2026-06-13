@@ -30,6 +30,7 @@ Future<T?> showResponsiveModal<T>({
         useSafeArea: useSafeArea,
         backgroundColor: bottomSheetBackgroundColor,
         useRootNavigator: useRootNavigator,
+        clipBehavior: Clip.hardEdge,
         builder: bottomSheetBuilder,
       );
     case ViewportKind.mediumPlus:

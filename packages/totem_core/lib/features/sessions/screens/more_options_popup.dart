@@ -104,41 +104,44 @@ class MoreOptions extends ConsumerWidget {
     final isKeeper = currentSession.isCurrentUserKeeper();
 
     Widget buildContent([ScrollController? scrollController]) {
-      return SingleChildScrollView(
+      final cameraTile = MoreOptionsTile.camera(
+        currentSession.devices.localVideoTrack?.currentOptions
+            as CameraCaptureOptions?,
+        () {
+          currentSession.devices.switchCameraPosition();
+          Navigator.of(context).pop();
+        },
+      );
+
+      final outputTile = MoreOptionsTile.output(
+        AudioOutputOptions(
+          speakerOn: deviceState.isSpeakerphoneEnabled,
+          deviceId: deviceState.selectedAudioOutputDeviceId,
+        ),
+        (options) {
+          if (options.speakerOn != null) {
+            currentSession.devices.setSpeakerphone(
+              options.speakerOn ?? false,
+            );
+          }
+        },
+        currentSession.devices.selectAudioOutputDevice,
+      );
+
+      final content = SingleChildScrollView(
         controller: scrollController,
         padding: EdgeInsetsDirectional.only(
           start: 20,
           end: 20,
           bottom: isDialog ? 20 : 36,
-          top: isDialog ? 24 : 0,
+          top: isDialog ? 24 : 10,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (!isDialog) const SheetDragHandle(),
-            ?MoreOptionsTile.camera(
-              currentSession.devices.localVideoTrack?.currentOptions
-                  as CameraCaptureOptions?,
-              () {
-                currentSession.devices.switchCameraPosition();
-                Navigator.of(context).pop();
-              },
-            ),
-            ?MoreOptionsTile.output(
-              AudioOutputOptions(
-                speakerOn: deviceState.isSpeakerphoneEnabled,
-                deviceId: deviceState.selectedAudioOutputDeviceId,
-              ),
-              (options) {
-                if (options.speakerOn != null) {
-                  currentSession.devices.setSpeakerphone(
-                    options.speakerOn ?? false,
-                  );
-                }
-              },
-              currentSession.devices.selectAudioOutputDevice,
-            ),
+            ?cameraTile,
+            ?outputTile,
             MoreOptionsTile<void>(
               title: 'Leave Session',
               icon: TotemIcons.leaveCall,
@@ -287,6 +290,18 @@ class MoreOptions extends ConsumerWidget {
           ].expand((child) => [const SizedBox(height: 10), child]).skip(1).toList(),
         ),
       );
+
+      if (isDialog) return content;
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ColoredBox(
+            color: theme.colorScheme.surface,
+            child: const SheetDragHandle(),
+          ),
+          Flexible(child: content),
+        ],
+      );
     }
 
     if (isDialog || !isKeeper) {
@@ -294,10 +309,9 @@ class MoreOptions extends ConsumerWidget {
     } else {
       return DraggableScrollableSheet(
         expand: false,
-        initialChildSize: isKeeper ? 0.95 : 0.4,
+        initialChildSize: 0.95,
         minChildSize: 0.25,
         maxChildSize: 0.95,
-
         builder: (context, scrollController) {
           return buildContent(scrollController);
         },
