@@ -234,6 +234,7 @@ class _GuidelinesTab extends StatelessWidget {
                   color: AppTheme.purple,
                   decoration: TextDecoration.underline,
                 ),
+                mouseCursor: SystemMouseCursors.click,
                 recognizer: TapGestureRecognizer()
                   ..onTap = () async {
                     final url = AppConfig.instance.communityGuidelinesUrl;
@@ -310,6 +311,21 @@ class _ProfileTabState extends State<_ProfileTab>
     return null;
   }
 
+  void _showReferralChoicesModal() async {
+    final value = await showModalBottomSheet<(ReferralChoices, String?)>(
+      isScrollControlled: true,
+      useSafeArea: true,
+      context: context,
+      clipBehavior: Clip.hardEdge,
+      builder: (context) =>
+          ReferralSourceModal(initialSource: widget.referralSource),
+    );
+    if (value != null) {
+      final (choice, text) = value;
+      widget.onReferralSourceSelected(choice, text);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -345,16 +361,17 @@ class _ProfileTabState extends State<_ProfileTab>
               PositionedDirectional(
                 bottom: -10,
                 end: -10,
-                child: Container(
-                  height: 40,
-                  width: 40,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainer,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: AlignmentDirectional.center,
-                  child: GestureDetector(
-                    onTap: () => showProfileImagePicker(context),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => showProfileImagePicker(context),
+                  child: Container(
+                    height: 40,
+                    width: 40,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: AlignmentDirectional.center,
                     child: const TotemIcon(TotemIcons.edit),
                   ),
                 ),
@@ -380,6 +397,7 @@ class _ProfileTabState extends State<_ProfileTab>
           restorationId: 'first_name_onboarding_input',
           textInputAction: TextInputAction.next,
           autofillHints: const [AutofillHints.givenName],
+          onTapOutside: (e) => FocusScope.of(context).unfocus(),
         ),
         const InfoText(
           "Other people will see this. You don't have to use your real "
@@ -404,6 +422,7 @@ class _ProfileTabState extends State<_ProfileTab>
           restorationId: 'age_onboarding_input',
           textInputAction: TextInputAction.done,
           onFieldSubmitted: (_) => widget.onContinue(),
+          onTapOutside: (e) => FocusScope.of(context).unfocus(),
         ),
         const InfoText(
           'You must be over 13 to join. This is only for a legal requirement, no one '
@@ -419,24 +438,10 @@ class _ProfileTabState extends State<_ProfileTab>
         ),
         const SizedBox(height: 6),
         GestureDetector(
-          onTap: () async {
-            final value =
-                await showModalBottomSheet<(ReferralChoices, String?)>(
-                  isScrollControlled: true,
-                  useSafeArea: true,
-                  context: context,
-                  clipBehavior: Clip.hardEdge,
-                  builder: (context) =>
-                      ReferralSourceModal(initialSource: widget.referralSource),
-                );
-            if (value != null) {
-              final (choice, text) = value;
-              widget.onReferralSourceSelected(choice, text);
-            }
-          },
+          onTap: _showReferralChoicesModal,
           child: Container(
             height: 53,
-            padding: const EdgeInsetsDirectional.symmetric(horizontal: 15),
+            padding: theme.inputDecorationTheme.contentPadding,
             decoration: BoxDecoration(
               color: const Color(0xffD9D9D9),
               borderRadius: BorderRadius.circular(20),
