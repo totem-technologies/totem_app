@@ -29,4 +29,6 @@ final class ClientApi {
 
   ClientApi withJWTAuth(String token) =>
       ClientApi(ClientSecurity.applyJWTAuth(_config, token));
+  ClientApi withSessionAuth(String value) =>
+      ClientApi(ClientSecurity.applySessionAuth(_config, value));
 }

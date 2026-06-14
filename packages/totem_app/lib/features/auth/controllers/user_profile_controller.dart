@@ -6,6 +6,7 @@ import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/repositories/user_profile_repository.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/local_storage_service.dart';
 import 'package:totem_core/shared/logger.dart';
@@ -41,7 +42,7 @@ class UserProfileController extends _$UserProfileController {
     required String firstName,
     required int? age,
     required ReferralChoices? referralSource,
-    required Set<String> interestTopics,
+    required Set<SpaceCategories> interestTopics,
     required bool newsletterConsent,
     String? referralOther,
   }) async {
@@ -60,7 +61,7 @@ class UserProfileController extends _$UserProfileController {
       _authController.syncUser(updatedUser);
 
       await _userRepository.completeOnboarding(
-        interestTopics: interestTopics,
+        interestTopics: interestTopics.map((e) => e.slug).toSet(),
         referralSource: referralSource,
         referralOther: referralOther,
         yearBorn: age == null ? null : (DateTime.now().year - age),

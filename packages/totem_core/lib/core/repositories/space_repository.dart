@@ -148,18 +148,31 @@ Future<List<SessionDetailSchema>> listSessionsHistory(Ref ref) async {
   }
 }
 
+// TODO(totem): These hard coded categories should be fetched from the API.
+// It is safe for now since there are only a few spaces to categorize.
+enum SpaceCategories {
+  allies('allies'),
+  loveAndEmotions('love-emotions'),
+  mothers('mothers'),
+  queer('queer'),
+  selfImprovement('self-improvement');
+
+  const SpaceCategories(this.slug);
+
+  final String slug;
+}
+
 @riverpod
 Future<List<SessionDetailSchema>> getRecommendedSessions(
   Ref ref, [
-  String? topicsKey,
+  Set<SpaceCategories>? topics,
 ]) {
   final mobileApiService = ref.read(apiServiceProvider);
-  final List<String>? body = topicsKey == null || topicsKey.isEmpty
-      ? null
-      : topicsKey.split('|').toList();
   return RepositoryUtils.handleApiCall<List<SessionDetailSchema>>(
-    apiCall: () => mobileApiService.spaces
-        .totemSpacesMobileApiGetRecommendedSpaces(body: body),
+    apiCall: () =>
+        mobileApiService.spaces.totemSpacesMobileApiGetRecommendedSpaces(
+          body: topics?.map((topic) => topic.slug).toList(),
+        ),
     operationName: 'get recommended sessions',
     maxRetries: 0,
     timeout: const Duration(seconds: 5),

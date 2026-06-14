@@ -28,13 +28,13 @@ class ProfileSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
-  final PageController _pageController = PageController();
+  final _pageController = PageController();
 
-  final GlobalKey<FormState> _formKeyTab1 = GlobalKey<FormState>();
-  final TextEditingController _firstNameController = TextEditingController();
-  final TextEditingController _ageController = TextEditingController();
+  final _formKeyTab1 = GlobalKey<FormState>();
+  final _firstNameController = TextEditingController();
+  final _ageController = TextEditingController();
 
-  final Set<String> _selectedTopics = <String>{};
+  final _selectedTopics = <SpaceCategories>{};
   ReferralChoices? _referralSource;
   String? _referralOther;
   bool _isLoading = false;
@@ -57,7 +57,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     }
   }
 
-  void _handleTopicSelection(String topic, bool isSelected) {
+  void _handleTopicSelection(SpaceCategories topic, bool isSelected) {
     setState(() {
       if (isSelected) {
         _selectedTopics.add(topic);
@@ -140,7 +140,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           _TopicsTab(
             selectedTopics: _selectedTopics,
             isLoading: _isLoading,
-            onTopicSelected: _handleTopicSelection,
+            onTopicSelectionChanged: _handleTopicSelection,
             onContinue: _nextPage,
           ),
           _SuggestionsTab(
@@ -497,26 +497,21 @@ class _ProfileTabState extends State<_ProfileTab>
   bool get wantKeepAlive => true;
 }
 
+typedef _TopicSelectionChanged =
+    void Function(SpaceCategories topic, bool isSelected);
+
 /// Third tab: Topics selection.
 class _TopicsTab extends StatelessWidget {
   const _TopicsTab({
     required this.selectedTopics,
     required this.isLoading,
-    required this.onTopicSelected,
+    required this.onTopicSelectionChanged,
     required this.onContinue,
   });
-  final Set<String> selectedTopics;
+  final Set<SpaceCategories> selectedTopics;
   final bool isLoading;
-  final void Function(String topic, bool isSelected) onTopicSelected;
+  final _TopicSelectionChanged onTopicSelectionChanged;
   final VoidCallback onContinue;
-
-  static const List<String> _availableTopics = [
-    'Love & Emotions',
-    'Mothers',
-    'Queer',
-    'Self-improvement',
-    'Other',
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -539,16 +534,22 @@ class _TopicsTab extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
-        ..._availableTopics.map((topic) {
+        ...SpaceCategories.values.map((topic) {
           final isSelected = selectedTopics.contains(topic);
           return Padding(
             padding: const EdgeInsetsDirectional.only(bottom: 10),
             child: CheckboxListTile(
-              title: Text(topic),
+              title: Text(switch (topic) {
+                SpaceCategories.allies => 'Allies',
+                SpaceCategories.loveAndEmotions => 'Love & Emotions',
+                SpaceCategories.mothers => 'Mothers',
+                SpaceCategories.queer => 'Queer',
+                SpaceCategories.selfImprovement => 'Self-Improvement',
+              }),
               value: isSelected,
               onChanged: isLoading
                   ? null
-                  : (value) => onTopicSelected(topic, value ?? false),
+                  : (value) => onTopicSelectionChanged(topic, value ?? false),
               checkboxScaleFactor: 1.35,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -580,15 +581,18 @@ class _SuggestionsTab extends ConsumerWidget {
     required this.onSeeAllSpaces,
   });
 
-  final Set<String> selectedTopics;
+  final Set<SpaceCategories> selectedTopics;
   final bool isLoading;
   final VoidCallback onSeeAllSpaces;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final topicsKey = (selectedTopics.toList()..sort()).join('|');
-    final recommended = ref.watch(getRecommendedSessionsProvider(topicsKey));
+    final recommended = ref.watch(
+      getRecommendedSessionsProvider(
+        selectedTopics.map((topic) => topic.slug).toSet(),
+      ),
+    );
 
     return CardScreen(
       isLoading: isLoading,
