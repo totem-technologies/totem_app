@@ -524,7 +524,7 @@ final class GetRecommendedSessionsProvider
         $FutureProvider<List<SessionDetailSchema>> {
   GetRecommendedSessionsProvider._({
     required GetRecommendedSessionsFamily super.from,
-    required Set<String>? super.argument,
+    required Set<SpaceCategories>? super.argument,
   }) : super(
          retry: null,
          name: r'getRecommendedSessionsProvider',
@@ -551,7 +551,7 @@ final class GetRecommendedSessionsProvider
 
   @override
   FutureOr<List<SessionDetailSchema>> create(Ref ref) {
-    final argument = this.argument as Set<String>?;
+    final argument = this.argument as Set<SpaceCategories>?;
     return getRecommendedSessions(ref, argument);
   }
 
@@ -568,13 +568,13 @@ final class GetRecommendedSessionsProvider
 }
 
 String _$getRecommendedSessionsHash() =>
-    r'd56108b69d532f1223423d8fa1f969cba66c7edf';
+    r'42beae718659f05e3502cc191774e7b27303752f';
 
 final class GetRecommendedSessionsFamily extends $Family
     with
         $FunctionalFamilyOverride<
           FutureOr<List<SessionDetailSchema>>,
-          Set<String>?
+          Set<SpaceCategories>?
         > {
   GetRecommendedSessionsFamily._()
     : super(
@@ -585,7 +585,7 @@ final class GetRecommendedSessionsFamily extends $Family
         isAutoDispose: true,
       );
 
-  GetRecommendedSessionsProvider call([Set<String>? topics]) =>
+  GetRecommendedSessionsProvider call([Set<SpaceCategories>? topics]) =>
       GetRecommendedSessionsProvider._(argument: topics, from: this);
 
   @override
