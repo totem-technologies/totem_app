@@ -57,6 +57,8 @@ class UserProfileController extends _$UserProfileController {
         newsletterConsent: newsletterConsent,
       );
 
+      _authController.syncUser(updatedUser);
+
       await _userRepository.completeOnboarding(
         interestTopics: interestTopics,
         referralSource: referralSource,
@@ -65,9 +67,6 @@ class UserProfileController extends _$UserProfileController {
       );
 
       logger.i('🔑 Onboard completed!');
-
-      // Sync the newly updated user back to the AuthController's state
-      _authController.syncUser(updatedUser);
 
       if (referralSource != null) {
         _analyticsService.logEvent(
@@ -100,19 +99,21 @@ class UserProfileController extends _$UserProfileController {
     ProfileAvatarTypeEnum? profileAvatarType,
     String? avatarSeed,
   }) async {
-    assert(
-      _authController.isAuthenticated,
-      'Cannot update profile when user is not authenticated.',
-    );
+    if (!_authController.isAuthenticated || _authController.user == null) {
+      throw Exception('Cannot update profile when user is not authenticated.');
+    }
 
-    assert(
-      profileImage != null ||
-          avatarSeed != null ||
-          profileAvatarType != null ||
-          name != null ||
-          email != null,
-      'At least one profile field must be provided for update.',
-    );
+    if (profileImage == null &&
+        avatarSeed == null &&
+        profileAvatarType == null &&
+        name == null &&
+        email == null) {
+      throw Exception(
+        'At least one profile field must be provided for update.',
+      );
+    }
+
+    state = const AsyncLoading();
 
     var overallSuccess = true;
     var finalUpdatedUser = _authController.user;
@@ -165,8 +166,8 @@ class UserProfileController extends _$UserProfileController {
             .updateCurrentUserProfile(
               name: newName,
               email: newEmail,
-              profileAvatarType: profileAvatarType,
-              avatarSeed: avatarSeed,
+              profileAvatarType: newProfileAvatarType,
+              avatarSeed: newAvatarSeed,
             );
         finalUpdatedUser = backendUpdatedUser;
       } catch (error, stackTrace) {
@@ -198,6 +199,7 @@ class UserProfileController extends _$UserProfileController {
       }
     }
 
+    state = const AsyncData(null);
     return overallSuccess;
   }
 }

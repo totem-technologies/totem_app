@@ -115,7 +115,7 @@ void main() {
       when(() => mockAuthController.isAuthenticated).thenReturn(false);
       when(() => mockAuthController.user).thenReturn(null);
 
-      expect(
+      expectLater(
         () => getController().completeOnboarding(
           firstName: 'John',
           age: 30,
@@ -181,9 +181,9 @@ void main() {
     test('throws assertion error if unauthenticated', () async {
       when(() => mockAuthController.isAuthenticated).thenReturn(false);
 
-      expect(
+      expectLater(
         () => getController().updateUserProfile(name: 'Jane'),
-        throwsA(isA<AssertionError>()), // Asserts throw AssertionError in Dart
+        throwsA(isA<Exception>()),
       );
     });
 
