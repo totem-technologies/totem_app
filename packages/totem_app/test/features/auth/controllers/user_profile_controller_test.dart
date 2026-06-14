@@ -7,6 +7,7 @@ import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_app/features/auth/controllers/user_profile_controller.dart';
 import 'package:totem_core/auth/repositories/user_profile_repository.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/local_storage_service.dart';
 
@@ -120,7 +121,7 @@ void main() {
           firstName: 'John',
           age: 30,
           referralSource: null,
-          interestTopics: {'Sports'},
+          interestTopics: {SpaceCategories.allies},
           newsletterConsent: true,
         ),
         throwsA(isA<Exception>()),
@@ -161,7 +162,7 @@ void main() {
         firstName: 'John Doe',
         age: 30,
         referralSource: null,
-        interestTopics: {'Sports'},
+        interestTopics: {SpaceCategories.allies},
         newsletterConsent: true,
       );
 
