@@ -74,7 +74,7 @@ test:
 	@echo "Running tests..."
 	cd $(APP_DIR) && flutter test
 	cd $(CORE_DIR) && flutter test
-# 	cd $(WEB_DIR) && flutter test # Web doesn't have tests now
+	cd $(WEB_DIR) && flutter test
 
 lint:
 	@echo "Running linter..."

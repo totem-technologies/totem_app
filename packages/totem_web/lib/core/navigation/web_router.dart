@@ -57,33 +57,25 @@ class WebTotemRouter extends TotemRouter {
     launchUrlString('https://www.totem.org/', webOnlyWindowName: '_self');
   }
 
-  @override
-  void toHome([HomeRoutes route = HomeRoutes.initialRoute]) {
+  String buildHomeUrl(HomeRoutes route) {
+    final baseUri = Uri.parse(AppConfig.instance.apiUrl);
     switch (route) {
       case HomeRoutes.home:
-        launchUrlString('https://www.totem.org/', webOnlyWindowName: '_self');
-        break;
+        return baseUri.toString();
       case HomeRoutes.spaces:
-        launchUrlString(
-          'https://www.totem.org/spaces/',
-          webOnlyWindowName: '_self',
-        );
-        break;
+        return baseUri.resolve('spaces/').toString();
       case HomeRoutes.blog:
-        launchUrlString(
-          'https://www.totem.org/blog/',
-          webOnlyWindowName: '_self',
-        );
-        break;
+        return baseUri.resolve('blog/').toString();
       case HomeRoutes.profile:
-        launchUrlString(
-          'https://www.totem.org/users/profile/',
-          webOnlyWindowName: '_self',
-        );
-        break;
+        return baseUri.resolve('users/profile/').toString();
       case HomeRoutes.messages:
         throw UnimplementedError();
     }
+  }
+
+  @override
+  void toHome([HomeRoutes route = HomeRoutes.initialRoute]) {
+    launchUrlString(buildHomeUrl(route), webOnlyWindowName: '_self');
   }
 
   @override
