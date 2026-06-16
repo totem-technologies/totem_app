@@ -497,7 +497,7 @@ final class ResolveCurrentScreenProvider
 }
 
 String _$resolveCurrentScreenHash() =>
-    r'b04195422b950ffa50548f0b122ee6cf17a5d489';
+    r'89cfb17d6ce71cc99dd82c616518b55210b28d61';
 
 /// The list of participants in the session.
 

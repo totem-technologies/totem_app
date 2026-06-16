@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_app/features/auth/controllers/auth_controller.dart';
+import 'package:totem_app/features/auth/controllers/user_profile_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
@@ -28,13 +28,13 @@ class ProfileSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
-  final PageController _pageController = PageController();
+  final _pageController = PageController();
 
-  final GlobalKey<FormState> _formKeyTab1 = GlobalKey<FormState>();
-  final TextEditingController _firstNameController = TextEditingController();
-  final TextEditingController _ageController = TextEditingController();
+  final _formKeyTab1 = GlobalKey<FormState>();
+  final _firstNameController = TextEditingController();
+  final _ageController = TextEditingController();
 
-  final Set<String> _selectedTopics = <String>{};
+  final _selectedTopics = <SpaceCategories>{};
   ReferralChoices? _referralSource;
   String? _referralOther;
   bool _isLoading = false;
@@ -57,7 +57,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     }
   }
 
-  void _handleTopicSelection(String topic, bool isSelected) {
+  void _handleTopicSelection(SpaceCategories topic, bool isSelected) {
     setState(() {
       if (isSelected) {
         _selectedTopics.add(topic);
@@ -71,7 +71,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     setState(() => _isLoading = true);
     try {
       await ref
-          .read(mobileAuthControllerProvider)
+          .read(userProfileControllerProvider.notifier)
           .completeOnboarding(
             firstName: _firstNameController.text.trim(),
             referralSource: _referralSource,
@@ -140,7 +140,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           _TopicsTab(
             selectedTopics: _selectedTopics,
             isLoading: _isLoading,
-            onTopicSelected: _handleTopicSelection,
+            onTopicSelectionChanged: _handleTopicSelection,
             onContinue: _nextPage,
           ),
           _SuggestionsTab(
@@ -234,6 +234,7 @@ class _GuidelinesTab extends StatelessWidget {
                   color: AppTheme.purple,
                   decoration: TextDecoration.underline,
                 ),
+                mouseCursor: SystemMouseCursors.click,
                 recognizer: TapGestureRecognizer()
                   ..onTap = () async {
                     final url = AppConfig.instance.communityGuidelinesUrl;
@@ -310,6 +311,21 @@ class _ProfileTabState extends State<_ProfileTab>
     return null;
   }
 
+  void _showReferralChoicesModal() async {
+    final value = await showModalBottomSheet<(ReferralChoices, String?)>(
+      isScrollControlled: true,
+      useSafeArea: true,
+      context: context,
+      clipBehavior: Clip.hardEdge,
+      builder: (context) =>
+          ReferralSourceModal(initialSource: widget.referralSource),
+    );
+    if (value != null) {
+      final (choice, text) = value;
+      widget.onReferralSourceSelected(choice, text);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -336,6 +352,7 @@ class _ProfileTabState extends State<_ProfileTab>
         Center(
           child: Stack(
             alignment: AlignmentDirectional.center,
+            clipBehavior: Clip.none,
             children: [
               UserAvatar.currentUser(
                 radius: 50,
@@ -344,16 +361,17 @@ class _ProfileTabState extends State<_ProfileTab>
               PositionedDirectional(
                 bottom: -10,
                 end: -10,
-                child: Container(
-                  height: 40,
-                  width: 40,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: AlignmentDirectional.center,
-                  child: GestureDetector(
-                    onTap: () => showProfileImagePicker(context),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => showProfileImagePicker(context),
+                  child: Container(
+                    height: 40,
+                    width: 40,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: AlignmentDirectional.center,
                     child: const TotemIcon(TotemIcons.edit),
                   ),
                 ),
@@ -379,6 +397,7 @@ class _ProfileTabState extends State<_ProfileTab>
           restorationId: 'first_name_onboarding_input',
           textInputAction: TextInputAction.next,
           autofillHints: const [AutofillHints.givenName],
+          onTapOutside: (e) => FocusScope.of(context).unfocus(),
         ),
         const InfoText(
           "Other people will see this. You don't have to use your real "
@@ -403,6 +422,7 @@ class _ProfileTabState extends State<_ProfileTab>
           restorationId: 'age_onboarding_input',
           textInputAction: TextInputAction.done,
           onFieldSubmitted: (_) => widget.onContinue(),
+          onTapOutside: (e) => FocusScope.of(context).unfocus(),
         ),
         const InfoText(
           'You must be over 13 to join. This is only for a legal requirement, no one '
@@ -418,37 +438,23 @@ class _ProfileTabState extends State<_ProfileTab>
         ),
         const SizedBox(height: 6),
         GestureDetector(
-          onTap: () async {
-            final value =
-                await showModalBottomSheet<(ReferralChoices, String?)>(
-                  isScrollControlled: true,
-                  context: context,
-                  builder: (context) => const ReferralSourceModal(),
-                );
-            if (value != null) {
-              widget.onReferralSourceSelected(value.$1, value.$2);
-            }
-          },
+          onTap: _showReferralChoicesModal,
           child: Container(
             height: 53,
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 15,
-              vertical: 16,
-            ),
+            padding: theme.inputDecorationTheme.contentPadding,
             decoration: BoxDecoration(
               color: const Color(0xffD9D9D9),
               borderRadius: BorderRadius.circular(20),
             ),
+            alignment: AlignmentDirectional.centerStart,
             child: Text(
+              widget.referralSource?.name ?? 'Tap to select',
               maxLines: 1,
               textAlign: TextAlign.left,
               overflow: TextOverflow.ellipsis,
-              widget.referralSource?.name ?? 'Tap to select',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: widget.referralSource == null
-                    ? const Color(0xffA2A2A2)
-                    : theme.textTheme.bodyLarge?.color,
-              ),
+              style: widget.referralSource == null
+                  ? theme.inputDecorationTheme.hintStyle
+                  : theme.textTheme.bodyLarge,
             ),
           ),
         ),
@@ -491,26 +497,21 @@ class _ProfileTabState extends State<_ProfileTab>
   bool get wantKeepAlive => true;
 }
 
+typedef _TopicSelectionChanged =
+    void Function(SpaceCategories topic, bool isSelected);
+
 /// Third tab: Topics selection.
 class _TopicsTab extends StatelessWidget {
   const _TopicsTab({
     required this.selectedTopics,
     required this.isLoading,
-    required this.onTopicSelected,
+    required this.onTopicSelectionChanged,
     required this.onContinue,
   });
-  final Set<String> selectedTopics;
+  final Set<SpaceCategories> selectedTopics;
   final bool isLoading;
-  final void Function(String topic, bool isSelected) onTopicSelected;
+  final _TopicSelectionChanged onTopicSelectionChanged;
   final VoidCallback onContinue;
-
-  static const List<String> _availableTopics = [
-    'Love & Emotions',
-    'Mothers',
-    'Queer',
-    'Self-improvement',
-    'Other',
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -533,16 +534,22 @@ class _TopicsTab extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
-        ..._availableTopics.map((topic) {
+        ...SpaceCategories.values.map((topic) {
           final isSelected = selectedTopics.contains(topic);
           return Padding(
             padding: const EdgeInsetsDirectional.only(bottom: 10),
             child: CheckboxListTile(
-              title: Text(topic),
+              title: Text(switch (topic) {
+                SpaceCategories.allies => 'Allies',
+                SpaceCategories.loveAndEmotions => 'Love & Emotions',
+                SpaceCategories.mothers => 'Mothers',
+                SpaceCategories.queer => 'Queer',
+                SpaceCategories.selfImprovement => 'Self-Improvement',
+              }),
               value: isSelected,
               onChanged: isLoading
                   ? null
-                  : (value) => onTopicSelected(topic, value ?? false),
+                  : (value) => onTopicSelectionChanged(topic, value ?? false),
               checkboxScaleFactor: 1.35,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -574,15 +581,16 @@ class _SuggestionsTab extends ConsumerWidget {
     required this.onSeeAllSpaces,
   });
 
-  final Set<String> selectedTopics;
+  final Set<SpaceCategories> selectedTopics;
   final bool isLoading;
   final VoidCallback onSeeAllSpaces;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final topicsKey = (selectedTopics.toList()..sort()).join('|');
-    final recommended = ref.watch(getRecommendedSessionsProvider(topicsKey));
+    final recommended = ref.watch(
+      getRecommendedSessionsProvider(selectedTopics),
+    );
 
     return CardScreen(
       isLoading: isLoading,

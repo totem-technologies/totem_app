@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
-import 'package:totem_core/auth/repositories/auth_repository.dart';
+import 'package:totem_core/auth/repositories/user_profile_repository.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:web/web.dart' as web;
 
@@ -10,7 +10,7 @@ class WebAuthController extends AuthController {
   final _authStateController = StreamController<AuthState>.broadcast();
   Completer<void>? _checkExistingAuthCompleter;
 
-  AuthRepository get _authRepository => ref.read(authRepositoryProvider);
+  UserRepository get _userRepository => ref.read(userRepositoryProvider);
 
   @override
   AuthState build() {
@@ -40,7 +40,7 @@ class WebAuthController extends AuthController {
 
       try {
         _setState(AuthState.loading());
-        final currentUser = await _authRepository.currentUser;
+        final currentUser = await _userRepository.currentUser;
         _setState(AuthState.authenticated(user: currentUser));
         _checkExistingAuthCompleter?.complete();
       } catch (_) {
@@ -57,7 +57,7 @@ class WebAuthController extends AuthController {
   @override
   Future<void> deleteAccount() async {
     try {
-      await _authRepository.deleteAccount();
+      await _userRepository.deleteAccount();
     } finally {
       _setState(AuthState.unauthenticated());
     }

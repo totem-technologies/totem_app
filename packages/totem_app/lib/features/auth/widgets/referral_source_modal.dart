@@ -37,14 +37,16 @@ final List<ReferralChoices> _orderedSources = [
 /// Returns a `(ReferralChoices, String?)` record where the second element
 /// is the write-in text when "Other" is selected.
 class ReferralSourceModal extends StatefulWidget {
-  const ReferralSourceModal({super.key});
+  const ReferralSourceModal({super.key, this.initialSource});
+
+  final ReferralChoices? initialSource;
 
   @override
   State<ReferralSourceModal> createState() => _ReferralSourceModalState();
 }
 
 class _ReferralSourceModalState extends State<ReferralSourceModal> {
-  ReferralChoices? _selectedSource;
+  late ReferralChoices? _selectedSource = widget.initialSource;
   final TextEditingController _otherController = TextEditingController();
 
   @override

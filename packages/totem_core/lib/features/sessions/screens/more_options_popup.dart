@@ -66,7 +66,7 @@ Future<void> showOptionsSheet(
       right: 24,
     ),
     isScrollControlled: true,
-    smallScreenBuilder: (context) {
+    bottomSheetBuilder: (context) {
       return SafeArea(
         child: MoreOptions(session: session, isDialog: false),
       );
@@ -103,192 +103,220 @@ class MoreOptions extends ConsumerWidget {
 
     final isKeeper = currentSession.isCurrentUserKeeper();
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (!isDialog) const SheetDragHandle(),
-        Flexible(
-          child: ListView(
-            padding: EdgeInsetsDirectional.only(
-              start: 20,
-              end: 20,
-              bottom: isDialog ? 20 : 36,
-              top: isDialog ? 24 : 0,
+    Widget buildContent([ScrollController? scrollController]) {
+      final cameraTile = MoreOptionsTile.camera(
+        currentSession.devices.localVideoTrack?.currentOptions
+            as CameraCaptureOptions?,
+        () {
+          currentSession.devices.switchCameraPosition();
+          Navigator.of(context).pop();
+        },
+      );
+
+      final outputTile = MoreOptionsTile.output(
+        AudioOutputOptions(
+          speakerOn: deviceState.isSpeakerphoneEnabled,
+          deviceId: deviceState.selectedAudioOutputDeviceId,
+        ),
+        (options) {
+          if (options.speakerOn != null) {
+            currentSession.devices.setSpeakerphone(
+              options.speakerOn ?? false,
+            );
+          }
+        },
+        currentSession.devices.selectAudioOutputDevice,
+      );
+
+      final content = SingleChildScrollView(
+        controller: scrollController,
+        padding: EdgeInsetsDirectional.only(
+          start: 20,
+          end: 20,
+          bottom: isDialog ? 20 : 36,
+          top: isDialog ? 24 : 10,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ?cameraTile,
+            ?outputTile,
+            MoreOptionsTile<void>(
+              title: 'Leave Session',
+              icon: TotemIcons.leaveCall,
+              type: MoreOptionsTileType.destructive,
+              onTap: () async {
+                final navigator = Navigator.of(context)..pop();
+                final shouldLeave = await showLeaveDialog(context) ?? false;
+                if (shouldLeave && navigator.mounted) {
+                  TotemRouter.instance.popOrHome(navigator.context);
+                  currentSession.leave();
+                }
+              },
             ),
-            shrinkWrap: true,
-            physics: const ClampingScrollPhysics(),
-            children: <Widget>[
-              ?MoreOptionsTile.camera(
-                currentSession.devices.localVideoTrack?.currentOptions
-                    as CameraCaptureOptions?,
-                () {
-                  currentSession.devices.switchCameraPosition();
-                  Navigator.of(context).pop();
-                },
-              ),
-              ?MoreOptionsTile.output(
-                AudioOutputOptions(
-                  speakerOn: deviceState.isSpeakerphoneEnabled,
-                  deviceId: deviceState.selectedAudioOutputDeviceId,
+
+            if (isKeeper) ...[
+              Text(
+                'Keeper Options',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
                 ),
-                (options) {
-                  if (options.speakerOn != null) {
-                    currentSession.devices.setSpeakerphone(
-                      options.speakerOn ?? false,
-                    );
-                  }
-                },
-                currentSession.devices.selectAudioOutputDevice,
               ),
               MoreOptionsTile<void>(
-                title: 'Leave Session',
-                icon: TotemIcons.leaveCall,
-                type: MoreOptionsTileType.destructive,
-                onTap: () async {
-                  final navigator = Navigator.of(context)..pop();
-                  final shouldLeave = await showLeaveDialog(context) ?? false;
-                  if (shouldLeave && navigator.mounted) {
-                    TotemRouter.instance.popOrHome(navigator.context);
-                    currentSession.leave();
-                  }
+                title: 'Reorder Participants',
+                icon: TotemIcons.reorderParticipants,
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showParticipantReorderModals(context);
                 },
               ),
-
-              if (isKeeper) ...[
-                Text(
-                  'Keeper Options',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                MoreOptionsTile<void>(
-                  title: 'Reorder Participants',
-                  icon: TotemIcons.reorderParticipants,
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    showParticipantReorderModals(context);
-                  },
-                ),
-                MoreOptionsTile<void>(
-                  title:
-                      'Banned Participants'
-                      '${state.roomState.bannedParticipants.isNotEmpty ? ' (${state.roomState.bannedParticipants.length})' : ''}',
-                  icon: TotemIcons.removePerson,
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    showBannedParticipantsModal(context, currentSession, state);
-                  },
-                ),
-                MoreOptionsTile<void>(
-                  title: 'Mute everyone',
-                  icon: TotemIcons.microphoneOff,
-                  type: MoreOptionsTileType.destructive,
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _onMuteEveryone(currentSession);
-                  },
-                ),
-                if (state.roomState.status == mobile_api.RoomStatus.active)
-                  Builder(
-                    builder: (context) {
-                      final next =
-                          state.roomState.nextParticipantForcePassIdentity;
-                      final nextParticipantName = next != null
-                          ? state.participantsList
-                                .firstWhereOrNull((p) => p.identity == next)
-                                ?.name
-                          : null;
-                      return MoreOptionsTile<void>(
-                        title:
-                            'Force pass to ${nextParticipantName ?? 'the next'}',
-                        icon: TotemIcons.passToNext,
-                        type: MoreOptionsTileType.destructive,
-                        onTap:
-                            state.roomState.turnState !=
-                                mobile_api.TurnState.idle
-                            ? () {
-                                Navigator.of(context).pop();
-                                _onNextTotemAction(
-                                  context,
-                                  currentSession,
-                                  state,
-                                );
-                              }
-                            : null,
-                      );
-                    },
-                  ),
-                if (state.roomState.status == mobile_api.RoomStatus.waitingRoom)
-                  MoreOptionsTile<void>(
-                    title: 'Start Session',
-                    icon: TotemIcons.arrowForward,
-                    type: MoreOptionsTileType.destructive,
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      _onStartSession(context, currentSession);
-                    },
-                  )
-                else if (state.roomState.status != mobile_api.RoomStatus.ended)
-                  MoreOptionsTile<void>(
-                    title: 'End Session',
-                    icon: TotemIcons.cameraOff,
-                    type: MoreOptionsTileType.destructive,
-                    onTap:
-                        state.roomState.status == mobile_api.RoomStatus.active
-                        ? () {
-                            Navigator.of(context).pop();
-                            _onEndSession(context, currentSession);
-                          }
-                        : null,
-                  ),
-                Text(
-                  'Session State',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                MoreOptionsTile<void>(
-                  title: switch (state.roomState.status) {
-                    mobile_api.RoomStatus.waitingRoom =>
-                      'Session Status: Waiting Room',
-                    mobile_api.RoomStatus.active => 'Session Status: Active',
-                    mobile_api.RoomStatus.ended => 'Session Status: Ended',
-                    _ => 'Session Status: Unknown',
-                  },
-                  icon: TotemIcons.checkboxOutlined,
-                ),
-                MoreOptionsTile<void>(
-                  title:
-                      'Totem Status: '
-                      '${state.roomState.turnState.value.uppercaseFirst()}',
-                  icon: TotemIcons.feedback,
-                ),
+              MoreOptionsTile<void>(
+                title:
+                    'Banned Participants'
+                    '${state.roomState.bannedParticipants.isNotEmpty ? ' (${state.roomState.bannedParticipants.length})' : ''}',
+                icon: TotemIcons.removePerson,
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showBannedParticipantsModal(
+                    context,
+                    currentSession,
+                    state,
+                  );
+                },
+              ),
+              MoreOptionsTile<void>(
+                title: 'Mute everyone',
+                icon: TotemIcons.microphoneOff,
+                type: MoreOptionsTileType.destructive,
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _onMuteEveryone(currentSession);
+                },
+              ),
+              if (state.roomState.status == mobile_api.RoomStatus.active)
                 Builder(
                   builder: (context) {
-                    final String? userName =
-                        state.roomState.currentSpeaker != null
+                    final next =
+                        state.roomState.nextParticipantForcePassIdentity;
+                    final nextParticipantName = next != null
                         ? state.participantsList
-                              .firstWhereOrNull(
-                                (p) =>
-                                    p.identity ==
-                                    state.roomState.currentSpeaker,
-                              )
+                              .firstWhereOrNull((p) => p.identity == next)
                               ?.name
                         : null;
                     return MoreOptionsTile<void>(
                       title:
-                          'Speaking now: '
-                          '${userName ?? 'None'}',
-                      icon: TotemIcons.community,
+                          'Force pass to ${nextParticipantName ?? 'the next'}',
+                      icon: TotemIcons.passToNext,
+                      type: MoreOptionsTileType.destructive,
+                      onTap:
+                          state.roomState.turnState != mobile_api.TurnState.idle
+                          ? () {
+                              Navigator.of(context).pop();
+                              _onNextTotemAction(
+                                context,
+                                currentSession,
+                                state,
+                              );
+                            }
+                          : null,
                     );
                   },
                 ),
-              ],
-            ].expand((child) => [const SizedBox(height: 10), child]).skip(1).toList(),
-          ),
+              if (state.roomState.status == mobile_api.RoomStatus.waitingRoom)
+                MoreOptionsTile<void>(
+                  title: 'Start Session',
+                  icon: TotemIcons.arrowForward,
+                  type: MoreOptionsTileType.destructive,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _onStartSession(context, currentSession);
+                  },
+                )
+              else if (state.roomState.status != mobile_api.RoomStatus.ended)
+                MoreOptionsTile<void>(
+                  title: 'End Session',
+                  icon: TotemIcons.cameraOff,
+                  type: MoreOptionsTileType.destructive,
+                  onTap: state.roomState.status == mobile_api.RoomStatus.active
+                      ? () {
+                          Navigator.of(context).pop();
+                          _onEndSession(context, currentSession);
+                        }
+                      : null,
+                ),
+              Text(
+                'Session State',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              MoreOptionsTile<void>(
+                title: switch (state.roomState.status) {
+                  mobile_api.RoomStatus.waitingRoom =>
+                    'Session Status: Waiting Room',
+                  mobile_api.RoomStatus.active => 'Session Status: Active',
+                  mobile_api.RoomStatus.ended => 'Session Status: Ended',
+                  _ => 'Session Status: Unknown',
+                },
+                icon: TotemIcons.checkboxOutlined,
+              ),
+              MoreOptionsTile<void>(
+                title:
+                    'Totem Status: '
+                    '${state.roomState.turnState.value.uppercaseFirst()}',
+                icon: TotemIcons.feedback,
+              ),
+              Builder(
+                builder: (context) {
+                  final String? userName =
+                      state.roomState.currentSpeaker != null
+                      ? state.participantsList
+                            .firstWhereOrNull(
+                              (p) =>
+                                  p.identity == state.roomState.currentSpeaker,
+                            )
+                            ?.name
+                      : null;
+                  return MoreOptionsTile<void>(
+                    title:
+                        'Speaking now: '
+                        '${userName ?? 'None'}',
+                    icon: TotemIcons.community,
+                  );
+                },
+              ),
+            ],
+          ].expand((child) => [const SizedBox(height: 10), child]).skip(1).toList(),
         ),
-      ],
-    );
+      );
+
+      if (isDialog) return content;
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ColoredBox(
+            color: theme.colorScheme.surface,
+            child: const SheetDragHandle(),
+          ),
+          Flexible(child: content),
+        ],
+      );
+    }
+
+    if (isDialog || !isKeeper) {
+      return buildContent();
+    } else {
+      return DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.95,
+        minChildSize: 0.25,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) {
+          return buildContent(scrollController);
+        },
+      );
+    }
   }
 
   Future<void> _onMuteEveryone(SessionController session) =>

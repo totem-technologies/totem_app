@@ -18,7 +18,7 @@ Future<void> showUserFeedbackPopup(
     showDragHandle: false,
     useRootNavigator: true,
     isScrollControlled: true,
-    smallScreenBuilder: (context) =>
+    bottomSheetBuilder: (context) =>
         UserFeedback(onFeedbackSubmitted: onFeedbackSubmitted),
     largeScreenBuilder: (context) => SizedBox(
       width: 400,

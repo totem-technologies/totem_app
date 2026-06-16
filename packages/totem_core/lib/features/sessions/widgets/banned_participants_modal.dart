@@ -18,7 +18,7 @@ Future<void> showBannedParticipantsModal(
     showDragHandle: false,
     bottomSheetBackgroundColor: const Color(0xFFF3F1E9),
     dialogBackgroundColor: const Color(0xFFF3F1E9),
-    smallScreenBuilder: (context) => BannedParticipants(
+    bottomSheetBuilder: (context) => BannedParticipants(
       session: session,
       state: state,
     ),

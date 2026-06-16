@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 // ignore: depend_on_referenced_packages
@@ -8,6 +7,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/auth/repositories/auth_repository.dart';
+import 'package:totem_core/auth/repositories/user_profile_repository.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
@@ -26,11 +26,11 @@ MobileAuthController mobileAuthController(Ref ref) {
   return ref.read(authControllerProvider.notifier) as MobileAuthController;
 }
 
-// TODO(bdlukaa): Create a user-profile provider
 class MobileAuthController extends AuthController {
   MobileAuthController();
 
   AuthRepository get _authRepository => ref.read(authRepositoryProvider);
+  UserRepository get _userRepository => ref.read(userRepositoryProvider);
   SecureStorage get _secureStorage => ref.read(secureStorageProvider);
   AnalyticsService get _analyticsService => ref.read(analyticsProvider);
   NotificationsService get _notificationsService =>
@@ -55,27 +55,13 @@ class MobileAuthController extends AuthController {
 
   @override
   bool get isAuthenticated => state.status == AuthStatus.authenticated;
+
   bool get isOnboardingCompleted =>
       isAuthenticated &&
       (state.user?.name != null && state.user!.name!.isNotEmpty);
 
   @override
   UserSchema? get user => state.user;
-
-  /// Check if the user has seen the welcome onboarding screens before
-  /// This determines if they should see the intro screens on app launch
-  Future<bool> get hasSeenWelcomeOnboarding async {
-    return ref.read(localStorageServiceProvider).hasSeenWelcomeOnboarding();
-  }
-
-  /// Mark that the user has completed the welcome onboarding screens
-  /// Called when user finishes the intro screens or skips them
-  Future<void> markWelcomeOnboardingCompleted() async {
-    await ref
-        .read(localStorageServiceProvider)
-        .markWelcomeOnboardingCompleted();
-    _analyticsService.logEvent('welcome_onboarding_completed');
-  }
 
   void _initialize() {
     checkExistingAuth();
@@ -115,8 +101,6 @@ class MobileAuthController extends AuthController {
   Future<void> verifyPin(String pin) async {
     final currentEmail = state.email;
     if (currentEmail == null) {
-      // This should ideally not happen if UI flow is correct
-      // _setState(AuthState.error('Invalid state for PIN verification.'));
       _setState(AuthState.error('Something went wrong.'));
       return;
     }
@@ -126,7 +110,7 @@ class MobileAuthController extends AuthController {
       final authResponse = await _authRepository.verifyPin(currentEmail, pin);
       await _storeTokens(authResponse.accessToken, authResponse.refreshToken);
 
-      final user = await _authRepository.currentUser;
+      final user = await _userRepository.currentUser;
       _setState(AuthState.authenticated(user: user));
 
       await _analyticsService.setUserId(user);
@@ -138,198 +122,14 @@ class MobileAuthController extends AuthController {
         stackTrace: stackTrace,
         email: currentEmail,
       );
-
       rethrow;
     }
-  }
-
-  Future<void> completeOnboarding({
-    required String firstName,
-    required int? age,
-    required ReferralChoices? referralSource,
-    required Set<String> interestTopics,
-    required bool newsletterConsent,
-    String? referralOther,
-  }) async {
-    if (!isAuthenticated || state.user == null) {
-      _setState(AuthState.error('User not authenticated for onboarding.'));
-      // Potentially throw AppAuthException.unauthenticated();
-      return;
-    }
-
-    // _setState(state.copyWith(status: AuthStatus.loading)); // Optional: if there's a noticeable delay
-
-    try {
-      final updatedUser = await _authRepository.updateCurrentUserProfile(
-        name: firstName,
-        newsletterConsent: newsletterConsent,
-      );
-
-      await _authRepository.completeOnboarding(
-        interestTopics: interestTopics,
-        referralSource: referralSource,
-        referralOther: referralOther,
-        yearBorn: age == null ? null : (DateTime.now().year - age),
-      );
-      logger.i('🔑 Onboard completed!');
-
-      _setState(AuthState.authenticated(user: updatedUser));
-
-      if (referralSource != null) {
-        _analyticsService.logEvent(
-          'referral_source',
-          parameters: {
-            'source': referralSource,
-            'user_type': 'new_user',
-            'signup_flow_step': 3,
-          },
-        );
-      }
-
-      _analyticsService.logEvent('onboarding_completed');
-    } catch (error, stackTrace) {
-      _setState(
-        state.copyWith(
-          status: AuthStatus.authenticated,
-          error: 'Failed to update profile: $error',
-        ),
-      );
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: '🔑 Failed to complete onboarding',
-      );
-      rethrow;
-    }
-  }
-
-  Future<bool> updateUserProfile({
-    String? name,
-    String? email,
-    File? profileImage,
-    ProfileAvatarTypeEnum? profileAvatarType,
-    String? avatarSeed,
-  }) async {
-    assert(
-      isAuthenticated,
-      'Cannot update profile when user is not authenticated.',
-    );
-
-    assert(
-      profileImage != null ||
-          avatarSeed != null ||
-          profileAvatarType != null ||
-          name != null ||
-          email != null,
-      'At least one profile field must be provided for update.',
-    );
-
-    var overallSuccess = true;
-    var finalUpdatedUser = state.user;
-
-    if (profileImage != null) {
-      try {
-        final bool imageUpdateSuccess = await _authRepository
-            .updateCurrentUserProfilePicture(profileImage);
-        if (!imageUpdateSuccess) {
-          overallSuccess = false;
-        } else {
-          // If image update was successful and you need to refresh user data
-          // to get new image URL
-          // you might need to call _authRepository.currentUser again or the
-          // image update method should return the new UserSchema or at least
-          // the new image URL. For simplicity, if it returns a new UserSchema:
-          // finalUser = await _authRepository.currentUser;
-        }
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Failed to update profile image',
-        );
-        overallSuccess = false;
-      }
-    }
-
-    var shouldUpdateMetaProfile = false;
-    final newName = (name != null && state.user?.name != name) ? name : null;
-    final newEmail = (email != null && state.user?.email != email)
-        ? email
-        : null;
-    final newProfileAvatarType =
-        (profileAvatarType != null &&
-            state.user?.profileAvatarType != profileAvatarType)
-        ? profileAvatarType
-        : null;
-    final newAvatarSeed =
-        (avatarSeed != null && state.user?.profileAvatarSeed != avatarSeed)
-        ? avatarSeed
-        : null;
-
-    if (newName != null ||
-        newEmail != null ||
-        newProfileAvatarType != null ||
-        newAvatarSeed != null) {
-      shouldUpdateMetaProfile = true;
-    }
-
-    if (shouldUpdateMetaProfile) {
-      try {
-        final backendUpdatedUser = await _authRepository
-            .updateCurrentUserProfile(
-              name: newName,
-              email: newEmail,
-              profileAvatarType: profileAvatarType,
-              avatarSeed: avatarSeed,
-            );
-        finalUpdatedUser = backendUpdatedUser;
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Failed to update name/email',
-        );
-        overallSuccess = false;
-      }
-    }
-
-    if (overallSuccess &&
-        finalUpdatedUser != null &&
-        finalUpdatedUser != state.user) {
-      _setState(
-        state.copyWith(
-          status: AuthStatus.authenticated,
-          user: finalUpdatedUser,
-        ),
-      );
-    } else if (overallSuccess &&
-        (profileImage != null || shouldUpdateMetaProfile)) {
-      // If an update was attempted and reported success by the repo,
-      // but we don't have a new user object from the repo calls,
-      // it might be safest to re-fetch the user to ensure UI consistency.
-      try {
-        final refreshedUser = await _authRepository.currentUser;
-        _setState(
-          state.copyWith(status: AuthStatus.authenticated, user: refreshedUser),
-        );
-      } catch (error, stackTrace) {
-        overallSuccess = false;
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Failed to refresh user after profile update',
-        );
-      }
-    }
-
-    return overallSuccess;
   }
 
   @override
   Future<void> logout() async {
     if (!isAuthenticated) return;
 
-    // _setState(AuthState.loading());
     try {
       final refreshToken = await _secureStorage.read(
         key: AppConsts.refreshTokenKey,
@@ -357,7 +157,7 @@ class MobileAuthController extends AuthController {
 
     _setState(AuthState.loading());
     try {
-      await _authRepository.deleteAccount();
+      await _userRepository.deleteAccount();
       _setState(AuthState.unauthenticated());
       _analyticsService.logAccountDeleted();
     } catch (error, stackTrace) {
@@ -374,6 +174,7 @@ class MobileAuthController extends AuthController {
   }
 
   Completer<void>? _checkExistingAuthCompleter;
+
   @override
   Future<void> checkExistingAuth() async {
     if (_checkExistingAuthCompleter == null) {
@@ -405,6 +206,7 @@ class MobileAuthController extends AuthController {
   ///
   /// Prevents concurrent executions using [_isCheckingExistingAuth] flag.
   var _isCheckingExistingAuth = false;
+
   Future<void> _checkExistingAuth() async {
     if (_isCheckingExistingAuth) return;
     _isCheckingExistingAuth = true;
@@ -455,7 +257,7 @@ class MobileAuthController extends AuthController {
       logger.i('🔑 Validating token with backend...');
 
       await (() async {
-        final user = await _authRepository.currentUser;
+        final user = await _userRepository.currentUser;
 
         // If we timed out while waiting for this, DO NOT update state to avoid
         // overwriting with potentially stale data.
@@ -588,5 +390,13 @@ class MobileAuthController extends AuthController {
   void _setState(AuthState newState) {
     state = newState;
     _authStateController.add(state);
+  }
+
+  /// Bridge method allowing other controllers to update the user object
+  /// without changing the core authentication status.
+  void syncUser(UserSchema updatedUser) {
+    if (isAuthenticated) {
+      _setState(AuthState.authenticated(user: updatedUser));
+    }
   }
 }

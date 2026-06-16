@@ -243,7 +243,7 @@ final class DefaultApi with ApiExecutor {
   /// Logout by invalidating a refresh token.
   ///
   /// `POST /api/mobile/auth/logout`
-  Future<ApiResult<MessageResponse, ErrorResponse>> totemApiAuthLogout({
+  Future<ApiResult<MessageResponse, Never>> totemApiAuthLogout({
     required RefreshTokenSchema body,
     RequestOptions? options,
   }) async {
@@ -262,11 +262,6 @@ final class DefaultApi with ApiExecutor {
       request,
       onSuccess: (response) {
         return MessageResponse.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
-      },
-      onError: (response) {
-        return ErrorResponse.fromJson(
           jsonDecode(response.body) as Map<String, dynamic>,
         );
       },
