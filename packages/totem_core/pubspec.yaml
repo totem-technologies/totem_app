@@ -33,8 +33,6 @@ dependencies:
   degenerate_dio: ^0.4.1
 
   # Messaging
-  firebase_core: ^4.0.0
-  firebase_messaging: ^16.0.0
   flutter_local_notifications: ^21.0.0
   posthog_flutter: ^5.25.1
   intl: ^0.20.2

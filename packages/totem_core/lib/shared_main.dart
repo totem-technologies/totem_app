@@ -1,6 +1,5 @@
 // ignore_for_file: experimental_member_use
 
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,7 +19,6 @@ import 'package:totem_core/shared/widgets/error_screen.dart';
 Future<void> sharedMain(
   Widget app,
   AsyncCallback init, {
-  required FirebaseOptions firebaseOptions,
   List<Override> providerOverrides = const [],
 }) async {
   // Install Sentry's binding before anything else triggers binding init
@@ -31,7 +29,6 @@ Future<void> sharedMain(
   AppConfig.instance = await AppConfig.build();
 
   try {
-    await Firebase.initializeApp(options: firebaseOptions);
     await init();
 
     Future<void> launch(Widget rootChild) async {
