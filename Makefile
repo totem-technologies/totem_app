@@ -24,15 +24,15 @@ run:
 
 run-chrome:
 	@echo "Running app in Chrome..."
-	cd $(WEB_DIR) && flutter run -d chrome --web-port=5173 --web-hostname=0.0.0.0
+	cd $(WEB_DIR) && flutter run -d chrome --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"
 
 run-web:
 	@echo "Running app in Web Server..."
-	cd $(WEB_DIR) && flutter run -d web-server --web-port=5173 --web-hostname=0.0.0.0 --release
+	cd $(WEB_DIR) && flutter run -d web-server --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
 
 # Build the web app the way it deploys: mounted at /room/, assets fetched from
 # a separate origin (here the local serve-web "CDN" on :5173) via ASSET_BASE.
-run-web-release:
+build-web-release:
 	@echo "Building web app..."
 	cd $(WEB_DIR) && flutter build web --wasm --base-href "/room/" --web-define=ASSET_BASE="http://localhost:5173/"
 	@echo "Built $(WEB_DIR)/build/web — serve it with: make serve-web"
