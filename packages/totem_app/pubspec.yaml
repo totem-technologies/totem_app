@@ -36,6 +36,7 @@ dependencies:
   posthog_flutter: ^5.24.1
   intl: ^0.20.2
   sentry_flutter: ^9.21.0
+  shared_preferences: ^2.5.3
 
   # UI & Utilities
   auto_size_text: ^3.0.0
@@ -70,8 +71,6 @@ dev_dependencies:
   # App Icon and Splash Screens
   flutter_launcher_icons: ^0.14.3
   flutter_native_splash: ^2.4.7
-
-
 
 flutter:
   default-flavor: production
