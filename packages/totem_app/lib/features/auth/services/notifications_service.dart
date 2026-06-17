@@ -140,7 +140,6 @@ class NotificationsService {
       );
       // Fail gracefully - mark as initialized anyway
       _initialized = true;
-      rethrow;
     }
   }
 

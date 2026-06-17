@@ -11,7 +11,6 @@ import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
-import 'package:totem_core/core/services/notifications_service.dart';
 import 'package:totem_core/core/services/observer_service.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
@@ -29,9 +28,8 @@ Future<void> sharedMain(
   AppConfig.instance = await AppConfig.build();
 
   try {
-    await init();
-
     Future<void> launch(Widget rootChild) async {
+      await init();
       _initializeBestEffortServices();
       final container = ProviderContainer(
         observers: [ObserverService()],
@@ -100,7 +98,6 @@ void _configureSentry(SentryFlutterOptions options) {
 void _initializeBestEffortServices() {
   try {
     AnalyticsService.instance.initialize();
-    NotificationsService.instance.initialize();
   } catch (e, stackTrace) {
     ErrorHandler.logError(
       e,

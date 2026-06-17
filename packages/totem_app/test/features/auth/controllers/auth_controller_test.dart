@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
+import 'package:totem_app/features/auth/services/notifications_service.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/auth/repositories/auth_repository.dart';
@@ -13,7 +14,6 @@ import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/cache_service.dart';
 import 'package:totem_core/core/services/local_storage_service.dart';
-import 'package:totem_core/core/services/notifications_service.dart';
 import 'package:totem_core/core/services/secure_storage.dart';
 
 UserSchema _buildUserSchema({
