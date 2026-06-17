@@ -31,15 +31,21 @@ class WebTotemRouter extends TotemRouter {
       routes: [
         GoRoute(
           path: '/',
-          builder: (context, state) {
-            final nextRoute = state.uri.queryParameters['next'];
-            return _WebRedirectScreen(nextRoute: nextRoute);
-          },
+          builder: (context, state) => const _WebRedirectScreen(),
         ),
         GoRoute(
           path: '/:slug',
           builder: (context, state) {
+            final container = ProviderScope.containerOf(context);
+            final authController = container.read(
+              authControllerProvider.notifier,
+            );
             final slug = state.pathParameters['slug'] ?? '';
+
+            if (!authController.isAuthenticated) {
+              return _WebRedirectScreen(nextRoute: 'room/$slug');
+            }
+
             return SentryDisplayWidget(child: PreJoinScreen(sessionSlug: slug));
           },
         ),
@@ -110,9 +116,25 @@ class WebTotemRouter extends TotemRouter {
   }
 }
 
+/// Builds the URI for browser-level redirects.
+///
+/// When [nextRoute] is provided, returns the login page URL with a `next`
+/// query parameter so the parent website can redirect back after login.
+/// Otherwise, returns the origin (main website home).
+Uri buildRedirectUri({String? nextRoute}) {
+  final baseUri = Uri.parse(AppConfig.instance.apiUrl);
+  if (nextRoute != null && nextRoute.isNotEmpty) {
+    return baseUri
+        .resolve('users/login/')
+        .replace(queryParameters: {'next': nextRoute});
+  }
+  return baseUri;
+}
+
 class _WebRedirectScreen extends StatefulWidget {
   const _WebRedirectScreen({this.nextRoute});
 
+  /// The route to redirect to after login, if any.
   final String? nextRoute;
 
   @override
@@ -125,28 +147,18 @@ class _WebRedirectScreenState extends State<_WebRedirectScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_redirected) {
-      return;
-    }
+    if (_redirected) return;
     _redirected = true;
-    scheduleMicrotask(_redirectToSignIn);
+    scheduleMicrotask(_performBrowserRedirect);
   }
 
-  Future<void> _redirectToSignIn() async {
-    final baseUri = Uri.parse(AppConfig.instance.apiUrl);
-    final nextRoute = widget.nextRoute;
-    final signInUri = baseUri.replace(
-      queryParameters: {
-        ...baseUri.queryParameters,
-        if (nextRoute != null && nextRoute.isNotEmpty) 'next': nextRoute,
-      },
-    );
-
-    await launchUrlString(signInUri.toString(), webOnlyWindowName: '_self');
+  Future<void> _performBrowserRedirect() async {
+    final uri = buildRedirectUri(nextRoute: widget.nextRoute);
+    await launchUrlString(uri.toString(), webOnlyWindowName: '_self');
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    return const Scaffold();
   }
 }
