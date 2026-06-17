@@ -15,6 +15,9 @@ import 'package:url_launcher/url_launcher_string.dart';
 class WebTotemRouter extends TotemRouter {
   final _navigatorKey = GlobalKey<NavigatorState>();
 
+  Uri get baseUri => Uri.parse(AppConfig.instance.apiUrl);
+  // Uri get baseUri => Uri.base;
+
   @override
   GlobalKey<NavigatorState> get navigatorKey => _navigatorKey;
 
@@ -54,11 +57,10 @@ class WebTotemRouter extends TotemRouter {
       }
     }
 
-    launchUrlString('https://www.totem.org/', webOnlyWindowName: '_self');
+    launchUrlString(baseUri.toString(), webOnlyWindowName: '_self');
   }
 
   String buildHomeUrl(HomeRoutes route) {
-    final baseUri = Uri.parse(AppConfig.instance.apiUrl);
     switch (route) {
       case HomeRoutes.home:
         return baseUri.toString();
@@ -86,7 +88,7 @@ class WebTotemRouter extends TotemRouter {
     );
     if (profile.username != null) {
       launchUrlString(
-        'https://www.totem.org/keeper/${profile.username!}/',
+        baseUri.resolve('keeper/${profile.username!}/').toString(),
         webOnlyWindowName: '_self',
       );
     }
@@ -101,7 +103,7 @@ class WebTotemRouter extends TotemRouter {
   ]) async {
     if (sessionSlug != null) {
       launchUrlString(
-        'https://www.totem.org/spaces/session/$sessionSlug',
+        baseUri.resolve('spaces/session/$sessionSlug').toString(),
         webOnlyWindowName: '_self',
       );
     }
