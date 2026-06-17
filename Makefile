@@ -6,6 +6,7 @@ WEB_DIR := packages/totem_web
 
 clean:
 	@echo "Cleaning build artifacts..."
+	cd $(CORE_DIR) && flutter clean
 	cd $(APP_DIR) && flutter clean
 	rm -rf $(APP_DIR)/build/
 	rm -rf $(APP_DIR)/.dart_tool/build/
@@ -17,6 +18,7 @@ clean:
 	rm -rf $(APP_DIR)/ios/Flutter/Flutter.framework
 	rm -rf $(APP_DIR)/ios/Flutter/App.framework
 # 	rm -rf ~/Library/Developer/Xcode/DerivedData/*
+	cd $(WEB_DIR) && flutter clean
 
 run:
 	@echo "Running app..."
@@ -101,8 +103,8 @@ flutterfire:
 	@test -d $(WEB_DIR) || { echo "Error: $(WEB_DIR) not found."; exit 1; }
 	@echo "Configuring Firebase for app package (android + ios)..."
 	cd $(APP_DIR) && flutterfire configure --platforms=android,ios,windows,macos
-	@echo "Configuring Firebase for web package..."
-	cd $(WEB_DIR) && flutterfire configure --platforms=web
+	# @echo "Configuring Firebase for web package..."
+	# cd $(WEB_DIR) && flutterfire configure --platforms=web
 
 release:
 	@echo "Creating release..."
