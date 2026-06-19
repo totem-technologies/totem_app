@@ -37,12 +37,7 @@ Future<void> sharedMain(
         retry: _retryPolicy,
       );
       await container.read(authControllerProvider.notifier).checkExistingAuth();
-      runApp(
-        UncontrolledProviderScope(
-          container: container,
-          child: rootChild,
-        ),
-      );
+      runApp(UncontrolledProviderScope(container: container, child: rootChild));
     }
 
     final dsn = AppConfig.instance.sentryDsn;

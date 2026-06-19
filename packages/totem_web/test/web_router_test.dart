@@ -72,37 +72,8 @@ void main() {
     });
 
     test('returns origin when nextRoute is empty', () {
-      final uri = buildRedirectUri(nextRoute: '');
+      final uri = buildRedirectUri();
       expect(uri.toString(), 'https://totem.org/');
-    });
-
-    test(
-      'returns login URL with next query parameter when nextRoute is set',
-      () {
-        final uri = buildRedirectUri(nextRoute: 'room/my-session');
-        expect(
-          uri.toString(),
-          'https://totem.org/users/login/?next=room%2Fmy-session',
-        );
-      },
-    );
-
-    test('URI-encodes the nextRoute value', () {
-      final uri = buildRedirectUri(nextRoute: 'room/session with spaces');
-      expect(
-        uri.toString(),
-        'https://totem.org/users/login/?next=room%2Fsession+with+spaces',
-      );
-    });
-
-    test('next query parameter is absent when nextRoute is empty', () {
-      final uri = buildRedirectUri(nextRoute: '');
-      expect(uri.queryParameters.containsKey('next'), isFalse);
-    });
-
-    test('next query parameter is present when nextRoute is provided', () {
-      final uri = buildRedirectUri(nextRoute: 'room/test');
-      expect(uri.queryParameters['next'], 'room/test');
     });
   });
 

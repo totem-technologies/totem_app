@@ -15,8 +15,8 @@ import 'package:url_launcher/url_launcher_string.dart';
 class WebTotemRouter extends TotemRouter {
   final _navigatorKey = GlobalKey<NavigatorState>();
 
-  Uri get baseUri => Uri.parse(AppConfig.instance.apiUrl);
-  // Uri get baseUri => Uri.base;
+  // Uri get baseUri => Uri.parse(AppConfig.instance.apiUrl);
+  static Uri get baseUri => Uri.http(Uri.base.host, '/');
 
   @override
   GlobalKey<NavigatorState> get navigatorKey => _navigatorKey;
@@ -36,16 +36,7 @@ class WebTotemRouter extends TotemRouter {
         GoRoute(
           path: '/:slug',
           builder: (context, state) {
-            final container = ProviderScope.containerOf(context);
-            final authController = container.read(
-              authControllerProvider.notifier,
-            );
             final slug = state.pathParameters['slug'] ?? '';
-
-            if (!authController.isAuthenticated) {
-              return _WebRedirectScreen(nextRoute: 'room/$slug');
-            }
-
             return SentryDisplayWidget(child: PreJoinScreen(sessionSlug: slug));
           },
         ),
@@ -121,21 +112,13 @@ class WebTotemRouter extends TotemRouter {
 /// When [nextRoute] is provided, returns the login page URL with a `next`
 /// query parameter so the parent website can redirect back after login.
 /// Otherwise, returns the origin (main website home).
-Uri buildRedirectUri({String? nextRoute}) {
+Uri buildRedirectUri() {
   final baseUri = Uri.parse(AppConfig.instance.apiUrl);
-  if (nextRoute != null && nextRoute.isNotEmpty) {
-    return baseUri
-        .resolve('users/login/')
-        .replace(queryParameters: {'next': nextRoute});
-  }
   return baseUri;
 }
 
 class _WebRedirectScreen extends StatefulWidget {
-  const _WebRedirectScreen({this.nextRoute});
-
-  /// The route to redirect to after login, if any.
-  final String? nextRoute;
+  const _WebRedirectScreen();
 
   @override
   State<_WebRedirectScreen> createState() => _WebRedirectScreenState();
@@ -153,7 +136,7 @@ class _WebRedirectScreenState extends State<_WebRedirectScreen> {
   }
 
   Future<void> _performBrowserRedirect() async {
-    final uri = buildRedirectUri(nextRoute: widget.nextRoute);
+    final uri = buildRedirectUri();
     await launchUrlString(uri.toString(), webOnlyWindowName: '_self');
   }
 
