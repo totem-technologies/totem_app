@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
-import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/features/keeper/repositories/keeper_repository.dart';
 import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_core/shared/router.dart';
@@ -15,8 +14,12 @@ import 'package:url_launcher/url_launcher_string.dart';
 class WebTotemRouter extends TotemRouter {
   final _navigatorKey = GlobalKey<NavigatorState>();
 
-  // Uri get baseUri => Uri.parse(AppConfig.instance.apiUrl);
-  static Uri get baseUri => Uri.http(Uri.base.host, '/');
+  @override
+  Uri get baseUri {
+    final scheme = Uri.base.scheme;
+    final host = Uri.base.host;
+    return Uri(scheme: scheme, host: host, path: '/');
+  }
 
   @override
   GlobalKey<NavigatorState> get navigatorKey => _navigatorKey;
@@ -54,7 +57,7 @@ class WebTotemRouter extends TotemRouter {
       }
     }
 
-    launchUrlString(baseUri.toString(), webOnlyWindowName: '_self');
+    toHome();
   }
 
   String buildHomeUrl(HomeRoutes route) {
@@ -107,16 +110,6 @@ class WebTotemRouter extends TotemRouter {
   }
 }
 
-/// Builds the URI for browser-level redirects.
-///
-/// When [nextRoute] is provided, returns the login page URL with a `next`
-/// query parameter so the parent website can redirect back after login.
-/// Otherwise, returns the origin (main website home).
-Uri buildRedirectUri() {
-  final baseUri = Uri.parse(AppConfig.instance.apiUrl);
-  return baseUri;
-}
-
 class _WebRedirectScreen extends StatefulWidget {
   const _WebRedirectScreen();
 
@@ -136,7 +129,7 @@ class _WebRedirectScreenState extends State<_WebRedirectScreen> {
   }
 
   Future<void> _performBrowserRedirect() async {
-    final uri = buildRedirectUri();
+    final uri = TotemRouter.instance.baseUri;
     await launchUrlString(uri.toString(), webOnlyWindowName: '_self');
   }
 

@@ -78,6 +78,16 @@ test:
 	cd $(CORE_DIR) && flutter test
 	cd $(WEB_DIR) && flutter test
 
+test-app:
+	@echo "Running app tests..."
+	cd $(APP_DIR) && flutter test
+	cd $(CORE_DIR) && flutter test
+
+test-web:
+	@echo "Running web tests..."
+	cd $(WEB_DIR) && flutter test
+	cd $(CORE_DIR) && flutter test
+
 lint:
 	@echo "Running linter..."
 	cd $(APP_DIR) && flutter analyze

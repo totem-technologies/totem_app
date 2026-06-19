@@ -4,13 +4,13 @@ import 'package:dio/dio.dart' hide Interceptor;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/core/api/api_client/client/api_client_api.dart';
 import 'package:totem_core/core/services/api_service.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_web/auth/controllers/auth_controller.dart';
-import 'package:totem_web/core/navigation/web_router.dart';
 
 final webApiServiceProvider = Provider<ClientApi>((ref) {
   final dio = Dio(
     BaseOptions(
-      baseUrl: WebTotemRouter.baseUri.toString(),
+      baseUrl: TotemRouter.instance.baseUri.toString(),
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
       sendTimeout: const Duration(seconds: 30),

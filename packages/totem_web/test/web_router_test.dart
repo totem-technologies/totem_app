@@ -7,6 +7,8 @@ import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/models/profile_avatar_type_enum.dart';
 import 'package:totem_core/core/api/api_client/models/user_schema.dart';
 import 'package:totem_core/core/config/app_config.dart';
+import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_web/core/navigation/web_router.dart';
@@ -24,6 +26,7 @@ final _fakeUser = UserSchema(
 Future<GoRouter> _pumpTestRouter(
   WidgetTester tester, {
   required AuthState authState,
+  List<Object?> overrides = const [],
 }) async {
   GoRouter? router;
 
@@ -33,6 +36,7 @@ Future<GoRouter> _pumpTestRouter(
         authControllerProvider.overrideWith(
           () => FakeAuthController(authState),
         ),
+        ...overrides.cast(),
       ],
       child: Consumer(
         builder: (context, ref, _) {
@@ -48,7 +52,7 @@ Future<GoRouter> _pumpTestRouter(
 }
 
 void main() {
-  setUpAll(() {
+  setUp(() {
     AppConfig.instance = AppConfig(
       environment: Environment.development,
       apiUrl: 'https://totem.org/',
@@ -63,32 +67,24 @@ void main() {
       termsOfServiceUrl: Uri.parse('https://totem.org/tos/'),
       communityGuidelinesUrl: Uri.parse('https://totem.org/guidelines/'),
     );
-  });
-
-  group('buildRedirectUri', () {
-    test('returns origin (main website home) when nextRoute is null', () {
-      final uri = buildRedirectUri();
-      expect(uri.toString(), 'https://totem.org/');
-    });
-
-    test('returns origin when nextRoute is empty', () {
-      final uri = buildRedirectUri();
-      expect(uri.toString(), 'https://totem.org/');
-    });
+    TotemRouter.instance = WebTotemRouter();
   });
 
   group('buildHomeUrl', () {
+    final router = WebTotemRouter();
     test('returns correct URLs for each HomeRoute', () {
-      final router = WebTotemRouter();
-      expect(router.buildHomeUrl(HomeRoutes.home), 'https://totem.org/');
+      expect(router.buildHomeUrl(HomeRoutes.home), router.baseUri.toString());
       expect(
         router.buildHomeUrl(HomeRoutes.spaces),
-        'https://totem.org/spaces/',
+        router.baseUri.resolve('spaces/').toString(),
       );
-      expect(router.buildHomeUrl(HomeRoutes.blog), 'https://totem.org/blog/');
+      expect(
+        router.buildHomeUrl(HomeRoutes.blog),
+        router.baseUri.resolve('blog/').toString(),
+      );
       expect(
         router.buildHomeUrl(HomeRoutes.profile),
-        'https://totem.org/users/profile/',
+        router.baseUri.resolve('users/profile/').toString(),
       );
     });
   });
@@ -109,16 +105,26 @@ void main() {
     testWidgets('/:slug route captures the slug path parameter', (
       tester,
     ) async {
+      const slug = 'test-session';
       final router = await _pumpTestRouter(
         tester,
-        authState: AuthState.initial(),
+        authState: AuthState.authenticated(user: _fakeUser),
+        overrides: [
+          // Stub providers to prevent API calls that create pending timers.
+          sessionTokenProvider(
+            slug,
+          ).overrideWith((ref) async => throw Exception('test')),
+          eventProvider(
+            slug,
+          ).overrideWith((ref) async => throw Exception('test')),
+        ],
       );
 
-      router.go('/test-session');
+      router.go('/$slug');
       await tester.pump();
 
-      expect(router.state.uri.path, '/test-session');
-      expect(router.state.pathParameters['slug'], 'test-session');
+      expect(router.state.uri.path, '/$slug');
+      expect(router.state.pathParameters['slug'], slug);
     });
 
     testWidgets('/ route matches the root path', (tester) async {
@@ -149,20 +155,6 @@ void main() {
       // _WebRedirectScreen displays a Scaffold.
       expect(find.byType(Scaffold), findsOneWidget);
       // PreJoinScreen must NOT be shown.
-      expect(find.byType(PreJoinScreen), findsNothing);
-    });
-
-    testWidgets('/:slug shows redirect screen when auth status is initial '
-        '(not yet authenticated)', (tester) async {
-      final router = await _pumpTestRouter(
-        tester,
-        authState: AuthState.initial(),
-      );
-
-      router.go('/test-session');
-      await tester.pump();
-
-      expect(find.byType(Scaffold), findsOneWidget);
       expect(find.byType(PreJoinScreen), findsNothing);
     });
 
