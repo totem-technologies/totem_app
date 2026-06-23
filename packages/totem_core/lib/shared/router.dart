@@ -77,6 +77,8 @@ abstract class TotemRouter {
 
   GlobalKey<NavigatorState> get navigatorKey;
 
+  Uri get baseUri;
+
   /// Pops the current route if possible, otherwise navigates to the home route.
   void popOrHome([BuildContext? context]);
 

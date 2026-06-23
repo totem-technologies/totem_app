@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 // ignore: depend_on_referenced_packages
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_app/features/auth/services/notifications_service.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/auth/repositories/auth_repository.dart';
@@ -15,7 +16,6 @@ import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/cache_service.dart';
 import 'package:totem_core/core/services/local_storage_service.dart';
-import 'package:totem_core/core/services/notifications_service.dart';
 import 'package:totem_core/core/services/secure_storage.dart';
 import 'package:totem_core/shared/logger.dart';
 

@@ -19,8 +19,6 @@ dependencies:
   http: ^1.6.0
   web: ^1.1.1
 
-  # Firebase (used by generated firebase_options.dart)
-  firebase_core: ^4.9.0
   sentry_flutter: ^9.21.0
 
   # State Management

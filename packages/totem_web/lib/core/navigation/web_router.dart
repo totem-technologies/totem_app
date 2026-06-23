@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
-import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/features/keeper/repositories/keeper_repository.dart';
 import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_core/shared/router.dart';
@@ -14,6 +13,13 @@ import 'package:url_launcher/url_launcher_string.dart';
 
 class WebTotemRouter extends TotemRouter {
   final _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  Uri get baseUri {
+    final scheme = Uri.base.scheme;
+    final host = Uri.base.host;
+    return Uri(scheme: scheme, host: host, path: '/');
+  }
 
   @override
   GlobalKey<NavigatorState> get navigatorKey => _navigatorKey;
@@ -28,10 +34,7 @@ class WebTotemRouter extends TotemRouter {
       routes: [
         GoRoute(
           path: '/',
-          builder: (context, state) {
-            final nextRoute = state.uri.queryParameters['next'];
-            return _WebRedirectScreen(nextRoute: nextRoute);
-          },
+          builder: (context, state) => const _WebRedirectScreen(),
         ),
         GoRoute(
           path: '/:slug',
@@ -54,36 +57,27 @@ class WebTotemRouter extends TotemRouter {
       }
     }
 
-    launchUrlString('https://www.totem.org/', webOnlyWindowName: '_self');
+    toHome();
+  }
+
+  String buildHomeUrl(HomeRoutes route) {
+    switch (route) {
+      case HomeRoutes.home:
+        return baseUri.toString();
+      case HomeRoutes.spaces:
+        return baseUri.resolve('spaces/').toString();
+      case HomeRoutes.blog:
+        return baseUri.resolve('blog/').toString();
+      case HomeRoutes.profile:
+        return baseUri.resolve('users/profile/').toString();
+      case HomeRoutes.messages:
+        throw UnimplementedError();
+    }
   }
 
   @override
   void toHome([HomeRoutes route = HomeRoutes.initialRoute]) {
-    switch (route) {
-      case HomeRoutes.home:
-        launchUrlString('https://www.totem.org/', webOnlyWindowName: '_self');
-        break;
-      case HomeRoutes.spaces:
-        launchUrlString(
-          'https://www.totem.org/spaces/',
-          webOnlyWindowName: '_self',
-        );
-        break;
-      case HomeRoutes.blog:
-        launchUrlString(
-          'https://www.totem.org/blog/',
-          webOnlyWindowName: '_self',
-        );
-        break;
-      case HomeRoutes.profile:
-        launchUrlString(
-          'https://www.totem.org/users/profile/',
-          webOnlyWindowName: '_self',
-        );
-        break;
-      case HomeRoutes.messages:
-        throw UnimplementedError();
-    }
+    launchUrlString(buildHomeUrl(route), webOnlyWindowName: '_self');
   }
 
   @override
@@ -94,7 +88,7 @@ class WebTotemRouter extends TotemRouter {
     );
     if (profile.username != null) {
       launchUrlString(
-        'https://www.totem.org/keeper/${profile.username!}/',
+        baseUri.resolve('keeper/${profile.username!}/').toString(),
         webOnlyWindowName: '_self',
       );
     }
@@ -109,7 +103,7 @@ class WebTotemRouter extends TotemRouter {
   ]) async {
     if (sessionSlug != null) {
       launchUrlString(
-        'https://www.totem.org/spaces/session/$sessionSlug',
+        baseUri.resolve('spaces/session/$sessionSlug').toString(),
         webOnlyWindowName: '_self',
       );
     }
@@ -117,9 +111,7 @@ class WebTotemRouter extends TotemRouter {
 }
 
 class _WebRedirectScreen extends StatefulWidget {
-  const _WebRedirectScreen({this.nextRoute});
-
-  final String? nextRoute;
+  const _WebRedirectScreen();
 
   @override
   State<_WebRedirectScreen> createState() => _WebRedirectScreenState();
@@ -131,28 +123,18 @@ class _WebRedirectScreenState extends State<_WebRedirectScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_redirected) {
-      return;
-    }
+    if (_redirected) return;
     _redirected = true;
-    scheduleMicrotask(_redirectToSignIn);
+    scheduleMicrotask(_performBrowserRedirect);
   }
 
-  Future<void> _redirectToSignIn() async {
-    final baseUri = Uri.parse(AppConfig.instance.apiUrl);
-    final nextRoute = widget.nextRoute;
-    final signInUri = baseUri.replace(
-      queryParameters: {
-        ...baseUri.queryParameters,
-        if (nextRoute != null && nextRoute.isNotEmpty) 'next': nextRoute,
-      },
-    );
-
-    await launchUrlString(signInUri.toString(), webOnlyWindowName: '_self');
+  Future<void> _performBrowserRedirect() async {
+    final uri = TotemRouter.instance.baseUri;
+    await launchUrlString(uri.toString(), webOnlyWindowName: '_self');
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    return const Scaffold();
   }
 }

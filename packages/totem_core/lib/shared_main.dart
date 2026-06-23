@@ -1,6 +1,5 @@
 // ignore_for_file: experimental_member_use
 
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,7 +11,6 @@ import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
-import 'package:totem_core/core/services/notifications_service.dart';
 import 'package:totem_core/core/services/observer_service.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
@@ -20,7 +18,6 @@ import 'package:totem_core/shared/widgets/error_screen.dart';
 Future<void> sharedMain(
   Widget app,
   AsyncCallback init, {
-  required FirebaseOptions firebaseOptions,
   List<Override> providerOverrides = const [],
 }) async {
   // Install Sentry's binding before anything else triggers binding init
@@ -31,10 +28,8 @@ Future<void> sharedMain(
   AppConfig.instance = await AppConfig.build();
 
   try {
-    await Firebase.initializeApp(options: firebaseOptions);
-    await init();
-
     Future<void> launch(Widget rootChild) async {
+      await init();
       _initializeBestEffortServices();
       final container = ProviderContainer(
         observers: [ObserverService()],
@@ -42,12 +37,7 @@ Future<void> sharedMain(
         retry: _retryPolicy,
       );
       await container.read(authControllerProvider.notifier).checkExistingAuth();
-      runApp(
-        UncontrolledProviderScope(
-          container: container,
-          child: rootChild,
-        ),
-      );
+      runApp(UncontrolledProviderScope(container: container, child: rootChild));
     }
 
     final dsn = AppConfig.instance.sentryDsn;
@@ -103,7 +93,6 @@ void _configureSentry(SentryFlutterOptions options) {
 void _initializeBestEffortServices() {
   try {
     AnalyticsService.instance.initialize();
-    NotificationsService.instance.initialize();
   } catch (e, stackTrace) {
     ErrorHandler.logError(
       e,

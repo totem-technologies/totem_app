@@ -167,6 +167,11 @@ class AppTotemRouter extends TotemRouter {
   GlobalKey<NavigatorState> get navigatorKey => _navigatorKey;
 
   @override
+  Uri get baseUri {
+    return Uri.parse(AppConfig.instance.apiUrl);
+  }
+
+  @override
   void popOrHome([BuildContext? context]) {
     if (context != null) {
       final router = GoRouter.of(context);

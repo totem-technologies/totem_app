@@ -6,6 +6,7 @@ WEB_DIR := packages/totem_web
 
 clean:
 	@echo "Cleaning build artifacts..."
+	cd $(CORE_DIR) && flutter clean
 	cd $(APP_DIR) && flutter clean
 	rm -rf $(APP_DIR)/build/
 	rm -rf $(APP_DIR)/.dart_tool/build/
@@ -17,6 +18,7 @@ clean:
 	rm -rf $(APP_DIR)/ios/Flutter/Flutter.framework
 	rm -rf $(APP_DIR)/ios/Flutter/App.framework
 # 	rm -rf ~/Library/Developer/Xcode/DerivedData/*
+	cd $(WEB_DIR) && flutter clean
 
 run:
 	@echo "Running app..."
@@ -24,15 +26,15 @@ run:
 
 run-chrome:
 	@echo "Running app in Chrome..."
-	cd $(WEB_DIR) && flutter run -d chrome --web-port=5173 --web-hostname=0.0.0.0
+	cd $(WEB_DIR) && flutter run -d chrome --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"
 
 run-web:
 	@echo "Running app in Web Server..."
-	cd $(WEB_DIR) && flutter run -d web-server --web-port=5173 --web-hostname=0.0.0.0 --release
+	cd $(WEB_DIR) && flutter run -d web-server --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
 
 # Build the web app the way it deploys: mounted at /room/, assets fetched from
 # a separate origin (here the local serve-web "CDN" on :5173) via ASSET_BASE.
-run-web-release:
+build-web-release:
 	@echo "Building web app..."
 	cd $(WEB_DIR) && flutter build web --wasm --base-href "/room/" --web-define=ASSET_BASE="http://localhost:5173/"
 	@echo "Built $(WEB_DIR)/build/web — serve it with: make serve-web"
@@ -74,7 +76,17 @@ test:
 	@echo "Running tests..."
 	cd $(APP_DIR) && flutter test
 	cd $(CORE_DIR) && flutter test
-# 	cd $(WEB_DIR) && flutter test # Web doesn't have tests now
+	cd $(WEB_DIR) && flutter test
+
+test-app:
+	@echo "Running app tests..."
+	cd $(APP_DIR) && flutter test
+	cd $(CORE_DIR) && flutter test
+
+test-web:
+	@echo "Running web tests..."
+	cd $(WEB_DIR) && flutter test
+	cd $(CORE_DIR) && flutter test
 
 lint:
 	@echo "Running linter..."
@@ -101,8 +113,8 @@ flutterfire:
 	@test -d $(WEB_DIR) || { echo "Error: $(WEB_DIR) not found."; exit 1; }
 	@echo "Configuring Firebase for app package (android + ios)..."
 	cd $(APP_DIR) && flutterfire configure --platforms=android,ios,windows,macos
-	@echo "Configuring Firebase for web package..."
-	cd $(WEB_DIR) && flutterfire configure --platforms=web
+	# @echo "Configuring Firebase for web package..."
+	# cd $(WEB_DIR) && flutterfire configure --platforms=web
 
 release:
 	@echo "Creating release..."

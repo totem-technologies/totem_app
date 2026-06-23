@@ -9,7 +9,6 @@ import 'package:totem_core/shared_main.dart';
 import 'package:totem_web/auth/controllers/auth_controller.dart';
 import 'package:totem_web/core/navigation/web_router.dart';
 import 'package:totem_web/core/services/web_api_service.dart';
-import 'package:totem_web/firebase_options.dart';
 
 void main() {
   sharedMain(
@@ -18,7 +17,6 @@ void main() {
       TotemRouter.instance = WebTotemRouter();
       usePathUrlStrategy();
     },
-    firebaseOptions: DefaultFirebaseOptions.currentPlatform,
     providerOverrides: [
       authControllerProvider.overrideWith(() => WebAuthController()),
       apiServiceProvider.overrideWith((ref) => ref.read(webApiServiceProvider)),
