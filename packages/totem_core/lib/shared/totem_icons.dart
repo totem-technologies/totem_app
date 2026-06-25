@@ -324,6 +324,12 @@ class TotemIcons {
 </svg>
 ''';
 
+  static const checkmark = '''
+<svg width="43" height="39" viewBox="0 0 43 39" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M3.25 21.3752L16.8438 34.969L39.5 3.25024" stroke="white" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+''';
+
   static const errorOutlined = '''
 <svg width="102" height="101" viewBox="0 0 102 101" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M51 92.3889C74.1653 92.3889 92.9444 73.6097 92.9444 50.4445C92.9444 27.2793 74.1653 8.50012 51 8.50012C27.8348 8.50012 9.05566 27.2793 9.05566 50.4445C9.05566 73.6097 27.8348 92.3889 51 92.3889Z" stroke="white" stroke-width="6.29166"/>
@@ -605,6 +611,18 @@ class TotemIcons {
 <path d="M21 44C22.6569 44 24 42.6569 24 41C24 39.3431 22.6569 38 21 38C19.3431 38 18 39.3431 18 41C18 42.6569 19.3431 44 21 44Z" stroke="#987AA5" stroke-width="0.75"/>
 <circle cx="37" cy="43" r="10" fill="#987AA5"/>
 <path d="M37.4335 37.1136L37.4783 48.4942M37.4783 48.4942L34.2111 44.677M37.4783 48.4942L40.7154 44.6514" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+''';
+
+  static const banned = '''
+<svg width="50" height="48" viewBox="0 0 50 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M40.3062 8.90038C36.3247 5.10043 30.8253 2.75 24.75 2.75C12.5999 2.75 2.75 12.1522 2.75 23.75C2.75 29.5491 5.21235 34.7986 9.19325 38.5991C13.1747 42.3996 18.6747 44.75 24.75 44.75C36.9001 44.75 46.75 35.3478 46.75 23.75C46.75 17.9509 44.2876 12.7009 40.3062 8.90038ZM9.19325 38.5991L40.3062 8.90038" stroke="white" stroke-width="5.5" stroke-linejoin="round"/>
+</svg>
+''';
+
+  static const x = '''
+<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M1.944 27.6481L1.56462e-06 25.7041L11.808 13.8241L1.56462e-06 1.94411L1.944 0.000108242L13.752 11.8801L25.488 0.000108242L27.432 1.94411L15.624 13.8241L27.432 25.7041L25.488 27.6481L13.752 15.8401L1.944 27.6481Z" fill="white"/>
 </svg>
 ''';
 }

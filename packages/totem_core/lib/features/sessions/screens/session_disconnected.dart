@@ -9,6 +9,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -19,6 +20,7 @@ import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confetti.dart';
 import 'package:totem_core/shared/widgets/space_card.dart';
+import 'package:totem_core/shared/widgets/totem_icon.dart';
 import 'package:totem_core/shared/widgets/user_feedback.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -178,7 +180,7 @@ class _SessionDisconnectedScreenState
                 sessionState: sessionState,
               );
 
-              final nextEvents = widget.session.space.nextEvents
+              final nextSessions = widget.session.space.nextEvents
                   .where((e) => e.slug != widget.session.slug)
                   .take(2)
                   .toList();
@@ -280,9 +282,9 @@ class _SessionDisconnectedScreenState
                     )
                   : null;
 
-              final nextEventsList = <Widget>[
-                if (nextEvents.isNotEmpty) ...[
-                  for (final nextEvent in nextEvents)
+              final nextList = <Widget>[
+                if (nextSessions.isNotEmpty) ...[
+                  for (final nextSession in nextSessions)
                     ConstrainedBox(
                       constraints: BoxConstraints(
                         maxHeight: MediaQuery.textScalerOf(
@@ -292,14 +294,14 @@ class _SessionDisconnectedScreenState
                       child: SmallSpaceCard(
                         space: MobileSpaceDetailSchemaExtension.copyWith(
                           widget.session.space,
-                          nextEvents: [nextEvent],
+                          nextEvents: [nextSession],
                         ),
                         onTap: () async {
                           _refreshHome();
                           return TotemRouter.instance.toSpaceSession(
                             context,
                             widget.session.space.slug,
-                            nextEvent.slug,
+                            nextSession.slug,
                             true,
                           );
                         },
@@ -309,7 +311,7 @@ class _SessionDisconnectedScreenState
                   ...recommended.when(
                     data: (data) sync* {
                       if (data.isNotEmpty) {
-                        for (final event in data.take(2)) {
+                        for (final session in data.take(2)) {
                           yield ConstrainedBox(
                             constraints: BoxConstraints(
                               maxHeight: MediaQuery.textScalerOf(
@@ -317,13 +319,13 @@ class _SessionDisconnectedScreenState
                               ).scale(140),
                             ),
                             child: SmallSpaceCard.fromSessionDetailSchema(
-                              event,
+                              session,
                               onTap: () async {
                                 _refreshHome();
                                 return TotemRouter.instance.toSpaceSession(
                                   context,
-                                  event.space.slug,
-                                  event.slug,
+                                  session.space.slug,
+                                  session.slug,
                                   true,
                                 );
                               },
@@ -336,19 +338,30 @@ class _SessionDisconnectedScreenState
                     loading: () => [],
                   ),
               ];
-              final nextEventsHeader = nextEvents.isEmpty
+              final nextSessionsHeaderText = nextSessions.isNotEmpty
+                  ? nextSessions.length == 1
+                        ? 'Join this upcoming session'
+                        : 'Join these upcoming sessions'
+                  : recommended.hasValue && recommended.value!.isNotEmpty
+                  ? 'You may enjoy these spaces'
+                  : null;
+              final nextSessionsHeader = nextSessionsHeaderText == null
                   ? null
                   : Text(
-                      recommended.hasValue && recommended.value!.isNotEmpty
-                          ? 'You may enjoy these spaces'
-                          : nextEvents.length == 1
-                          ? 'Join this upcoming session'
-                          : 'Join these upcoming sessions',
+                      nextSessionsHeaderText,
                       style: theme.textTheme.titleMedium,
                       textAlign: TextAlign.start,
                     );
 
               final exploreMoreButton = ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 58,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                ),
                 onPressed: () {
                   _refreshHome();
                   TotemRouter.instance.toHome();
@@ -372,8 +385,8 @@ class _SessionDisconnectedScreenState
                           header,
                           subheader,
                           ?feedback,
-                          ?nextEventsHeader,
-                          ...nextEventsList.map((e) => Flexible(child: e)),
+                          ?nextSessionsHeader,
+                          ...nextList.map((e) => Flexible(child: e)),
                           exploreMoreButton,
                         ],
                       ),
@@ -401,8 +414,8 @@ class _SessionDisconnectedScreenState
                             mainAxisAlignment: MainAxisAlignment.center,
                             spacing: 20,
                             children: [
-                              ?nextEventsHeader,
-                              ...nextEventsList.map((e) => Flexible(child: e)),
+                              ?nextSessionsHeader,
+                              ...nextList.map((e) => Flexible(child: e)),
                               exploreMoreButton,
                             ],
                           ),
@@ -411,58 +424,104 @@ class _SessionDisconnectedScreenState
                     ),
                   );
                 case ViewportKind.mediumPlus:
-                  final crossAxisCount = (MediaQuery.widthOf(context) / 450)
-                      .floor()
-                      .clamp(2, 6);
-
-                  return Padding(
-                    padding: const EdgeInsetsDirectional.all(40.0),
-                    child: Column(
-                      spacing: 10,
-                      children: [
-                        FractionallySizedBox(
-                          widthFactor: 0.4,
+                  return Column(
+                    spacing: 10,
+                    children: [
+                      const ListTile(
+                        contentPadding: EdgeInsetsDirectional.symmetric(
+                          horizontal: 40,
+                        ),
+                        leading: TotemLogo(color: Colors.white, size: 24),
+                        shape: Border(
+                          bottom: BorderSide(color: Color(0x14FFFFFF)),
+                        ),
+                      ),
+                      Expanded(
+                        child: FractionallySizedBox(
+                          widthFactor: 0.75,
                           child: Column(
-                            spacing: 20,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              header,
-                              subheader,
-                              ?feedback,
-                            ],
+                            spacing: 30,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children:
+                                [
+                                  Container(
+                                    height: 80,
+                                    width: 80,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: switch (sessionReason) {
+                                        SessionDisconnectedReason
+                                            .movedToAnotherDevice =>
+                                          AppTheme.mauve,
+                                        SessionDisconnectedReason.keeperEnded =>
+                                          AppTheme.paleGreen,
+                                        SessionDisconnectedReason
+                                            .keeperAbsent =>
+                                          AppTheme.mauve,
+                                        SessionDisconnectedReason.roomEmpty =>
+                                          AppTheme.mauve,
+                                        SessionDisconnectedReason.removed =>
+                                          Colors.red,
+                                      },
+                                    ),
+                                    alignment: AlignmentDirectional.center,
+                                    child: TotemIcon(
+                                      switch (sessionReason) {
+                                        SessionDisconnectedReason
+                                            .movedToAnotherDevice =>
+                                          TotemIcons.info,
+                                        SessionDisconnectedReason.keeperEnded =>
+                                          TotemIcons.checkmark,
+                                        SessionDisconnectedReason
+                                            .keeperAbsent =>
+                                          TotemIcons.clockCircle,
+                                        SessionDisconnectedReason.roomEmpty =>
+                                          TotemIcons.seats,
+                                        SessionDisconnectedReason.removed =>
+                                          TotemIcons.x,
+                                      },
+                                      color: AppTheme.white,
+                                      size: 38,
+                                    ),
+                                  ),
+                                  header,
+                                  subheader,
+                                  const Divider(color: Color(0x0FFFFFFF)),
+                                  ?feedback,
+                                  if (nextList.isNotEmpty) ...[
+                                    ?nextSessionsHeader,
+                                    Flexible(
+                                      child: Row(
+                                        spacing: 20,
+                                        children: [
+                                          ...nextList
+                                              .take(2)
+                                              .map(
+                                                (session) =>
+                                                    Expanded(child: session),
+                                              ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                  exploreMoreButton,
+                                ]
+                                // this ensures the divider is bigger than the content
+                                .map((widget) {
+                                  if (widget is Divider ||
+                                      widget is ElevatedButton) {
+                                    return widget;
+                                  }
+                                  return FractionallySizedBox(
+                                    widthFactor: 0.75,
+                                    child: widget,
+                                  );
+                                }).toList(),
                           ),
                         ),
-                        if (nextEventsList.isNotEmpty)
-                          Expanded(
-                            flex: 2,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              spacing: 20,
-                              children: [
-                                ?nextEventsHeader,
-                                Expanded(
-                                  child: GridView.count(
-                                    crossAxisCount: crossAxisCount,
-                                    crossAxisSpacing: 20,
-                                    mainAxisSpacing: 20,
-                                    childAspectRatio: 3,
-                                    children: nextEventsList,
-                                  ),
-                                ),
-                                Align(
-                                  alignment: AlignmentDirectional.centerEnd,
-                                  child: exploreMoreButton,
-                                ),
-                              ],
-                            ),
-                          )
-                        else
-                          Padding(
-                            padding: const EdgeInsets.only(top: 20),
-                            child: exploreMoreButton,
-                          ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 40),
+                    ],
                   );
               }
             },
