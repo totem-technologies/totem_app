@@ -72,6 +72,9 @@ enum SessionDisconnectedReason {
 
   /// The user was kicked out of the session by the keeper.
   removed,
+
+  /// The user was disconnected for an unknown reason.
+  other,
 }
 
 @riverpod

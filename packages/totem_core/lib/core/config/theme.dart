@@ -21,6 +21,7 @@ class AppTheme {
   static const Color pinkTint = Color(0xFF8B5363);
   static const Color purple = Color(0xFF8B5CF6);
   static const Color green = Color(0xFF19F554);
+  static const Color paleGreen = Color(0xFF98BD44);
 
   // --- Shadows ---
   static const List<BoxShadow> cardShadow = [

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
 
 void main() {
@@ -10,13 +13,26 @@ void main() {
     Object? error,
   }) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: SessionErrorScreen(
-          onRetry: onRetry,
-          error: error,
+      ProviderScope(
+        overrides: [
+          currentSessionStateProvider.overrideWithValue(null),
+          getRecommendedSessionsProvider().overrideWith(
+            (ref) => <SessionDetailSchema>[],
+          ),
+          spacesSummaryProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
+        ],
+        child: MaterialApp(
+          home: SessionErrorScreen(
+            onRetry: onRetry,
+            error: error,
+          ),
         ),
       ),
     );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
   }
 
   group('RoomErrorScreen', () {
@@ -71,14 +87,11 @@ void main() {
         await pumpErrorScreen(tester, error: bannedError, onRetry: () {});
 
         expect(
-          find.text("You've been removed from this session"),
+          find.text("You've been removed from this session."),
           findsOneWidget,
         );
         expect(
-          find.text(
-            "You can still join other sessions, but you won't be able to "
-            'access this one.',
-          ),
+          find.textContaining('Please take a moment to review our'),
           findsOneWidget,
         );
       });
@@ -102,19 +115,18 @@ void main() {
       testWidgets('shows ended title and subtitle', (tester) async {
         await pumpErrorScreen(tester, error: endedError, onRetry: () {});
 
-        expect(find.text('This session has ended'), findsOneWidget);
+        expect(find.text('Session Ended'), findsOneWidget);
         expect(
-          find.text(
-            'This session has already ended. You can still join other sessions.',
-          ),
+          find.textContaining('Thank you for joining!'),
           findsOneWidget,
         );
       });
 
-      testWidgets('shows retry button', (tester) async {
+      testWidgets('shows Explore More button', (tester) async {
         await pumpErrorScreen(tester, error: endedError, onRetry: () {});
 
-        expect(find.text('Retry'), findsOneWidget);
+        // SessionDisconnectedScreen shows Explore More, not Retry.
+        expect(find.text('Explore More'), findsOneWidget);
       });
     });
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
@@ -29,7 +30,7 @@ Future<void> showBannedParticipantsModal(
   );
 }
 
-class BannedParticipants extends ConsumerWidget {
+class BannedParticipants extends ConsumerStatefulWidget {
   const BannedParticipants({
     required this.session,
     required this.state,
@@ -40,9 +41,18 @@ class BannedParticipants extends ConsumerWidget {
   final SessionRoomState state;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BannedParticipants> createState() => _BannedParticipantsState();
+}
+
+class _BannedParticipantsState extends ConsumerState<BannedParticipants> {
+  final _unbannedSlugs = <String>{};
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bannedParticipants = state.roomState.bannedParticipants;
+    final bannedParticipants = widget.state.roomState.bannedParticipants
+        .where((slug) => !_unbannedSlugs.contains(slug))
+        .toList();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -99,7 +109,12 @@ class BannedParticipants extends ConsumerWidget {
                       return _BannedParticipantItem(
                         key: ValueKey(participantSlug),
                         participantSlug: participantSlug,
-                        session: session,
+                        session: widget.session,
+                        onUnbanned: () {
+                          setState(() {
+                            _unbannedSlugs.add(participantSlug);
+                          });
+                        },
                       );
                     },
                   ),
@@ -121,11 +136,13 @@ class _BannedParticipantItem extends ConsumerStatefulWidget {
   const _BannedParticipantItem({
     required this.participantSlug,
     required this.session,
+    required this.onUnbanned,
     super.key,
   });
 
   final String participantSlug;
   final SessionController session;
+  final VoidCallback onUnbanned;
 
   @override
   ConsumerState<_BannedParticipantItem> createState() =>
@@ -136,26 +153,17 @@ class _BannedParticipantItemState
     extends ConsumerState<_BannedParticipantItem> {
   var _loading = false;
 
-  Future<void> _onUnban() async {
+  Future<void> _onUnban(String? name) async {
     if (_loading) return;
     setState(() => _loading = true);
     try {
       await widget.session.keeper.unbanParticipant(widget.participantSlug);
-      if (mounted && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Participant unbanned successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
+      widget.onUnbanned();
     } catch (error) {
       if (mounted && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to unban participant: $error'),
-            backgroundColor: Colors.red,
-          ),
+        showErrorDialog(
+          context,
+          'Failed to unban ${name ?? widget.participantSlug}',
         );
       }
     } finally {
@@ -221,16 +229,36 @@ class _BannedParticipantItemState
             ),
           ),
         ),
-        trailing: _loading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-              )
-            : TextButton(
-                onPressed: _onUnban,
-                child: const Text('Unban'),
-              ),
+        trailing: SizedBox(
+          width: 100,
+          child: _loading
+              ? const Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                  ),
+                )
+              : Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(vertical: 8),
+                  child: OutlinedButton(
+                    style: const ButtonStyle(
+                      foregroundColor: WidgetStatePropertyAll(Colors.white),
+                      side: WidgetStatePropertyAll(
+                        BorderSide(color: Colors.white),
+                      ),
+                    ),
+                    onPressed: () {
+                      final name = user.value?.name;
+                      _onUnban(name);
+                    },
+                    child: const Text(
+                      'Unban',
+                      style: TextStyle(decoration: TextDecoration.none),
+                    ),
+                  ),
+                ),
+        ),
         contentPadding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
       ),
     );

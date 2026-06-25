@@ -156,7 +156,7 @@ Future<void> showErrorDialog(BuildContext context, [String? error]) {
 class ErrorDialog extends StatelessWidget {
   const ErrorDialog({
     super.key,
-    this.title = 'Something went wrong!\nPlease try later',
+    this.title = 'Something went wrong!\nPlease try again later',
     this.message,
   });
 
@@ -194,7 +194,7 @@ class ErrorDialog extends StatelessWidget {
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF333333),
               ),
@@ -205,7 +205,7 @@ class ErrorDialog extends StatelessWidget {
                 message!,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 16,
                   color: Colors.black54,
                   height: 1.5,
                 ),

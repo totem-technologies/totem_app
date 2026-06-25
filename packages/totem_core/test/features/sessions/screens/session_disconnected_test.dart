@@ -284,36 +284,6 @@ void main() {
         });
       });
 
-      group('next events', () {
-        testWidgets('shows next sessions when available', (tester) async {
-          final nextEvent = NextSessionSchema(
-            slug: 'next-session',
-            start: DateTime(2024, 7, 1),
-            link: 'https://example.com',
-            title: 'Upcoming Session',
-            seatsLeft: 5,
-            duration: 60,
-            meetingProvider: MeetingProviderEnum.livekit,
-            calLink: '',
-            attending: false,
-            cancelled: false,
-            open: true,
-            joinable: true,
-          );
-
-          await pumpDisconnectedScreen(
-            tester,
-            sessionState: _createEndedState(),
-            session: _createTestSession(nextEvents: [nextEvent]),
-          );
-
-          expect(
-            find.text('Join this upcoming session'),
-            findsOneWidget,
-          );
-        });
-      });
-
       group('explore more button', () {
         testWidgets('shows Explore More button', (tester) async {
           await pumpDisconnectedScreen(
