@@ -34,6 +34,11 @@
     
     
   
+  <!-- Splash assets are prefixed with {{ASSET_BASE}} (a --web-define Flutter
+       substitutes into this HTML at build time) so they load from the CDN. The
+       page is served by Django under /room/, so a relative "splash/img/..." URL
+       would resolve to /room/splash/img/... and hit Django, not the CDN. When
+       ASSET_BASE is empty (dev) the prefix collapses to a relative URL. -->
   <style id="splash-screen-style">
     html {
       height: 100%
@@ -43,7 +48,7 @@
       margin: 0;
       min-height: 100%;
       background-color: #ffffff;
-      background-image: url("splash/img/light-background.png");
+      background-image: url("{{ASSET_BASE}}splash/img/light-background.png");
       background-size: 100% 100%;
     }
 
@@ -145,9 +150,9 @@
   <body>
   <div id="splash-loader" aria-hidden="true"></div>
   <picture id="splash">
-      <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
-      <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-      <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
+      <source srcset="{{ASSET_BASE}}splash/img/light-1x.png 1x, {{ASSET_BASE}}splash/img/light-2x.png 2x, {{ASSET_BASE}}splash/img/light-3x.png 3x, {{ASSET_BASE}}splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
+      <source srcset="{{ASSET_BASE}}splash/img/dark-1x.png 1x, {{ASSET_BASE}}splash/img/dark-2x.png 2x, {{ASSET_BASE}}splash/img/dark-3x.png 3x, {{ASSET_BASE}}splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
+      <img class="center" aria-hidden="true" src="{{ASSET_BASE}}splash/img/light-1x.png" alt="">
   </picture>
   
     

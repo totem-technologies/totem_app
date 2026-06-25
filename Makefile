@@ -24,6 +24,10 @@ run:
 	@echo "Running app..."
 	cd $(APP_DIR) && flutter run
 
+# ASSET_BASE is empty in dev: the splash assets in web/index.html use the
+# {{ASSET_BASE}} placeholder, so define it (to "") here or the token leaks into
+# the splash <img>/background URLs. Empty means relative, which resolves fine
+# against the dev server's "/" base href.
 run-chrome:
 	@echo "Running app in Chrome..."
 	cd $(WEB_DIR) && flutter run -d chrome --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"
