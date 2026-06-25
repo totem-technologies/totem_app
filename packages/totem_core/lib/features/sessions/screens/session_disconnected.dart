@@ -58,13 +58,15 @@ SessionDisconnectedReason resolveDisconnectedReason({
 
 class SessionDisconnectedScreen extends ConsumerStatefulWidget {
   const SessionDisconnectedScreen({
-    required this.session,
+    this.session,
     this.disconnectReason,
+    this.sessionDisconnectedReason,
     super.key,
   });
 
-  final SessionDetailSchema session;
+  final SessionDetailSchema? session;
   final DisconnectReason? disconnectReason;
+  final SessionDisconnectedReason? sessionDisconnectedReason;
 
   @override
   ConsumerState<SessionDisconnectedScreen> createState() =>
@@ -175,15 +177,19 @@ class _SessionDisconnectedScreenState
               final sessionState = ref.watch(currentSessionStateProvider);
               final disconnectReason =
                   widget.disconnectReason ?? sessionState?.disconnectReason;
-              final sessionReason = resolveDisconnectedReason(
-                disconnectReason: disconnectReason,
-                sessionState: sessionState,
-              );
+              final sessionReason =
+                  widget.sessionDisconnectedReason ??
+                  resolveDisconnectedReason(
+                    disconnectReason: disconnectReason,
+                    sessionState: sessionState,
+                  );
 
-              final nextSessions = widget.session.space.nextEvents
-                  .where((e) => e.slug != widget.session.slug)
-                  .take(2)
-                  .toList();
+              final nextSessions =
+                  widget.session?.space.nextEvents
+                      .where((e) => e.slug != widget.session?.slug)
+                      .take(2)
+                      .toList() ??
+                  const [];
 
               final header = Semantics(
                 header: true,
@@ -197,6 +203,7 @@ class _SessionDisconnectedScreenState
                       "You've been removed from this session.",
                     SessionDisconnectedReason.roomEmpty ||
                     SessionDisconnectedReason.keeperEnded => 'Session Ended',
+                    SessionDisconnectedReason.other => 'Disconnected',
                   },
                   style: theme.textTheme.headlineMedium,
                   textAlign: TextAlign.center,
@@ -244,12 +251,14 @@ class _SessionDisconnectedScreenState
                     text:
                         'Thank you for joining!\nWe hope you found the session enjoyable.',
                   ),
+                  SessionDisconnectedReason.other => const TextSpan(text: ''),
                 },
                 textAlign: TextAlign.center,
               );
 
               final feedback =
-                  sessionReason == SessionDisconnectedReason.keeperEnded
+                  widget.session != null &&
+                      sessionReason == SessionDisconnectedReason.keeperEnded
                   ? _SessionFeedbackWidget(
                       state: _thumbState,
                       onThumbUpPressed: () async {
@@ -257,7 +266,7 @@ class _SessionDisconnectedScreenState
                         ConfettiController.showConfetti(context);
                         await ref.read(
                           sessionFeedbackProvider(
-                            widget.session.slug,
+                            widget.session!.slug,
                             SessionFeedbackOptions.up,
                           ).future,
                         );
@@ -271,7 +280,7 @@ class _SessionDisconnectedScreenState
                             if (mounted) setState(() {});
                             return ref.read(
                               sessionFeedbackProvider(
-                                widget.session.slug,
+                                widget.session!.slug,
                                 SessionFeedbackOptions.down,
                                 message,
                               ).future,
@@ -293,14 +302,14 @@ class _SessionDisconnectedScreenState
                       ),
                       child: SmallSpaceCard(
                         space: MobileSpaceDetailSchemaExtension.copyWith(
-                          widget.session.space,
+                          widget.session!.space,
                           nextEvents: [nextSession],
                         ),
                         onTap: () async {
                           _refreshHome();
                           return TotemRouter.instance.toSpaceSession(
                             context,
-                            widget.session.space.slug,
+                            widget.session!.space.slug,
                             nextSession.slug,
                             true,
                           );
@@ -460,7 +469,8 @@ class _SessionDisconnectedScreenState
                                           AppTheme.mauve,
                                         SessionDisconnectedReason.roomEmpty =>
                                           AppTheme.mauve,
-                                        SessionDisconnectedReason.removed =>
+                                        SessionDisconnectedReason.removed ||
+                                        SessionDisconnectedReason.other =>
                                           Colors.red,
                                       },
                                     ),
@@ -477,7 +487,8 @@ class _SessionDisconnectedScreenState
                                           TotemIcons.clockCircle,
                                         SessionDisconnectedReason.roomEmpty =>
                                           TotemIcons.seats,
-                                        SessionDisconnectedReason.removed =>
+                                        SessionDisconnectedReason.removed ||
+                                        SessionDisconnectedReason.other =>
                                           TotemIcons.x,
                                       },
                                       color: AppTheme.white,
