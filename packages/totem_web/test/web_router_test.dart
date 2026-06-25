@@ -144,12 +144,21 @@ void main() {
     testWidgets('/:slug shows redirect screen when unauthenticated', (
       tester,
     ) async {
+      const slug = 'test-session';
       final router = await _pumpTestRouter(
         tester,
         authState: AuthState.unauthenticated(),
+        overrides: [
+          sessionTokenProvider(
+            slug,
+          ).overrideWith((ref) async => throw Exception('test')),
+          eventProvider(
+            slug,
+          ).overrideWith((ref) async => throw Exception('test')),
+        ],
       );
 
-      router.go('/test-session');
+      router.go('/$slug');
       await tester.pump();
 
       // _WebRedirectScreen displays a Scaffold.
