@@ -20,7 +20,20 @@ clean:
 # 	rm -rf ~/Library/Developer/Xcode/DerivedData/*
 	cd $(WEB_DIR) && flutter clean
 
-run:
+# Compose packages/*/.env from the layered sources in config/ for a flavor.
+# This is the single source of truth for runtime config; see config/README.md.
+# A deploy overwrites .env with the deployed flavor, so run `make env-dev` to
+# get back to your local development config.
+env-dev:
+	dart scripts/setup_env.dart development
+
+env-staging:
+	dart scripts/setup_env.dart staging
+
+env-prod:
+	dart scripts/setup_env.dart production
+
+run: env-dev
 	@echo "Running app..."
 	cd $(APP_DIR) && flutter run
 
@@ -28,19 +41,20 @@ run:
 # {{ASSET_BASE}} placeholder, so define it (to "") here or the token leaks into
 # the splash <img>/background URLs. Empty means relative, which resolves fine
 # against the dev server's "/" base href.
-run-chrome:
+run-chrome: env-dev
 	@echo "Running app in Chrome..."
 	cd $(WEB_DIR) && flutter run -d chrome --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"
 
-run-web:
+run-web: env-dev
 	@echo "Running app in Web Server..."
 	cd $(WEB_DIR) && flutter run -d web-server --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
 
 # Build the web app the way it deploys: mounted at /room/, assets fetched from
-# a separate origin (here the local serve-web "CDN" on :5173) via ASSET_BASE.
-build-web-release:
+# a separate origin (here the local serve-web "CDN" on :5173). The `development`
+# flavor maps to that local CDN and composes the development .env.
+build-web-release: env-dev
 	@echo "Building web app..."
-	cd $(WEB_DIR) && flutter build web --wasm --base-href "/room/" --web-define=ASSET_BASE="http://localhost:5173/"
+	dart scripts/web_build.dart
 	@echo "Built $(WEB_DIR)/build/web — serve it with: make serve-web"
 
 # Serve the built bundle with CORS headers so an HTML document on another origin
@@ -52,14 +66,14 @@ serve-web:
 # Build with the staging worker as ASSET_BASE and deploy it to Cloudflare.
 # Requires wrangler auth (bunx wrangler login, or CLOUDFLARE_API_TOKEN +
 # CLOUDFLARE_ACCOUNT_ID).
-deploy-web-staging:
+deploy-web-staging: env-staging
 	@echo "Building web app (staging)"
-	cd $(WEB_DIR) && flutter build web --wasm --base-href "/room/" --web-define=ASSET_BASE="https://totem-web-staging.lopkerk.workers.dev/"
+	dart scripts/web_build.dart
 	cd $(WEB_DIR) && bunx wrangler deploy --env staging
 
-deploy-web-production:
+deploy-web-production: env-prod
 	@echo "Building web app (production)"
-	cd $(WEB_DIR) && flutter build web --wasm --base-href "/room/" --web-define=ASSET_BASE="https://totem-web-production.lopkerk.workers.dev/"
+	dart scripts/web_build.dart
 	cd $(WEB_DIR) && bunx wrangler deploy --env production
 
 build-runner:
