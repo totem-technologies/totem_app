@@ -39,6 +39,7 @@ Future<T?> showResponsiveModal<T>({
         useRootNavigator: useRootNavigator,
         barrierColor: dialogBarrierColor,
         fullscreenDialog: true,
+        useSafeArea: useSafeArea,
         builder: (context) => Dialog(
           alignment: dialogAlignment,
           constraints: const BoxConstraints(maxWidth: 600),

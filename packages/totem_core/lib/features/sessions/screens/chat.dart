@@ -19,6 +19,7 @@ Future<void> showSessionChat(BuildContext context) {
     context: context,
     useRootNavigator: false,
     showDragHandle: false,
+    useSafeArea: false,
     bottomSheetBackgroundColor: Colors.white,
     dialogBackgroundColor: Colors.white,
     dialogAlignment: AlignmentDirectional.centerEnd,
