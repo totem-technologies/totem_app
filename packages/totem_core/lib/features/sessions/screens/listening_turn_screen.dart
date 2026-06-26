@@ -80,7 +80,6 @@ class ListeningTurnScreen extends ConsumerWidget {
           final participantGrid = _ListeningTurnGrid(
             event: event,
             speakingNow: activeSpeaker?.identity,
-            viewportKind: viewportKind,
           );
 
           final Widget? marquee = roomStatus == RoomStatus.waitingRoom
@@ -186,11 +185,8 @@ class ListeningTurnScreen extends ConsumerWidget {
                         child: _ListeningTurnGrid(
                           event: event,
                           speakingNow: activeSpeaker?.identity,
-                          // Only show the speaking now participant in waiting room.
-                          // In active room, the speaking now participant is already featured.
                           showSpeakingNowParticipant: true,
                           gap: 20,
-                          viewportKind: viewportKind,
                         ),
                       ),
                     ),
@@ -214,7 +210,6 @@ class _ListeningTurnGrid extends ConsumerWidget {
   const _ListeningTurnGrid({
     required this.event,
     required this.speakingNow,
-    required this.viewportKind,
     this.showSpeakingNowParticipant = false,
     this.gap = 10,
   });
@@ -223,7 +218,6 @@ class _ListeningTurnGrid extends ConsumerWidget {
   final String? speakingNow;
   final bool showSpeakingNowParticipant;
   final double gap;
-  final ViewportKind viewportKind;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
