@@ -17,7 +17,6 @@ import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/loading_screen.dart';
 import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
-import 'package:totem_core/features/sessions/widgets/download_mobile_app_dialog.dart';
 import 'package:totem_core/features/sessions/widgets/permissions_popups.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -103,8 +102,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
 
-      await showDownloadMobileAppDialog(context);
-      if (!mounted) return;
+      // TODO(totem): Re-enable this in the future when app is ready
+      // await showDownloadMobileAppDialog(context);
+      // if (!mounted) return;
 
       final granted = await showPermissionsRequestSheet(context);
       if (!mounted) return;

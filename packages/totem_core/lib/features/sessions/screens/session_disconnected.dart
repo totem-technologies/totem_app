@@ -165,6 +165,25 @@ class _SessionDisconnectedScreenState
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final recommended = ref.watch(getRecommendedSessionsProvider());
+    final sessionState = ref.watch(currentSessionStateProvider);
+    final disconnectReason =
+        widget.disconnectReason ?? sessionState?.disconnectReason;
+    final sessionReason =
+        widget.sessionDisconnectedReason ??
+        resolveDisconnectedReason(
+          disconnectReason: disconnectReason,
+          sessionState: sessionState,
+        );
+
+    final nextSessions =
+        widget.session?.space.nextEvents
+            .where((e) => e.slug != widget.session?.slug)
+            .take(2)
+            .toList() ??
+        const [];
+
     return RoomBackground(
       status: RoomStatus.ended,
       child: PopScope(
@@ -172,25 +191,6 @@ class _SessionDisconnectedScreenState
         child: SafeArea(
           child: ViewportResolver(
             builder: (context, viewportKind) {
-              final theme = Theme.of(context);
-              final recommended = ref.watch(getRecommendedSessionsProvider());
-              final sessionState = ref.watch(currentSessionStateProvider);
-              final disconnectReason =
-                  widget.disconnectReason ?? sessionState?.disconnectReason;
-              final sessionReason =
-                  widget.sessionDisconnectedReason ??
-                  resolveDisconnectedReason(
-                    disconnectReason: disconnectReason,
-                    sessionState: sessionState,
-                  );
-
-              final nextSessions =
-                  widget.session?.space.nextEvents
-                      .where((e) => e.slug != widget.session?.slug)
-                      .take(2)
-                      .toList() ??
-                  const [];
-
               final header = Semantics(
                 header: true,
                 child: Text(
@@ -520,8 +520,19 @@ class _SessionDisconnectedScreenState
                                 // this ensures the divider is bigger than the content
                                 .map((widget) {
                                   if (widget is Divider ||
-                                      widget is ElevatedButton) {
+                                      widget is ElevatedButton ||
+                                      widget is FractionallySizedBox) {
                                     return widget;
+                                  }
+                                  if (widget is Flexible) {
+                                    return Flexible(
+                                      flex: widget.flex,
+                                      fit: widget.fit,
+                                      child: FractionallySizedBox(
+                                        widthFactor: 0.75,
+                                        child: widget.child,
+                                      ),
+                                    );
                                   }
                                   return FractionallySizedBox(
                                     widthFactor: 0.75,

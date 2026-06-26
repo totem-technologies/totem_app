@@ -345,6 +345,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     final roomStatus = ref.watch(roomStatusProvider);
     final disconnectReason = ref.watch(disconnectionReasonProvider);
 
+    final cuesService = ref.read(sessionCuesServiceProvider);
+    final emojiNotifier = ref.read(emojiReactionsProvider.notifier);
+
     // Early transient join recovery check: keep showing the loading screen
     // when a join attempt failed transiently (e.g. signaling hiccup). This
     // must be evaluated before honoring a room-ended state so the UI
@@ -378,14 +381,16 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
           if (!mounted) return;
 
           final isListeningTurnScreen =
-              ref.read(resolveCurrentScreenProvider) == RoomScreen.listening;
+              currentRoomScreen == RoomScreen.listening;
 
           for (final reaction in next.where(
             (reaction) => !reaction.displayed,
           )) {
-            ref
-                .read(emojiReactionsProvider.notifier)
-                .displayReaction(context, reaction, isListeningTurnScreen);
+            emojiNotifier.displayReaction(
+              context,
+              reaction,
+              isListeningTurnScreen,
+            );
           }
         },
       )
@@ -402,8 +407,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         (previous, next) {
           _syncKeeperDisconnectedNotification(
             next,
-            ref.read(roomStatusProvider),
-            ref.read(connectionStateProvider),
+            roomStatus,
+            connectionState,
           );
         },
       )
@@ -412,7 +417,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         (previous, next) {
           if (previous != RoomScreen.receiving &&
               next == RoomScreen.receiving) {
-            ref.read(sessionCuesServiceProvider).playTotemReceivedCue();
+            cuesService.playTotemReceivedCue();
           }
 
           if (next == RoomScreen.disconnected || next == RoomScreen.error) {
@@ -430,7 +435,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
               previous == RoomStatus.active && next == RoomStatus.ended;
 
           if (isRoomOpeningTransition || isRoomClosingTransition) {
-            ref.read(sessionCuesServiceProvider).playSessionTransitionCue();
+            cuesService.playSessionTransitionCue();
           }
 
           if (next == RoomStatus.ended) {
@@ -451,18 +456,18 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       );
 
     if (currentSession != null) {
+      final audioRouteNotifier = ref.read(
+        sessionDeviceControllerProvider(currentSession).notifier,
+      );
+
       ref.listen(
         sessionDeviceControllerProvider(currentSession),
         (previous, next) {
           if (!mounted || previous == null) return;
 
-          final audioRouteController = ref.read(
-            sessionDeviceControllerProvider(currentSession).notifier,
-          );
-          if (!audioRouteController.audioRouteNotificationsEnabled) return;
+          if (!audioRouteNotifier.audioRouteNotificationsEnabled) return;
 
-          final currentConnectionState = ref.read(connectionStateProvider);
-          if (currentConnectionState != RoomConnectionState.connected) return;
+          if (connectionState != RoomConnectionState.connected) return;
 
           final routeChanged =
               previous.isSpeakerphoneEnabled != next.isSpeakerphoneEnabled ||
