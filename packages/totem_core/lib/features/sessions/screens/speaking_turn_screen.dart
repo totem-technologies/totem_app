@@ -10,6 +10,7 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_core/features/sessions/widgets/adaptive_call_layout.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
@@ -161,15 +162,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                     spacing: 40,
                     children: [
                       Expanded(
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(
-                              maxHeight: 460,
-                              maxWidth: 896,
-                            ),
-                            child: Center(child: participantGrid),
-                          ),
-                        ),
+                        child: Center(child: Center(child: participantGrid)),
                       ),
                       Transform.translate(
                         offset: Offset(0, yOffset),
@@ -187,6 +180,11 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
   }
 }
 
+/// The grid layout for the speaking turn screen.
+///
+/// When in a small screen, the grid is controlled.
+///
+/// When in a large screen, the grid is an adaptive layout.
 class _SpeakingTurnGrid extends ConsumerWidget {
   const _SpeakingTurnGrid({
     required this.event,
@@ -208,100 +206,102 @@ class _SpeakingTurnGrid extends ConsumerWidget {
     final sortedParticipants = participantsSorting(
       originalParticipants: participants,
       state: sessionState,
+      showSpeakingNow: false,
     );
 
     // debug:
-    // sortedParticipants = [for (var i = 0; i < 3; i++) ...sortedParticipants];
+    // sortedParticipants = [for (var i = 0; i < 13; i++) ...sortedParticipants];
 
-    final itemCount = sortedParticipants.length;
-    if (itemCount == 0) return const SizedBox.shrink();
+    return ViewportResolver(
+      builder: (context, viewportKind) {
+        switch (viewportKind) {
+          case ViewportKind.smallPortrait:
+          case ViewportKind.smallLandscape:
+            final itemCount = sortedParticipants.length;
+            if (itemCount == 0) return const SizedBox.shrink();
 
-    late final int crossAxisCount;
-    switch (viewportKind) {
-      case ViewportKind.smallPortrait:
-        crossAxisCount = math
-            .sqrt(itemCount)
-            // Uses .round() to round to the nearest integer.
-            // This distributes the cards alongside the available space better
-            // than .ceil() when in portrait screens.
-            .round()
-            .clamp(1, maxPerLineCount);
-      case ViewportKind.smallLandscape:
-        if (itemCount <= 2) {
-          crossAxisCount = 2;
-        } else if (itemCount <= 6) {
-          crossAxisCount = 3;
-        } else if (itemCount <= 9) {
-          crossAxisCount = 4;
-        } else {
-          crossAxisCount = math
-              .sqrt(itemCount)
-              // Uses .ceil() to round up to the nearest integer.
-              // This distributes the cards alongside the available space better
-              // than .round() when in landscape screens.
-              .ceil()
-              .clamp(3, maxPerLineCount);
-        }
-      case ViewportKind.mediumPlus:
-        if (itemCount <= 2) {
-          crossAxisCount = 2;
-        } else if (itemCount <= 3) {
-          crossAxisCount = 3;
-        } else if (itemCount <= 4) {
-          // 2x2 reads better than 4x1
-          crossAxisCount = 2;
-        } else if (itemCount <= 8) {
-          crossAxisCount = 4;
-        } else if (itemCount <= 10) {
-          crossAxisCount = 5;
-        } else if (itemCount <= 12) {
-          crossAxisCount = 6;
-        } else {
-          // + 2 prefers filling out rows before adding new ones, which looks better on larger screens with more participants.
-          crossAxisCount = math.sqrt(itemCount).ceil() + 2;
-        }
-    }
+            late final int crossAxisCount;
+            switch (viewportKind) {
+              case ViewportKind.smallPortrait:
+                crossAxisCount = math
+                    .sqrt(itemCount)
+                    // Uses .round() to round to the nearest integer.
+                    // This distributes the cards alongside the available space better
+                    // than .ceil() when in portrait screens.
+                    .round()
+                    .clamp(1, maxPerLineCount);
+              case ViewportKind.smallLandscape:
+              case ViewportKind.mediumPlus:
+                if (itemCount <= 2) {
+                  crossAxisCount = 2;
+                } else if (itemCount <= 6) {
+                  crossAxisCount = 3;
+                } else if (itemCount <= 9) {
+                  crossAxisCount = 4;
+                } else {
+                  crossAxisCount = math
+                      .sqrt(itemCount)
+                      // Uses .ceil() to round up to the nearest integer.
+                      // This distributes the cards alongside the available space better
+                      // than .round() when in landscape screens.
+                      .ceil()
+                      .clamp(3, maxPerLineCount);
+                }
+            }
 
-    final rowCount = (itemCount / crossAxisCount).ceil();
+            final rowCount = (itemCount / crossAxisCount).ceil();
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      spacing: gap,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: List.generate(
-        rowCount,
-        (rowIndex) {
-          final startIndex = rowIndex * crossAxisCount;
-
-          return Flexible(
-            child: Row(
+            return Column(
+              mainAxisSize: MainAxisSize.min,
               spacing: gap,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: List.generate(
-                crossAxisCount,
-                (colIndex) {
-                  final itemIndex = startIndex + colIndex;
-                  if (itemIndex < itemCount) {
-                    final participant = sortedParticipants[itemIndex];
-                    return Expanded(
-                      child: ParticipantCard(
-                        key: ValueKey(participant.sid),
-                        participant: participant,
-                        session: event,
-                        participantIdentity: participant.identity,
+                rowCount,
+                (rowIndex) {
+                  final startIndex = rowIndex * crossAxisCount;
+
+                  return Flexible(
+                    child: Row(
+                      spacing: gap,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: List.generate(
+                        crossAxisCount,
+                        (colIndex) {
+                          final itemIndex = startIndex + colIndex;
+                          if (itemIndex < itemCount) {
+                            final participant = sortedParticipants[itemIndex];
+                            return Expanded(
+                              child: ParticipantCard(
+                                key: ValueKey(participant.sid),
+                                participant: participant,
+                                session: event,
+                                participantIdentity: participant.identity,
+                              ),
+                            );
+                          } else {
+                            return const Expanded(child: SizedBox.shrink());
+                          }
+                        },
                       ),
-                    );
-                  } else {
-                    return const Expanded(
-                      child: SizedBox.shrink(),
-                    );
-                  }
+                    ),
+                  );
                 },
               ),
-            ),
-          );
-        },
-      ),
+            );
+          case ViewportKind.mediumPlus:
+            return AdaptiveCallLayout(
+              participants: [
+                for (final participant in sortedParticipants)
+                  ParticipantCard(
+                    key: ValueKey(participant.sid),
+                    participant: participant,
+                    session: event,
+                    participantIdentity: participant.identity,
+                  ),
+              ],
+            );
+        }
+      },
     );
   }
 }

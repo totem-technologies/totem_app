@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_core/features/sessions/widgets/adaptive_call_layout.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
@@ -173,47 +175,22 @@ class ListeningTurnScreen extends ConsumerWidget {
                 padding: const EdgeInsetsDirectional.only(
                   top: 40,
                   bottom: 28,
-                  start: 100,
-                  end: 100,
+                  start: 60,
+                  end: 60,
                 ),
                 child: Column(
                   spacing: 10,
                   children: [
                     Expanded(
                       child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            maxHeight: 460,
-                          ),
-                          child: Row(
-                            spacing: 20,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              if (roomStatus == RoomStatus.active &&
-                                  activeSpeaker != null)
-                                Flexible(
-                                  child: ParticipantCard(
-                                    key: ValueKey(activeSpeaker.sid),
-                                    session: event,
-                                    participant: activeSpeaker,
-                                    participantIdentity: activeSpeaker.identity,
-                                  ),
-                                ),
-                              Expanded(
-                                flex: 2,
-                                child: _ListeningTurnGrid(
-                                  event: event,
-                                  speakingNow: activeSpeaker?.identity,
-                                  // Only show the speaking now participant in waiting room.
-                                  // In active room, the speaking now participant is already featured.
-                                  showSpeakingNowParticipant:
-                                      roomStatus == RoomStatus.waitingRoom,
-                                  gap: 20,
-                                  viewportKind: viewportKind,
-                                ),
-                              ),
-                            ],
-                          ),
+                        child: _ListeningTurnGrid(
+                          event: event,
+                          speakingNow: activeSpeaker?.identity,
+                          // Only show the speaking now participant in waiting room.
+                          // In active room, the speaking now participant is already featured.
+                          showSpeakingNowParticipant: true,
+                          gap: 20,
+                          viewportKind: viewportKind,
                         ),
                       ),
                     ),
@@ -262,85 +239,119 @@ class _ListeningTurnGrid extends ConsumerWidget {
 
     // debug:
     // sortedParticipants = [for (var i = 0; i < 3; i++) ...sortedParticipants];
+    return ViewportResolver(
+      builder: (context, viewportKind) {
+        switch (viewportKind) {
+          case ViewportKind.smallLandscape:
+          case ViewportKind.smallPortrait:
+            final itemCount = sortedParticipants.length;
+            if (itemCount == 0) return const SizedBox.shrink();
 
-    final itemCount = sortedParticipants.length;
-    if (itemCount == 0) return const SizedBox.shrink();
-
-    int minRowCount = 1;
-    late final int crossAxisCount;
-    switch (viewportKind) {
-      case ViewportKind.smallPortrait:
-        minRowCount = 2;
-        if (itemCount <= 6) {
-          crossAxisCount = 3;
-        } else if (itemCount <= 12) {
-          crossAxisCount = 4;
-        } else {
-          crossAxisCount = 5;
-        }
-      case ViewportKind.smallLandscape:
-        if (itemCount <= 4) {
-          crossAxisCount = 2;
-        } else if (itemCount <= 6) {
-          crossAxisCount = 3;
-        } else {
-          crossAxisCount = 4;
-        }
-      case ViewportKind.mediumPlus:
-        if (itemCount <= 2) {
-          crossAxisCount = 1;
-        } else if (itemCount <= 4) {
-          crossAxisCount = 2;
-        } else if (itemCount <= 6) {
-          crossAxisCount = 3;
-        } else if (itemCount <= 12) {
-          crossAxisCount = 4;
-        } else {
-          crossAxisCount = math.sqrt(itemCount).ceil();
-        }
-    }
-
-    final rowCount = (itemCount / crossAxisCount).ceil().clamp(
-      minRowCount,
-      100,
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisAlignment: MainAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      spacing: gap,
-      children: List.generate(
-        rowCount,
-        (rowIndex) {
-          final startIndex = rowIndex * crossAxisCount;
-
-          return Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            int minRowCount = 1;
+            late final int crossAxisCount;
+            switch (viewportKind) {
+              case ViewportKind.smallPortrait:
+                minRowCount = 2;
+                if (itemCount <= 6) {
+                  crossAxisCount = 3;
+                } else if (itemCount <= 12) {
+                  crossAxisCount = 4;
+                } else {
+                  crossAxisCount = 5;
+                }
+              case ViewportKind.smallLandscape:
+                if (itemCount <= 4) {
+                  crossAxisCount = 2;
+                } else if (itemCount <= 6) {
+                  crossAxisCount = 3;
+                } else {
+                  crossAxisCount = 4;
+                }
+              case ViewportKind.mediumPlus:
+                if (itemCount <= 2) {
+                  crossAxisCount = 1;
+                } else if (itemCount <= 4) {
+                  crossAxisCount = 2;
+                } else if (itemCount <= 6) {
+                  crossAxisCount = 3;
+                } else if (itemCount <= 12) {
+                  crossAxisCount = 4;
+                } else {
+                  crossAxisCount = math.sqrt(itemCount).ceil();
+                }
+            }
+            final rowCount = (itemCount / crossAxisCount).ceil().clamp(
+              minRowCount,
+              100,
+            );
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               spacing: gap,
-              children: List<Widget>.generate(
-                crossAxisCount,
-                (colIndex) {
-                  final itemIndex = startIndex + colIndex;
-                  if (itemIndex < itemCount) {
-                    final participant = sortedParticipants[itemIndex];
-                    return Expanded(
-                      child: ParticipantCard(
-                        key: ValueKey(participant.sid),
-                        participant: participant,
-                        session: event,
-                        participantIdentity: participant.identity,
+              children: List.generate(
+                rowCount,
+                (rowIndex) {
+                  final startIndex = rowIndex * crossAxisCount;
+
+                  return Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: gap,
+                      children: List<Widget>.generate(
+                        crossAxisCount,
+                        (colIndex) {
+                          final itemIndex = startIndex + colIndex;
+                          if (itemIndex < itemCount) {
+                            final participant = sortedParticipants[itemIndex];
+                            return Expanded(
+                              child: ParticipantCard(
+                                key: ValueKey(participant.sid),
+                                participant: participant,
+                                session: event,
+                                participantIdentity: participant.identity,
+                              ),
+                            );
+                          } else {
+                            return const Expanded(child: SizedBox.shrink());
+                          }
+                        },
                       ),
-                    );
-                  } else {
-                    return const Expanded(child: SizedBox.shrink());
-                  }
+                    ),
+                  );
                 },
               ),
-            ),
-          );
-        },
-      ),
+            );
+          case ViewportKind.mediumPlus:
+            final speaker = showSpeakingNowParticipant
+                ? participants.firstWhereOrNull(
+                    (p) => p.identity == speakingNow,
+                  )
+                : null;
+
+            return AdaptiveCallLayout(
+              speaker: speaker == null
+                  ? null
+                  : ParticipantCard(
+                      key: ValueKey(speaker.sid),
+                      participant: speaker,
+                      session: event,
+                      participantIdentity: speaker.identity,
+                    ),
+              participants: [
+                for (final participant in sortedParticipants.where(
+                  (participant) => participant.identity != speaker?.identity,
+                ))
+                  ParticipantCard(
+                    key: ValueKey(participant.sid),
+                    participant: participant,
+                    session: event,
+                    participantIdentity: participant.identity,
+                  ),
+              ],
+            );
+        }
+      },
     );
   }
 }
