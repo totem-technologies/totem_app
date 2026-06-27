@@ -57,22 +57,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           submodules: recursive
 
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: "zulu"
-          java-version: "17.x"
-          cache: "gradle"
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2.23.0
-        with:
-          channel: "stable"
-          cache: true
-
-      - name: Setup Environment
+      - name: Setup build environment
         uses: ./.github/actions/setup-environment
         with:
+          java: "true"
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           google_services_json: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
           flavor: ${{ matrix.flavor }}
@@ -102,13 +90,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           submodules: recursive
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2.23.0
-        with:
-          channel: "stable"
-          cache: true
-
-      - name: Setup Environment
+      - name: Setup build environment
         uses: ./.github/actions/setup-environment
         with:
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}

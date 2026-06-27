@@ -42,9 +42,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Environment
+      - name: Setup build environment
         uses: ./.github/actions/setup-environment
         with:
+          java: "true"
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           google_services_json: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
           flavor: ${{ matrix.flavor }}
@@ -93,7 +94,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Environment
+      - name: Setup build environment
         uses: ./.github/actions/setup-environment
         with:
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}

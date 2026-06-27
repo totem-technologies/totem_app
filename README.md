@@ -44,7 +44,7 @@ make run
 make run-chrome
 ```
 
-For web and app development, copy `.env.example` to `.env` for using the staging server. See `.env.full-example` for all options.
+Runtime config is composed from the layered files in `config/` into each package's `.env`. `make run` / `make run-chrome` do this automatically for the `development` flavor; run `make env-dev` to (re)generate it manually. To override a value on your machine, copy `config/development.local.env.example` to `config/development.local.env` and edit it. See [`config/README.md`](config/README.md) for the full layering model and available keys.
 
 If testing on an iOS device, ensure you're using macOS and have Xcode installed.
 

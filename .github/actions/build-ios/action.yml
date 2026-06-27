@@ -31,26 +31,11 @@ inputs:
 runs:
   using: "composite"
   steps:
+    # Assumes the Flutter toolchain is already set up by the calling workflow
+    # (see .github/actions/setup-environment).
     - name: xcode version
       run: /usr/bin/xcodebuild -version
       shell: bash
-
-    - name: Check flutter found
-      id: check_flutter
-      shell: bash
-      run: |
-        if flutter --version; then
-            echo "installed=true" >> "$GITHUB_OUTPUT"
-        else
-            echo "installed=false" >> "$GITHUB_OUTPUT"
-        fi
-
-    - name: Setup flutter
-      if: steps.check_flutter.outputs.installed == 'false'
-      uses: subosito/flutter-action@v2.23.0
-      with:
-        channel: "stable"
-        cache: true
 
     - name: Activate flutterfire
       if: ${{ inputs.flutterfire }} == 'true'

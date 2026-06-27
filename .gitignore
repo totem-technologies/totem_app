@@ -13,6 +13,9 @@
 .wrangler/
 migrate_working_dir/
 **/.env
+# Per-developer local config overrides (config/README.md); the committed
+# config/*.env layers are the source of truth.
+config/**/*.local.env
 **/GoogleService-Info.plist
 
 # IntelliJ related
