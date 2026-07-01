@@ -446,7 +446,7 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
             Flexible(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(
-                  minWidth: 160,
+                  minWidth: 200,
                 ),
                 child: ActionSliderButton(
                   text: widget.actionText,

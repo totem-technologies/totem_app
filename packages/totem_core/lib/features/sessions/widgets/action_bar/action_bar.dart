@@ -211,26 +211,13 @@ class _PrejoinActionBarState extends State<PrejoinActionBar> {
   }
 }
 
-class SessionActionBar extends ConsumerStatefulWidget {
+class SessionActionBar extends ConsumerWidget {
   const SessionActionBar({super.key});
 
   static final GlobalKey actionBarKey = GlobalKey();
 
   @override
-  ConsumerState<SessionActionBar> createState() => _SessionActionBarState();
-}
-
-class _SessionActionBarState extends ConsumerState<SessionActionBar> {
-  final moreFocusNode = FocusNode(canRequestFocus: false);
-
-  @override
-  void dispose() {
-    moreFocusNode.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(currentSessionProvider);
     final currentScreen = ref.watch(resolveCurrentScreenProvider);
     final user = session?.room?.localParticipant;
@@ -268,19 +255,20 @@ class _SessionActionBarState extends ConsumerState<SessionActionBar> {
         maxWidth: 40,
         maxHeight: 40,
       ),
-      child: IconButton(
-        focusNode: moreFocusNode,
-        padding: EdgeInsetsDirectional.zero,
-        onPressed: () => showOptionsSheet(
-          context,
-          ref.read(currentSessionStateProvider)!,
-          session.event!,
+      child: ExcludeFocus(
+        child: IconButton(
+          padding: EdgeInsetsDirectional.zero,
+          onPressed: () => showOptionsSheet(
+            context,
+            ref.read(currentSessionStateProvider)!,
+            session.event!,
+          ),
+          icon: const TotemIcon(
+            TotemIcons.more,
+            color: Colors.white,
+          ),
+          tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
         ),
-        icon: const TotemIcon(
-          TotemIcons.more,
-          color: Colors.white,
-        ),
-        tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
       ),
     );
 

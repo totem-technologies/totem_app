@@ -160,6 +160,7 @@ class _ActionButtonState extends State<ActionButton> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 40),
         ),
         child: effectiveLoading
             ? const SizedBox(
@@ -170,7 +171,7 @@ class _ActionButtonState extends State<ActionButton> {
                   strokeCap: StrokeCap.round,
                 ),
               )
-            : Text(widget.text),
+            : AutoSizeText(widget.text, maxLines: 1),
       ),
     );
   }
