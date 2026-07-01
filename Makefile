@@ -66,7 +66,7 @@ serve-web:
 # Build with the staging worker as ASSET_BASE and deploy it to Cloudflare.
 # Requires wrangler auth (bunx wrangler login, or CLOUDFLARE_API_TOKEN +
 # CLOUDFLARE_ACCOUNT_ID).
-deploy-web-staging: env-staging
+deploy-web-staging: env-staging 	
 	@echo "Building web app (staging)"
 	dart scripts/web_build.dart
 	cd $(WEB_DIR) && bunx wrangler deploy --env staging

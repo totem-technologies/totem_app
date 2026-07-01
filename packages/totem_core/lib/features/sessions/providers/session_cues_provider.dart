@@ -13,7 +13,7 @@ final sessionCuesServiceProvider = Provider<SessionCuesService>((ref) {
   return service;
 });
 
-typedef SessionCuesHapticPulseCallback = Future<void> Function();
+typedef SessionCuesHapticPulseCallback = AsyncCallback;
 
 abstract class SessionCuesAudioPlayer {
   Future<void> setPlayerMode(PlayerMode mode);

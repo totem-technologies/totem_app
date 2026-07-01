@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -21,7 +22,7 @@ class ErrorScreen extends StatefulWidget {
 
   final bool? showHomeButton;
 
-  final Future<void> Function()? onRetry;
+  final AsyncCallback? onRetry;
 
   /// Suppresses the internal [AppBar] (and its [BackButton]). Use when
   /// rendering this screen in a context where [TotemRouter.instance] may

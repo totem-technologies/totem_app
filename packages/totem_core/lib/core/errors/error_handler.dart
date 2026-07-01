@@ -9,6 +9,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/shared/logger.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 /// Centralized error handling for the Totem App.
@@ -98,28 +99,21 @@ class ErrorHandler {
   static Future<void> showErrorDialog(
     BuildContext context, {
     required String message,
-    String title = 'Error',
+    String title = 'Something Went Wrong',
     String buttonText = 'OK',
   }) async {
-    final theme = Theme.of(context);
-
-    return showDialog<void>(
+    await showDialog<void>(
       context: context,
-      barrierDismissible: false,
       builder: (context) {
-        return AlertDialog(
-          title: Text(title, style: theme.textTheme.titleLarge),
-          content: SingleChildScrollView(
-            child: Text(message, style: theme.textTheme.bodyMedium),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text(buttonText),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
+        return ConfirmationDialog(
+          title: title,
+          content: message,
+          confirmButtonText: buttonText,
+          icon: TotemIcons.errorOutlined,
+          onConfirm: () async {
+            Navigator.of(context).pop();
+          },
+          showCancel: false,
         );
       },
     );
@@ -130,7 +124,7 @@ class ErrorHandler {
     BuildContext context,
     Object error, {
     StackTrace? stackTrace,
-    Future<void> Function()? onRetry,
+    AsyncCallback? onRetry,
     bool showError = true,
   }) async {
     logError(error, stackTrace: stackTrace);
@@ -147,7 +141,7 @@ class ErrorHandler {
         buttonText: 'Sign In Again',
       );
     } else
-    // For network errors, we might want to offer a retry
+    // For network errors, allow retry
     if (error is AppNetworkException && onRetry != null) {
       await showDialog<void>(
         context: context,

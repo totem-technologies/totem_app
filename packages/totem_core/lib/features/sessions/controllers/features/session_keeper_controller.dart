@@ -57,7 +57,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<T> _run<T>({
-    required Future<T> Function() action,
+    required AsyncValueGetter<T> action,
     required String errorMessage,
     Duration? timeout,
   }) async {
