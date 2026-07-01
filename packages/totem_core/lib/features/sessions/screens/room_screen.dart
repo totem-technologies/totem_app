@@ -27,8 +27,7 @@ import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
-import 'package:totem_core/shared/widgets/error_screen.dart';
-import 'package:totem_core/shared/widgets/popups.dart';
+import 'package:totem_core/shared/widgets/notifications.dart';
 
 class VideoSessionScreen extends ConsumerStatefulWidget {
   const VideoSessionScreen({
@@ -50,9 +49,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   static var _didWarmEmojiGlyphs = false;
 
   final _roomNavigatorKey = GlobalKey<NavigatorState>();
-  final _notificationController = PopupController();
+  final _notificationController = NotificationController();
 
-  PopupRequest? _closeKeeperLeftNotification;
+  NotificationRequest? _closeKeeperLeftNotification;
   Timer? _timeRemainingWarningTimer;
   String? _timeRemainingWarningSessionSlug;
   bool _hasShownTimeRemainingWarning = false;
@@ -72,8 +71,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
   @override
   void dispose() {
-    _closeKeeperDisconnectedNotification();
-    _clearSessionPopups();
+    _clearSessionNotifications();
     _clearTimeRemainingWarningTimer();
     _disableScreenProtection();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -153,7 +151,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     _closeKeeperLeftNotification = null;
   }
 
-  void _clearSessionPopups() {
+  void _clearSessionNotifications() {
     _notificationController.dismissAll();
   }
 
@@ -203,12 +201,11 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     if (!mounted || _hasShownTimeRemainingWarning) return;
 
     _hasShownTimeRemainingWarning = true;
-    showNotificationPopup(
+    _notificationController.showTimed(
       context,
       icon: TotemIcons.clockCircle,
       title: 'Time Remaining 5 min',
       message: 'Thanks for your participation in this session today',
-      controller: _notificationController,
     );
   }
 
@@ -230,12 +227,11 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
               _shouldShowLowBatteryWarning = true;
               if (mounted) {
                 setState(() {});
-                showNotificationPopup(
+                _notificationController.showTimed(
                   context,
                   icon: TotemIcons.person,
                   title: 'Your battery is running low',
                   message: 'You might want to plug in.',
-                  controller: _notificationController,
                 );
               }
             }
@@ -259,12 +255,11 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       // These errors are shown in the error screen
     } else {
       if (mounted) {
-        showErrorPopup(
+        _notificationController.showError(
           context,
           icon: TotemIcons.errorOutlined,
           title: 'Something went wrong',
           message: 'Check your connection and try again.',
-          controller: _notificationController,
         );
       }
     }
@@ -275,14 +270,13 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         ? 'Audio is now playing through speaker.'
         : 'Audio is now routed to another output device.';
 
-    showNotificationPopup(
+    _notificationController.showTimed(
       context,
       icon: next.isSpeakerphoneEnabled
           ? TotemIcons.speakerOn
           : TotemIcons.speakerOff,
       title: 'Audio route changed',
       message: message,
-      controller: _notificationController,
     );
   }
 
@@ -302,12 +296,11 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
     _closeKeeperLeftNotification?.dismissActive();
     _closeKeeperLeftNotification = null;
-    _closeKeeperLeftNotification = showPermanentNotificationPopup(
+    _closeKeeperLeftNotification = _notificationController.showPermanent(
       context,
       icon: TotemIcons.pause,
       title: 'The session has been paused.',
       message: 'The keeper will be right back.',
-      controller: _notificationController,
     );
   }
 
@@ -316,7 +309,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     RoomStatus roomStatus,
     RoomConnectionState connectionState,
   ) {
-    if (connectionState != RoomConnectionState.connected) {
+    if (connectionState != RoomConnectionState.connected ||
+        roomStatus == RoomStatus.ended) {
       _closeKeeperDisconnectedNotification();
       return;
     }
@@ -421,7 +415,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
           }
 
           if (next == RoomScreen.disconnected || next == RoomScreen.error) {
-            _clearSessionPopups();
+            _clearSessionNotifications();
             _clearTimeRemainingWarningTimer();
           }
         },
@@ -439,7 +433,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
           }
 
           if (next == RoomStatus.ended) {
-            _clearSessionPopups();
+            _clearSessionNotifications();
             _clearTimeRemainingWarningTimer();
           }
         },
@@ -449,7 +443,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         (previous, next) {
           if (next == RoomConnectionState.disconnected ||
               next == RoomConnectionState.error) {
-            _clearSessionPopups();
+            _clearSessionNotifications();
             _clearTimeRemainingWarningTimer();
           }
         },

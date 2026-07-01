@@ -12,8 +12,8 @@ import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/network.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
-import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
+import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:totem_core/shared/widgets/session_metadata.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
@@ -371,7 +371,7 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
           _loading = false;
         });
         if (mounted) {
-          showErrorPopup(
+          NotificationController().showError(
             context,
             icon: TotemIcons.spaces,
             title: 'Failed to attend',
@@ -390,7 +390,7 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
           _optimisticAttending = null;
           _loading = false;
         });
-        showErrorPopup(
+        NotificationController().showError(
           context,
           icon: TotemIcons.spaces,
           title: 'Failed to attend',
