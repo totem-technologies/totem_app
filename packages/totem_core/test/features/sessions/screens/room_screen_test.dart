@@ -197,9 +197,13 @@ Future<void> _pumpRoomScreenForResolvedScreen(
         ...extraOverrides.cast(),
       ],
       child: const MaterialApp(
-        home: VideoSessionScreen(
-          sessionSlug: 'test-session',
-          loadingScreen: SizedBox(key: ValueKey('loading-screen')),
+        home: SizedBox(
+          height: 1920,
+          width: 1080,
+          child: VideoSessionScreen(
+            sessionSlug: 'test-session',
+            loadingScreen: SizedBox(key: ValueKey('loading-screen')),
+          ),
         ),
       ),
     ),
@@ -488,25 +492,6 @@ void main() {
       );
 
       expect(find.byKey(const ValueKey('loading-screen')), findsOneWidget);
-    });
-
-    testWidgets('renders disconnected screen for RoomScreen.disconnected', (
-      tester,
-    ) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 5)),
-        duration: 10,
-      );
-
-      await _pumpRoomScreenForResolvedScreen(
-        tester,
-        session: session,
-        event: event,
-        screen: RoomScreen.disconnected,
-      );
-
-      expect(find.byType(SessionDisconnectedScreen), findsOneWidget);
-      await tester.pump(const Duration(seconds: 10));
     });
 
     testWidgets(

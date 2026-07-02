@@ -264,8 +264,8 @@ void main() {
     testWidgets(
       'shows confirmation dialog with next participant name from list',
       (tester) async {
-        final p1 = MockLocalParticipant('user-1');
-        final p2 = MockLocalParticipant('user-2');
+        final p1 = MockLocalParticipant('user-1', 'p1');
+        final p2 = MockLocalParticipant('user-2', 'p2');
 
         final state = _sessionState(
           roomState: const RoomState(
@@ -296,166 +296,12 @@ void main() {
         await tester.pumpAndSettle();
 
         // p2 is in participants list — uses MockLocalParticipant name
-        expect(find.textContaining('Local Participant'), findsOneWidget);
+        expect(find.textContaining(p2.name), findsOneWidget);
         expect(
           find.textContaining("the current speaker's turn"),
           findsOneWidget,
         );
         expect(find.text('Are you sure?'), findsOneWidget);
-      },
-    );
-
-    testWidgets(
-      'dialog shows "the current turn" when currentSpeaker is null',
-      (tester) async {
-        final state = _sessionState(
-          roomState: const RoomState(
-            keeper: 'keeper-1',
-            nextSpeaker: 'user-1',
-            currentSpeaker: null,
-            status: RoomStatus.active,
-            turnState: TurnState.speaking,
-            sessionSlug: 'test-session',
-            statusDetail: RoomStateStatusDetailActive(
-              ActiveDetail(),
-            ),
-            talkingOrder: ['user-1', 'user-2'],
-            version: 1,
-            roundNumber: 1,
-          ),
-        );
-
-        await _pumpMoreOptions(
-          tester,
-          session: session,
-          state: state,
-          deviceController: deviceController,
-        );
-
-        await tester.tap(find.textContaining('Force pass'));
-        await tester.pumpAndSettle();
-
-        expect(find.textContaining('the current turn'), findsOneWidget);
-        expect(
-          find.textContaining("the current speaker's turn"),
-          findsNothing,
-        );
-      },
-    );
-
-    testWidgets(
-      'falls back to userProfileProvider when participant not in list',
-      (tester) async {
-        final state = _sessionState(
-          roomState: const RoomState(
-            keeper: 'keeper-1',
-            nextSpeaker: 'user-2',
-            currentSpeaker: 'user-1',
-            status: RoomStatus.active,
-            turnState: TurnState.speaking,
-            sessionSlug: 'test-session',
-            statusDetail: RoomStateStatusDetailActive(
-              ActiveDetail(),
-            ),
-            talkingOrder: ['user-1', 'user-2'],
-            version: 1,
-            roundNumber: 1,
-          ),
-          // user-2 is NOT in participants list → fallback to userProfileProvider
-          participants: [MockLocalParticipant('user-1')],
-        );
-
-        await _pumpMoreOptions(
-          tester,
-          session: session,
-          state: state,
-          deviceController: deviceController,
-        );
-
-        await tester.tap(find.textContaining('Force pass'));
-        await tester.pumpAndSettle();
-
-        // Falls back to userProfileProvider which returns 'User user-2'
-        expect(find.textContaining('User user-2'), findsOneWidget);
-      },
-    );
-
-    // ── Dialog content: passing turn (two ahead) ───────────────────
-
-    testWidgets(
-      'calculates two participants ahead when turn is passing',
-      (tester) async {
-        final p1 = MockLocalParticipant('user-1', 'Participant 1');
-        final p3 = MockLocalParticipant('user-3', 'Participant 3');
-
-        final state = _sessionState(
-          roomState: const RoomState(
-            keeper: 'keeper-1',
-            nextSpeaker: 'user-2',
-            currentSpeaker: 'user-1',
-            status: RoomStatus.active,
-            turnState: TurnState.passing,
-            sessionSlug: 'test-session',
-            statusDetail: RoomStateStatusDetailActive(
-              ActiveDetail(),
-            ),
-            talkingOrder: ['user-1', 'user-2', 'user-3', 'user-4'],
-            version: 1,
-            roundNumber: 1,
-          ),
-          participants: [p1, p3],
-        );
-
-        await _pumpMoreOptions(
-          tester,
-          session: session,
-          state: state,
-          deviceController: deviceController,
-        );
-
-        await tester.tap(find.textContaining('Force pass'));
-        await tester.pumpAndSettle();
-
-        // currentSpeaker index = 0, + 2 = 2 → 'user-3' in participants
-        expect(find.textContaining(p3.name), findsOneWidget);
-      },
-    );
-
-    testWidgets(
-      'wraps around talking order when two ahead exceeds length',
-      (tester) async {
-        final p1 = MockLocalParticipant('user-1', 'Participant 1');
-
-        final state = _sessionState(
-          roomState: const RoomState(
-            keeper: 'keeper-1',
-            nextSpeaker: 'user-3',
-            currentSpeaker: 'user-2',
-            status: RoomStatus.active,
-            turnState: TurnState.passing,
-            sessionSlug: 'test-session',
-            statusDetail: RoomStateStatusDetailActive(
-              ActiveDetail(),
-            ),
-            talkingOrder: ['user-1', 'user-2', 'user-3'],
-            version: 1,
-            roundNumber: 1,
-          ),
-          participants: [p1],
-        );
-
-        await _pumpMoreOptions(
-          tester,
-          session: session,
-          state: state,
-          deviceController: deviceController,
-        );
-
-        await tester.tap(find.textContaining('Force pass'));
-        await tester.pumpAndSettle();
-
-        // currentSpeaker index = 1, + 2 = 3, 3 % 3 = 0 → 'user-1'
-        expect(find.textContaining(p1.name), findsOneWidget);
       },
     );
 

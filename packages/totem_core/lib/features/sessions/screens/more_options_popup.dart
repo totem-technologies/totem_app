@@ -197,8 +197,10 @@ class MoreOptions extends ConsumerWidget {
               if (state.roomState.status == mobile_api.RoomStatus.active)
                 Builder(
                   builder: (context) {
-                    final next =
-                        state.roomState.nextParticipantForcePassIdentity;
+                    final next = state.roomState
+                        .nextParticipantForcePassIdentity(
+                          participants: state.participantsList,
+                        );
                     final nextParticipantName = next != null
                         ? state.participantsList
                               .firstWhereOrNull((p) => p.identity == next)
@@ -215,6 +217,7 @@ class MoreOptions extends ConsumerWidget {
                               Navigator.of(context).pop();
                               onForcePass(
                                 context,
+                                nextParticipantName,
                                 currentSession,
                                 state,
                               );
@@ -325,6 +328,7 @@ class MoreOptions extends ConsumerWidget {
   @visibleForTesting
   Future<void> onForcePass(
     BuildContext context,
+    String? nextParticipantName,
     SessionController session,
     SessionRoomState state,
   ) async {
@@ -334,32 +338,9 @@ class MoreOptions extends ConsumerWidget {
       context: context,
       builder: (context) {
         final theme = Theme.of(context);
-        final nextParticipantIdentity = () {
-          if (state.roomState.turnState == mobile_api.TurnState.passing) {
-            // when passing, the next participant for Force Pass is two participants ahead
-            final nextIndex =
-                state.roomState.talkingOrder.indexOf(
-                  state.roomState.currentSpeaker!,
-                ) +
-                2;
-            return state.roomState.talkingOrder[nextIndex %
-                state.roomState.talkingOrder.length];
-          }
-          return state.roomState.nextParticipantIdentity!;
-        }();
 
         return Consumer(
           builder: (context, ref, child) {
-            final nextParticipantName =
-                state.participantsList
-                    .firstWhereOrNull(
-                      (p) => p.identity == nextParticipantIdentity,
-                    )
-                    ?.name ??
-                ref
-                    .watch(userProfileProvider(nextParticipantIdentity))
-                    .whenData((user) => user.name)
-                    .value;
             return ConfirmationDialog(
               title: 'Are you sure?',
               confirmButtonText: 'Force pass',
