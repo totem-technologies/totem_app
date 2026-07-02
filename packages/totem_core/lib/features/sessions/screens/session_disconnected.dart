@@ -23,7 +23,6 @@ import 'package:totem_core/shared/widgets/space_card.dart';
 import 'package:totem_core/shared/widgets/totem_icon.dart';
 import 'package:totem_core/shared/widgets/user_feedback.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
-import 'package:url_launcher/link.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Resolves the [SessionDisconnectedReason] from the given
@@ -448,6 +447,29 @@ class _SessionSubheaderState extends State<_SessionSubheader> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final removedSpan = TextSpan(
+      text: 'Please take a moment to review our ',
+      children: [
+        // TODO(totem): Use LinkSpan when available https://github.com/flutter/flutter/issues/91600
+        TextSpan(
+          text: 'Community Guidelines',
+          style: theme.textTheme.bodyLarge?.copyWith(
+            fontWeight: FontWeight.w500,
+          ),
+          recognizer: _communityGuidelinesRecognizer,
+        ),
+        const TextSpan(text: '. '),
+        const TextSpan(
+          text: 'If you believe this was a mistake, reach out to us at ',
+        ),
+        TextSpan(
+          text: 'help@totem.org',
+          style: TextStyle(color: Colors.blue.shade200),
+          recognizer: _helpEmailRecognizer,
+        ),
+        const TextSpan(text: '.'),
+      ],
+    );
     return Text.rich(
       switch (widget.reason) {
         SessionDisconnectedReason.keeperAbsent => const TextSpan(
@@ -458,36 +480,19 @@ class _SessionSubheaderState extends State<_SessionSubheader> {
           text:
               'This account joined the same session on another device. Continue there or rejoin from this device.',
         ),
-        SessionDisconnectedReason.removed => TextSpan(
-          text: 'Please take a moment to review our ',
-          children: [
-            TextSpan(
-              text: 'Community Guidelines',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
-              recognizer: _communityGuidelinesRecognizer,
-            ),
-            const TextSpan(text: '. '),
-            const TextSpan(
-              text: 'If you believe this was a mistake, reach out to us at ',
-            ),
-            TextSpan(
-              text: 'help@totem.org',
-              style: TextStyle(color: Colors.blue.shade200),
-              recognizer: _helpEmailRecognizer,
-            ),
-            const TextSpan(text: '.'),
-          ],
-        ),
+        SessionDisconnectedReason.removed => removedSpan,
         SessionDisconnectedReason.keeperEnded ||
         SessionDisconnectedReason.roomEmpty => const TextSpan(
           text:
               'Thank you for joining!\nWe hope you found the session enjoyable.',
         ),
-        SessionDisconnectedReason.banned => const TextSpan(
+        SessionDisconnectedReason.banned => TextSpan(
           text:
-              'Your account has been removed from this session due to a violation of our community guidelines.',
+              'You have been removed from this session due to a violation of our community guidelines.',
+          children: [
+            const TextSpan(text: '\n'),
+            removedSpan,
+          ],
         ),
         SessionDisconnectedReason.other => const TextSpan(text: ''),
       },
@@ -667,21 +672,21 @@ class _ActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isBanned) {
-      return Link(
-        uri: Uri.parse('mailto:help@totem.org'),
-        builder: (context, followLink) => ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsetsDirectional.symmetric(horizontal: 58),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(26),
-            ),
-          ),
-          onPressed: followLink,
-          child: const Text('Contact us'),
-        ),
-      );
-    }
+    // if (isBanned) {
+    //   return Link(
+    //     uri: Uri.parse('mailto:help@totem.org'),
+    //     builder: (context, followLink) => ElevatedButton(
+    //       style: ElevatedButton.styleFrom(
+    //         padding: const EdgeInsetsDirectional.symmetric(horizontal: 58),
+    //         shape: RoundedRectangleBorder(
+    //           borderRadius: BorderRadius.circular(26),
+    //         ),
+    //       ),
+    //       onPressed: followLink,
+    //       child: const Text('Contact us'),
+    //     ),
+    //   );
+    // }
 
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
