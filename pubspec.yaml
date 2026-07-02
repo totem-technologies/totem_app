@@ -8,8 +8,4 @@ workspace:
   - packages/totem_web
 
 dependency_overrides:
-  # flutter_webrtc: 1.4.1
-  flutter_webrtc:
-    git:
-      url: https://github.com/flutter-webrtc/flutter-webrtc
-      ref: 3931f2f351079cdc2053e3b128a62438455cfc42
+  flutter_webrtc: 1.5.2
