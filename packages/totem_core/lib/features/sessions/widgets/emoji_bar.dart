@@ -5,76 +5,25 @@ import 'package:flutter/material.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
-/// Displays an emoji bar above the given button context and calls
-/// [onEmojiSelected] with the selected emoji.
-Future<void> showEmojiBar(
-  BuildContext context, {
-  required ValueChanged<String> onEmojiSelected,
-}) async {
-  final navigator = Navigator.of(context).context;
-  final box = context.findRenderObject() as RenderBox?;
-  if (box == null) return;
-  final overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
-  if (overlay == null) return;
-  final overlayPositionX = overlay
-      .localToGlobal(
-        Offset.zero,
-        ancestor: navigator.findRenderObject(),
-      )
-      .dx;
-  final boxY = box
-      .localToGlobal(
-        Offset.zero,
-        ancestor: navigator.findRenderObject(),
-      )
-      .dy;
-  final position = Offset(overlayPositionX, boxY);
-
-  final completer = Completer<void>();
-  OverlayEntry? entry;
-  entry = OverlayEntry(
-    builder: (context) {
-      return SafeArea(
-        left: false,
-        top: false,
-        bottom: true,
-        right: true,
-        child: _EmojiBarOverlay(
-          position: position,
-          onEmojiSelected: onEmojiSelected,
-          onDismissed: () {
-            completer.complete();
-            if (entry?.mounted ?? false) {
-              entry?.remove();
-            }
-          },
-        ),
-      );
-    },
-  );
-  Overlay.of(navigator).insert(entry);
-  return completer.future;
-}
-
-class _EmojiBarOverlay extends StatefulWidget {
-  const _EmojiBarOverlay({
-    required this.position,
+class EmojiBarOverlay extends StatefulWidget {
+  const EmojiBarOverlay({
+    required this.buttonKey,
     required this.onEmojiSelected,
     required this.onDismissed,
-    // ignore: unused_element_parameter
     this.displayDuration = const Duration(seconds: 4),
+    super.key,
   });
 
-  final Offset position;
+  final GlobalKey buttonKey;
   final ValueChanged<String> onEmojiSelected;
   final Duration displayDuration;
   final VoidCallback onDismissed;
 
   @override
-  State<_EmojiBarOverlay> createState() => _EmojiBarOverlayState();
+  State<EmojiBarOverlay> createState() => EmojiBarOverlayState();
 }
 
-class _EmojiBarOverlayState extends State<_EmojiBarOverlay>
+class EmojiBarOverlayState extends State<EmojiBarOverlay>
     with SingleTickerProviderStateMixin {
   Timer? _timer;
 
@@ -110,7 +59,18 @@ class _EmojiBarOverlayState extends State<_EmojiBarOverlay>
 
   @override
   Widget build(BuildContext context) {
-    final topPosition = widget.position.dy - 70;
+    final overlayBox = context.findRenderObject() as RenderBox?;
+    final buttonBox =
+        widget.buttonKey.currentContext?.findRenderObject() as RenderBox?;
+
+    final topPosition = () {
+      if (buttonBox == null) return 0.0;
+      final buttonOffset = buttonBox.localToGlobal(
+        Offset.zero,
+        ancestor: overlayBox,
+      );
+      return buttonOffset.dy - 70;
+    }();
 
     return Stack(
       children: [
@@ -125,7 +85,7 @@ class _EmojiBarOverlayState extends State<_EmojiBarOverlay>
         ),
         PositionedDirectional(
           top: topPosition,
-          start: widget.position.dx,
+          start: 0,
           end: 0,
           child: FadeTransition(
             opacity: _animationController,
