@@ -595,14 +595,14 @@ void main() {
         );
       });
 
-      test('defaultCameraCaptureOptions has 20 fps framerate', () {
+      test('defaultCameraCaptureOptions has 24 fps framerate', () {
         expect(
           SessionController
               .defaultCameraCaptureOptions
               .params
               .encoding
               ?.maxFramerate,
-          equals(20),
+          equals(24),
         );
       });
 
@@ -614,6 +614,20 @@ void main() {
               .encoding
               ?.maxBitrate,
           equals(1300 * 1000),
+        );
+      });
+
+      test('defaultVideoPublishOptions uses h264 codec', () {
+        expect(
+          SessionController.defaultVideoPublishOptions.videoCodec,
+          equals('h264'),
+        );
+      });
+
+      test('defaultVideoPublishOptions disables the backup video codec', () {
+        expect(
+          SessionController.defaultVideoPublishOptions.backupVideoCodec.enabled,
+          isFalse,
         );
       });
     });

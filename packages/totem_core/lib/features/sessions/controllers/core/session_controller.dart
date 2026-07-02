@@ -101,14 +101,25 @@ class SessionController extends _$SessionController {
   SessionDetailSchema? event;
   static const SessionStateReducer _stateReducer = SessionStateReducer();
 
+  /// The capture framerate caps both the local self-view and the published
+  /// stream (the camera is the single source for both).
   static const defaultCameraCaptureOptions = CameraCaptureOptions(
     params: VideoParameters(
       dimensions: VideoDimensionsPresets.h720_43,
       encoding: VideoEncoding(
         maxBitrate: 1300 * 1000,
-        maxFramerate: 20,
+        maxFramerate: 24,
       ),
     ),
+  );
+
+  /// h264 has hardware encode/decode on effectively every mobile device and
+  /// browser, so the vp8 backup encoder (software on iOS, a battery drain
+  /// when a subscriber can't decode the primary codec) is unnecessary and
+  /// disabled.
+  static const defaultVideoPublishOptions = VideoPublishOptions(
+    videoCodec: 'h264',
+    backupVideoCodec: BackupVideoCodec(enabled: false),
   );
 
   SessionDeviceController get devices {
@@ -334,40 +345,7 @@ class SessionController extends _$SessionController {
           speakerOn: options.speakerEnabled,
         ),
         dynacast: true,
-        defaultVideoPublishOptions: const VideoPublishOptions(
-          // simulcast: true,
-          videoCodec: 'h265',
-          //   videoEncoding: const VideoEncoding(
-          //     maxBitrate: 1_500_000,
-          //     maxFramerate: 30,
-          //   ),
-          //   videoSimulcastLayers: [
-          //     // Low: Small tiles (216p @ 15fps) - Minimal CPU impact
-          //     // const VideoParameters(
-          //     //   dimensions: VideoDimensions(384, 216),
-          //     //   encoding: VideoEncoding(
-          //     //     maxBitrate: 150_000,
-          //     //     maxFramerate: 15,
-          //     //   ),
-          //     // ),
-          //     // Medium: Mid-size tiles (540p @ 20fps)
-          //     const VideoParameters(
-          //       dimensions: VideoDimensions(960, 540),
-          //       encoding: VideoEncoding(
-          //         maxBitrate: 450_000,
-          //         maxFramerate: 24,
-          //       ),
-          //     ),
-          //     // High: The active speaker (720p @ 30fps)
-          //     VideoParameters(
-          //       dimensions: VideoParametersPresets.h720_169.dimensions,
-          //       encoding: const VideoEncoding(
-          //         maxBitrate: 1_500_000,
-          //         maxFramerate: 30,
-          //       ),
-          //     ),
-          //   ],
-        ),
+        defaultVideoPublishOptions: defaultVideoPublishOptions,
         adaptiveStream: true,
       ),
       url: AppConfig.instance.liveKitUrl,
