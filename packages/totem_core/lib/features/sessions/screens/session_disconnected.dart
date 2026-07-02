@@ -23,6 +23,7 @@ import 'package:totem_core/shared/widgets/space_card.dart';
 import 'package:totem_core/shared/widgets/totem_icon.dart';
 import 'package:totem_core/shared/widgets/user_feedback.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
+import 'package:url_launcher/link.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Resolves the [SessionDisconnectedReason] from the given
@@ -91,26 +92,28 @@ class SessionDisconnectedScreen extends ConsumerStatefulWidget {
     SharedPreferences? prefs,
     InAppReview? inAppReview,
   }) async {
-    final effectivePrefs = prefs ?? await SharedPreferences.getInstance();
-    final effectiveInAppReview = inAppReview ?? InAppReview.instance;
+    try {
+      final effectivePrefs = prefs ?? await SharedPreferences.getInstance();
+      final effectiveInAppReview = inAppReview ?? InAppReview.instance;
 
-    final alreadyRequested =
-        effectivePrefs.getBool(SessionDisconnectedScreen.reviewRequestedKey) ??
-        false;
-    if (alreadyRequested) return;
+      final alreadyRequested =
+          effectivePrefs.getBool(
+            SessionDisconnectedScreen.reviewRequestedKey,
+          ) ??
+          false;
+      if (alreadyRequested) return;
 
-    final count =
-        (effectivePrefs.getInt(
-              SessionDisconnectedScreen.sessionLikedCountKey,
-            ) ??
-            0) +
-        1;
-    await effectivePrefs.setInt(
-      SessionDisconnectedScreen.sessionLikedCountKey,
-      count,
-    );
-    if (count >= 5) {
-      try {
+      final count =
+          (effectivePrefs.getInt(
+                SessionDisconnectedScreen.sessionLikedCountKey,
+              ) ??
+              0) +
+          1;
+      await effectivePrefs.setInt(
+        SessionDisconnectedScreen.sessionLikedCountKey,
+        count,
+      );
+      if (count >= 5) {
         if (await effectiveInAppReview.isAvailable()) {
           await effectiveInAppReview.requestReview();
           await effectivePrefs.setBool(
@@ -118,9 +121,9 @@ class SessionDisconnectedScreen extends ConsumerStatefulWidget {
             true,
           );
         }
-      } catch (_) {
-        // Fine if fail
       }
+    } catch (_) {
+      // Fine if fail
     }
   }
 }
@@ -172,8 +175,6 @@ class _SessionDisconnectedScreenState
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final recommended = ref.watch(getRecommendedSessionsProvider());
     final sessionState = ref.watch(currentSessionStateProvider);
     final disconnectReason =
         widget.disconnectReason ?? sessionState?.disconnectReason;
@@ -183,6 +184,12 @@ class _SessionDisconnectedScreenState
           disconnectReason: disconnectReason,
           sessionState: sessionState,
         );
+
+    // Skip the network request when the user has been banned.
+    final isBanned = sessionReason == SessionDisconnectedReason.banned;
+    final recommended = isBanned
+        ? const AsyncData<List<SessionDetailSchema>>([])
+        : ref.watch(getRecommendedSessionsProvider());
 
     final nextSessions =
         widget.session?.space.nextEvents
@@ -198,6 +205,7 @@ class _SessionDisconnectedScreenState
         child: SafeArea(
           child: ViewportResolver(
             builder: (context, viewportKind) {
+              final theme = Theme.of(context);
               final header = Semantics(
                 header: true,
                 child: Text(
@@ -390,6 +398,26 @@ class _SessionDisconnectedScreenState
                 child: const Text('Explore More'),
               );
 
+              final contactUsButton = Link(
+                uri: Uri.parse('mailto:help@totem.org'),
+                builder: (context, followLink) => ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 58,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(26),
+                    ),
+                  ),
+                  onPressed: followLink,
+                  child: const Text('Contact us'),
+                ),
+              );
+
+              final actionButton = Center(
+                child: isBanned ? contactUsButton : exploreMoreButton,
+              );
+
               switch (viewportKind) {
                 case ViewportKind.smallPortrait:
                   return Center(
@@ -406,9 +434,11 @@ class _SessionDisconnectedScreenState
                           header,
                           subheader,
                           ?feedback,
-                          ?nextSessionsHeader,
-                          ...nextList.map((e) => Flexible(child: e)),
-                          exploreMoreButton,
+                          if (!isBanned) ...[
+                            ?nextSessionsHeader,
+                            ...nextList.map((e) => Flexible(child: e)),
+                          ],
+                          actionButton,
                         ],
                       ),
                     ),
@@ -435,9 +465,11 @@ class _SessionDisconnectedScreenState
                             mainAxisAlignment: MainAxisAlignment.center,
                             spacing: 20,
                             children: [
-                              ?nextSessionsHeader,
-                              ...nextList.map((e) => Flexible(child: e)),
-                              exploreMoreButton,
+                              if (!isBanned) ...[
+                                ?nextSessionsHeader,
+                                ...nextList.map((e) => Flexible(child: e)),
+                              ],
+                              actionButton,
                             ],
                           ),
                         ),
@@ -514,7 +546,7 @@ class _SessionDisconnectedScreenState
                                   subheader,
                                   const Divider(color: Color(0x0FFFFFFF)),
                                   ?feedback,
-                                  if (nextList.isNotEmpty) ...[
+                                  if (!isBanned && nextList.isNotEmpty) ...[
                                     ?nextSessionsHeader,
                                     Flexible(
                                       child: Row(
@@ -530,7 +562,7 @@ class _SessionDisconnectedScreenState
                                       ),
                                     ),
                                   ],
-                                  exploreMoreButton,
+                                  actionButton,
                                 ]
                                 // this ensures the divider is bigger than the content
                                 .map((widget) {

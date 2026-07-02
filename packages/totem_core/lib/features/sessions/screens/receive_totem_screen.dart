@@ -17,7 +17,6 @@ class ReceiveTotemScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final sessionStatus = ref.watch(roomStatusProvider);
     final session = ref.watch(currentSessionProvider);
     final roundPrompt = ref.watch(roundMessageProvider);
@@ -51,6 +50,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
       child: SafeArea(
         child: ViewportResolver(
           builder: (context, viewportKind) {
+            final theme = Theme.of(context);
             final titleWidget = Column(
               spacing: 16,
               children: [

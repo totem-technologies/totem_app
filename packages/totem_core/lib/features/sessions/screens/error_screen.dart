@@ -15,11 +15,11 @@ class SessionErrorScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var title = 'Something went wrong';
-    var subtitle =
+    const title = 'Something went wrong';
+    const subtitle =
         "We couldn't connect you to this session. "
         'Please check your internet connection or try again.';
-    var canRetry = true;
+    const canRetry = true;
 
     // API failures arrive wrapped: the structured body lives in ApiError.error.
     var error = this.error;
@@ -30,24 +30,25 @@ class SessionErrorScreen extends StatelessWidget {
     if (error is RoomErrorResponse) {
       switch (error.code) {
         case ErrorCode.banned:
-          title = "You've been removed from this session";
-          subtitle =
-              "You can still join other sessions, but you won't be able to access this one.";
-          canRetry = false;
           return const SessionDisconnectedScreen(
-            sessionDisconnectedReason: SessionDisconnectedReason.removed,
+            sessionDisconnectedReason: SessionDisconnectedReason.banned,
+          );
+        case ErrorCode.keeperNotInRoom:
+          return const SessionDisconnectedScreen(
+            sessionDisconnectedReason: SessionDisconnectedReason.keeperAbsent,
           );
         case ErrorCode.roomAlreadyEnded:
-          title = 'This session has ended';
-          subtitle =
-              'This session has already ended. You can still join other sessions.';
+        case ErrorCode.roomNotActive:
           return const SessionDisconnectedScreen(
             sessionDisconnectedReason: SessionDisconnectedReason.keeperEnded,
           );
         case ErrorCode.notJoinable:
-          title = 'This session cannot be joined';
-          subtitle =
-              'You cannot join the session at this time. Please try again later.';
+        case ErrorCode.notInRoom:
+        case ErrorCode.notFound:
+        case ErrorCode.livekitError:
+          return const SessionDisconnectedScreen(
+            sessionDisconnectedReason: SessionDisconnectedReason.other,
+          );
         default:
           break;
       }
@@ -86,10 +87,7 @@ class SessionErrorScreen extends StatelessWidget {
                 style: theme.textTheme.headlineMedium,
                 textAlign: TextAlign.center,
               ),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-              ),
+              const Text(subtitle, textAlign: TextAlign.center),
               const Spacer(),
               if (canRetry && onRetry != null)
                 OutlinedButton(

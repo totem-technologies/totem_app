@@ -73,7 +73,7 @@ enum SessionDisconnectedReason {
   /// The user was kicked out of the session by the keeper.
   removed,
 
-  ///
+  /// The user was banned from the session by the keeper.
   banned,
 
   /// The user was disconnected for an unknown reason.
