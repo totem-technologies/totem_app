@@ -57,11 +57,15 @@ VoidCallback stubFlutterWebRtcChannels() {
 }
 
 class MockLocalParticipant extends Mock implements LocalParticipant {
-  MockLocalParticipant([this.id = 'local-participant']);
+  MockLocalParticipant([
+    this.id = 'local-participant',
+    this.participantName = 'Local Participant',
+  ]);
   final String id;
+  final String participantName;
 
   @override
-  String get name => 'Local Participant';
+  String get name => participantName;
 
   @override
   String get identity => id;

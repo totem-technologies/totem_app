@@ -73,6 +73,9 @@ enum SessionDisconnectedReason {
   /// The user was kicked out of the session by the keeper.
   removed,
 
+  /// The user was banned from the session by the keeper.
+  banned,
+
   /// The user was disconnected for an unknown reason.
   other,
 }
@@ -132,8 +135,8 @@ class SessionController extends _$SessionController {
     _dispatch(SessionChatMessageAdded(message));
   }
 
-  void markParticipantRemoved() {
-    _dispatch(const ParticipantRemoved());
+  void markParticipantRemoved(RemoveReason reason) {
+    _dispatch(ParticipantRemoved(reason));
   }
 
   void applyRoomState(RoomState roomState) {

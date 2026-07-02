@@ -395,9 +395,26 @@ class PromptTransitionCard extends StatefulWidget {
 class _PromptTransitionCardState extends State<PromptTransitionCard> {
   final roundMessageController = TextEditingController();
 
+  final textFieldFocusNode = FocusNode();
+  final buttonFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    textFieldFocusNode.addListener(_textFieldFocusNodeListener);
+  }
+
+  void _textFieldFocusNodeListener() {
+    if (!textFieldFocusNode.hasFocus) {
+      buttonFocusNode.requestFocus();
+    }
+  }
+
   @override
   void dispose() {
     roundMessageController.dispose();
+    textFieldFocusNode.dispose();
+    buttonFocusNode.dispose();
     super.dispose();
   }
 
@@ -419,12 +436,17 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: theme.colorScheme.onSurface,
                 ),
+                selectAllOnFocus: true,
+                focusNode: textFieldFocusNode,
+                onTapOutside: (_) {
+                  buttonFocusNode.requestFocus();
+                },
               ),
             ),
             Flexible(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(
-                  minWidth: 160,
+                  minWidth: 200,
                 ),
                 child: ActionSliderButton(
                   text: widget.actionText,
@@ -434,6 +456,7 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
                     );
                   },
                   keepLoadingOnSuccess: widget.keepActionLoadingOnSuccess,
+                  focusNode: buttonFocusNode,
                 ),
               ),
             ),

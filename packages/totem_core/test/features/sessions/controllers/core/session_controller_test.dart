@@ -506,7 +506,7 @@ void main() {
 
         final _ = container.read(
           sessionControllerProvider(options).notifier,
-        )..markParticipantRemoved();
+        )..markParticipantRemoved(RemoveReason.remove);
 
         final state = container.read(sessionControllerProvider(options));
         expect(state.removed, isTrue);

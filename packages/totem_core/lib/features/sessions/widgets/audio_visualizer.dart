@@ -123,7 +123,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   int _consecutiveRestartAttempts = 0;
 
   Future<void> _safeAsyncAction(
-    Future<void> Function() action, {
+    AsyncCallback action, {
     required String failureMessage,
   }) async {
     try {

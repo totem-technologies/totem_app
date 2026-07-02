@@ -125,7 +125,7 @@ void main() {
             sessionMessagingControllerProvider(mockSession).notifier,
           );
 
-          final removedData = {'identity': 'user-1'};
+          final removedData = {'identity': 'user-1', 'reason': 'remove'};
 
           final removedEvent = DataReceivedEvent(
             data: utf8.encode(jsonEncode(removedData)),
@@ -149,6 +149,7 @@ void main() {
 
           final removedData2 = {
             'identity': 'user-2',
+            'reason': 'remove',
           };
 
           final removedEvent2 = DataReceivedEvent(

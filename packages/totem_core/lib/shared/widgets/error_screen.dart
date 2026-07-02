@@ -1,11 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/router.dart';
-import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
-import 'package:totem_core/shared/widgets/popups.dart';
 
 class ErrorScreen extends StatefulWidget {
   const ErrorScreen({
@@ -23,7 +22,7 @@ class ErrorScreen extends StatefulWidget {
 
   final bool? showHomeButton;
 
-  final Future<void> Function()? onRetry;
+  final AsyncCallback? onRetry;
 
   /// Suppresses the internal [AppBar] (and its [BackButton]). Use when
   /// rendering this screen in a context where [TotemRouter.instance] may
@@ -241,26 +240,4 @@ class ErrorDialog extends StatelessWidget {
       ),
     );
   }
-}
-
-void showErrorPopup(
-  BuildContext context, {
-  required TotemIconData icon,
-  required String title,
-  required String message,
-  PopupController? controller,
-}) {
-  showPopup(
-    context,
-    controller: controller,
-    duration: const Duration(seconds: 5),
-    builder: (context) {
-      return NotificationPopup(
-        icon: icon,
-        title: title,
-        message: message,
-        iconBackgroundColor: const Color(0xFFF44336),
-      );
-    },
-  );
 }

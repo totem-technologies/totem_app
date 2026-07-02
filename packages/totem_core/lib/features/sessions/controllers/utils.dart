@@ -75,8 +75,13 @@ extension SessionStateExtension on RoomState {
   }
 
   /// Walk the talking order starting after [after], wrapping around.
-  String? nextInOrder({required String after}) {
+  String? nextInOrder({
+    required String after,
+    required Iterable<Participant> participants,
+  }) {
     if (!talkingOrder.contains(after)) return null;
+
+    final onlineIds = participants.map((p) => p.identity).toSet();
 
     final start = talkingOrder.indexOf(after) + 1;
     final rotated = [
@@ -84,10 +89,12 @@ extension SessionStateExtension on RoomState {
       ...talkingOrder.sublist(0, start),
     ];
 
-    return rotated.firstOrNull;
+    return rotated.where(onlineIds.contains).firstOrNull;
   }
 
-  String? get nextParticipantForcePassIdentity {
+  String? nextParticipantForcePassIdentity({
+    required Iterable<Participant> participants,
+  }) {
     if (nextSpeaker == null) return null;
     switch (turnState) {
       case TurnState.idle:
@@ -95,7 +102,7 @@ extension SessionStateExtension on RoomState {
       case TurnState.speaking:
         return nextSpeaker;
       case TurnState.passing:
-        return nextInOrder(after: nextSpeaker!);
+        return nextInOrder(after: nextSpeaker!, participants: participants);
     }
     return null;
   }

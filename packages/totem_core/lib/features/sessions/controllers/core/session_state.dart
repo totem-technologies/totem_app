@@ -87,18 +87,22 @@ class ParticipantsState {
   const ParticipantsState({
     this.participants = const [],
     this.removed = false,
+    this.removeReason,
   });
 
   final List<Participant> participants;
   final bool removed;
+  final RemoveReason? removeReason;
 
   ParticipantsState copyWith({
     List<Participant>? participants,
     bool? removed,
+    RemoveReason? removeReason,
   }) {
     return ParticipantsState(
       participants: participants ?? this.participants,
       removed: removed ?? this.removed,
+      removeReason: removeReason ?? this.removeReason,
     );
   }
 
@@ -110,13 +114,15 @@ class ParticipantsState {
           other.participants.map((p) => p.sid),
           participants.map((p) => p.sid),
         ) &&
-        other.removed == removed;
+        other.removed == removed &&
+        other.removeReason == removeReason;
   }
 
   @override
   int get hashCode =>
       const DeepCollectionEquality().hash(participants.map((p) => p.sid)) ^
-      removed.hashCode;
+      removed.hashCode ^
+      removeReason.hashCode;
 }
 
 @immutable

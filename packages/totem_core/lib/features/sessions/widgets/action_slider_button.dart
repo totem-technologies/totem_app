@@ -2,11 +2,12 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
-typedef OnActionPerformed = Future<bool> Function();
+typedef OnActionPerformed = AsyncValueGetter<bool>;
 
 class ActionSliderButton extends StatefulWidget {
   const ActionSliderButton({
@@ -15,6 +16,7 @@ class ActionSliderButton extends StatefulWidget {
     this.keepLoadingOnSuccess = false,
     this.isLoading,
     this.backgroundColor,
+    this.focusNode,
     this.autofocus = true,
     super.key,
   });
@@ -24,6 +26,7 @@ class ActionSliderButton extends StatefulWidget {
   final bool keepLoadingOnSuccess;
   final bool? isLoading;
   final Color? backgroundColor;
+  final FocusNode? focusNode;
   final bool autofocus;
 
   @override
@@ -31,25 +34,28 @@ class ActionSliderButton extends StatefulWidget {
 }
 
 class _ActionSliderButtonState extends State<ActionSliderButton> {
-  late final MouseTracker _mouseTracker;
   late bool _hasMouseConnected;
 
   @override
   void initState() {
     super.initState();
-    _mouseTracker = RendererBinding.instance.mouseTracker;
-    _hasMouseConnected = _mouseTracker.mouseIsConnected;
-    _mouseTracker.addListener(_handleMouseConnectionChanged);
+    _hasMouseConnected = RendererBinding.instance.mouseTracker.mouseIsConnected;
+    RendererBinding.instance.mouseTracker.addListener(
+      _handleMouseConnectionChanged,
+    );
   }
 
   @override
   void dispose() {
-    _mouseTracker.removeListener(_handleMouseConnectionChanged);
+    RendererBinding.instance.mouseTracker.removeListener(
+      _handleMouseConnectionChanged,
+    );
     super.dispose();
   }
 
   void _handleMouseConnectionChanged() {
-    final hasMouseConnected = _mouseTracker.mouseIsConnected;
+    final hasMouseConnected =
+        RendererBinding.instance.mouseTracker.mouseIsConnected;
     if (_hasMouseConnected == hasMouseConnected || !mounted) {
       return;
     }
@@ -78,6 +84,7 @@ class _ActionSliderButtonState extends State<ActionSliderButton> {
       keepLoadingOnSuccess: widget.keepLoadingOnSuccess,
       isLoading: widget.isLoading,
       backgroundColor: widget.backgroundColor,
+      focusNode: widget.focusNode,
       autofocus: widget.autofocus,
     );
   }
@@ -91,6 +98,7 @@ class ActionButton extends StatefulWidget {
     this.keepLoadingOnSuccess = false,
     this.isLoading,
     this.backgroundColor,
+    this.focusNode,
     this.autofocus = true,
     super.key,
   });
@@ -100,6 +108,7 @@ class ActionButton extends StatefulWidget {
   final bool keepLoadingOnSuccess;
   final bool? isLoading;
   final Color? backgroundColor;
+  final FocusNode? focusNode;
   final bool autofocus;
 
   @override
@@ -143,6 +152,7 @@ class _ActionButtonState extends State<ActionButton> {
       height: 50,
       child: ElevatedButton(
         autofocus: widget.autofocus,
+        focusNode: widget.focusNode,
         onPressed: effectiveLoading ? null : _onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
@@ -150,6 +160,7 @@ class _ActionButtonState extends State<ActionButton> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 40),
         ),
         child: effectiveLoading
             ? const SizedBox(
@@ -160,7 +171,7 @@ class _ActionButtonState extends State<ActionButton> {
                   strokeCap: StrokeCap.round,
                 ),
               )
-            : Text(widget.text),
+            : AutoSizeText(widget.text, maxLines: 1),
       ),
     );
   }

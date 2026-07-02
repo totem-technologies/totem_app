@@ -6,28 +6,28 @@ import 'package:flutter/semantics.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
-const _defaultPopupAnimationDuration = Duration(milliseconds: 600);
-const _defaultPopupDuration = Duration(milliseconds: 2800);
+const _defaultNotificationAnimationDuration = Duration(milliseconds: 600);
+const _defaultNotificationDuration = Duration(milliseconds: 2800);
 
-class AnimatedPopup extends StatefulWidget {
-  const AnimatedPopup({
+class AnimatedNotification extends StatefulWidget {
+  const AnimatedNotification({
     required this.onDismissed,
-    required this.popup,
-    this.animationDuration = _defaultPopupAnimationDuration,
-    this.duration = _defaultPopupDuration,
+    required this.notification,
+    this.animationDuration = _defaultNotificationAnimationDuration,
+    this.duration = _defaultNotificationDuration,
     super.key,
   });
   final VoidCallback onDismissed;
-  final Widget popup;
+  final Widget notification;
 
   final Duration animationDuration;
   final Duration duration;
 
   @override
-  State<AnimatedPopup> createState() => AnimatedPopupState();
+  State<AnimatedNotification> createState() => AnimatedNotificationState();
 }
 
-class AnimatedPopupState extends State<AnimatedPopup>
+class AnimatedNotificationState extends State<AnimatedNotification>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _offsetAnimation;
@@ -80,27 +80,28 @@ class AnimatedPopupState extends State<AnimatedPopup>
   Widget build(BuildContext context) {
     return SlideTransition(
       position: _offsetAnimation,
-      child: widget.popup,
+      child: widget.notification,
     );
   }
 }
 
-class PopupRequest {
-  PopupRequest({
+class NotificationRequest {
+  NotificationRequest({
     required this.overlay,
-    required this.popup,
+    required this.overlayEntry,
     required this.onClosed,
     required this.dedupeKey,
     this.onShown,
   });
 
   final OverlayState overlay;
-  final OverlayEntry popup;
+  final OverlayEntry overlayEntry;
   final VoidCallback onClosed;
   final Object? dedupeKey;
   final VoidCallback? onShown;
 
-  final GlobalKey<AnimatedPopupState> key = GlobalKey<AnimatedPopupState>();
+  final GlobalKey<AnimatedNotificationState> key =
+      GlobalKey<AnimatedNotificationState>();
 
   bool _isShown = false;
   bool _isCancelled = false;
@@ -113,7 +114,7 @@ class PopupRequest {
     if (_isShown || _isCancelled) return;
 
     _isShown = true;
-    overlay.insert(popup);
+    overlay.insert(overlayEntry);
     onShown?.call();
   }
 
@@ -134,8 +135,8 @@ class PopupRequest {
       return;
     }
 
-    if (popup.mounted) {
-      popup.remove();
+    if (overlayEntry.mounted) {
+      overlayEntry.remove();
     }
     close();
   }
@@ -148,10 +149,14 @@ class PopupRequest {
   }
 }
 
-class PopupController {
-  final List<PopupRequest> _queue = <PopupRequest>[];
-  PopupRequest? _activeRequest;
+class NotificationController {
+  final List<NotificationRequest> _queue = <NotificationRequest>[];
+  NotificationRequest? _activeRequest;
   bool _isBulkDismissing = false;
+
+  // ---------------------------------------------------------------------------
+  // Queue management
+  // ---------------------------------------------------------------------------
 
   bool _hasDuplicate(Object? dedupeKey) {
     if (dedupeKey == null) return false;
@@ -163,7 +168,7 @@ class PopupController {
     return _queue.any((request) => request.dedupeKey == dedupeKey);
   }
 
-  void _enqueue(PopupRequest request) {
+  void _enqueue(NotificationRequest request) {
     if (_hasDuplicate(request.dedupeKey)) {
       return;
     }
@@ -187,7 +192,7 @@ class PopupController {
     }
   }
 
-  void _handleRequestClosed(PopupRequest request) {
+  void _handleRequestClosed(NotificationRequest request) {
     if (_activeRequest == request) {
       _activeRequest = null;
     } else {
@@ -200,7 +205,7 @@ class PopupController {
   }
 
   void dismissAll() {
-    final requests = <PopupRequest>[
+    final requests = <NotificationRequest>[
       ..._queue,
       ?_activeRequest,
     ];
@@ -219,137 +224,163 @@ class PopupController {
     _activeRequest = null;
     _isBulkDismissing = false;
   }
-}
 
-PopupRequest showPopup(
-  BuildContext context, {
-  required WidgetBuilder builder,
-  PopupController? controller,
-  Duration animationDuration = _defaultPopupAnimationDuration,
-  Duration duration = _defaultPopupDuration,
-  VoidCallback? onShown,
-  Object? dedupeKey,
-}) {
-  final overlay = Overlay.of(context);
+  // ---------------------------------------------------------------------------
+  // Display helpers
+  // ---------------------------------------------------------------------------
 
-  late OverlayEntry popup;
-  late final PopupRequest request;
+  /// Shows an arbitrary widget as a notification banner.
+  ///
+  /// When this controller is managing the notification, it is queued and
+  /// deduplicated by [dedupeKey].
+  NotificationRequest show(
+    BuildContext context, {
+    required WidgetBuilder builder,
+    Duration animationDuration = _defaultNotificationAnimationDuration,
+    Duration duration = _defaultNotificationDuration,
+    VoidCallback? onShown,
+    Object? dedupeKey,
+  }) {
+    final overlay = Overlay.of(context);
 
-  popup = OverlayEntry(
-    builder: (context) => PositionedDirectional(
-      start: 0,
-      end: 0,
-      child: Material(
-        color: Colors.transparent,
-        child: AnimatedPopup(
-          key: request.key,
-          animationDuration: animationDuration,
-          duration: duration,
-          onDismissed: () {
-            if (popup.mounted) {
-              popup.remove();
-            }
-            request.close();
-          },
-          popup: Builder(builder: builder),
+    late OverlayEntry entry;
+    late final NotificationRequest request;
+
+    entry = OverlayEntry(
+      builder: (context) => PositionedDirectional(
+        start: 0,
+        end: 0,
+        child: Material(
+          color: Colors.transparent,
+          child: AnimatedNotification(
+            key: request.key,
+            animationDuration: animationDuration,
+            duration: duration,
+            onDismissed: () {
+              if (entry.mounted) {
+                entry.remove();
+              }
+              request.close();
+            },
+            notification: Builder(builder: builder),
+          ),
         ),
       ),
-    ),
-  );
+    );
 
-  request = PopupRequest(
-    overlay: overlay,
-    popup: popup,
-    dedupeKey: dedupeKey,
-    onClosed: () {
-      controller?._handleRequestClosed(request);
-    },
-    onShown: onShown,
-  );
+    request = NotificationRequest(
+      overlay: overlay,
+      overlayEntry: entry,
+      dedupeKey: dedupeKey,
+      onClosed: () {
+        _handleRequestClosed(request);
+      },
+      onShown: onShown,
+    );
 
-  if (controller != null) {
-    controller._enqueue(request);
-  } else {
-    request.show();
+    _enqueue(request);
+
+    return request;
   }
 
-  return request;
+  /// Shows a standard notification banner that auto-dismisses after
+  /// [_defaultNotificationDuration].
+  NotificationRequest showTimed(
+    BuildContext context, {
+    required TotemIconData icon,
+    required String title,
+    required String message,
+  }) {
+    final view = View.of(context);
+    return show(
+      context,
+      dedupeKey: ('notification', icon, title, message),
+      onShown: () {
+        SemanticsService.sendAnnouncement(
+          view,
+          'New message: $message',
+          TextDirection.ltr,
+        );
+      },
+      builder: (context) {
+        return NotificationBanner(
+          icon: icon,
+          title: title,
+          message: message,
+        );
+      },
+    );
+  }
+
+  /// Shows a notification banner with custom content that stays until
+  /// dismissed manually.
+  NotificationRequest showDismissible(
+    BuildContext context, {
+    required WidgetBuilder builder,
+  }) {
+    return show(
+      context,
+      duration: Duration.zero,
+      builder: builder,
+    );
+  }
+
+  /// Shows a notification banner that stays visible until dismissed.
+  ///
+  /// The notification is deduplicated so that the same
+  /// (icon, title, message) combination is only shown once while visible.
+  NotificationRequest showPermanent(
+    BuildContext context, {
+    required TotemIconData icon,
+    required String title,
+    required String message,
+  }) {
+    final view = View.of(context);
+    return show(
+      context,
+      duration: Duration.zero,
+      dedupeKey: ('permanent_notification', icon, title, message),
+      onShown: () {
+        SemanticsService.sendAnnouncement(
+          view,
+          'New message: $message',
+          TextDirection.ltr,
+        );
+      },
+      builder: (context) {
+        return NotificationBanner(
+          icon: icon,
+          title: title,
+          message: message,
+        );
+      },
+    );
+  }
+
+  /// Shows an error notification banner that auto-dismisses after 5 seconds.
+  NotificationRequest showError(
+    BuildContext context, {
+    required TotemIconData icon,
+    required String title,
+    required String message,
+  }) {
+    return show(
+      context,
+      duration: const Duration(seconds: 5),
+      builder: (context) {
+        return NotificationBanner(
+          icon: icon,
+          title: title,
+          message: message,
+          iconBackgroundColor: const Color(0xFFF44336),
+        );
+      },
+    );
+  }
 }
 
-PopupRequest showNotificationPopup(
-  BuildContext context, {
-  required TotemIconData icon,
-  required String title,
-  required String message,
-  PopupController? controller,
-}) {
-  final view = View.of(context);
-  return showPopup(
-    context,
-    controller: controller,
-    dedupeKey: ('notification', icon, title, message),
-    onShown: () {
-      SemanticsService.sendAnnouncement(
-        view,
-        'New message: $message',
-        TextDirection.ltr,
-      );
-    },
-    builder: (context) {
-      return NotificationPopup(
-        icon: icon,
-        title: title,
-        message: message,
-      );
-    },
-  );
-}
-
-PopupRequest showDismissiblePopup(
-  BuildContext context, {
-  required WidgetBuilder builder,
-  PopupController? controller,
-}) {
-  return showPopup(
-    context,
-    controller: controller,
-    duration: Duration.zero,
-    builder: builder,
-  );
-}
-
-PopupRequest showPermanentNotificationPopup(
-  BuildContext context, {
-  required TotemIconData icon,
-  required String title,
-  required String message,
-  required PopupController controller,
-}) {
-  final view = View.of(context);
-  return showPopup(
-    context,
-    controller: controller,
-    duration: Duration.zero,
-    dedupeKey: ('permanent_notification', icon, title, message),
-    onShown: () {
-      SemanticsService.sendAnnouncement(
-        view,
-        'New message: $message',
-        TextDirection.ltr,
-      );
-    },
-    builder: (context) {
-      return NotificationPopup(
-        icon: icon,
-        title: title,
-        message: message,
-      );
-    },
-  );
-}
-
-class NotificationPopup extends StatelessWidget {
-  const NotificationPopup({
+class NotificationBanner extends StatelessWidget {
+  const NotificationBanner({
     required this.icon,
     required this.title,
     required this.message,

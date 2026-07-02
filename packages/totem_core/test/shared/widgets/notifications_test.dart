@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/shared/totem_icons.dart';
-import 'package:totem_core/shared/widgets/popups.dart';
+import 'package:totem_core/shared/widgets/notifications.dart';
 
 void main() {
   Future<BuildContext> pumpHost(WidgetTester tester) async {
@@ -21,18 +21,19 @@ void main() {
     return hostKey.currentContext!;
   }
 
-  group('showPopup', () {
-    testWidgets('showPopup auto dismisses after configured duration', (
+  group('NotificationController.show', () {
+    testWidgets('show auto dismisses after configured duration', (
       tester,
     ) async {
       final context = await pumpHost(tester);
+      final controller = NotificationController();
 
-      showPopup(
+      controller.show(
         context,
         duration: const Duration(milliseconds: 500),
         animationDuration: const Duration(milliseconds: 120),
         builder: (_) {
-          return const NotificationPopup(
+          return const NotificationBanner(
             icon: TotemIcons.chat,
             title: 'Auto dismiss',
             message: 'This should close automatically',
@@ -50,99 +51,104 @@ void main() {
       expect(find.text('Auto dismiss'), findsNothing);
     });
 
-    testWidgets('showPopup with zero duration stays until manually dismissed', (
-      tester,
-    ) async {
-      final context = await pumpHost(tester);
+    testWidgets(
+      'show with zero duration stays until manually dismissed',
+      (tester) async {
+        final context = await pumpHost(tester);
+        final controller = NotificationController();
 
-      final dismiss = showPopup(
-        context,
-        duration: Duration.zero,
-        builder: (_) {
-          return const NotificationPopup(
-            icon: TotemIcons.chat,
-            title: 'No timer',
-            message: 'This should stay visible',
-          );
-        },
-      );
+        final dismiss = controller.show(
+          context,
+          duration: Duration.zero,
+          builder: (_) {
+            return const NotificationBanner(
+              icon: TotemIcons.chat,
+              title: 'No timer',
+              message: 'This should stay visible',
+            );
+          },
+        );
 
-      await tester.pump();
-      expect(find.text('No timer'), findsOneWidget);
+        await tester.pump();
+        expect(find.text('No timer'), findsOneWidget);
 
-      await tester.pump(const Duration(seconds: 10));
-      expect(find.text('No timer'), findsOneWidget);
+        await tester.pump(const Duration(seconds: 10));
+        expect(find.text('No timer'), findsOneWidget);
 
-      dismiss.dismissActive();
-      await tester.pumpAndSettle();
-      expect(find.text('No timer'), findsNothing);
-    });
+        dismiss.dismissActive();
+        await tester.pumpAndSettle();
+        expect(find.text('No timer'), findsNothing);
+      },
+    );
 
-    testWidgets('showPopup respects short duration and animation boundaries', (
-      tester,
-    ) async {
-      final context = await pumpHost(tester);
+    testWidgets(
+      'show respects short duration and animation boundaries',
+      (tester) async {
+        final context = await pumpHost(tester);
+        final controller = NotificationController();
 
-      showPopup(
-        context,
-        duration: const Duration(milliseconds: 120),
-        animationDuration: const Duration(milliseconds: 80),
-        builder: (_) {
-          return const NotificationPopup(
-            icon: TotemIcons.chat,
-            title: 'Timing check',
-            message: 'Validate timing behavior',
-          );
-        },
-      );
+        controller.show(
+          context,
+          duration: const Duration(milliseconds: 120),
+          animationDuration: const Duration(milliseconds: 80),
+          builder: (_) {
+            return const NotificationBanner(
+              icon: TotemIcons.chat,
+              title: 'Timing check',
+              message: 'Validate timing behavior',
+            );
+          },
+        );
 
-      await tester.pump();
-      expect(find.text('Timing check'), findsOneWidget);
+        await tester.pump();
+        expect(find.text('Timing check'), findsOneWidget);
 
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(find.text('Timing check'), findsOneWidget);
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.text('Timing check'), findsOneWidget);
 
-      await tester.pumpAndSettle();
-      expect(find.text('Timing check'), findsNothing);
-    });
+        await tester.pumpAndSettle();
+        expect(find.text('Timing check'), findsNothing);
+      },
+    );
   });
 
-  group('showDismissiblePopup', () {
-    testWidgets('showDismissiblePopup stays visible until dismiss callback', (
-      tester,
-    ) async {
-      final context = await pumpHost(tester);
+  group('NotificationController.showDismissible', () {
+    testWidgets(
+      'showDismissible stays visible until dismiss callback',
+      (tester) async {
+        final context = await pumpHost(tester);
+        final controller = NotificationController();
 
-      final dismiss = showDismissiblePopup(
-        context,
-        builder: (_) {
-          return const NotificationPopup(
-            icon: TotemIcons.pause,
-            title: 'Dismissible',
-            message: 'Manual close only',
-          );
-        },
-      );
+        final dismiss = controller.showDismissible(
+          context,
+          builder: (_) {
+            return const NotificationBanner(
+              icon: TotemIcons.pause,
+              title: 'Dismissible',
+              message: 'Manual close only',
+            );
+          },
+        );
 
-      await tester.pump();
-      expect(find.text('Dismissible'), findsOneWidget);
+        await tester.pump();
+        expect(find.text('Dismissible'), findsOneWidget);
 
-      await tester.pump(const Duration(seconds: 8));
-      expect(find.text('Dismissible'), findsOneWidget);
+        await tester.pump(const Duration(seconds: 8));
+        expect(find.text('Dismissible'), findsOneWidget);
 
-      dismiss.dismissActive();
-      await tester.pumpAndSettle();
-      expect(find.text('Dismissible'), findsNothing);
-    });
+        dismiss.dismissActive();
+        await tester.pumpAndSettle();
+        expect(find.text('Dismissible'), findsNothing);
+      },
+    );
   });
 
-  group('showNotificationPopup', () {
-    testWidgets('showNotificationPopup eventually auto dismisses', (
-      tester,
-    ) async {
+  group('NotificationController.showTimed', () {
+    testWidgets('showTimed eventually auto dismisses', (tester) async {
       final context = await pumpHost(tester);
+      final controller = NotificationController();
 
-      showNotificationPopup(
+      controller.showTimed(
         context,
         icon: TotemIcons.chat,
         title: 'Auto dismiss',
@@ -158,16 +164,13 @@ void main() {
     });
   });
 
-  group('showPermanentNotificationPopup', () {
-    testWidgets('showPermanentNotificationPopup stays until dismissed', (
-      tester,
-    ) async {
+  group('NotificationController.showPermanent', () {
+    testWidgets('showPermanent stays until dismissed', (tester) async {
       final context = await pumpHost(tester);
-      final controller = PopupController();
+      final controller = NotificationController();
 
-      final dismiss = showPermanentNotificationPopup(
+      final dismiss = controller.showPermanent(
         context,
-        controller: controller,
         icon: TotemIcons.pause,
         title: 'Permanent',
         message: 'Will stay visible',
@@ -185,14 +188,13 @@ void main() {
     });
 
     testWidgets(
-      'showPermanentNotificationPopup can be dismissed immediately after show',
+      'showPermanent can be dismissed immediately after show',
       (tester) async {
         final context = await pumpHost(tester);
-        final controller = PopupController();
+        final controller = NotificationController();
 
-        final dismiss = showPermanentNotificationPopup(
+        final dismiss = controller.showPermanent(
           context,
-          controller: controller,
           icon: TotemIcons.pause,
           title: 'Early dismiss',
           message: 'Should close quickly',
@@ -208,16 +210,13 @@ void main() {
     );
 
     testWidgets(
-      'showPermanentNotificationPopup dismiss callback is idempotent',
-      (
-        tester,
-      ) async {
+      'showPermanent dismiss callback is idempotent',
+      (tester) async {
         final context = await pumpHost(tester);
-        final controller = PopupController();
+        final controller = NotificationController();
 
-        final dismiss = showPermanentNotificationPopup(
+        final dismiss = controller.showPermanent(
           context,
-          controller: controller,
           icon: TotemIcons.pause,
           title: 'Idempotent',
           message: 'Dismiss can be called multiple times',
@@ -236,25 +235,23 @@ void main() {
     );
 
     testWidgets(
-      'PopupController queues permanent notifications one after another',
+      'NotificationController queues permanent notifications one after another',
       (tester) async {
         final context = await pumpHost(tester);
-        final controller = PopupController();
+        final controller = NotificationController();
 
-        showPermanentNotificationPopup(
+        controller.showPermanent(
           context,
-          controller: controller,
           icon: TotemIcons.pause,
           title: 'Permanent A',
-          message: 'First persistent popup',
+          message: 'First persistent notification',
         );
 
-        showPermanentNotificationPopup(
+        controller.showPermanent(
           context,
-          controller: controller,
           icon: TotemIcons.pause,
           title: 'Permanent B',
-          message: 'Second persistent popup',
+          message: 'Second persistent notification',
         );
 
         await tester.pump();
@@ -269,21 +266,19 @@ void main() {
       },
     );
 
-    testWidgets('duplicate notification popup is suppressed', (tester) async {
+    testWidgets('duplicate notification is suppressed', (tester) async {
       final context = await pumpHost(tester);
-      final controller = PopupController();
+      final controller = NotificationController();
 
-      showNotificationPopup(
+      controller.showTimed(
         context,
-        controller: controller,
         icon: TotemIcons.chat,
         title: 'Duplicate',
         message: 'Shown only once',
       );
 
-      showNotificationPopup(
+      controller.showTimed(
         context,
-        controller: controller,
         icon: TotemIcons.chat,
         title: 'Duplicate',
         message: 'Shown only once',
@@ -298,24 +293,20 @@ void main() {
     });
   });
 
-  group('PopupController', () {
-    testWidgets('PopupController dismissAll closes active popups', (
-      tester,
-    ) async {
+  group('NotificationController', () {
+    testWidgets('dismissAll closes active notifications', (tester) async {
       final context = await pumpHost(tester);
-      final controller = PopupController();
+      final controller = NotificationController();
 
-      showNotificationPopup(
+      controller.showTimed(
         context,
-        controller: controller,
         icon: TotemIcons.chat,
         title: 'Ephemeral',
         message: 'Ephemeral message',
       );
 
-      showPermanentNotificationPopup(
+      controller.showPermanent(
         context,
-        controller: controller,
         icon: TotemIcons.pause,
         title: 'Persistent',
         message: 'Persistent message',
@@ -333,30 +324,28 @@ void main() {
     });
 
     testWidgets('dismissAll on empty controller is a no-op', (tester) async {
-      final controller = PopupController();
+      final controller = NotificationController();
       controller.dismissAll();
       await tester.pump();
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('dismissAll affects only its own controller popups', (
+    testWidgets('dismissAll affects only its own controller notifications', (
       tester,
     ) async {
       final context = await pumpHost(tester);
-      final controllerA = PopupController();
-      final controllerB = PopupController();
+      final controllerA = NotificationController();
+      final controllerB = NotificationController();
 
-      showPermanentNotificationPopup(
+      controllerA.showPermanent(
         context,
-        controller: controllerA,
         icon: TotemIcons.pause,
         title: 'Controller A',
         message: 'Owned by controller A',
       );
 
-      showPermanentNotificationPopup(
+      controllerB.showPermanent(
         context,
-        controller: controllerB,
         icon: TotemIcons.pause,
         title: 'Controller B',
         message: 'Owned by controller B',
@@ -376,55 +365,53 @@ void main() {
       expect(find.text('Controller B'), findsNothing);
     });
 
-    testWidgets('auto-dismissed popup is safely unregistered from controller', (
-      tester,
-    ) async {
-      final context = await pumpHost(tester);
-      final controller = PopupController();
+    testWidgets(
+      'auto-dismissed notification is safely unregistered from controller',
+      (tester) async {
+        final context = await pumpHost(tester);
+        final controller = NotificationController();
 
-      showPopup(
-        context,
-        controller: controller,
-        duration: const Duration(milliseconds: 150),
-        animationDuration: const Duration(milliseconds: 80),
-        builder: (_) {
-          return const NotificationPopup(
-            icon: TotemIcons.chat,
-            title: 'Auto unregister',
-            message: 'Should unregister itself',
-          );
-        },
-      );
+        controller.show(
+          context,
+          duration: const Duration(milliseconds: 150),
+          animationDuration: const Duration(milliseconds: 80),
+          builder: (_) {
+            return const NotificationBanner(
+              icon: TotemIcons.chat,
+              title: 'Auto unregister',
+              message: 'Should unregister itself',
+            );
+          },
+        );
 
-      await tester.pump();
-      expect(find.text('Auto unregister'), findsOneWidget);
+        await tester.pump();
+        expect(find.text('Auto unregister'), findsOneWidget);
 
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.pumpAndSettle();
-      expect(find.text('Auto unregister'), findsNothing);
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpAndSettle();
+        expect(find.text('Auto unregister'), findsNothing);
 
-      controller.dismissAll();
-      await tester.pump();
-      expect(tester.takeException(), isNull);
-    });
+        controller.dismissAll();
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets('mixed auto and permanent lifecycle is handled correctly', (
       tester,
     ) async {
       final context = await pumpHost(tester);
-      final controller = PopupController();
+      final controller = NotificationController();
 
-      showNotificationPopup(
+      controller.showTimed(
         context,
-        controller: controller,
         icon: TotemIcons.chat,
         title: 'Ephemeral mixed',
         message: 'Auto-dismisses',
       );
 
-      showPermanentNotificationPopup(
+      controller.showPermanent(
         context,
-        controller: controller,
         icon: TotemIcons.pause,
         title: 'Permanent mixed',
         message: 'Stays visible',
@@ -448,11 +435,10 @@ void main() {
       tester,
     ) async {
       final context = await pumpHost(tester);
-      final controller = PopupController();
+      final controller = NotificationController();
 
-      final dismiss = showPermanentNotificationPopup(
+      final dismiss = controller.showPermanent(
         context,
-        controller: controller,
         icon: TotemIcons.pause,
         title: 'Race safe',
         message: 'No double remove issues',
@@ -472,8 +458,9 @@ void main() {
   });
 
   group('semantics announcements', () {
-    testWidgets('showNotificationPopup announces message', (tester) async {
+    testWidgets('showTimed announces message', (tester) async {
       final context = await pumpHost(tester);
+      final controller = NotificationController();
       final announcements = <String>[];
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -493,7 +480,7 @@ void main() {
             .setMockDecodedMessageHandler(SystemChannels.accessibility, null);
       });
 
-      showNotificationPopup(
+      controller.showTimed(
         context,
         icon: TotemIcons.chat,
         title: 'Accessible',
@@ -504,11 +491,9 @@ void main() {
       expect(announcements, contains('New message: Ephemeral semantics'));
     });
 
-    testWidgets('showPermanentNotificationPopup announces message', (
-      tester,
-    ) async {
+    testWidgets('showPermanent announces message', (tester) async {
       final context = await pumpHost(tester);
-      final controller = PopupController();
+      final controller = NotificationController();
       final announcements = <String>[];
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -528,9 +513,8 @@ void main() {
             .setMockDecodedMessageHandler(SystemChannels.accessibility, null);
       });
 
-      showPermanentNotificationPopup(
+      controller.showPermanent(
         context,
-        controller: controller,
         icon: TotemIcons.pause,
         title: 'Accessible permanent',
         message: 'Persistent semantics',
@@ -541,13 +525,13 @@ void main() {
     });
   });
 
-  group('NotificationPopup', () {
+  group('NotificationBanner', () {
     testWidgets('uses custom icon background color', (tester) async {
       const customColor = Color(0xFF336699);
 
       await tester.pumpWidget(
         const MaterialApp(
-          home: NotificationPopup(
+          home: NotificationBanner(
             icon: TotemIcons.chat,
             title: 'Custom color',
             message: 'Uses overridden icon color',
@@ -575,12 +559,13 @@ void main() {
           home: Scaffold(
             body: SizedBox(
               width: 220,
-              child: NotificationPopup(
+              child: NotificationBanner(
                 icon: TotemIcons.chat,
-                title: 'Very long popup title that must remain stable in UI',
+                title:
+                    'Very long notification title that must remain stable in UI',
                 message:
-                    'Very long popup message that should be truncated safely '
-                    'without causing overflow exceptions during layout.',
+                    'Very long notification message that should be truncated '
+                    'safely without causing overflow exceptions during layout.',
               ),
             ),
           ),

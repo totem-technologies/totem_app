@@ -48,7 +48,10 @@ class SessionStateReducer {
       case ParticipantRemoved():
         return SessionRoomState(
           connection: current.connection,
-          participants: current.participants.copyWith(removed: true),
+          participants: current.participants.copyWith(
+            removed: true,
+            removeReason: event.reason,
+          ),
           chat: current.chat,
           turn: current.turn,
         );

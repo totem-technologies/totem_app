@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -308,7 +309,7 @@ void main() {
       testWidgets('retries and recovers after an initial token failure', (
         tester,
       ) async {
-        Future<JoinResponse> Function() loadToken = () async =>
+        AsyncValueGetter<JoinResponse> loadToken = () async =>
             throw Exception('token failed');
         var tokenAttempts = 0;
 

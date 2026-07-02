@@ -143,9 +143,8 @@ void main() {
       await tester.pump(const Duration(seconds: 10));
       await tester.pumpAndSettle();
 
-      expect(find.text('Error'), findsOneWidget);
       expect(
-        find.text('Something went wrong. Please try again.'),
+        find.text('Something Went Wrong'),
         findsOneWidget,
       );
       expect(find.text('OK'), findsOneWidget);

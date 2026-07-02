@@ -9,7 +9,6 @@ import 'package:totem_core/core/api/api_client/api_client.dart'
     as mobile_api
     show RoomStatus, SessionDetailSchema, TurnState;
 import 'package:totem_core/core/errors/error_handler.dart';
-import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -197,8 +196,10 @@ class MoreOptions extends ConsumerWidget {
               if (state.roomState.status == mobile_api.RoomStatus.active)
                 Builder(
                   builder: (context) {
-                    final next =
-                        state.roomState.nextParticipantForcePassIdentity;
+                    final next = state.roomState
+                        .nextParticipantForcePassIdentity(
+                          participants: state.participantsList,
+                        );
                     final nextParticipantName = next != null
                         ? state.participantsList
                               .firstWhereOrNull((p) => p.identity == next)
@@ -213,8 +214,9 @@ class MoreOptions extends ConsumerWidget {
                           state.roomState.turnState != mobile_api.TurnState.idle
                           ? () {
                               Navigator.of(context).pop();
-                              _onNextTotemAction(
+                              onForcePass(
                                 context,
+                                nextParticipantName,
                                 currentSession,
                                 state,
                               );
@@ -322,8 +324,10 @@ class MoreOptions extends ConsumerWidget {
   Future<void> _onMuteEveryone(SessionController session) =>
       session.keeper.muteEveryone();
 
-  Future<void> _onNextTotemAction(
+  @visibleForTesting
+  Future<void> onForcePass(
     BuildContext context,
+    String? nextParticipantName,
     SessionController session,
     SessionRoomState state,
   ) async {
@@ -333,21 +337,9 @@ class MoreOptions extends ConsumerWidget {
       context: context,
       builder: (context) {
         final theme = Theme.of(context);
-        final nextParticipantIdentity =
-            state.roomState.nextParticipantIdentity!;
 
         return Consumer(
           builder: (context, ref, child) {
-            final nextParticipantName =
-                state.participantsList
-                    .firstWhereOrNull(
-                      (p) => p.identity == nextParticipantIdentity,
-                    )
-                    ?.name ??
-                ref
-                    .watch(userProfileProvider(nextParticipantIdentity))
-                    .whenData((user) => user.name)
-                    .value;
             return ConfirmationDialog(
               title: 'Are you sure?',
               confirmButtonText: 'Force pass',

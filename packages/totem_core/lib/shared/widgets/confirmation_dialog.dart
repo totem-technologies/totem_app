@@ -1,5 +1,4 @@
-import 'dart:async';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -18,8 +17,9 @@ class ConfirmationDialog extends StatefulWidget {
     this.title = 'Are you sure?',
     this.icon,
     this.iconWidget,
-    this.iconSize = 90,
+    this.iconSize = 60,
     this.type = ConfirmationDialogType.destructive,
+    this.showCancel = true,
     super.key,
   });
 
@@ -30,8 +30,9 @@ class ConfirmationDialog extends StatefulWidget {
   final String content;
   final TextStyle? contentStyle;
   final String confirmButtonText;
-  final Future<void> Function() onConfirm;
+  final AsyncCallback onConfirm;
   final ConfirmationDialogType type;
+  final bool showCancel;
 
   @override
   State<ConfirmationDialog> createState() => ConfirmationDialogState();
@@ -95,13 +96,14 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                                 ?.copyWith(color: theme.colorScheme.onSurface),
                       ),
                     ),
+                    Text(
+                      widget.content,
+                      textAlign: TextAlign.center,
+                      style: widget.contentStyle,
+                    ),
                   ],
                 ),
-                Text(
-                  widget.content,
-                  textAlign: TextAlign.center,
-                  style: widget.contentStyle,
-                ),
+
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -154,10 +156,14 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                               textAlign: TextAlign.center,
                             ),
                     ),
-                    OutlinedButton(
-                      onPressed: _loading ? null : () => context.pop(),
-                      child: const Text('Cancel', textAlign: TextAlign.center),
-                    ),
+                    if (widget.showCancel)
+                      OutlinedButton(
+                        onPressed: _loading ? null : () => context.pop(),
+                        child: const Text(
+                          'Cancel',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                   ],
                 ),
               ],

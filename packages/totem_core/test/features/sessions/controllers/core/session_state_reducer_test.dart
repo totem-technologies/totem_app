@@ -288,7 +288,10 @@ void main() {
             turn: SessionTurnState(roomState: _roomState()),
           );
 
-          final next = reducer.reduceState(current, const ParticipantRemoved());
+          final next = reducer.reduceState(
+            current,
+            const ParticipantRemoved(RemoveReason.remove),
+          );
 
           expect(next.removed, isTrue);
         });
@@ -298,7 +301,7 @@ void main() {
 
           final newState = reducer.reduceState(
             state,
-            const ParticipantRemoved(),
+            const ParticipantRemoved(RemoveReason.remove),
           );
 
           expect(newState.removed, isTrue);
@@ -318,7 +321,7 @@ void main() {
 
           state = reducer.reduceState(
             state,
-            const ParticipantRemoved(),
+            const ParticipantRemoved(RemoveReason.remove),
           );
 
           expect(state.removed, isTrue);
