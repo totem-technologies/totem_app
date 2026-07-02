@@ -147,56 +147,6 @@ final class ClientSecurity {
     const ApiSecurityRequirement({'JWTAuth': []}),
     const ApiSecurityRequirement({'SessionAuth': []}),
   ];
-  static final totemMeetingsMobileApiGetLivekitTokenRequirements =
-      <ApiSecurityRequirement>[
-        const ApiSecurityRequirement({'JWTAuth': []}),
-        const ApiSecurityRequirement({'SessionAuth': []}),
-      ];
-  static final totemMeetingsMobileApiPassTotemEndpointRequirements =
-      <ApiSecurityRequirement>[
-        const ApiSecurityRequirement({'JWTAuth': []}),
-        const ApiSecurityRequirement({'SessionAuth': []}),
-      ];
-  static final totemMeetingsMobileApiAcceptTotemEndpointRequirements =
-      <ApiSecurityRequirement>[
-        const ApiSecurityRequirement({'JWTAuth': []}),
-        const ApiSecurityRequirement({'SessionAuth': []}),
-      ];
-  static final totemMeetingsMobileApiStartRoomEndpointRequirements =
-      <ApiSecurityRequirement>[
-        const ApiSecurityRequirement({'JWTAuth': []}),
-        const ApiSecurityRequirement({'SessionAuth': []}),
-      ];
-  static final totemMeetingsMobileApiEndRoomEndpointRequirements =
-      <ApiSecurityRequirement>[
-        const ApiSecurityRequirement({'JWTAuth': []}),
-        const ApiSecurityRequirement({'SessionAuth': []}),
-      ];
-  static final totemMeetingsMobileApiMuteParticipantEndpointRequirements =
-      <ApiSecurityRequirement>[
-        const ApiSecurityRequirement({'JWTAuth': []}),
-        const ApiSecurityRequirement({'SessionAuth': []}),
-      ];
-  static final totemMeetingsMobileApiMuteAllParticipantsEndpointRequirements =
-      <ApiSecurityRequirement>[
-        const ApiSecurityRequirement({'JWTAuth': []}),
-        const ApiSecurityRequirement({'SessionAuth': []}),
-      ];
-  static final totemMeetingsMobileApiRemoveParticipantEndpointRequirements =
-      <ApiSecurityRequirement>[
-        const ApiSecurityRequirement({'JWTAuth': []}),
-        const ApiSecurityRequirement({'SessionAuth': []}),
-      ];
-  static final totemMeetingsMobileApiReorderParticipantsEndpointRequirements =
-      <ApiSecurityRequirement>[
-        const ApiSecurityRequirement({'JWTAuth': []}),
-        const ApiSecurityRequirement({'SessionAuth': []}),
-      ];
-  static final totemMeetingsMobileApiGetRoomStateEndpointRequirements =
-      <ApiSecurityRequirement>[
-        const ApiSecurityRequirement({'JWTAuth': []}),
-        const ApiSecurityRequirement({'SessionAuth': []}),
-      ];
   static final totemRoomsApiPostEventRequirements = <ApiSecurityRequirement>[
     const ApiSecurityRequirement({'JWTAuth': []}),
     const ApiSecurityRequirement({'SessionAuth': []}),
@@ -213,6 +163,11 @@ final class ClientSecurity {
     const ApiSecurityRequirement({'JWTAuth': []}),
     const ApiSecurityRequirement({'SessionAuth': []}),
   ];
+  static final totemRoomsApiDisableCameraRequirements =
+      <ApiSecurityRequirement>[
+        const ApiSecurityRequirement({'JWTAuth': []}),
+        const ApiSecurityRequirement({'SessionAuth': []}),
+      ];
   static final totemRoomsApiMuteAllRequirements = <ApiSecurityRequirement>[
     const ApiSecurityRequirement({'JWTAuth': []}),
     const ApiSecurityRequirement({'SessionAuth': []}),

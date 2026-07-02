@@ -156,6 +156,37 @@ final class RoomsApi with ApiExecutor {
     );
   }
 
+  /// Disable a participant's camera
+  ///
+  /// Keeper disables a specific participant's camera.
+  ///
+  /// `POST /api/mobile/protected/rooms/{session_slug}/disable-camera/{participant_identity}`
+  Future<ApiResult<void, RoomErrorResponse>> totemRoomsApiDisableCamera({
+    required String sessionSlug,
+    required String participantIdentity,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+
+    final request = ApiRequest(
+      method: 'POST',
+      path:
+          '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/disable-camera/${Uri.encodeComponent(participantIdentity)}',
+      headers: headers,
+      options: options,
+    );
+
+    return execute(
+      request,
+      onSuccess: (_) {},
+      onError: (response) {
+        return RoomErrorResponse.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>,
+        );
+      },
+    );
+  }
+
   /// Mute all participants
   ///
   /// Keeper mutes everyone except themselves.
