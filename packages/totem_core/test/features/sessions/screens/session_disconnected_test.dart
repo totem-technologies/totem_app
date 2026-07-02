@@ -1,63 +1,15 @@
-import 'package:flutter/material.dart' hide ConnectionState;
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 
 class MockSharedPreferences extends Mock implements SharedPreferences {}
 
 class MockInAppReview extends Mock implements InAppReview {}
-
-/// A minimal [SessionDetailSchema] for testing.
-SessionDetailSchema _createTestSession({
-  String slug = 'test-session',
-  List<NextSessionSchema> nextEvents = const [],
-}) {
-  return SessionDetailSchema(
-    slug: slug,
-    title: 'Test Session',
-    space: MobileSpaceDetailSchema(
-      slug: 'test-space',
-      title: 'Test Space',
-      imageLink: null,
-      shortDescription: 'A test space.',
-      content: '',
-      author: PublicUserSchema(
-        profileAvatarType: ProfileAvatarTypeEnum.td,
-        dateCreated: DateTime(2024),
-      ),
-      category: null,
-      subscribers: 0,
-      recurring: null,
-      price: 0,
-      nextEvents: nextEvents,
-    ),
-    content: '',
-    seatsLeft: 10,
-    duration: 60,
-    start: DateTime(2024, 6, 1),
-    attending: true,
-    open: true,
-    started: true,
-    cancelled: false,
-    joinable: false,
-    ended: true,
-    rsvpUrl: '',
-    joinUrl: null,
-    subscribeUrl: '',
-    calLink: '',
-    subscribed: false,
-    userTimezone: null,
-    meetingProvider: MeetingProviderEnum.livekit,
-  );
-}
 
 SessionRoomState _createEndedState({
   RoomStatus status = RoomStatus.ended,
@@ -107,39 +59,6 @@ SessionRoomState _createEndedState({
 
 void main() {
   group('SessionDisconnectedScreen', () {
-    Future<void> pumpDisconnectedScreen(
-      WidgetTester tester, {
-      required SessionRoomState sessionState,
-      SessionDetailSchema? session,
-      DisconnectReason? disconnectReason,
-    }) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            currentSessionStateProvider.overrideWithValue(sessionState),
-            getRecommendedSessionsProvider().overrideWith(
-              (ref) => <SessionDetailSchema>[],
-            ),
-            spacesSummaryProvider.overrideWith(
-              (ref) => throw UnimplementedError(),
-            ),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: SessionDisconnectedScreen(
-                session: session ?? _createTestSession(),
-                disconnectReason: disconnectReason,
-              ),
-            ),
-          ),
-        ),
-      );
-      // Allow post-frame callbacks to run.
-      await tester.pump();
-      // Drain the 2.75s Future.delayed timer created in initState.
-      await tester.pump(const Duration(seconds: 3));
-    }
-
     group('Reason Resolution (Unit Tests)', () {
       test('returns movedToAnotherDevice when duplicateIdentity', () {
         final result = resolveDisconnectedReason(

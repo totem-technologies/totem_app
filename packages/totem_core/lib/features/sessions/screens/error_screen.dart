@@ -38,11 +38,11 @@ class SessionErrorScreen extends StatelessWidget {
             sessionDisconnectedReason: SessionDisconnectedReason.keeperAbsent,
           );
         case ErrorCode.roomAlreadyEnded:
+        case ErrorCode.notJoinable:
         case ErrorCode.roomNotActive:
           return const SessionDisconnectedScreen(
             sessionDisconnectedReason: SessionDisconnectedReason.keeperEnded,
           );
-        case ErrorCode.notJoinable:
         case ErrorCode.notInRoom:
         case ErrorCode.notFound:
         case ErrorCode.livekitError:

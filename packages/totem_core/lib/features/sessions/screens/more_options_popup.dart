@@ -9,7 +9,6 @@ import 'package:totem_core/core/api/api_client/api_client.dart'
     as mobile_api
     show RoomStatus, SessionDetailSchema, TurnState;
 import 'package:totem_core/core/errors/error_handler.dart';
-import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';

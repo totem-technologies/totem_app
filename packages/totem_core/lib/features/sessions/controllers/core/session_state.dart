@@ -1,5 +1,4 @@
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions, logger;
 import 'package:totem_core/core/api/api_client/api_client.dart';
