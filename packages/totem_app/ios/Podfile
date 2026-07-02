@@ -33,11 +33,11 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 flutter_ios_podfile_setup
 
 # flutter_webrtc is overridden to a git commit (see root pubspec.yaml) whose
-# podspec pins WebRTC-SDK 144.7559.04, while livekit_client still pins
+# podspec pins WebRTC-SDK 144.7559.09, while livekit_client still pins
 # 144.7559.01. Both pins are exact, so CocoaPods can't resolve them. Rewrite
 # livekit's pin to match before dependency resolution runs. This edits the
 # pub-cache copy of the podspec, and re-applies on every pod install. Remove
-# once livekit_client ships a release pinning >= 144.7559.04.
+# once livekit_client ships a release pinning >= 144.7559.09.
 def patch_livekit_webrtc_pin
   podspec = File.expand_path(
     File.join('.symlinks', 'plugins', 'livekit_client', 'ios', 'livekit_client.podspec'),
@@ -45,7 +45,7 @@ def patch_livekit_webrtc_pin
   )
   return unless File.exist?(podspec)
   contents = File.read(podspec)
-  patched = contents.gsub(/'WebRTC-SDK',\s*'[0-9.]+'/, "'WebRTC-SDK', '144.7559.04'")
+  patched = contents.gsub(/'WebRTC-SDK',\s*'[0-9.]+'/, "'WebRTC-SDK', '144.7559.09'")
   return if patched == contents
   real_path = File.realpath(podspec)
   File.chmod(0644, real_path) # pub cache files are read-only
@@ -75,7 +75,7 @@ post_install do |installer|
 
         ## dart: PermissionGroup.calendar
         # 'PERMISSION_EVENTS=1',
-        
+
         ## dart: PermissionGroup.calendarFullAccess
         # 'PERMISSION_EVENTS_FULL_ACCESS=1',
 
