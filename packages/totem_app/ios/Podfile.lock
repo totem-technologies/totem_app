@@ -4,16 +4,16 @@ PODS:
     - Flutter
   - flutter_webrtc (1.4.0):
     - Flutter
-    - WebRTC-SDK (= 144.7559.04)
-  - livekit_client (2.8.0):
+    - WebRTC-SDK (= 144.7559.09)
+  - livekit_client (2.8.1):
     - Flutter
     - flutter_webrtc
-    - WebRTC-SDK (= 144.7559.04)
+    - WebRTC-SDK (= 144.7559.09)
   - screen_protector (1.5.1):
     - Flutter
     - ScreenProtectorKit (= 1.5.1)
   - ScreenProtectorKit (1.5.1)
-  - WebRTC-SDK (144.7559.04)
+  - WebRTC-SDK (144.7559.09)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
@@ -42,12 +42,12 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_foreground_task: a159d2c2173b33699ddb3e6c2a067045d7cebb89
-  flutter_webrtc: 3cea548ace6c8cdefc98a898fe0c177d680080b7
-  livekit_client: 5a531341d132c37a60e307acab09e0c4d79b0bac
+  flutter_webrtc: 3ee86aa10e0313c38c93fdb215dd86e77014f96a
+  livekit_client: 48637997ba4d696117639ac7750b3a6dc21c67a6
   screen_protector: 18c6aca2dc5d2a832f6787a5318f97f03e9d3150
   ScreenProtectorKit: 6ceb3e0808341a9bc15d175bff40dfdd4b32da71
-  WebRTC-SDK: ac5965a3cc2c258973466e3b1739ab0308bab0d0
+  WebRTC-SDK: e6006119cd730d6315d875e4a421b6cc8bb88833
 
-PODFILE CHECKSUM: 3893b3c838801665896b9025ed08b301181d20f9
+PODFILE CHECKSUM: 08736a6ec42ad8ab552cf38919aeb9a7e1e43b7f
 
 COCOAPODS: 1.16.2
