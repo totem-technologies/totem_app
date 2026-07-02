@@ -364,10 +364,9 @@ class _RisingEmojiState extends State<RisingEmoji>
       builder: (context, child) {
         final screenHeight = MediaQuery.heightOf(context);
 
-        // Vertical position (bottom to top)
-        final bottom = (screenHeight / 2) * _animation.value;
+        final maxTravelDistance = (screenHeight / 2).clamp(200.0, 400.0);
+        final bottom = maxTravelDistance * _animation.value;
 
-        // Horizontal position (sine wave for curvy effect)
         final initialLeft = widget.startX;
         final angle = _controller.value * _frequency * math.pi;
         var horizontalOffset = math.sin(angle) * _amplitude;
