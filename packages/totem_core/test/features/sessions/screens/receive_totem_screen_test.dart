@@ -261,7 +261,9 @@ void main() {
       expect(feedbackService.swipePulseCount, 1);
     });
 
-    testWidgets('shows error notification when accept totem fails', (tester) async {
+    testWidgets('shows error notification when accept totem fails', (
+      tester,
+    ) async {
       when(
         () => keeper.acceptTotem(),
       ).thenAnswer((_) async => throw Exception('accept failed'));

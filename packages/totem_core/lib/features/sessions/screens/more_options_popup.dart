@@ -213,7 +213,7 @@ class MoreOptions extends ConsumerWidget {
                           state.roomState.turnState != mobile_api.TurnState.idle
                           ? () {
                               Navigator.of(context).pop();
-                              _onNextTotemAction(
+                              onForcePass(
                                 context,
                                 currentSession,
                                 state,
@@ -322,7 +322,8 @@ class MoreOptions extends ConsumerWidget {
   Future<void> _onMuteEveryone(SessionController session) =>
       session.keeper.muteEveryone();
 
-  Future<void> _onNextTotemAction(
+  @visibleForTesting
+  Future<void> onForcePass(
     BuildContext context,
     SessionController session,
     SessionRoomState state,
@@ -333,8 +334,19 @@ class MoreOptions extends ConsumerWidget {
       context: context,
       builder: (context) {
         final theme = Theme.of(context);
-        final nextParticipantIdentity =
-            state.roomState.nextParticipantIdentity!;
+        final nextParticipantIdentity = () {
+          if (state.roomState.turnState == mobile_api.TurnState.passing) {
+            // when passing, the next participant for Force Pass is two participants ahead
+            final nextIndex =
+                state.roomState.talkingOrder.indexOf(
+                  state.roomState.currentSpeaker!,
+                ) +
+                2;
+            return state.roomState.talkingOrder[nextIndex %
+                state.roomState.talkingOrder.length];
+          }
+          return state.roomState.nextParticipantIdentity!;
+        }();
 
         return Consumer(
           builder: (context, ref, child) {
