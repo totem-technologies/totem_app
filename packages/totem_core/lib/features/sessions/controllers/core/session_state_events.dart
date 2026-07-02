@@ -32,7 +32,9 @@ class ParticipantsChanged extends SessionEvent {
 }
 
 class ParticipantRemoved extends SessionEvent {
-  const ParticipantRemoved();
+  const ParticipantRemoved(this.reason);
+
+  final RemoveReason reason;
 }
 
 class SessionErrorChanged extends SessionEvent {

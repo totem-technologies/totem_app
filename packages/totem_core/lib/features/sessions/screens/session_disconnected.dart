@@ -39,7 +39,14 @@ SessionDisconnectedReason resolveDisconnectedReason({
   }
 
   if (sessionState?.removed ?? false) {
-    return SessionDisconnectedReason.removed;
+    final removeReason = sessionState?.participants.removeReason;
+    switch (removeReason) {
+      case RemoveReason.ban:
+        return SessionDisconnectedReason.banned;
+      case RemoveReason.remove:
+      default:
+        return SessionDisconnectedReason.removed;
+    }
   }
 
   if (sessionState?.roomState.status == RoomStatus.ended &&
@@ -203,6 +210,7 @@ class _SessionDisconnectedScreenState
                       "You've been removed from this session.",
                     SessionDisconnectedReason.roomEmpty ||
                     SessionDisconnectedReason.keeperEnded => 'Session Ended',
+                    SessionDisconnectedReason.banned => "You've Been Banned",
                     SessionDisconnectedReason.other => 'Disconnected',
                   },
                   style: theme.textTheme.headlineMedium,
@@ -250,6 +258,10 @@ class _SessionDisconnectedScreenState
                   SessionDisconnectedReason.roomEmpty => const TextSpan(
                     text:
                         'Thank you for joining!\nWe hope you found the session enjoyable.',
+                  ),
+                  SessionDisconnectedReason.banned => const TextSpan(
+                    text:
+                        'Your account has been removed from this session due to a violation of our community guidelines.',
                   ),
                   SessionDisconnectedReason.other => const TextSpan(text: ''),
                 },
@@ -470,6 +482,7 @@ class _SessionDisconnectedScreenState
                                         SessionDisconnectedReason.roomEmpty =>
                                           AppTheme.mauve,
                                         SessionDisconnectedReason.removed ||
+                                        SessionDisconnectedReason.banned ||
                                         SessionDisconnectedReason.other =>
                                           Colors.red,
                                       },
@@ -487,6 +500,8 @@ class _SessionDisconnectedScreenState
                                           TotemIcons.clockCircle,
                                         SessionDisconnectedReason.roomEmpty =>
                                           TotemIcons.seats,
+                                        SessionDisconnectedReason.banned =>
+                                          TotemIcons.banned,
                                         SessionDisconnectedReason.removed ||
                                         SessionDisconnectedReason.other =>
                                           TotemIcons.x,

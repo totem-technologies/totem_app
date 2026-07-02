@@ -63,6 +63,7 @@ SessionRoomState _createEndedState({
   RoomStatus status = RoomStatus.ended,
   EndReason? endReason,
   bool removed = false,
+  RemoveReason? removeReason,
   DisconnectReason? disconnectReason,
 }) {
   return SessionRoomState(
@@ -80,6 +81,7 @@ SessionRoomState _createEndedState({
     participants: ParticipantsState(
       participants: const [],
       removed: removed,
+      removeReason: removeReason,
     ),
     chat: const ChatState(),
     turn: SessionTurnState(
@@ -355,6 +357,29 @@ void main() {
         );
 
         expect(result, SessionDisconnectedReason.removed);
+      });
+
+      test('returns banned when removeReason is ban', () {
+        final result = resolveDisconnectedReason(
+          sessionState: _createEndedState(
+            removed: true,
+            removeReason: RemoveReason.ban,
+          ),
+        );
+
+        expect(result, SessionDisconnectedReason.banned);
+      });
+
+      test('banned takes priority over endReason', () {
+        final result = resolveDisconnectedReason(
+          sessionState: _createEndedState(
+            removed: true,
+            removeReason: RemoveReason.ban,
+            endReason: EndReason.keeperEnded,
+          ),
+        );
+
+        expect(result, SessionDisconnectedReason.banned);
       });
 
       test('returns keeperAbsent when EndReason.keeperAbsent', () {
