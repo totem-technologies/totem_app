@@ -649,7 +649,8 @@ class TotemIcon extends StatelessWidget {
     final iconSize = size ?? iconTheme.size ?? 24.0;
     final iconColor = color ?? iconTheme.color ?? Colors.black;
 
-    return ExcludeSemantics(
+    return SizedBox.square(
+      dimension: iconSize,
       child: SvgPicture.string(
         icon,
         width: iconSize,
@@ -658,6 +659,7 @@ class TotemIcon extends StatelessWidget {
             ? ColorFilter.mode(iconColor, BlendMode.srcIn)
             : null,
         alignment: AlignmentDirectional.center,
+        excludeFromSemantics: true,
       ),
     );
   }

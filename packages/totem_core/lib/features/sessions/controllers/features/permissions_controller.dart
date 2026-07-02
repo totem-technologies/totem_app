@@ -84,8 +84,6 @@ class PermissionsController extends _$PermissionsController {
             notificationsPermission == NotificationPermission.granted
             ? PermissionStatus.granted
             : PermissionStatus.denied;
-      } else {
-        notificationStatus = await Permission.notification.status;
       }
       return PermissionsState(
         cameraStatus: camera,
@@ -121,11 +119,12 @@ class PermissionsController extends _$PermissionsController {
   Future<void> requestPermissions() async {
     try {
       final current = _currentOrDefault;
-      final statuses = await [
+      final permissions = <Permission>[
         Permission.camera,
         Permission.microphone,
-        Permission.notification,
-      ].request();
+        if (!(kIsWeb || kIsWasm)) Permission.notification,
+      ];
+      final statuses = await permissions.request();
       if (!ref.mounted) return;
       state = AsyncValue.data(
         current.copyWith(
@@ -204,18 +203,16 @@ class PermissionsController extends _$PermissionsController {
   }
 
   Future<void> requestNotification() async {
+    if (kIsWeb || kIsWasm) return;
+
     final current = _currentOrDefault;
     try {
       PermissionStatus status;
-      if (kIsWeb || kIsWasm) {
-        status = await Permission.notification.request();
-      } else {
-        final result =
-            await FlutterForegroundTask.requestNotificationPermission();
-        status = result == NotificationPermission.granted
-            ? PermissionStatus.granted
-            : PermissionStatus.denied;
-      }
+      final result =
+          await FlutterForegroundTask.requestNotificationPermission();
+      status = result == NotificationPermission.granted
+          ? PermissionStatus.granted
+          : PermissionStatus.denied;
 
       if (!ref.mounted) return;
       state = AsyncValue.data(current.copyWith(notificationStatus: status));

@@ -349,9 +349,11 @@ class _MediumPlusLayout extends StatelessWidget {
                 if (session != null &&
                     reason == SessionDisconnectedReason.keeperEnded)
                   _wrapConstrained(
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 300),
-                      child: _InteractiveFeedbackWidget(session: session!),
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 300),
+                        child: _InteractiveFeedbackWidget(session: session!),
+                      ),
                     ),
                   ),
                 if (!isBanned)

@@ -412,7 +412,7 @@ class ParticipantControlButton extends ConsumerWidget {
             children: [
               const TotemIcon(
                 TotemIcons.microphoneOff,
-                size: 20,
+                size: 18,
                 color: Colors.white,
               ),
               Text(
@@ -422,6 +422,31 @@ class ParticipantControlButton extends ConsumerWidget {
             ],
           ),
         ),
+      if (participant.hasVideo)
+        () {
+          final isVideoOn =
+              !(participant.videoTrackPublications.firstOrNull?.muted ?? false);
+          return PopupMenuItem<void>(
+            enabled: isVideoOn,
+            onTap: () => _onDisableParticipantCamera(context),
+            textStyle: _menuTextStyle,
+            child: Row(
+              spacing: 8,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const TotemIcon(
+                  TotemIcons.cameraOff,
+                  size: 18,
+                  color: Colors.white,
+                ),
+                Text(
+                  !isVideoOn ? 'Camera Disabled' : 'Disable camera',
+                  style: _menuTextStyle,
+                ),
+              ],
+            ),
+          );
+        }(),
       PopupMenuItem<void>(
         onTap: () => _onRemoveParticipant(context),
         textStyle: _menuTextStyle,
@@ -430,8 +455,8 @@ class ParticipantControlButton extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             TotemIcon(
-              TotemIcons.removePerson,
-              size: 20,
+              TotemIcons.x,
+              size: 18,
               color: Colors.white,
             ),
             Text('Remove', style: _menuTextStyle),
@@ -446,8 +471,8 @@ class ParticipantControlButton extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             TotemIcon(
-              TotemIcons.removePerson,
-              size: 20,
+              TotemIcons.banned,
+              size: 18,
               color: Colors.white,
             ),
             Text('Ban', style: _menuTextStyle),
@@ -478,6 +503,46 @@ class ParticipantControlButton extends ConsumerWidget {
               onConfirm: () async {
                 try {
                   await currentSession?.keeper.muteParticipant(
+                    participant.identity,
+                  );
+                } catch (error) {
+                  if (!context.mounted) return;
+                  await ErrorHandler.handleApiError(context, error);
+                } finally {
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
+                }
+              },
+              type: ConfirmationDialogType.standard,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _onDisableParticipantCamera(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      useRootNavigator: false,
+      builder: (context) {
+        return Consumer(
+          builder: (context, ref, _) {
+            final user = ref.watch(userProfileProvider(participant.identity));
+            final currentSession = ref.watch(currentSessionProvider);
+            return ConfirmationDialog(
+              iconWidget: user
+                  .whenData(
+                    (user) => UserAvatar.fromUserSchema(user, radius: 40),
+                  )
+                  .value,
+              confirmButtonText: 'Disable Camera',
+              title: "Disable ${participant.name}'s camera?",
+              content: 'They can enable their camera anytime.',
+              onConfirm: () async {
+                try {
+                  await currentSession?.keeper.disableParticipantCamera(
                     participant.identity,
                   );
                 } catch (error) {

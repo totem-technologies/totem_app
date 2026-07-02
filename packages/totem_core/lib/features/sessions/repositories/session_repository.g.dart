@@ -320,6 +320,101 @@ final class MuteEveryoneFamily extends $Family
   String toString() => r'muteEveryoneProvider';
 }
 
+/// Disables the camera of a participant.
+///
+/// An error can be thrown if the participant camera is already disabled .
+
+@ProviderFor(disableParticipantCamera)
+final disableParticipantCameraProvider = DisableParticipantCameraFamily._();
+
+/// Disables the camera of a participant.
+///
+/// An error can be thrown if the participant camera is already disabled .
+
+final class DisableParticipantCameraProvider
+    extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
+    with $FutureModifier<void>, $FutureProvider<void> {
+  /// Disables the camera of a participant.
+  ///
+  /// An error can be thrown if the participant camera is already disabled .
+  DisableParticipantCameraProvider._({
+    required DisableParticipantCameraFamily super.from,
+    required (String, String) super.argument,
+  }) : super(
+         retry: null,
+         name: r'disableParticipantCameraProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$disableParticipantCameraHash();
+
+  @override
+  String toString() {
+    return r'disableParticipantCameraProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<void> create(Ref ref) {
+    final argument = this.argument as (String, String);
+    return disableParticipantCamera(ref, argument.$1, argument.$2);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is DisableParticipantCameraProvider &&
+        other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$disableParticipantCameraHash() =>
+    r'f1200b246f251ac999e89515ad3655bf9008c0d2';
+
+/// Disables the camera of a participant.
+///
+/// An error can be thrown if the participant camera is already disabled .
+
+final class DisableParticipantCameraFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<void>, (String, String)> {
+  DisableParticipantCameraFamily._()
+    : super(
+        retry: null,
+        name: r'disableParticipantCameraProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Disables the camera of a participant.
+  ///
+  /// An error can be thrown if the participant camera is already disabled .
+
+  DisableParticipantCameraProvider call(
+    String sessionSlug,
+    String participantIdentity,
+  ) => DisableParticipantCameraProvider._(
+    argument: (sessionSlug, participantIdentity),
+    from: this,
+  );
+
+  @override
+  String toString() => r'disableParticipantCameraProvider';
+}
+
 @ProviderFor(passTotem)
 final passTotemProvider = PassTotemFamily._();
 

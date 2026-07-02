@@ -126,6 +126,26 @@ Future<void> muteEveryone(
   );
 }
 
+/// Disables the camera of a participant.
+///
+/// An error can be thrown if the participant camera is already disabled .
+@riverpod
+Future<void> disableParticipantCamera(
+  Ref ref,
+  String sessionSlug,
+  String participantIdentity,
+) async {
+  final apiService = ref.read(apiServiceProvider);
+  await RepositoryUtils.handleApiCall<void>(
+    apiCall: () => apiService.rooms.totemRoomsApiDisableCamera(
+      sessionSlug: sessionSlug,
+      participantIdentity: participantIdentity,
+    ),
+    operationName: 'disable camera',
+    retryOnNetworkError: true,
+  );
+}
+
 @riverpod
 Future<RoomState> passTotem(
   Ref ref,
