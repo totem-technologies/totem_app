@@ -368,7 +368,7 @@ class _ActionBarCameraSwitcherButtonOverlayState
             child: Padding(
               padding: const EdgeInsetsDirectional.only(bottom: 8.0),
               child: Material(
-                color: Colors.black54,
+                color: Colors.black87,
                 borderRadius: BorderRadius.circular(
                   widget.isDesktopPicker ? 20 : 100,
                 ),
@@ -564,7 +564,9 @@ class _SessionActionBarCameraButtonState
       },
       cameraPosition: CameraPosition.front,
       availableCameraDevices: _availableCameraDevices,
-      selectedCameraDeviceId: session.devices.selectedCameraDeviceId,
+      selectedCameraDeviceId:
+          session.devices.selectedCameraDeviceId ??
+          _availableCameraDevices.firstOrNull?.deviceId,
       onCameraPositionChanged: (_) {},
       onCameraDeviceSelected: (device) async {
         await session.devices.selectCameraDevice(device);

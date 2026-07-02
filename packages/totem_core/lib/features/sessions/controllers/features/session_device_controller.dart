@@ -199,6 +199,7 @@ class SessionDeviceController extends _$SessionDeviceController {
   }
 
   String? get selectedCameraDeviceId {
+    String? id;
     final room = _room;
     final userTrack = room?.localParticipant
         ?.getTrackPublications()
@@ -206,9 +207,9 @@ class SessionDeviceController extends _$SessionDeviceController {
         ?.track;
     if (userTrack?.currentOptions != null &&
         userTrack?.currentOptions is CameraCaptureOptions) {
-      return (userTrack!.currentOptions as CameraCaptureOptions).deviceId;
+      id ??= (userTrack!.currentOptions as CameraCaptureOptions).deviceId;
     }
-    return room
+    return id ??= room
         // ignore: invalid_use_of_internal_member
         ?.engine
         .roomOptions
