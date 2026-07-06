@@ -236,7 +236,7 @@ void main() {
         authState: AuthState.unauthenticated(),
       );
 
-      expect(find.text('Long press to send a quick message'), findsOneWidget);
+      expect(find.text('Tap to send a quick message'), findsOneWidget);
       expect(find.text('No messages yet'), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
       expect(find.byType(IconButton), findsOneWidget);
@@ -353,7 +353,7 @@ void main() {
       expect(find.text('Hello chat'), findsNothing);
     });
 
-    testWidgets('sends a quick message on long press', (tester) async {
+    testWidgets('sends a quick message on tap on desktop', (tester) async {
       await pumpChatSheet(
         tester,
         isKeeper: true,
@@ -362,7 +362,7 @@ void main() {
         authState: AuthState.unauthenticated(),
       );
 
-      await tester.longPress(find.text('Please mute your mic'));
+      await tester.tap(find.text('Please mute your mic'));
       await tester.pump();
 
       verify(() => messaging.sendMessage('Please mute your mic')).called(1);
