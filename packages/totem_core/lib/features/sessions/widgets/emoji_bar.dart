@@ -317,7 +317,15 @@ class _RisingEmojiState extends State<RisingEmoji>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: widget.duration);
+    // Preserve the real duration when the OS "reduce motion" setting is on;
+    // otherwise the controller runs at 5% of its duration, which also cuts
+    // short the corner emoji on the participant card, whose visibility is
+    // tied to this animation completing.
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+      animationBehavior: AnimationBehavior.preserve,
+    );
 
     _animation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
@@ -359,6 +367,12 @@ class _RisingEmojiState extends State<RisingEmoji>
 
   @override
   Widget build(BuildContext context) {
+    // With "reduce motion" enabled, skip the float animation entirely. The
+    // controller still runs so onCompleted fires after the normal duration,
+    // keeping the corner emoji on the participant card visible as usual.
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return const SizedBox.shrink();
+    }
     return AnimatedBuilder(
       animation: Listenable.merge([_animation, _opacityAnimation]),
       builder: (context, child) {
