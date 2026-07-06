@@ -779,11 +779,7 @@ class _SessionFeedbackWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Flexible(
-            fit: switch (state) {
-              ThumbState.up => FlexFit.tight,
-              ThumbState.down => FlexFit.tight,
-              ThumbState.none => FlexFit.loose,
-            },
+            fit: FlexFit.tight,
             child: AutoSizeText(
               switch (state) {
                 ThumbState.none => 'How was your experience?',
@@ -797,43 +793,34 @@ class _SessionFeedbackWidget extends StatelessWidget {
               ),
             ),
           ),
-          if (state == ThumbState.none)
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                spacing: 10,
-                children: [
-                  _SessionFeedbackButton(
-                    icon: const TotemIcon(TotemIcons.thumbUp),
-                    onPressed: switch (state) {
-                      ThumbState.up => () {},
-                      _ => onThumbUpPressed,
-                    },
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              spacing: 10,
+              children: [
+                _SessionFeedbackButton(
+                  outlined: state == ThumbState.down,
+                  icon: TotemIcon(
+                    state == ThumbState.up
+                        ? TotemIcons.thumbUpFilled
+                        : TotemIcons.thumbUp,
                   ),
-                  _SessionFeedbackButton(
-                    icon: const TotemIcon(TotemIcons.thumbDown),
-                    onPressed: switch (state) {
-                      ThumbState.down => () {},
-                      _ => onThumbDownPressed,
-                    },
-                  ),
-                ],
-              ),
-            )
-          else
-            IgnorePointer(
-              child: _SessionFeedbackButton(
-                outlined: true,
-                icon: TotemIcon(
-                  switch (state) {
-                    ThumbState.up => TotemIcons.thumbUpFilled,
-                    ThumbState.down => TotemIcons.thumbDownFilled,
-                    _ => TotemIcons.thumbUp,
-                  },
+                  onPressed: state == ThumbState.none ? onThumbUpPressed : null,
                 ),
-                onPressed: () {},
-              ),
+                _SessionFeedbackButton(
+                  outlined: state == ThumbState.up,
+                  icon: TotemIcon(
+                    state == ThumbState.down
+                        ? TotemIcons.thumbDownFilled
+                        : TotemIcons.thumbDown,
+                  ),
+                  onPressed: state == ThumbState.none
+                      ? onThumbDownPressed
+                      : null,
+                ),
+              ],
             ),
+          ),
         ],
       ),
     );
@@ -848,7 +835,7 @@ class _SessionFeedbackButton extends StatelessWidget {
   });
 
   final Widget icon;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool outlined;
 
   @override
