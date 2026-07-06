@@ -108,6 +108,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       // await showDownloadMobileAppDialog(context);
       // if (!mounted) return;
 
+      // TODO(totem): Review the permissions request logic across different platforms.
+
       final granted = await showPermissionsRequestSheet(context);
       if (!mounted) return;
 

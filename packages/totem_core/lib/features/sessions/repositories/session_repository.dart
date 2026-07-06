@@ -128,7 +128,7 @@ Future<void> muteEveryone(
 
 /// Disables the camera of a participant.
 ///
-/// An error can be thrown if the participant camera is already disabled .
+/// An error can be thrown if the participant camera is already disabled.
 @riverpod
 Future<void> disableParticipantCamera(
   Ref ref,

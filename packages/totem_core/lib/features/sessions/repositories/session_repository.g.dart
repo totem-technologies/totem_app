@@ -322,21 +322,21 @@ final class MuteEveryoneFamily extends $Family
 
 /// Disables the camera of a participant.
 ///
-/// An error can be thrown if the participant camera is already disabled .
+/// An error can be thrown if the participant camera is already disabled.
 
 @ProviderFor(disableParticipantCamera)
 final disableParticipantCameraProvider = DisableParticipantCameraFamily._();
 
 /// Disables the camera of a participant.
 ///
-/// An error can be thrown if the participant camera is already disabled .
+/// An error can be thrown if the participant camera is already disabled.
 
 final class DisableParticipantCameraProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
     with $FutureModifier<void>, $FutureProvider<void> {
   /// Disables the camera of a participant.
   ///
-  /// An error can be thrown if the participant camera is already disabled .
+  /// An error can be thrown if the participant camera is already disabled.
   DisableParticipantCameraProvider._({
     required DisableParticipantCameraFamily super.from,
     required (String, String) super.argument,
@@ -386,7 +386,7 @@ String _$disableParticipantCameraHash() =>
 
 /// Disables the camera of a participant.
 ///
-/// An error can be thrown if the participant camera is already disabled .
+/// An error can be thrown if the participant camera is already disabled.
 
 final class DisableParticipantCameraFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, (String, String)> {
@@ -401,7 +401,7 @@ final class DisableParticipantCameraFamily extends $Family
 
   /// Disables the camera of a participant.
   ///
-  /// An error can be thrown if the participant camera is already disabled .
+  /// An error can be thrown if the participant camera is already disabled.
 
   DisableParticipantCameraProvider call(
     String sessionSlug,
