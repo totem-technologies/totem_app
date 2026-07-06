@@ -81,6 +81,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   final GlobalKey _loadingScreenKey = GlobalKey();
 
+  bool _permissionsGranted = false;
+
   @override
   void initState() {
     super.initState();
@@ -110,9 +112,19 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       if (!mounted) return;
 
       if (!granted) {
+        if (kIsWeb || kIsWasm) {
+          // On web, show a message instead of popping to avoid
+          // "nothing to pop" crashes when this is the initial route.
+          final retryGranted = await showWebPermissionsDeniedDialog(context);
+          if (!mounted) return;
+          setState(() => _permissionsGranted = retryGranted);
+          return;
+        }
         context.pop();
         return;
       }
+
+      setState(() => _permissionsGranted = true);
 
       if (!kIsWeb && Platform.isAndroid) {
         if (!mounted) return;
@@ -137,6 +149,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       joinCard: JoinTransitionCard(
         margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
         keepActionLoadingOnSuccess: true,
+        enabled: _permissionsGranted,
         onActionPressed: () async {
           await _joinRoom();
           return _hasRequestedJoin;

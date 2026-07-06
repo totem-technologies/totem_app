@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -87,6 +88,115 @@ class BackgroundActivityDialog extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Shows a dialog on web when browser permissions are denied, allowing
+/// the user to retry granting permissions or go back.
+///
+/// Returns true if permissions were eventually granted, false if the
+/// user chose to go back without granting.
+Future<bool> showWebPermissionsDeniedDialog(BuildContext context) async {
+  final container = ProviderScope.containerOf(context, listen: false);
+
+  if (!context.mounted) return false;
+
+  final tryAgain = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      final theme = Theme.of(context);
+      return AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
+        contentPadding: const EdgeInsets.all(24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const TotemIcon(
+              TotemIcons.lock,
+              size: 45,
+              color: AppTheme.mauve,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Permissions Required',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Totem needs access to your camera and microphone '
+              'for live sessions. Please allow these permissions '
+              'in your browser settings and try again.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  textStyle: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                child: const Text(
+                  'Try Again',
+                  softWrap: false,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Go Back'),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+
+  if (!context.mounted) return false;
+
+  if (tryAgain != true) {
+    if (context.canPop()) {
+      context.pop();
+    }
+    return false;
+  }
+
+  // Re-request permissions
+  final controller = container.read(
+    permissionsControllerProvider.notifier,
+  );
+  await controller.requestPermissions();
+
+  if (!context.mounted) return false;
+
+  final statuses = await controller.currentStatuses;
+
+  if (!context.mounted) return false;
+
+  if (statuses.requiredPermissionsGranted) {
+    return true;
+  }
+
+  // Permissions still not granted - show dialog again.
+  return showWebPermissionsDeniedDialog(context);
 }
 
 Future<bool> showPermissionsRequestSheet(BuildContext context) async {
