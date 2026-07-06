@@ -98,7 +98,7 @@ class NotificationsService {
       // Set up local notifications
       {
         const initializationSettings = InitializationSettings(
-          android: AndroidInitializationSettings('@drawable/ic_notification'),
+          android: AndroidInitializationSettings('ic_notification'),
           iOS: DarwinInitializationSettings(
             requestAlertPermission: false,
             requestBadgePermission: false,

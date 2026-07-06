@@ -265,6 +265,7 @@ class SessionController extends _$SessionController {
   }
 
   void _onDisconnected() {
+    _disableLocalMediaTracks();
     _dispatch(
       const ConnectionChanged(
         RoomConnectionState.disconnected,
@@ -291,8 +292,16 @@ class SessionController extends _$SessionController {
 
   void _onRoomChanges([RoomState? newSessionState]) {
     _updateParticipantsList();
+
+    void handleStateChange(RoomState state) {
+      if (state.status == RoomStatus.ended) {
+        _disableLocalMediaTracks();
+      }
+      _dispatch(RoomStateChanged(state));
+    }
+
     if (newSessionState != null) {
-      _dispatch(RoomStateChanged(newSessionState));
+      handleStateChange(newSessionState);
     } else {
       final metadataResult = resolveMetadataState(
         metadata: room?.metadata,
@@ -300,7 +309,7 @@ class SessionController extends _$SessionController {
       );
       _lastMetadata = metadataResult.lastMetadata;
       if (metadataResult.roomState != null) {
-        _dispatch(RoomStateChanged(metadataResult.roomState!));
+        handleStateChange(metadataResult.roomState!);
       }
     }
 

@@ -18,6 +18,7 @@ class ActionSliderButton extends StatefulWidget {
     this.backgroundColor,
     this.focusNode,
     this.autofocus = true,
+    this.enabled = true,
     super.key,
   });
 
@@ -28,6 +29,7 @@ class ActionSliderButton extends StatefulWidget {
   final Color? backgroundColor;
   final FocusNode? focusNode;
   final bool autofocus;
+  final bool enabled;
 
   @override
   State<ActionSliderButton> createState() => _ActionSliderButtonState();
@@ -75,6 +77,7 @@ class _ActionSliderButtonState extends State<ActionSliderButton> {
         isLoading: widget.isLoading,
         backgroundColor: widget.backgroundColor,
         autofocus: widget.autofocus,
+        enabled: widget.enabled,
       );
     }
 
@@ -86,6 +89,7 @@ class _ActionSliderButtonState extends State<ActionSliderButton> {
       backgroundColor: widget.backgroundColor,
       focusNode: widget.focusNode,
       autofocus: widget.autofocus,
+      enabled: widget.enabled,
     );
   }
 }
@@ -100,6 +104,7 @@ class ActionButton extends StatefulWidget {
     this.backgroundColor,
     this.focusNode,
     this.autofocus = true,
+    this.enabled = true,
     super.key,
   });
 
@@ -110,6 +115,7 @@ class ActionButton extends StatefulWidget {
   final Color? backgroundColor;
   final FocusNode? focusNode;
   final bool autofocus;
+  final bool enabled;
 
   @override
   State<ActionButton> createState() => _ActionButtonState();
@@ -119,7 +125,7 @@ class _ActionButtonState extends State<ActionButton> {
   var _isLoading = false;
 
   Future<void> _onPressed() async {
-    if (widget.isLoading == true || _isLoading) return;
+    if (!widget.enabled || widget.isLoading == true || _isLoading) return;
 
     setState(() {
       _isLoading = true;
@@ -153,7 +159,7 @@ class _ActionButtonState extends State<ActionButton> {
       child: ElevatedButton(
         autofocus: widget.autofocus,
         focusNode: widget.focusNode,
-        onPressed: effectiveLoading ? null : _onPressed,
+        onPressed: (!widget.enabled || effectiveLoading) ? null : _onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,
@@ -186,6 +192,7 @@ class ActionSlider extends StatefulWidget {
     this.isLoading,
     this.backgroundColor,
     this.autofocus = true,
+    this.enabled = true,
     super.key,
   });
 
@@ -195,6 +202,7 @@ class ActionSlider extends StatefulWidget {
   final bool? isLoading;
   final Color? backgroundColor;
   final bool autofocus;
+  final bool enabled;
 
   @override
   State<ActionSlider> createState() => _ActionSliderState();
@@ -210,7 +218,7 @@ class _ActionSliderState extends State<ActionSlider> {
     DragUpdateDetails details,
     double maxSlideDistance,
   ) async {
-    if (_isCompleted || _isLoading) return;
+    if (_isCompleted || _isLoading || !widget.enabled) return;
 
     setState(() {
       _dragPosition += details.delta.dx;
@@ -233,7 +241,7 @@ class _ActionSliderState extends State<ActionSlider> {
     DragEndDetails details,
     double maxSlideDistance,
   ) {
-    if (_isCompleted || _isLoading) return;
+    if (_isCompleted || _isLoading || !widget.enabled) return;
 
     final progress = _dragPosition / maxSlideDistance;
     final velocity = details.velocity.pixelsPerSecond.dx;
@@ -312,7 +320,10 @@ class _ActionSliderState extends State<ActionSlider> {
         return CallbackShortcuts(
           bindings: <ShortcutActivator, VoidCallback>{
             const SingleActivator(LogicalKeyboardKey.space): () {
-              if (!_isCompleted && !_isLoading && widget.isLoading != true) {
+              if (widget.enabled &&
+                  !_isCompleted &&
+                  !_isLoading &&
+                  widget.isLoading != true) {
                 setState(() {
                   _dragPosition = maxSlideDistance;
                   _isCompleted = true;
@@ -326,75 +337,82 @@ class _ActionSliderState extends State<ActionSlider> {
           child: Focus(
             autofocus: widget.autofocus,
             child: GestureDetector(
-              onPanUpdate: (details) => _onPanUpdate(details, maxSlideDistance),
-              onPanEnd: (details) => _onPanEnd(details, maxSlideDistance),
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 50),
-                decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  alignment: AlignmentDirectional.center,
-                  children: [
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.symmetric(
-                          horizontal: thumbSize * 1.25,
-                        ),
-                        child: AutoSizeText(
-                          widget.text,
-                          style: textStyle?.copyWith(
-                            color: foregroundColor.withValues(
-                              alpha: 1.0 - progress,
-                            ),
+              onPanUpdate: widget.enabled
+                  ? (details) => _onPanUpdate(details, maxSlideDistance)
+                  : null,
+              onPanEnd: widget.enabled
+                  ? (details) => _onPanEnd(details, maxSlideDistance)
+                  : null,
+              child: Opacity(
+                opacity: widget.enabled ? 1.0 : 0.5,
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 50),
+                  decoration: BoxDecoration(
+                    color: backgroundColor,
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: AlignmentDirectional.center,
+                    children: [
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: thumbSize * 1.25,
                           ),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                        ),
-                      ),
-                    ),
-                    AnimatedPositioned(
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      left: padding + _dragPosition,
-                      top: padding,
-                      bottom: padding,
-                      child: Container(
-                        width: thumbSize,
-                        decoration: BoxDecoration(
-                          color: foregroundColor,
-                          borderRadius: BorderRadius.circular(25),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: widget.isLoading == true || _isLoading
-                            ? Center(
-                                child: Container(
-                                  width: 24,
-                                  height: 24,
-                                  alignment: AlignmentDirectional.center,
-                                  child:
-                                      const CircularProgressIndicator.adaptive(
-                                        strokeWidth: 1.5,
-                                        strokeCap: StrokeCap.round,
-                                      ),
-                                ),
-                              )
-                            : Icon(
-                                Icons.arrow_forward_ios,
-                                size: 20,
-                                color: backgroundColor,
+                          child: AutoSizeText(
+                            widget.text,
+                            style: textStyle?.copyWith(
+                              color: foregroundColor.withValues(
+                                alpha: 1.0 - progress,
                               ),
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                      AnimatedPositioned(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOut,
+                        left: padding + _dragPosition,
+                        top: padding,
+                        bottom: padding,
+                        child: Container(
+                          width: thumbSize,
+                          decoration: BoxDecoration(
+                            color: foregroundColor,
+                            borderRadius: BorderRadius.circular(25),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: widget.isLoading == true || _isLoading
+                              ? Center(
+                                  child: Container(
+                                    width: 24,
+                                    height: 24,
+                                    alignment: AlignmentDirectional.center,
+                                    child:
+                                        const CircularProgressIndicator.adaptive(
+                                          strokeWidth: 1.5,
+                                          strokeCap: StrokeCap.round,
+                                        ),
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 20,
+                                  color: backgroundColor,
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

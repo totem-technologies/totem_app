@@ -187,9 +187,15 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
     await _disposePreviewVideoTrack();
 
     try {
-      _previewVideoTrack = await widget.previewTrackFactory.createVideoTrack(
+      final track = await widget.previewTrackFactory.createVideoTrack(
         _cameraOptions,
       );
+      if (!mounted) {
+        await track?.stop();
+        await track?.dispose();
+        return;
+      }
+      _previewVideoTrack = track;
       await _previewVideoTrack?.start();
     } catch (error, stackTrace) {
       _isCameraOn = false;
@@ -207,7 +213,13 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
     await _disposePreviewAudioTrack();
 
     try {
-      _previewAudioTrack = await widget.previewTrackFactory.createAudioTrack();
+      final track = await widget.previewTrackFactory.createAudioTrack();
+      if (!mounted) {
+        await track?.stop();
+        await track?.dispose();
+        return null;
+      }
+      _previewAudioTrack = track;
       await _previewAudioTrack?.enable();
       await _previewAudioTrack?.start();
       return _previewAudioTrack;
