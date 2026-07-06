@@ -99,6 +99,20 @@ class EmojiReactions extends _$EmojiReactions {
     state = state
         .map((r) => r == reaction ? r.copyWith(displayed: true) : r)
         .toList();
+
+    // While the app is hidden (e.g. a backgrounded browser tab) no frames
+    // are rendered, so overlay entries would accumulate unbuilt and all
+    // animate at once on refocus. Nobody can see the reaction anyway.
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    final isHidden =
+        lifecycle == AppLifecycleState.hidden ||
+        lifecycle == AppLifecycleState.paused ||
+        lifecycle == AppLifecycleState.detached;
+    if (isHidden) {
+      state = state.where((e) => e != reaction).toList();
+      return;
+    }
+
     try {
       await presentEmojiReaction(
         context,

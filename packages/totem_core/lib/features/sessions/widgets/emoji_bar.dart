@@ -175,6 +175,7 @@ Future<void> presentEmojiReaction(
 
   final completer = Completer<void>();
   OverlayEntry? entry;
+  var inserted = false;
 
   try {
     entry = OverlayEntry(
@@ -216,6 +217,7 @@ Future<void> presentEmojiReaction(
     );
 
     overlay.insert(entry!);
+    inserted = true;
     await completer.future.timeout(
       const Duration(seconds: 3),
       onTimeout: () => {},
@@ -227,8 +229,11 @@ Future<void> presentEmojiReaction(
       message: 'Failed to show emoji reaction: $emoji',
     );
   } finally {
-    if (entry?.mounted ?? false) {
-      entry?.remove();
+    // An entry inserted while no frames are rendered (e.g. hidden browser
+    // tab) never mounts, but still sits in the overlay — remove it whenever
+    // it was inserted, not only when it is mounted.
+    if (inserted && entry != null) {
+      entry!.remove();
       entry = null;
     }
   }
