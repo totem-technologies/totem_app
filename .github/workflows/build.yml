@@ -99,4 +99,5 @@ jobs:
 
       - name: Build IPA
         working-directory: ./packages/totem_app
-        run: flutter build ipa --verbose --no-codesign --flavor ${{ matrix.flavor }}
+        # Wrapper retries transient Swift Package Manager download failures.
+        run: ../../.github/scripts/retry-flutter-build.sh flutter build ipa --verbose --no-codesign --flavor ${{ matrix.flavor }}
