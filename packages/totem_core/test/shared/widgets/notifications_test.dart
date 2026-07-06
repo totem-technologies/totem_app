@@ -457,6 +457,84 @@ void main() {
     });
   });
 
+  group('hidden app lifecycle', () {
+    testWidgets('dismissActive removes a banner that was never built', (
+      tester,
+    ) async {
+      final context = await pumpHost(tester);
+      final controller = NotificationController();
+
+      final request = controller.showTimed(
+        context,
+        icon: TotemIcons.chat,
+        title: 'Never built',
+        message: 'Dismissed before the first frame',
+      );
+
+      // No pump between show and dismiss: the overlay entry is inserted but
+      // not built yet, like when the tab is hidden and no frames render.
+      request.dismissActive();
+
+      await tester.pump();
+      expect(find.text('Never built'), findsNothing);
+    });
+
+    testWidgets('showTimed drops the banner while the app is hidden', (
+      tester,
+    ) async {
+      final context = await pumpHost(tester);
+      final controller = NotificationController();
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      try {
+        controller.showTimed(
+          context,
+          icon: TotemIcons.chat,
+          title: 'Hidden timed',
+          message: 'Stale by the time the app is visible again',
+        );
+      } finally {
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+      }
+
+      await tester.pump();
+      expect(find.text('Hidden timed'), findsNothing);
+    });
+
+    testWidgets(
+      'showPermanent while hidden is still visible when the app returns',
+      (tester) async {
+        final context = await pumpHost(tester);
+        final controller = NotificationController();
+
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.hidden,
+        );
+        try {
+          controller.showPermanent(
+            context,
+            icon: TotemIcons.pause,
+            title: 'Hidden permanent',
+            message: 'Should survive until the app is visible again',
+          );
+        } finally {
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+        }
+
+        await tester.pump();
+        expect(find.text('Hidden permanent'), findsOneWidget);
+
+        controller.dismissAll();
+        await tester.pumpAndSettle();
+        expect(find.text('Hidden permanent'), findsNothing);
+      },
+    );
+  });
+
   group('semantics announcements', () {
     testWidgets('showTimed announces message', (tester) async {
       final context = await pumpHost(tester);
