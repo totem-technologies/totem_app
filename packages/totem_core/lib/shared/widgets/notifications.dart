@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/utils.dart';
 
 const _defaultNotificationAnimationDuration = Duration(milliseconds: 600);
 const _defaultNotificationDuration = Duration(milliseconds: 2800);
@@ -135,7 +136,10 @@ class NotificationRequest {
       return;
     }
 
-    if (overlayEntry.mounted) {
+    // An entry inserted while no frames were rendered (e.g. a hidden
+    // browser tab) never mounts but still sits in the overlay — remove it
+    // whenever it was inserted, not only when it is mounted.
+    if (_isShown) {
       overlayEntry.remove();
     }
     close();
@@ -277,6 +281,15 @@ class NotificationController {
       },
       onShown: onShown,
     );
+
+    // Timed banners that would present while the app is hidden (e.g. a
+    // backgrounded browser tab) are stale by the time frames render again,
+    // so drop them. Zero-duration banners stay queued so they are still
+    // visible when the app returns to the foreground.
+    if (duration > Duration.zero && isAppHidden()) {
+      request.cancelQueued();
+      return request;
+    }
 
     _enqueue(request);
 
