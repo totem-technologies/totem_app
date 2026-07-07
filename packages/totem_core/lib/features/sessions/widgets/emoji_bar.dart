@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
@@ -218,6 +219,11 @@ Future<void> presentEmojiReaction(
 
     overlay.insert(entry!);
     inserted = true;
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      emoji,
+      Directionality.of(context),
+    );
     await completer.future.timeout(
       const Duration(seconds: 3),
       onTimeout: () => {},
