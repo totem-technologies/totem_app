@@ -76,6 +76,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     _disableScreenProtection();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _batterySubscription?.cancel();
+    TotemRouter.instance.setTabCloseConfirmationEnabled(false);
     super.dispose();
   }
 

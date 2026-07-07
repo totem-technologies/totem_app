@@ -50,7 +50,7 @@ class WebTotemRouter extends TotemRouter {
     );
   }
 
-  void _beforeUnloadListener(web.Event event) {
+  static void _beforeUnloadListener(web.Event event) {
     final beforeUnloadEvent = event as web.BeforeUnloadEvent;
     beforeUnloadEvent.returnValue = 'Are you sure you want to leave?';
   }

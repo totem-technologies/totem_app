@@ -516,5 +516,7 @@ class AppTotemRouter extends TotemRouter {
   }
 
   @override
-  void setTabCloseConfirmationEnabled(_) {}
+  void setTabCloseConfirmationEnabled(bool enabled) {
+    // TODO(totem): Enable picture in picture
+  }
 }

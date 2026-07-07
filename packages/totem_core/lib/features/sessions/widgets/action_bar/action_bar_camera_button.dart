@@ -66,6 +66,7 @@ class _ActionBarCameraSwitcherButtonState
       if (_isOpen) {
         _portalController.hide();
         _isOpen = false;
+        _menuController.reverse();
       }
     }
   }

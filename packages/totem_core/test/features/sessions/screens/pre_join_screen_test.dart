@@ -21,6 +21,7 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart'
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
+import 'package:totem_core/shared/router.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../mocks/flutter_foreground_task_mock.dart';
@@ -162,6 +163,7 @@ void main() {
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
     setupAppConfig();
+    TotemRouter.instance = FakeTotemRouter();
     silenceLogger();
     setupMockFlutterForegroundTask();
     setupMockPermissionHandler();
