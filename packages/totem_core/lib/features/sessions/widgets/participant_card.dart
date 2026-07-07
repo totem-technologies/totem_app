@@ -397,9 +397,7 @@ class ParticipantControlButton extends ConsumerWidget {
     );
   }
 
-  List<PopupMenuEntry<void>> _buildMenuItems(
-    BuildContext context,
-  ) {
+  List<PopupMenuEntry<void>> _buildMenuItems(BuildContext context) {
     return [
       if (participant.hasAudio)
         PopupMenuItem<void>(

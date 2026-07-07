@@ -514,4 +514,7 @@ class AppTotemRouter extends TotemRouter {
       errorBuilder: (context, state) => const ErrorScreen(),
     );
   }
+
+  @override
+  void setTabCloseConfirmationEnabled(_) {}
 }
