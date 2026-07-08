@@ -22,7 +22,7 @@ class ViewportResolver extends StatelessWidget {
   static ViewportKind getViewportKind(BuildContext context) {
     final shortestSide = MediaQuery.sizeOf(context).shortestSide;
 
-    if (shortestSide < 600) {
+    if (shortestSide <= 600) {
       final orientation = MediaQuery.orientationOf(context);
       return switch (orientation) {
         Orientation.portrait => ViewportKind.smallPortrait,

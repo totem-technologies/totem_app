@@ -76,6 +76,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     _disableScreenProtection();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _batterySubscription?.cancel();
+    TotemRouter.instance.setTabCloseConfirmationEnabled(false);
     super.dispose();
   }
 
@@ -432,9 +433,15 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
             cuesService.playSessionTransitionCue();
           }
 
-          if (next == RoomStatus.ended) {
-            _clearSessionNotifications();
-            _clearTimeRemainingWarningTimer();
+          switch (next) {
+            case RoomStatus.waitingRoom:
+              break;
+            case RoomStatus.active:
+              TotemRouter.instance.setTabCloseConfirmationEnabled(true);
+            case RoomStatus.ended:
+              _clearSessionNotifications();
+              _clearTimeRemainingWarningTimer();
+              TotemRouter.instance.setTabCloseConfirmationEnabled(false);
           }
         },
       )

@@ -39,7 +39,9 @@ class _ActionBarCameraSwitcherButtonState
     extends State<ActionBarCameraSwitcherButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _menuController;
-  OverlayEntry? entry;
+  final _portalController = OverlayPortalController();
+  final GlobalKey _buttonKey = GlobalKey();
+  var _isOpen = false;
 
   @override
   void initState() {
@@ -53,7 +55,6 @@ class _ActionBarCameraSwitcherButtonState
   @override
   void dispose() {
     _menuController.dispose();
-    entry?.remove();
     super.dispose();
   }
 
@@ -62,62 +63,25 @@ class _ActionBarCameraSwitcherButtonState
     super.didUpdateWidget(oldWidget);
     if (oldWidget.availableCameraDevices != widget.availableCameraDevices ||
         oldWidget.selectedCameraDeviceId != widget.selectedCameraDeviceId) {
-      closeCameraPositionOptions();
+      if (_isOpen) {
+        _portalController.hide();
+        _isOpen = false;
+        _menuController.reverse();
+      }
     }
   }
 
-  Future<void> showCameraPositionOptions(BuildContext context) {
-    final overlay = Overlay.of(context);
-
-    final renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox == null) return Future.value();
-    final overlaySize = overlay.context.size!;
-    final target = renderBox.localToGlobal(Offset.zero) & renderBox.size;
-    final position = RelativeRect.fromLTRB(
-      target.left,
-      target.top,
-      overlaySize.width - target.right,
-      overlaySize.height - target.bottom,
-    );
-
-    final completer = Completer<void>();
-
-    void dismissOverlay() {
-      if (entry?.mounted == true) {
-        entry?.remove();
-      }
-      if (!completer.isCompleted) {
-        completer.complete();
-      }
-      entry = null;
-    }
-
-    entry = OverlayEntry(
-      builder: (context) {
-        final isDesktopPicker = kIsWeb || lkPlatformIsDesktop();
-        return ActionBarCameraSwitcherButtonOverlay(
-          isDesktopPicker: isDesktopPicker,
-          initialCameraPosition: widget.cameraPosition,
-          availableCameraDevices: widget.availableCameraDevices,
-          selectedCameraDeviceId: widget.selectedCameraDeviceId,
-          onCameraPositionChanged: widget.onCameraPositionChanged,
-          onCameraDeviceSelected: widget.onCameraDeviceSelected,
-          onDismissOverlay: dismissOverlay,
-          position: Offset(
-            position.left,
-            overlaySize.height - position.top,
-          ),
-        );
-      },
-    );
-    overlay.insert(entry!);
-    return completer.future;
+  void _showCameraPositionOptions() {
+    if (_isOpen) return;
+    _menuController.forward();
+    setState(() => _isOpen = true);
+    _portalController.show();
   }
 
-  Future<void> closeCameraPositionOptions() async {
-    await _menuController.reverse();
-    entry?.remove();
-    entry = null;
+  void _dismissOverlay() {
+    _menuController.reverse();
+    _portalController.hide();
+    if (mounted) setState(() => _isOpen = false);
   }
 
   @override
@@ -138,53 +102,71 @@ class _ActionBarCameraSwitcherButtonState
       );
     }
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.black45,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () async {
-              if (widget.onToggle == null) return closeCameraPositionOptions();
-              _menuController.forward();
-              await showCameraPositionOptions(context);
-              _menuController.reverse();
-            },
-            child: Padding(
-              padding: const EdgeInsetsDirectional.symmetric(
-                horizontal: 8.0,
-              ),
-              child: AnimatedBuilder(
-                animation: _menuController,
-                builder: (context, child) {
-                  return Transform.rotate(
-                    angle:
-                        CurvedAnimation(
-                          parent: _menuController,
-                          curve: Curves.easeOutCubic,
-                        ).value *
-                        math.pi,
-                    child: child,
-                  );
-                },
-                child: const Icon(
-                  Icons.keyboard_arrow_down,
-                  color: Colors.white,
+    return OverlayPortal(
+      controller: _portalController,
+      overlayChildBuilder: (_) {
+        final buttonBox =
+            _buttonKey.currentContext?.findRenderObject() as RenderBox?;
+        if (buttonBox == null) return const SizedBox.shrink();
+
+        return ActionBarCameraSwitcherButtonOverlay(
+          buttonKey: _buttonKey,
+          isDesktopPicker: isDesktopPicker,
+          initialCameraPosition: widget.cameraPosition,
+          availableCameraDevices: widget.availableCameraDevices,
+          selectedCameraDeviceId: widget.selectedCameraDeviceId,
+          onCameraPositionChanged: widget.onCameraPositionChanged,
+          onCameraDeviceSelected: widget.onCameraDeviceSelected,
+          onDismissOverlay: _dismissOverlay,
+        );
+      },
+      child: DecoratedBox(
+        key: _buttonKey,
+        decoration: BoxDecoration(
+          color: Colors.black45,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Row(
+          children: [
+            GestureDetector(
+              onTap: () {
+                if (widget.onToggle == null) return;
+                _showCameraPositionOptions();
+              },
+              child: Padding(
+                padding: const EdgeInsetsDirectional.symmetric(
+                  horizontal: 8.0,
+                ),
+                child: AnimatedBuilder(
+                  animation: _menuController,
+                  builder: (context, child) {
+                    return Transform.rotate(
+                      angle:
+                          CurvedAnimation(
+                            parent: _menuController,
+                            curve: Curves.easeOutCubic,
+                          ).value *
+                          math.pi,
+                      child: child,
+                    );
+                  },
+                  child: const Icon(
+                    Icons.keyboard_arrow_down,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
-          ),
-          ActionBarButton(
-            semanticsLabel: 'Camera ${widget.isCameraOn ? 'on' : 'off'}',
-            onPressed: widget.onToggle,
-            active: widget.isCameraOn,
-            child: TotemIcon(
-              widget.isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+            ActionBarButton(
+              semanticsLabel: 'Camera ${widget.isCameraOn ? 'on' : 'off'}',
+              onPressed: widget.onToggle,
+              active: widget.isCameraOn,
+              child: TotemIcon(
+                widget.isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -192,6 +174,7 @@ class _ActionBarCameraSwitcherButtonState
 
 class ActionBarCameraSwitcherButtonOverlay extends StatefulWidget {
   const ActionBarCameraSwitcherButtonOverlay({
+    required this.buttonKey,
     required this.isDesktopPicker,
     required this.initialCameraPosition,
     required this.availableCameraDevices,
@@ -199,10 +182,10 @@ class ActionBarCameraSwitcherButtonOverlay extends StatefulWidget {
     required this.onCameraPositionChanged,
     required this.onCameraDeviceSelected,
     required this.onDismissOverlay,
-    required this.position,
     super.key,
   });
 
+  final GlobalKey buttonKey;
   final bool isDesktopPicker;
   final CameraPosition initialCameraPosition;
   final List<MediaDevice> availableCameraDevices;
@@ -211,7 +194,6 @@ class ActionBarCameraSwitcherButtonOverlay extends StatefulWidget {
   final ValueChanged<MediaDevice>? onCameraDeviceSelected;
 
   final VoidCallback onDismissOverlay;
-  final Offset position;
 
   @override
   State<ActionBarCameraSwitcherButtonOverlay> createState() =>
@@ -352,6 +334,16 @@ class _ActionBarCameraSwitcherButtonOverlayState
             ),
           );
 
+    final overlayBox = context.findRenderObject() as RenderBox?;
+    final buttonBox =
+        widget.buttonKey.currentContext?.findRenderObject() as RenderBox?;
+
+    final overlaySize = overlayBox?.size ?? MediaQuery.sizeOf(context);
+    final buttonOffset = buttonBox?.localToGlobal(
+      Offset.zero,
+      ancestor: overlayBox,
+    );
+
     return Stack(
       children: [
         Positioned.fill(
@@ -360,9 +352,11 @@ class _ActionBarCameraSwitcherButtonOverlayState
             onTap: _dismissOverlay,
           ),
         ),
-        Positioned(
-          left: widget.position.dx,
-          bottom: widget.position.dy,
+        CustomSingleChildLayout(
+          delegate: _CameraOverlayPositionDelegate(
+            preferredOffset: buttonOffset ?? Offset.zero,
+            overlaySize: overlaySize,
+          ),
           child: SlideTransition(
             position: _slideAnimation,
             child: Padding(
@@ -379,6 +373,43 @@ class _ActionBarCameraSwitcherButtonOverlayState
         ),
       ],
     );
+  }
+}
+
+class _CameraOverlayPositionDelegate extends SingleChildLayoutDelegate {
+  _CameraOverlayPositionDelegate({
+    required this.preferredOffset,
+    required this.overlaySize,
+  });
+
+  final Offset preferredOffset;
+  final Size overlaySize;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    return BoxConstraints.loose(overlaySize);
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    // Position the menu above the button (bottom of menu at button's top)
+    final preferredX = preferredOffset.dx;
+    final preferredY = preferredOffset.dy - childSize.height;
+
+    // Clamp to stay within bounds
+    final clampedX = preferredX.clamp(0.0, overlaySize.width - childSize.width);
+    final clampedY = preferredY.clamp(
+      0.0,
+      overlaySize.height - childSize.height,
+    );
+
+    return Offset(clampedX, clampedY);
+  }
+
+  @override
+  bool shouldRelayout(_CameraOverlayPositionDelegate oldDelegate) {
+    return preferredOffset != oldDelegate.preferredOffset ||
+        overlaySize != oldDelegate.overlaySize;
   }
 }
 

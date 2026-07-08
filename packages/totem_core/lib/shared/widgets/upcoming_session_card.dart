@@ -59,6 +59,8 @@ class UpcomingSessionCard extends ConsumerStatefulWidget {
 }
 
 class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
+  final _notificationController = NotificationController();
+
   bool? _optimisticAttending;
   bool _loading = false;
 
@@ -371,7 +373,7 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
           _loading = false;
         });
         if (mounted) {
-          NotificationController().showError(
+          _notificationController.showError(
             context,
             icon: TotemIcons.spaces,
             title: 'Failed to attend',
@@ -390,7 +392,7 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
           _optimisticAttending = null;
           _loading = false;
         });
-        NotificationController().showError(
+        _notificationController.showError(
           context,
           icon: TotemIcons.spaces,
           title: 'Failed to attend',

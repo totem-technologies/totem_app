@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:js_interop';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:url_launcher/url_launcher_string.dart';
+import 'package:web/web.dart' as web;
 
 class WebTotemRouter extends TotemRouter {
   final _navigatorKey = GlobalKey<NavigatorState>();
@@ -46,6 +48,20 @@ class WebTotemRouter extends TotemRouter {
       ],
       errorBuilder: (context, state) => const ErrorScreen(),
     );
+  }
+
+  static void _beforeUnloadListener(web.Event event) {
+    final beforeUnloadEvent = event as web.BeforeUnloadEvent;
+    beforeUnloadEvent.returnValue = 'Are you sure you want to leave?';
+  }
+
+  @override
+  void setTabCloseConfirmationEnabled(bool enabled) {
+    if (enabled) {
+      web.window.onbeforeunload = _beforeUnloadListener.toJS;
+    } else {
+      web.window.onbeforeunload = null;
+    }
   }
 
   @override

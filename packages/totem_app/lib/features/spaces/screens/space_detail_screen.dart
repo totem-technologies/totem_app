@@ -489,6 +489,7 @@ class _SessionInfoCard extends ConsumerStatefulWidget {
 
 class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   MobileSpaceDetailSchema get space => widget.space;
+  final _notificationController = NotificationController();
 
   bool _attending = false;
   bool _loading = false;
@@ -640,7 +641,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
         await _refresh(event);
       } else {
         if (mounted) {
-          NotificationController().showError(
+          _notificationController.showError(
             context,
             icon: TotemIcons.spaces,
             title: 'Failed to attend this circle',
@@ -651,7 +652,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     } catch (e, st) {
       ErrorHandler.logError(e, stackTrace: st, message: 'Failed to attend');
       if (mounted) {
-        NotificationController().showError(
+        _notificationController.showError(
           context,
           icon: TotemIcons.spaces,
           title: 'Failed to attend this circle',
@@ -686,7 +687,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     try {
       final success = await CalendarService.addToCalendar(calendarEvent);
       if (!success && mounted) {
-        NotificationController().showError(
+        _notificationController.showError(
           context,
           icon: TotemIcons.calendar,
           title: 'Failed to add event to calendar',
@@ -700,7 +701,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
         message: 'Failed to add to calendar',
       );
       if (mounted) {
-        NotificationController().showError(
+        _notificationController.showError(
           context,
           icon: TotemIcons.calendar,
           title: 'Failed to add event to calendar',
@@ -729,7 +730,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
         if (mounted) setState(() => _attending = false);
 
         if (mounted) {
-          NotificationController().showError(
+          _notificationController.showError(
             context,
             icon: TotemIcons.seats,
             title: 'You gave up your spot',
@@ -739,7 +740,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
         await _refresh(event);
       } else {
         if (mounted) {
-          NotificationController().showError(
+          _notificationController.showError(
             context,
             icon: TotemIcons.seats,
             title: 'Failed to give up your spot',
@@ -754,7 +755,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
         message: 'Failed to give up spot',
       );
       if (mounted) {
-        NotificationController().showError(
+        _notificationController.showError(
           context,
           icon: TotemIcons.seats,
           title: 'Failed to give up your spot',

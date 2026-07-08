@@ -18,6 +18,7 @@ import 'package:totem_core/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
@@ -450,6 +451,7 @@ void main() {
     setUpAll(() async {
       registerFallbackValue(TrackSource.camera);
       setupAppConfig();
+      TotemRouter.instance = FakeTotemRouter();
     });
 
     setUp(() {
