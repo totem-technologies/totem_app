@@ -1,10 +1,9 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
@@ -103,7 +102,7 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
     final sessionEvent = ref.watch(currentSessionEventProvider);
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
-    final isDesktop = kIsWeb || lkPlatformIsDesktop();
+    final isDesktop = RendererBinding.instance.mouseTracker.mouseIsConnected;
 
     const fastMessages = [
       'Welcome! 🙏',
@@ -445,6 +444,7 @@ class KeeperProfileSheet extends StatelessWidget {
   }
 }
 
+@visibleForTesting
 class QuickMessageChip extends StatelessWidget {
   const QuickMessageChip({
     required this.label,
