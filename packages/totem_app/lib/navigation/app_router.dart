@@ -514,4 +514,9 @@ class AppTotemRouter extends TotemRouter {
       errorBuilder: (context, state) => const ErrorScreen(),
     );
   }
+
+  @override
+  void setTabCloseConfirmationEnabled(bool enabled) {
+    // TODO(totem): Enable picture in picture
+  }
 }

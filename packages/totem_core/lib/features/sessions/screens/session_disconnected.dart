@@ -131,12 +131,19 @@ class _SessionDisconnectedScreenState
   @override
   void initState() {
     super.initState();
+    _shutDownCamera();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (ref.context.mounted) ref.invalidate(spacesSummaryProvider);
     });
     Future.delayed(const Duration(milliseconds: 2750), () {
       if (ref.context.mounted) ref.invalidate(spacesSummaryProvider);
     });
+  }
+
+  void _shutDownCamera() {
+    final session = ref.read(currentSessionProvider);
+    session?.room?.localParticipant?.setCameraEnabled(false);
+    session?.room?.localParticipant?.setMicrophoneEnabled(false);
   }
 
   @override

@@ -126,6 +126,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: ActionBarCameraSwitcherButtonOverlay(
+              buttonKey: GlobalKey(),
               isDesktopPicker: true,
               initialCameraPosition: CameraPosition.front,
               availableCameraDevices: const [
@@ -137,7 +138,6 @@ void main() {
               onDismissOverlay: () {
                 dismissed = true;
               },
-              position: const Offset(100, 100),
             ),
           ),
         ),
@@ -159,6 +159,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: ActionBarCameraSwitcherButtonOverlay(
+              buttonKey: GlobalKey(),
               isDesktopPicker: true,
               initialCameraPosition: CameraPosition.front,
               availableCameraDevices: const [],
@@ -166,7 +167,6 @@ void main() {
               onCameraPositionChanged: (_) {},
               onCameraDeviceSelected: (_) {},
               onDismissOverlay: () {},
-              position: const Offset(100, 100),
             ),
           ),
         ),
@@ -185,6 +185,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: ActionBarCameraSwitcherButtonOverlay(
+              buttonKey: GlobalKey(),
               isDesktopPicker: true,
               initialCameraPosition: CameraPosition.front,
               availableCameraDevices: const [
@@ -199,7 +200,6 @@ void main() {
               onDismissOverlay: () {
                 dismissed = true;
               },
-              position: const Offset(100, 100),
             ),
           ),
         ),
@@ -223,6 +223,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: ActionBarCameraSwitcherButtonOverlay(
+              buttonKey: GlobalKey(),
               isDesktopPicker: false,
               initialCameraPosition: CameraPosition.front,
               availableCameraDevices: const [],
@@ -230,7 +231,6 @@ void main() {
               onCameraPositionChanged: selectedPositions.add,
               onCameraDeviceSelected: (_) {},
               onDismissOverlay: () {},
-              position: const Offset(100, 100),
             ),
           ),
         ),

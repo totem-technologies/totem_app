@@ -196,6 +196,7 @@ class JoinTransitionCard extends StatelessWidget {
     this.keepActionLoadingOnSuccess = false,
     this.isSliderLoading,
     this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
+    this.enabled = true,
     super.key,
   });
 
@@ -203,6 +204,7 @@ class JoinTransitionCard extends StatelessWidget {
   final bool keepActionLoadingOnSuccess;
   final bool? isSliderLoading;
   final EdgeInsetsGeometry margin;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -242,6 +244,7 @@ class JoinTransitionCard extends StatelessWidget {
                         onActionCompleted: onActionPressed,
                         keepLoadingOnSuccess: keepActionLoadingOnSuccess,
                         isLoading: isSliderLoading,
+                        enabled: enabled,
                       ),
                     ),
                   ),

@@ -254,6 +254,21 @@ class SessionKeeperController extends _$SessionKeeperController {
     logger.i('Unbanned participant $participantSlug successfully');
   }
 
+  Future<void> disableParticipantCamera(String participantSlug) async {
+    if (!session.isCurrentUserKeeper()) return;
+    await _run<void>(
+      action: () => ref.read(
+        disableParticipantCameraProvider(
+          _eventSlug,
+          participantSlug,
+        ).future,
+      ),
+      errorMessage: 'Error disable participant camera $participantSlug',
+      timeout: const Duration(seconds: 20),
+    );
+    logger.i('Disabled participant $participantSlug camera successfully');
+  }
+
   Future<void> muteParticipant(String participantSlug) async {
     if (!session.isCurrentUserKeeper()) return;
     await _run<void>(

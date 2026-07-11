@@ -94,6 +94,8 @@ abstract class TotemRouter {
   ]);
 
   GoRouter createRouter(WidgetRef ref);
+
+  void setTabCloseConfirmationEnabled(bool enabled);
 }
 
 /// A class to wrap a Stream as a Listenable for GoRouter refreshes
