@@ -8,6 +8,10 @@
 // the matching CDN, then builds. If .env hasn't been composed it errors rather
 // than silently shipping the wrong config.
 //
+// Version info is injected as `--web-define` compile-time constants so the
+// running app can report its exact commit, build number and deploy timestamp.
+// CI passes GITHUB_SHA automatically; local builds fall back to `git rev-parse`.
+//
 // Usage: dart scripts/web_build.dart   (run `make env-<flavor>` first)
 
 // OK to use print
@@ -44,8 +48,15 @@ Future<void> main() async {
     exit(1);
   }
 
+  final commitSha = _resolveCommitSha(repoRoot);
+  final deployTimestamp = DateTime.now().toUtc().toIso8601String();
+  final pubspec = _readPubspec('$webDir/pubspec.yaml');
+
+  print('web_build: environment=$flavor commit=$commitSha');
+
   // --base-href /room/ : app is served from /room/ on the Django origin.
   // --web-define ASSET_BASE : where flutter_bootstrap.js loads assets from.
+  // --web-define COMMIT_SHA / APP_VERSION / etc. : build-info constants.
   final build = await Process.start(
     'flutter',
     [
@@ -55,6 +66,11 @@ Future<void> main() async {
       '--base-href',
       '/room/',
       '--web-define=ASSET_BASE=$assetBase',
+      '--web-define=COMMIT_SHA=$commitSha',
+      '--web-define=DEPLOYMENT_TIMESTAMP=$deployTimestamp',
+      '--web-define=APP_VERSION=${pubspec.version}',
+      '--web-define=APP_BUILD_NUMBER=${pubspec.buildNumber}',
+      '--web-define=APP_ENVIRONMENT=$flavor',
     ],
     workingDirectory: webDir,
     mode: ProcessStartMode.inheritStdio,
@@ -86,4 +102,54 @@ String? _readEnvironment(File envFile) {
 void _stripInlinedSourceMap(File index) {
   final html = index.readAsStringSync();
   index.writeAsStringSync(html.replaceAll(_sourceMapMarker, ''));
+}
+
+/// Resolves the commit SHA of the current checkout.
+///
+/// Precedence:
+///  1. `COMMIT_SHA` env var (set by CI, e.g. GITHUB_SHA is mapped in the
+///     build-web action)
+///  2. `git rev-parse HEAD` (local builds)
+String _resolveCommitSha(String repoRoot) {
+  final fromEnv = Platform.environment['COMMIT_SHA'];
+  if (fromEnv != null && fromEnv.isNotEmpty) return fromEnv;
+
+  try {
+    final result = Process.runSync(
+      'git',
+      ['rev-parse', 'HEAD'],
+      workingDirectory: repoRoot,
+      runInShell: true,
+    );
+    if (result.exitCode == 0) {
+      return (result.stdout as String).trim();
+    }
+  } catch (_) {
+    // fall through
+  }
+  return 'unknown';
+}
+
+/// Parses the version line from pubspec.yaml into a [PubspecVersion].
+_PubspecVersion _readPubspec(String path) {
+  const versionRe = RegExp(
+    r'^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+)$',
+    multiLine: true,
+  );
+  final content = File(path).readAsStringSync();
+  final match = versionRe.firstMatch(content);
+  if (match == null) {
+    stderr.writeln('web_build: could not parse version from $path');
+    exit(1);
+  }
+  return _PubspecVersion(
+    version: match.group(1)!,
+    buildNumber: match.group(2)!,
+  );
+}
+
+class _PubspecVersion {
+  const _PubspecVersion({required this.version, required this.buildNumber});
+  final String version;
+  final String buildNumber;
 }

@@ -13,4 +13,6 @@ runs:
   steps:
     - name: Build web
       shell: bash
+      env:
+        COMMIT_SHA: ${{ github.sha }}
       run: dart scripts/web_build.dart

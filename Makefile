@@ -54,7 +54,7 @@ run-web: env-dev
 # flavor maps to that local CDN and composes the development .env.
 build-web-release: env-dev
 	@echo "Building web app..."
-	dart scripts/web_build.dart
+	COMMIT_SHA=$$(git rev-parse HEAD) dart scripts/web_build.dart
 	@echo "Built $(WEB_DIR)/build/web — serve it with: make serve-web"
 
 # Serve the built bundle with CORS headers so an HTML document on another origin
@@ -68,12 +68,12 @@ serve-web:
 # CLOUDFLARE_ACCOUNT_ID).
 deploy-web-staging: env-staging
 	@echo "Building web app (staging)"
-	dart scripts/web_build.dart
+	COMMIT_SHA=$$(git rev-parse HEAD) dart scripts/web_build.dart
 	cd $(WEB_DIR) && bunx wrangler deploy --env staging
 
 deploy-web-production: env-prod
 	@echo "Building web app (production)"
-	dart scripts/web_build.dart
+	COMMIT_SHA=$$(git rev-parse HEAD) dart scripts/web_build.dart
 	cd $(WEB_DIR) && bunx wrangler deploy --env production
 
 build-runner:

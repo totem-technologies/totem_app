@@ -10,6 +10,7 @@ import 'package:totem_core/features/keeper/repositories/keeper_repository.dart';
 import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
+import 'package:totem_web/core/navigation/version_screen.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:web/web.dart' as web;
 
@@ -37,6 +38,10 @@ class WebTotemRouter extends TotemRouter {
         GoRoute(
           path: '/',
           builder: (context, state) => const _WebRedirectScreen(),
+        ),
+        GoRoute(
+          path: '/_version',
+          builder: (context, state) => const VersionScreen(),
         ),
         GoRoute(
           path: '/:slug',
