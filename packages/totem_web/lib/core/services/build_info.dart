@@ -16,15 +16,27 @@ class BuildInfo {
   /// Reads the compile-time defines baked in by [scripts/web_build.dart].
   ///
   /// Returns sensible defaults when the defines are absent (local dev).
-  factory BuildInfo.fromEnvironment() {
-    return BuildInfo(
-      version: _env('APP_VERSION', defaultValue: '0.0.0'),
-      buildNumber: _env('APP_BUILD_NUMBER', defaultValue: '0'),
-      environment: _env('APP_ENVIRONMENT', defaultValue: 'development'),
-      commitSha: _env('COMMIT_SHA', defaultValue: 'unknown'),
-      deploymentTimestamp: _env('DEPLOYMENT_TIMESTAMP', defaultValue: ''),
-    );
-  }
+  const BuildInfo.fromEnvironment()
+    : version = const String.fromEnvironment(
+        'APP_VERSION',
+        defaultValue: '0.0.0',
+      ),
+      buildNumber = const String.fromEnvironment(
+        'APP_BUILD_NUMBER',
+        defaultValue: '0',
+      ),
+      environment = const String.fromEnvironment(
+        'APP_ENVIRONMENT',
+        defaultValue: 'development',
+      ),
+      commitSha = const String.fromEnvironment(
+        'COMMIT_SHA',
+        defaultValue: 'unknown',
+      ),
+      deploymentTimestamp = const String.fromEnvironment(
+        'DEPLOYMENT_TIMESTAMP',
+        defaultValue: '',
+      );
 
   /// Semantic version, e.g. `0.0.72`.
   final String version;
@@ -63,5 +75,3 @@ class BuildInfo {
       'environment: $environment, commit: $shortCommitSha, '
       'deployed: ${deploymentTimestamp.isNotEmpty ? deploymentTimestamp : "local"})';
 }
-
-const _env = String.fromEnvironment;

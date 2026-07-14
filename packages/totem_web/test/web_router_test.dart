@@ -11,6 +11,7 @@ import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_web/core/navigation/version_screen.dart';
 import 'package:totem_web/core/navigation/web_router.dart';
 
 import '../../totem_core/test/auth/controllers/auth_controller_mock.dart';
@@ -89,8 +90,50 @@ void main() {
     });
   });
 
+  group('/_version route', () {
+    testWidgets('/_version navigates to VersionScreen', (tester) async {
+      final router = await _pumpTestRouter(
+        tester,
+        authState: AuthState.initial(),
+      );
+
+      router.go('/_version');
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(VersionScreen), findsOneWidget);
+    });
+
+    testWidgets('/_version does not conflict with /:slug routes', (
+      tester,
+    ) async {
+      const slug = '_version';
+      final router = await _pumpTestRouter(
+        tester,
+        authState: AuthState.unauthenticated(),
+        overrides: [
+          sessionTokenProvider(
+            slug,
+          ).overrideWith((ref) async => throw Exception('test')),
+          eventProvider(
+            slug,
+          ).overrideWith((ref) async => throw Exception('test')),
+        ],
+      );
+
+      router.go('/$slug');
+      await tester.pump();
+
+      // `/_version` is an exact match, not a slug match.
+      expect(find.byType(VersionScreen), findsNothing);
+      expect(find.byType(PreJoinScreen), findsNothing);
+      // Falls through to the redirect screen.
+      expect(find.byType(Scaffold), findsOneWidget);
+    });
+  });
+
   group('GoRouter route configuration', () {
-    testWidgets('has routes for / and /:slug', (tester) async {
+    testWidgets('has routes for /, /_version and /:slug', (tester) async {
       final router = await _pumpTestRouter(
         tester,
         authState: AuthState.initial(),

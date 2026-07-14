@@ -49,7 +49,7 @@ Future<void> main() async {
   }
 
   final commitSha = _resolveCommitSha(repoRoot);
-  final deployTimestamp = DateTime.now().toUtc().toIso8601String();
+  final deployTimestamp = _resolveCommitTimestamp(repoRoot);
   final pubspec = _readPubspec('$webDir/pubspec.yaml');
 
   print('web_build: environment=$flavor commit=$commitSha');
@@ -130,21 +130,54 @@ String _resolveCommitSha(String repoRoot) {
   return 'unknown';
 }
 
+/// Resolves the commit's committer timestamp as an ISO-8601 string.
+///
+/// Using the commit date (rather than wall-clock `DateTime.now()`) ensures
+/// two builds of the same commit produce identical bundles — important for
+/// reproducible builds.
+String _resolveCommitTimestamp(String repoRoot) {
+  try {
+    final result = Process.runSync(
+      'git',
+      ['show', '-s', '--format=%cI', 'HEAD'],
+      workingDirectory: repoRoot,
+      runInShell: true,
+    );
+    if (result.exitCode == 0) {
+      return (result.stdout as String).trim();
+    }
+  } catch (_) {
+    // fall through
+  }
+  // Fallback: current time if git isn't available (CI artifact, etc.).
+  return DateTime.now().toUtc().toIso8601String();
+}
+
 /// Parses the version line from pubspec.yaml into a [PubspecVersion].
+///
+/// Accepted formats (`version:` line in pubspec):
+///   - `x.y.z`               → version = `x.y.z`,     buildNumber = `0`
+///   - `x.y.z+b`             → version = `x.y.z`,     buildNumber = `b`
+///   - `x.y.z-pre`           → version = `x.y.z-pre`, buildNumber = `0`
+///   - `x.y.z-pre+b`         → version = `x.y.z-pre`, buildNumber = `b`
 _PubspecVersion _readPubspec(String path) {
-  const versionRe = RegExp(
-    r'^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+)$',
+  final versionRe = RegExp(
+    r'^version:\s*([0-9]+\.[0-9]+\.[0-9]+(?:-[a-zA-Z0-9.]+)?)(?:\+([0-9]+))?$',
     multiLine: true,
   );
   final content = File(path).readAsStringSync();
   final match = versionRe.firstMatch(content);
   if (match == null) {
-    stderr.writeln('web_build: could not parse version from $path');
+    stderr.writeln(
+      'web_build: could not parse version from $path. '
+      'Expected "version: x.y.z[+build]" or '
+      '"version: x.y.z-pre[+build]" (e.g. "0.0.72+72").',
+    );
     exit(1);
   }
   return _PubspecVersion(
     version: match.group(1)!,
-    buildNumber: match.group(2)!,
+    buildNumber: match.group(2) ?? '0',
   );
 }
 
