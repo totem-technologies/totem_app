@@ -69,13 +69,32 @@ class _BannedParticipantsState extends ConsumerState<BannedParticipants> {
                     end: 20,
                     bottom: 6,
                   ),
-                  child: Text(
-                    'Banned Participants',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                    textAlign: TextAlign.center,
+                  child: Stack(
+                    children: [
+                      Center(
+                        child: Text(
+                          'Banned Participants',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: IconButton(
+                          key: const Key('close-banned-participants-modal'),
+                          icon: const TotemIcon(
+                            TotemIcons.x,
+                            size: 20,
+                            color: Colors.black,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

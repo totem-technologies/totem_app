@@ -233,6 +233,89 @@ void main() {
       expect(find.text('Unban'), findsNothing);
     });
 
+    testWidgets('close button dismisses the modal', (tester) async {
+      const roomState = RoomState(
+        sessionSlug: 'test-session',
+        version: 1,
+        status: RoomStatus.waitingRoom,
+        turnState: TurnState.idle,
+        statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
+        talkingOrder: [],
+        keeper: 'keeper-1',
+        bannedParticipants: ['user-1'],
+        roundNumber: 1,
+      );
+
+      final sessionState = MockSessionRoomState();
+      when(() => sessionState.roomState).thenReturn(roomState);
+
+      final session = createMockSession(state: sessionState);
+
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+      addTearDown(() async {
+        await tester.binding.setSurfaceSize(null);
+      });
+
+      await pumpModal(
+        tester,
+        session,
+        sessionState,
+        child: MaterialApp(
+          home: Navigator(
+            onGenerateRoute: (settings) {
+              return MaterialPageRoute<void>(
+                builder: (routeContext) {
+                  return Scaffold(
+                    body: Builder(
+                      builder: (context) {
+                        return Center(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              showBannedParticipantsModal(
+                                context,
+                                session,
+                                sessionState,
+                              );
+                            },
+                            child: const Text('Open banned modal'),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      );
+
+      // Open the modal
+      await tester.tap(find.text('Open banned modal'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Banned Participants'), findsOneWidget);
+      expect(find.text('User user-1'), findsOneWidget);
+
+      // Close button is visible
+      expect(
+        find.byKey(const Key('close-banned-participants-modal')),
+        findsOneWidget,
+      );
+
+      // Tap the close button
+      await tester.tap(
+        find.byKey(const Key('close-banned-participants-modal')),
+      );
+      await tester.pumpAndSettle();
+
+      // Modal is dismissed
+      expect(find.text('Banned Participants'), findsNothing);
+      expect(find.text('User user-1'), findsNothing);
+      // Original screen is still visible
+      expect(find.text('Open banned modal'), findsOneWidget);
+    });
+
     testWidgets('shows error dialog and keeps tile on unban failure', (
       tester,
     ) async {
