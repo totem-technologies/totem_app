@@ -18,30 +18,33 @@ class VersionScreen extends StatelessWidget {
         title: const Text('App Version'),
         backgroundColor: theme.colorScheme.surfaceContainerHighest,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _Tile(label: 'Version', value: info.version),
-          _Tile(label: 'Build number', value: info.buildNumber),
-          _Tile(label: 'Environment', value: info.environment),
-          _Tile(label: 'Commit SHA', value: info.commitSha),
-          if (info.shortCommitSha != info.commitSha)
-            _Tile(label: 'Commit (short)', value: info.shortCommitSha),
-          _Tile(
-            label: 'Deployed at',
-            value: info.deploymentTimestamp.isNotEmpty
-                ? info.deploymentTimestamp
-                : 'Local development build',
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'This information is automatically injected during deployment. '
-            'Use it to verify which build is running in any environment.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+      body: SelectableRegion(
+        selectionControls: DesktopTextSelectionControls(),
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _Tile(label: 'Version', value: info.version),
+            _Tile(label: 'Build number', value: info.buildNumber),
+            _Tile(label: 'Environment', value: info.environment),
+            _Tile(label: 'Commit SHA', value: info.commitSha),
+            if (info.shortCommitSha != info.commitSha)
+              _Tile(label: 'Commit (short)', value: info.shortCommitSha),
+            _Tile(
+              label: 'Deployed at',
+              value: info.deploymentTimestamp.isNotEmpty
+                  ? info.deploymentTimestamp
+                  : 'Local development build',
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            Text(
+              'This information is automatically injected during deployment. '
+              'Use it to verify which build is running in any environment.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -72,7 +75,7 @@ class _Tile extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: SelectableText(
+            child: Text(
               value,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontFamily: 'monospace',
