@@ -8,9 +8,10 @@
 // the matching CDN, then builds. If .env hasn't been composed it errors rather
 // than silently shipping the wrong config.
 //
-// Version info is injected as `--web-define` compile-time constants so the
-// running app can report its exact commit, build number and deploy timestamp.
-// CI passes GITHUB_SHA automatically; local builds fall back to `git rev-parse`.
+// Version info is injected as `--dart-define` compile-time constants
+// (`String.fromEnvironment`) so the running app can report its exact commit,
+// build number and deploy timestamp. CI passes GITHUB_SHA automatically;
+// local builds fall back to `git rev-parse`.
 //
 // Usage: dart scripts/web_build.dart   (run `make env-<flavor>` first)
 
@@ -55,8 +56,9 @@ Future<void> main() async {
   print('web_build: environment=$flavor commit=$commitSha');
 
   // --base-href /room/ : app is served from /room/ on the Django origin.
-  // --web-define ASSET_BASE : where flutter_bootstrap.js loads assets from.
-  // --web-define COMMIT_SHA / APP_VERSION / etc. : build-info constants.
+  // --web-define ASSET_BASE : {{token}} substitution in flutter_bootstrap.js.
+  // --dart-define COMMIT_SHA / APP_VERSION / etc. : compile-time constants
+  //   read by String.fromEnvironment in BuildInfo.fromEnvironment.
   final build = await Process.start(
     'flutter',
     [
@@ -66,11 +68,11 @@ Future<void> main() async {
       '--base-href',
       '/room/',
       '--web-define=ASSET_BASE=$assetBase',
-      '--web-define=COMMIT_SHA=$commitSha',
-      '--web-define=DEPLOYMENT_TIMESTAMP=$deployTimestamp',
-      '--web-define=APP_VERSION=${pubspec.version}',
-      '--web-define=APP_BUILD_NUMBER=${pubspec.buildNumber}',
-      '--web-define=APP_ENVIRONMENT=$flavor',
+      '--dart-define=COMMIT_SHA=$commitSha',
+      '--dart-define=DEPLOYMENT_TIMESTAMP=$deployTimestamp',
+      '--dart-define=APP_VERSION=${pubspec.version}',
+      '--dart-define=APP_BUILD_NUMBER=${pubspec.buildNumber}',
+      '--dart-define=APP_ENVIRONMENT=$flavor',
     ],
     workingDirectory: webDir,
     mode: ProcessStartMode.inheritStdio,
