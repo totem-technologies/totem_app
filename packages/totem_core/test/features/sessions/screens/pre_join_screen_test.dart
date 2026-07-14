@@ -14,7 +14,9 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
     as sessions;
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart'
     as session_state;
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
+import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/loading_screen.dart';
 import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
@@ -227,6 +229,16 @@ void main() {
             }
             return sessionEvent;
           }),
+          if (tokenError != null || eventError != null)
+            currentSessionStateProvider.overrideWithValue(null),
+          if (tokenError != null || eventError != null)
+            getRecommendedSessionsProvider().overrideWith(
+              (ref) => <SessionDetailSchema>[],
+            ),
+          if (tokenError != null || eventError != null)
+            spacesSummaryProvider.overrideWith(
+              (ref) => throw UnimplementedError(),
+            ),
         ],
         child: SentryDisplayWidget(
           child: MaterialApp(
@@ -239,6 +251,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
     await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump();
   }
 
   Future<void> pumpUntilPreviewTracksReady(
@@ -372,6 +385,60 @@ void main() {
         expect(find.text('Something went wrong'), findsOneWidget);
         expect(find.text('Retry'), findsOneWidget);
       });
+
+      testWidgets(
+        'shows error screen for notFound RoomErrorResponse (non-web fallback)',
+        (tester) async {
+          const notFoundError = ApiError<JoinResponse, RoomErrorResponse>(
+            statusCode: 404,
+            error: RoomErrorResponse(
+              code: ErrorCode.notFound,
+              message: 'Session not found',
+            ),
+          );
+
+          await pumpPreJoinScreen(
+            tester,
+            tokenError: notFoundError,
+          );
+          // Pump enough time for SessionDisconnectedScreen's Future.delayed
+          // (2750ms) to fire and complete.
+          await tester.pump(const Duration(seconds: 3));
+          await tester.pump();
+
+          // On non-web (test environment), the error screen is shown.
+          expect(find.byType(SessionErrorScreen), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'notFound error does not render the pre-join camera/mic controls',
+        (tester) async {
+          const notFoundError = ApiError<JoinResponse, RoomErrorResponse>(
+            statusCode: 404,
+            error: RoomErrorResponse(
+              code: ErrorCode.notFound,
+              message: 'Session not found',
+            ),
+          );
+
+          await pumpPreJoinScreen(
+            tester,
+            tokenError: notFoundError,
+          );
+          // Pump enough time for SessionDisconnectedScreen's Future.delayed
+          // (2750ms) to fire and complete.
+          await tester.pump(const Duration(seconds: 3));
+          await tester.pump();
+
+          // Camera and microphone controls must not be shown.
+          expect(
+            find.byType(ActionBarCameraSwitcherButton),
+            findsNothing,
+          );
+          expect(find.byType(ActionBarMicButton), findsNothing);
+        },
+      );
     });
 
     group('preview controls', () {

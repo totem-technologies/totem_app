@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -27,13 +28,23 @@ class SessionErrorScreen extends StatelessWidget {
     const canRetry = true;
 
     // API failures arrive wrapped: the structured body lives in ApiError.error.
-    var error = this.error;
-    if (error is ApiError && error.error is RoomErrorResponse) {
-      error = error.error as RoomErrorResponse;
+    var resolvedError = error;
+    if (resolvedError is ApiError && resolvedError.error is RoomErrorResponse) {
+      resolvedError = resolvedError.error as RoomErrorResponse;
     }
 
-    if (error is RoomErrorResponse) {
-      switch (error.code) {
+    // On web, redirect to the website when the session doesn't exist (404)
+    // instead of showing the disconnected session screen.
+    if (kIsWeb) {
+      if (resolvedError is RoomErrorResponse &&
+          resolvedError.code == ErrorCode.notFound) {
+        TotemRouter.instance.toHome();
+        return const SizedBox.shrink();
+      }
+    }
+
+    if (resolvedError is RoomErrorResponse) {
+      switch (resolvedError.code) {
         case ErrorCode.banned:
           return const SessionDisconnectedScreen(
             sessionDisconnectedReason: SessionDisconnectedReason.banned,

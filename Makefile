@@ -94,7 +94,7 @@ test:
 	@echo "Running tests..."
 	cd $(APP_DIR) && flutter test
 	cd $(CORE_DIR) && flutter test
-	cd $(WEB_DIR) && flutter test
+	cd $(WEB_DIR) && flutter test --platform chrome
 
 test-app:
 	@echo "Running app tests..."
@@ -103,7 +103,7 @@ test-app:
 
 test-web:
 	@echo "Running web tests..."
-	cd $(WEB_DIR) && flutter test
+	cd $(WEB_DIR) && flutter test --platform chrome
 	cd $(CORE_DIR) && flutter test
 
 lint:

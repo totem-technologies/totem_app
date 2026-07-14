@@ -1,3 +1,8 @@
+@TestOn('chrome')
+library;
+
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,7 +18,41 @@ import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_web/core/navigation/web_router.dart';
 
-import '../../totem_core/test/auth/controllers/auth_controller_mock.dart';
+/// A minimal [AuthController] fake used in web router tests.
+class _FakeAuthController extends AuthController {
+  _FakeAuthController(this.fakeState);
+
+  final AuthState fakeState;
+  final StreamController<AuthState> _controller =
+      StreamController<AuthState>.broadcast();
+
+  @override
+  AuthState build() {
+    ref.onDispose(() async {
+      await _controller.close();
+    });
+    _controller.add(fakeState);
+    return fakeState;
+  }
+
+  @override
+  Stream<AuthState> get authStateChanges => _controller.stream;
+
+  @override
+  Future<void> checkExistingAuth() async {}
+
+  @override
+  Future<void> deleteAccount() async {}
+
+  @override
+  bool get isAuthenticated => fakeState.status == AuthStatus.authenticated;
+
+  @override
+  Future<void> logout() async {}
+
+  @override
+  UserSchema? get user => fakeState.user;
+}
 
 final _fakeUser = UserSchema(
   profileAvatarType: ProfileAvatarTypeEnum.td,
@@ -34,7 +73,7 @@ Future<GoRouter> _pumpTestRouter(
     ProviderScope(
       overrides: [
         authControllerProvider.overrideWith(
-          () => FakeAuthController(authState),
+          () => _FakeAuthController(authState),
         ),
         ...overrides.cast(),
       ],
@@ -73,7 +112,10 @@ void main() {
   group('buildHomeUrl', () {
     final router = WebTotemRouter();
     test('returns correct URLs for each HomeRoute', () {
-      expect(router.buildHomeUrl(HomeRoutes.home), router.baseUri.toString());
+      expect(
+        router.buildHomeUrl(HomeRoutes.home),
+        router.baseUri.resolve('users/dashboard/').toString(),
+      );
       expect(
         router.buildHomeUrl(HomeRoutes.spaces),
         router.baseUri.resolve('spaces/').toString(),
@@ -169,17 +211,17 @@ void main() {
 
     test('isAuthenticated returns correct values for each auth status', () {
       expect(
-        FakeAuthController(
+        _FakeAuthController(
           AuthState.authenticated(user: _fakeUser),
         ).isAuthenticated,
         isTrue,
       );
       expect(
-        FakeAuthController(AuthState.unauthenticated()).isAuthenticated,
+        _FakeAuthController(AuthState.unauthenticated()).isAuthenticated,
         isFalse,
       );
-      expect(FakeAuthController(AuthState.initial()).isAuthenticated, isFalse);
-      expect(FakeAuthController(AuthState.loading()).isAuthenticated, isFalse);
+      expect(_FakeAuthController(AuthState.initial()).isAuthenticated, isFalse);
+      expect(_FakeAuthController(AuthState.loading()).isAuthenticated, isFalse);
     });
 
     testWidgets('/ (root) shows redirect screen regardless of auth state', (
