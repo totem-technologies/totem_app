@@ -8,10 +8,15 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/circle_icon_button.dart';
 
 class SessionErrorScreen extends StatelessWidget {
-  const SessionErrorScreen({this.onRetry, this.error, super.key});
+  const SessionErrorScreen({this.onRetry, this.error, this.session, super.key});
 
   final VoidCallback? onRetry;
   final Object? error;
+
+  /// The session detail, when available. Forwarded to
+  /// [SessionDisconnectedScreen] so the post-session feedback bar can be shown
+  /// (it requires a session slug to submit feedback).
+  final SessionDetailSchema? session;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +45,8 @@ class SessionErrorScreen extends StatelessWidget {
         case ErrorCode.roomAlreadyEnded:
         case ErrorCode.notJoinable:
         case ErrorCode.roomNotActive:
-          return const SessionDisconnectedScreen(
+          return SessionDisconnectedScreen(
+            session: session,
             sessionDisconnectedReason: SessionDisconnectedReason.keeperEnded,
           );
         case ErrorCode.notInRoom:

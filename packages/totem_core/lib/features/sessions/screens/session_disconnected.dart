@@ -355,13 +355,9 @@ class _MediumPlusLayout extends StatelessWidget {
                 const Divider(color: Color(0x0FFFFFFF)),
                 if (session != null &&
                     reason == SessionDisconnectedReason.keeperEnded)
-                  _wrapConstrained(
-                    Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 300),
-                        child: _InteractiveFeedbackWidget(session: session!),
-                      ),
-                    ),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 500),
+                    child: _InteractiveFeedbackWidget(session: session!),
                   ),
                 if (!isBanned)
                   Flexible(
@@ -785,20 +781,15 @@ class _SessionFeedbackWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(30),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        spacing: 12,
         children: [
-          Flexible(
-            fit: switch (state) {
-              ThumbState.up => FlexFit.tight,
-              ThumbState.down => FlexFit.tight,
-              ThumbState.none => FlexFit.loose,
-            },
+          Expanded(
             child: AutoSizeText(
               switch (state) {
                 ThumbState.none => 'How was your experience?',
                 _ => 'Thank you for your feedback!',
               },
-              textAlign: TextAlign.center,
+              textAlign: TextAlign.start,
               maxLines: 2,
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.onSurface,
@@ -806,43 +797,30 @@ class _SessionFeedbackWidget extends StatelessWidget {
               ),
             ),
           ),
-          if (state == ThumbState.none)
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                spacing: 10,
-                children: [
-                  _SessionFeedbackButton(
-                    icon: const TotemIcon(TotemIcons.thumbUp),
-                    onPressed: switch (state) {
-                      ThumbState.up => () {},
-                      _ => onThumbUpPressed,
-                    },
-                  ),
-                  _SessionFeedbackButton(
-                    icon: const TotemIcon(TotemIcons.thumbDown),
-                    onPressed: switch (state) {
-                      ThumbState.down => () {},
-                      _ => onThumbDownPressed,
-                    },
-                  ),
-                ],
-              ),
-            )
-          else
-            IgnorePointer(
-              child: _SessionFeedbackButton(
-                outlined: true,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 10,
+            children: [
+              _SessionFeedbackButton(
+                outlined: state == ThumbState.down,
                 icon: TotemIcon(
-                  switch (state) {
-                    ThumbState.up => TotemIcons.thumbUpFilled,
-                    ThumbState.down => TotemIcons.thumbDownFilled,
-                    _ => TotemIcons.thumbUp,
-                  },
+                  state == ThumbState.up
+                      ? TotemIcons.thumbUpFilled
+                      : TotemIcons.thumbUp,
                 ),
-                onPressed: () {},
+                onPressed: state == ThumbState.none ? onThumbUpPressed : null,
               ),
-            ),
+              _SessionFeedbackButton(
+                outlined: state == ThumbState.up,
+                icon: TotemIcon(
+                  state == ThumbState.down
+                      ? TotemIcons.thumbDownFilled
+                      : TotemIcons.thumbDown,
+                ),
+                onPressed: state == ThumbState.none ? onThumbDownPressed : null,
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -857,7 +835,7 @@ class _SessionFeedbackButton extends StatelessWidget {
   });
 
   final Widget icon;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool outlined;
 
   @override

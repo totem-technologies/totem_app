@@ -162,10 +162,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     );
   }
 
-  Widget _buildErrorScreen(Object? error) {
+  Widget _buildErrorScreen(Object? error, {SessionDetailSchema? session}) {
     return RoomBackground(
       child: SessionErrorScreen(
         error: error,
+        session: session,
         onRetry: _onRetry,
       ),
     );
@@ -304,7 +305,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     _listenForTokenUpdates();
 
     if (tokenData.hasError) {
-      return _buildErrorScreen(tokenData.error);
+      return _buildErrorScreen(
+        tokenData.error,
+        session: sessionData.value,
+      );
     }
 
     if (sessionData.hasError) {
