@@ -9,7 +9,8 @@
       "Bash(dart run build_runner build:*)",
       "Bash(gh search:*)",
       "Bash(gh issue:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(gh pr *)"
     ]
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
@@ -101,6 +102,7 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
     final sessionEvent = ref.watch(currentSessionEventProvider);
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
+    final isDesktop = RendererBinding.instance.mouseTracker.mouseIsConnected;
 
     const fastMessages = [
       'Welcome! 🙏',
@@ -225,7 +227,9 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
                     end: 20,
                   ),
                   child: Text(
-                    'Long press to send a quick message',
+                    isDesktop
+                        ? 'Tap to send a quick message'
+                        : 'Long press to send a quick message',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: Colors.black54,
                     ),
@@ -244,8 +248,9 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
                       itemCount: fastMessages.length,
                       itemBuilder: (context, index) {
                         final label = fastMessages[index];
-                        return _QuickMessageChip(
+                        return QuickMessageChip(
                           label: label,
+                          isDesktop: isDesktop,
                           onSend: () => ref
                               .read(currentSessionProvider)
                               ?.messaging
@@ -439,14 +444,18 @@ class KeeperProfileSheet extends StatelessWidget {
   }
 }
 
-class _QuickMessageChip extends StatelessWidget {
-  const _QuickMessageChip({
+@visibleForTesting
+class QuickMessageChip extends StatelessWidget {
+  const QuickMessageChip({
     required this.label,
     required this.onSend,
+    required this.isDesktop,
+    super.key,
   });
 
   final String label;
   final VoidCallback onSend;
+  final bool isDesktop;
 
   @override
   Widget build(BuildContext context) {
@@ -455,7 +464,8 @@ class _QuickMessageChip extends StatelessWidget {
       color: theme.colorScheme.primaryContainer,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        onLongPress: onSend,
+        onTap: isDesktop ? onSend : null,
+        onLongPress: isDesktop ? null : onSend,
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: const EdgeInsetsDirectional.symmetric(

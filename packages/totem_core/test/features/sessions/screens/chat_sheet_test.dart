@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -353,7 +354,14 @@ void main() {
       expect(find.text('Hello chat'), findsNothing);
     });
 
-    testWidgets('sends a quick message on long press', (tester) async {
+    testWidgets('sends a quick message on tap when a mouse is connected', (
+      tester,
+    ) async {
+      // Simulate a connected mouse so the chip adapts to the desktop branch.
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
+
       await pumpChatSheet(
         tester,
         isKeeper: true,
@@ -362,9 +370,34 @@ void main() {
         authState: AuthState.unauthenticated(),
       );
 
-      await tester.longPress(find.text('Please mute your mic'));
+      expect(find.text('Tap to send a quick message'), findsOneWidget);
+
+      await tester.tap(find.text('Please mute your mic'));
       await tester.pump();
 
+      verify(() => messaging.sendMessage('Please mute your mic')).called(1);
+    });
+
+    testWidgets('sends a quick message on long press without a mouse', (
+      tester,
+    ) async {
+      await pumpChatSheet(
+        tester,
+        isKeeper: true,
+        messages: const [],
+        session: session,
+        authState: AuthState.unauthenticated(),
+      );
+
+      expect(find.text('Long press to send a quick message'), findsOneWidget);
+
+      // A plain tap should not send when there is no mouse connected.
+      await tester.tap(find.text('Please mute your mic'));
+      await tester.pump();
+      verifyNever(() => messaging.sendMessage(any()));
+
+      await tester.longPress(find.text('Please mute your mic'));
+      await tester.pump();
       verify(() => messaging.sendMessage('Please mute your mic')).called(1);
     });
   });
