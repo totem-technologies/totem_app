@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:totem_web/core/services/build_info.dart';
 
-/// Displays the exact build version and deployment metadata at `/_version`.
-///
-/// This is an internal diagnostic page — no navigation chrome, minimal
-/// styling — so it works even when the router is in an error state.
 class VersionScreen extends StatelessWidget {
   const VersionScreen({super.key});
 
@@ -31,9 +27,9 @@ class VersionScreen extends StatelessWidget {
               _Tile(label: 'Commit (short)', value: info.shortCommitSha),
             _Tile(
               label: 'Deployed at',
-              value: info.deploymentTimestamp.isNotEmpty
-                  ? info.deploymentTimestamp
-                  : 'Local development build',
+              value: info.isLocal
+                  ? 'Local development build'
+                  : info.deploymentTimestamp,
             ),
             const SizedBox(height: 24),
             Text(

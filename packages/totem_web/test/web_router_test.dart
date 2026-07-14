@@ -91,7 +91,9 @@ void main() {
   });
 
   group('/_version route', () {
-    testWidgets('/_version navigates to VersionScreen', (tester) async {
+    testWidgets('literal /_version shows VersionScreen, not PreJoinScreen', (
+      tester,
+    ) async {
       final router = await _pumpTestRouter(
         tester,
         authState: AuthState.initial(),
@@ -99,36 +101,12 @@ void main() {
 
       router.go('/_version');
       await tester.pump();
-      await tester.pump();
 
       expect(find.byType(VersionScreen), findsOneWidget);
-    });
-
-    testWidgets('/_version does not conflict with /:slug routes', (
-      tester,
-    ) async {
-      const slug = '_version';
-      final router = await _pumpTestRouter(
-        tester,
-        authState: AuthState.unauthenticated(),
-        overrides: [
-          sessionTokenProvider(
-            slug,
-          ).overrideWith((ref) async => throw Exception('test')),
-          eventProvider(
-            slug,
-          ).overrideWith((ref) async => throw Exception('test')),
-        ],
-      );
-
-      router.go('/$slug');
-      await tester.pump();
-
-      // `/_version` is an exact match, not a slug match.
-      expect(find.byType(VersionScreen), findsNothing);
+      // The literal `/_version` route is listed before `/:slug`, so it
+      // wins — PreJoinScreen must NOT appear.
       expect(find.byType(PreJoinScreen), findsNothing);
-      // Falls through to the redirect screen.
-      expect(find.byType(Scaffold), findsOneWidget);
+      expect(find.text('App Version'), findsOneWidget);
     });
   });
 

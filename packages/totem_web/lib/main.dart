@@ -28,15 +28,10 @@ void main() {
   );
 }
 
-/// Attaches build version info to Sentry and the browser console so the
-/// deployed build can be identified in both diagnostics and error reports.
 void _configureVersionInfo() {
   final buildInfo = BuildInfo.fromEnvironment();
-
-  // Log to browser console for quick inspection during development.
   debugPrint('[Totem] $buildInfo');
 
-  // Attach version tags to every Sentry event.
   final tags = buildInfo.toSentryTags();
   Sentry.configureScope((scope) {
     for (final entry in tags.entries) {

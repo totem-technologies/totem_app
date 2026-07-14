@@ -126,9 +126,7 @@ String _resolveCommitSha(String repoRoot) {
     if (result.exitCode == 0) {
       return (result.stdout as String).trim();
     }
-  } catch (_) {
-    // fall through
-  }
+  } catch (_) {}
   return 'unknown';
 }
 
@@ -148,10 +146,7 @@ String _resolveCommitTimestamp(String repoRoot) {
     if (result.exitCode == 0) {
       return (result.stdout as String).trim();
     }
-  } catch (_) {
-    // fall through
-  }
-  // Fallback: current time if git isn't available (CI artifact, etc.).
+  } catch (_) {}
   return DateTime.now().toUtc().toIso8601String();
 }
 
@@ -167,7 +162,8 @@ _PubspecVersion _readPubspec(String path) {
     r'^version:\s*([0-9]+\.[0-9]+\.[0-9]+(?:-[a-zA-Z0-9.]+)?)(?:\+([0-9]+))?$',
     multiLine: true,
   );
-  final content = File(path).readAsStringSync();
+  // Strip CR so the `$` anchor works on CRLF checkouts.
+  final content = File(path).readAsStringSync().replaceAll('\r', '');
   final match = versionRe.firstMatch(content);
   if (match == null) {
     stderr.writeln(
