@@ -109,27 +109,41 @@ class SessionKeeperController extends _$SessionKeeperController {
     logger.i('Passed totem successfully');
   }
 
+  /// Accepts the totem and enables the microphone.
+  ///
+  /// Throws a [StateError] if the user is not the next participant or there is no keeper.
   Future<void> acceptTotem() async {
     final room = session.room;
     if (room == null || !_state.amNext(room)) {
       throw StateError("Not the user's turn to accept the totem");
     }
     if (!_state.hasKeeper) {
-      throw StateError('No keeper in the session to accept the totem');
+      throw StateError('There is no Keeper in the session to accept the totem');
     }
 
-    final roomState = await _run(
-      action: () => ref.read(
-        acceptTotemProvider(
-          _eventSlug,
-          _roomVersion,
-        ).future,
-      ),
-      errorMessage: 'Error accepting totem',
-    );
-    session.applyRoomState(roomState);
-    await session.devices.enableMicrophone();
-    logger.i('Accepted totem successfully');
+    final wasMicEnabled = session.devices.isMicrophoneEnabled;
+    final micFuture = session.devices.enableMicrophone();
+
+    try {
+      final roomState = await _run(
+        action: () => ref.read(
+          acceptTotemProvider(
+            _eventSlug,
+            _roomVersion,
+          ).future,
+        ),
+        errorMessage: 'Error accepting totem',
+      );
+      session.applyRoomState(roomState);
+      await micFuture;
+      logger.i('Accepted totem successfully');
+    } catch (e) {
+      await micFuture.catchError((_) {});
+      if (!wasMicEnabled) {
+        await session.devices.disableMicrophone();
+      }
+      rethrow;
+    }
   }
 
   Future<void> reorder(List<String> newOrder) async {

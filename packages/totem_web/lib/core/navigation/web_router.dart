@@ -79,7 +79,7 @@ class WebTotemRouter extends TotemRouter {
   String buildHomeUrl(HomeRoutes route) {
     switch (route) {
       case HomeRoutes.home:
-        return baseUri.toString();
+        return baseUri.resolve('users/dashboard/').toString();
       case HomeRoutes.spaces:
         return baseUri.resolve('spaces/').toString();
       case HomeRoutes.blog:

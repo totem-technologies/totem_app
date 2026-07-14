@@ -610,9 +610,11 @@ class SessionController extends _$SessionController {
           !state.hasKeeper) {
         return options.microphoneEnabled;
       }
-      if (state.roomState.status == RoomStatus.active &&
-          state.speakingNow == currentRoom.localParticipant?.identity) {
-        return options.microphoneEnabled;
+      if (state.roomState.status == RoomStatus.active) {
+        if (state.speakingNow == currentRoom.localParticipant?.identity) {
+          return options.microphoneEnabled;
+        }
+        return false;
       }
       return isCurrentUserKeeper() && options.microphoneEnabled;
     }();

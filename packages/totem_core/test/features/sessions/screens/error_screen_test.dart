@@ -5,6 +5,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
+import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 
 void main() {
   Future<void> pumpErrorScreen(
@@ -90,6 +91,25 @@ void main() {
         await pumpErrorScreen(tester, error: wrappedError, onRetry: () {});
 
         expect(find.text('Something went wrong'), findsNothing);
+      });
+    });
+
+    group('RoomErrorResponse notFound', () {
+      const notFoundError = ApiError<JoinResponse, RoomErrorResponse>(
+        statusCode: 404,
+        error: RoomErrorResponse(
+          code: ErrorCode.notFound,
+          message: 'Session not found',
+        ),
+      );
+
+      testWidgets('shows SessionDisconnectedScreen with other reason', (
+        tester,
+      ) async {
+        await pumpErrorScreen(tester, error: notFoundError, onRetry: () {});
+
+        expect(find.text('Something went wrong'), findsNothing);
+        expect(find.byType(SessionDisconnectedScreen), findsOneWidget);
       });
     });
   });
