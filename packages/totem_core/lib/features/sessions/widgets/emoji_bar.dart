@@ -11,13 +11,11 @@ class EmojiBarOverlay extends StatefulWidget {
     required this.buttonKey,
     required this.onEmojiSelected,
     required this.onDismissed,
-    this.displayDuration = const Duration(seconds: 4),
     super.key,
   });
 
   final GlobalKey buttonKey;
   final ValueChanged<String> onEmojiSelected;
-  final Duration displayDuration;
   final VoidCallback onDismissed;
 
   @override
@@ -26,29 +24,15 @@ class EmojiBarOverlay extends StatefulWidget {
 
 class EmojiBarOverlayState extends State<EmojiBarOverlay>
     with SingleTickerProviderStateMixin {
-  Timer? _timer;
-
   late final AnimationController _animationController = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 300),
   )..forward();
 
   @override
-  void initState() {
-    super.initState();
-    _startTimer();
-  }
-
-  @override
   void dispose() {
-    _timer?.cancel();
     _animationController.dispose();
     super.dispose();
-  }
-
-  void _startTimer() {
-    _timer?.cancel();
-    _timer = Timer(widget.displayDuration, _dismiss);
   }
 
   void _dismiss() async {
@@ -65,7 +49,8 @@ class EmojiBarOverlayState extends State<EmojiBarOverlay>
         widget.buttonKey.currentContext?.findRenderObject() as RenderBox?;
 
     final topPosition = () {
-      if (buttonBox == null) return 0.0;
+      if (buttonBox == null || overlayBox == null) return 0.0;
+      if (!overlayBox.hasSize) return 0.0;
       final buttonOffset = buttonBox.localToGlobal(
         Offset.zero,
         ancestor: overlayBox,
@@ -93,7 +78,7 @@ class EmojiBarOverlayState extends State<EmojiBarOverlay>
             child: EmojiBar(
               onEmojiSelected: (emoji) {
                 widget.onEmojiSelected(emoji);
-                _startTimer();
+                _dismiss();
               },
               emojis: EmojiBar.defaultEmojis,
             ),
