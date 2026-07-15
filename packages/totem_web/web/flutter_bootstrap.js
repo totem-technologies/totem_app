@@ -8,7 +8,7 @@ const config = {
   wasmAllowList: {
     blink: true,
     gecko: false,
-    webkit: true,
+    webkit: false,
     unknown: false,
   },
   // assetBase only affects the engine's asset fetches (assets/, canvaskit);
