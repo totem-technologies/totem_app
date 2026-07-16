@@ -839,7 +839,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   }
 
   // Whether the track is inactive due to poor network conditions.
-  bool _isTrackInactive = false;
+  bool _isTrackInactive = true;
 
   void _onTrackEvent(TrackEvent event) {
     if (!mounted) return;
@@ -856,7 +856,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         mimeType = event.stats.mimeType;
 
         _currentBitrate = bitrate.round();
-        _isTrackInactive = bitrate < 10;
+        _isTrackInactive = bitrate <= 0;
       });
     } else if (event is VideoSenderStatsEvent) {
       resetStats();
@@ -870,6 +870,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         mimeType = stats?.mimeType;
 
         _currentBitrate = event.currentBitrate.round();
+        _isTrackInactive = _currentBitrate <= 0;
       });
     }
   }
@@ -906,6 +907,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
     final shouldShowAvatar = () {
       if (trackPublication == null ||
+          trackPublication.track == null ||
           !trackPublication.subscribed ||
           trackPublication.muted ||
           _isTrackInactive) {
@@ -917,6 +919,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     final content = Stack(
       children: [
         if (trackPublication != null &&
+            trackPublication.track != null &&
             trackPublication.subscribed &&
             !trackPublication.muted &&
             !_isTrackInactive)
