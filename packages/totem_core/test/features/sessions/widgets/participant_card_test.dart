@@ -272,10 +272,21 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      // Default isTrackInactive = true, so avatar is shown initially.
+      expect(find.byType(VideoTrackRenderer), findsNothing);
+
+      // Simulate a healthy bitrate to activate the video.
+      final healthyEvent = MockVideoReceiverStatsEvent();
+      when(() => healthyEvent.currentBitrate).thenReturn(500);
+      trackListener.capturedListener?.call(healthyEvent);
+
+      await tester.pumpAndSettle();
+
       expect(find.byType(VideoTrackRenderer), findsOneWidget);
 
+      // Now simulate a drop below threshold (bitrate <= 0).
       final event = MockVideoReceiverStatsEvent();
-      when(() => event.currentBitrate).thenReturn(5);
+      when(() => event.currentBitrate).thenReturn(0);
       trackListener.capturedListener?.call(event);
 
       await tester.pumpAndSettle();

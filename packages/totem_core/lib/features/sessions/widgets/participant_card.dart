@@ -821,6 +821,12 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   @override
   void initState() {
     super.initState();
+    // When user is a local participant, the track is not inactive by default.
+    if (widget.participant is LocalParticipant) {
+      _isTrackInactive = false;
+    } else {
+      _isTrackInactive = true;
+    }
     _setupListeners();
   }
 
@@ -839,7 +845,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   }
 
   // Whether the track is inactive due to poor network conditions.
-  bool _isTrackInactive = true;
+  late bool _isTrackInactive;
 
   void _onTrackEvent(TrackEvent event) {
     if (!mounted) return;
@@ -868,9 +874,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         fps = stats?.framesPerSecond ?? 0;
         qualityLimitationReason = stats?.qualityLimitationReason;
         mimeType = stats?.mimeType;
-
         _currentBitrate = event.currentBitrate.round();
-        _isTrackInactive = _currentBitrate <= 0;
       });
     }
   }
@@ -905,6 +909,50 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     final user = ref.watch(userProfileProvider(widget.participant.identity));
     final trackPublication = videoTrack;
 
+    Widget buildAvatar() {
+      return Builder(
+        builder: (context) {
+          final localUserSlug = ref.watch(
+            authControllerProvider.select((auth) => auth.user?.slug),
+          );
+          if (widget.participant.identity == localUserSlug) {
+            return IgnorePointer(
+              child: UserAvatar.currentUser(
+                radius: 0,
+                borderRadius: BorderRadius.zero,
+                borderWidth: 0,
+              ),
+            );
+          } else {
+            return IgnorePointer(
+              child: user.when(
+                data: (user) {
+                  return UserAvatar.fromUserSchema(
+                    user,
+                    borderRadius: BorderRadius.zero,
+                    borderWidth: 0,
+                  );
+                },
+                error: (error, stackTrace) {
+                  return const ColoredBox(
+                    color: AppTheme.mauve,
+                    child: Center(
+                      child: TotemIcon(
+                        TotemIcons.person,
+                        size: 24,
+                        color: Colors.white,
+                      ),
+                    ),
+                  );
+                },
+                loading: () => const LoadingVideoPlaceholder(borderRadius: 0),
+              ),
+            );
+          }
+        },
+      );
+    }
+
     final shouldShowAvatar = () {
       if (trackPublication == null ||
           trackPublication.track == null ||
@@ -931,54 +979,11 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
                 trackPublication.track! as VideoTrack,
                 fit: VideoViewFit.cover,
                 renderMode: VideoRenderMode.platformView,
+                placeholderBuilder: (_) => buildAvatar(),
               ),
             ),
           ),
-        if (shouldShowAvatar)
-          Positioned.fill(
-            child: Builder(
-              builder: (context) {
-                final localUserSlug = ref.watch(
-                  authControllerProvider.select((auth) => auth.user?.slug),
-                );
-                if (widget.participant.identity == localUserSlug) {
-                  return IgnorePointer(
-                    child: UserAvatar.currentUser(
-                      radius: 0,
-                      borderRadius: BorderRadius.zero,
-                      borderWidth: 0,
-                    ),
-                  );
-                } else {
-                  return IgnorePointer(
-                    child: user.when(
-                      data: (user) {
-                        return UserAvatar.fromUserSchema(
-                          user,
-                          borderRadius: BorderRadius.zero,
-                          borderWidth: 0,
-                        );
-                      },
-                      error: (error, stackTrace) {
-                        return const ColoredBox(
-                          color: AppTheme.mauve,
-                          child: Center(
-                            child: TotemIcon(
-                              TotemIcons.person,
-                              size: 24,
-                              color: Colors.white,
-                            ),
-                          ),
-                        );
-                      },
-                      loading: () =>
-                          const LoadingVideoPlaceholder(borderRadius: 0),
-                    ),
-                  );
-                }
-              },
-            ),
-          ),
+        if (shouldShowAvatar) Positioned.fill(child: buildAvatar()),
       ],
     );
 
