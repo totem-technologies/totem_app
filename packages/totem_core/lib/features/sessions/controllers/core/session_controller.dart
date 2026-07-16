@@ -113,13 +113,20 @@ class SessionController extends _$SessionController {
     ),
   );
 
-  /// h264 has hardware encode/decode on effectively every mobile device and
-  /// browser, so the vp8 backup encoder (software on iOS, a battery drain
-  /// when a subscriber can't decode the primary codec) is unnecessary and
-  /// disabled.
-  static const defaultVideoPublishOptions = VideoPublishOptions(
-    videoCodec: 'h264',
-    backupVideoCodec: BackupVideoCodec(enabled: false),
+  /// h264 has hardware encode/decode on effectively every mobile device.
+  /// On Web, each browser supports different codecs:
+  ///   - Safari: H.265
+  ///   - Firefox: VP8 by default (H.264 requires OpenH264 plugin)
+  ///   - Chrome/Edge: H.264 (software) and VP8/VP9
+  static final defaultVideoPublishOptions = VideoPublishOptions(
+    videoCodec: (kIsWeb || kIsWasm)
+        ? switch (lkBrowser()) {
+            BrowserType.safari => 'h265',
+            BrowserType.firefox => 'vp8',
+            _ => 'h264',
+          }
+        : 'h264',
+    backupVideoCodec: const BackupVideoCodec(enabled: false),
   );
 
   SessionDeviceController get devices {
