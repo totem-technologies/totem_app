@@ -3,8 +3,6 @@
 
 const assetBase = "{{ASSET_BASE}}";
 const config = {
-  // Flutter disables WebKit by default for skwasm. Enable it explicitly
-  // so modern Safari builds can attempt WASM when WasmGC is available.
   wasmAllowList: {
     blink: true,
     gecko: false,
