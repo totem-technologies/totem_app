@@ -40,17 +40,17 @@ dependencies:
   sentry_dio: ^9.21.0
 
   # Video Experience
-  livekit_client: ^2.8.0
-  # livekit_client:
-  # git:
-  #   url: https://github.com/totem-technologies/client-sdk-flutter/
-  #   ref: main
+  # livekit_client: ^2.8.0
+  livekit_client:
+    git:
+      url: https://github.com/livekit/client-sdk-flutter
+      ref: 051581bea2bcddeccd6963ad8f4fcfb00db42e26
   # path: ../client-sdk-flutter
   # git:
   # url: https://github.com/livekit/client-sdk-flutter/
   # ref: hiroshi/fix-local-audio # Fixes Local Audio visualizer
   # ref: hiroshi/better-track-settings # Fixes manually setting quality
-  flutter_foreground_task: ^9.2.0
+  flutter_foreground_task: ^10.0.0
   wakelock_plus: ^1.4.0
   audio_session: ^0.2.1
   audioplayers: ^6.7.0

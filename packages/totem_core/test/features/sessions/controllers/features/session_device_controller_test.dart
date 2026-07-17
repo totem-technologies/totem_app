@@ -23,7 +23,8 @@ void main() {
       setUp(() {
         mockSession = FakeSessionController();
         mockLocalParticipant = MockLocalParticipant();
-        mockRoom = FakeRoom(mockLocalParticipant)..setSpeakerOn(true);
+        mockRoom = FakeRoom(mockLocalParticipant);
+        AudioManager.instance.setSpeakerOutputPreferred(true);
 
         mockSession.mockRoom = mockRoom;
 

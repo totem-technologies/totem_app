@@ -259,7 +259,8 @@ class SessionDeviceController extends _$SessionDeviceController {
   }
 
   bool get isSpeakerphoneEnabled =>
-      _systemSpeakerphoneEnabled ?? _room?.speakerOn ?? false;
+      _systemSpeakerphoneEnabled ??
+      AudioManager.instance.isSpeakerOutputPreferred;
 
   Future<void> _refreshSpeakerphoneState() async {
     if (kIsWeb) return;
@@ -306,12 +307,10 @@ class SessionDeviceController extends _$SessionDeviceController {
     // There is a bug in the livekit library that doesn't effectively turn the speakerphone
     // on when requested.
     // A workaround is to first turn it off, then set the desired state.
-    await Hardware.instance.setSpeakerphoneOn(false);
-    await _room?.setSpeakerOn(false);
+    AudioManager.instance.setSpeakerOutputPreferred(false);
 
     if (enabled) {
-      await Hardware.instance.setSpeakerphoneOn(enabled);
-      await _room?.setSpeakerOn(enabled);
+      AudioManager.instance.setSpeakerOutputPreferred(enabled);
     }
 
     await _refreshSpeakerphoneState();

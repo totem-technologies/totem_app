@@ -202,7 +202,9 @@ class _PrejoinActionBarState extends State<PrejoinActionBar> {
           onToggle: widget.locked ? null : widget.onToggleCamera,
           cameraPosition: widget.cameraPosition,
           availableCameraDevices: _availableCameraDevices,
-          selectedCameraDeviceId: widget.selectedCameraDeviceId,
+          selectedCameraDeviceId:
+              widget.selectedCameraDeviceId ??
+              _availableCameraDevices.firstOrNull?.deviceId,
           onCameraPositionChanged: widget.onCameraPositionChanged,
           onCameraDeviceSelected: widget.onCameraDeviceSelected,
         ),

@@ -5,7 +5,7 @@ PODS:
   - flutter_webrtc (1.4.0):
     - Flutter
     - WebRTC-SDK (= 144.7559.09)
-  - livekit_client (2.8.1):
+  - livekit_client (2.8.0):
     - Flutter
     - flutter_webrtc
     - WebRTC-SDK (= 144.7559.09)
@@ -43,7 +43,7 @@ SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_foreground_task: a159d2c2173b33699ddb3e6c2a067045d7cebb89
   flutter_webrtc: 3ee86aa10e0313c38c93fdb215dd86e77014f96a
-  livekit_client: 48637997ba4d696117639ac7750b3a6dc21c67a6
+  livekit_client: b9729357c26fc8a225f17da49699cf5657a454af
   screen_protector: 18c6aca2dc5d2a832f6787a5318f97f03e9d3150
   ScreenProtectorKit: 6ceb3e0808341a9bc15d175bff40dfdd4b32da71
   WebRTC-SDK: e6006119cd730d6315d875e4a421b6cc8bb88833

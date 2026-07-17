@@ -6,36 +6,27 @@ void main() {
   group('EmojiBarOverlay', () {
     final buttonKey = GlobalKey();
 
-    /// Builds the widget tree with [EmojiBarOverlay] inside an [Overlay] so
-    /// its [RenderBox] is properly laid out before first build — matching
-    /// the production usage via [OverlayPortal].
     Widget buildOverlay({
       required ValueChanged<String> onEmojiSelected,
       required VoidCallback onDismissed,
     }) {
       return MaterialApp(
         home: Scaffold(
-          body: Overlay(
-            initialEntries: [
-              OverlayEntry(
-                builder: (_) => Stack(
-                  children: [
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      child: SizedBox(
-                        key: buttonKey,
-                        width: 48,
-                        height: 48,
-                      ),
-                    ),
-                    EmojiBarOverlay(
-                      buttonKey: buttonKey,
-                      onEmojiSelected: onEmojiSelected,
-                      onDismissed: onDismissed,
-                    ),
-                  ],
+          body: Stack(
+            children: [
+              Positioned(
+                top: 0,
+                left: 0,
+                child: SizedBox(
+                  key: buttonKey,
+                  width: 48,
+                  height: 48,
                 ),
+              ),
+              EmojiBarOverlay(
+                buttonKey: buttonKey,
+                onEmojiSelected: onEmojiSelected,
+                onDismissed: onDismissed,
               ),
             ],
           ),
@@ -81,7 +72,7 @@ void main() {
       );
     });
 
-    testWidgets('selecting an emoji calls onEmojiSelected and dismisses', (
+    testWidgets('selecting an emoji calls onEmojiSelected', (
       tester,
     ) async {
       String? selectedEmoji;
@@ -101,11 +92,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(selectedEmoji, equals(EmojiBar.defaultEmojis.first));
-      expect(
-        dismissed,
-        isTrue,
-        reason: 'Overlay should dismiss after selection',
-      );
+      expect(dismissed, isFalse, reason: 'Overlay should not be dismissed');
     });
 
     testWidgets('tapping outside the menu dismisses it', (tester) async {
@@ -164,33 +151,5 @@ void main() {
         reason: 'onDismissed should fire after animation completes',
       );
     });
-
-    testWidgets(
-      'selecting an emoji then tapping outside does not double-call dismiss',
-      (tester) async {
-        var dismissCount = 0;
-
-        await tester.pumpWidget(
-          buildOverlay(
-            onEmojiSelected: (_) {},
-            onDismissed: () => dismissCount++,
-          ),
-        );
-
-        await tester.pumpAndSettle();
-
-        // Select emoji — triggers dismiss
-        await tester.tap(find.text(EmojiBar.defaultEmojis.first));
-        await tester.pump();
-
-        // Tap outside while still animating
-        await tester.tapAt(const Offset(5, 5));
-        await tester.pumpAndSettle();
-
-        // Widget is already in the process of dismissing, so the second tap
-        // should not increment dismissCount further.
-        expect(dismissCount, equals(1));
-      },
-    );
   });
 }

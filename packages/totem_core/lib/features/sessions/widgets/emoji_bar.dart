@@ -29,6 +29,8 @@ class EmojiBarOverlayState extends State<EmojiBarOverlay>
     duration: const Duration(milliseconds: 300),
   )..forward();
 
+  bool _isDismissing = false;
+
   @override
   void dispose() {
     _animationController.dispose();
@@ -36,6 +38,8 @@ class EmojiBarOverlayState extends State<EmojiBarOverlay>
   }
 
   void _dismiss() async {
+    if (_isDismissing) return;
+    _isDismissing = true;
     await _animationController.reverse();
     if (mounted) {
       widget.onDismissed();
@@ -44,16 +48,13 @@ class EmojiBarOverlayState extends State<EmojiBarOverlay>
 
   @override
   Widget build(BuildContext context) {
-    final overlayBox = context.findRenderObject() as RenderBox?;
-    final buttonBox =
-        widget.buttonKey.currentContext?.findRenderObject() as RenderBox?;
-
     final topPosition = () {
-      if (buttonBox == null || overlayBox == null) return 0.0;
-      if (!overlayBox.hasSize) return 0.0;
+      final buttonBox =
+          widget.buttonKey.currentContext?.findRenderObject() as RenderBox?;
+      if (buttonBox == null || !buttonBox.hasSize) return 0.0;
       final buttonOffset = buttonBox.localToGlobal(
         Offset.zero,
-        ancestor: overlayBox,
+        ancestor: context.findRenderObject() as RenderBox?,
       );
       return buttonOffset.dy - 70;
     }();
@@ -78,7 +79,6 @@ class EmojiBarOverlayState extends State<EmojiBarOverlay>
             child: EmojiBar(
               onEmojiSelected: (emoji) {
                 widget.onEmojiSelected(emoji);
-                _dismiss();
               },
               emojis: EmojiBar.defaultEmojis,
             ),

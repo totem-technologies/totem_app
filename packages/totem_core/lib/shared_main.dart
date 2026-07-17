@@ -77,6 +77,7 @@ Duration? _retryPolicy(int retryCount, Object error) {
 void _configureSentry(SentryFlutterOptions options) {
   final config = AppConfig.instance;
   options
+    ..environment = config.environment.name
     ..dsn = config.sentryDsn
     ..navigatorKey = TotemRouter.instance.navigatorKey
     ..sendDefaultPii = true
