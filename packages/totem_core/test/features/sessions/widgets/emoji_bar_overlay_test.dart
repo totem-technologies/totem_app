@@ -92,6 +92,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(selectedEmoji, equals(EmojiBar.defaultEmojis.first));
+      expect(dismissed, isFalse, reason: 'Overlay should not be dismissed');
     });
 
     testWidgets('tapping outside the menu dismisses it', (tester) async {
