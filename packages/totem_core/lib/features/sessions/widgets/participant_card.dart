@@ -954,13 +954,12 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     }
 
     final shouldShowAvatar = () {
-      // if (trackPublication == null ||
-      //     trackPublication.track == null ||
-      //     !trackPublication.subscribed ||
-      //     trackPublication.muted ||
-      //     _isTrackInactive) {
-      //   return true;
-      // }
+      if (trackPublication == null ||
+          trackPublication.track == null ||
+          !trackPublication.subscribed ||
+          trackPublication.muted) {
+        return true;
+      }
       return false;
     }();
 
