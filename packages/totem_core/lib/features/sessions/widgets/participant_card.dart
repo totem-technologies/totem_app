@@ -977,7 +977,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
                 trackPublication.track! as VideoTrack,
                 fit: VideoViewFit.cover,
                 renderMode: VideoRenderMode.platformView,
-                // placeholderBuilder: (_) => buildAvatar(),
+                placeholderBuilder: (_) => buildAvatar(),
               ),
             ),
           ),
