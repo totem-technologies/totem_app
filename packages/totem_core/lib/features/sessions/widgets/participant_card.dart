@@ -23,6 +23,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    print('attempt 3');
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );
@@ -978,7 +979,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
                 trackPublication.track! as VideoTrack,
                 fit: VideoViewFit.cover,
                 renderMode: VideoRenderMode.platformView,
-                placeholderBuilder: (_) => buildAvatar(),
+                // placeholderBuilder: (_) => buildAvatar(),
               ),
             ),
           ),
