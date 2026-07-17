@@ -954,13 +954,13 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     }
 
     final shouldShowAvatar = () {
-      if (trackPublication == null ||
-          trackPublication.track == null ||
-          !trackPublication.subscribed ||
-          trackPublication.muted ||
-          _isTrackInactive) {
-        return true;
-      }
+      // if (trackPublication == null ||
+      //     trackPublication.track == null ||
+      //     !trackPublication.subscribed ||
+      //     trackPublication.muted ||
+      //     _isTrackInactive) {
+      //   return true;
+      // }
       return false;
     }();
 
@@ -969,8 +969,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         if (trackPublication != null &&
             trackPublication.track != null &&
             trackPublication.subscribed &&
-            !trackPublication.muted &&
-            !_isTrackInactive)
+            !trackPublication.muted)
           IgnorePointer(
             child: ColoredBox(
               color: Colors.black,
