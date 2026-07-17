@@ -121,10 +121,10 @@ class SessionController extends _$SessionController {
   static final defaultVideoPublishOptions = VideoPublishOptions(
     videoCodec: (kIsWeb || kIsWasm)
         ? switch (lkBrowser()) {
-            BrowserType.safari => 'h265',
+            // BrowserType.safari => 'h265',
             _ => 'h264',
           }
-        : 'h264',
+        : 'h265',
     backupVideoCodec: const BackupVideoCodec(codec: 'h264'),
   );
 
