@@ -139,9 +139,10 @@ void main() {
       );
 
       final routes = router.configuration.routes;
-      expect(routes.length, 2);
+      expect(routes.length, 3);
       expect((routes[0] as GoRoute).path, '/');
-      expect((routes[1] as GoRoute).path, '/:slug');
+      expect((routes[1] as GoRoute).path, '/__version');
+      expect((routes[2] as GoRoute).path, '/:slug');
     });
 
     testWidgets('/:slug route captures the slug path parameter', (
