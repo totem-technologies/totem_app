@@ -16,6 +16,7 @@ import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/totem_icon.dart';
+import 'package:totem_core/shared/logger.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 class FeaturedParticipantCard extends ConsumerWidget {
@@ -23,7 +24,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    print('attempt 3');
+    logger.i('hi');
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );
