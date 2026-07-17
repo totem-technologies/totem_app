@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
+import 'package:totem_core/shared/logger.dart';
 
 class RoomBackground extends StatelessWidget {
   const RoomBackground({
@@ -26,6 +27,7 @@ class RoomBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    logger.i('hi');
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlayStyle,
       child: ViewportResolver(
