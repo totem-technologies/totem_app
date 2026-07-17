@@ -114,18 +114,9 @@ class SessionController extends _$SessionController {
   );
 
   /// h264 has hardware encode/decode on effectively every mobile device.
-  /// On Web, each browser supports different codecs:
-  ///   - Safari: H.265
-  ///   - Firefox: VP8 by default (H.264 requires OpenH264 plugin)
-  ///   - Chrome/Edge: H.264 (software) and VP8/VP9
-  static final defaultVideoPublishOptions = VideoPublishOptions(
-    videoCodec: (kIsWeb || kIsWasm)
-        ? switch (lkBrowser()) {
-            // BrowserType.safari => 'h265',
-            _ => 'h264',
-          }
-        : 'h265',
-    backupVideoCodec: const BackupVideoCodec(codec: 'h264'),
+  static const defaultVideoPublishOptions = VideoPublishOptions(
+    videoCodec: (kIsWeb || kIsWasm) ? 'h264' : 'h265',
+    backupVideoCodec: BackupVideoCodec(codec: 'h264'),
   );
 
   SessionDeviceController get devices {
