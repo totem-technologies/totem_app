@@ -777,46 +777,31 @@ class ParticipantVideo extends ConsumerWidget {
 
     final content = Stack(
       children: [
-        Builder(
-          builder: (context) {
-            final localUserSlug = ref.watch(
-              authControllerProvider.select((auth) => auth.user?.slug),
-            );
-            if (participant.identity == localUserSlug) {
-              return IgnorePointer(
-                child: UserAvatar.currentUser(
+        IgnorePointer(
+          child: participant.identity == currentUser?.slug
+              ? UserAvatar.currentUser(
                   radius: 0,
                   borderRadius: BorderRadius.zero,
                   borderWidth: 0,
-                ),
-              );
-            } else {
-              return IgnorePointer(
-                child: user.when(
-                  data: (user) {
-                    return UserAvatar.fromUserSchema(
-                      user,
-                      borderRadius: BorderRadius.zero,
-                      borderWidth: 0,
-                    );
-                  },
-                  error: (error, stackTrace) {
-                    return const ColoredBox(
-                      color: AppTheme.mauve,
-                      child: Center(
-                        child: TotemIcon(
-                          TotemIcons.person,
-                          size: 24,
-                          color: Colors.white,
-                        ),
+                )
+              : user.when(
+                  data: (user) => UserAvatar.fromUserSchema(
+                    user,
+                    borderRadius: BorderRadius.zero,
+                    borderWidth: 0,
+                  ),
+                  error: (error, stackTrace) => const ColoredBox(
+                    color: AppTheme.mauve,
+                    child: Center(
+                      child: TotemIcon(
+                        TotemIcons.person,
+                        size: 24,
+                        color: Colors.white,
                       ),
-                    );
-                  },
+                    ),
+                  ),
                   loading: () => const LoadingVideoPlaceholder(borderRadius: 0),
                 ),
-              );
-            }
-          },
         ),
         if (trackPublication != null &&
             trackPublication.track != null &&
