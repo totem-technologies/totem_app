@@ -753,6 +753,8 @@ class ParticipantVideo extends ConsumerStatefulWidget {
 }
 
 class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
+  final videoKey = GlobalKey();
+
   EventsListener<ParticipantEvent>? _listener;
   void _setupListeners() {
     _listener?.dispose();
@@ -849,7 +851,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
             !trackPublication.muted)
           IgnorePointer(
             child: VideoTrackRenderer(
-              key: ValueKey(trackPublication.track!.sid),
+              key: videoKey,
               trackPublication.track! as VideoTrack,
               fit: VideoViewFit.cover,
               renderMode: VideoRenderMode.platformView,
