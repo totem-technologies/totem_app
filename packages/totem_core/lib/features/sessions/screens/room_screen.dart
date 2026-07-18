@@ -440,7 +440,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
           switch (next) {
             case RoomStatus.waitingRoom:
-              break;
+              TotemRouter.instance.setTabCloseConfirmationEnabled(false);
             case RoomStatus.active:
               TotemRouter.instance.setTabCloseConfirmationEnabled(true);
             case RoomStatus.ended:
