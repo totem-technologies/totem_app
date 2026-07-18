@@ -19,16 +19,6 @@ import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../livekit_mocks.dart';
 
-class FakeTrackEventsListener extends MockTrackEventsListener {
-  void Function(TrackEvent)? capturedListener;
-
-  @override
-  CancelListenFunc listen(void Function(TrackEvent event) listener) {
-    capturedListener = listener;
-    return () async {};
-  }
-}
-
 void main() {
   late MockRemoteParticipant remoteParticipant;
   late FakeSessionController fakeSessionState;

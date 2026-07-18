@@ -82,10 +82,12 @@ class MockLocalParticipant extends Mock implements LocalParticipant {
   @override
   List<LocalTrackPublication<LocalTrack>> getTrackPublications() => [];
 
+  final listener = _MockParticipantEventsListener();
+
   @override
   EventsListener<ParticipantEvent> createListener({
     bool synchronized = false,
-  }) => _MockParticipantEventsListener();
+  }) => listener;
 }
 
 class FakeRoom extends Fake implements Room {

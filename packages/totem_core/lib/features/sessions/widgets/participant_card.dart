@@ -758,6 +758,12 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     _setupListeners();
   }
 
+  @override
+  void dispose() {
+    _listener?.dispose();
+    super.dispose();
+  }
+
   TrackPublication<Track>? get videoTrack {
     if (widget.participant is RemoteParticipant) {
       return widget.participant.getTrackPublicationBySource(TrackSource.camera);
@@ -784,6 +790,12 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     final user = ref.watch(userProfileProvider(widget.participant.identity));
     final trackPublication = videoTrack;
 
+    /// The user avatar is always rendered behind the video.
+    ///
+    ///  1. If the user swipes the app away or close the browser tab and stops emitting data,
+    ///     the video turns transparent and the user avatar remains visible.
+    ///  2. If the user disabled their camera (muted track), the user avatar remains visible.
+    ///  3. In all other cases, the video is displayed normally.
     final content = Stack(
       children: [
         Positioned.fill(
@@ -945,7 +957,9 @@ class _ParticipantVideoStatisticsState
   @override
   void didUpdateWidget(covariant _ParticipantVideoStatistics oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.participant.sid != widget.participant.sid) {
+    if (oldWidget.participant.sid != widget.participant.sid ||
+        oldWidget.trackPublication?.track?.sid !=
+            widget.trackPublication?.track?.sid) {
       _setupListeners();
     }
   }
