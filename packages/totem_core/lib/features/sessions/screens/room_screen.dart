@@ -420,6 +420,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
           if (next == RoomScreen.disconnected || next == RoomScreen.error) {
             _notificationController.blocked = true;
+            TotemRouter.instance.setTabCloseConfirmationEnabled(false);
             _clearTimeRemainingWarningTimer();
           } else {
             _notificationController.blocked = false;
