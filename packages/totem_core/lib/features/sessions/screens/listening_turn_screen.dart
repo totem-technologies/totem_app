@@ -195,7 +195,14 @@ class ListeningTurnScreen extends ConsumerWidget {
                       ?marquee,
                       const SizedBox.shrink(),
                     ],
-                    const Center(child: SessionActionBar()),
+                    Row(
+                      spacing: 12,
+                      children: [
+                        Expanded(child: nextUpText),
+                        const Center(child: SessionActionBar()),
+                        const Spacer(),
+                      ],
+                    ),
                   ],
                 ),
               );
