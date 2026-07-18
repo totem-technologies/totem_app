@@ -35,7 +35,7 @@ jobs:
 
       - name: Run app tests
         working-directory: packages/totem_app
-        run: flutter test
+        run: flutter test --platform chrome
 
       # - name: Run web tests
       #   working-directory: packages/totem_web

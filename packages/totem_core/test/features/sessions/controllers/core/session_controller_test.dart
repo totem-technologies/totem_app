@@ -617,19 +617,22 @@ void main() {
         );
       });
 
-      test('defaultVideoPublishOptions uses h264 codec', () {
+      test('defaultVideoPublishOptions uses h265 codec on native', () {
         expect(
           SessionController.defaultVideoPublishOptions.videoCodec,
-          equals('h264'),
+          equals('h265'),
         );
       });
 
-      test('defaultVideoPublishOptions disables the backup video codec', () {
-        expect(
-          SessionController.defaultVideoPublishOptions.backupVideoCodec.enabled,
-          isFalse,
-        );
-      });
+      test(
+        'defaultVideoPublishOptions configures h264 as backup video codec',
+        () {
+          final backup =
+              SessionController.defaultVideoPublishOptions.backupVideoCodec;
+          expect(backup.enabled, isTrue);
+          expect(backup.codec, equals('h264'));
+        },
+      );
     });
   });
 }
