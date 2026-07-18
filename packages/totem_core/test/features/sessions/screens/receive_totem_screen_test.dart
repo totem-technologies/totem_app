@@ -122,9 +122,6 @@ void main() {
     when(
       () => localParticipant.getTrackPublicationBySource(TrackSource.camera),
     ).thenReturn(null);
-    when(
-      () => localParticipant.createListener(),
-    ).thenReturn(MockParticipantEventsListener());
   });
 
   Future<void> pumpReceiveTotem(

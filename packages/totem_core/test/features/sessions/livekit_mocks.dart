@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:livekit_client/src/core/engine.dart';
-import 'package:livekit_client/src/stats/stats.dart' show VideoReceiverStats;
+
 import 'package:livekit_client/src/track/video_track_view_registration.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -81,6 +81,13 @@ class MockLocalParticipant extends Mock implements LocalParticipant {
 
   @override
   List<LocalTrackPublication<LocalTrack>> getTrackPublications() => [];
+
+  final listener = _MockParticipantEventsListener();
+
+  @override
+  EventsListener<ParticipantEvent> createListener({
+    bool synchronized = false,
+  }) => listener;
 }
 
 class FakeRoom extends Fake implements Room {
@@ -142,6 +149,13 @@ class MockRemoteParticipant extends Mock implements RemoteParticipant {
 
   @override
   List<RemoteTrackPublication<RemoteTrack>> getTrackPublications() => [];
+
+  final listener = _MockParticipantEventsListener();
+
+  @override
+  EventsListener<ParticipantEvent> createListener({
+    bool synchronized = false,
+  }) => listener;
 }
 
 class MockRemoteAudioTrack extends Mock implements RemoteAudioTrack {
@@ -166,16 +180,10 @@ class MockRemoteAudioTrack extends Mock implements RemoteAudioTrack {
   }
 
   @override
-  dynamic noSuchMethod(Invocation invocation) {
-    if (invocation.memberName == #createListener) {
-      return trackListener;
-    }
-    return super.noSuchMethod(invocation);
-  }
+  EventsListener<TrackEvent> createListener({
+    bool synchronized = false,
+  }) => trackListener;
 }
-
-class MockRemoteAudioTrackPublication extends Mock
-    implements RemoteTrackPublication<RemoteAudioTrack> {}
 
 class MockTrackMutedEvent extends Mock implements TrackMutedEvent {}
 
@@ -185,15 +193,27 @@ class MockTrackEvent extends Mock implements TrackEvent {}
 
 class MockMediaStreamTrack extends Mock implements webrtc.MediaStreamTrack {}
 
-class MockParticipantEventsListener extends Mock
+class _MockParticipantEventsListener extends Mock
     implements EventsListener<ParticipantEvent> {
+  void Function(TrackMutedEvent event)? onMuted;
+  void Function(TrackUnmutedEvent event)? onUnmuted;
+
   @override
   CancelListenFunc on<E>(
     FutureOr<void> Function(E event) listener, {
     bool Function(E)? filter,
   }) {
+    if (E == TrackMutedEvent) {
+      onMuted = listener as void Function(TrackMutedEvent);
+    } else if (E == TrackUnmutedEvent) {
+      onUnmuted = listener as void Function(TrackUnmutedEvent);
+    }
     return () async {};
   }
+
+  void emitMuted(TrackMutedEvent event) => onMuted?.call(event);
+
+  void emitUnmuted(TrackUnmutedEvent event) => onUnmuted?.call(event);
 
   @override
   Future<bool> dispose() async {
@@ -201,8 +221,8 @@ class MockParticipantEventsListener extends Mock
   }
 }
 
-class MockRemoteTrackPublication extends Mock
-    implements RemoteTrackPublication<RemoteVideoTrack> {}
+class MockRemoteTrackPublication<T extends RemoteTrack> extends Mock
+    implements RemoteTrackPublication<T> {}
 
 class MockLocalTrackPublication extends Mock
     implements LocalTrackPublication<LocalVideoTrack> {
@@ -251,6 +271,11 @@ class MockRemoteVideoTrack extends Mock implements RemoteVideoTrack {
       return defaulted;
     }
     return super.noSuchMethod(invocation);
+  }
+
+  @override
+  EventsListener<TrackEvent> createListener({bool synchronized = false}) {
+    return MockTrackEventsListener();
   }
 }
 
@@ -324,28 +349,6 @@ class MockTrackEventsListener extends Mock
   }
 }
 
-class CapturingParticipantEventsListener extends MockParticipantEventsListener {
-  void Function(TrackMutedEvent event)? onMuted;
-  void Function(TrackUnmutedEvent event)? onUnmuted;
-
-  @override
-  CancelListenFunc on<E>(
-    FutureOr<void> Function(E event) listener, {
-    bool Function(E)? filter,
-  }) {
-    if (E == TrackMutedEvent) {
-      onMuted = listener as void Function(TrackMutedEvent);
-    } else if (E == TrackUnmutedEvent) {
-      onUnmuted = listener as void Function(TrackUnmutedEvent);
-    }
-    return () async {};
-  }
-
-  void emitMuted(TrackMutedEvent event) => onMuted?.call(event);
-
-  void emitUnmuted(TrackUnmutedEvent event) => onUnmuted?.call(event);
-}
-
 class CapturingTrackEventsListener extends MockTrackEventsListener {
   void Function(TrackEvent event)? capturedListener;
 
@@ -356,15 +359,4 @@ class CapturingTrackEventsListener extends MockTrackEventsListener {
   }
 
   void emit(TrackEvent event) => capturedListener?.call(event);
-}
-
-class MockVideoReceiverStats extends Mock implements VideoReceiverStats {}
-
-class MockVideoReceiverStatsEvent extends Mock
-    implements VideoReceiverStatsEvent {
-  @override
-  dynamic noSuchMethod(Invocation invocation) {
-    if (invocation.memberName == #stats) return MockVideoReceiverStats();
-    return super.noSuchMethod(invocation);
-  }
 }

@@ -29,9 +29,6 @@ import '../livekit_mocks.dart';
 
 MockLocalParticipant _buildMockParticipant(String id) {
   final participant = MockLocalParticipant(id);
-  when(
-    participant.createListener,
-  ).thenReturn(MockParticipantEventsListener());
   when(participant.isMicrophoneEnabled).thenAnswer((_) => false);
   when(participant.isCameraEnabled).thenAnswer((_) => false);
   when(() => participant.getTrackPublicationBySource(any())).thenReturn(null);

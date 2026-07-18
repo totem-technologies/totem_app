@@ -128,7 +128,6 @@ void main() {
     late MockSessionController session;
     late FakeRoom room;
     late MockLocalParticipant participant;
-    late MockParticipantEventsListener listener;
     late MockSessionDeviceController deviceController;
 
     setUp(() {
@@ -136,7 +135,6 @@ void main() {
       deviceController = MockSessionDeviceController();
       participant = MockLocalParticipant();
       room = FakeRoom(participant);
-      listener = MockParticipantEventsListener();
 
       when(() => session.room).thenReturn(room);
       when(() => session.devices).thenReturn(deviceController);
@@ -157,8 +155,6 @@ void main() {
         () => participant.getTrackPublicationBySource(TrackSource.camera),
       ).thenReturn(null);
       when(() => participant.isMicrophoneEnabled()).thenReturn(false);
-
-      when(() => participant.createListener()).thenReturn(listener);
 
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
       when(() => session.event).thenReturn(_createSessionEvent());

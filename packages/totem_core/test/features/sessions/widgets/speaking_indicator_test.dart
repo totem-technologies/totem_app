@@ -17,9 +17,6 @@ void main() {
 
   setUp(() {
     remoteParticipant = MockRemoteParticipant('user-1', 'User 1');
-    when(() => remoteParticipant.createListener()).thenReturn(
-      MockParticipantEventsListener(),
-    );
     when(
       () =>
           remoteParticipant.getTrackPublicationBySource(TrackSource.microphone),
@@ -150,14 +147,10 @@ void main() {
         tester,
       ) async {
         final participant = MockRemoteParticipant('user-2', 'User 2');
-        final publication = MockRemoteAudioTrackPublication();
+        final publication = MockRemoteTrackPublication<RemoteAudioTrack>();
         final audioTrack = MockRemoteAudioTrack(muted: false);
         final mediaStreamTrack = MockMediaStreamTrack();
-        final participantListener = CapturingParticipantEventsListener();
 
-        when(
-          participant.createListener,
-        ).thenReturn(participantListener);
         when(() => participant.kind).thenReturn(ParticipantKind.STANDARD);
         when(
           () => participant.getTrackPublicationBySource(TrackSource.microphone),
@@ -181,7 +174,7 @@ void main() {
         expect(find.byType(TotemIcon), findsNothing);
 
         audioTrack.setMuted(true);
-        participantListener.emitMuted(mutedEvent);
+        participant.listener.emitMuted(mutedEvent);
         audioTrack.trackListener.emit(MockTrackEvent());
         await tester.pump();
 
@@ -189,7 +182,7 @@ void main() {
         expect(find.byType(SoundWaveformWidget), findsNothing);
 
         audioTrack.setMuted(false);
-        participantListener.emitUnmuted(unmutedEvent);
+        participant.listener.emitUnmuted(unmutedEvent);
         audioTrack.trackListener.emit(MockTrackEvent());
         await tester.pump();
 
