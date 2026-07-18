@@ -743,65 +743,105 @@ class _LocalParticipantCardState extends ConsumerState<LocalParticipantCard> {
   }
 }
 
-class ParticipantVideo extends ConsumerWidget {
+class ParticipantVideo extends ConsumerStatefulWidget {
   const ParticipantVideo({required this.participant, super.key});
 
   final Participant<TrackPublication<Track>> participant;
 
+  @override
+  ConsumerState<ParticipantVideo> createState() => _ParticipantVideoState();
+}
+
+class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
+  EventsListener<ParticipantEvent>? _listener;
+  void _setupListeners() {
+    _listener?.dispose();
+    _listener = widget.participant.createListener()
+      ..on<TrackMutedEvent>(_onTrackMuted)
+      ..on<TrackUnmutedEvent>(_onTrackUnmuted)
+      ..on<ParticipantEvent>(_onParticipantUpdated);
+  }
+
+  void _onTrackMuted(TrackMutedEvent event) {
+    if (event.publication.source != TrackSource.camera) return;
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _onTrackUnmuted(TrackUnmutedEvent event) {
+    if (event.publication.source != TrackSource.camera) return;
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _onParticipantUpdated(ParticipantEvent _) {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _setupListeners();
+  }
+
   TrackPublication<Track>? get videoTrack {
-    if (participant is RemoteParticipant) {
-      return participant.getTrackPublicationBySource(TrackSource.camera);
-    } else if (participant is LocalParticipant) {
-      return (participant as LocalParticipant).getTrackPublicationBySource(
-            TrackSource.camera,
-          ) ??
-          participant.videoTrackPublications
+    if (widget.participant is RemoteParticipant) {
+      return widget.participant.getTrackPublicationBySource(TrackSource.camera);
+    } else if (widget.participant is LocalParticipant) {
+      return (widget.participant as LocalParticipant)
+              .getTrackPublicationBySource(
+                TrackSource.camera,
+              ) ??
+          widget.participant.videoTrackPublications
               .where(
                 (t) => t.track != null && t.track!.isActive && !t.track!.muted,
               )
               .firstOrNull;
     } else {
-      return participant.videoTrackPublications
+      return widget.participant.videoTrackPublications
           .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)
           .firstOrNull;
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final currentUser = ref.watch(
       authControllerProvider.select((auth) => auth.user),
     );
-    final user = ref.watch(userProfileProvider(participant.identity));
+    final user = ref.watch(userProfileProvider(widget.participant.identity));
     final trackPublication = videoTrack;
 
     final content = Stack(
       children: [
-        IgnorePointer(
-          child: participant.identity == currentUser?.slug
-              ? UserAvatar.currentUser(
-                  radius: 0,
-                  borderRadius: BorderRadius.zero,
-                  borderWidth: 0,
-                )
-              : user.when(
-                  data: (user) => UserAvatar.fromUserSchema(
-                    user,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: widget.participant.identity == currentUser?.slug
+                ? UserAvatar.currentUser(
+                    radius: 0,
                     borderRadius: BorderRadius.zero,
                     borderWidth: 0,
-                  ),
-                  error: (error, stackTrace) => const ColoredBox(
-                    color: AppTheme.mauve,
-                    child: Center(
-                      child: TotemIcon(
-                        TotemIcons.person,
-                        size: 24,
-                        color: Colors.white,
+                  )
+                : user.when(
+                    data: (user) => UserAvatar.fromUserSchema(
+                      user,
+                      borderRadius: BorderRadius.zero,
+                      borderWidth: 0,
+                    ),
+                    error: (error, stackTrace) => const ColoredBox(
+                      color: AppTheme.mauve,
+                      child: Center(
+                        child: TotemIcon(
+                          TotemIcons.person,
+                          size: 24,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
+                    loading: () =>
+                        const LoadingVideoPlaceholder(borderRadius: 0),
                   ),
-                  loading: () => const LoadingVideoPlaceholder(borderRadius: 0),
-                ),
+          ),
         ),
         if (trackPublication != null &&
             trackPublication.track != null &&
@@ -820,7 +860,7 @@ class ParticipantVideo extends ConsumerWidget {
 
     if (kDebugMode || currentUser?.isStaff == true) {
       return _ParticipantVideoStatistics(
-        participant: participant,
+        participant: widget.participant,
         trackPublication: trackPublication,
         child: content,
       );
@@ -863,21 +903,10 @@ class _ParticipantVideoStatisticsState
     fps = 0;
   }
 
-  EventsListener<ParticipantEvent>? _listener;
   EventsListener<TrackEvent>? _trackListener;
   String? _listenedTrackSid;
 
   void _setupListeners() {
-    _listener?.dispose();
-    _listener = widget.participant.createListener()
-      ..on<TrackMutedEvent>(_onTrackMuted)
-      ..on<TrackUnmutedEvent>(_onTrackUnmuted)
-      ..on<ParticipantEvent>(_onParticipantUpdated);
-
-    _bindTrackListener();
-  }
-
-  void _bindTrackListener() {
     final track = widget.trackPublication?.track;
     final trackSid = track?.sid;
 
@@ -904,20 +933,6 @@ class _ParticipantVideoStatisticsState
       _isTrackInactive = true;
     }
     _setupListeners();
-  }
-
-  void _onTrackMuted(TrackMutedEvent event) {
-    if (event.publication.source != TrackSource.camera) return;
-    if (!mounted) return;
-    _bindTrackListener();
-    setState(() {});
-  }
-
-  void _onTrackUnmuted(TrackUnmutedEvent event) {
-    if (event.publication.source != TrackSource.camera) return;
-    if (!mounted) return;
-    _bindTrackListener();
-    setState(() {});
   }
 
   // Whether the track is inactive due to poor network conditions.
@@ -955,11 +970,6 @@ class _ParticipantVideoStatisticsState
     }
   }
 
-  void _onParticipantUpdated(ParticipantEvent _) {
-    _bindTrackListener();
-    if (mounted) setState(() {});
-  }
-
   @override
   void didUpdateWidget(covariant _ParticipantVideoStatistics oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -970,7 +980,6 @@ class _ParticipantVideoStatisticsState
 
   @override
   void dispose() {
-    _listener?.dispose();
     _trackListener?.dispose();
     super.dispose();
   }
