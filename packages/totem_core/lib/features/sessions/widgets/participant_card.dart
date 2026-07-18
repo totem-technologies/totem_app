@@ -743,16 +743,126 @@ class _LocalParticipantCardState extends ConsumerState<LocalParticipantCard> {
   }
 }
 
-class ParticipantVideo extends ConsumerStatefulWidget {
+class ParticipantVideo extends ConsumerWidget {
   const ParticipantVideo({required this.participant, super.key});
 
   final Participant<TrackPublication<Track>> participant;
 
+  TrackPublication<Track>? get videoTrack {
+    if (participant is RemoteParticipant) {
+      return participant.getTrackPublicationBySource(TrackSource.camera);
+    } else if (participant is LocalParticipant) {
+      return (participant as LocalParticipant).getTrackPublicationBySource(
+            TrackSource.camera,
+          ) ??
+          participant.videoTrackPublications
+              .where(
+                (t) => t.track != null && t.track!.isActive && !t.track!.muted,
+              )
+              .firstOrNull;
+    } else {
+      return participant.videoTrackPublications
+          .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)
+          .firstOrNull;
+    }
+  }
+
   @override
-  ConsumerState<ParticipantVideo> createState() => _ParticipantVideoState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(
+      authControllerProvider.select((auth) => auth.user),
+    );
+    final user = ref.watch(userProfileProvider(participant.identity));
+    final trackPublication = videoTrack;
+
+    final content = Stack(
+      children: [
+        Builder(
+          builder: (context) {
+            final localUserSlug = ref.watch(
+              authControllerProvider.select((auth) => auth.user?.slug),
+            );
+            if (participant.identity == localUserSlug) {
+              return IgnorePointer(
+                child: UserAvatar.currentUser(
+                  radius: 0,
+                  borderRadius: BorderRadius.zero,
+                  borderWidth: 0,
+                ),
+              );
+            } else {
+              return IgnorePointer(
+                child: user.when(
+                  data: (user) {
+                    return UserAvatar.fromUserSchema(
+                      user,
+                      borderRadius: BorderRadius.zero,
+                      borderWidth: 0,
+                    );
+                  },
+                  error: (error, stackTrace) {
+                    return const ColoredBox(
+                      color: AppTheme.mauve,
+                      child: Center(
+                        child: TotemIcon(
+                          TotemIcons.person,
+                          size: 24,
+                          color: Colors.white,
+                        ),
+                      ),
+                    );
+                  },
+                  loading: () => const LoadingVideoPlaceholder(borderRadius: 0),
+                ),
+              );
+            }
+          },
+        ),
+        if (trackPublication != null &&
+            trackPublication.track != null &&
+            trackPublication.subscribed &&
+            !trackPublication.muted)
+          IgnorePointer(
+            child: VideoTrackRenderer(
+              key: ValueKey(trackPublication.track!.sid),
+              trackPublication.track! as VideoTrack,
+              fit: VideoViewFit.cover,
+              renderMode: VideoRenderMode.platformView,
+            ),
+          ),
+      ],
+    );
+
+    if (kDebugMode || currentUser?.isStaff == true) {
+      return _ParticipantVideoStatistics(
+        participant: participant,
+        trackPublication: trackPublication,
+        child: content,
+      );
+    }
+
+    return content;
+  }
 }
 
-class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
+class _ParticipantVideoStatistics extends StatefulWidget {
+  const _ParticipantVideoStatistics({
+    required this.participant,
+    required this.trackPublication,
+    required this.child,
+  });
+
+  final Participant<TrackPublication<Track>> participant;
+  final TrackPublication<Track>? trackPublication;
+  final Widget child;
+
+  @override
+  State<_ParticipantVideoStatistics> createState() =>
+      _ParticipantVideoStatisticsState();
+}
+
+class _ParticipantVideoStatisticsState
+    extends State<_ParticipantVideoStatistics> {
   // --- Debug Stats State ---
   int _currentBitrate = 0;
   num frameHeight = 0;
@@ -766,24 +876,6 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     _currentBitrate = frameHeight = frameWidth = 0;
     qualityLimitationReason = decoderImplementation = mimeType = null;
     fps = 0;
-  }
-
-  TrackPublication<Track>? get videoTrack {
-    if (widget.participant is RemoteParticipant) {
-      return widget.participant.getTrackPublicationBySource(TrackSource.camera);
-    } else if (widget.participant is LocalParticipant) {
-      return (widget.participant as LocalParticipant)
-              .getTrackPublicationBySource(TrackSource.camera) ??
-          widget.participant.videoTrackPublications
-              .where(
-                (t) => t.track != null && t.track!.isActive && !t.track!.muted,
-              )
-              .firstOrNull;
-    } else {
-      return widget.participant.videoTrackPublications
-          .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)
-          .firstOrNull;
-    }
   }
 
   EventsListener<ParticipantEvent>? _listener;
@@ -801,8 +893,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   }
 
   void _bindTrackListener() {
-    final publication = videoTrack;
-    final track = publication?.track;
+    final track = widget.trackPublication?.track;
     final trackSid = track?.sid;
 
     if (_listenedTrackSid == trackSid && _trackListener != null) {
@@ -885,7 +976,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   }
 
   @override
-  void didUpdateWidget(covariant ParticipantVideo oldWidget) {
+  void didUpdateWidget(covariant _ParticipantVideoStatistics oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.participant.sid != widget.participant.sid) {
       _setupListeners();
@@ -903,112 +994,45 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = ref.watch(
-      authControllerProvider.select((auth) => auth.user),
-    );
-    final user = ref.watch(userProfileProvider(widget.participant.identity));
-    final trackPublication = videoTrack;
-
-    final content = Stack(
-      children: [
-        Builder(
-          builder: (context) {
-            final localUserSlug = ref.watch(
-              authControllerProvider.select((auth) => auth.user?.slug),
-            );
-            if (widget.participant.identity == localUserSlug) {
-              return IgnorePointer(
-                child: UserAvatar.currentUser(
-                  radius: 0,
-                  borderRadius: BorderRadius.zero,
-                  borderWidth: 0,
-                ),
-              );
-            } else {
-              return IgnorePointer(
-                child: user.when(
-                  data: (user) {
-                    return UserAvatar.fromUserSchema(
-                      user,
-                      borderRadius: BorderRadius.zero,
-                      borderWidth: 0,
-                    );
-                  },
-                  error: (error, stackTrace) {
-                    return const ColoredBox(
-                      color: AppTheme.mauve,
-                      child: Center(
-                        child: TotemIcon(
-                          TotemIcons.person,
-                          size: 24,
-                          color: Colors.white,
-                        ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(
+        () => _shouldShowStatistics = !_shouldShowStatistics,
+      ),
+      child: _shouldShowStatistics
+          ? Stack(
+              fit: StackFit.expand,
+              children: [
+                widget.child,
+                Positioned(
+                  left: 4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'Bitrate: $_currentBitrate\n'
+                      'Res: ${frameWidth}x$frameHeight\n'
+                      'FPS: $fps\n'
+                      'Mime: ${mimeType ?? 'None'}\n'
+                      'Is off: $_isTrackInactive',
+                      style: const TextStyle(
+                        color: Colors.greenAccent,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        height: 1.3,
                       ),
-                    );
-                  },
-                  loading: () => const LoadingVideoPlaceholder(borderRadius: 0),
-                ),
-              );
-            }
-          },
-        ),
-        if (trackPublication != null &&
-            trackPublication.track != null &&
-            trackPublication.subscribed &&
-            !trackPublication.muted)
-          IgnorePointer(
-            child: VideoTrackRenderer(
-              key: ValueKey(trackPublication.track!.sid),
-              trackPublication.track! as VideoTrack,
-              fit: VideoViewFit.cover,
-              renderMode: VideoRenderMode.platformView,
-            ),
-          ),
-      ],
-    );
-
-    if (kDebugMode || currentUser?.isStaff == true) {
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => setState(
-          () => _shouldShowStatistics = !_shouldShowStatistics,
-        ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            content,
-            if (_shouldShowStatistics)
-              Positioned(
-                left: 4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.7),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    'Bitrate: $_currentBitrate\n'
-                    'Res: ${frameWidth}x$frameHeight\n'
-                    'FPS: $fps\n'
-                    'Mime: ${mimeType ?? 'None'}\n'
-                    'Is off: $_isTrackInactive',
-                    style: const TextStyle(
-                      color: Colors.greenAccent,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      height: 1.3,
                     ),
                   ),
                 ),
-              ),
-          ],
-        ),
-      );
-    }
-
-    return content;
+              ],
+            )
+          : widget.child,
+    );
   }
 }
