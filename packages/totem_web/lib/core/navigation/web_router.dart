@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:js_interop';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -37,6 +38,10 @@ class WebTotemRouter extends TotemRouter {
         GoRoute(
           path: '/',
           builder: (context, state) => const _WebRedirectScreen(),
+        ),
+        GoRoute(
+          path: '/__version',
+          builder: (context, state) => const _VersionScreen(),
         ),
         GoRoute(
           path: '/:slug',
@@ -123,6 +128,50 @@ class WebTotemRouter extends TotemRouter {
         webOnlyWindowName: '_self',
       );
     }
+  }
+}
+
+class _VersionScreen extends StatefulWidget {
+  const _VersionScreen();
+
+  @override
+  State<_VersionScreen> createState() => _VersionScreenState();
+}
+
+class _VersionScreenState extends State<_VersionScreen> {
+  String _version = 'Loading…';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final yaml = await rootBundle.loadString('pubspec.yaml');
+      for (final line in yaml.split('\n')) {
+        final trimmed = line.trimLeft();
+        if (trimmed.startsWith('version:')) {
+          _version = trimmed.substring('version:'.length).trim();
+          break;
+        }
+      }
+    } catch (_) {
+      _version = 'unknown';
+    }
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Version')),
+      body: Center(
+        child: SelectableText(_version, style: theme.textTheme.headlineMedium),
+      ),
+    );
   }
 }
 
