@@ -114,6 +114,9 @@ class SessionController extends _$SessionController {
   );
 
   /// h264 has hardware encode/decode on effectively every mobile device.
+  ///
+  /// Some Browsers have trouble encoding h265.
+  /// Prefer h265 on mobile devices.
   static const defaultVideoPublishOptions = VideoPublishOptions(
     videoCodec: (kIsWeb || kIsWasm) ? 'h264' : 'h265',
     backupVideoCodec: BackupVideoCodec(codec: 'h264'),

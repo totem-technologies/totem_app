@@ -641,7 +641,7 @@ class ParticipantControlButton extends ConsumerWidget {
   }
 }
 
-class LocalParticipantCard extends ConsumerStatefulWidget {
+class LocalParticipantCard extends ConsumerWidget {
   const LocalParticipantCard({
     this.isCameraOn = true,
     this.audioTrack,
@@ -653,38 +653,17 @@ class LocalParticipantCard extends ConsumerStatefulWidget {
   final AudioTrack? audioTrack;
   final VideoTrack? videoTrack;
 
-  @override
-  ConsumerState<LocalParticipantCard> createState() =>
-      _LocalParticipantCardState();
-}
-
-class _LocalParticipantCardState extends ConsumerState<LocalParticipantCard> {
   bool get _isVideoTrackVisible =>
-      widget.videoTrack != null &&
-      widget.videoTrack!.isActive &&
-      !widget.videoTrack!.muted;
+      videoTrack != null && videoTrack!.isActive && !videoTrack!.muted;
 
   @override
-  void didUpdateWidget(LocalParticipantCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // TODO(totem): Show a placeholder while video initializes
-    // Investigate better ways to display the video only when the video is initialized
-    // This delay is necessary because the native video view needs a moment to initialize and display
-    // the first frame after the track is unmuted or becomes active. Without this, we might see a brief
-    // flash of the avatar before the video appears.
-    // https://github.com/livekit/client-sdk-flutter/issues/1061
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final user = ref.watch(
       authControllerProvider.select((auth) => auth.user),
     );
 
-    final showAvatar = !widget.isCameraOn || !_isVideoTrackVisible;
-
-    final isVideoTrackVisible = _isVideoTrackVisible;
+    final showVideo = isCameraOn && _isVideoTrackVisible;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(30),
@@ -693,47 +672,40 @@ class _LocalParticipantCardState extends ConsumerState<LocalParticipantCard> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            const Positioned.fill(child: ColoredBox(color: Colors.black)),
-            if (isVideoTrackVisible)
-              IgnorePointer(
-                child: VideoTrackRenderer(
-                  widget.videoTrack!,
-                  key: ValueKey(widget.videoTrack!.sid),
-                  fit: VideoViewFit.cover,
-                  renderMode: VideoRenderMode.platformView,
+            Positioned.fill(
+              child: IgnorePointer(
+                child: UserAvatar.currentUser(
+                  radius: 0,
+                  borderRadius: BorderRadius.zero,
+                  borderWidth: 0,
                 ),
-              )
-            else if (!showAvatar)
-              const LoadingVideoPlaceholder(),
-            AnimatedOpacity(
-              opacity: showAvatar ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 250),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: UserAvatar.currentUser(
-                        radius: 0,
-                        borderRadius: BorderRadius.zero,
-                        borderWidth: 0,
+              ),
+            ),
+            AnimatedSwitcher(
+              duration: kThemeAnimationDuration,
+              child: showVideo
+                  ? IgnorePointer(
+                      child: VideoTrackRenderer(
+                        videoTrack!,
+                        key: ValueKey(videoTrack!.sid),
+                        fit: VideoViewFit.cover,
+                        renderMode: VideoRenderMode.platformView,
                       ),
-                    ),
-                  ),
-                  PositionedDirectional(
-                    bottom: 14,
-                    start: 14,
-                    end: 14,
-                    child: SmartNameText(
-                      name: user?.name ?? 'You',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        shadows: kElevationToShadow[6],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
+                    )
+                  : const SizedBox(),
+            ),
+            PositionedDirectional(
+              bottom: 14,
+              start: 14,
+              end: 14,
+              child: SmartNameText(
+                name: user?.name ?? 'You',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  shadows: kElevationToShadow[6],
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
           ],
@@ -753,7 +725,7 @@ class ParticipantVideo extends ConsumerStatefulWidget {
 }
 
 class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
-  final videoKey = GlobalKey();
+  final GlobalKey videoKey = GlobalKey();
 
   EventsListener<ParticipantEvent>? _listener;
   void _setupListeners() {
@@ -791,9 +763,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
       return widget.participant.getTrackPublicationBySource(TrackSource.camera);
     } else if (widget.participant is LocalParticipant) {
       return (widget.participant as LocalParticipant)
-              .getTrackPublicationBySource(
-                TrackSource.camera,
-              ) ??
+              .getTrackPublicationBySource(TrackSource.camera) ??
           widget.participant.videoTrackPublications
               .where(
                 (t) => t.track != null && t.track!.isActive && !t.track!.muted,
