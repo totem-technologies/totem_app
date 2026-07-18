@@ -909,79 +909,61 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     final user = ref.watch(userProfileProvider(widget.participant.identity));
     final trackPublication = videoTrack;
 
-    Widget buildAvatar() {
-      return Builder(
-        builder: (context) {
-          final localUserSlug = ref.watch(
-            authControllerProvider.select((auth) => auth.user?.slug),
-          );
-          if (widget.participant.identity == localUserSlug) {
-            return IgnorePointer(
-              child: UserAvatar.currentUser(
-                radius: 0,
-                borderRadius: BorderRadius.zero,
-                borderWidth: 0,
-              ),
-            );
-          } else {
-            return IgnorePointer(
-              child: user.when(
-                data: (user) {
-                  return UserAvatar.fromUserSchema(
-                    user,
-                    borderRadius: BorderRadius.zero,
-                    borderWidth: 0,
-                  );
-                },
-                error: (error, stackTrace) {
-                  return const ColoredBox(
-                    color: AppTheme.mauve,
-                    child: Center(
-                      child: TotemIcon(
-                        TotemIcons.person,
-                        size: 24,
-                        color: Colors.white,
-                      ),
-                    ),
-                  );
-                },
-                loading: () => const LoadingVideoPlaceholder(borderRadius: 0),
-              ),
-            );
-          }
-        },
-      );
-    }
-
-    final shouldShowAvatar = () {
-      if (trackPublication == null ||
-          trackPublication.track == null ||
-          !trackPublication.subscribed ||
-          trackPublication.muted) {
-        return true;
-      }
-      return false;
-    }();
-
     final content = Stack(
       children: [
+        Builder(
+          builder: (context) {
+            final localUserSlug = ref.watch(
+              authControllerProvider.select((auth) => auth.user?.slug),
+            );
+            if (widget.participant.identity == localUserSlug) {
+              return IgnorePointer(
+                child: UserAvatar.currentUser(
+                  radius: 0,
+                  borderRadius: BorderRadius.zero,
+                  borderWidth: 0,
+                ),
+              );
+            } else {
+              return IgnorePointer(
+                child: user.when(
+                  data: (user) {
+                    return UserAvatar.fromUserSchema(
+                      user,
+                      borderRadius: BorderRadius.zero,
+                      borderWidth: 0,
+                    );
+                  },
+                  error: (error, stackTrace) {
+                    return const ColoredBox(
+                      color: AppTheme.mauve,
+                      child: Center(
+                        child: TotemIcon(
+                          TotemIcons.person,
+                          size: 24,
+                          color: Colors.white,
+                        ),
+                      ),
+                    );
+                  },
+                  loading: () => const LoadingVideoPlaceholder(borderRadius: 0),
+                ),
+              );
+            }
+          },
+        ),
         if (trackPublication != null &&
             trackPublication.track != null &&
             trackPublication.subscribed &&
             !trackPublication.muted)
           IgnorePointer(
-            child: ColoredBox(
-              color: Colors.black,
-              child: VideoTrackRenderer(
-                key: ValueKey(trackPublication.track!.sid),
-                trackPublication.track! as VideoTrack,
-                fit: VideoViewFit.cover,
-                renderMode: VideoRenderMode.platformView,
-                placeholderBuilder: (_) => buildAvatar(),
-              ),
+            child: VideoTrackRenderer(
+              key: ValueKey(trackPublication.track!.sid),
+              trackPublication.track! as VideoTrack,
+              fit: VideoViewFit.cover,
+              renderMode: VideoRenderMode.platformView,
             ),
           ),
-        if (shouldShowAvatar) Positioned.fill(child: buildAvatar()),
       ],
     );
 
