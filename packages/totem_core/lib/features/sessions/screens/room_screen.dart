@@ -71,7 +71,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
   @override
   void dispose() {
-    _clearSessionNotifications();
+    _notificationController.dismissAll();
     _clearTimeRemainingWarningTimer();
     _disableScreenProtection();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -150,10 +150,6 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   void _closeKeeperDisconnectedNotification() {
     _closeKeeperLeftNotification?.dismissActive();
     _closeKeeperLeftNotification = null;
-  }
-
-  void _clearSessionNotifications() {
-    _notificationController.dismissAll();
   }
 
   void _clearTimeRemainingWarningTimer() {
@@ -326,6 +322,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      if (ref.read(connectionStateProvider) != RoomConnectionState.connected) {
+        return;
+      }
       _setKeeperDisconnectedNotification(hasKeeperDisconnected, roomStatus);
     });
   }
@@ -356,6 +355,10 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     if (isTransientJoinRecoveryEarly) {
       return widget.loadingScreen;
     }
+
+    _notificationController.blocked =
+        currentRoomScreen == RoomScreen.disconnected ||
+        currentRoomScreen == RoomScreen.error;
 
     _scheduleTimeRemainingWarning(
       currentSessionEvent,
@@ -416,8 +419,10 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
           }
 
           if (next == RoomScreen.disconnected || next == RoomScreen.error) {
-            _clearSessionNotifications();
+            _notificationController.blocked = true;
             _clearTimeRemainingWarningTimer();
+          } else {
+            _notificationController.blocked = false;
           }
         },
       )
@@ -439,7 +444,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
             case RoomStatus.active:
               TotemRouter.instance.setTabCloseConfirmationEnabled(true);
             case RoomStatus.ended:
-              _clearSessionNotifications();
+              _notificationController.blocked = true;
               _clearTimeRemainingWarningTimer();
               TotemRouter.instance.setTabCloseConfirmationEnabled(false);
           }
@@ -450,8 +455,10 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         (previous, next) {
           if (next == RoomConnectionState.disconnected ||
               next == RoomConnectionState.error) {
-            _clearSessionNotifications();
+            _notificationController.blocked = true;
             _clearTimeRemainingWarningTimer();
+          } else {
+            _notificationController.blocked = false;
           }
         },
       );
@@ -487,12 +494,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     }
 
     if (currentSessionEvent.ended || roomStatus == RoomStatus.ended) {
-      return RoomBackground(
-        status: roomStatus,
-        child: SessionDisconnectedScreen(
-          session: currentSessionEvent,
-          disconnectReason: disconnectReason,
-        ),
+      return SessionDisconnectedScreen(
+        session: currentSessionEvent,
+        disconnectReason: disconnectReason,
       );
     }
 
