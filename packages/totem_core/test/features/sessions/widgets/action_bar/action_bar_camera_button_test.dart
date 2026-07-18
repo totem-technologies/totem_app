@@ -19,10 +19,6 @@ void main() {
     sessionController = FakeSessionController();
     participant = MockLocalParticipant();
     devices = sessionController.devices as FakeSessionDeviceController;
-
-    when(
-      participant.createListener,
-    ).thenReturn(MockParticipantEventsListener());
   });
 
   group('ActionBarCameraSwitcherButton', () {

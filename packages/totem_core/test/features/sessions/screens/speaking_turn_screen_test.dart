@@ -88,7 +88,6 @@ SessionDetailSchema _createTestSession() {
 
 MockRemoteParticipant _mockRemote(String id, String name) {
   final participant = MockRemoteParticipant(id, name);
-  when(participant.createListener).thenReturn(MockParticipantEventsListener());
   when(() => participant.getTrackPublicationBySource(any())).thenReturn(null);
   return participant;
 }
@@ -191,9 +190,6 @@ void main() {
     when(
       () => localParticipant.getTrackPublicationBySource(TrackSource.camera),
     ).thenReturn(null);
-    when(
-      () => localParticipant.createListener(),
-    ).thenReturn(MockParticipantEventsListener());
   });
 
   Future<void> pumpSpeakingTurn(

@@ -47,10 +47,6 @@ void main() {
   setUp(() {
     remoteParticipant = MockRemoteParticipant('user-2', 'John Doe');
     fakeSessionState = FakeSessionController();
-
-    when(
-      () => remoteParticipant.createListener(),
-    ).thenReturn(MockParticipantEventsListener());
   });
 
   Future<void> pumpWidget(
@@ -146,9 +142,6 @@ void main() {
       tester,
     ) async {
       final keeperParticipant = MockRemoteParticipant('keeper-1', 'The Keeper');
-      when(
-        keeperParticipant.createListener,
-      ).thenReturn(MockParticipantEventsListener());
 
       // Add keeper-1 as keeper to the room state
       fakeSessionState.mockState = SessionRoomState(
@@ -233,19 +226,29 @@ void main() {
   });
 
   group('ParticipantVideo', () {
-    testWidgets('hides track when connection is lost (isTrackInactive)', (
+    testWidgets('hides track when muted', (
       tester,
     ) async {
       final mockParticipant = MockRemoteParticipant('user-2', 'John Doe');
-      final mockPublication = MockRemoteTrackPublication();
+      Future<void> show() {
+        return pumpWidget(
+          tester,
+          authState: AuthState.unauthenticated(),
+          overrides: [
+            currentSessionStateProvider.overrideWithValue(
+              fakeSessionState.mockState,
+            ),
+          ],
+          child: ParticipantVideo(participant: mockParticipant),
+        );
+      }
+
+      final mockPublication = MockRemoteTrackPublication<RemoteVideoTrack>();
       final mockTrack = MockRemoteVideoTrack();
 
       when(
         () => mockParticipant.getTrackPublicationBySource(TrackSource.camera),
       ).thenReturn(mockPublication);
-      when(
-        mockParticipant.createListener,
-      ).thenReturn(MockParticipantEventsListener());
 
       when(() => mockPublication.track).thenReturn(mockTrack);
       when(() => mockPublication.source).thenReturn(TrackSource.camera);
@@ -253,42 +256,19 @@ void main() {
       when(() => mockPublication.subscribed).thenReturn(true);
       when(() => mockPublication.muted).thenReturn(false);
 
-      final trackListener = FakeTrackEventsListener();
-      when(mockTrack.createListener).thenReturn(trackListener);
       when(() => mockTrack.sid).thenReturn('track-sid');
       when(() => mockTrack.isActive).thenReturn(true);
       when(() => mockTrack.muted).thenReturn(false);
 
-      await pumpWidget(
-        tester,
-        authState: AuthState.unauthenticated(),
-        overrides: [
-          currentSessionStateProvider.overrideWithValue(
-            fakeSessionState.mockState,
-          ),
-        ],
-        child: ParticipantVideo(participant: mockParticipant),
-      );
-
-      await tester.pumpAndSettle();
-
-      // Default isTrackInactive = true, so avatar is shown initially.
-      expect(find.byType(VideoTrackRenderer), findsNothing);
-
-      // Simulate a healthy bitrate to activate the video.
-      final healthyEvent = MockVideoReceiverStatsEvent();
-      when(() => healthyEvent.currentBitrate).thenReturn(500);
-      trackListener.capturedListener?.call(healthyEvent);
-
+      await show();
       await tester.pumpAndSettle();
 
       expect(find.byType(VideoTrackRenderer), findsOneWidget);
 
-      // Now simulate a drop below threshold (bitrate <= 0).
-      final event = MockVideoReceiverStatsEvent();
-      when(() => event.currentBitrate).thenReturn(0);
-      trackListener.capturedListener?.call(event);
+      when(() => mockPublication.muted).thenReturn(true);
+      when(() => mockTrack.muted).thenReturn(true);
 
+      await show();
       await tester.pumpAndSettle();
 
       expect(find.byType(VideoTrackRenderer), findsNothing);
