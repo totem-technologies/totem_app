@@ -283,30 +283,49 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
 
   // ===== Local controls =====
 
+  bool _isTogglingCamera = false;
+
   Future<void> _toggleCamera() async {
-    if (_isCameraOn) {
-      setState(() => _isCameraOn = false);
-      _notifyMediaPreferencesChanged();
-      await _disposePreviewVideoTrack();
-      if (mounted) setState(() {});
-    } else {
-      await _initializeLocalVideo();
-      if (mounted) {
-        setState(() => _isCameraOn = true);
+    if (_isTogglingCamera) return;
+    _isTogglingCamera = true;
+
+    try {
+      if (_isCameraOn) {
+        setState(() => _isCameraOn = false);
         _notifyMediaPreferencesChanged();
+        await _disposePreviewVideoTrack();
+        if (mounted) setState(() {});
+      } else {
+        await _initializeLocalVideo();
+        if (mounted) {
+          setState(() => _isCameraOn = true);
+          _notifyMediaPreferencesChanged();
+        }
       }
+    } finally {
+      _isTogglingCamera = false;
     }
   }
 
+  bool _isTogglingMic = false;
+
   Future<void> _toggleMic() async {
-    setState(() => _isMicOn = !_isMicOn);
-    _notifyMediaPreferencesChanged();
-    final track = await _initializeLocalAudio();
-    switch (_isMicOn) {
-      case true:
+    if (_isTogglingMic) return;
+    _isTogglingMic = true;
+
+    try {
+      setState(() => _isMicOn = !_isMicOn);
+      _notifyMediaPreferencesChanged();
+
+      if (_isMicOn) {
+        final track = await _initializeLocalAudio();
         await track?.unmute(stopOnMute: false);
-      case false:
-        await track?.mute(stopOnMute: false);
+      } else {
+        await _disposePreviewAudioTrack();
+        if (mounted) setState(() {});
+      }
+    } finally {
+      _isTogglingMic = false;
     }
   }
 
@@ -382,7 +401,7 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
                           );
                         });
                         _notifyMediaPreferencesChanged();
-                        _initializeLocalVideo();
+                        if (_isCameraOn) _initializeLocalVideo();
                       },
                       onCameraDeviceSelected: (device) {
                         setState(() {
@@ -391,7 +410,7 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
                           );
                         });
                         _notifyMediaPreferencesChanged();
-                        _initializeLocalVideo();
+                        if (_isCameraOn) _initializeLocalVideo();
                       },
                     ),
                   ],

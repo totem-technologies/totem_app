@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/keeper/repositories/keeper_repository.dart';
 import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_core/shared/router.dart';
@@ -47,7 +48,24 @@ class WebTotemRouter extends TotemRouter {
           path: '/:slug',
           builder: (context, state) {
             final slug = state.pathParameters['slug'] ?? '';
-            return SentryDisplayWidget(child: PreJoinScreen(sessionSlug: slug));
+            return Consumer(
+              builder: (context, ref, child) {
+                ref.listen(eventProvider(slug), (prev, next) {
+                  next.maybeWhen(
+                    data: (data) {
+                      if (data.title.isNotEmpty) {
+                        web.document.title = 'Totem - ${data.title}';
+                      }
+                    },
+                    orElse: () {},
+                  );
+                });
+                return child!;
+              },
+              child: SentryDisplayWidget(
+                child: PreJoinScreen(sessionSlug: slug),
+              ),
+            );
           },
         ),
       ],

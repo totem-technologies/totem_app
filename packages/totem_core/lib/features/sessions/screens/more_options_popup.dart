@@ -30,6 +30,7 @@ Future<bool?> showLeaveDialog(BuildContext context) {
         content: 'Are you sure you want to leave the session?',
         confirmButtonText: 'Yes',
         onConfirm: () async {
+          TotemRouter.instance.setTabCloseConfirmationEnabled(false);
           Navigator.of(context).pop(true);
         },
       );

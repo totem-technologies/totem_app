@@ -470,7 +470,7 @@ void main() {
         expect(previewTracks.videoTracks, hasLength(1));
       });
 
-      testWidgets('toggles the microphone preview and recreates the track', (
+      testWidgets('toggles the microphone preview and disposes the track', (
         tester,
       ) async {
         final previewTracks = _PreviewTrackFactory();
@@ -491,6 +491,15 @@ void main() {
         await tester.pump(const Duration(milliseconds: 250));
         await tester.pump(const Duration(milliseconds: 250));
 
+        expect(previewTracks.audioTracks, hasLength(1));
+        verify(firstTrack.stop).called(1);
+        verify(firstTrack.dispose).called(1);
+
+        await tester.tap(find.byType(ActionBarMicButton));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        await tester.pump(const Duration(milliseconds: 250));
+
         expect(previewTracks.audioTracks, hasLength(2));
         expect(
           tester
@@ -498,26 +507,6 @@ void main() {
               .audioTrack,
           same(previewTracks.audioTracks.last),
         );
-        verify(firstTrack.stop).called(1);
-        verify(firstTrack.dispose).called(1);
-        verify(
-          () => previewTracks.audioTracks.last.mute(stopOnMute: false),
-        ).called(1);
-
-        await tester.tap(find.byType(ActionBarMicButton));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 250));
-        await tester.pump(const Duration(milliseconds: 250));
-
-        expect(previewTracks.audioTracks, hasLength(3));
-        expect(
-          tester
-              .widget<ActionBarMicButton>(find.byType(ActionBarMicButton))
-              .audioTrack,
-          same(previewTracks.audioTracks.last),
-        );
-        verify(() => previewTracks.audioTracks[1].stop()).called(1);
-        verify(() => previewTracks.audioTracks[1].dispose()).called(1);
         verify(
           () => previewTracks.audioTracks.last.unmute(stopOnMute: false),
         ).called(1);

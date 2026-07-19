@@ -629,6 +629,92 @@ void main() {
       expect(iconBackground, findsOneWidget);
     });
 
+    group('NotificationController.blocked', () {
+      testWidgets('rejects new notifications when blocked', (tester) async {
+        final context = await pumpHost(tester);
+        final controller = NotificationController();
+
+        controller.blocked = true;
+        expect(controller.blocked, isTrue);
+
+        controller.showTimed(
+          context,
+          icon: TotemIcons.chat,
+          title: 'Blocked',
+          message: 'Should not appear',
+        );
+
+        await tester.pump();
+        expect(find.text('Blocked'), findsNothing);
+      });
+
+      testWidgets('dismisses active notifications when becoming blocked', (
+        tester,
+      ) async {
+        final context = await pumpHost(tester);
+        final controller = NotificationController();
+
+        controller.showPermanent(
+          context,
+          icon: TotemIcons.pause,
+          title: 'Active',
+          message: 'Should be dismissed',
+        );
+
+        await tester.pump();
+        expect(find.text('Active'), findsOneWidget);
+
+        controller.blocked = true;
+        await tester.pumpAndSettle();
+        expect(find.text('Active'), findsNothing);
+      });
+
+      testWidgets('allows notifications after unblocking', (tester) async {
+        final context = await pumpHost(tester);
+        final controller = NotificationController();
+
+        controller.blocked = true;
+
+        controller.showTimed(
+          context,
+          icon: TotemIcons.chat,
+          title: 'Blocked',
+          message: 'Should not appear',
+        );
+        await tester.pump();
+        expect(find.text('Blocked'), findsNothing);
+
+        controller.blocked = false;
+        expect(controller.blocked, isFalse);
+
+        controller.showTimed(
+          context,
+          icon: TotemIcons.chat,
+          title: 'Unblocked',
+          message: 'Should appear',
+        );
+        await tester.pump();
+        expect(find.text('Unblocked'), findsOneWidget);
+      });
+
+      testWidgets('idempotent block/unblock', (tester) async {
+        final controller = NotificationController();
+
+        controller.blocked = true;
+        expect(controller.blocked, isTrue);
+        controller.blocked = true; // no-op
+        expect(controller.blocked, isTrue);
+
+        controller.blocked = false;
+        expect(controller.blocked, isFalse);
+        controller.blocked = false; // no-op
+        expect(controller.blocked, isFalse);
+
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+      });
+    });
+
     testWidgets('handles long title and message without layout exceptions', (
       tester,
     ) async {
