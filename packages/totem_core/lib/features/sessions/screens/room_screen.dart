@@ -147,11 +147,6 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     });
   }
 
-  void _closeKeeperDisconnectedNotification() {
-    _closeKeeperLeftNotification?.dismissActive();
-    _closeKeeperLeftNotification = null;
-  }
-
   void _clearTimeRemainingWarningTimer() {
     _timeRemainingWarningTimer?.cancel();
     _timeRemainingWarningTimer = null;
@@ -282,7 +277,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     RoomStatus roomStatus,
   ) {
     if (!mounted || !hasKeeperDisconnected || roomStatus != RoomStatus.active) {
-      _closeKeeperDisconnectedNotification();
+      _closeKeeperLeftNotification?.dismissActive();
+      _closeKeeperLeftNotification = null;
       return;
     }
 
@@ -291,8 +287,6 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       return;
     }
 
-    _closeKeeperLeftNotification?.dismissActive();
-    _closeKeeperLeftNotification = null;
     _closeKeeperLeftNotification = _notificationController.showPermanent(
       context,
       icon: TotemIcons.pause,
@@ -308,7 +302,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   ) {
     if (connectionState != RoomConnectionState.connected ||
         roomStatus == RoomStatus.ended) {
-      _closeKeeperDisconnectedNotification();
+      _closeKeeperLeftNotification?.dismissActive();
+      _closeKeeperLeftNotification = null;
       return;
     }
 
@@ -356,9 +351,12 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       return widget.loadingScreen;
     }
 
-    _notificationController.blocked =
+    final showingDisconnectedScreen =
+        currentSessionEvent?.ended == true ||
+        roomStatus == RoomStatus.ended ||
         currentRoomScreen == RoomScreen.disconnected ||
         currentRoomScreen == RoomScreen.error;
+    _notificationController.blocked = showingDisconnectedScreen;
 
     _scheduleTimeRemainingWarning(
       currentSessionEvent,
@@ -401,16 +399,6 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         },
       )
       ..listen(
-        hasKeeperDisconnectedProvider,
-        (previous, next) {
-          _syncKeeperDisconnectedNotification(
-            next,
-            roomStatus,
-            connectionState,
-          );
-        },
-      )
-      ..listen(
         resolveCurrentScreenProvider,
         (previous, next) {
           if (previous != RoomScreen.receiving &&
@@ -419,11 +407,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
           }
 
           if (next == RoomScreen.disconnected || next == RoomScreen.error) {
-            _notificationController.blocked = true;
-            TotemRouter.instance.setTabCloseConfirmationEnabled(false);
             _clearTimeRemainingWarningTimer();
-          } else {
-            _notificationController.blocked = false;
           }
         },
       )
@@ -445,7 +429,6 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
             case RoomStatus.active:
               TotemRouter.instance.setTabCloseConfirmationEnabled(true);
             case RoomStatus.ended:
-              _notificationController.blocked = true;
               _clearTimeRemainingWarningTimer();
               TotemRouter.instance.setTabCloseConfirmationEnabled(false);
           }
@@ -456,10 +439,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         (previous, next) {
           if (next == RoomConnectionState.disconnected ||
               next == RoomConnectionState.error) {
-            _notificationController.blocked = true;
             _clearTimeRemainingWarningTimer();
-          } else {
-            _notificationController.blocked = false;
           }
         },
       );

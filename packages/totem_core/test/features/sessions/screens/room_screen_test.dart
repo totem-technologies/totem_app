@@ -1394,6 +1394,32 @@ void main() {
         expect(find.text('Time Remaining 5 min'), findsNothing);
       },
     );
+
+    testWidgets(
+      'blocks keeper paused notification when event ended but screen active',
+      (tester) async {
+        final event = _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 1)),
+          duration: 10,
+          ended: true,
+        );
+
+        // Screen is still listening because roomStatus is active and
+        // connection is connected — but event.ended is true, which triggers
+        // the SessionDisconnectedScreen early return. blocked must be true.
+        await _pumpRoomScreenWithMutableState(
+          tester,
+          event: event,
+          connectionState: RoomConnectionState.connected,
+          roomStatus: RoomStatus.active,
+          hasKeeperDisconnected: true,
+          roomScreen: RoomScreen.listening,
+        );
+
+        await tester.pumpAndSettle();
+        expect(find.byType(NotificationBanner), findsNothing);
+      },
+    );
   });
 
   group('VideoRoomScreen - session feedback cues', () {
