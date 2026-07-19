@@ -341,6 +341,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         currentRoomScreen == RoomScreen.disconnected ||
         currentRoomScreen == RoomScreen.error;
     _notificationController.blocked = showingDisconnectedScreen;
+    TotemRouter.instance.setTabCloseConfirmationEnabled(
+      !showingDisconnectedScreen,
+    );
 
     if (currentSessionEvent != null &&
         connectionState == RoomConnectionState.connected &&
@@ -413,12 +416,10 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
           switch (next) {
             case RoomStatus.waitingRoom:
-              TotemRouter.instance.setTabCloseConfirmationEnabled(false);
             case RoomStatus.active:
-              TotemRouter.instance.setTabCloseConfirmationEnabled(true);
+              break;
             case RoomStatus.ended:
               _clearTimeRemainingWarningTimer();
-              TotemRouter.instance.setTabCloseConfirmationEnabled(false);
           }
         },
       )
