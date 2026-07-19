@@ -199,7 +199,7 @@ class ListeningTurnScreen extends ConsumerWidget {
                       spacing: 12,
                       children: [
                         Expanded(child: nextUpText),
-                        const Center(child: SessionActionBar()),
+                        const SessionActionBar(),
                         const Spacer(),
                       ],
                     ),

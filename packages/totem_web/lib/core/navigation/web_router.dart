@@ -9,7 +9,6 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/keeper/repositories/keeper_repository.dart';
-import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
