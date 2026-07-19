@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/semantics.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -167,7 +168,9 @@ class NotificationController {
     if (_blocked == value) return;
     _blocked = value;
     if (_blocked) {
-      dismissAll();
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        dismissAll();
+      });
     }
   }
 
