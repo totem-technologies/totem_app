@@ -9,6 +9,12 @@ part 'session_repository.g.dart';
 const _shortTimeoutDuration = Duration(seconds: 10);
 const _timeoutDuration = Duration(seconds: 15);
 
+const _maxPostEventAttempts = 3;
+
+bool _isRecoverableErrorCode(ErrorCode? code) {
+  return code == ErrorCode.staleVersion || code == ErrorCode.invalidTransition;
+}
+
 Future<RoomState> _postEvent({
   required ClientApi apiService,
   required String sessionSlug,
@@ -17,46 +23,44 @@ Future<RoomState> _postEvent({
   required String operationName,
   Duration? timeout,
 }) async {
-  try {
-    return await RepositoryUtils.handleApiCall<RoomState>(
-      apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
-        sessionSlug: sessionSlug,
-        body: EventRequest(
-          event: event,
-          lastSeenVersion: lastSeenVersion,
+  var version = lastSeenVersion;
+
+  for (var attempt = 0; attempt < _maxPostEventAttempts; attempt++) {
+    try {
+      return await RepositoryUtils.handleApiCall<RoomState>(
+        apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
+          sessionSlug: sessionSlug,
+          body: EventRequest(
+            event: event,
+            lastSeenVersion: version,
+          ),
         ),
-      ),
-      operationName: operationName,
-      retryOnNetworkError: true,
-      timeout: timeout,
-    );
-  } on ApiError<RoomState, RoomErrorResponse> catch (error) {
-    final isStaleVersionError = error.error?.code == ErrorCode.staleVersion;
-    if (!isStaleVersionError) {
-      rethrow;
+        operationName: operationName,
+        retryOnNetworkError: true,
+        timeout: timeout,
+      );
+    } on ApiError<RoomState, RoomErrorResponse> catch (error) {
+      if (!_isRecoverableErrorCode(error.error?.code)) {
+        rethrow;
+      }
+
+      final isLastAttempt = attempt >= _maxPostEventAttempts - 1;
+      if (isLastAttempt) {
+        rethrow;
+      }
+
+      final roomState = await RepositoryUtils.handleApiCall<RoomState>(
+        apiCall: () =>
+            apiService.rooms.totemRoomsApiGetState(sessionSlug: sessionSlug),
+        operationName: 'refresh room state',
+        retryOnNetworkError: true,
+        timeout: timeout,
+      );
+      version = roomState.version;
     }
-
-    final roomState = await RepositoryUtils.handleApiCall<RoomState>(
-      apiCall: () =>
-          apiService.rooms.totemRoomsApiGetState(sessionSlug: sessionSlug),
-      operationName: 'refresh room state',
-      retryOnNetworkError: true,
-      timeout: timeout,
-    );
-
-    return RepositoryUtils.handleApiCall<RoomState>(
-      apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
-        sessionSlug: sessionSlug,
-        body: EventRequest(
-          event: event,
-          lastSeenVersion: roomState.version,
-        ),
-      ),
-      operationName: operationName,
-      retryOnNetworkError: true,
-      timeout: timeout,
-    );
   }
+
+  throw StateError('_postEvent loop exhausted');
 }
 
 @riverpod

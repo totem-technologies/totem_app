@@ -76,6 +76,17 @@ ApiResponse _staleVersionResponse() {
   );
 }
 
+ApiResponse _invalidTransitionResponse() {
+  return ApiResponse(
+    statusCode: 400,
+    body: jsonEncode(<String, dynamic>{
+      'code': 'invalid_transition',
+      'message': 'No stick to accept right now',
+      'detail': null,
+    }),
+  );
+}
+
 ClientApi _createApi(_ScriptedApiClient client) {
   return ClientApi(ApiConfig(client: client));
 }
@@ -135,11 +146,105 @@ void main() {
       expect(client.requests, hasLength(3));
     });
 
-    test('does not retry indefinitely when stale version persists', () async {
+    test(
+      'retries up to max attempts, throwing on the last failure',
+      () async {
+        final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
+          // Attempt 0: POST → stale
+          (_) => _staleVersionResponse(),
+          // Refresh
+          (_) => _roomStateResponse(10),
+          // Attempt 1: POST → stale
+          (_) => _staleVersionResponse(),
+          // Refresh
+          (_) => _roomStateResponse(15),
+          // Attempt 2 (last): POST → stale, rethrows immediately
+          (_) => _staleVersionResponse(),
+        ]);
+
+        final container = ProviderContainer(
+          retry: (_, _) => null,
+          overrides: [
+            apiServiceProvider.overrideWithValue(_createApi(client)),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        try {
+          await container.read(passTotemProvider('test-session', 5).future);
+          fail('Expected passTotemProvider to throw a stale version error');
+        } on ApiError<RoomState, RoomErrorResponse> catch (error) {
+          expect(error.error?.code, ErrorCode.staleVersion);
+        }
+
+        // 3 POSTs + 2 GETs = 5 total
+        expect(client.requests, hasLength(5));
+      },
+    );
+
+    test(
+      'succeeds after multiple version advances',
+      () async {
+        final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
+          // Attempt 0: POST(v=5) → stale
+          (_) => _staleVersionResponse(),
+          // Refresh → v=10
+          (_) => _roomStateResponse(10),
+          // Attempt 1: POST(v=10) → stale
+          (_) => _staleVersionResponse(),
+          // Refresh → v=15
+          (_) => _roomStateResponse(15),
+          // Attempt 2: POST(v=15) → success
+          (_) => _roomStateResponse(16),
+        ]);
+
+        final container = ProviderContainer(
+          retry: (_, _) => null,
+          overrides: [
+            apiServiceProvider.overrideWithValue(_createApi(client)),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final roomState = await container.read(
+          passTotemProvider('test-session', 5).future,
+        );
+
+        expect(roomState.version, 16);
+        expect(client.requests, hasLength(5));
+      },
+    );
+
+    test('refreshes state and retries on invalid transition error', () async {
       final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
-        (_) => _staleVersionResponse(),
-        (_) => _roomStateResponse(10),
-        (_) => _staleVersionResponse(),
+        (request) {
+          expect(request.method, 'POST');
+          expect(
+            request.path,
+            '/api/mobile/protected/rooms/test-session/event',
+          );
+          final body = _decodeJsonBody(request.body);
+          expect(body['last_seen_version'], 5);
+          return _invalidTransitionResponse();
+        },
+        (request) {
+          expect(request.method, 'GET');
+          expect(
+            request.path,
+            '/api/mobile/protected/rooms/test-session/state',
+          );
+          return _roomStateResponse(6);
+        },
+        (request) {
+          expect(request.method, 'POST');
+          expect(
+            request.path,
+            '/api/mobile/protected/rooms/test-session/event',
+          );
+          final body = _decodeJsonBody(request.body);
+          expect(body['last_seen_version'], 6);
+          return _roomStateResponse(7);
+        },
       ]);
 
       final container = ProviderContainer(
@@ -148,22 +253,49 @@ void main() {
           apiServiceProvider.overrideWithValue(_createApi(client)),
         ],
       );
-      final subscription = container.listen(
-        passTotemProvider('test-session', 5),
-        (_, _) {},
-        fireImmediately: true,
-      );
-      addTearDown(subscription.close);
       addTearDown(container.dispose);
 
-      try {
-        await container.read(passTotemProvider('test-session', 5).future);
-        fail('Expected passTotemProvider to throw a stale version error');
-      } on ApiError<RoomState, RoomErrorResponse> catch (error) {
-        expect(error.error?.code, ErrorCode.staleVersion);
-      }
+      final roomState = await container.read(
+        acceptTotemProvider('test-session', 5).future,
+      );
 
+      expect(roomState.version, 7);
       expect(client.requests, hasLength(3));
     });
+
+    test(
+      'does not retry on non-recoverable errors like room_not_active',
+      () async {
+        final client = _ScriptedApiClient(
+          <ApiResponse Function(ApiRequest)>[
+            (_) => ApiResponse(
+              statusCode: 400,
+              body: jsonEncode(<String, dynamic>{
+                'code': 'room_not_active',
+                'message': 'Room is not active',
+                'detail': null,
+              }),
+            ),
+          ],
+        );
+
+        final container = ProviderContainer(
+          retry: (_, _) => null,
+          overrides: [
+            apiServiceProvider.overrideWithValue(_createApi(client)),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        try {
+          await container.read(acceptTotemProvider('test-session', 5).future);
+          fail('Expected acceptTotemProvider to throw');
+        } on ApiError<RoomState, RoomErrorResponse> catch (error) {
+          expect(error.error?.code, ErrorCode.roomNotActive);
+        }
+
+        expect(client.requests, hasLength(1));
+      },
+    );
   });
 }
