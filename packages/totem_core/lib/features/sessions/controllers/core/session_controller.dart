@@ -300,6 +300,7 @@ class SessionController extends _$SessionController {
   }
 
   void _onRoomChanges([RoomState? newSessionState]) {
+    _updateParticipantsList();
     void handleStateChange(RoomState state) {
       if (state.version <= this.state.roomState.version) return;
 
@@ -307,7 +308,6 @@ class SessionController extends _$SessionController {
         _disableLocalMediaTracks();
       }
       _dispatch(RoomStateChanged(state));
-      _updateParticipantsList();
     }
 
     if (newSessionState != null) {
@@ -347,9 +347,14 @@ class SessionController extends _$SessionController {
       // Protects against out-of-order application from overlapping polls
       if (roomState.version > state.roomState.version) {
         applyRoomState(roomState);
-        logger.d('Polled server state: version ${state.roomState.version}');
+        logger.d('Polled server state: version ${roomState.version}');
       }
-    } catch (_) {
+    } catch (e, s) {
+      logger.d(
+        'poll room state failed (will retry next tick)',
+        error: e,
+        stackTrace: s,
+      );
       // Network hiccup or transient error - the next poll will retry.
     }
   }
