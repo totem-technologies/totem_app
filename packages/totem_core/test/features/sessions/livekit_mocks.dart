@@ -125,11 +125,17 @@ class FakeEngine extends Fake implements Engine {
 class FakeCameraCaptureOptions extends Fake implements CameraCaptureOptions {}
 
 class MockRemoteParticipant extends Mock implements RemoteParticipant {
-  MockRemoteParticipant(this.id, this.name);
+  MockRemoteParticipant(
+    this.id,
+    this.name, {
+    List<RemoteTrackPublication<RemoteAudioTrack>>? audioTracks,
+  }) : _audioTracks = audioTracks ?? [];
 
   final String id;
   @override
   final String name;
+
+  final List<RemoteTrackPublication<RemoteAudioTrack>> _audioTracks;
 
   @override
   String get identity => id;
@@ -138,10 +144,14 @@ class MockRemoteParticipant extends Mock implements RemoteParticipant {
   String get sid => id;
 
   @override
-  bool get hasAudio => true;
+  bool get hasAudio => _audioTracks.isNotEmpty;
 
   @override
   bool get isMuted => false;
+
+  @override
+  List<RemoteTrackPublication<RemoteAudioTrack>> get audioTrackPublications =>
+      _audioTracks;
 
   @override
   List<RemoteTrackPublication<RemoteVideoTrack>> get videoTrackPublications =>
@@ -359,4 +369,27 @@ class CapturingTrackEventsListener extends MockTrackEventsListener {
   }
 
   void emit(TrackEvent event) => capturedListener?.call(event);
+}
+
+class MockRemoteAudioTrackPublication extends Mock
+    implements RemoteTrackPublication<RemoteAudioTrack> {
+  MockRemoteAudioTrackPublication({
+    required this.sid,
+    this.subscribed = true,
+    this.subscriptionAllowed = true,
+  });
+
+  @override
+  final String sid;
+
+  @override
+  bool subscribed;
+
+  @override
+  bool subscriptionAllowed;
+
+  @override
+  Future<void> subscribe() async {
+    subscribed = true;
+  }
 }
