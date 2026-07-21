@@ -255,6 +255,11 @@ class SessionController extends _$SessionController {
       ),
     );
 
+    // Fetch server state immediately so we are never stuck with stale
+    // local state when LiveKit metadata is empty (e.g. room was killed
+    // and recreated but alive on the Totem server).
+    unawaited(_pollServerState());
+
     final speakerPref = options.speakerEnabled;
     devices.resetSpeakerRoutingDefaults(speakerPref);
     // Delay setting up the listener and applying the initial routing up to a bit.
