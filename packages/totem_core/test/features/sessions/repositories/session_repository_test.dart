@@ -147,18 +147,16 @@ void main() {
     });
 
     test(
-      'retries up to max attempts, throwing on the last failure',
+      'staleVersion: retries up to max attempts, throws on last failure',
       () async {
         final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
-          // Attempt 0: POST → stale
+          // Attempt 0
           (_) => _staleVersionResponse(),
-          // Refresh
           (_) => _roomStateResponse(10),
-          // Attempt 1: POST → stale
+          // Attempt 1
           (_) => _staleVersionResponse(),
-          // Refresh
           (_) => _roomStateResponse(15),
-          // Attempt 2 (last): POST → stale, rethrows immediately
+          // Attempt 2 (last) — rethrows immediately, no GET
           (_) => _staleVersionResponse(),
         ]);
 
@@ -177,24 +175,19 @@ void main() {
           expect(error.error?.code, ErrorCode.staleVersion);
         }
 
-        // 3 POSTs + 2 GETs = 5 total
+        // 3 POSTs + 2 GETs = 5
         expect(client.requests, hasLength(5));
       },
     );
 
     test(
-      'succeeds after multiple version advances',
+      'staleVersion: succeeds after multiple version bumps',
       () async {
         final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
-          // Attempt 0: POST(v=5) → stale
           (_) => _staleVersionResponse(),
-          // Refresh → v=10
           (_) => _roomStateResponse(10),
-          // Attempt 1: POST(v=10) → stale
           (_) => _staleVersionResponse(),
-          // Refresh → v=15
           (_) => _roomStateResponse(15),
-          // Attempt 2: POST(v=15) → success
           (_) => _roomStateResponse(16),
         ]);
 
@@ -215,53 +208,85 @@ void main() {
       },
     );
 
-    test('refreshes state and retries on invalid transition error', () async {
-      final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
-        (request) {
-          expect(request.method, 'POST');
-          expect(
-            request.path,
-            '/api/mobile/protected/rooms/test-session/event',
-          );
-          final body = _decodeJsonBody(request.body);
-          expect(body['last_seen_version'], 5);
-          return _invalidTransitionResponse();
-        },
-        (request) {
-          expect(request.method, 'GET');
-          expect(
-            request.path,
-            '/api/mobile/protected/rooms/test-session/state',
-          );
-          return _roomStateResponse(6);
-        },
-        (request) {
-          expect(request.method, 'POST');
-          expect(
-            request.path,
-            '/api/mobile/protected/rooms/test-session/event',
-          );
-          final body = _decodeJsonBody(request.body);
-          expect(body['last_seen_version'], 6);
-          return _roomStateResponse(7);
-        },
-      ]);
+    test(
+      'invalidTransition: refreshes state and retries exactly once',
+      () async {
+        final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
+          (request) {
+            expect(request.method, 'POST');
+            expect(
+              request.path,
+              '/api/mobile/protected/rooms/test-session/event',
+            );
+            final body = _decodeJsonBody(request.body);
+            expect(body['last_seen_version'], 5);
+            return _invalidTransitionResponse();
+          },
+          (request) {
+            expect(request.method, 'GET');
+            expect(
+              request.path,
+              '/api/mobile/protected/rooms/test-session/state',
+            );
+            return _roomStateResponse(6);
+          },
+          (request) {
+            expect(request.method, 'POST');
+            expect(
+              request.path,
+              '/api/mobile/protected/rooms/test-session/event',
+            );
+            final body = _decodeJsonBody(request.body);
+            expect(body['last_seen_version'], 6);
+            return _roomStateResponse(7);
+          },
+        ]);
 
-      final container = ProviderContainer(
-        retry: (_, _) => null,
-        overrides: [
-          apiServiceProvider.overrideWithValue(_createApi(client)),
-        ],
-      );
-      addTearDown(container.dispose);
+        final container = ProviderContainer(
+          retry: (_, _) => null,
+          overrides: [
+            apiServiceProvider.overrideWithValue(_createApi(client)),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      final roomState = await container.read(
-        acceptTotemProvider('test-session', 5).future,
-      );
+        final roomState = await container.read(
+          acceptTotemProvider('test-session', 5).future,
+        );
 
-      expect(roomState.version, 7);
-      expect(client.requests, hasLength(3));
-    });
+        expect(roomState.version, 7);
+        expect(client.requests, hasLength(3));
+      },
+    );
+
+    test(
+      'invalidTransition: surfaces error after one refresh + retry',
+      () async {
+        final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
+          (_) => _invalidTransitionResponse(),
+          (_) => _roomStateResponse(6),
+          (_) => _invalidTransitionResponse(),
+        ]);
+
+        final container = ProviderContainer(
+          retry: (_, _) => null,
+          overrides: [
+            apiServiceProvider.overrideWithValue(_createApi(client)),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        try {
+          await container.read(acceptTotemProvider('test-session', 5).future);
+          fail('Expected acceptTotemProvider to throw');
+        } on ApiError<RoomState, RoomErrorResponse> catch (error) {
+          expect(error.error?.code, ErrorCode.invalidTransition);
+        }
+
+        // 1 POST + 1 GET + 1 POST = 3 (one refresh, no loop)
+        expect(client.requests, hasLength(3));
+      },
+    );
 
     test(
       'does not retry on non-recoverable errors like room_not_active',

@@ -255,9 +255,9 @@ class SessionController extends _$SessionController {
       ),
     );
 
-    // Fetch server state immediately so we are never stuck with stale
-    // local state when LiveKit metadata is empty (e.g. room was killed
-    // and recreated but alive on the Totem server).
+    // Fetch server state immediately on join so the client is never stuck with
+    // stale local state when LiveKit metadata is empty (e.g. room was killed and
+    // recreated on Livekit but alive on the Totem server).
     unawaited(_pollServerState());
 
     final speakerPref = options.speakerEnabled;
@@ -333,7 +333,6 @@ class SessionController extends _$SessionController {
 
     try {
       final apiService = ref.read(apiServiceProvider);
-      final currentVersion = state.roomState.version;
 
       final roomState = await RepositoryUtils.handleApiCall<RoomState>(
         apiCall: () => apiService.rooms.totemRoomsApiGetState(
@@ -344,11 +343,10 @@ class SessionController extends _$SessionController {
 
       if (!ref.mounted) return;
 
-      if (roomState.version > currentVersion) {
+      // Protects against out-of-order application from overlapping polls
+      if (roomState.version > state.roomState.version) {
         applyRoomState(roomState);
-        logger.d(
-          'Polled server state: version $currentVersion → ${roomState.version}',
-        );
+        logger.d('Polled server state: version ${state.roomState.version}');
       }
     } catch (_) {
       // Network hiccup or transient error - the next poll will retry.
