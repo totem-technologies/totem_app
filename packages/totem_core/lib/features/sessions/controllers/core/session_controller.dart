@@ -12,6 +12,8 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/core/services/api_service.dart';
+import 'package:totem_core/core/services/repository_utils.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_events.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_reducer.dart';
@@ -95,7 +97,9 @@ class SessionController extends _$SessionController {
   /// and participants list, to keep the UI up to date.
   KeepAliveLink? _keepAliveLink;
   Timer? _syncTimer;
+  Timer? _statePollTimer;
   static const syncTimerDuration = Duration(seconds: 20);
+  static const _statePollInterval = Duration(seconds: 15);
 
   String? _lastMetadata;
   SessionDetailSchema? event;
@@ -251,6 +255,11 @@ class SessionController extends _$SessionController {
       ),
     );
 
+    // Fetch server state immediately on join so the client is never stuck with
+    // stale local state when LiveKit metadata is empty (e.g. room was killed and
+    // recreated on Livekit but alive on the Totem server).
+    unawaited(_pollServerState());
+
     final speakerPref = options.speakerEnabled;
     devices.resetSpeakerRoutingDefaults(speakerPref);
     // Delay setting up the listener and applying the initial routing up to a bit.
@@ -292,8 +301,9 @@ class SessionController extends _$SessionController {
 
   void _onRoomChanges([RoomState? newSessionState]) {
     _updateParticipantsList();
-
     void handleStateChange(RoomState state) {
+      if (state.version <= this.state.roomState.version) return;
+
       if (state.status == RoomStatus.ended) {
         _disableLocalMediaTracks();
       }
@@ -316,6 +326,44 @@ class SessionController extends _$SessionController {
     if (state.roomState.status == RoomStatus.ended) {
       _onSessionEnd();
     }
+  }
+
+  Future<void> _pollServerState() async {
+    if (!ref.mounted) return;
+    if (state.connectionState != RoomConnectionState.connected) return;
+
+    try {
+      final apiService = ref.read(apiServiceProvider);
+
+      final roomState = await RepositoryUtils.handleApiCall<RoomState>(
+        apiCall: () => apiService.rooms.totemRoomsApiGetState(
+          sessionSlug: options.eventSlug,
+        ),
+        operationName: 'poll room state',
+      );
+
+      if (!ref.mounted) return;
+
+      // Protects against out-of-order application from overlapping polls
+      if (roomState.version > state.roomState.version) {
+        applyRoomState(roomState);
+        logger.d('Polled server state: version ${roomState.version}');
+      }
+    } catch (e, s) {
+      logger.d(
+        'poll room state failed (will retry next tick)',
+        error: e,
+        stackTrace: s,
+      );
+      // Network hiccup or transient error - the next poll will retry.
+    }
+  }
+
+  void _startStatePolling() {
+    _statePollTimer?.cancel();
+    _statePollTimer = Timer.periodic(_statePollInterval, (_) {
+      unawaited(_pollServerState());
+    });
   }
 
   void _onParticipantDisconnected(ParticipantDisconnectedEvent event) {
@@ -370,6 +418,7 @@ class SessionController extends _$SessionController {
       SessionController.syncTimerDuration,
       (_) => _onRoomChanges(),
     );
+    _startStatePolling();
 
     try {
       final connectOptions = defaultTargetPlatform == TargetPlatform.iOS
@@ -478,6 +527,8 @@ class SessionController extends _$SessionController {
 
     _syncTimer?.cancel();
     _syncTimer = null;
+    _statePollTimer?.cancel();
+    _statePollTimer = null;
 
     disposeConnection();
   }
