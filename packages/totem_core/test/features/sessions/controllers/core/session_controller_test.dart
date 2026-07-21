@@ -657,7 +657,7 @@ void main() {
         speakerEnabled: true,
       );
 
-      SessionController _makeController(
+      SessionController makeController(
         ProviderContainer container, {
         Map<String, RemoteParticipant>? remoteParticipants,
       }) {
@@ -676,37 +676,36 @@ void main() {
           () => localParticipant.setMicrophoneEnabled(any<bool>()),
         ).thenAnswer((_) async => null);
 
-        final controller = container.read(
-          sessionControllerProvider(options).notifier,
-        );
-        controller.room = _CountingRoom(
-          localParticipant,
-          remoteParticipants: remoteParticipants,
-        );
-
-        controller.dispatch(
-          const ConnectionChanged(
-            RoomConnectionState.connected,
-            SessionPhase.connected,
-          ),
-        );
-
-        controller.applyRoomState(
-          const RoomState(
-            keeper: '',
-            nextSpeaker: '',
-            currentSpeaker: '',
-            status: RoomStatus.waitingRoom,
-            turnState: TurnState.idle,
-            sessionSlug: eventSlug,
-            statusDetail: RoomStateStatusDetailWaitingRoom(
-              WaitingRoomDetail(),
-            ),
-            talkingOrder: [],
-            version: 1,
-            roundNumber: 0,
-          ),
-        );
+        final controller =
+            container.read(
+                sessionControllerProvider(options).notifier,
+              )
+              ..room = _CountingRoom(
+                localParticipant,
+                remoteParticipants: remoteParticipants,
+              )
+              ..dispatch(
+                const ConnectionChanged(
+                  RoomConnectionState.connected,
+                  SessionPhase.connected,
+                ),
+              )
+              ..applyRoomState(
+                const RoomState(
+                  keeper: '',
+                  nextSpeaker: '',
+                  currentSpeaker: '',
+                  status: RoomStatus.waitingRoom,
+                  turnState: TurnState.idle,
+                  sessionSlug: eventSlug,
+                  statusDetail: RoomStateStatusDetailWaitingRoom(
+                    WaitingRoomDetail(),
+                  ),
+                  talkingOrder: [],
+                  version: 1,
+                  roundNumber: 0,
+                ),
+              );
 
         return controller;
       }
@@ -725,15 +724,15 @@ void main() {
           sessionControllerProvider(options).notifier,
         );
 
-        expect(() => controller.monitorTrackHealth(), returnsNormally);
+        expect(controller.monitorTrackHealth, returnsNormally);
       });
 
       test('does nothing when no remote participants', () {
         final container = _createContainerWithEventOverride(eventSlug);
         addTearDown(container.dispose);
-        final controller = _makeController(container);
+        final controller = makeController(container);
 
-        expect(() => controller.monitorTrackHealth(), returnsNormally);
+        expect(controller.monitorTrackHealth, returnsNormally);
       });
 
       test('does nothing when all audio tracks are subscribed', () {
@@ -749,12 +748,10 @@ void main() {
           'P1',
           audioTracks: [track],
         );
-        final controller = _makeController(
+        final _ = makeController(
           container,
           remoteParticipants: {'p1': p},
-        );
-
-        controller.monitorTrackHealth();
+        )..monitorTrackHealth();
         expect(track.subscribed, isTrue);
       });
 
@@ -774,12 +771,10 @@ void main() {
             'P1',
             audioTracks: [track],
           );
-          final controller = _makeController(
+          makeController(
             container,
             remoteParticipants: {'p1': p},
-          );
-
-          controller.monitorTrackHealth();
+          ).monitorTrackHealth();
           await pumpEventQueue();
           expect(track.subscribed, isTrue);
         },
@@ -799,12 +794,10 @@ void main() {
           'P1',
           audioTracks: [track],
         );
-        final controller = _makeController(
+        final _ = makeController(
           container,
           remoteParticipants: {'p1': p},
-        );
-
-        controller.monitorTrackHealth();
+        )..monitorTrackHealth();
         expect(track.subscribed, isFalse);
       });
 
@@ -834,12 +827,10 @@ void main() {
           audioTracks: [broken, denied],
         );
 
-        final controller = _makeController(
+        final _ = makeController(
           container,
           remoteParticipants: {'p1': p1, 'p2': p2},
-        );
-
-        controller.monitorTrackHealth();
+        )..monitorTrackHealth();
         await pumpEventQueue();
 
         expect(ok.subscribed, isTrue);
