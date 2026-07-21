@@ -300,13 +300,14 @@ class SessionController extends _$SessionController {
   }
 
   void _onRoomChanges([RoomState? newSessionState]) {
-    _updateParticipantsList();
-
     void handleStateChange(RoomState state) {
+      if (state.version <= this.state.roomState.version) return;
+
       if (state.status == RoomStatus.ended) {
         _disableLocalMediaTracks();
       }
       _dispatch(RoomStateChanged(state));
+      _updateParticipantsList();
     }
 
     if (newSessionState != null) {
