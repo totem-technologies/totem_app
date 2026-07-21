@@ -342,7 +342,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         currentRoomScreen == RoomScreen.error;
     _notificationController.blocked = showingDisconnectedScreen;
     TotemRouter.instance.setTabCloseConfirmationEnabled(
-      !showingDisconnectedScreen,
+      roomStatus != RoomStatus.waitingRoom && !showingDisconnectedScreen,
     );
 
     if (currentSessionEvent != null &&
