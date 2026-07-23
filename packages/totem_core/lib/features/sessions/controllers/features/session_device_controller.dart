@@ -105,6 +105,7 @@ class SessionDeviceController extends _$SessionDeviceController {
   StreamSubscription<void>? _becomingNoisySubscription;
   StreamSubscription<audio.AudioDevicesChangedEvent>?
   _devicesChangedSubscription;
+  StreamSubscription<List<MediaDevice>>? _webDeviceChangeSubscription;
   bool _userSpeakerPreference = true;
   bool _hasExternalOutput = false;
   bool _audioRouteNotificationsEnabled = false;
@@ -140,53 +141,11 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   Future<void> setupDeviceChangeListener() async {
     try {
-      final session = await audio.AudioSession.instance;
-      await _refreshSpeakerphoneState();
-
-      final devices = await session.getDevices(includeInputs: false);
-      final hasExternalOutput = devices.any(
-        (d) => externalAudioOutputTypes.contains(d.type),
-      );
-      if (hasExternalOutput) {
-        _hasExternalOutput = true;
-        await _autoSetSpeakerphone(false);
+      if (kIsWeb) {
+        await _setupWebDeviceChangeListener();
       } else {
-        await _autoSetSpeakerphone(_userSpeakerPreference);
+        await _setupNativeDeviceChangeListener();
       }
-
-      _becomingNoisySubscription = session.becomingNoisyEventStream.listen((_) {
-        logger.i('Headphones unplugged, restoring to speaker.');
-        _hasExternalOutput = false;
-        unawaited(_autoSetSpeakerphone(true));
-        unawaited(_refreshSpeakerphoneState());
-      });
-
-      _devicesChangedSubscription = session.devicesChangedEventStream.listen((
-        event,
-      ) {
-        final addedExternal = event.devicesAdded
-            .where((d) => d.isOutput)
-            .any((d) => externalAudioOutputTypes.contains(d.type));
-        final removedExternal = event.devicesRemoved
-            .where((d) => d.isOutput)
-            .any((d) => externalAudioOutputTypes.contains(d.type));
-
-        if (addedExternal) {
-          logger.i('External audio output connected, routing to headphones.');
-          _hasExternalOutput = true;
-          // Remove speaker override so OS routes to the newly connected device.
-          unawaited(_autoSetSpeakerphone(false));
-          unawaited(_refreshSpeakerphoneState());
-        } else if (removedExternal) {
-          logger.i('External audio output disconnected, switching to speaker.');
-          _hasExternalOutput = false;
-          unawaited(_autoSetSpeakerphone(true));
-          unawaited(_refreshSpeakerphoneState());
-        } else {
-          unawaited(_refreshSpeakerphoneState());
-          _emitState();
-        }
-      });
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -196,6 +155,124 @@ class SessionDeviceController extends _$SessionDeviceController {
     } finally {
       _audioRouteNotificationsEnabled = true;
     }
+  }
+
+  Future<void> _setupNativeDeviceChangeListener() async {
+    final session = await audio.AudioSession.instance;
+    await _refreshSpeakerphoneState();
+
+    final devices = await session.getDevices(includeInputs: false);
+    final hasExternalOutput = devices.any(
+      (d) => externalAudioOutputTypes.contains(d.type),
+    );
+    if (hasExternalOutput) {
+      _hasExternalOutput = true;
+      await _autoSetSpeakerphone(false);
+    } else {
+      await _autoSetSpeakerphone(_userSpeakerPreference);
+    }
+
+    _becomingNoisySubscription = session.becomingNoisyEventStream.listen((_) {
+      logger.i('Headphones unplugged, restoring to speaker.');
+      _hasExternalOutput = false;
+      unawaited(_autoSetSpeakerphone(true));
+      unawaited(_refreshSpeakerphoneState());
+    });
+
+    _devicesChangedSubscription = session.devicesChangedEventStream.listen((
+      event,
+    ) {
+      final addedExternal = event.devicesAdded
+          .where((d) => d.isOutput)
+          .any((d) => externalAudioOutputTypes.contains(d.type));
+      final removedExternal = event.devicesRemoved
+          .where((d) => d.isOutput)
+          .any((d) => externalAudioOutputTypes.contains(d.type));
+
+      if (addedExternal) {
+        logger.i('External audio output connected, routing to headphones.');
+        _hasExternalOutput = true;
+        // Remove speaker override so OS routes to the newly connected device.
+        unawaited(_autoSetSpeakerphone(false));
+        unawaited(_refreshSpeakerphoneState());
+      } else if (removedExternal) {
+        logger.i('External audio output disconnected, switching to speaker.');
+        _hasExternalOutput = false;
+        unawaited(_autoSetSpeakerphone(true));
+        unawaited(_refreshSpeakerphoneState());
+      } else {
+        unawaited(_refreshSpeakerphoneState());
+        _emitState();
+      }
+    });
+  }
+
+  /// Sets up device change detection on web via the browser's
+  /// `navigator.mediaDevices.ondevicechange` event.
+  Future<void> _setupWebDeviceChangeListener() async {
+    final devices = await Hardware.instance.audioOutputs();
+    _applyWebAudioRouting(devices);
+    await _refreshSpeakerphoneState();
+
+    _webDeviceChangeSubscription = Hardware.instance.onDeviceChange.stream
+        .listen((allDevices) {
+          final outputs = allDevices
+              .where((d) => d.kind == 'audiooutput')
+              .toList();
+          _applyWebAudioRouting(outputs);
+          unawaited(_refreshSpeakerphoneState());
+          _emitState();
+        });
+  }
+
+  /// Examines available audio output devices and determines whether an
+  /// external output (headphones, bluetooth) is present, then applies the
+  /// corresponding speaker routing.
+  void _applyWebAudioRouting(List<MediaDevice> outputs) {
+    final hasExternal = hasExternalAudioOutput(outputs);
+    if (hasExternal && !_hasExternalOutput) {
+      logger.i('Web external audio output detected, routing to headphones.');
+      _hasExternalOutput = true;
+      unawaited(_autoSetSpeakerphone(false));
+    } else if (!hasExternal && _hasExternalOutput) {
+      logger.i('Web external audio output removed, routing to speaker.');
+      _hasExternalOutput = false;
+      unawaited(_autoSetSpeakerphone(true));
+    }
+  }
+
+  /// Heuristic to detect external audio outputs (headphones, bluetooth) from
+  /// a list of web audio output devices.
+  ///
+  /// On web, the API doesn't expose device type information, so we consider
+  /// a device "external" if it has a non-empty label that doesn't contain
+  /// "Default".
+  @visibleForTesting
+  static bool hasExternalAudioOutput(List<MediaDevice> outputs) {
+    return outputs.any(
+      (d) => d.label.isNotEmpty && !d.label.contains('Default'),
+    );
+  }
+
+  /// Finds the appropriate audio output device to route to on web.
+  ///
+  /// When [speakerPreferred] is true, returns the default speaker device.
+  /// When false (external output preferred), looks for a communications
+  /// device (headset/headphones) first, then falls back to the default.
+  @visibleForTesting
+  static MediaDevice? findSpeakerTarget(
+    List<MediaDevice> devices,
+    bool speakerPreferred,
+  ) {
+    if (!speakerPreferred) {
+      final commsDevice = devices.firstWhereOrNull(
+        (d) => d.label.toLowerCase().contains('communications'),
+      );
+      if (commsDevice != null) return commsDevice;
+    }
+    return devices.firstWhereOrNull(
+      (d) => d.label.contains('Default') || d.deviceId == 'default',
+    );
   }
 
   String? get selectedCameraDeviceId {
@@ -263,7 +340,28 @@ class SessionDeviceController extends _$SessionDeviceController {
       AudioManager.instance.isSpeakerOutputPreferred;
 
   Future<void> _refreshSpeakerphoneState() async {
-    if (kIsWeb) return;
+    if (kIsWeb) {
+      try {
+        final devices = await Hardware.instance.audioOutputs();
+        if (!ref.mounted) return;
+        // On web, speakerphone is considered enabled when there are no
+        // external audio output devices with non-empty labels.
+        final speakerEnabled = !devices.any(
+          (d) => d.label.isNotEmpty && !d.label.contains('Default'),
+        );
+        if (speakerEnabled != _systemSpeakerphoneEnabled) {
+          _systemSpeakerphoneEnabled = speakerEnabled;
+          _emitState();
+        }
+      } catch (error, stackTrace) {
+        logger.w(
+          'Failed to refresh speakerphone state from web',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+      return;
+    }
 
     try {
       bool? speakerEnabled;
@@ -304,6 +402,29 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   Future<void> _autoSetSpeakerphone(bool enabled) async {
     if (_room == null) return;
+
+    if (kIsWeb) {
+      // On web, attempt to route audio using setSinkId (supported on
+      // desktop Chrome/Edge and Safari 17+). On mobile browsers this is
+      // usually a no-op, but the preference is tracked for UI purposes.
+      try {
+        final devices = await Hardware.instance.audioOutputs();
+        final target = findSpeakerTarget(devices, enabled);
+        if (target != null) {
+          await _room?.setAudioOutputDevice(target);
+        }
+      } catch (error, stackTrace) {
+        logger.w(
+          'Failed to set audio output on web',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+      await _refreshSpeakerphoneState();
+      _emitState();
+      return;
+    }
+
     // There is a bug in the livekit library that doesn't effectively turn the speakerphone
     // on when requested.
     // A workaround is to first turn it off, then set the desired state.
@@ -443,5 +564,7 @@ class SessionDeviceController extends _$SessionDeviceController {
     _becomingNoisySubscription = null;
     await _devicesChangedSubscription?.cancel();
     _devicesChangedSubscription = null;
+    await _webDeviceChangeSubscription?.cancel();
+    _webDeviceChangeSubscription = null;
   }
 }

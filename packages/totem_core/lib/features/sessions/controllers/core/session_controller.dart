@@ -12,6 +12,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/core/services/repository_utils.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
@@ -147,11 +148,11 @@ class SessionController extends _$SessionController {
   }
 
   void addSessionChatMessage(SessionChatMessage message) {
-    _dispatch(SessionChatMessageAdded(message));
+    dispatch(SessionChatMessageAdded(message));
   }
 
   void markParticipantRemoved(RemoveReason reason) {
-    _dispatch(ParticipantRemoved(reason));
+    dispatch(ParticipantRemoved(reason));
   }
 
   void applyRoomState(RoomState roomState) {
@@ -162,7 +163,8 @@ class SessionController extends _$SessionController {
     return _disconnect();
   }
 
-  void _dispatch(SessionEvent event) {
+  @visibleForTesting
+  void dispatch(SessionEvent event) {
     state = _stateReducer.reduceState(state, event);
   }
 
@@ -224,12 +226,92 @@ class SessionController extends _$SessionController {
         keeper.onKeeperDisconnected(state.roomState.status);
       }
 
-      _dispatch(ParticipantsChanged(participantsSorted));
+      dispatch(ParticipantsChanged(participantsSorted));
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Error updating participants list',
+      );
+    }
+  }
+
+  void _onSyncTimerTick() {
+    _onRoomChanges();
+    monitorTrackHealth();
+  }
+
+  /// Checks remote participants' audio track subscriptions and attempts to
+  /// recover any that are unexpectedly unsubscribed.
+  ///
+  /// LiveKit auto-subscribes to remote tracks, but subscriptions can silently
+  /// fail due to browser AudioContext suspension, fast-connect race conditions,
+  /// or SFU forwarding hiccups. This periodic check catches those failures.
+  @visibleForTesting
+  void monitorTrackHealth() {
+    final currentRoom = room;
+    if (currentRoom == null) return;
+    if (state.connectionState != RoomConnectionState.connected) return;
+
+    final remoteParticipants = currentRoom.remoteParticipants.values;
+    if (remoteParticipants.isEmpty) return;
+
+    var unsubscribedCount = 0;
+    var notAllowedCount = 0;
+
+    for (final participant in remoteParticipants) {
+      for (final pub in participant.audioTrackPublications) {
+        if (pub.subscribed) continue;
+
+        unsubscribedCount++;
+        if (!pub.subscriptionAllowed) {
+          notAllowedCount++;
+          continue;
+        }
+
+        // Track is not subscribed but subscription is allowed - attempt recovery.
+        AnalyticsService.instance.logEvent(
+          'audio_track_health_issue',
+          parameters: {
+            'participant': participant.identity,
+            'track_sid': pub.sid,
+          },
+        );
+        unawaited(recoverAudioSubscription(pub, participant.identity));
+      }
+    }
+
+    if (unsubscribedCount > 0) {
+      AnalyticsService.instance.logEvent(
+        'audio_track_health_summary',
+        parameters: {
+          'unsubscribed_count': unsubscribedCount,
+          'not_allowed_count': notAllowedCount,
+        },
+      );
+    }
+  }
+
+  @visibleForTesting
+  Future<void> recoverAudioSubscription(
+    RemoteTrackPublication pub,
+    String identity,
+  ) async {
+    try {
+      await pub.subscribe();
+      AnalyticsService.instance.logEvent(
+        'audio_track_recovered',
+        parameters: {
+          'participant': identity,
+          'track_sid': pub.sid,
+        },
+      );
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message:
+            'Failed to re-subscribe audio track for $identity (${pub.sid})',
       );
     }
   }
@@ -248,7 +330,7 @@ class SessionController extends _$SessionController {
     _onRoomChanges();
 
     _applyJoinMediaState();
-    _dispatch(
+    dispatch(
       const ConnectionChanged(
         RoomConnectionState.connected,
         SessionPhase.connected,
@@ -271,11 +353,19 @@ class SessionController extends _$SessionController {
     });
 
     _updateParticipantsList();
+
+    // After connection settles, verify that remote audio track subscriptions
+    // completed. FastConnect can sometimes report "connected" before all
+    // remote track subscriptions finish.
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!ref.mounted) return;
+      monitorTrackHealth();
+    });
   }
 
   void _onDisconnected() {
     _disableLocalMediaTracks();
-    _dispatch(
+    dispatch(
       const ConnectionChanged(
         RoomConnectionState.disconnected,
         SessionPhase.disconnected,
@@ -296,7 +386,7 @@ class SessionController extends _$SessionController {
   void _onError(LiveKitException? error) {
     if (error == null) return;
     ErrorHandler.handleLivekitError(error);
-    _dispatch(SessionErrorChanged(RoomLiveKitError(error)));
+    dispatch(SessionErrorChanged(RoomLiveKitError(error)));
   }
 
   void _onRoomChanges([RoomState? newSessionState]) {
@@ -307,7 +397,7 @@ class SessionController extends _$SessionController {
       if (state.status == RoomStatus.ended) {
         _disableLocalMediaTracks();
       }
-      _dispatch(RoomStateChanged(state));
+      dispatch(RoomStateChanged(state));
     }
 
     if (newSessionState != null) {
@@ -387,7 +477,7 @@ class SessionController extends _$SessionController {
       }
     }
 
-    _dispatch(
+    dispatch(
       const ConnectionChanged(
         RoomConnectionState.connecting,
         SessionPhase.connecting,
@@ -416,7 +506,7 @@ class SessionController extends _$SessionController {
     _syncTimer?.cancel();
     _syncTimer = Timer.periodic(
       SessionController.syncTimerDuration,
-      (_) => _onRoomChanges(),
+      (_) => _onSyncTimerTick(),
     );
     _startStatePolling();
 
@@ -560,7 +650,7 @@ class SessionController extends _$SessionController {
             isTransientJoinDisconnectReason(event.reason);
 
         if (isTransientJoinDisconnect) {
-          _dispatch(
+          dispatch(
             const ConnectionChanged(
               RoomConnectionState.disconnected,
               SessionPhase.disconnected,
@@ -571,7 +661,7 @@ class SessionController extends _$SessionController {
         }
 
         if (event.reason != null) {
-          _dispatch(
+          dispatch(
             SessionErrorChanged(RoomDisconnectionError(event.reason!)),
           );
         }

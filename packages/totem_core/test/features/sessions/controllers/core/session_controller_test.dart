@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_state_events.dart';
 
 import '../../../../setup.dart';
 import '../../livekit_mocks.dart';
@@ -107,7 +109,10 @@ class _CountingRoomEventsListener implements EventsListener<RoomEvent> {
 }
 
 class _CountingRoom implements Room {
-  _CountingRoom(this.participant);
+  _CountingRoom(
+    this.participant, {
+    Map<String, RemoteParticipant>? remoteParticipants,
+  }) : _remoteParticipants = remoteParticipants ?? {};
 
   final MockLocalParticipant participant;
   final _CountingRoomEventsListener listener = _CountingRoomEventsListener();
@@ -117,6 +122,12 @@ class _CountingRoom implements Room {
   int disconnectCount = 0;
   int disposeCount = 0;
 
+  /// Override to inject remote participants for track health tests.
+  @override
+  UnmodifiableMapView<String, RemoteParticipant> get remoteParticipants =>
+      UnmodifiableMapView(_remoteParticipants);
+
+  final Map<String, RemoteParticipant> _remoteParticipants;
   @override
   LocalParticipant get localParticipant => participant;
 
@@ -633,6 +644,224 @@ void main() {
           expect(backup.codec, equals('h264'));
         },
       );
+    });
+
+    group('Track Health Monitoring', () {
+      const eventSlug = 'test-session';
+      const options = SessionOptions(
+        eventSlug: eventSlug,
+        token: 'test-token',
+        cameraEnabled: true,
+        microphoneEnabled: true,
+        cameraOptions: SessionController.defaultCameraCaptureOptions,
+        speakerEnabled: true,
+      );
+
+      SessionController makeController(
+        ProviderContainer container, {
+        Map<String, RemoteParticipant>? remoteParticipants,
+      }) {
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        final localParticipant = MockLocalParticipant();
+        when(
+          () => localParticipant.setCameraEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setMicrophoneEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+
+        final controller =
+            container.read(
+                sessionControllerProvider(options).notifier,
+              )
+              ..room = _CountingRoom(
+                localParticipant,
+                remoteParticipants: remoteParticipants,
+              )
+              ..dispatch(
+                const ConnectionChanged(
+                  RoomConnectionState.connected,
+                  SessionPhase.connected,
+                ),
+              )
+              ..applyRoomState(
+                const RoomState(
+                  keeper: '',
+                  nextSpeaker: '',
+                  currentSpeaker: '',
+                  status: RoomStatus.waitingRoom,
+                  turnState: TurnState.idle,
+                  sessionSlug: eventSlug,
+                  statusDetail: RoomStateStatusDetailWaitingRoom(
+                    WaitingRoomDetail(),
+                  ),
+                  talkingOrder: [],
+                  version: 1,
+                  roundNumber: 0,
+                ),
+              );
+
+        return controller;
+      }
+
+      test('does nothing when room is null', () {
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+
+        expect(controller.monitorTrackHealth, returnsNormally);
+      });
+
+      test('does nothing when no remote participants', () {
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+        final controller = makeController(container);
+
+        expect(controller.monitorTrackHealth, returnsNormally);
+      });
+
+      test('does nothing when all audio tracks are subscribed', () {
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+
+        final track = MockRemoteAudioTrackPublication(
+          sid: 'track-1',
+          subscribed: true,
+        );
+        final p = MockRemoteParticipant(
+          'p1',
+          'P1',
+          audioTracks: [track],
+        );
+        final _ = makeController(
+          container,
+          remoteParticipants: {'p1': p},
+        )..monitorTrackHealth();
+        expect(track.subscribed, isTrue);
+      });
+
+      test(
+        'recovers unsubscribed track when subscription is allowed',
+        () async {
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+
+          final track = MockRemoteAudioTrackPublication(
+            sid: 'track-1',
+            subscribed: false,
+            subscriptionAllowed: true,
+          );
+          final p = MockRemoteParticipant(
+            'p1',
+            'P1',
+            audioTracks: [track],
+          );
+          makeController(
+            container,
+            remoteParticipants: {'p1': p},
+          ).monitorTrackHealth();
+          await pumpEventQueue();
+          expect(track.subscribed, isTrue);
+        },
+      );
+
+      test('skips track when subscription is not allowed', () {
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+
+        final track = MockRemoteAudioTrackPublication(
+          sid: 'track-1',
+          subscribed: false,
+          subscriptionAllowed: false,
+        );
+        final p = MockRemoteParticipant(
+          'p1',
+          'P1',
+          audioTracks: [track],
+        );
+        final _ = makeController(
+          container,
+          remoteParticipants: {'p1': p},
+        )..monitorTrackHealth();
+        expect(track.subscribed, isFalse);
+      });
+
+      test('handles mixed states across participants', () async {
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+
+        final ok = MockRemoteAudioTrackPublication(
+          sid: 'track-ok',
+          subscribed: true,
+        );
+        final broken = MockRemoteAudioTrackPublication(
+          sid: 'track-broken',
+          subscribed: false,
+          subscriptionAllowed: true,
+        );
+        final denied = MockRemoteAudioTrackPublication(
+          sid: 'track-denied',
+          subscribed: false,
+          subscriptionAllowed: false,
+        );
+
+        final p1 = MockRemoteParticipant('p1', 'Good', audioTracks: [ok]);
+        final p2 = MockRemoteParticipant(
+          'p2',
+          'Mixed',
+          audioTracks: [broken, denied],
+        );
+
+        final _ = makeController(
+          container,
+          remoteParticipants: {'p1': p1, 'p2': p2},
+        )..monitorTrackHealth();
+        await pumpEventQueue();
+
+        expect(ok.subscribed, isTrue);
+        expect(broken.subscribed, isTrue);
+        expect(denied.subscribed, isFalse);
+      });
+
+      test('recoverAudioSubscription calls subscribe', () async {
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+
+        final track = MockRemoteAudioTrackPublication(
+          sid: 'track-1',
+          subscribed: false,
+          subscriptionAllowed: true,
+        );
+
+        await controller.recoverAudioSubscription(track, 'test-user');
+
+        expect(track.subscribed, isTrue);
+      });
     });
   });
 }

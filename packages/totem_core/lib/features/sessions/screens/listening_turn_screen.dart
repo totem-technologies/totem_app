@@ -11,6 +11,7 @@ import 'package:totem_core/features/sessions/widgets/adaptive_call_layout.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
+import 'package:totem_core/features/sessions/widgets/session_title.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class ListeningTurnScreen extends ConsumerWidget {
@@ -180,6 +181,7 @@ class ListeningTurnScreen extends ConsumerWidget {
                 child: Column(
                   spacing: 10,
                   children: [
+                    const SessionTitle(),
                     Expanded(
                       child: Center(
                         child: _ListeningTurnGrid(

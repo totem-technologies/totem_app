@@ -124,7 +124,7 @@ class _ParticipantReorderWidgetState
                               bottom: 20,
                             ),
                             child: Text(
-                              'Drag to set participant order',
+                              'Drag to set participant order. Tap to see participant details.',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: Colors.black,
                               ),

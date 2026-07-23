@@ -515,7 +515,7 @@ class MoreOptionsTile<T> extends StatelessWidget {
     ValueChanged<AudioOutputOptions> onSwitch,
     ValueChanged<MediaDevice> onDeviceSelect,
   ) {
-    if (lkPlatformIsMobile()) {
+    if (lkPlatformIsMobile() || lkPlatformIsWebMobile()) {
       return MoreOptionsTile<MediaDevice>(
         title: 'Speaker',
         icon: TotemIcons.speakerOn,
