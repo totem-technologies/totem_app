@@ -454,16 +454,14 @@ class _SessionSubheaderState extends State<_SessionSubheader> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final linkStyle = TextStyle(color: Colors.blue.shade200);
     final removedSpan = TextSpan(
       text: 'Please take a moment to review our ',
       children: [
         // TODO(totem): Use LinkSpan when available https://github.com/flutter/flutter/issues/91600
         TextSpan(
           text: 'Community Guidelines',
-          style: theme.textTheme.bodyLarge?.copyWith(
-            fontWeight: FontWeight.w500,
-          ),
+          style: linkStyle,
           recognizer: _communityGuidelinesRecognizer,
         ),
         const TextSpan(text: '. '),
@@ -472,7 +470,7 @@ class _SessionSubheaderState extends State<_SessionSubheader> {
         ),
         TextSpan(
           text: 'help@totem.org',
-          style: TextStyle(color: Colors.blue.shade200),
+          style: linkStyle,
           recognizer: _helpEmailRecognizer,
         ),
         const TextSpan(text: '.'),
