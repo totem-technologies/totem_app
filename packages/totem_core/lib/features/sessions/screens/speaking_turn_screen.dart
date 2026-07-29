@@ -5,10 +5,8 @@ import 'dart:math' as math;
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -50,7 +48,9 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
     final turnState = ref.watch(turnStateProvider);
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
     final nextUp = ref.watch(speakingNextParticipantProvider);
-    final selfViewEnabled = ref.watch(selfViewEnabledProvider);
+    final selfViewEnabled = ref.watch(
+      selfViewSettingsProvider.select((s) => s.enabled),
+    );
 
     final body = ViewportResolver(
       builder: (context, viewportKind) {
@@ -321,8 +321,6 @@ class _SpeakingTurnGrid extends ConsumerWidget {
   }
 }
 
-enum SelfViewPosition { start, end }
-
 /// A floating self-view that shows the current participant's video.
 @visibleForTesting
 class SelfView extends ConsumerStatefulWidget {
@@ -334,9 +332,15 @@ class SelfView extends ConsumerStatefulWidget {
 
 class _SelfViewState extends ConsumerState<SelfView>
     with SingleTickerProviderStateMixin {
-  SelfViewPosition _position = SelfViewPosition.end;
   Offset _visualOffset = Offset.zero;
-  late final AnimationController _snapController;
+  late final AnimationController _snapController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 250),
+  );
+  late final animation = CurvedAnimation(
+    parent: _snapController,
+    curve: Curves.easeOutCubic,
+  );
 
   // Cache the layout size to use inside the drag callbacks
   Size _layoutSize = Size.zero;
@@ -347,38 +351,9 @@ class _SelfViewState extends ConsumerState<SelfView>
   static const double _padding = 16;
 
   @override
-  void initState() {
-    super.initState();
-    _snapController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 250),
-    );
-    _loadPosition();
-  }
-
-  void _loadPosition() {
-    Future.microtask(() async {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final stored = prefs.getString(AppConsts.storageSelfViewPositionKey);
-        if (stored == null || !mounted) return;
-        final newPosition = stored == 'start'
-            ? SelfViewPosition.start
-            : SelfViewPosition.end;
-        setState(() => _position = newPosition);
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Failed to load self-view position',
-        );
-      }
-    });
-  }
-
-  @override
   void dispose() {
     _snapController.dispose();
+    animation.dispose();
     super.dispose();
   }
 
@@ -388,8 +363,9 @@ class _SelfViewState extends ConsumerState<SelfView>
 
   // Helper to get the top-left or top-right snap position based on actual container bounds
   Offset get _targetPosition {
+    final position = ref.read(selfViewSettingsProvider).position;
     final containerWidth = _containerSize.width;
-    final left = _position == SelfViewPosition.start
+    final left = position == SelfViewPosition.start
         ? _padding
         : containerWidth - _cardWidth - _padding;
 
@@ -441,28 +417,18 @@ class _SelfViewState extends ConsumerState<SelfView>
     final remainingOffset = currentPos - newTargetPosition;
 
     setState(() {
-      _position = newPosition;
       _visualOffset = remainingOffset;
     });
 
-    final name = newPosition == SelfViewPosition.start ? 'start' : 'end';
-    SharedPreferences.getInstance()
-        .then((prefs) {
-          prefs.setString(AppConsts.storageSelfViewPositionKey, name);
-        })
-        .catchError((Object error, StackTrace stackTrace) {
-          ErrorHandler.logError(
-            error,
-            stackTrace: stackTrace,
-            message: 'Failed to persist self-view position',
-          );
-        });
+    ref.read(selfViewSettingsProvider.notifier).setPosition(newPosition);
 
     _snapController.forward(from: 0);
   }
 
   @override
   Widget build(BuildContext context) {
+    // Watch position so the UI updates if it changes externally
+    ref.watch(selfViewSettingsProvider.select((s) => s.position));
     final theme = Theme.of(context);
 
     final currentUserSlug = ref.watch(
@@ -479,35 +445,30 @@ class _SelfViewState extends ConsumerState<SelfView>
     final borderRadius = BorderRadius.circular(16);
 
     return Positioned.fill(
-      child: Semantics(
-        label: 'You',
-        excludeSemantics: true,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            _layoutSize = Size(constraints.maxWidth, constraints.maxHeight);
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          _layoutSize = Size(constraints.maxWidth, constraints.maxHeight);
 
-            return AnimatedBuilder(
-              animation: _snapController,
-              builder: (context, child) {
-                if (child == null) return const SizedBox.shrink();
+          return AnimatedBuilder(
+            animation: animation,
+            builder: (context, child) {
+              if (child == null) return const SizedBox.shrink();
 
-                final animation = CurvedAnimation(
-                  parent: _snapController,
-                  curve: Curves.easeOutCubic,
-                );
-
-                final offset = _visualOffset * (1 - animation.value);
-                final target = _targetPosition;
-                return Stack(
-                  children: [
-                    Positioned(
-                      top: target.dy + offset.dy,
-                      left: target.dx + offset.dx,
-                      child: child,
-                    ),
-                  ],
-                );
-              },
+              final offset = _visualOffset * (1 - animation.value);
+              final target = _targetPosition;
+              return Stack(
+                children: [
+                  Positioned(
+                    top: target.dy + offset.dy,
+                    left: target.dx + offset.dx,
+                    child: child,
+                  ),
+                ],
+              );
+            },
+            child: Semantics(
+              label: 'Your self view, draggable',
+              excludeSemantics: true,
               child: SizedBox(
                 width: _cardWidth,
                 height: _cardHeight,
@@ -565,9 +526,9 @@ class _SelfViewState extends ConsumerState<SelfView>
                   ),
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }

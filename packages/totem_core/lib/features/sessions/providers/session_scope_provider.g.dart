@@ -1369,51 +1369,51 @@ final class IsCameraOnProvider extends $FunctionalProvider<bool, bool, bool>
 
 String _$isCameraOnHash() => r'8cd38fa32a571a61e9d32c8a2d998297e0619957';
 
-@ProviderFor(SelfViewEnabled)
-final selfViewEnabledProvider = SelfViewEnabledProvider._();
+@ProviderFor(SelfViewSettings)
+final selfViewSettingsProvider = SelfViewSettingsProvider._();
 
-final class SelfViewEnabledProvider
-    extends $NotifierProvider<SelfViewEnabled, bool> {
-  SelfViewEnabledProvider._()
+final class SelfViewSettingsProvider
+    extends $NotifierProvider<SelfViewSettings, SelfViewState> {
+  SelfViewSettingsProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'selfViewEnabledProvider',
+        name: r'selfViewSettingsProvider',
         isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$selfViewEnabledHash();
+  String debugGetCreateSourceHash() => _$selfViewSettingsHash();
 
   @$internal
   @override
-  SelfViewEnabled create() => SelfViewEnabled();
+  SelfViewSettings create() => SelfViewSettings();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(bool value) {
+  Override overrideWithValue(SelfViewState value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<bool>(value),
+      providerOverride: $SyncValueProvider<SelfViewState>(value),
     );
   }
 }
 
-String _$selfViewEnabledHash() => r'0866d1f179fe4090413f3c2b008e9af9d4b7a1a5';
+String _$selfViewSettingsHash() => r'31267a7c58a8f9fe2a496adbf16f0f644386a89c';
 
-abstract class _$SelfViewEnabled extends $Notifier<bool> {
-  bool build();
+abstract class _$SelfViewSettings extends $Notifier<SelfViewState> {
+  SelfViewState build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<bool, bool>;
+    final ref = this.ref as $Ref<SelfViewState, SelfViewState>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<bool, bool>,
-              bool,
+              AnyNotifier<SelfViewState, SelfViewState>,
+              SelfViewState,
               Object?,
               Object?
             >;

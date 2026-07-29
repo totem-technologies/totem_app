@@ -289,41 +289,108 @@ bool isCameraOn(Ref ref) {
   return devices.isCameraEnabled;
 }
 
+enum SelfViewPosition { start, end }
+
+class SelfViewState {
+  final bool enabled;
+  final SelfViewPosition position;
+
+  const SelfViewState({
+    required this.enabled,
+    required this.position,
+  });
+
+  SelfViewState copyWith({
+    bool? enabled,
+    SelfViewPosition? position,
+  }) {
+    return SelfViewState(
+      enabled: enabled ?? this.enabled,
+      position: position ?? this.position,
+    );
+  }
+}
+
 @Riverpod(keepAlive: true)
-class SelfViewEnabled extends _$SelfViewEnabled {
-  bool _userTouched = false;
+class SelfViewSettings extends _$SelfViewSettings {
+  bool _userTouchedEnabled = false;
+  bool _userTouchedPosition = false;
 
   @override
-  bool build() {
-    Future.microtask(() async {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final stored = prefs.getBool(AppConsts.storageSelfViewEnabledKey);
-        if (stored != null && !_userTouched) state = stored;
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Failed to load self-view preference',
-        );
-      }
-    });
-    return false;
+  SelfViewState build() {
+    Future.microtask(() => loadPrefs());
+    return const SelfViewState(
+      enabled: false,
+      position: SelfViewPosition.end,
+    );
   }
 
-  void setEnabled(bool value) {
-    _userTouched = true;
-    state = value;
-    SharedPreferences.getInstance()
-        .then((prefs) {
-          prefs.setBool(AppConsts.storageSelfViewEnabledKey, value);
-        })
-        .catchError((Object error, StackTrace stackTrace) {
-          ErrorHandler.logError(
-            error,
-            stackTrace: stackTrace,
-            message: 'Failed to persist self-view preference',
-          );
-        });
+  @visibleForTesting
+  Future<void> loadPrefs({SharedPreferences? prefs}) async {
+    try {
+      final effectivePrefs = prefs ?? await SharedPreferences.getInstance();
+      
+      final storedEnabled = effectivePrefs.getBool(AppConsts.storageSelfViewEnabledKey);
+      final storedPosition = effectivePrefs.getString(AppConsts.storageSelfViewPositionKey);
+      
+      bool newEnabled = state.enabled;
+      if (storedEnabled != null && !_userTouchedEnabled) {
+        newEnabled = storedEnabled;
+      }
+      
+      SelfViewPosition newPosition = state.position;
+      if (storedPosition != null && !_userTouchedPosition) {
+        newPosition = storedPosition == 'start' ? SelfViewPosition.start : SelfViewPosition.end;
+      }
+      
+      state = state.copyWith(enabled: newEnabled, position: newPosition);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to load self-view settings',
+      );
+    }
+  }
+
+  void setEnabled(bool value, {SharedPreferences? prefs}) {
+    _userTouchedEnabled = true;
+    state = state.copyWith(enabled: value);
+    _persistEnabled(value, prefs: prefs);
+  }
+  
+  Future<void> _persistEnabled(bool value, {SharedPreferences? prefs}) async {
+    try {
+      final effectivePrefs = prefs ?? await SharedPreferences.getInstance();
+      await effectivePrefs.setBool(AppConsts.storageSelfViewEnabledKey, value);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to persist self-view enabled preference',
+      );
+    }
+  }
+
+  void setPosition(SelfViewPosition position, {SharedPreferences? prefs}) {
+    _userTouchedPosition = true;
+    state = state.copyWith(position: position);
+    _persistPosition(position, prefs: prefs);
+  }
+
+  Future<void> _persistPosition(SelfViewPosition position, {SharedPreferences? prefs}) async {
+    try {
+      final effectivePrefs = prefs ?? await SharedPreferences.getInstance();
+      await effectivePrefs.setString(
+        AppConsts.storageSelfViewPositionKey,
+        position == SelfViewPosition.start ? 'start' : 'end',
+      );
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to persist self-view position preference',
+      );
+    }
   }
 }
