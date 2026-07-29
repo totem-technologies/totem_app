@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
@@ -340,8 +341,8 @@ class _SelfViewState extends ConsumerState<_SelfView>
   Offset _visualOffset = Offset.zero;
   late final AnimationController _snapController;
 
-  static const double _cardWidth = 120;
-  // Aspect ratio is 3/4, so height is 160
+  static const double _cardWidth = 70;
+  // Aspect ratio is 3/4, so height is 70 * (4 / 3) = 56.67
   static const double _cardHeight = _cardWidth * (4 / 3);
   static const double _padding = 16;
 
@@ -381,7 +382,7 @@ class _SelfViewState extends ConsumerState<_SelfView>
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
-    final size = MediaQuery.sizeOf(context);
+    final size = MediaQuery.of(context).size;
     final currentPos = _targetPosition + _visualOffset + details.delta;
 
     // Clamp to screen bounds on both X and Y axes
@@ -394,7 +395,7 @@ class _SelfViewState extends ConsumerState<_SelfView>
   }
 
   void _onPanEnd(DragEndDetails details) {
-    final screenWidth = MediaQuery.widthOf(context);
+    final screenWidth = MediaQuery.of(context).size.width;
     final currentPos = _targetPosition + _visualOffset;
 
     final midpoint = screenWidth / 2;
@@ -419,6 +420,8 @@ class _SelfViewState extends ConsumerState<_SelfView>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );
@@ -442,15 +445,40 @@ class _SelfViewState extends ConsumerState<_SelfView>
           child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white24, width: 1),
+              border: Border.all(width: 1.5, color: AppTheme.blue),
               boxShadow: kElevationToShadow[6],
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(15),
-              child: ParticipantVideo(
-                key: participantKeys.getKey(currentParticipant.sid),
-                participant: currentParticipant,
-              ),
+            position: DecorationPosition.foreground,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(15),
+                    child: ParticipantVideo(
+                      key: participantKeys.getKey(currentParticipant.sid),
+                      participant: currentParticipant,
+                    ),
+                  ),
+                ),
+                PositionedDirectional(
+                  top: 6,
+                  start: 6,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black45,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    child: Text(
+                      'You',
+                      style: theme.textTheme.labelSmall?.copyWith(fontSize: 8),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
