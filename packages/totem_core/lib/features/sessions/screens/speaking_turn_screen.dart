@@ -324,9 +324,6 @@ class _SpeakingTurnGrid extends ConsumerWidget {
 enum SelfViewPosition { start, end }
 
 /// A floating self-view that shows the current participant's video.
-///
-/// Draggable horizontally; snaps to [SelfViewPosition.start] (top-left) or
-/// [SelfViewPosition.end] (top-right).
 @visibleForTesting
 class SelfView extends ConsumerStatefulWidget {
   const SelfView({super.key});

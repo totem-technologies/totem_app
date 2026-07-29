@@ -1380,7 +1380,7 @@ final class SelfViewEnabledProvider
         argument: null,
         retry: null,
         name: r'selfViewEnabledProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -1401,7 +1401,7 @@ final class SelfViewEnabledProvider
   }
 }
 
-String _$selfViewEnabledHash() => r'b4ddfe8d04d4a950bfd4fccc149c0c0fc70e634e';
+String _$selfViewEnabledHash() => r'84a92aab2f095f99fb135b7189e8bd733127355d';
 
 abstract class _$SelfViewEnabled extends $Notifier<bool> {
   bool build();

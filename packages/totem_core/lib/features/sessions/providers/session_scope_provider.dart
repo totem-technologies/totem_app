@@ -287,7 +287,7 @@ bool isCameraOn(Ref ref) {
   return devices.isCameraEnabled;
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class SelfViewEnabled extends Notifier<bool> {
   @override
   bool build() {
@@ -296,7 +296,7 @@ class SelfViewEnabled extends Notifier<bool> {
       final stored = await service.getSelfViewEnabled();
       if (stored != null) state = stored;
     });
-    return true;
+    return false;
   }
 
   void setEnabled(bool value) {
