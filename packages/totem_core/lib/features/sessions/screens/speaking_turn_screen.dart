@@ -352,7 +352,7 @@ class _SelfViewState extends ConsumerState<SelfView>
     _snapController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 250),
-    )..addListener(() => setState(() {}));
+    );
   }
 
   @override
@@ -436,73 +436,81 @@ class _SelfViewState extends ConsumerState<SelfView>
 
     if (currentParticipant == null) return const SizedBox.shrink();
 
-    final child = SizedBox(
-      width: _cardWidth,
-      height: _cardHeight,
-      child: GestureDetector(
-        onPanStart: _onPanStart,
-        onPanUpdate: _onPanUpdate,
-        onPanEnd: _onPanEnd,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(width: 1.5, color: AppTheme.blue),
-            boxShadow: kElevationToShadow[6],
-          ),
-          position: DecorationPosition.foreground,
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(15),
-                  child: ParticipantVideo(
-                    key: participantKeys.getKey(currentParticipant.sid),
-                    participant: currentParticipant,
-                  ),
-                ),
-              ),
-              PositionedDirectional(
-                top: 6,
-                start: 6,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black45,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: 4,
-                    vertical: 1,
-                  ),
-                  child: Text(
-                    'You',
-                    style: theme.textTheme.labelSmall?.copyWith(fontSize: 8),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
     return Positioned.fill(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          _layoutSize = Size(constraints.maxWidth, constraints.maxHeight);
+      child: AnimatedBuilder(
+        animation: _snapController,
+        builder: (context, child) {
+          if (child == null) return const SizedBox.shrink();
 
-          final offset = _visualOffset * (1 - _snapController.value);
-          final target = _targetPosition;
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              _layoutSize = Size(constraints.maxWidth, constraints.maxHeight);
 
-          return Stack(
-            children: [
-              Positioned(
-                top: target.dy + offset.dy,
-                left: target.dx + offset.dx,
-                child: child,
-              ),
-            ],
+              final offset = _visualOffset * (1 - _snapController.value);
+              final target = _targetPosition;
+
+              return Stack(
+                children: [
+                  Positioned(
+                    top: target.dy + offset.dy,
+                    left: target.dx + offset.dx,
+                    child: child,
+                  ),
+                ],
+              );
+            },
           );
         },
+        child: SizedBox(
+          width: _cardWidth,
+          height: _cardHeight,
+          child: GestureDetector(
+            onPanStart: _onPanStart,
+            onPanUpdate: _onPanUpdate,
+            onPanEnd: _onPanEnd,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(width: 1.5, color: AppTheme.blue),
+                boxShadow: kElevationToShadow[6],
+              ),
+              position: DecorationPosition.foreground,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: ParticipantVideo(
+                        key: participantKeys.getKey(currentParticipant.sid),
+                        participant: currentParticipant,
+                      ),
+                    ),
+                  ),
+                  PositionedDirectional(
+                    top: 6,
+                    start: 6,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black45,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      padding: const EdgeInsetsDirectional.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
+                      child: Text(
+                        'You',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontSize: 8,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

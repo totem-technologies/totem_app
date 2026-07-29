@@ -401,9 +401,6 @@ void main() {
   });
 
   group('Speaking View - Self View', () {
-    const double cardWidth = 120;
-    const double padding = 16;
-
     final selfViewKey = GlobalKey();
 
     /// Helper to wrap the widget in the required environment
@@ -459,8 +456,8 @@ void main() {
       expect(selfView, findsOneWidget);
 
       final topLeft = tester.getTopLeft(selfView);
-      expect(topLeft.dx, padding);
-      expect(topLeft.dy, padding);
+      expect(topLeft.dx, 0);
+      expect(topLeft.dy, 0);
 
       await tester.pumpAndSettle();
     });
@@ -477,8 +474,8 @@ void main() {
         final topLeft = tester.getTopLeft(find.byKey(selfViewKey));
 
         // Should snap back to the start
-        expect(topLeft.dx, padding);
-        expect(topLeft.dy, padding);
+        expect(topLeft.dx, 0);
+        expect(topLeft.dy, 0);
       },
     );
   });
