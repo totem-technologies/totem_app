@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
-import 'package:totem_core/core/services/local_storage_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 
@@ -294,10 +295,10 @@ class SelfViewEnabled extends _$SelfViewEnabled {
 
   @override
   bool build() {
-    final service = ref.read(localStorageServiceProvider);
     Future.microtask(() async {
       try {
-        final stored = await service.getSelfViewEnabled();
+        final prefs = await SharedPreferences.getInstance();
+        final stored = prefs.getBool(AppConsts.storageSelfViewEnabledKey);
         if (stored != null && !_userTouched) state = stored;
       } catch (error, stackTrace) {
         ErrorHandler.logError(
@@ -313,16 +314,16 @@ class SelfViewEnabled extends _$SelfViewEnabled {
   void setEnabled(bool value) {
     _userTouched = true;
     state = value;
-    final service = ref.read(localStorageServiceProvider);
-    service.setSelfViewEnabled(value).catchError((
-      Object error,
-      StackTrace stackTrace,
-    ) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to persist self-view preference',
-      );
-    });
+    SharedPreferences.getInstance()
+        .then((prefs) {
+          prefs.setBool(AppConsts.storageSelfViewEnabledKey, value);
+        })
+        .catchError((Object error, StackTrace stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Failed to persist self-view preference',
+          );
+        });
   }
 }

@@ -5,8 +5,10 @@ import 'dart:math' as math;
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -332,7 +334,7 @@ class SelfView extends ConsumerStatefulWidget {
 
 class _SelfViewState extends ConsumerState<SelfView>
     with SingleTickerProviderStateMixin {
-  SelfViewPosition _position = SelfViewPosition.start;
+  SelfViewPosition _position = SelfViewPosition.end;
   Offset _visualOffset = Offset.zero;
   late final AnimationController _snapController;
 
@@ -351,6 +353,27 @@ class _SelfViewState extends ConsumerState<SelfView>
       vsync: this,
       duration: const Duration(milliseconds: 250),
     );
+    _loadPosition();
+  }
+
+  void _loadPosition() {
+    Future.microtask(() async {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final stored = prefs.getString(AppConsts.storageSelfViewPositionKey);
+        if (stored == null || !mounted) return;
+        final newPosition = stored == 'start'
+            ? SelfViewPosition.start
+            : SelfViewPosition.end;
+        setState(() => _position = newPosition);
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to load self-view position',
+        );
+      }
+    });
   }
 
   @override
@@ -421,6 +444,19 @@ class _SelfViewState extends ConsumerState<SelfView>
       _position = newPosition;
       _visualOffset = remainingOffset;
     });
+
+    final name = newPosition == SelfViewPosition.start ? 'start' : 'end';
+    SharedPreferences.getInstance()
+        .then((prefs) {
+          prefs.setString(AppConsts.storageSelfViewPositionKey, name);
+        })
+        .catchError((Object error, StackTrace stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Failed to persist self-view position',
+          );
+        });
 
     _snapController.forward(from: 0);
   }

@@ -65,21 +65,4 @@ class LocalStorageService {
   Future<void> clearWelcomeOnboardingFlag() async {
     await _secureStorage.delete(key: AppConsts.hasSeenWelcomeOnboarding);
   }
-
-  /// Whether the user has enabled the self-view during speaking turns.
-  Future<bool?> getSelfViewEnabled() async {
-    final value = await _secureStorage.read(
-      key: AppConsts.storageSelfViewEnabledKey,
-    );
-    if (value == null) return null;
-    return value == 'true';
-  }
-
-  /// Persist the self-view enabled preference.
-  Future<void> setSelfViewEnabled(bool value) async {
-    await _secureStorage.write(
-      key: AppConsts.storageSelfViewEnabledKey,
-      value: value.toString(),
-    );
-  }
 }
