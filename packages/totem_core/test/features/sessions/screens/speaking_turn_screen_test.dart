@@ -229,6 +229,7 @@ void main() {
               dateCreated: DateTime(2024),
             );
           }),
+          selfViewEnabledProvider.overrideWithValue(false),
         ],
         child: MaterialApp(
           home: Scaffold(
@@ -397,5 +398,88 @@ void main() {
       expect(find.byType(ActionSlider), findsNothing);
       expect(find.byType(SessionActionBar), findsOneWidget);
     });
+  });
+
+  group('Speaking View - Self View', () {
+    const double cardWidth = 120;
+    const double padding = 16;
+
+    final selfViewKey = GlobalKey();
+
+    /// Helper to wrap the widget in the required environment
+    Widget buildTestWidget({required bool hasParticipant}) {
+      final mockParticipant = MockRemoteParticipant(
+        'sid_1',
+        'test_user',
+      );
+
+      return ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => FakeAuthController(
+              AuthState.authenticated(
+                user: UserSchema(
+                  email: 'test@test.com',
+                  name: 'Test User',
+                  slug: mockParticipant.identity,
+                  profileAvatarType: ProfileAvatarTypeEnum.td,
+                  circleCount: 0,
+                  dateCreated: DateTime.now(),
+                ),
+              ),
+            ),
+          ),
+          sessionParticipantsProvider.overrideWithValue(
+            hasParticipant ? [mockParticipant] : [],
+          ),
+          selfViewEnabledProvider.overrideWithValue(true),
+          // sessionParticipantKeysProvider.overrideWithValue(MockKeysProvider()),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Stack(children: [SelfView(key: selfViewKey)]),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('Does not render if currentParticipant is null', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildTestWidget(hasParticipant: false));
+
+      expect(find.byType(GestureDetector), findsNothing);
+      expect(find.byType(SizedBox), findsOneWidget);
+    });
+
+    testWidgets('Renders at top-start position initially', (tester) async {
+      await tester.pumpWidget(buildTestWidget(hasParticipant: true));
+
+      final selfView = find.byKey(selfViewKey);
+      expect(selfView, findsOneWidget);
+
+      final topLeft = tester.getTopLeft(selfView);
+      expect(topLeft.dx, padding);
+      expect(topLeft.dy, padding);
+
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets(
+      'Snaps back to top-start when dragged but released before midpoint',
+      (tester) async {
+        await tester.pumpWidget(buildTestWidget(hasParticipant: true));
+
+        // Drag 200 pixels right (does not cross 400px midpoint) and 300 pixels down
+        await tester.drag(find.byKey(selfViewKey), const Offset(200, 300));
+        await tester.pumpAndSettle();
+
+        final topLeft = tester.getTopLeft(find.byKey(selfViewKey));
+
+        // Should snap back to the start
+        expect(topLeft.dx, padding);
+        expect(topLeft.dy, padding);
+      },
+    );
   });
 }

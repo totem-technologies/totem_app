@@ -187,7 +187,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                 },
               ),
             ),
-            if (selfViewEnabled) const _SelfView(),
+            if (selfViewEnabled) const SelfView(),
           ],
         ),
       ),
@@ -327,14 +327,15 @@ enum SelfViewPosition { start, end }
 ///
 /// Draggable horizontally; snaps to [SelfViewPosition.start] (top-left) or
 /// [SelfViewPosition.end] (top-right).
-class _SelfView extends ConsumerStatefulWidget {
-  const _SelfView();
+@visibleForTesting
+class SelfView extends ConsumerStatefulWidget {
+  const SelfView({super.key});
 
   @override
-  ConsumerState<_SelfView> createState() => _SelfViewState();
+  ConsumerState<SelfView> createState() => _SelfViewState();
 }
 
-class _SelfViewState extends ConsumerState<_SelfView>
+class _SelfViewState extends ConsumerState<SelfView>
     with SingleTickerProviderStateMixin {
   SelfViewPosition _position = SelfViewPosition.start;
 
