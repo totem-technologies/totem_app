@@ -100,6 +100,7 @@ class MoreOptions extends ConsumerWidget {
     final deviceState = ref.watch(
       sessionDeviceControllerProvider(currentSession),
     );
+    final isSelfViewEnabled = ref.watch(selfViewEnabledProvider);
 
     final isKeeper = currentSession.isCurrentUserKeeper();
 
@@ -127,8 +128,6 @@ class MoreOptions extends ConsumerWidget {
         },
         currentSession.devices.selectAudioOutputDevice,
       );
-
-      final isSelfViewEnabled = ref.watch(selfViewEnabledProvider);
 
       final content = SingleChildScrollView(
         controller: scrollController,

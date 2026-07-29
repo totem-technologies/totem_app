@@ -50,131 +50,92 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
     final nextUp = ref.watch(speakingNextParticipantProvider);
     final selfViewEnabled = ref.watch(selfViewEnabledProvider);
 
-    return RoomBackground(
-      status: roomStatus,
-      child: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: ViewportResolver(
-                builder: (context, viewportKind) {
-                  final participantGrid = _SpeakingTurnGrid(
-                    event: widget.event,
-                    viewportKind: viewportKind,
-                  );
+    final body = ViewportResolver(
+      builder: (context, viewportKind) {
+        final participantGrid = _SpeakingTurnGrid(
+          event: widget.event,
+          viewportKind: viewportKind,
+        );
 
-                  final isWaitingReceive = turnState == TurnState.passing;
+        final isWaitingReceive = turnState == TurnState.passing;
 
-                  final normalPassCard = isWaitingReceive
-                      ? const WaitingReceiveTransitionCard()
-                      : PassTransitionCard(
-                          onActionPressed: _onPassTotem,
-                          actionText: nextUp != null
-                              ? 'Pass to ${nextUp.name}'
-                              : 'Pass',
-                        );
+        final normalPassCard = isWaitingReceive
+            ? const WaitingReceiveTransitionCard()
+            : PassTransitionCard(
+                onActionPressed: _onPassTotem,
+                actionText: nextUp != null ? 'Pass to ${nextUp.name}' : 'Pass',
+              );
 
-                  Widget passCard;
-                  if (isWaitingReceive) {
-                    passCard = normalPassCard;
-                  } else if (isKeeper) {
-                    passCard = PromptTransitionCard(
-                      onActionPressed: (message) {
-                        return _onPassTotem(
-                          message.isEmpty ? null : message,
-                        );
-                      },
-                      actionText:
-                          'Pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
-                              .trim(),
-                    );
-                  } else {
-                    passCard = normalPassCard;
-                  }
-                  final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-                  final restingBottom = switch (viewportKind.isLarge) {
-                    true => 180,
-                    false => 80,
-                  };
+        Widget passCard;
+        if (isWaitingReceive) {
+          passCard = normalPassCard;
+        } else if (isKeeper) {
+          passCard = PromptTransitionCard(
+            onActionPressed: (message) {
+              return _onPassTotem(
+                message.isEmpty ? null : message,
+              );
+            },
+            actionText: 'Pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
+                .trim(),
+          );
+        } else {
+          passCard = normalPassCard;
+        }
+        final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+        final restingBottom = switch (viewportKind.isLarge) {
+          true => 180,
+          false => 80,
+        };
 
-                  // Calculate how far up we need to visually push the card.
-                  // If the keyboard is lower than the resting position, offset is 0 (it doesn't move).
-                  // If the keyboard is higher, push it up by the difference.
-                  final double yOffset = keyboardInset > 0
-                      ? -math.max(0.0, (keyboardInset + 16) - restingBottom)
-                      : 0.0;
+        // Calculate how far up we need to visually push the card.
+        // If the keyboard is lower than the resting position, offset is 0 (it doesn't move).
+        // If the keyboard is higher, push it up by the difference.
+        final double yOffset = keyboardInset > 0
+            ? -math.max(0.0, (keyboardInset + 16) - restingBottom)
+            : 0.0;
 
-                  switch (viewportKind) {
-                    case ViewportKind.smallPortrait:
-                      return Column(
-                        spacing: 20,
-                        children: [
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsetsDirectional.all(40.0),
-                              child: participantGrid,
-                            ),
+        switch (viewportKind) {
+          case ViewportKind.smallPortrait:
+            return Column(
+              spacing: 20,
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.all(40.0),
+                    child: participantGrid,
+                  ),
+                ),
+                Transform.translate(
+                  offset: Offset(0, yOffset),
+                  child: passCard,
+                ),
+                const SessionActionBar(),
+              ],
+            );
+          case ViewportKind.smallLandscape:
+            return Column(
+              spacing: 16,
+              children: [
+                Expanded(
+                  child: Row(
+                    spacing: 16,
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            vertical: 40.0,
+                            horizontal: 12.0,
                           ),
-                          Transform.translate(
-                            offset: Offset(0, yOffset),
-                            child: passCard,
-                          ),
-                          const SessionActionBar(),
-                        ],
-                      );
-                    case ViewportKind.smallLandscape:
-                      return Column(
-                        spacing: 16,
-                        children: [
-                          Expanded(
-                            child: Row(
-                              spacing: 16,
-                              children: [
-                                Expanded(
-                                  child: Padding(
-                                    padding:
-                                        const EdgeInsetsDirectional.symmetric(
-                                          vertical: 40.0,
-                                          horizontal: 12.0,
-                                        ),
-                                    child: participantGrid,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Column(
-                                    spacing: 16,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Transform.translate(
-                                        offset: Offset(0, yOffset),
-                                        child: passCard,
-                                      ),
-                                      const SessionActionBar(),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    case ViewportKind.mediumPlus:
-                      return Padding(
-                        padding: const EdgeInsetsDirectional.only(
-                          top: 40.0,
-                          bottom: 28,
-                          start: 60.0,
-                          end: 60.0,
+                          child: participantGrid,
                         ),
+                      ),
+                      Flexible(
                         child: Column(
-                          spacing: 40,
+                          spacing: 16,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Expanded(
-                              child: Center(
-                                child: Center(child: participantGrid),
-                              ),
-                            ),
                             Transform.translate(
                               offset: Offset(0, yOffset),
                               child: passCard,
@@ -182,14 +143,51 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                             const SessionActionBar(),
                           ],
                         ),
-                      );
-                  }
-                },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          case ViewportKind.mediumPlus:
+            return Padding(
+              padding: const EdgeInsetsDirectional.only(
+                top: 40.0,
+                bottom: 28,
+                start: 60.0,
+                end: 60.0,
               ),
-            ),
-            if (selfViewEnabled) const SelfView(),
-          ],
-        ),
+              child: Column(
+                spacing: 40,
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: Center(child: participantGrid),
+                    ),
+                  ),
+                  Transform.translate(
+                    offset: Offset(0, yOffset),
+                    child: passCard,
+                  ),
+                  const SessionActionBar(),
+                ],
+              ),
+            );
+        }
+      },
+    );
+
+    return RoomBackground(
+      status: roomStatus,
+      child: SafeArea(
+        child: selfViewEnabled
+            ? Stack(
+                children: [
+                  Positioned.fill(child: body),
+                  const SelfView(),
+                ],
+              )
+            : body,
       ),
     );
   }
@@ -389,8 +387,14 @@ class _SelfViewState extends ConsumerState<SelfView>
     final currentPos = _targetPosition + _visualOffset + details.delta;
 
     // Clamp dynamically to the exact parent container size
-    final clampedX = currentPos.dx.clamp(0.0, size.width - _cardWidth);
-    final clampedY = currentPos.dy.clamp(0.0, size.height - _cardHeight);
+    final clampedX = currentPos.dx.clamp(
+      _padding,
+      size.width - _cardWidth - _padding,
+    );
+    final clampedY = currentPos.dy.clamp(
+      _padding,
+      size.height - _cardHeight - _padding,
+    );
 
     setState(() {
       _visualOffset = Offset(clampedX, clampedY) - _targetPosition;
@@ -436,80 +440,97 @@ class _SelfViewState extends ConsumerState<SelfView>
 
     if (currentParticipant == null) return const SizedBox.shrink();
 
+    final borderRadius = BorderRadius.circular(16);
+
     return Positioned.fill(
-      child: AnimatedBuilder(
-        animation: _snapController,
-        builder: (context, child) {
-          if (child == null) return const SizedBox.shrink();
+      child: Semantics(
+        label: 'You',
+        excludeSemantics: true,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            _layoutSize = Size(constraints.maxWidth, constraints.maxHeight);
 
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              _layoutSize = Size(constraints.maxWidth, constraints.maxHeight);
+            return AnimatedBuilder(
+              animation: _snapController,
+              builder: (context, child) {
+                if (child == null) return const SizedBox.shrink();
 
-              final offset = _visualOffset * (1 - _snapController.value);
-              final target = _targetPosition;
+                final animation = CurvedAnimation(
+                  parent: _snapController,
+                  curve: Curves.easeOutCubic,
+                );
 
-              return Stack(
-                children: [
-                  Positioned(
-                    top: target.dy + offset.dy,
-                    left: target.dx + offset.dx,
-                    child: child,
-                  ),
-                ],
-              );
-            },
-          );
-        },
-        child: SizedBox(
-          width: _cardWidth,
-          height: _cardHeight,
-          child: GestureDetector(
-            onPanStart: _onPanStart,
-            onPanUpdate: _onPanUpdate,
-            onPanEnd: _onPanEnd,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(width: 1.5, color: AppTheme.blue),
-                boxShadow: kElevationToShadow[6],
-              ),
-              position: DecorationPosition.foreground,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(15),
-                      child: ParticipantVideo(
-                        key: participantKeys.getKey(currentParticipant.sid),
-                        participant: currentParticipant,
-                      ),
+                final offset = _visualOffset * (1 - animation.value);
+                final target = _targetPosition;
+                return Stack(
+                  children: [
+                    Positioned(
+                      top: target.dy + offset.dy,
+                      left: target.dx + offset.dx,
+                      child: child,
                     ),
-                  ),
-                  PositionedDirectional(
-                    top: 6,
-                    start: 6,
-                    child: Container(
+                  ],
+                );
+              },
+              child: SizedBox(
+                width: _cardWidth,
+                height: _cardHeight,
+                child: GestureDetector(
+                  onPanStart: _onPanStart,
+                  onPanUpdate: _onPanUpdate,
+                  onPanEnd: _onPanEnd,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: borderRadius,
+                      boxShadow: kElevationToShadow[6],
+                    ),
+                    child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Colors.black45,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: borderRadius,
+                        border: Border.all(width: 1.5, color: AppTheme.blue),
                       ),
-                      padding: const EdgeInsetsDirectional.symmetric(
-                        horizontal: 4,
-                        vertical: 1,
-                      ),
-                      child: Text(
-                        'You',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontSize: 8,
-                        ),
+                      position: DecorationPosition.foreground,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: ClipRRect(
+                              borderRadius: borderRadius,
+                              child: ParticipantVideo(
+                                key: participantKeys.getKey(
+                                  currentParticipant.sid,
+                                ),
+                                participant: currentParticipant,
+                              ),
+                            ),
+                          ),
+                          PositionedDirectional(
+                            top: 6,
+                            start: 6,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black45,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              padding: const EdgeInsetsDirectional.symmetric(
+                                horizontal: 4,
+                                vertical: 1,
+                              ),
+                              child: Text(
+                                'You',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontSize: 8,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
