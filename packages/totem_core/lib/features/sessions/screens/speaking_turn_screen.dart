@@ -335,12 +335,14 @@ class SelfView extends ConsumerStatefulWidget {
 class _SelfViewState extends ConsumerState<SelfView>
     with SingleTickerProviderStateMixin {
   SelfViewPosition _position = SelfViewPosition.start;
-
   Offset _visualOffset = Offset.zero;
   late final AnimationController _snapController;
 
+  // Cache the layout size to use inside the drag callbacks
+  Size _layoutSize = Size.zero;
+
   static const double _cardWidth = 70;
-  // Aspect ratio is 3/4, so height is 70 * (4 / 3) = 56.67
+  // Aspect ratio is 3/4, so height is 70 * (4 / 3) = 93.33
   static const double _cardHeight = _cardWidth * (4 / 3);
   static const double _padding = 16;
 
@@ -359,12 +361,16 @@ class _SelfViewState extends ConsumerState<SelfView>
     super.dispose();
   }
 
-  // Helper to get the top-left or top-right snap position
+  // Fallback to MediaQuery only if layout hasn't built yet
+  Size get _containerSize =>
+      _layoutSize == Size.zero ? MediaQuery.sizeOf(context) : _layoutSize;
+
+  // Helper to get the top-left or top-right snap position based on actual container bounds
   Offset get _targetPosition {
-    final screenWidth = MediaQuery.of(context).size.width;
+    final containerWidth = _containerSize.width;
     final left = _position == SelfViewPosition.start
         ? _padding
-        : screenWidth - _cardWidth - _padding;
+        : containerWidth - _cardWidth - _padding;
 
     // Always snaps to the top padding
     return Offset(left, _padding);
@@ -373,17 +379,16 @@ class _SelfViewState extends ConsumerState<SelfView>
   void _onPanStart(DragStartDetails details) {
     _snapController.stop();
     setState(() {
-      // Bake the current animation state into the 2D offset
       _visualOffset = _visualOffset * (1 - _snapController.value);
       _snapController.value = 0;
     });
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
-    final size = MediaQuery.of(context).size;
+    final size = _containerSize;
     final currentPos = _targetPosition + _visualOffset + details.delta;
 
-    // Clamp to screen bounds on both X and Y axes
+    // Clamp dynamically to the exact parent container size
     final clampedX = currentPos.dx.clamp(0.0, size.width - _cardWidth);
     final clampedY = currentPos.dy.clamp(0.0, size.height - _cardHeight);
 
@@ -393,17 +398,17 @@ class _SelfViewState extends ConsumerState<SelfView>
   }
 
   void _onPanEnd(DragEndDetails details) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    final containerWidth = _containerSize.width;
     final currentPos = _targetPosition + _visualOffset;
 
-    final midpoint = screenWidth / 2;
+    final midpoint = containerWidth / 2;
     final newPosition = currentPos.dx + _cardWidth / 2 < midpoint
         ? SelfViewPosition.start
         : SelfViewPosition.end;
 
     final newTargetLeft = newPosition == SelfViewPosition.start
         ? _padding
-        : screenWidth - _cardWidth - _padding;
+        : containerWidth - _cardWidth - _padding;
     final newTargetPosition = Offset(newTargetLeft, _padding);
 
     final remainingOffset = currentPos - newTargetPosition;
@@ -433,64 +438,72 @@ class _SelfViewState extends ConsumerState<SelfView>
 
     final child = SizedBox(
       width: _cardWidth,
-      child: AspectRatio(
-        aspectRatio: 3 / 4,
-        child: GestureDetector(
-          // Swapped horizontal drag for pan gestures
-          onPanStart: _onPanStart,
-          onPanUpdate: _onPanUpdate,
-          onPanEnd: _onPanEnd,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(width: 1.5, color: AppTheme.blue),
-              boxShadow: kElevationToShadow[6],
-            ),
-            position: DecorationPosition.foreground,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(15),
-                    child: ParticipantVideo(
-                      key: participantKeys.getKey(currentParticipant.sid),
-                      participant: currentParticipant,
-                    ),
+      height: _cardHeight,
+      child: GestureDetector(
+        onPanStart: _onPanStart,
+        onPanUpdate: _onPanUpdate,
+        onPanEnd: _onPanEnd,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(width: 1.5, color: AppTheme.blue),
+            boxShadow: kElevationToShadow[6],
+          ),
+          position: DecorationPosition.foreground,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                  child: ParticipantVideo(
+                    key: participantKeys.getKey(currentParticipant.sid),
+                    participant: currentParticipant,
                   ),
                 ),
-                PositionedDirectional(
-                  top: 6,
-                  start: 6,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: 4,
-                      vertical: 1,
-                    ),
-                    child: Text(
-                      'You',
-                      style: theme.textTheme.labelSmall?.copyWith(fontSize: 8),
-                    ),
+              ),
+              PositionedDirectional(
+                top: 6,
+                start: 6,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black45,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
+                  child: Text(
+                    'You',
+                    style: theme.textTheme.labelSmall?.copyWith(fontSize: 8),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
 
-    // Dart's Offset class supports scalar multiplication out of the box
-    final offset = _visualOffset * (1 - _snapController.value);
-    final target = _targetPosition;
+    return Positioned.fill(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          _layoutSize = Size(constraints.maxWidth, constraints.maxHeight);
 
-    return Positioned(
-      top: target.dy + offset.dy,
-      left: target.dx + offset.dx,
-      child: child,
+          final offset = _visualOffset * (1 - _snapController.value);
+          final target = _targetPosition;
+
+          return Stack(
+            children: [
+              Positioned(
+                top: target.dy + offset.dy,
+                left: target.dx + offset.dx,
+                child: child,
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
