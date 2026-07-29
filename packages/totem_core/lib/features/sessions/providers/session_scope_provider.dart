@@ -4,6 +4,7 @@ import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/local_storage_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
@@ -288,19 +289,40 @@ bool isCameraOn(Ref ref) {
 }
 
 @Riverpod(keepAlive: true)
-class SelfViewEnabled extends Notifier<bool> {
+class SelfViewEnabled extends _$SelfViewEnabled {
+  bool _userTouched = false;
+
   @override
   bool build() {
+    final service = ref.read(localStorageServiceProvider);
     Future.microtask(() async {
-      final service = ref.read(localStorageServiceProvider);
-      final stored = await service.getSelfViewEnabled();
-      if (stored != null) state = stored;
+      try {
+        final stored = await service.getSelfViewEnabled();
+        if (stored != null && !_userTouched) state = stored;
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to load self-view preference',
+        );
+      }
     });
     return false;
   }
 
   void setEnabled(bool value) {
+    _userTouched = true;
     state = value;
-    ref.read(localStorageServiceProvider).setSelfViewEnabled(value);
+    final service = ref.read(localStorageServiceProvider);
+    service.setSelfViewEnabled(value).catchError((
+      Object error,
+      StackTrace stackTrace,
+    ) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to persist self-view preference',
+      );
+    });
   }
 }

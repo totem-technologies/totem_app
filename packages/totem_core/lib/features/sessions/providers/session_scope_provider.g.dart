@@ -1401,7 +1401,7 @@ final class SelfViewEnabledProvider
   }
 }
 
-String _$selfViewEnabledHash() => r'84a92aab2f095f99fb135b7189e8bd733127355d';
+String _$selfViewEnabledHash() => r'0866d1f179fe4090413f3c2b008e9af9d4b7a1a5';
 
 abstract class _$SelfViewEnabled extends $Notifier<bool> {
   bool build();
