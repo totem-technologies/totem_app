@@ -128,6 +128,8 @@ class MoreOptions extends ConsumerWidget {
         currentSession.devices.selectAudioOutputDevice,
       );
 
+      final isSelfViewEnabled = ref.watch(selfViewEnabledProvider);
+
       final content = SingleChildScrollView(
         controller: scrollController,
         padding: EdgeInsetsDirectional.only(
@@ -142,6 +144,27 @@ class MoreOptions extends ConsumerWidget {
           children: [
             ?cameraTile,
             ?outputTile,
+            MoreOptionsTile<void>(
+              title: 'Self-view',
+              icon: TotemIcons.selfView,
+              trailing: IgnorePointer(
+                child: Switch.adaptive(
+                  value: isSelfViewEnabled,
+                  onChanged: (value) {
+                    ref
+                        .read(selfViewEnabledProvider.notifier)
+                        .setEnabled(value);
+                  },
+                ),
+              ),
+              onTap: () {
+                ref
+                    .read(selfViewEnabledProvider.notifier)
+                    .setEnabled(
+                      !isSelfViewEnabled,
+                    );
+              },
+            ),
             MoreOptionsTile<void>(
               title: 'Leave Session',
               icon: TotemIcons.leaveCall,

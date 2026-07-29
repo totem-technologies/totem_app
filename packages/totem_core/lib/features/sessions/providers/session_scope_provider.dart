@@ -4,6 +4,7 @@ import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/services/local_storage_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 
@@ -284,4 +285,22 @@ bool isCameraOn(Ref ref) {
   if (session == null) return false;
   final devices = ref.watch(sessionDeviceControllerProvider(session));
   return devices.isCameraEnabled;
+}
+
+@riverpod
+class SelfViewEnabled extends Notifier<bool> {
+  @override
+  bool build() {
+    Future.microtask(() async {
+      final service = ref.read(localStorageServiceProvider);
+      final stored = await service.getSelfViewEnabled();
+      if (stored != null) state = stored;
+    });
+    return true;
+  }
+
+  void setEnabled(bool value) {
+    state = value;
+    ref.read(localStorageServiceProvider).setSelfViewEnabled(value);
+  }
 }

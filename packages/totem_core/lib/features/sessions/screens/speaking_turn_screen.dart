@@ -2,8 +2,10 @@
 
 import 'dart:math' as math;
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -45,135 +47,147 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
     final turnState = ref.watch(turnStateProvider);
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
     final nextUp = ref.watch(speakingNextParticipantProvider);
+    final selfViewEnabled = ref.watch(selfViewEnabledProvider);
 
     return RoomBackground(
       status: roomStatus,
       child: SafeArea(
-        child: ViewportResolver(
-          builder: (context, viewportKind) {
-            final participantGrid = _SpeakingTurnGrid(
-              event: widget.event,
-              viewportKind: viewportKind,
-            );
-
-            final isWaitingReceive = turnState == TurnState.passing;
-
-            final normalPassCard = isWaitingReceive
-                ? const WaitingReceiveTransitionCard()
-                : PassTransitionCard(
-                    onActionPressed: _onPassTotem,
-                    actionText: nextUp != null
-                        ? 'Pass to ${nextUp.name}'
-                        : 'Pass',
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: ViewportResolver(
+                builder: (context, viewportKind) {
+                  final participantGrid = _SpeakingTurnGrid(
+                    event: widget.event,
+                    viewportKind: viewportKind,
                   );
 
-            Widget passCard;
-            if (isWaitingReceive) {
-              passCard = normalPassCard;
-            } else if (isKeeper) {
-              passCard = PromptTransitionCard(
-                onActionPressed: (message) {
-                  return _onPassTotem(
-                    message.isEmpty ? null : message,
-                  );
-                },
-                actionText: 'Pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
-                    .trim(),
-              );
-            } else {
-              passCard = normalPassCard;
-            }
-            final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-            final restingBottom = switch (viewportKind.isLarge) {
-              true => 180,
-              false => 80,
-            };
+                  final isWaitingReceive = turnState == TurnState.passing;
 
-            // Calculate how far up we need to visually push the card.
-            // If the keyboard is lower than the resting position, offset is 0 (it doesn't move).
-            // If the keyboard is higher, push it up by the difference.
-            final double yOffset = keyboardInset > 0
-                ? -math.max(0.0, (keyboardInset + 16) - restingBottom)
-                : 0.0;
+                  final normalPassCard = isWaitingReceive
+                      ? const WaitingReceiveTransitionCard()
+                      : PassTransitionCard(
+                          onActionPressed: _onPassTotem,
+                          actionText: nextUp != null
+                              ? 'Pass to ${nextUp.name}'
+                              : 'Pass',
+                        );
 
-            switch (viewportKind) {
-              case ViewportKind.smallPortrait:
-                return Column(
-                  spacing: 20,
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.all(40.0),
-                        child: participantGrid,
-                      ),
-                    ),
-                    Transform.translate(
-                      offset: Offset(0, yOffset),
-                      child: passCard,
-                    ),
-                    const SessionActionBar(),
-                  ],
-                );
-              case ViewportKind.smallLandscape:
-                return Column(
-                  spacing: 16,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        spacing: 16,
+                  Widget passCard;
+                  if (isWaitingReceive) {
+                    passCard = normalPassCard;
+                  } else if (isKeeper) {
+                    passCard = PromptTransitionCard(
+                      onActionPressed: (message) {
+                        return _onPassTotem(
+                          message.isEmpty ? null : message,
+                        );
+                      },
+                      actionText:
+                          'Pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
+                              .trim(),
+                    );
+                  } else {
+                    passCard = normalPassCard;
+                  }
+                  final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+                  final restingBottom = switch (viewportKind.isLarge) {
+                    true => 180,
+                    false => 80,
+                  };
+
+                  // Calculate how far up we need to visually push the card.
+                  // If the keyboard is lower than the resting position, offset is 0 (it doesn't move).
+                  // If the keyboard is higher, push it up by the difference.
+                  final double yOffset = keyboardInset > 0
+                      ? -math.max(0.0, (keyboardInset + 16) - restingBottom)
+                      : 0.0;
+
+                  switch (viewportKind) {
+                    case ViewportKind.smallPortrait:
+                      return Column(
+                        spacing: 20,
                         children: [
                           Expanded(
                             child: Padding(
-                              padding: const EdgeInsetsDirectional.symmetric(
-                                vertical: 40.0,
-                                horizontal: 12.0,
-                              ),
+                              padding: const EdgeInsetsDirectional.all(40.0),
                               child: participantGrid,
                             ),
                           ),
-                          Flexible(
-                            child: Column(
+                          Transform.translate(
+                            offset: Offset(0, yOffset),
+                            child: passCard,
+                          ),
+                          const SessionActionBar(),
+                        ],
+                      );
+                    case ViewportKind.smallLandscape:
+                      return Column(
+                        spacing: 16,
+                        children: [
+                          Expanded(
+                            child: Row(
                               spacing: 16,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Transform.translate(
-                                  offset: Offset(0, yOffset),
-                                  child: passCard,
+                                Expanded(
+                                  child: Padding(
+                                    padding:
+                                        const EdgeInsetsDirectional.symmetric(
+                                          vertical: 40.0,
+                                          horizontal: 12.0,
+                                        ),
+                                    child: participantGrid,
+                                  ),
                                 ),
-                                const SessionActionBar(),
+                                Flexible(
+                                  child: Column(
+                                    spacing: 16,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Transform.translate(
+                                        offset: Offset(0, yOffset),
+                                        child: passCard,
+                                      ),
+                                      const SessionActionBar(),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                         ],
-                      ),
-                    ),
-                  ],
-                );
-              case ViewportKind.mediumPlus:
-                return Padding(
-                  padding: const EdgeInsetsDirectional.only(
-                    top: 40.0,
-                    bottom: 28,
-                    start: 60.0,
-                    end: 60.0,
-                  ),
-                  child: Column(
-                    spacing: 40,
-                    children: [
-                      Expanded(
-                        child: Center(child: Center(child: participantGrid)),
-                      ),
-                      Transform.translate(
-                        offset: Offset(0, yOffset),
-                        child: passCard,
-                      ),
-                      const SessionActionBar(),
-                    ],
-                  ),
-                );
-            }
-          },
+                      );
+                    case ViewportKind.mediumPlus:
+                      return Padding(
+                        padding: const EdgeInsetsDirectional.only(
+                          top: 40.0,
+                          bottom: 28,
+                          start: 60.0,
+                          end: 60.0,
+                        ),
+                        child: Column(
+                          spacing: 40,
+                          children: [
+                            Expanded(
+                              child: Center(
+                                child: Center(child: participantGrid),
+                              ),
+                            ),
+                            Transform.translate(
+                              offset: Offset(0, yOffset),
+                              child: passCard,
+                            ),
+                            const SessionActionBar(),
+                          ],
+                        ),
+                      );
+                  }
+                },
+              ),
+            ),
+            if (selfViewEnabled) const _SelfView(),
+          ],
         ),
       ),
     );
@@ -302,6 +316,155 @@ class _SpeakingTurnGrid extends ConsumerWidget {
             );
         }
       },
+    );
+  }
+}
+
+enum SelfViewPosition { start, end }
+
+/// A floating self-view that shows the current participant's video.
+///
+/// Draggable horizontally; snaps to [SelfViewPosition.start] (top-left) or
+/// [SelfViewPosition.end] (top-right).
+class _SelfView extends ConsumerStatefulWidget {
+  const _SelfView();
+
+  @override
+  ConsumerState<_SelfView> createState() => _SelfViewState();
+}
+
+class _SelfViewState extends ConsumerState<_SelfView>
+    with SingleTickerProviderStateMixin {
+  SelfViewPosition _position = SelfViewPosition.start;
+
+  Offset _visualOffset = Offset.zero;
+  late final AnimationController _snapController;
+
+  static const double _cardWidth = 120;
+  // Aspect ratio is 3/4, so height is 160
+  static const double _cardHeight = _cardWidth * (4 / 3);
+  static const double _padding = 16;
+
+  @override
+  void initState() {
+    super.initState();
+    _snapController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    )..addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _snapController.dispose();
+    super.dispose();
+  }
+
+  // Helper to get the top-left or top-right snap position
+  Offset get _targetPosition {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final left = _position == SelfViewPosition.start
+        ? _padding
+        : screenWidth - _cardWidth - _padding;
+
+    // Always snaps to the top padding
+    return Offset(left, _padding);
+  }
+
+  void _onPanStart(DragStartDetails details) {
+    _snapController.stop();
+    setState(() {
+      // Bake the current animation state into the 2D offset
+      _visualOffset = _visualOffset * (1 - _snapController.value);
+      _snapController.value = 0;
+    });
+  }
+
+  void _onPanUpdate(DragUpdateDetails details) {
+    final size = MediaQuery.sizeOf(context);
+    final currentPos = _targetPosition + _visualOffset + details.delta;
+
+    // Clamp to screen bounds on both X and Y axes
+    final clampedX = currentPos.dx.clamp(0.0, size.width - _cardWidth);
+    final clampedY = currentPos.dy.clamp(0.0, size.height - _cardHeight);
+
+    setState(() {
+      _visualOffset = Offset(clampedX, clampedY) - _targetPosition;
+    });
+  }
+
+  void _onPanEnd(DragEndDetails details) {
+    final screenWidth = MediaQuery.widthOf(context);
+    final currentPos = _targetPosition + _visualOffset;
+
+    final midpoint = screenWidth / 2;
+    final newPosition = currentPos.dx + _cardWidth / 2 < midpoint
+        ? SelfViewPosition.start
+        : SelfViewPosition.end;
+
+    final newTargetLeft = newPosition == SelfViewPosition.start
+        ? _padding
+        : screenWidth - _cardWidth - _padding;
+    final newTargetPosition = Offset(newTargetLeft, _padding);
+
+    final remainingOffset = currentPos - newTargetPosition;
+
+    setState(() {
+      _position = newPosition;
+      _visualOffset = remainingOffset;
+    });
+
+    _snapController.forward(from: 0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUserSlug = ref.watch(
+      authControllerProvider.select((auth) => auth.user?.slug),
+    );
+    final participants = ref.watch(sessionParticipantsProvider);
+    final participantKeys = ref.watch(sessionParticipantKeysProvider);
+    final currentParticipant = participants.firstWhereOrNull(
+      (p) => p.identity == currentUserSlug,
+    );
+
+    if (currentParticipant == null) return const SizedBox.shrink();
+
+    final child = SizedBox(
+      width: _cardWidth,
+      child: AspectRatio(
+        aspectRatio: 3 / 4,
+        child: GestureDetector(
+          // Swapped horizontal drag for pan gestures
+          onPanStart: _onPanStart,
+          onPanUpdate: _onPanUpdate,
+          onPanEnd: _onPanEnd,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white24, width: 1),
+              boxShadow: kElevationToShadow[6],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(15),
+              child: ParticipantVideo(
+                key: participantKeys.getKey(currentParticipant.sid),
+                participant: currentParticipant,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Dart's Offset class supports scalar multiplication out of the box
+    final offset = _visualOffset * (1 - _snapController.value);
+    final target = _targetPosition;
+
+    return Positioned(
+      top: target.dy + offset.dy,
+      left: target.dx + offset.dx,
+      child: child,
     );
   }
 }
