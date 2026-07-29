@@ -24,6 +24,12 @@ class RoomBackground extends StatelessWidget {
   /// The status of the session to determine background style.
   final RoomStatus status;
 
+  /// Called when the room background changes so platform-specific
+  /// code (e.g. web) can sync the native chrome to avoid white flashes.
+  ///
+  /// The [Color] passed is the background color the room is rendering.
+  static ValueChanged<Color>? onBackgroundChanged;
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -55,6 +61,15 @@ class RoomBackground extends StatelessWidget {
             RoomStatus.waitingRoom => Colors.black,
             _ => Colors.white,
           };
+
+          onBackgroundChanged?.call(switch (status) {
+            RoomStatus.waitingRoom =>
+              (waitingDecoration.gradient! as LinearGradient).colors.reduce(
+                (a, b) => Color.lerp(a, b, 0.5)!,
+              ),
+            _ => roomDecoration.color!,
+          });
+
           return AnimatedContainer(
             duration: kThemeAnimationDuration,
             decoration: switch (status) {
