@@ -62,12 +62,14 @@ class RoomBackground extends StatelessWidget {
             _ => Colors.white,
           };
 
-          onBackgroundChanged?.call(switch (status) {
-            RoomStatus.waitingRoom =>
-              (waitingDecoration.gradient! as LinearGradient).colors.reduce(
-                (a, b) => Color.lerp(a, b, 0.5)!,
-              ),
-            _ => roomDecoration.color!,
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            onBackgroundChanged?.call(switch (status) {
+              RoomStatus.waitingRoom =>
+                (waitingDecoration.gradient! as LinearGradient).colors.reduce(
+                  (a, b) => Color.lerp(a, b, 0.5)!,
+                ),
+              _ => roomDecoration.color!,
+            });
           });
 
           return AnimatedContainer(
