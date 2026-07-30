@@ -473,8 +473,6 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       );
     }
 
-    // transient join recovery handled earlier
-
     return RoomBackground(
       status: roomStatus,
       child: Navigator(

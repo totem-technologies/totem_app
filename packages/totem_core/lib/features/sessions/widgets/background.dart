@@ -4,7 +4,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
-class RoomBackground extends StatelessWidget {
+class RoomBackground extends StatefulWidget {
   const RoomBackground({
     required this.child,
     this.padding = EdgeInsetsDirectional.zero,
@@ -31,17 +31,43 @@ class RoomBackground extends StatelessWidget {
   static ValueChanged<Color>? onBackgroundChanged;
 
   @override
+  State<RoomBackground> createState() => _RoomBackgroundState();
+}
+
+class _RoomBackgroundState extends State<RoomBackground> {
+  static const roomDecoration = BoxDecoration(
+    color: AppTheme.slate,
+  );
+
+  static const gradientColors = <Color>[
+    AppTheme.cream,
+    AppTheme.mauve,
+  ];
+
+  @override
+  void didUpdateWidget(covariant RoomBackground oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.status != oldWidget.status) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        RoomBackground.onBackgroundChanged?.call(switch (widget.status) {
+          RoomStatus.waitingRoom => gradientColors.reduce(
+            (a, b) => Color.lerp(a, b, 0.5)!,
+          ),
+          _ => roomDecoration.color!,
+        });
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: overlayStyle,
+      value: widget.overlayStyle,
       child: ViewportResolver(
         builder: (context, viewportKind) {
           final waitingDecoration = BoxDecoration(
             gradient: LinearGradient(
-              colors: const [
-                AppTheme.cream,
-                AppTheme.mauve,
-              ],
+              colors: gradientColors,
               begin: switch (viewportKind) {
                 ViewportKind.smallLandscape => AlignmentDirectional.centerStart,
                 _ => AlignmentDirectional.topCenter,
@@ -53,32 +79,19 @@ class RoomBackground extends StatelessWidget {
               stops: const [0.5, 1],
             ),
           );
-          const roomDecoration = BoxDecoration(
-            color: AppTheme.slate,
-          );
 
-          final foregroundColor = switch (status) {
+          final foregroundColor = switch (widget.status) {
             RoomStatus.waitingRoom => Colors.black,
             _ => Colors.white,
           };
 
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            onBackgroundChanged?.call(switch (status) {
-              RoomStatus.waitingRoom =>
-                (waitingDecoration.gradient! as LinearGradient).colors.reduce(
-                  (a, b) => Color.lerp(a, b, 0.5)!,
-                ),
-              _ => roomDecoration.color!,
-            });
-          });
-
           return AnimatedContainer(
             duration: kThemeAnimationDuration,
-            decoration: switch (status) {
+            decoration: switch (widget.status) {
               RoomStatus.waitingRoom => waitingDecoration,
               _ => roomDecoration,
             },
-            padding: padding,
+            padding: widget.padding,
             child: Theme(
               data: Theme.of(context).copyWith(
                 scaffoldBackgroundColor: Colors.transparent,
@@ -92,7 +105,7 @@ class RoomBackground extends StatelessWidget {
                 style: TextStyle(color: foregroundColor),
                 child: Material(
                   type: MaterialType.transparency,
-                  child: child,
+                  child: widget.child,
                 ),
               ),
             ),
