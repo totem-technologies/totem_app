@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/consts.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 
@@ -284,4 +287,118 @@ bool isCameraOn(Ref ref) {
   if (session == null) return false;
   final devices = ref.watch(sessionDeviceControllerProvider(session));
   return devices.isCameraEnabled;
+}
+
+enum SelfViewPosition { start, end }
+
+class SelfViewState {
+  const SelfViewState({
+    required this.enabled,
+    required this.position,
+  });
+
+  final bool enabled;
+  final SelfViewPosition position;
+
+  SelfViewState copyWith({
+    bool? enabled,
+    SelfViewPosition? position,
+  }) {
+    return SelfViewState(
+      enabled: enabled ?? this.enabled,
+      position: position ?? this.position,
+    );
+  }
+}
+
+@Riverpod(keepAlive: true)
+class SelfViewSettings extends _$SelfViewSettings {
+  bool _userTouchedEnabled = false;
+  bool _userTouchedPosition = false;
+
+  @override
+  SelfViewState build() {
+    Future.microtask(loadPrefs);
+    return const SelfViewState(
+      enabled: false,
+      position: SelfViewPosition.end,
+    );
+  }
+
+  @visibleForTesting
+  Future<void> loadPrefs({SharedPreferences? prefs}) async {
+    try {
+      final effectivePrefs = prefs ?? await SharedPreferences.getInstance();
+
+      final storedEnabled = effectivePrefs.getBool(
+        AppConsts.storageSelfViewEnabledKey,
+      );
+      final storedPosition = effectivePrefs.getString(
+        AppConsts.storageSelfViewPositionKey,
+      );
+
+      bool newEnabled = state.enabled;
+      if (storedEnabled != null && !_userTouchedEnabled) {
+        newEnabled = storedEnabled;
+      }
+
+      SelfViewPosition newPosition = state.position;
+      if (storedPosition != null && !_userTouchedPosition) {
+        newPosition = SelfViewPosition.values.byName(storedPosition);
+      }
+
+      state = state.copyWith(enabled: newEnabled, position: newPosition);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to load self-view settings',
+      );
+    }
+  }
+
+  void setEnabled(bool value, {SharedPreferences? prefs}) {
+    _userTouchedEnabled = true;
+    state = state.copyWith(enabled: value);
+    _persistEnabled(value, prefs: prefs);
+  }
+
+  Future<void> _persistEnabled(bool value, {SharedPreferences? prefs}) async {
+    try {
+      final effectivePrefs = prefs ?? await SharedPreferences.getInstance();
+      await effectivePrefs.setBool(AppConsts.storageSelfViewEnabledKey, value);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to persist self-view enabled preference',
+      );
+    }
+  }
+
+  void setPosition(SelfViewPosition position, {SharedPreferences? prefs}) {
+    if (position == state.position) return;
+    _userTouchedPosition = true;
+    state = state.copyWith(position: position);
+    _persistPosition(position, prefs: prefs);
+  }
+
+  Future<void> _persistPosition(
+    SelfViewPosition position, {
+    SharedPreferences? prefs,
+  }) async {
+    try {
+      final effectivePrefs = prefs ?? await SharedPreferences.getInstance();
+      await effectivePrefs.setString(
+        AppConsts.storageSelfViewPositionKey,
+        position.name,
+      );
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to persist self-view position preference',
+      );
+    }
+  }
 }

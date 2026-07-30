@@ -85,6 +85,9 @@ class MoreOptions extends ConsumerWidget {
     final deviceState = ref.watch(
       sessionDeviceControllerProvider(currentSession),
     );
+    final isSelfViewEnabled = ref.watch(
+      selfViewSettingsProvider.select((s) => s.enabled),
+    );
 
     final isKeeper = currentSession.isCurrentUserKeeper();
 
@@ -127,6 +130,23 @@ class MoreOptions extends ConsumerWidget {
           children: [
             ?cameraTile,
             ?outputTile,
+            MoreOptionsTile<void>(
+              title: 'Self-view',
+              icon: TotemIcons.selfView,
+              trailing: IgnorePointer(
+                child: Switch.adaptive(
+                  value: isSelfViewEnabled,
+                  onChanged: (value) {},
+                ),
+              ),
+              onTap: () {
+                ref
+                    .read(selfViewSettingsProvider.notifier)
+                    .setEnabled(
+                      !isSelfViewEnabled,
+                    );
+              },
+            ),
             MoreOptionsTile<void>(
               title: 'Leave Session',
               icon: TotemIcons.leaveCall,
