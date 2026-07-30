@@ -16,7 +16,7 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart'
 import 'package:totem_core/features/sessions/widgets/adaptive_call_layout.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
-import 'package:totem_core/features/sessions/widgets/session_title.dart';
+import 'package:totem_core/features/sessions/widgets/session_text.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
@@ -52,6 +52,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
     final selfViewEnabled = ref.watch(
       selfViewSettingsProvider.select((s) => s.enabled),
     );
+    final roundPrompt = ref.watch(roundMessageProvider);
 
     final body = ViewportResolver(
       builder: (context, viewportKind) {
@@ -109,6 +110,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                     child: participantGrid,
                   ),
                 ),
+                ?roundPromptText(roundPrompt),
                 Transform.translate(
                   offset: Offset(0, yOffset),
                   child: passCard,
@@ -139,6 +141,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            ?roundPromptText(roundPrompt),
                             Transform.translate(
                               offset: Offset(0, yOffset),
                               child: passCard,
@@ -164,11 +167,8 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                 spacing: 40,
                 children: [
                   const SessionTitle(),
-                  Expanded(
-                    child: Center(
-                      child: Center(child: participantGrid),
-                    ),
-                  ),
+                  Expanded(child: Center(child: participantGrid)),
+                  ?roundPromptText(roundPrompt),
                   Transform.translate(
                     offset: Offset(0, yOffset),
                     child: passCard,

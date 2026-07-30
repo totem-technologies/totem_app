@@ -37,3 +37,19 @@ class SessionTitle extends ConsumerWidget {
     );
   }
 }
+
+Widget? roundPromptText(String? roundPrompt) {
+  if (roundPrompt == null) return null;
+  return Builder(
+    builder: (context) {
+      final theme = Theme.of(context);
+      return Text(
+        '"$roundPrompt"',
+        style: theme.textTheme.bodyLarge?.copyWith(
+          fontStyle: FontStyle.italic,
+        ),
+        textAlign: TextAlign.center,
+      );
+    },
+  );
+}

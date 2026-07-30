@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
+import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class _TransitionCardContainer extends StatelessWidget {
   const _TransitionCardContainer({
@@ -276,17 +277,37 @@ class PassTransitionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _GenericTransitionCard(
-      actionText: actionText,
-      onActionPressed: onActionPressed,
-      instructionTextClick:
-          'When done, click to pass the Totem to the next person.',
-      instructionTextSwipe:
-          'When done, slide to pass the Totem to the next person.',
-      keyboardShortcutText: 'press space bar to pass',
-      keepActionLoadingOnSuccess: keepActionLoadingOnSuccess,
-      isSliderLoading: isSliderLoading,
-      margin: margin,
+    return ViewportResolver(
+      builder: (context, viewportKind) {
+        return switch (viewportKind) {
+          ViewportKind.smallPortrait ||
+          ViewportKind.smallLandscape => Container(
+            margin: const EdgeInsetsDirectional.only(
+              start: 20,
+              end: 20,
+              bottom: 18,
+            ),
+            height: 50,
+            child: ActionSliderButton(
+              text: actionText,
+              onActionCompleted: onActionPressed,
+              keepLoadingOnSuccess: true,
+            ),
+          ),
+          ViewportKind.mediumPlus => _GenericTransitionCard(
+            actionText: actionText,
+            onActionPressed: onActionPressed,
+            instructionTextClick:
+                'When done, click to pass the Totem to the next person.',
+            instructionTextSwipe:
+                'When done, slide to pass the Totem to the next person.',
+            keyboardShortcutText: 'press space bar to pass',
+            keepActionLoadingOnSuccess: keepActionLoadingOnSuccess,
+            isSliderLoading: isSliderLoading,
+            margin: margin,
+          ),
+        };
+      },
     );
   }
 }
