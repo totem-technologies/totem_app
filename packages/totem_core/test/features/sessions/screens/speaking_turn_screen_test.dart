@@ -164,6 +164,7 @@ void main() {
   });
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     session = MockSessionController();
     keeper = MockSessionKeeperController();
     devices = MockSessionDeviceController();
@@ -401,6 +402,45 @@ void main() {
       expect(find.byType(SessionActionBar), findsOneWidget);
     });
 
+    testWidgets('does not render SelfView when disabled by default', (
+      tester,
+    ) async {
+      final state = _buildState(
+        keeper: 'user-1',
+        currentSpeaker: 'user-1',
+        nextSpeaker: 'user-2',
+      );
+
+      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SelfView), findsNothing);
+    });
+
+    testWidgets('SelfView Settings enables and persists', (
+      tester,
+    ) async {
+      final state = _buildState(
+        keeper: 'user-1',
+        currentSpeaker: 'user-1',
+        nextSpeaker: 'user-2',
+      );
+
+      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
+      await tester.pumpAndSettle();
+
+      final container = tester.element(find.byType(SpeakingTurnScreen));
+      final ref = ProviderScope.containerOf(container);
+
+      ref.read(selfViewSettingsProvider.notifier).setEnabled(true);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SelfView), findsOneWidget);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool(AppConsts.storageSelfViewEnabledKey), true);
+    });
+
     testWidgets('renders SelfView when enabled and handles dragging', (
       tester,
     ) async {
@@ -422,7 +462,7 @@ void main() {
 
       final cardFinder = find.bySemanticsLabel('Your self view, draggable');
       final initialOffset = tester.getTopLeft(cardFinder);
-      expect(initialOffset.dx, greaterThan(200));
+      expect(initialOffset.dx, equals(714.0)); // 800 - 70 - 16
 
       await tester.drag(cardFinder, const Offset(-500, 0));
       await tester.pumpAndSettle();
@@ -432,6 +472,14 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString(AppConsts.storageSelfViewPositionKey), 'start');
+
+      // Drag back past the midpoint
+      await tester.drag(cardFinder, const Offset(500, 0));
+      await tester.pumpAndSettle();
+
+      final backOffset = tester.getTopLeft(cardFinder);
+      expect(backOffset.dx, equals(714.0)); // Should snap back to end
+      expect(prefs.getString(AppConsts.storageSelfViewPositionKey), 'end');
     });
   });
 }

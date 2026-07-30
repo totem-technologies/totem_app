@@ -322,6 +322,8 @@ class _SpeakingTurnGrid extends ConsumerWidget {
 }
 
 /// A floating self-view that shows the current participant's video.
+///
+/// This only works inside a Stack widget.
 @visibleForTesting
 class SelfView extends ConsumerStatefulWidget {
   const SelfView({super.key});
@@ -337,13 +339,13 @@ class _SelfViewState extends ConsumerState<SelfView>
     vsync: this,
     duration: const Duration(milliseconds: 250),
   );
-  late final animation = CurvedAnimation(
+  late final _animation = CurvedAnimation(
     parent: _snapController,
     curve: Curves.easeOutCubic,
   );
 
   // Cache the layout size to use inside the drag callbacks
-  Size _layoutSize = Size.zero;
+  Size _containerSize = Size.zero;
 
   static const double _cardWidth = 70;
   // Aspect ratio is 3/4, so height is 70 * (4 / 3) = 93.33
@@ -353,11 +355,9 @@ class _SelfViewState extends ConsumerState<SelfView>
   @override
   void dispose() {
     _snapController.dispose();
-    animation.dispose();
+    _animation.dispose();
     super.dispose();
   }
-
-  Size get _containerSize => _layoutSize;
 
   // Helper to get the top-left or top-right snap position based on actual container bounds
   Offset get _targetPosition {
@@ -374,7 +374,7 @@ class _SelfViewState extends ConsumerState<SelfView>
   void _onPanStart(DragStartDetails details) {
     _snapController.stop();
     setState(() {
-      _visualOffset = _visualOffset * (1 - _snapController.value);
+      _visualOffset = _visualOffset * (1 - _animation.value);
       _snapController.value = 0;
     });
   }
@@ -445,21 +445,19 @@ class _SelfViewState extends ConsumerState<SelfView>
     return Positioned.fill(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          _layoutSize = Size(constraints.maxWidth, constraints.maxHeight);
+          _containerSize = Size(constraints.maxWidth, constraints.maxHeight);
 
           return AnimatedBuilder(
-            animation: animation,
+            animation: _animation,
             builder: (context, child) {
-              if (child == null) return const SizedBox.shrink();
-
-              final offset = _visualOffset * (1 - animation.value);
+              final offset = _visualOffset * (1 - _animation.value);
               final target = _targetPosition;
               return Stack(
                 children: [
                   Positioned(
                     top: target.dy + offset.dy,
                     left: target.dx + offset.dx,
-                    child: child,
+                    child: child!,
                   ),
                 ],
               );

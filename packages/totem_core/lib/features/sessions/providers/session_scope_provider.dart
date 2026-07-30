@@ -377,6 +377,7 @@ class SelfViewSettings extends _$SelfViewSettings {
   }
 
   void setPosition(SelfViewPosition position, {SharedPreferences? prefs}) {
+    if (position == state.position) return;
     _userTouchedPosition = true;
     state = state.copyWith(position: position);
     _persistPosition(position, prefs: prefs);

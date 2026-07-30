@@ -100,7 +100,9 @@ class MoreOptions extends ConsumerWidget {
     final deviceState = ref.watch(
       sessionDeviceControllerProvider(currentSession),
     );
-    final isSelfViewEnabled = ref.watch(selfViewSettingsProvider.select((s) => s.enabled));
+    final isSelfViewEnabled = ref.watch(
+      selfViewSettingsProvider.select((s) => s.enabled),
+    );
 
     final isKeeper = currentSession.isCurrentUserKeeper();
 
@@ -149,11 +151,7 @@ class MoreOptions extends ConsumerWidget {
               trailing: IgnorePointer(
                 child: Switch.adaptive(
                   value: isSelfViewEnabled,
-                  onChanged: (value) {
-                    ref
-                        .read(selfViewSettingsProvider.notifier)
-                        .setEnabled(value);
-                  },
+                  onChanged: (value) {},
                 ),
               ),
               onTap: () {
