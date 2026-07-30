@@ -92,7 +92,7 @@ abstract class _$SessionController extends $Notifier<SessionRoomState> {
   SessionRoomState build(SessionOptions options);
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref = this.ref as $Ref<SessionRoomState, SessionRoomState>;
     final element =
         ref.element
@@ -102,7 +102,7 @@ abstract class _$SessionController extends $Notifier<SessionRoomState> {
               Object?,
               Object?
             >;
-    element.handleCreate(ref, () => build(_$args));
+    return element.handleCreate(ref, () => build(_$args));
   }
 }
 

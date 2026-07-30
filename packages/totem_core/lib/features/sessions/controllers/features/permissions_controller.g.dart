@@ -41,7 +41,7 @@ abstract class _$PermissionsController
   FutureOr<PermissionsState> build();
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref =
         this.ref as $Ref<AsyncValue<PermissionsState>, PermissionsState>;
     final element =
@@ -52,6 +52,6 @@ abstract class _$PermissionsController
               Object?,
               Object?
             >;
-    element.handleCreate(ref, build);
+    return element.handleCreate(ref, build);
   }
 }

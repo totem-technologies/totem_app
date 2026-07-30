@@ -94,7 +94,7 @@ abstract class _$SessionDeviceController extends $Notifier<SessionDeviceState> {
   SessionDeviceState build(SessionController session);
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref = this.ref as $Ref<SessionDeviceState, SessionDeviceState>;
     final element =
         ref.element
@@ -104,6 +104,6 @@ abstract class _$SessionDeviceController extends $Notifier<SessionDeviceState> {
               Object?,
               Object?
             >;
-    element.handleCreate(ref, () => build(_$args));
+    return element.handleCreate(ref, () => build(_$args));
   }
 }
