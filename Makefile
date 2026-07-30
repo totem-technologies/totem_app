@@ -99,11 +99,13 @@ test:
 test-app:
 	@echo "Running app tests..."
 	cd $(APP_DIR) && flutter test
-	cd $(CORE_DIR) && flutter test
 
 test-web:
 	@echo "Running web tests..."
 	cd $(WEB_DIR) && flutter test --platform chrome
+
+test-core:
+	@echo "Running core tests..."
 	cd $(CORE_DIR) && flutter test
 
 lint:

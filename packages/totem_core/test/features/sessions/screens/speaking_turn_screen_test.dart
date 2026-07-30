@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
@@ -162,6 +164,7 @@ void main() {
   });
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     session = MockSessionController();
     keeper = MockSessionKeeperController();
     devices = MockSessionDeviceController();
@@ -229,6 +232,7 @@ void main() {
               dateCreated: DateTime(2024),
             );
           }),
+          selfViewSettingsProvider.overrideWith(SelfViewSettings.new),
         ],
         child: MaterialApp(
           home: Scaffold(
@@ -396,6 +400,86 @@ void main() {
       expect(find.byType(TextField), findsNothing);
       expect(find.byType(ActionSlider), findsNothing);
       expect(find.byType(SessionActionBar), findsOneWidget);
+    });
+
+    testWidgets('does not render SelfView when disabled by default', (
+      tester,
+    ) async {
+      final state = _buildState(
+        keeper: 'user-1',
+        currentSpeaker: 'user-1',
+        nextSpeaker: 'user-2',
+      );
+
+      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SelfView), findsNothing);
+    });
+
+    testWidgets('SelfView Settings enables and persists', (
+      tester,
+    ) async {
+      final state = _buildState(
+        keeper: 'user-1',
+        currentSpeaker: 'user-1',
+        nextSpeaker: 'user-2',
+      );
+
+      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
+      await tester.pumpAndSettle();
+
+      final container = tester.element(find.byType(SpeakingTurnScreen));
+      final ref = ProviderScope.containerOf(container);
+
+      ref.read(selfViewSettingsProvider.notifier).setEnabled(true);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SelfView), findsOneWidget);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool(AppConsts.storageSelfViewEnabledKey), true);
+    });
+
+    testWidgets('renders SelfView when enabled and handles dragging', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        AppConsts.storageSelfViewEnabledKey: true,
+        AppConsts.storageSelfViewPositionKey: 'end',
+      });
+
+      final state = _buildState(
+        keeper: 'user-1',
+        currentSpeaker: 'user-1',
+        nextSpeaker: 'user-2',
+      );
+
+      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SelfView), findsOneWidget);
+
+      final cardFinder = find.bySemanticsLabel('Your self view, draggable');
+      final initialOffset = tester.getTopLeft(cardFinder);
+      expect(initialOffset.dx, equals(714.0)); // 800 - 70 - 16
+
+      await tester.drag(cardFinder, const Offset(-500, 0));
+      await tester.pumpAndSettle();
+
+      final newOffset = tester.getTopLeft(cardFinder);
+      expect(newOffset.dx, equals(16.0)); // _padding is 16
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString(AppConsts.storageSelfViewPositionKey), 'start');
+
+      // Drag back past the midpoint
+      await tester.drag(cardFinder, const Offset(500, 0));
+      await tester.pumpAndSettle();
+
+      final backOffset = tester.getTopLeft(cardFinder);
+      expect(backOffset.dx, equals(714.0)); // Should snap back to end
+      expect(prefs.getString(AppConsts.storageSelfViewPositionKey), 'end');
     });
   });
 }

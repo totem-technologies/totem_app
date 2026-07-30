@@ -1368,3 +1368,55 @@ final class IsCameraOnProvider extends $FunctionalProvider<bool, bool, bool>
 }
 
 String _$isCameraOnHash() => r'8cd38fa32a571a61e9d32c8a2d998297e0619957';
+
+@ProviderFor(SelfViewSettings)
+final selfViewSettingsProvider = SelfViewSettingsProvider._();
+
+final class SelfViewSettingsProvider
+    extends $NotifierProvider<SelfViewSettings, SelfViewState> {
+  SelfViewSettingsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'selfViewSettingsProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$selfViewSettingsHash();
+
+  @$internal
+  @override
+  SelfViewSettings create() => SelfViewSettings();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SelfViewState value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SelfViewState>(value),
+    );
+  }
+}
+
+String _$selfViewSettingsHash() => r'31267a7c58a8f9fe2a496adbf16f0f644386a89c';
+
+abstract class _$SelfViewSettings extends $Notifier<SelfViewState> {
+  SelfViewState build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<SelfViewState, SelfViewState>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<SelfViewState, SelfViewState>,
+              SelfViewState,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
