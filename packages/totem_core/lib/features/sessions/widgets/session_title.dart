@@ -29,6 +29,8 @@ class SessionTitle extends ConsumerWidget {
               fontWeight: FontWeight.w600,
               letterSpacing: 0,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
