@@ -357,9 +357,7 @@ class _SelfViewState extends ConsumerState<SelfView>
     super.dispose();
   }
 
-  // Fallback to MediaQuery only if layout hasn't built yet
-  Size get _containerSize =>
-      _layoutSize == Size.zero ? MediaQuery.sizeOf(context) : _layoutSize;
+  Size get _containerSize => _layoutSize;
 
   // Helper to get the top-left or top-right snap position based on actual container bounds
   Offset get _targetPosition {
@@ -388,11 +386,11 @@ class _SelfViewState extends ConsumerState<SelfView>
     // Clamp dynamically to the exact parent container size
     final clampedX = currentPos.dx.clamp(
       _padding,
-      size.width - _cardWidth - _padding,
+      math.max<double>(_padding, size.width - _cardWidth - _padding),
     );
     final clampedY = currentPos.dy.clamp(
       _padding,
-      size.height - _cardHeight - _padding,
+      math.max<double>(_padding, size.height - _cardHeight - _padding),
     );
 
     setState(() {
@@ -516,6 +514,7 @@ class _SelfViewState extends ConsumerState<SelfView>
                                 'You',
                                 style: theme.textTheme.labelSmall?.copyWith(
                                   fontSize: 8,
+                                  color: Colors.white,
                                 ),
                               ),
                             ),

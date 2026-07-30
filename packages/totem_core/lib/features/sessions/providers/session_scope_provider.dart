@@ -292,13 +292,13 @@ bool isCameraOn(Ref ref) {
 enum SelfViewPosition { start, end }
 
 class SelfViewState {
-  final bool enabled;
-  final SelfViewPosition position;
-
   const SelfViewState({
     required this.enabled,
     required this.position,
   });
+
+  final bool enabled;
+  final SelfViewPosition position;
 
   SelfViewState copyWith({
     bool? enabled,
@@ -318,7 +318,7 @@ class SelfViewSettings extends _$SelfViewSettings {
 
   @override
   SelfViewState build() {
-    Future.microtask(() => loadPrefs());
+    Future.microtask(loadPrefs);
     return const SelfViewState(
       enabled: false,
       position: SelfViewPosition.end,
@@ -329,20 +329,24 @@ class SelfViewSettings extends _$SelfViewSettings {
   Future<void> loadPrefs({SharedPreferences? prefs}) async {
     try {
       final effectivePrefs = prefs ?? await SharedPreferences.getInstance();
-      
-      final storedEnabled = effectivePrefs.getBool(AppConsts.storageSelfViewEnabledKey);
-      final storedPosition = effectivePrefs.getString(AppConsts.storageSelfViewPositionKey);
-      
+
+      final storedEnabled = effectivePrefs.getBool(
+        AppConsts.storageSelfViewEnabledKey,
+      );
+      final storedPosition = effectivePrefs.getString(
+        AppConsts.storageSelfViewPositionKey,
+      );
+
       bool newEnabled = state.enabled;
       if (storedEnabled != null && !_userTouchedEnabled) {
         newEnabled = storedEnabled;
       }
-      
+
       SelfViewPosition newPosition = state.position;
       if (storedPosition != null && !_userTouchedPosition) {
-        newPosition = storedPosition == 'start' ? SelfViewPosition.start : SelfViewPosition.end;
+        newPosition = SelfViewPosition.values.byName(storedPosition);
       }
-      
+
       state = state.copyWith(enabled: newEnabled, position: newPosition);
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -358,7 +362,7 @@ class SelfViewSettings extends _$SelfViewSettings {
     state = state.copyWith(enabled: value);
     _persistEnabled(value, prefs: prefs);
   }
-  
+
   Future<void> _persistEnabled(bool value, {SharedPreferences? prefs}) async {
     try {
       final effectivePrefs = prefs ?? await SharedPreferences.getInstance();
@@ -378,12 +382,15 @@ class SelfViewSettings extends _$SelfViewSettings {
     _persistPosition(position, prefs: prefs);
   }
 
-  Future<void> _persistPosition(SelfViewPosition position, {SharedPreferences? prefs}) async {
+  Future<void> _persistPosition(
+    SelfViewPosition position, {
+    SharedPreferences? prefs,
+  }) async {
     try {
       final effectivePrefs = prefs ?? await SharedPreferences.getInstance();
       await effectivePrefs.setString(
         AppConsts.storageSelfViewPositionKey,
-        position == SelfViewPosition.start ? 'start' : 'end',
+        position.name,
       );
     } catch (error, stackTrace) {
       ErrorHandler.logError(
