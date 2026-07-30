@@ -20,6 +20,7 @@ class ConfirmationDialog extends StatefulWidget {
     this.iconSize = 60,
     this.type = ConfirmationDialogType.destructive,
     this.showCancel = true,
+    this.extraButtons = const [],
     super.key,
   });
 
@@ -33,6 +34,11 @@ class ConfirmationDialog extends StatefulWidget {
   final AsyncCallback onConfirm;
   final ConfirmationDialogType type;
   final bool showCancel;
+
+  /// The extra buttons.
+  ///
+  /// It is displayed below the confirm button and above the cancel button, if any.
+  final List<Widget> extraButtons;
 
   @override
   State<ConfirmationDialog> createState() => ConfirmationDialogState();
@@ -109,53 +115,48 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   spacing: 12,
                   children: [
-                    ElevatedButton(
-                      onPressed: () async {
-                        if (_loading) return;
-                        setState(() => _loading = true);
-                        await widget.onConfirm().timeout(
-                          const Duration(seconds: 10),
-                          onTimeout: () {
-                            if (context.mounted) {
-                              ErrorHandler.showErrorDialog(
-                                context,
-                                message:
-                                    'Something went wrong. Please try again.',
-                              );
-                            }
-                          },
-                        );
-                        if (mounted) {
-                          setState(() {
-                            _loading = false;
-                          });
-                        }
+                    ConfirmationDialogButton.elevated(
+                      isLoading: _loading,
+                      onLoadingChanged: (loading) {
+                        if (mounted) setState(() => _loading = loading);
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: switch (widget.type) {
-                          ConfirmationDialogType.destructive => const Color(
-                            0xFFFF3B30,
-                          ),
-                          ConfirmationDialogType.standard =>
-                            theme.colorScheme.primary,
-                        },
-                        foregroundColor: switch (widget.type) {
-                          ConfirmationDialogType.destructive => Colors.white,
-                          ConfirmationDialogType.standard =>
-                            theme.colorScheme.onPrimary,
-                        },
-                      ),
-                      child: _loading
-                          ? const LoadingIndicator(
-                              color: Colors.white,
-                              size: 24,
-                              semanticsLabel: 'Processing',
-                            )
-                          : Text(
-                              widget.confirmButtonText,
-                              textAlign: TextAlign.center,
-                            ),
+                      onConfirm: widget.onConfirm,
+                      type: widget.type,
+                      child: Text(widget.confirmButtonText),
                     ),
+                    ...widget.extraButtons.map((button) {
+                      if (button is ConfirmationDialogButton) {
+                        if (button._outlined) {
+                          return ConfirmationDialogButton.outlined(
+                            key: button.key,
+                            isLoading: button.isLoading ?? _loading,
+                            onLoadingChanged:
+                                button.onLoadingChanged ??
+                                (loading) {
+                                  if (mounted) {
+                                    setState(() => _loading = loading);
+                                  }
+                                },
+                            onConfirm: button.onConfirm,
+                            type: button.type,
+                            child: button.child,
+                          );
+                        }
+                        return ConfirmationDialogButton.elevated(
+                          key: button.key,
+                          isLoading: button.isLoading ?? _loading,
+                          onLoadingChanged:
+                              button.onLoadingChanged ??
+                              (loading) {
+                                if (mounted) setState(() => _loading = loading);
+                              },
+                          onConfirm: button.onConfirm,
+                          type: button.type,
+                          child: button.child,
+                        );
+                      }
+                      return button;
+                    }),
                     if (widget.showCancel)
                       OutlinedButton(
                         onPressed: _loading ? null : () => context.pop(),
@@ -172,5 +173,101 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
         },
       ),
     );
+  }
+}
+
+class ConfirmationDialogButton extends StatelessWidget {
+  const ConfirmationDialogButton.elevated({
+    required this.onConfirm,
+    required this.child,
+    this.isLoading,
+    this.onLoadingChanged,
+    this.type = ConfirmationDialogType.standard,
+    super.key,
+  }) : _outlined = false;
+
+  const ConfirmationDialogButton.outlined({
+    required this.onConfirm,
+    required this.child,
+    this.isLoading,
+    this.onLoadingChanged,
+    this.type = ConfirmationDialogType.standard,
+    super.key,
+  }) : _outlined = true;
+
+  final bool _outlined;
+
+  final bool? isLoading;
+  final ValueChanged<bool>? onLoadingChanged;
+  final AsyncCallback onConfirm;
+
+  final ConfirmationDialogType type;
+  final Widget child;
+
+  Future<void> _onPressed(BuildContext context) async {
+    if (isLoading ?? false) return;
+    onLoadingChanged?.call(true);
+    await onConfirm().timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        if (context.mounted) {
+          ErrorHandler.showErrorDialog(
+            context,
+            message: 'Something went wrong. Please try again.',
+          );
+        }
+      },
+    );
+    onLoadingChanged?.call(false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final backgroundColor = switch (type) {
+      ConfirmationDialogType.destructive => const Color(
+        0xFFFF3B30,
+      ),
+      ConfirmationDialogType.standard => theme.colorScheme.primary,
+    };
+    final foregroundColor = switch (type) {
+      ConfirmationDialogType.destructive => Colors.white,
+      ConfirmationDialogType.standard => theme.colorScheme.onPrimary,
+    };
+    final child = isLoading ?? false
+        ? Builder(
+            builder: (context) {
+              return LoadingIndicator(
+                color:
+                    DefaultTextStyle.of(context).style.color ?? foregroundColor,
+                size: 24,
+                semanticsLabel: 'Processing',
+              );
+            },
+          )
+        : DefaultTextStyle.merge(
+            textAlign: TextAlign.center,
+            child: this.child,
+          );
+
+    if (_outlined) {
+      return OutlinedButton(
+        onPressed: () => _onPressed(context),
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: backgroundColor),
+          foregroundColor: backgroundColor,
+        ),
+        child: child,
+      );
+    } else {
+      return ElevatedButton(
+        onPressed: () => _onPressed(context),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+        ),
+        child: child,
+      );
+    }
   }
 }
