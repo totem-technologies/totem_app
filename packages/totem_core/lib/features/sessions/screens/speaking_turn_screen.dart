@@ -18,6 +18,7 @@ import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_text.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class SpeakingTurnScreen extends ConsumerStatefulWidget {
@@ -30,17 +31,43 @@ class SpeakingTurnScreen extends ConsumerStatefulWidget {
 }
 
 class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
-  Future<bool> _onPassTotem([String? roundMessage]) async {
+  Future<bool> _onPassTotem({
+    required String nextText,
+    String? roundMessage,
+  }) async {
     final session = ref.read(currentSessionProvider);
-    try {
-      ref.read(sessionCuesServiceProvider).pulseSwipeCompletion();
-      await session?.keeper.passTotem(roundMessage: roundMessage);
-      return true;
-    } catch (error) {
-      if (!mounted) return false;
-      ErrorHandler.handleApiError(context, error);
-      return false;
+    final isKeeper = ref.read(isCurrentUserKeeperProvider);
+    final shouldPass =
+        !isKeeper ||
+        (!(roundMessage != null) ||
+            (await showDialog<bool>(
+                  context: context,
+                  builder: (context) => ConfirmationDialog(
+                    title: 'Pass Totem',
+                    content:
+                        'Are you sure you want to pass the totem? \n\nThe round message is:\n"$roundMessage"',
+                    type: ConfirmationDialogType.standard,
+                    confirmButtonText: nextText,
+                    onConfirm: () async {
+                      Navigator.of(context).pop(true);
+                    },
+                  ),
+                ) ??
+                false));
+
+    if (shouldPass) {
+      try {
+        ref.read(sessionCuesServiceProvider).pulseSwipeCompletion();
+        await session?.keeper.passTotem(roundMessage: roundMessage);
+        return true;
+      } catch (error) {
+        if (!mounted) return false;
+        ErrorHandler.handleApiError(context, error);
+        return false;
+      }
     }
+
+    return false;
   }
 
   @override
@@ -63,11 +90,14 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
 
         final isWaitingReceive = turnState == TurnState.passing;
 
+        final nextText = 'Pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
+            .trim();
+
         final normalPassCard = isWaitingReceive
             ? const WaitingReceiveTransitionCard()
             : PassTransitionCard(
-                onActionPressed: _onPassTotem,
-                actionText: nextUp != null ? 'Pass to ${nextUp.name}' : 'Pass',
+                onActionPressed: () => _onPassTotem(nextText: nextText),
+                actionText: nextText,
               );
 
         Widget passCard;
@@ -77,11 +107,11 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
           passCard = PromptTransitionCard(
             onActionPressed: (message) {
               return _onPassTotem(
-                message.isEmpty ? null : message,
+                roundMessage: message.isEmpty ? null : message,
+                nextText: nextText,
               );
             },
-            actionText: 'Pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
-                .trim(),
+            actionText: nextText,
           );
         } else {
           passCard = normalPassCard;

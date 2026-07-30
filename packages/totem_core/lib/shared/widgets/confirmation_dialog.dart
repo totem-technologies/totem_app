@@ -123,7 +123,11 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                       disabled: _anyButtonBusy,
                       onConfirm: widget.onConfirm,
                       type: widget.type,
-                      child: Text(widget.confirmButtonText),
+                      child: Text(
+                        widget.confirmButtonText,
+                        maxLines: 1,
+                        overflow: TextOverflow.fade,
+                      ),
                     ),
                     ...widget.extraButtons.map(
                       (b) => b._withBusyChanged(
@@ -220,7 +224,7 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
       await widget.onConfirm().timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          if (context.mounted) {
+          if (mounted) {
             ErrorHandler.showErrorDialog(
               context,
               message: 'Something went wrong. Please try again.',
