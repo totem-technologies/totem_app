@@ -1051,11 +1051,11 @@ packages:
     dependency: transitive
     description:
       path: "."
-      ref: "051581bea2bcddeccd6963ad8f4fcfb00db42e26"
-      resolved-ref: "051581bea2bcddeccd6963ad8f4fcfb00db42e26"
+      ref: d3c53f20f1c0330449ef88cf8b3ec6114c5346bb
+      resolved-ref: d3c53f20f1c0330449ef88cf8b3ec6114c5346bb
       url: "https://github.com/livekit/client-sdk-flutter"
     source: git
-    version: "2.8.0"
+    version: "2.9.0"
   logger:
     dependency: transitive
     description:
