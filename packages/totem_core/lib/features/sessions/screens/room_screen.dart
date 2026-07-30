@@ -475,26 +475,26 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
     // transient join recovery handled earlier
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        await _handleBackNavigation(
-          currentSession,
-          connectionState,
-        );
-      },
-      child: RoomBackground(
-        status: roomStatus,
-        child: Navigator(
-          key: _roomNavigatorKey,
-          clipBehavior: Clip.none,
-          onDidRemovePage: (page) => {},
-          pages: [
-            MaterialPage(
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: RepaintBoundary(
+    return RoomBackground(
+      status: roomStatus,
+      child: Navigator(
+        key: _roomNavigatorKey,
+        clipBehavior: Clip.none,
+        onDidRemovePage: (page) => {},
+        pages: [
+          MaterialPage(
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: RepaintBoundary(
+                    child: PopScope(
+                      canPop: false,
+                      onPopInvokedWithResult: (didPop, result) async {
+                        await _handleBackNavigation(
+                          currentSession,
+                          connectionState,
+                        );
+                      },
                       child: _buildBody(
                         currentSession,
                         currentRoomScreen,
@@ -503,16 +503,16 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
                       ),
                     ),
                   ),
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: Overlay(key: EmojiReactions.emojiOverlayKey),
-                    ),
+                ),
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Overlay(key: EmojiReactions.emojiOverlayKey),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

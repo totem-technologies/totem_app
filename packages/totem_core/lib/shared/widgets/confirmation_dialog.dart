@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
@@ -38,21 +37,25 @@ class ConfirmationDialog extends StatefulWidget {
   /// The extra buttons.
   ///
   /// It is displayed below the confirm button and above the cancel button, if any.
-  final List<Widget> extraButtons;
+  final List<ConfirmationDialogButton> extraButtons;
 
   @override
   State<ConfirmationDialog> createState() => ConfirmationDialogState();
 }
 
 class ConfirmationDialogState extends State<ConfirmationDialog> {
-  var _loading = false;
+  var _anyButtonBusy = false;
+
+  void _onBusyChanged(bool busy) {
+    if (mounted) setState(() => _anyButtonBusy = busy);
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final iconSize = MediaQuery.textScalerOf(context).scale(widget.iconSize);
     return PopScope(
-      canPop: !_loading,
+      canPop: !_anyButtonBusy,
       child: ViewportResolver(
         builder: (context, viewportKind) {
           final contentPadding = switch (viewportKind) {
@@ -116,50 +119,23 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                   spacing: 12,
                   children: [
                     ConfirmationDialogButton.elevated(
-                      isLoading: _loading,
-                      onLoadingChanged: (loading) {
-                        if (mounted) setState(() => _loading = loading);
-                      },
+                      onBusyChanged: _onBusyChanged,
+                      disabled: _anyButtonBusy,
                       onConfirm: widget.onConfirm,
                       type: widget.type,
                       child: Text(widget.confirmButtonText),
                     ),
-                    ...widget.extraButtons.map((button) {
-                      if (button is ConfirmationDialogButton) {
-                        if (button._outlined) {
-                          return ConfirmationDialogButton.outlined(
-                            key: button.key,
-                            isLoading: button.isLoading ?? _loading,
-                            onLoadingChanged:
-                                button.onLoadingChanged ??
-                                (loading) {
-                                  if (mounted) {
-                                    setState(() => _loading = loading);
-                                  }
-                                },
-                            onConfirm: button.onConfirm,
-                            type: button.type,
-                            child: button.child,
-                          );
-                        }
-                        return ConfirmationDialogButton.elevated(
-                          key: button.key,
-                          isLoading: button.isLoading ?? _loading,
-                          onLoadingChanged:
-                              button.onLoadingChanged ??
-                              (loading) {
-                                if (mounted) setState(() => _loading = loading);
-                              },
-                          onConfirm: button.onConfirm,
-                          type: button.type,
-                          child: button.child,
-                        );
-                      }
-                      return button;
-                    }),
+                    ...widget.extraButtons.map(
+                      (b) => b._withBusyChanged(
+                        onBusyChanged: _onBusyChanged,
+                        disabled: _anyButtonBusy,
+                      ),
+                    ),
                     if (widget.showCancel)
                       OutlinedButton(
-                        onPressed: _loading ? null : () => context.pop(),
+                        onPressed: _anyButtonBusy
+                            ? null
+                            : () => Navigator.of(context).pop(),
                         child: const Text(
                           'Cancel',
                           textAlign: TextAlign.center,
@@ -176,12 +152,12 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
   }
 }
 
-class ConfirmationDialogButton extends StatelessWidget {
+class ConfirmationDialogButton extends StatefulWidget {
   const ConfirmationDialogButton.elevated({
     required this.onConfirm,
     required this.child,
-    this.isLoading,
-    this.onLoadingChanged,
+    this.onBusyChanged,
+    this.disabled = false,
     this.type = ConfirmationDialogType.standard,
     super.key,
   }) : _outlined = false;
@@ -189,52 +165,89 @@ class ConfirmationDialogButton extends StatelessWidget {
   const ConfirmationDialogButton.outlined({
     required this.onConfirm,
     required this.child,
-    this.isLoading,
-    this.onLoadingChanged,
+    this.onBusyChanged,
+    this.disabled = false,
     this.type = ConfirmationDialogType.standard,
     super.key,
   }) : _outlined = true;
 
   final bool _outlined;
 
-  final bool? isLoading;
-  final ValueChanged<bool>? onLoadingChanged;
+  final ValueChanged<bool>? onBusyChanged;
+  final bool disabled;
   final AsyncCallback onConfirm;
 
   final ConfirmationDialogType type;
   final Widget child;
 
-  Future<void> _onPressed(BuildContext context) async {
-    if (isLoading ?? false) return;
-    onLoadingChanged?.call(true);
-    await onConfirm().timeout(
-      const Duration(seconds: 10),
-      onTimeout: () {
-        if (context.mounted) {
-          ErrorHandler.showErrorDialog(
-            context,
-            message: 'Something went wrong. Please try again.',
-          );
-        }
-      },
+  ConfirmationDialogButton _withBusyChanged({
+    required ValueChanged<bool>? onBusyChanged,
+    required bool disabled,
+  }) {
+    if (_outlined) {
+      return ConfirmationDialogButton.outlined(
+        key: key,
+        onBusyChanged: onBusyChanged,
+        disabled: disabled,
+        onConfirm: onConfirm,
+        type: type,
+        child: child,
+      );
+    }
+    return ConfirmationDialogButton.elevated(
+      key: key,
+      onBusyChanged: onBusyChanged,
+      disabled: disabled,
+      onConfirm: onConfirm,
+      type: type,
+      child: child,
     );
-    onLoadingChanged?.call(false);
+  }
+
+  @override
+  State<ConfirmationDialogButton> createState() =>
+      _ConfirmationDialogButtonState();
+}
+
+class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
+  var _isLoading = false;
+
+  Future<void> _onPressed() async {
+    if (widget.disabled || _isLoading) return;
+    setState(() => _isLoading = true);
+    widget.onBusyChanged?.call(true);
+    try {
+      await widget.onConfirm().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          if (context.mounted) {
+            ErrorHandler.showErrorDialog(
+              context,
+              message: 'Something went wrong. Please try again.',
+            );
+          }
+        },
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+      widget.onBusyChanged?.call(false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final backgroundColor = switch (type) {
+    final backgroundColor = switch (widget.type) {
       ConfirmationDialogType.destructive => const Color(
         0xFFFF3B30,
       ),
       ConfirmationDialogType.standard => theme.colorScheme.primary,
     };
-    final foregroundColor = switch (type) {
+    final foregroundColor = switch (widget.type) {
       ConfirmationDialogType.destructive => Colors.white,
       ConfirmationDialogType.standard => theme.colorScheme.onPrimary,
     };
-    final child = isLoading ?? false
+    final child = _isLoading
         ? Builder(
             builder: (context) {
               return LoadingIndicator(
@@ -247,12 +260,12 @@ class ConfirmationDialogButton extends StatelessWidget {
           )
         : DefaultTextStyle.merge(
             textAlign: TextAlign.center,
-            child: this.child,
+            child: widget.child,
           );
 
-    if (_outlined) {
+    if (widget._outlined) {
       return OutlinedButton(
-        onPressed: () => _onPressed(context),
+        onPressed: (widget.disabled || _isLoading) ? null : _onPressed,
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: backgroundColor),
           foregroundColor: backgroundColor,
@@ -261,7 +274,7 @@ class ConfirmationDialogButton extends StatelessWidget {
       );
     } else {
       return ElevatedButton(
-        onPressed: () => _onPressed(context),
+        onPressed: (widget.disabled || _isLoading) ? null : _onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,

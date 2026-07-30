@@ -8,7 +8,6 @@ import 'package:livekit_client/livekit_client.dart' hide Session;
 import 'package:totem_core/core/api/api_client/api_client.dart'
     as mobile_api
     show RoomStatus, SessionDetailSchema, TurnState;
-import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
@@ -338,7 +337,7 @@ class MoreOptions extends ConsumerWidget {
             final roomStatus = ref.watch(roomStatusProvider);
             final isKeeper = currentSession.isCurrentUserKeeper();
             final isSessionRunning =
-                isKeeper && roomStatus == RoomStatus.active;
+                isKeeper && roomStatus == mobile_api.RoomStatus.active;
             return ConfirmationDialog(
               content: isSessionRunning
                   ? 'The session is still running. Are you sure you want to leave?'
@@ -456,7 +455,10 @@ class MoreOptions extends ConsumerWidget {
           title: 'End Session',
           content: 'Are you sure you want to end the session?',
           confirmButtonText: 'End Session',
-          onConfirm: () => _endSession(context, session),
+          onConfirm: () async {
+            await _endSession(context, session);
+            if (context.mounted) Navigator.of(context).pop();
+          },
         );
       },
     );
@@ -468,11 +470,8 @@ class MoreOptions extends ConsumerWidget {
   ) async {
     try {
       await session.keeper.endSession();
-      if (!context.mounted) return;
-      Navigator.of(context).pop();
     } catch (error) {
       if (!context.mounted) return;
-      Navigator.of(context).pop();
       await ErrorHandler.handleApiError(
         context,
         error,
