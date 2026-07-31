@@ -1,5 +1,3 @@
-// ignore_for_file: avoid_dynamic_calls
-
 import 'dart:async';
 
 import 'package:flutter/material.dart' hide ConnectionState;
@@ -356,7 +354,8 @@ void main() {
         find.byType(TextField),
         '  A round message  ',
       );
-      final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
+      final actionSlider =
+          tester.state(find.byType(ActionSlider)) as ActionSliderState;
       unawaited(actionSlider.widget.onActionCompleted());
       await tester.pumpAndSettle();
 
