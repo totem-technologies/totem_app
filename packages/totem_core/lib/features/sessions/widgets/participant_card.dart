@@ -984,28 +984,29 @@ class _ParticipantVideoStatisticsState
               fit: StackFit.expand,
               children: [
                 widget.child,
-                Positioned(
-                  left: 4,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      'Bitrate: $_currentBitrate\n'
-                      'Res: ${frameWidth}x$frameHeight\n'
-                      'FPS: $fps\n'
-                      'Mime: ${mimeType ?? 'None'}\n'
-                      'Is off: $_isTrackInactive',
-                      style: const TextStyle(
-                        color: Colors.greenAccent,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        height: 1.3,
+                Positioned.fill(
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'Bitrate: $_currentBitrate\n'
+                        'Res: ${frameWidth}x$frameHeight\n'
+                        'FPS: $fps\n'
+                        'Mime: ${mimeType ?? 'None'}\n'
+                        'Is off: $_isTrackInactive',
+                        style: const TextStyle(
+                          color: Colors.greenAccent,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          height: 1.3,
+                        ),
                       ),
                     ),
                   ),

@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_dynamic_calls
+import 'dart:async';
 
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -354,9 +354,14 @@ void main() {
         find.byType(TextField),
         '  A round message  ',
       );
-      final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
-      await actionSlider.widget.onActionCompleted();
-      await tester.pump();
+      final actionSlider =
+          tester.state(find.byType(ActionSlider)) as ActionSliderState;
+      unawaited(actionSlider.widget.onActionCompleted());
+      await tester.pumpAndSettle();
+
+      // The confirmation dialog should now be visible.
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Pass to User Two'));
+      await tester.pumpAndSettle();
 
       verify(
         () => keeper.passTotem(roundMessage: 'A round message'),

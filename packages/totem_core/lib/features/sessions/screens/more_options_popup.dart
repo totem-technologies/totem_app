@@ -22,22 +22,6 @@ import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 
-Future<bool?> showLeaveDialog(BuildContext context) {
-  return showDialog<bool>(
-    context: context,
-    builder: (context) {
-      return ConfirmationDialog(
-        content: 'Are you sure you want to leave the session?',
-        confirmButtonText: 'Yes',
-        onConfirm: () async {
-          TotemRouter.instance.setTabCloseConfirmationEnabled(false);
-          Navigator.of(context).pop(true);
-        },
-      );
-    },
-  );
-}
-
 Future<void> showOptionsSheet(
   BuildContext context,
   SessionRoomState state,
@@ -342,6 +326,48 @@ class MoreOptions extends ConsumerWidget {
     }
   }
 
+  static Future<bool?> showLeaveDialog(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      useRootNavigator: false,
+      builder: (context) {
+        return Consumer(
+          builder: (context, ref, child) {
+            final currentSession = ref.watch(currentSessionProvider)!;
+            final roomStatus = ref.watch(roomStatusProvider);
+            final isKeeper = currentSession.isCurrentUserKeeper();
+            final isSessionRunning =
+                isKeeper && roomStatus == mobile_api.RoomStatus.active;
+            return ConfirmationDialog(
+              content: isSessionRunning
+                  ? 'The session is still running. Are you sure you want to leave?'
+                  : 'Are you sure you want to leave the session?',
+              confirmButtonText: 'Leave Session',
+              onConfirm: () async {
+                TotemRouter.instance.setTabCloseConfirmationEnabled(false);
+                Navigator.of(context).pop(true);
+              },
+              extraButtons: [
+                if (isSessionRunning)
+                  ConfirmationDialogButton.outlined(
+                    onConfirm: () async {
+                      await _endSession(context, currentSession);
+                      TotemRouter.instance.setTabCloseConfirmationEnabled(
+                        false,
+                      );
+                      if (context.mounted) Navigator.of(context).pop(true);
+                    },
+                    type: ConfirmationDialogType.destructive,
+                    child: const Text('End Session and Leave'),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _onMuteEveryone(SessionController session) =>
       session.keeper.muteEveryone();
 
@@ -356,6 +382,7 @@ class MoreOptions extends ConsumerWidget {
 
     await showDialog<void>(
       context: context,
+      useRootNavigator: false,
       builder: (context) {
         final theme = Theme.of(context);
 
@@ -416,41 +443,47 @@ class MoreOptions extends ConsumerWidget {
     }
   }
 
-  Future<void> _onEndSession(
+  static Future<void> _onEndSession(
     BuildContext context,
     SessionController session,
   ) async {
     return showDialog<void>(
       context: context,
+      useRootNavigator: false,
       builder: (context) {
         return ConfirmationDialog(
           title: 'End Session',
           content: 'Are you sure you want to end the session?',
           confirmButtonText: 'End Session',
           onConfirm: () async {
-            try {
-              await session.keeper.endSession();
-              if (!context.mounted) return;
-              Navigator.of(context).pop();
-            } catch (error) {
-              if (!context.mounted) return;
-              Navigator.of(context).pop();
-              await ErrorHandler.handleApiError(
-                context,
-                error,
-                onRetry: () async {
-                  try {
-                    await session.keeper.endSession();
-                  } catch (e) {
-                    // Error already handled by handleApiError
-                  }
-                },
-              );
-            }
+            await _endSession(context, session);
+            if (context.mounted) Navigator.of(context).pop();
           },
         );
       },
     );
+  }
+
+  static Future<void> _endSession(
+    BuildContext context,
+    SessionController session,
+  ) async {
+    try {
+      await session.keeper.endSession();
+    } catch (error) {
+      if (!context.mounted) return;
+      await ErrorHandler.handleApiError(
+        context,
+        error,
+        onRetry: () async {
+          try {
+            await session.keeper.endSession();
+          } catch (e) {
+            // Error already handled by handleApiError
+          }
+        },
+      );
+    }
   }
 }
 

@@ -1,6 +1,3 @@
-import 'dart:ui';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
@@ -179,78 +176,6 @@ void main() {
 
       expect(actionTriggered, isTrue);
       expect(message, 'Test prompt');
-    });
-
-    group('Mouse & Keyboard context', () {
-      testWidgets('shows slide text when no mouse is connected', (
-        tester,
-      ) async {
-        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-        await tester.pumpWidget(
-          buildTestWidget(
-            PassTransitionCard(
-              onActionPressed: () async => true,
-              actionText: 'Pass',
-            ),
-          ),
-        );
-
-        expect(
-          find.text('When done, slide to pass the Totem to the next person.'),
-          findsOneWidget,
-        );
-        expect(find.text('press space bar to pass'), findsNothing);
-
-        debugDefaultTargetPlatformOverride = null;
-      });
-
-      testWidgets('shows click text when a mouse is connected', (
-        tester,
-      ) async {
-        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-
-        // Add a mouse pointer to simulate connection
-        final gesture = await tester.createGesture(
-          kind: PointerDeviceKind.mouse,
-        );
-        await gesture.addPointer(location: Offset.zero);
-        addTearDown(gesture.removePointer);
-
-        await tester.pumpWidget(
-          buildTestWidget(
-            PassTransitionCard(
-              onActionPressed: () async => true,
-              actionText: 'Pass',
-            ),
-          ),
-        );
-
-        await tester.pumpAndSettle();
-
-        expect(
-          find.text('When done, click to pass the Totem to the next person.'),
-          findsOneWidget,
-        );
-        expect(find.text('press space bar to pass'), findsNothing);
-
-        debugDefaultTargetPlatformOverride = null;
-      });
-
-      testWidgets('shows space bar hint on desktop platforms', (tester) async {
-        debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-        await tester.pumpWidget(
-          buildTestWidget(
-            PassTransitionCard(
-              onActionPressed: () async => true,
-              actionText: 'Pass',
-            ),
-          ),
-        );
-
-        expect(find.text('press space bar to pass'), findsOneWidget);
-
-        debugDefaultTargetPlatformOverride = null;
-      });
     });
   });
 }

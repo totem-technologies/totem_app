@@ -1401,13 +1401,13 @@ final class SelfViewSettingsProvider
   }
 }
 
-String _$selfViewSettingsHash() => r'31267a7c58a8f9fe2a496adbf16f0f644386a89c';
+String _$selfViewSettingsHash() => r'781af76d0af4f285d78b71f92ce62e0bed76d0bb';
 
 abstract class _$SelfViewSettings extends $Notifier<SelfViewState> {
   SelfViewState build();
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref = this.ref as $Ref<SelfViewState, SelfViewState>;
     final element =
         ref.element
@@ -1417,6 +1417,6 @@ abstract class _$SelfViewSettings extends $Notifier<SelfViewState> {
               Object?,
               Object?
             >;
-    element.handleCreate(ref, build);
+    return element.handleCreate(ref, build);
   }
 }

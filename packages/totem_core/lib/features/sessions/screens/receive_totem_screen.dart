@@ -7,6 +7,7 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart'
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
+import 'package:totem_core/features/sessions/widgets/session_text.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
@@ -89,23 +90,13 @@ class ReceiveTotemScreen extends ConsumerWidget {
               ),
             );
 
-            final roundPromptText = roundPrompt != null
-                ? Text(
-                    '"$roundPrompt"',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontStyle: FontStyle.italic,
-                    ),
-                    textAlign: TextAlign.center,
-                  )
-                : null;
-
             final receiveSlider = Padding(
               padding: const EdgeInsetsDirectional.symmetric(horizontal: 30),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 spacing: 20,
                 children: [
-                  ?roundPromptText,
+                  ?roundPromptText(roundPrompt),
                   SizedBox(
                     height: 50,
                     child: ActionSliderButton(
@@ -165,7 +156,8 @@ class ReceiveTotemScreen extends ConsumerWidget {
                     children: [
                       const SizedBox(),
                       Expanded(child: videoCard),
-                      roundPromptText ?? const SizedBox(height: 10),
+                      roundPromptText(roundPrompt) ??
+                          const SizedBox(height: 10),
                       ReceiveTransitionCard(
                         onActionPressed: onAccept,
                         keepActionLoadingOnSuccess: true,

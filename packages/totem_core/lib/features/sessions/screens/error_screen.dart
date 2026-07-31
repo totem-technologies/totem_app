@@ -46,11 +46,13 @@ class SessionErrorScreen extends StatelessWidget {
     if (resolvedError is RoomErrorResponse) {
       switch (resolvedError.code) {
         case ErrorCode.banned:
-          return const SessionDisconnectedScreen(
+          return SessionDisconnectedScreen(
+            session: session,
             sessionDisconnectedReason: SessionDisconnectedReason.banned,
           );
         case ErrorCode.keeperNotInRoom:
-          return const SessionDisconnectedScreen(
+          return SessionDisconnectedScreen(
+            session: session,
             sessionDisconnectedReason: SessionDisconnectedReason.keeperAbsent,
           );
         case ErrorCode.roomAlreadyEnded:
@@ -63,7 +65,8 @@ class SessionErrorScreen extends StatelessWidget {
         case ErrorCode.notInRoom:
         case ErrorCode.notFound:
         case ErrorCode.livekitError:
-          return const SessionDisconnectedScreen(
+          return SessionDisconnectedScreen(
+            session: session,
             sessionDisconnectedReason: SessionDisconnectedReason.other,
           );
         default:

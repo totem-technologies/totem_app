@@ -454,16 +454,14 @@ class _SessionSubheaderState extends State<_SessionSubheader> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final linkStyle = TextStyle(color: Colors.blue.shade200);
     final removedSpan = TextSpan(
       text: 'Please take a moment to review our ',
       children: [
         // TODO(totem): Use LinkSpan when available https://github.com/flutter/flutter/issues/91600
         TextSpan(
           text: 'Community Guidelines',
-          style: theme.textTheme.bodyLarge?.copyWith(
-            fontWeight: FontWeight.w500,
-          ),
+          style: linkStyle,
           recognizer: _communityGuidelinesRecognizer,
         ),
         const TextSpan(text: '. '),
@@ -472,7 +470,7 @@ class _SessionSubheaderState extends State<_SessionSubheader> {
         ),
         TextSpan(
           text: 'help@totem.org',
-          style: TextStyle(color: Colors.blue.shade200),
+          style: linkStyle,
           recognizer: _helpEmailRecognizer,
         ),
         const TextSpan(text: '.'),
@@ -573,9 +571,10 @@ class _NextSessionsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (isBanned) return const SizedBox.shrink();
 
+    final effectiveSession = session;
     final nextSessions =
-        session?.space.nextEvents
-            .where((e) => e.slug != session?.slug)
+        effectiveSession?.space.nextEvents
+            .where((e) => e.slug != effectiveSession.slug)
             .take(2)
             .toList() ??
         const [];
@@ -585,10 +584,12 @@ class _NextSessionsSection extends ConsumerWidget {
     List<Widget> cards = [];
     String? headerText;
 
-    if (nextSessions.isNotEmpty) {
+    if (nextSessions.isNotEmpty && effectiveSession != null) {
       headerText = nextSessions.length == 1
           ? 'Join this upcoming session'
           : 'Join these upcoming sessions';
+      final space = effectiveSession.space;
+      final spaceSlug = space.slug;
       cards = nextSessions.map((nextSession) {
         return ConstrainedBox(
           constraints: BoxConstraints(
@@ -596,14 +597,14 @@ class _NextSessionsSection extends ConsumerWidget {
           ),
           child: SmallSpaceCard(
             space: MobileSpaceDetailSchemaExtension.copyWith(
-              session!.space,
+              space,
               nextEvents: [nextSession],
             ),
             onTap: () async {
               onRefreshHome();
               return TotemRouter.instance.toSpaceSession(
                 context,
-                session!.space.slug,
+                spaceSlug,
                 nextSession.slug,
                 true,
               );

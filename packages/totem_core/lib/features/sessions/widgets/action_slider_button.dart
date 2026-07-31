@@ -205,10 +205,11 @@ class ActionSlider extends StatefulWidget {
   final bool enabled;
 
   @override
-  State<ActionSlider> createState() => _ActionSliderState();
+  State<ActionSlider> createState() => ActionSliderState();
 }
 
-class _ActionSliderState extends State<ActionSlider> {
+@visibleForTesting
+class ActionSliderState extends State<ActionSlider> {
   var _dragPosition = 0.0;
   var _isCompleted = false;
   var _isLoading = false;
