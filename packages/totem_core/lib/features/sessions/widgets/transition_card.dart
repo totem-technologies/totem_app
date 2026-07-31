@@ -292,6 +292,7 @@ class PassTransitionCard extends StatelessWidget {
               text: actionText,
               onActionCompleted: onActionPressed,
               keepLoadingOnSuccess: true,
+              isLoading: isSliderLoading,
             ),
           ),
           ViewportKind.mediumPlus => _GenericTransitionCard(

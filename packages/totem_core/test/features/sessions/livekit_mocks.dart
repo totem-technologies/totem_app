@@ -122,7 +122,10 @@ class FakeEngine extends Fake implements Engine {
   }
 }
 
-class FakeCameraCaptureOptions extends Fake implements CameraCaptureOptions {}
+class FakeCameraCaptureOptions extends Fake implements CameraCaptureOptions {
+  @override
+  CameraPosition get cameraPosition => CameraPosition.front;
+}
 
 class MockRemoteParticipant extends Mock implements RemoteParticipant {
   MockRemoteParticipant(this.id, this.name);
@@ -251,8 +254,14 @@ dynamic _videoTrackDefaults(Invocation invocation) {
       return null;
     case #source:
       return TrackSource.camera;
+    case #currentOptions:
+      return FakeCameraCaptureOptions();
     case #mediaStream:
       return MockMediaStream();
+    case #mediaStreamTrack:
+      final track = MockMediaStreamTrack();
+      when(() => track.getSettings()).thenReturn({});
+      return track;
   }
   return null;
 }
@@ -260,7 +269,10 @@ dynamic _videoTrackDefaults(Invocation invocation) {
 // Members that legitimately return null from the defaults above; without
 // this allowlist they would fall through to mocktail's noSuchMethod and
 // throw for being unstubbed.
-const _videoTrackVoidMembers = {#unregisterVideoView, #removeViewRegistration};
+const _videoTrackVoidMembers = {
+  #unregisterVideoView,
+  #removeViewRegistration,
+};
 
 class MockRemoteVideoTrack extends Mock implements RemoteVideoTrack {
   @override
