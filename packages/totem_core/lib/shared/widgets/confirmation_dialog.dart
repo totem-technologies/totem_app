@@ -123,6 +123,7 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                       disabled: _anyButtonBusy,
                       onConfirm: widget.onConfirm,
                       type: widget.type,
+                      autofocus: true,
                       child: Text(
                         widget.confirmButtonText,
                         maxLines: 1,
@@ -163,6 +164,7 @@ class ConfirmationDialogButton extends StatefulWidget {
     this.onBusyChanged,
     this.disabled = false,
     this.type = ConfirmationDialogType.standard,
+    this.autofocus = false,
     super.key,
   }) : _outlined = false;
 
@@ -172,10 +174,12 @@ class ConfirmationDialogButton extends StatefulWidget {
     this.onBusyChanged,
     this.disabled = false,
     this.type = ConfirmationDialogType.standard,
+    this.autofocus = false,
     super.key,
   }) : _outlined = true;
 
   final bool _outlined;
+  final bool autofocus;
 
   final ValueChanged<bool>? onBusyChanged;
   final bool disabled;
@@ -194,6 +198,7 @@ class ConfirmationDialogButton extends StatefulWidget {
         onBusyChanged: onBusyChanged,
         disabled: disabled,
         onConfirm: onConfirm,
+        autofocus: autofocus,
         type: type,
         child: child,
       );
@@ -203,6 +208,7 @@ class ConfirmationDialogButton extends StatefulWidget {
       onBusyChanged: onBusyChanged,
       disabled: disabled,
       onConfirm: onConfirm,
+      autofocus: autofocus,
       type: type,
       child: child,
     );
@@ -269,6 +275,7 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
 
     if (widget._outlined) {
       return OutlinedButton(
+        autofocus: widget.autofocus,
         onPressed: (widget.disabled || _isLoading) ? null : _onPressed,
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: backgroundColor),
@@ -278,6 +285,7 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
       );
     } else {
       return ElevatedButton(
+        autofocus: widget.autofocus,
         onPressed: (widget.disabled || _isLoading) ? null : _onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
