@@ -260,7 +260,7 @@ dynamic _videoTrackDefaults(Invocation invocation) {
       return MockMediaStream();
     case #mediaStreamTrack:
       final track = MockMediaStreamTrack();
-      when(() => track.getSettings()).thenReturn({});
+      when(track.getSettings).thenReturn({});
       return track;
   }
   return null;
