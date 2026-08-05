@@ -334,21 +334,21 @@ class MoreOptions extends ConsumerWidget {
         return Consumer(
           builder: (context, ref, child) {
             final currentSession = ref.watch(currentSessionProvider)!;
-            final roomStatus = ref.watch(roomStatusProvider);
             final isKeeper = currentSession.isCurrentUserKeeper();
-            final isSessionRunning =
-                isKeeper && roomStatus == mobile_api.RoomStatus.active;
+            final isEnded = ref.watch(
+              currentSessionStateProvider.select(
+                (s) => s?.roomState.status == mobile_api.RoomStatus.ended,
+              ),
+            );
             return ConfirmationDialog(
-              content: isSessionRunning
-                  ? 'The session is still running. Are you sure you want to leave?'
-                  : 'Are you sure you want to leave the session?',
+              content: 'Are you sure you want to leave the session?',
               confirmButtonText: 'Leave Session',
               onConfirm: () async {
                 TotemRouter.instance.setTabCloseConfirmationEnabled(false);
                 Navigator.of(context).pop(true);
               },
               extraButtons: [
-                if (isSessionRunning)
+                if (isKeeper && !isEnded)
                   ConfirmationDialogButton.outlined(
                     onConfirm: () async {
                       await _endSession(context, currentSession);

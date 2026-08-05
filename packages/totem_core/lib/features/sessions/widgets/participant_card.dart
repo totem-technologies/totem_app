@@ -7,14 +7,13 @@ import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/loading_screen.dart';
+import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
 import 'package:totem_core/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
-import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/totem_icon.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
@@ -147,6 +146,9 @@ class FeaturedParticipantCard extends ConsumerWidget {
                         spacing: 12,
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
+                          if (amKeeper &&
+                              session.roomState.status == RoomStatus.active)
+                            const _ElapsedTimer(),
                           Container(
                             width: 24,
                             height: 24,
@@ -202,6 +204,80 @@ class FeaturedParticipantCard extends ConsumerWidget {
   }
 }
 
+class _ElapsedTimer extends ConsumerStatefulWidget {
+  const _ElapsedTimer();
+
+  @override
+  ConsumerState<_ElapsedTimer> createState() => _ElapsedTimerState();
+}
+
+class _ElapsedTimerState extends ConsumerState<_ElapsedTimer> {
+  Timer? _tick;
+  DateTime? _start;
+
+  @override
+  void initState() {
+    super.initState();
+    _start = ref.read(featuredTurnStartTimeProvider);
+    _syncTimer();
+    ref.listenManual(featuredTurnStartTimeProvider, (_, next) {
+      setState(() => _start = next);
+      _syncTimer();
+    });
+  }
+
+  void _syncTimer() {
+    _tick?.cancel();
+    if (_start != null) {
+      _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  String _format(Duration d) {
+    final hours = d.inHours;
+    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    if (hours > 0) {
+      return '$hours:$minutes:$seconds';
+    }
+    return '$minutes:$seconds';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_start == null) return const SizedBox.shrink();
+
+    final elapsed = DateTime.now().difference(_start!);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 10,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(42),
+        color: Colors.black54,
+      ),
+      child: Text(
+        _format(elapsed),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Colors.white70,
+          fontWeight: FontWeight.w600,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+      ),
+    );
+  }
+}
+
 class ParticipantCard extends ConsumerWidget {
   const ParticipantCard({
     required this.participant,
@@ -220,11 +296,12 @@ class ParticipantCard extends ConsumerWidget {
       authControllerProvider.select((auth) => auth.user?.slug),
     );
     final session = ref.watch(currentSessionStateProvider);
-    final currentUserIsKeeper = session?.isKeeper(currentUserSlug) ?? false;
+    final amKeeper = session?.isKeeper(currentUserSlug) ?? false;
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
 
     const overlayPadding = 10.0;
     final isKeeper = session?.isKeeper(participant.identity) ?? false;
+    final isSpeaking = participant.identity == session?.speakingNow;
 
     const borderRadius = 20.0;
 
@@ -243,10 +320,20 @@ class ParticipantCard extends ConsumerWidget {
             PositionedDirectional(
               top: overlayPadding,
               start: overlayPadding,
-              child: SpeakingIndicatorOrEmoji(participant: participant),
+              child: Row(
+                spacing: 8,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SpeakingIndicatorOrEmoji(participant: participant),
+                  if (amKeeper &&
+                      isSpeaking &&
+                      session?.roomState.status == RoomStatus.active)
+                    const _ElapsedTimer(),
+                ],
+              ),
             ),
             if (session != null &&
-                currentUserIsKeeper &&
+                amKeeper &&
                 currentUserSlug != participant.identity)
               PositionedDirectional(
                 end: overlayPadding,
@@ -297,346 +384,6 @@ class ParticipantCard extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class ParticipantControlButton extends ConsumerWidget {
-  const ParticipantControlButton({
-    required this.participant,
-    required this.overlayPadding,
-    this.backgroundColor = Colors.black54,
-    super.key,
-  });
-
-  final Participant participant;
-  final double overlayPadding;
-
-  final Color backgroundColor;
-
-  static const _menuTextStyle = TextStyle(
-    color: Colors.white,
-    fontSize: 14,
-    fontWeight: FontWeight.w600,
-  );
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return GestureDetector(
-      onTap: () => _showParticipantMenu(context),
-      child: Container(
-        width: 20,
-        height: 20,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: backgroundColor,
-        ),
-        padding: const EdgeInsetsDirectional.all(2),
-        alignment: AlignmentDirectional.center,
-        child: const TotemIcon(
-          TotemIcons.moreVertical,
-          size: 16,
-          color: Colors.white,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showParticipantMenu(BuildContext context) async {
-    final box = context.findRenderObject() as RenderBox?;
-    if (box == null) return;
-
-    final buttonTopLeft = box.localToGlobal(Offset.zero);
-    final buttonRect = buttonTopLeft & box.size;
-
-    final position = _calculateMenuPosition(
-      buttonRect: buttonRect,
-      screenSize: MediaQuery.sizeOf(context),
-    );
-
-    await showMenu(
-      context: context,
-      useRootNavigator: false,
-      constraints: const BoxConstraints(),
-      position: position,
-      color: Colors.black.withValues(alpha: 0.8),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(16)),
-      ),
-      elevation: 0,
-      menuPadding: EdgeInsetsDirectional.zero,
-      clipBehavior: Clip.hardEdge,
-      items: _buildMenuItems(context),
-    );
-  }
-
-  RelativeRect _calculateMenuPosition({
-    required Rect buttonRect,
-    required Size screenSize,
-  }) {
-    const menuWidth = 170.0;
-    const verticalGap = 8.0;
-    const screenPadding = 8.0;
-
-    final maxLeft = (screenSize.width - menuWidth - screenPadding).clamp(
-      screenPadding,
-      double.infinity,
-    );
-
-    final left = (buttonRect.right - menuWidth).clamp(screenPadding, maxLeft);
-    final top = (buttonRect.bottom + verticalGap).clamp(
-      screenPadding,
-      screenSize.height - screenPadding,
-    );
-
-    return RelativeRect.fromLTRB(
-      left,
-      top,
-      screenSize.width - left - menuWidth,
-      screenSize.height - top,
-    );
-  }
-
-  List<PopupMenuEntry<void>> _buildMenuItems(BuildContext context) {
-    return [
-      if (participant.hasAudio)
-        PopupMenuItem<void>(
-          enabled: !participant.isMuted,
-          onTap: () => _onMuteParticipant(context),
-          textStyle: _menuTextStyle,
-          child: Row(
-            spacing: 8,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const TotemIcon(
-                TotemIcons.microphoneOff,
-                size: 18,
-                color: Colors.white,
-              ),
-              Text(
-                participant.isMuted ? 'Muted' : 'Mute',
-                style: _menuTextStyle,
-              ),
-            ],
-          ),
-        ),
-      if (participant.hasVideo)
-        () {
-          final isVideoOn =
-              !(participant.videoTrackPublications.firstOrNull?.muted ?? false);
-          return PopupMenuItem<void>(
-            enabled: isVideoOn,
-            onTap: () => _onDisableParticipantCamera(context),
-            textStyle: _menuTextStyle,
-            child: Row(
-              spacing: 8,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const TotemIcon(
-                  TotemIcons.cameraOff,
-                  size: 18,
-                  color: Colors.white,
-                ),
-                Text(
-                  !isVideoOn ? 'Camera Disabled' : 'Disable camera',
-                  style: _menuTextStyle,
-                ),
-              ],
-            ),
-          );
-        }(),
-      PopupMenuItem<void>(
-        onTap: () => _onRemoveParticipant(context),
-        textStyle: _menuTextStyle,
-        child: const Row(
-          spacing: 8,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TotemIcon(
-              TotemIcons.x,
-              size: 18,
-              color: Colors.white,
-            ),
-            Text('Remove', style: _menuTextStyle),
-          ],
-        ),
-      ),
-      PopupMenuItem<void>(
-        onTap: () => _onBanParticipant(context),
-        textStyle: _menuTextStyle,
-        child: const Row(
-          spacing: 8,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TotemIcon(
-              TotemIcons.banned,
-              size: 18,
-              color: Colors.white,
-            ),
-            Text('Ban', style: _menuTextStyle),
-          ],
-        ),
-      ),
-    ];
-  }
-
-  Future<void> _onMuteParticipant(BuildContext context) async {
-    await showDialog<void>(
-      context: context,
-      useRootNavigator: false,
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final user = ref.watch(userProfileProvider(participant.identity));
-            final currentSession = ref.watch(currentSessionProvider);
-            return ConfirmationDialog(
-              iconWidget: user
-                  .whenData(
-                    (user) => UserAvatar.fromUserSchema(user, radius: 40),
-                  )
-                  .value,
-              confirmButtonText: 'Mute',
-              title: 'Mute ${participant.name}',
-              content: 'They can unmute themselves anytime.',
-              onConfirm: () async {
-                try {
-                  await currentSession?.keeper.muteParticipant(
-                    participant.identity,
-                  );
-                } catch (error) {
-                  if (!context.mounted) return;
-                  await ErrorHandler.handleApiError(context, error);
-                } finally {
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                }
-              },
-              type: ConfirmationDialogType.standard,
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _onDisableParticipantCamera(BuildContext context) async {
-    await showDialog<void>(
-      context: context,
-      useRootNavigator: false,
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final user = ref.watch(userProfileProvider(participant.identity));
-            final currentSession = ref.watch(currentSessionProvider);
-            return ConfirmationDialog(
-              iconWidget: user
-                  .whenData(
-                    (user) => UserAvatar.fromUserSchema(user, radius: 40),
-                  )
-                  .value,
-              confirmButtonText: 'Disable Camera',
-              title: "Disable ${participant.name}'s camera?",
-              content: 'They can enable their camera anytime.',
-              onConfirm: () async {
-                try {
-                  await currentSession?.keeper.disableParticipantCamera(
-                    participant.identity,
-                  );
-                } catch (error) {
-                  if (!context.mounted) return;
-                  await ErrorHandler.handleApiError(context, error);
-                } finally {
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                }
-              },
-              type: ConfirmationDialogType.standard,
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _onRemoveParticipant(BuildContext context) async {
-    await showDialog<void>(
-      context: context,
-      useRootNavigator: false,
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final user = ref.watch(userProfileProvider(participant.identity));
-            final currentSession = ref.watch(currentSessionProvider);
-            return ConfirmationDialog(
-              iconWidget: user
-                  .whenData(
-                    (user) => UserAvatar.fromUserSchema(user, radius: 40),
-                  )
-                  .value,
-              confirmButtonText: 'Remove',
-              content:
-                  'Are you sure you want to remove '
-                  '${participant.name}?',
-              onConfirm: () async {
-                try {
-                  await currentSession?.keeper.removeParticipant(
-                    participant.identity,
-                  );
-                } catch (error) {
-                  if (!context.mounted) return;
-                  await ErrorHandler.handleApiError(context, error);
-                } finally {
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                }
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _onBanParticipant(BuildContext context) async {
-    await showDialog<void>(
-      context: context,
-      useRootNavigator: false,
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final user = ref.watch(userProfileProvider(participant.identity));
-            final currentSession = ref.watch(currentSessionProvider);
-            return ConfirmationDialog(
-              iconWidget: user
-                  .whenData(
-                    (user) => UserAvatar.fromUserSchema(user, radius: 40),
-                  )
-                  .value,
-              confirmButtonText: 'Ban',
-              content:
-                  'Are you sure you want to ban '
-                  '${participant.name}? They will not be able to rejoin the session.',
-              onConfirm: () async {
-                try {
-                  await currentSession?.keeper.banParticipant(
-                    participant.identity,
-                  );
-                } catch (error) {
-                  if (!context.mounted) return;
-                  await ErrorHandler.handleApiError(context, error);
-                } finally {
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                }
-              },
-            );
-          },
-        );
-      },
     );
   }
 }

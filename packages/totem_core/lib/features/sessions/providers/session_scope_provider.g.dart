@@ -1028,6 +1028,63 @@ final class FeaturedParticipantProvider
 String _$featuredParticipantHash() =>
     r'37c1fd41686ef04c3977f8c2c0bcf075635687dd';
 
+/// The wall-clock time when the current featured turn began.
+/// Null while no speaker is featured.
+
+@ProviderFor(featuredTurnStartTime)
+final featuredTurnStartTimeProvider = FeaturedTurnStartTimeProvider._();
+
+/// The wall-clock time when the current featured turn began.
+/// Null while no speaker is featured.
+
+final class FeaturedTurnStartTimeProvider
+    extends $FunctionalProvider<DateTime?, DateTime?, DateTime?>
+    with $Provider<DateTime?> {
+  /// The wall-clock time when the current featured turn began.
+  /// Null while no speaker is featured.
+  FeaturedTurnStartTimeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'featuredTurnStartTimeProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          FeaturedTurnStartTimeProvider.$allTransitiveDependencies0,
+          FeaturedTurnStartTimeProvider.$allTransitiveDependencies1,
+        ],
+      );
+
+  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionStateProvider.$allTransitiveDependencies0;
+
+  @override
+  String debugGetCreateSourceHash() => _$featuredTurnStartTimeHash();
+
+  @$internal
+  @override
+  $ProviderElement<DateTime?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  DateTime? create(Ref ref) {
+    return featuredTurnStartTime(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DateTime? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DateTime?>(value),
+    );
+  }
+}
+
+String _$featuredTurnStartTimeHash() =>
+    r'e9777341fb62a82b48e9b9422e66e5cda8c0d1a9';
+
 /// Participant expected to speak next.
 
 @ProviderFor(speakingNextParticipant)

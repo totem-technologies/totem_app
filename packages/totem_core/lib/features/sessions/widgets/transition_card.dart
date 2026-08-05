@@ -1,7 +1,6 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
@@ -67,40 +66,23 @@ class _TransitionCardBase extends StatefulWidget {
 }
 
 class _TransitionCardBaseState extends State<_TransitionCardBase> {
-  late final MouseTracker _mouseTracker;
   late bool _hasMouseConnected;
   late bool _hasKeyboardConnected;
 
   @override
   void initState() {
     super.initState();
-    _mouseTracker = RendererBinding.instance.mouseTracker;
-    _hasMouseConnected = _mouseTracker.mouseIsConnected;
 
-    // TODO(totem): Properly check for hardware keyboard.
-    // Update this check when https://github.com/flutter/flutter/issues/185479 is addressed
-    _hasKeyboardConnected =
+    // Platform check is stable — unlike mouseIsConnected, it doesn't flicker
+    // when the pointer leaves the browser window.
+    _hasMouseConnected =
         defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.linux;
-    _mouseTracker.addListener(_handleMouseConnectionChanged);
-  }
 
-  @override
-  void dispose() {
-    _mouseTracker.removeListener(_handleMouseConnectionChanged);
-    super.dispose();
-  }
-
-  void _handleMouseConnectionChanged() {
-    final hasMouseConnected = _mouseTracker.mouseIsConnected;
-    if (_hasMouseConnected == hasMouseConnected || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _hasMouseConnected = hasMouseConnected;
-    });
+    // TODO(totem): Properly check for hardware keyboard.
+    // Update this check when https://github.com/flutter/flutter/issues/185479 is addressed
+    _hasKeyboardConnected = _hasMouseConnected;
   }
 
   @override

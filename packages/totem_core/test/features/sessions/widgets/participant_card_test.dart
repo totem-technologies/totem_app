@@ -11,6 +11,7 @@ import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
+import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/totem_icon.dart';
@@ -264,4 +265,84 @@ void main() {
       expect(find.byType(VideoTrackRenderer), findsNothing);
     });
   });
+
+  group('ParticipantControlButton', () {
+    testWidgets('closes menu when unmounted', (tester) async {
+      // Use a StatefulWidget wrapper to toggle button visibility.
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => FakeAuthController(AuthState.unauthenticated()),
+            ),
+            userProfileProvider.overrideWith(
+              (ref, slug) => Future.value(
+                PublicUserSchema(
+                  slug: slug,
+                  name: 'Mocked User $slug',
+                  profileAvatarType: ProfileAvatarTypeEnum.td,
+                  circleCount: 0,
+                  dateCreated: DateTime.now(),
+                ),
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: _MenuCloseTestWrapper(
+                participant: remoteParticipant,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Tap the control button to open the menu.
+      await tester.tap(find.byType(ParticipantControlButton));
+      await tester.pumpAndSettle();
+
+      // The menu should be visible.
+      expect(find.text('Remove'), findsOneWidget);
+      expect(find.text('Ban'), findsOneWidget);
+
+      // Unmount the control button by toggling visibility.
+      final _ = tester
+          .state<_MenuCloseTestWrapperState>(
+            find.byType(_MenuCloseTestWrapper),
+          )
+          .hide();
+      await tester.pumpAndSettle();
+
+      // The menu should be gone.
+      expect(find.text('Remove'), findsNothing);
+      expect(find.text('Ban'), findsNothing);
+    });
+  });
+}
+
+class _MenuCloseTestWrapper extends StatefulWidget {
+  const _MenuCloseTestWrapper({required this.participant});
+
+  final Participant participant;
+
+  @override
+  State<_MenuCloseTestWrapper> createState() => _MenuCloseTestWrapperState();
+}
+
+class _MenuCloseTestWrapperState extends State<_MenuCloseTestWrapper> {
+  bool _visible = true;
+
+  void hide() => setState(() => _visible = false);
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: _visible
+          ? ParticipantControlButton(
+              participant: widget.participant,
+              overlayPadding: 10,
+            )
+          : const SizedBox.shrink(),
+    );
+  }
 }

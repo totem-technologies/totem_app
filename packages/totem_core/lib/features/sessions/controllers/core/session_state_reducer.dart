@@ -25,9 +25,17 @@ class SessionStateReducer {
               : current.participants,
           chat: current.chat,
           turn: current.turn,
+          turnStartedAt: current.turnStartedAt,
         );
       case RoomStateChanged():
         final isEnded = event.roomState.status == RoomStatus.ended;
+        final newSpeaker = SessionRoomState.speakerOf(event.roomState);
+        final turnStartedAt =
+            newSpeaker.isNotEmpty &&
+                (current.speakingNow != newSpeaker ||
+                    current.turnStartedAt == null)
+            ? DateTime.now()
+            : current.turnStartedAt;
         return SessionRoomState(
           connection: current.connection.copyWith(
             phase: isEnded ? SessionPhase.ended : null,
@@ -35,6 +43,7 @@ class SessionStateReducer {
           participants: current.participants,
           chat: current.chat,
           turn: current.turn.copyWith(roomState: event.roomState),
+          turnStartedAt: turnStartedAt,
         );
       case ParticipantsChanged():
         return SessionRoomState(
@@ -44,6 +53,7 @@ class SessionStateReducer {
           ),
           chat: current.chat,
           turn: current.turn,
+          turnStartedAt: current.turnStartedAt,
         );
       case ParticipantRemoved():
         return SessionRoomState(
@@ -54,6 +64,7 @@ class SessionStateReducer {
           ),
           chat: current.chat,
           turn: current.turn,
+          turnStartedAt: current.turnStartedAt,
         );
       case SessionErrorChanged():
         return SessionRoomState(
@@ -67,6 +78,7 @@ class SessionStateReducer {
           participants: current.participants,
           chat: current.chat,
           turn: current.turn,
+          turnStartedAt: current.turnStartedAt,
         );
       case SessionChatMessageAdded():
         return SessionRoomState(
@@ -76,6 +88,7 @@ class SessionStateReducer {
             messages: [...current.chat.messages, event.message],
           ),
           turn: current.turn,
+          turnStartedAt: current.turnStartedAt,
         );
     }
   }

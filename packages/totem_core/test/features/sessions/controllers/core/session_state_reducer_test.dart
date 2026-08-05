@@ -272,6 +272,88 @@ void main() {
           expect(state.roomState.version, 2);
           expect(state.roomState.talkingOrder, contains('user-1'));
         });
+
+        group('turnStartedAt', () {
+          test('stamps on keeper opening turn (currentSpeaker empty)', () {
+            final current = _initialState();
+            expect(current.turnStartedAt, isNull);
+
+            // Room goes active — speakerOf falls back to keeper.
+            final active = _roomState(status: RoomStatus.active).copyWith(
+              currentSpeaker: () => '',
+            );
+
+            final next = reducer.reduceState(current, RoomStateChanged(active));
+
+            expect(next.turnStartedAt, isNotNull);
+          });
+
+          test('stamps when speaker changes', () {
+            final current = _initialState();
+
+            final withSpeaker = _roomState(status: RoomStatus.active).copyWith(
+              currentSpeaker: () => 'user-1',
+            );
+
+            final next = reducer.reduceState(
+              current,
+              RoomStateChanged(withSpeaker),
+            );
+
+            expect(next.turnStartedAt, isNotNull);
+          });
+
+          test('keeps existing stamp when same speaker continues', () {
+            final current = _initialState();
+
+            final active = _roomState(status: RoomStatus.active).copyWith(
+              currentSpeaker: () => 'user-1',
+            );
+
+            final first = reducer.reduceState(
+              current,
+              RoomStateChanged(active),
+            );
+            final stamp = first.turnStartedAt!;
+
+            // Metadata bump — same speaker.
+            final bumped = active.copyWith(version: 2);
+            final second = reducer.reduceState(
+              first,
+              RoomStateChanged(bumped),
+            );
+
+            expect(second.turnStartedAt, same(stamp));
+          });
+
+          test('carries forward through non-room-state events', () {
+            final current = _initialState();
+
+            final active = _roomState(status: RoomStatus.active).copyWith(
+              currentSpeaker: () => 'user-1',
+            );
+
+            final afterRoom = reducer.reduceState(
+              current,
+              RoomStateChanged(active),
+            );
+            final stamp = afterRoom.turnStartedAt!;
+
+            final afterParticipants = reducer.reduceState(
+              afterRoom,
+              const ParticipantsChanged([]),
+            );
+            expect(afterParticipants.turnStartedAt, same(stamp));
+
+            final afterError = reducer.reduceState(
+              afterRoom,
+              const SessionErrorChanged(
+                RoomDisconnectionError(DisconnectReason.disconnected),
+              ),
+            );
+            expect(afterError.turnStartedAt, same(stamp));
+          });
+        });
       });
     });
 

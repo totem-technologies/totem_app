@@ -220,12 +220,18 @@ class SessionRoomState {
     required this.participants,
     required this.chat,
     required this.turn,
+    this.turnStartedAt,
   });
 
   final ConnectionState connection;
   final ParticipantsState participants;
   final ChatState chat;
   final SessionTurnState turn;
+
+  /// Wall-clock time when the current turn began.
+  /// Set by the reducer when [speakingNow] changes to a non-empty value;
+  /// carried through unchanged for all other events.
+  final DateTime? turnStartedAt;
 
   SessionPhase get phase => connection.phase;
   RoomConnectionState get connectionState => connection.state;
@@ -256,13 +262,15 @@ class SessionRoomState {
         turn.roomState.nextSpeaker == room.localParticipant?.identity;
   }
 
-  String get speakingNow {
-    if (turn.roomState.currentSpeaker == null ||
-        turn.roomState.currentSpeaker!.isEmpty) {
-      return turn.roomState.keeper;
+  /// The effective speaker identity for [roomState], using keeper as fallback.
+  static String speakerOf(RoomState roomState) {
+    if (roomState.currentSpeaker == null || roomState.currentSpeaker!.isEmpty) {
+      return roomState.keeper;
     }
-    return turn.roomState.currentSpeaker ?? turn.roomState.keeper;
+    return roomState.currentSpeaker!;
   }
+
+  String get speakingNow => speakerOf(turn.roomState);
 
   bool get hasKeeper =>
       participants.participants.any((p) => isKeeper(p.identity));
@@ -311,7 +319,8 @@ class SessionRoomState {
         other.connection == connection &&
         other.participants == participants &&
         other.chat == chat &&
-        other.turn == turn;
+        other.turn == turn &&
+        other.turnStartedAt == turnStartedAt;
   }
 
   @override
@@ -319,7 +328,8 @@ class SessionRoomState {
       connection.hashCode ^
       participants.hashCode ^
       chat.hashCode ^
-      turn.hashCode;
+      turn.hashCode ^
+      turnStartedAt.hashCode;
 }
 
 /// Returns true if the given [reason] represents a transient disconnect that

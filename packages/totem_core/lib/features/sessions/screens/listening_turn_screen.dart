@@ -41,7 +41,15 @@ class ListeningTurnScreen extends ConsumerWidget {
                   }
                   return 'The session is about to start...';
                 }(),
-                style: theme.textTheme.bodyLarge,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 6,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
               );
             } else if (roomStatus == RoomStatus.active) {
               if (!hasKeeper) {

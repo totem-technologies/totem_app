@@ -144,6 +144,9 @@ class MockRemoteParticipant extends Mock implements RemoteParticipant {
   bool get hasAudio => true;
 
   @override
+  bool get hasVideo => false;
+
+  @override
   bool get isMuted => false;
 
   @override

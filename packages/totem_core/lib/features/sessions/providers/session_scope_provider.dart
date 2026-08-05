@@ -239,6 +239,15 @@ Participant? featuredParticipant(Ref ref) {
   );
 }
 
+/// The wall-clock time when the current featured turn began.
+/// Null while no speaker is featured.
+@Riverpod(dependencies: [currentSessionState])
+DateTime? featuredTurnStartTime(Ref ref) {
+  return ref.watch(
+    currentSessionStateProvider.select((s) => s?.turnStartedAt),
+  );
+}
+
 /// Participant expected to speak next.
 @Riverpod(dependencies: [currentSessionState])
 Participant? speakingNextParticipant(Ref ref) {
