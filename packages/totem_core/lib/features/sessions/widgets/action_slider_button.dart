@@ -4,7 +4,6 @@ import 'dart:ui';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 typedef OnActionPerformed = AsyncValueGetter<bool>;
@@ -36,40 +35,19 @@ class ActionSliderButton extends StatefulWidget {
 }
 
 class _ActionSliderButtonState extends State<ActionSliderButton> {
-  late bool _hasMouseConnected;
-
-  @override
-  void initState() {
-    super.initState();
-    _hasMouseConnected = RendererBinding.instance.mouseTracker.mouseIsConnected;
-    RendererBinding.instance.mouseTracker.addListener(
-      _handleMouseConnectionChanged,
-    );
-  }
-
-  @override
-  void dispose() {
-    RendererBinding.instance.mouseTracker.removeListener(
-      _handleMouseConnectionChanged,
-    );
-    super.dispose();
-  }
-
-  void _handleMouseConnectionChanged() {
-    final hasMouseConnected =
-        RendererBinding.instance.mouseTracker.mouseIsConnected;
-    if (_hasMouseConnected == hasMouseConnected || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _hasMouseConnected = hasMouseConnected;
-    });
-  }
+  // Platform check is stable — unlike mouseIsConnected, it doesn't flicker
+  // when the pointer leaves the browser window.
+  bool get _isDesktop =>
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.linux;
 
   @override
   Widget build(BuildContext context) {
-    if (!_hasMouseConnected) {
+    if (!_isDesktop) {
+      // Touch variant intentionally does not auto-focus on enable —
+      // the slider uses CallbackShortcuts for Space which works
+      // globally, and stealing focus would disrupt on-screen keyboards.
       return ActionSlider(
         text: widget.text,
         onActionCompleted: widget.onActionCompleted,

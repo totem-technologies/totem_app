@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
@@ -173,54 +173,42 @@ void main() {
   });
 
   group('ActionSliderButton', () {
-    testWidgets('switches between slider and button on mouse plug in-out', (
+    testWidgets('renders ActionButton on desktop platforms', (
       tester,
     ) async {
-      TestGesture? mouseGesture;
-
-      Future<void> connectMouse() async {
-        mouseGesture ??= await tester.createGesture(
-          kind: PointerDeviceKind.mouse,
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        await pumpTestWidget(
+          tester,
+          child: ActionSliderButton(
+            text: 'Continue',
+            onActionCompleted: () async => true,
+          ),
         );
-        await mouseGesture!.addPointer(location: const Offset(10, 10));
-        await tester.pump();
+
+        expect(find.byType(ActionButton), findsOneWidget);
+        expect(find.byType(ActionSlider), findsNothing);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
       }
+    });
 
-      Future<void> disconnectMouse() async {
-        if (mouseGesture == null) return;
-        await mouseGesture!.removePointer();
-        mouseGesture = null;
-        await tester.pump();
+    testWidgets('renders ActionSlider on mobile platforms', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      try {
+        await pumpTestWidget(
+          tester,
+          child: ActionSliderButton(
+            text: 'Continue',
+            onActionCompleted: () async => true,
+          ),
+        );
+
+        expect(find.byType(ActionSlider), findsOneWidget);
+        expect(find.byType(ActionButton), findsNothing);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
       }
-
-      addTearDown(() async {
-        if (mouseGesture != null) {
-          await mouseGesture!.removePointer();
-        }
-      });
-
-      await disconnectMouse();
-
-      await pumpTestWidget(
-        tester,
-        child: ActionSliderButton(
-          text: 'Continue',
-          onActionCompleted: () async => true,
-        ),
-      );
-
-      expect(find.byType(ActionSlider), findsOneWidget);
-      expect(find.byType(ActionButton), findsNothing);
-
-      await connectMouse();
-
-      expect(find.byType(ActionButton), findsOneWidget);
-      expect(find.byType(ActionSlider), findsNothing);
-
-      await disconnectMouse();
-
-      expect(find.byType(ActionSlider), findsOneWidget);
-      expect(find.byType(ActionButton), findsNothing);
     });
   });
 }

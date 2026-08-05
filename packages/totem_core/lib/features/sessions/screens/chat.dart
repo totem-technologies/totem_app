@@ -1,7 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
@@ -102,7 +102,10 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
     final sessionEvent = ref.watch(currentSessionEventProvider);
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
-    final isDesktop = RendererBinding.instance.mouseTracker.mouseIsConnected;
+    final isDesktop =
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
 
     const fastMessages = [
       'Welcome! 🙏',
