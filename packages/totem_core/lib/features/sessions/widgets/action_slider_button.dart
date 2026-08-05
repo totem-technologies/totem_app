@@ -123,19 +123,22 @@ class ActionButton extends StatefulWidget {
 
 class _ActionButtonState extends State<ActionButton> {
   var _isLoading = false;
-  late final FocusNode _focusNode;
+  FocusNode? _internalNode;
+
+  FocusNode get _effectiveFocusNode =>
+      widget.focusNode ?? (_internalNode ??= FocusNode());
 
   @override
   void initState() {
     super.initState();
-    _focusNode = widget.focusNode ?? FocusNode();
+    if (widget.focusNode == null) {
+      _internalNode = FocusNode();
+    }
   }
 
   @override
   void dispose() {
-    if (widget.focusNode == null) {
-      _focusNode.dispose();
-    }
+    _internalNode?.dispose();
     super.dispose();
   }
 
@@ -160,9 +163,19 @@ class _ActionButtonState extends State<ActionButton> {
     if (oldWidget.isLoading != widget.isLoading && widget.isLoading != null) {
       _isLoading = widget.isLoading!;
     }
-    if (!oldWidget.enabled && widget.enabled) {
+    if (oldWidget.focusNode != widget.focusNode) {
+      if (oldWidget.focusNode == null && widget.focusNode != null) {
+        // Caller started providing a node — drop ours.
+        _internalNode?.dispose();
+        _internalNode = null;
+      } else if (oldWidget.focusNode != null && widget.focusNode == null) {
+        // Caller stopped providing a node — create ours.
+        _internalNode = FocusNode();
+      }
+    }
+    if (!oldWidget.enabled && widget.enabled && widget.autofocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _focusNode.requestFocus();
+        if (mounted) _effectiveFocusNode.requestFocus();
       });
     }
   }
@@ -178,7 +191,7 @@ class _ActionButtonState extends State<ActionButton> {
       height: 50,
       child: ElevatedButton(
         autofocus: widget.autofocus,
-        focusNode: _focusNode,
+        focusNode: _effectiveFocusNode,
         onPressed: (!widget.enabled || effectiveLoading) ? null : _onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
