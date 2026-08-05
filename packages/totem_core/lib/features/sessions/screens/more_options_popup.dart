@@ -335,6 +335,11 @@ class MoreOptions extends ConsumerWidget {
           builder: (context, ref, child) {
             final currentSession = ref.watch(currentSessionProvider)!;
             final isKeeper = currentSession.isCurrentUserKeeper();
+            final isEnded = ref.watch(
+              currentSessionStateProvider.select(
+                (s) => s?.roomState.status == mobile_api.RoomStatus.ended,
+              ),
+            );
             return ConfirmationDialog(
               content: 'Are you sure you want to leave the session?',
               confirmButtonText: 'Leave Session',
@@ -343,7 +348,7 @@ class MoreOptions extends ConsumerWidget {
                 Navigator.of(context).pop(true);
               },
               extraButtons: [
-                if (isKeeper)
+                if (isKeeper && !isEnded)
                   ConfirmationDialogButton.outlined(
                     onConfirm: () async {
                       await _endSession(context, currentSession);
