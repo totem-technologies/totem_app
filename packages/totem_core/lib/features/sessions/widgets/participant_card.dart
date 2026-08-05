@@ -206,7 +206,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
 }
 
 class _ElapsedTimer extends ConsumerStatefulWidget {
-  const _ElapsedTimer({super.key});
+  const _ElapsedTimer();
 
   @override
   ConsumerState<_ElapsedTimer> createState() => _ElapsedTimerState();
@@ -215,16 +215,6 @@ class _ElapsedTimer extends ConsumerStatefulWidget {
 class _ElapsedTimerState extends ConsumerState<_ElapsedTimer> {
   Timer? _tick;
 
-  DateTime? _startTime() => ref.read(featuredTurnStartTimeProvider);
-
-  @override
-  void initState() {
-    super.initState();
-    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
-    });
-  }
-
   @override
   void dispose() {
     _tick?.cancel();
@@ -232,17 +222,30 @@ class _ElapsedTimerState extends ConsumerState<_ElapsedTimer> {
   }
 
   String _format(Duration d) {
+    final hours = d.inHours;
     final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    if (hours > 0) {
+      return '$hours:${minutes.padLeft(2, '0')}:$seconds';
+    }
     return '$minutes:$seconds';
   }
 
   @override
   Widget build(BuildContext context) {
-    final start = _startTime();
-    final elapsed = start != null
-        ? DateTime.now().difference(start)
-        : Duration.zero;
+    final start = ref.watch(featuredTurnStartTimeProvider);
+
+    if (start == null) {
+      _tick?.cancel();
+      _tick = null;
+      return const SizedBox.shrink();
+    }
+
+    _tick ??= Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+
+    final elapsed = DateTime.now().difference(start);
 
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
@@ -315,9 +318,7 @@ class ParticipantCard extends ConsumerWidget {
                   if (amKeeper &&
                       isSpeaking &&
                       session?.roomState.status == RoomStatus.active)
-                    _ElapsedTimer(
-                      key: ValueKey('timer${participant.sid}'),
-                    ),
+                    const _ElapsedTimer(),
                 ],
               ),
             ),
