@@ -341,13 +341,13 @@ void main() {
 
             final afterParticipants = reducer.reduceState(
               afterRoom,
-              ParticipantsChanged(const []),
+              const ParticipantsChanged([]),
             );
             expect(afterParticipants.turnStartedAt, same(stamp));
 
             final afterError = reducer.reduceState(
               afterRoom,
-              SessionErrorChanged(
+              const SessionErrorChanged(
                 RoomDisconnectionError(DisconnectReason.disconnected),
               ),
             );
