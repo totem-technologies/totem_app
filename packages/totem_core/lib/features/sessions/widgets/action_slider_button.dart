@@ -123,6 +123,21 @@ class ActionButton extends StatefulWidget {
 
 class _ActionButtonState extends State<ActionButton> {
   var _isLoading = false;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = widget.focusNode ?? FocusNode();
+  }
+
+  @override
+  void dispose() {
+    if (widget.focusNode == null) {
+      _focusNode.dispose();
+    }
+    super.dispose();
+  }
 
   Future<void> _onPressed() async {
     if (!widget.enabled || widget.isLoading == true || _isLoading) return;
@@ -145,6 +160,11 @@ class _ActionButtonState extends State<ActionButton> {
     if (oldWidget.isLoading != widget.isLoading && widget.isLoading != null) {
       _isLoading = widget.isLoading!;
     }
+    if (!oldWidget.enabled && widget.enabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusNode.requestFocus();
+      });
+    }
   }
 
   @override
@@ -154,39 +174,30 @@ class _ActionButtonState extends State<ActionButton> {
     final foregroundColor = theme.colorScheme.onPrimary;
     final effectiveLoading = widget.isLoading ?? _isLoading;
 
-    return CallbackShortcuts(
-      bindings: <ShortcutActivator, VoidCallback>{
-        const SingleActivator(LogicalKeyboardKey.space): () {
-          if (widget.enabled && !effectiveLoading) {
-            _onPressed();
-          }
-        },
-      },
-      child: SizedBox(
-        height: 50,
-        child: ElevatedButton(
-          autofocus: widget.autofocus,
-          focusNode: widget.focusNode,
-          onPressed: (!widget.enabled || effectiveLoading) ? null : _onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: backgroundColor,
-            foregroundColor: foregroundColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(25),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 40),
+    return SizedBox(
+      height: 50,
+      child: ElevatedButton(
+        autofocus: widget.autofocus,
+        focusNode: _focusNode,
+        onPressed: (!widget.enabled || effectiveLoading) ? null : _onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
           ),
-          child: effectiveLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator.adaptive(
-                    strokeWidth: 2,
-                    strokeCap: StrokeCap.round,
-                  ),
-                )
-              : AutoSizeText(widget.text, maxLines: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 40),
         ),
+        child: effectiveLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator.adaptive(
+                  strokeWidth: 2,
+                  strokeCap: StrokeCap.round,
+                ),
+              )
+            : AutoSizeText(widget.text, maxLines: 1),
       ),
     );
   }
