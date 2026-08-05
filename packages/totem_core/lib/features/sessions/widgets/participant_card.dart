@@ -377,8 +377,7 @@ class ParticipantCard extends ConsumerWidget {
   }
 }
 
-// TODO(totem): Close button when this widget is unmounted.
-class ParticipantControlButton extends ConsumerWidget {
+class ParticipantControlButton extends ConsumerStatefulWidget {
   const ParticipantControlButton({
     required this.participant,
     required this.overlayPadding,
@@ -398,7 +397,25 @@ class ParticipantControlButton extends ConsumerWidget {
   );
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ParticipantControlButton> createState() =>
+      _ParticipantControlButtonState();
+}
+
+class _ParticipantControlButtonState
+    extends ConsumerState<ParticipantControlButton> {
+  bool _menuOpen = false;
+  NavigatorState? _navigator;
+
+  @override
+  void dispose() {
+    if (_menuOpen) {
+      _navigator?.maybePop();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => _showParticipantMenu(context),
       child: Container(
@@ -406,7 +423,7 @@ class ParticipantControlButton extends ConsumerWidget {
         height: 20,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: backgroundColor,
+          color: widget.backgroundColor,
         ),
         padding: const EdgeInsetsDirectional.all(2),
         alignment: AlignmentDirectional.center,
@@ -431,6 +448,8 @@ class ParticipantControlButton extends ConsumerWidget {
       screenSize: MediaQuery.sizeOf(context),
     );
 
+    _menuOpen = true;
+    _navigator = Navigator.of(context);
     await showMenu(
       context: context,
       useRootNavigator: false,
@@ -445,6 +464,7 @@ class ParticipantControlButton extends ConsumerWidget {
       clipBehavior: Clip.hardEdge,
       items: _buildMenuItems(context),
     );
+    _menuOpen = false;
   }
 
   RelativeRect _calculateMenuPosition({
@@ -476,11 +496,11 @@ class ParticipantControlButton extends ConsumerWidget {
 
   List<PopupMenuEntry<void>> _buildMenuItems(BuildContext context) {
     return [
-      if (participant.hasAudio)
+      if (widget.participant.hasAudio)
         PopupMenuItem<void>(
-          enabled: !participant.isMuted,
+          enabled: !widget.participant.isMuted,
           onTap: () => _onMuteParticipant(context),
-          textStyle: _menuTextStyle,
+          textStyle: ParticipantControlButton._menuTextStyle,
           child: Row(
             spacing: 8,
             mainAxisSize: MainAxisSize.min,
@@ -491,20 +511,21 @@ class ParticipantControlButton extends ConsumerWidget {
                 color: Colors.white,
               ),
               Text(
-                participant.isMuted ? 'Muted' : 'Mute',
-                style: _menuTextStyle,
+                widget.participant.isMuted ? 'Muted' : 'Mute',
+                style: ParticipantControlButton._menuTextStyle,
               ),
             ],
           ),
         ),
-      if (participant.hasVideo)
+      if (widget.participant.hasVideo)
         () {
           final isVideoOn =
-              !(participant.videoTrackPublications.firstOrNull?.muted ?? false);
+              !(widget.participant.videoTrackPublications.firstOrNull?.muted ??
+                  false);
           return PopupMenuItem<void>(
             enabled: isVideoOn,
             onTap: () => _onDisableParticipantCamera(context),
-            textStyle: _menuTextStyle,
+            textStyle: ParticipantControlButton._menuTextStyle,
             child: Row(
               spacing: 8,
               mainAxisSize: MainAxisSize.min,
@@ -516,7 +537,7 @@ class ParticipantControlButton extends ConsumerWidget {
                 ),
                 Text(
                   !isVideoOn ? 'Camera Disabled' : 'Disable camera',
-                  style: _menuTextStyle,
+                  style: ParticipantControlButton._menuTextStyle,
                 ),
               ],
             ),
@@ -524,7 +545,7 @@ class ParticipantControlButton extends ConsumerWidget {
         }(),
       PopupMenuItem<void>(
         onTap: () => _onRemoveParticipant(context),
-        textStyle: _menuTextStyle,
+        textStyle: ParticipantControlButton._menuTextStyle,
         child: const Row(
           spacing: 8,
           mainAxisSize: MainAxisSize.min,
@@ -534,13 +555,13 @@ class ParticipantControlButton extends ConsumerWidget {
               size: 18,
               color: Colors.white,
             ),
-            Text('Remove', style: _menuTextStyle),
+            Text('Remove', style: ParticipantControlButton._menuTextStyle),
           ],
         ),
       ),
       PopupMenuItem<void>(
         onTap: () => _onBanParticipant(context),
-        textStyle: _menuTextStyle,
+        textStyle: ParticipantControlButton._menuTextStyle,
         child: const Row(
           spacing: 8,
           mainAxisSize: MainAxisSize.min,
@@ -550,7 +571,7 @@ class ParticipantControlButton extends ConsumerWidget {
               size: 18,
               color: Colors.white,
             ),
-            Text('Ban', style: _menuTextStyle),
+            Text('Ban', style: ParticipantControlButton._menuTextStyle),
           ],
         ),
       ),
@@ -564,7 +585,9 @@ class ParticipantControlButton extends ConsumerWidget {
       builder: (context) {
         return Consumer(
           builder: (context, ref, _) {
-            final user = ref.watch(userProfileProvider(participant.identity));
+            final user = ref.watch(
+              userProfileProvider(widget.participant.identity),
+            );
             final currentSession = ref.watch(currentSessionProvider);
             return ConfirmationDialog(
               iconWidget: user
@@ -573,12 +596,12 @@ class ParticipantControlButton extends ConsumerWidget {
                   )
                   .value,
               confirmButtonText: 'Mute',
-              title: 'Mute ${participant.name}',
+              title: 'Mute ${widget.participant.name}',
               content: 'They can unmute themselves anytime.',
               onConfirm: () async {
                 try {
                   await currentSession?.keeper.muteParticipant(
-                    participant.identity,
+                    widget.participant.identity,
                   );
                 } catch (error) {
                   if (!context.mounted) return;
@@ -604,7 +627,9 @@ class ParticipantControlButton extends ConsumerWidget {
       builder: (context) {
         return Consumer(
           builder: (context, ref, _) {
-            final user = ref.watch(userProfileProvider(participant.identity));
+            final user = ref.watch(
+              userProfileProvider(widget.participant.identity),
+            );
             final currentSession = ref.watch(currentSessionProvider);
             return ConfirmationDialog(
               iconWidget: user
@@ -613,12 +638,12 @@ class ParticipantControlButton extends ConsumerWidget {
                   )
                   .value,
               confirmButtonText: 'Disable Camera',
-              title: "Disable ${participant.name}'s camera?",
+              title: "Disable ${widget.participant.name}'s camera?",
               content: 'They can enable their camera anytime.',
               onConfirm: () async {
                 try {
                   await currentSession?.keeper.disableParticipantCamera(
-                    participant.identity,
+                    widget.participant.identity,
                   );
                 } catch (error) {
                   if (!context.mounted) return;
@@ -644,7 +669,9 @@ class ParticipantControlButton extends ConsumerWidget {
       builder: (context) {
         return Consumer(
           builder: (context, ref, _) {
-            final user = ref.watch(userProfileProvider(participant.identity));
+            final user = ref.watch(
+              userProfileProvider(widget.participant.identity),
+            );
             final currentSession = ref.watch(currentSessionProvider);
             return ConfirmationDialog(
               iconWidget: user
@@ -655,11 +682,11 @@ class ParticipantControlButton extends ConsumerWidget {
               confirmButtonText: 'Remove',
               content:
                   'Are you sure you want to remove '
-                  '${participant.name}?',
+                  '${widget.participant.name}?',
               onConfirm: () async {
                 try {
                   await currentSession?.keeper.removeParticipant(
-                    participant.identity,
+                    widget.participant.identity,
                   );
                 } catch (error) {
                   if (!context.mounted) return;
@@ -684,7 +711,9 @@ class ParticipantControlButton extends ConsumerWidget {
       builder: (context) {
         return Consumer(
           builder: (context, ref, _) {
-            final user = ref.watch(userProfileProvider(participant.identity));
+            final user = ref.watch(
+              userProfileProvider(widget.participant.identity),
+            );
             final currentSession = ref.watch(currentSessionProvider);
             return ConfirmationDialog(
               iconWidget: user
@@ -695,11 +724,11 @@ class ParticipantControlButton extends ConsumerWidget {
               confirmButtonText: 'Ban',
               content:
                   'Are you sure you want to ban '
-                  '${participant.name}? They will not be able to rejoin the session.',
+                  '${widget.participant.name}? They will not be able to rejoin the session.',
               onConfirm: () async {
                 try {
                   await currentSession?.keeper.banParticipant(
-                    participant.identity,
+                    widget.participant.identity,
                   );
                 } catch (error) {
                   if (!context.mounted) return;

@@ -264,4 +264,83 @@ void main() {
       expect(find.byType(VideoTrackRenderer), findsNothing);
     });
   });
+
+  group('ParticipantControlButton', () {
+    testWidgets('closes menu when unmounted', (tester) async {
+      // Use a StatefulWidget wrapper to toggle button visibility.
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => FakeAuthController(AuthState.unauthenticated()),
+            ),
+            userProfileProvider.overrideWith(
+              (ref, slug) => Future.value(
+                PublicUserSchema(
+                  slug: slug,
+                  name: 'Mocked User $slug',
+                  profileAvatarType: ProfileAvatarTypeEnum.td,
+                  circleCount: 0,
+                  dateCreated: DateTime.now(),
+                ),
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: _MenuCloseTestWrapper(
+                participant: remoteParticipant,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Tap the control button to open the menu.
+      await tester.tap(find.byType(ParticipantControlButton));
+      await tester.pumpAndSettle();
+
+      // The menu should be visible.
+      expect(find.text('Remove'), findsOneWidget);
+      expect(find.text('Ban'), findsOneWidget);
+
+      // Unmount the control button by toggling visibility.
+      final state = tester.state<_MenuCloseTestWrapperState>(
+        find.byType(_MenuCloseTestWrapper),
+      );
+      state.hide();
+      await tester.pumpAndSettle();
+
+      // The menu should be gone.
+      expect(find.text('Remove'), findsNothing);
+      expect(find.text('Ban'), findsNothing);
+    });
+  });
+}
+
+class _MenuCloseTestWrapper extends StatefulWidget {
+  const _MenuCloseTestWrapper({required this.participant});
+
+  final Participant participant;
+
+  @override
+  State<_MenuCloseTestWrapper> createState() => _MenuCloseTestWrapperState();
+}
+
+class _MenuCloseTestWrapperState extends State<_MenuCloseTestWrapper> {
+  bool _visible = true;
+
+  void hide() => setState(() => _visible = false);
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: _visible
+          ? ParticipantControlButton(
+              participant: widget.participant,
+              overlayPadding: 10,
+            )
+          : const SizedBox.shrink(),
+    );
+  }
 }
