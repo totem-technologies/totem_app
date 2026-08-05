@@ -305,10 +305,9 @@ void main() {
       expect(find.text('Ban'), findsOneWidget);
 
       // Unmount the control button by toggling visibility.
-      final state = tester.state<_MenuCloseTestWrapperState>(
+      final _ = tester.state<_MenuCloseTestWrapperState>(
         find.byType(_MenuCloseTestWrapper),
-      );
-      state.hide();
+      )..hide();
       await tester.pumpAndSettle();
 
       // The menu should be gone.
