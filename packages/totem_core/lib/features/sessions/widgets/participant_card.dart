@@ -213,6 +213,27 @@ class _ElapsedTimer extends ConsumerStatefulWidget {
 
 class _ElapsedTimerState extends ConsumerState<_ElapsedTimer> {
   Timer? _tick;
+  DateTime? _start;
+
+  @override
+  void initState() {
+    super.initState();
+    _start = ref.read(featuredTurnStartTimeProvider);
+    _syncTimer();
+    ref.listenManual(featuredTurnStartTimeProvider, (_, next) {
+      setState(() => _start = next);
+      _syncTimer();
+    });
+  }
+
+  void _syncTimer() {
+    _tick?.cancel();
+    if (_start != null) {
+      _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() {});
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -225,26 +246,16 @@ class _ElapsedTimerState extends ConsumerState<_ElapsedTimer> {
     final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     if (hours > 0) {
-      return '$hours:${minutes.padLeft(2, '0')}:$seconds';
+      return '$hours:$minutes:$seconds';
     }
     return '$minutes:$seconds';
   }
 
   @override
   Widget build(BuildContext context) {
-    final start = ref.watch(featuredTurnStartTimeProvider);
+    if (_start == null) return const SizedBox.shrink();
 
-    if (start == null) {
-      _tick?.cancel();
-      _tick = null;
-      return const SizedBox.shrink();
-    }
-
-    _tick ??= Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
-    });
-
-    final elapsed = DateTime.now().difference(start);
+    final elapsed = DateTime.now().difference(_start!);
 
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
