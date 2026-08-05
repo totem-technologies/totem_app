@@ -123,7 +123,10 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                       disabled: _anyButtonBusy,
                       onConfirm: widget.onConfirm,
                       type: widget.type,
-                      autofocus: true,
+                      autofocus: switch (widget.type) {
+                        ConfirmationDialogType.standard => true,
+                        _ => false,
+                      },
                       child: Text(
                         widget.confirmButtonText,
                         maxLines: 1,
@@ -138,6 +141,10 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                     ),
                     if (widget.showCancel)
                       OutlinedButton(
+                        autofocus: switch (widget.type) {
+                          ConfirmationDialogType.destructive => true,
+                          _ => false,
+                        },
                         onPressed: _anyButtonBusy
                             ? null
                             : () => Navigator.of(context).pop(),
