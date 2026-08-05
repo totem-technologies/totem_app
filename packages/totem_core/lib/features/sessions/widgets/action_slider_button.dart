@@ -154,30 +154,39 @@ class _ActionButtonState extends State<ActionButton> {
     final foregroundColor = theme.colorScheme.onPrimary;
     final effectiveLoading = widget.isLoading ?? _isLoading;
 
-    return SizedBox(
-      height: 50,
-      child: ElevatedButton(
-        autofocus: widget.autofocus,
-        focusNode: widget.focusNode,
-        onPressed: (!widget.enabled || effectiveLoading) ? null : _onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor,
-          foregroundColor: foregroundColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.space): () {
+          if (widget.enabled && !effectiveLoading) {
+            _onPressed();
+          }
+        },
+      },
+      child: SizedBox(
+        height: 50,
+        child: ElevatedButton(
+          autofocus: widget.autofocus,
+          focusNode: widget.focusNode,
+          onPressed: (!widget.enabled || effectiveLoading) ? null : _onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: backgroundColor,
+            foregroundColor: foregroundColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(25),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 40),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: effectiveLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator.adaptive(
+                    strokeWidth: 2,
+                    strokeCap: StrokeCap.round,
+                  ),
+                )
+              : AutoSizeText(widget.text, maxLines: 1),
         ),
-        child: effectiveLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator.adaptive(
-                  strokeWidth: 2,
-                  strokeCap: StrokeCap.round,
-                ),
-              )
-            : AutoSizeText(widget.text, maxLines: 1),
       ),
     );
   }
