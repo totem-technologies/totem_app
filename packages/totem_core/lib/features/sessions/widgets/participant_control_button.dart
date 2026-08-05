@@ -68,6 +68,7 @@ class _ParticipantControlButtonState
     return MenuAnchor(
       controller: _menuController,
       clipBehavior: Clip.hardEdge,
+      alignmentOffset: Offset(0, widget.overlayPadding),
       menuChildren: _buildMenuItems(context),
       animated: true,
       style: MenuStyle(
