@@ -147,6 +147,9 @@ class FeaturedParticipantCard extends ConsumerWidget {
                         spacing: 12,
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
+                          if (amKeeper &&
+                              session.roomState.status == RoomStatus.active)
+                            const _ElapsedTimer(),
                           Container(
                             width: 24,
                             height: 24,
@@ -202,6 +205,66 @@ class FeaturedParticipantCard extends ConsumerWidget {
   }
 }
 
+class _ElapsedTimer extends ConsumerStatefulWidget {
+  const _ElapsedTimer({super.key});
+
+  @override
+  ConsumerState<_ElapsedTimer> createState() => _ElapsedTimerState();
+}
+
+class _ElapsedTimerState extends ConsumerState<_ElapsedTimer> {
+  Timer? _tick;
+
+  DateTime? _startTime() => ref.read(featuredTurnStartTimeProvider);
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  String _format(Duration d) {
+    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final start = _startTime();
+    final elapsed = start != null
+        ? DateTime.now().difference(start)
+        : Duration.zero;
+
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 10,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(42),
+        color: Colors.black54,
+      ),
+      child: Text(
+        _format(elapsed),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Colors.white70,
+          fontWeight: FontWeight.w600,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+      ),
+    );
+  }
+}
+
 class ParticipantCard extends ConsumerWidget {
   const ParticipantCard({
     required this.participant,
@@ -220,11 +283,12 @@ class ParticipantCard extends ConsumerWidget {
       authControllerProvider.select((auth) => auth.user?.slug),
     );
     final session = ref.watch(currentSessionStateProvider);
-    final currentUserIsKeeper = session?.isKeeper(currentUserSlug) ?? false;
+    final amKeeper = session?.isKeeper(currentUserSlug) ?? false;
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
 
     const overlayPadding = 10.0;
     final isKeeper = session?.isKeeper(participant.identity) ?? false;
+    final isSpeaking = participant.identity == session?.speakingNow;
 
     const borderRadius = 20.0;
 
@@ -243,10 +307,22 @@ class ParticipantCard extends ConsumerWidget {
             PositionedDirectional(
               top: overlayPadding,
               start: overlayPadding,
-              child: SpeakingIndicatorOrEmoji(participant: participant),
+              child: Row(
+                spacing: 8,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SpeakingIndicatorOrEmoji(participant: participant),
+                  if (amKeeper &&
+                      isSpeaking &&
+                      session?.roomState.status == RoomStatus.active)
+                    _ElapsedTimer(
+                      key: ValueKey('timer${participant.sid}'),
+                    ),
+                ],
+              ),
             ),
             if (session != null &&
-                currentUserIsKeeper &&
+                amKeeper &&
                 currentUserSlug != participant.identity)
               PositionedDirectional(
                 end: overlayPadding,
@@ -301,6 +377,7 @@ class ParticipantCard extends ConsumerWidget {
   }
 }
 
+// TODO(totem): Close button when this widget is unmounted.
 class ParticipantControlButton extends ConsumerWidget {
   const ParticipantControlButton({
     required this.participant,

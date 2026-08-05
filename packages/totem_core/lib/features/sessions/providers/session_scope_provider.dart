@@ -239,6 +239,30 @@ Participant? featuredParticipant(Ref ref) {
   );
 }
 
+/// The [DateTime] when the current turn began.
+/// Resets only when the featured participant identity changes — survives
+/// widget-tree remounts caused by viewport / orientation switches.
+final featuredTurnStartTimeProvider =
+    NotifierProvider<FeaturedTurnStartTime, DateTime?>(
+      FeaturedTurnStartTime.new,
+    );
+
+class FeaturedTurnStartTime extends Notifier<DateTime?> {
+  String? _lastIdentity;
+
+  @override
+  DateTime? build() {
+    ref.listen(featuredParticipantProvider, (_, next) {
+      final newId = next?.identity;
+      if (newId != _lastIdentity || newId == null) {
+        _lastIdentity = newId;
+        state = newId != null ? DateTime.now() : null;
+      }
+    });
+    return DateTime.now();
+  }
+}
+
 /// Participant expected to speak next.
 @Riverpod(dependencies: [currentSessionState])
 Participant? speakingNextParticipant(Ref ref) {
