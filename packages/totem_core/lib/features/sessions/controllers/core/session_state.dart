@@ -262,13 +262,15 @@ class SessionRoomState {
         turn.roomState.nextSpeaker == room.localParticipant?.identity;
   }
 
-  String get speakingNow {
-    if (turn.roomState.currentSpeaker == null ||
-        turn.roomState.currentSpeaker!.isEmpty) {
-      return turn.roomState.keeper;
+  /// The effective speaker identity for [roomState], using keeper as fallback.
+  static String speakerOf(RoomState roomState) {
+    if (roomState.currentSpeaker == null || roomState.currentSpeaker!.isEmpty) {
+      return roomState.keeper;
     }
-    return turn.roomState.currentSpeaker ?? turn.roomState.keeper;
+    return roomState.currentSpeaker!;
   }
+
+  String get speakingNow => speakerOf(turn.roomState);
 
   bool get hasKeeper =>
       participants.participants.any((p) => isKeeper(p.identity));

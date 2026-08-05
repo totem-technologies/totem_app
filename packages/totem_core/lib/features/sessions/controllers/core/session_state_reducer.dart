@@ -29,9 +29,11 @@ class SessionStateReducer {
         );
       case RoomStateChanged():
         final isEnded = event.roomState.status == RoomStatus.ended;
-        final oldSpeaker = current.speakingNow;
-        final newSpeaker = _effectiveSpeaker(event.roomState);
-        final turnStartedAt = oldSpeaker != newSpeaker && newSpeaker.isNotEmpty
+        final newSpeaker = SessionRoomState.speakerOf(event.roomState);
+        final turnStartedAt =
+            newSpeaker.isNotEmpty &&
+                (current.speakingNow != newSpeaker ||
+                    current.turnStartedAt == null)
             ? DateTime.now()
             : current.turnStartedAt;
         return SessionRoomState(
@@ -89,14 +91,5 @@ class SessionStateReducer {
           turnStartedAt: current.turnStartedAt,
         );
     }
-  }
-
-  /// Effective speaker identity for a [RoomState], using the same fallback
-  /// logic as [SessionRoomState.speakingNow].
-  static String _effectiveSpeaker(RoomState rs) {
-    if (rs.currentSpeaker == null || rs.currentSpeaker!.isEmpty) {
-      return rs.keeper;
-    }
-    return rs.currentSpeaker!;
   }
 }
