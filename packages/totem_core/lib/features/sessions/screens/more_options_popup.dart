@@ -189,6 +189,19 @@ class MoreOptions extends ConsumerWidget {
                   );
                 },
               ),
+              if (state.roomState.status == mobile_api.RoomStatus.active)
+                MoreOptionsTile<void>(
+                  title: 'Set Prompt',
+                  icon: TotemIcons.edit,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _onSetPrompt(
+                      context,
+                      currentSession,
+                      state.roomState.roundMessage,
+                    );
+                  },
+                ),
               MoreOptionsTile<void>(
                 title: 'Mute everyone',
                 icon: TotemIcons.microphoneOff,
@@ -370,6 +383,106 @@ class MoreOptions extends ConsumerWidget {
 
   Future<void> _onMuteEveryone(SessionController session) =>
       session.keeper.muteEveryone();
+
+  Future<void> _onSetPrompt(
+    BuildContext context,
+    SessionController session,
+    String? currentPrompt,
+  ) async {
+    final controller = TextEditingController(text: currentPrompt);
+    final formKey = GlobalKey<FormState>();
+    final result = await showDialog<String>(
+      context: context,
+      useRootNavigator: false,
+      builder: (context) {
+        var loading = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> onSubmit() async {
+              if (!formKey.currentState!.validate()) return;
+              final message = controller.text.trim();
+              setDialogState(() => loading = true);
+              try {
+                await session.keeper.setPrompt(message);
+                if (context.mounted) {
+                  Navigator.of(context).pop(message);
+                }
+              } catch (error, stackTrace) {
+                setDialogState(() => loading = false);
+                if (context.mounted) {
+                  ErrorHandler.handleApiError(
+                    context,
+                    error,
+                    stackTrace: stackTrace,
+                    onRetry: onSubmit,
+                  );
+                }
+              }
+            }
+
+            return AlertDialog(
+              title: const Text('Set Round Prompt'),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 24,
+                  children: [
+                    TextFormField(
+                      controller: controller,
+                      decoration: const InputDecoration(
+                        hintText: 'Enter a prompt for this round',
+                      ),
+                      autofocus: true,
+                      maxLines: 3,
+                      minLines: 1,
+                      enabled: !loading,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a prompt';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: loading ? null : onSubmit,
+                        child: loading
+                            ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Set'),
+                      ),
+                    ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: loading
+                            ? null
+                            : () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+    controller.dispose();
+    if (result != null && result.isNotEmpty && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Prompt set successfully')),
+      );
+    }
+  }
 
   @visibleForTesting
   Future<void> onForcePass(

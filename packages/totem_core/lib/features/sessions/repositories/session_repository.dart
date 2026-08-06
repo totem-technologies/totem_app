@@ -328,6 +328,23 @@ Future<RoomState> unbanParticipant(
 }
 
 @riverpod
+Future<RoomState> setPrompt(
+  Ref ref,
+  String sessionSlug,
+  int lastSeenVersion,
+  String prompt,
+) {
+  final apiService = ref.read(apiServiceProvider);
+  return _postEvent(
+    apiService: apiService,
+    sessionSlug: sessionSlug,
+    event: EventRequestEventSetPrompt(SetPromptEvent(prompt: prompt)),
+    lastSeenVersion: lastSeenVersion,
+    operationName: 'set prompt',
+  );
+}
+
+@riverpod
 Future<void> sessionFeedback(
   Ref ref,
   String sessionSlug,
