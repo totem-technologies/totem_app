@@ -42,11 +42,10 @@ List<Participant> participantsSorting({
       }
     }
 
-    // Rotate the list so the next participant is first (circular order)
-    final nextIdentity = state.roomState.nextParticipantIdentity;
-    if (nextIdentity != null) {
+    final nextSpeaker = state.roomState.nextSpeaker;
+    if (nextSpeaker != null) {
       final nextIndex = sortedParticipants.indexWhere(
-        (p) => p.identity == nextIdentity,
+        (p) => p.identity == nextSpeaker,
       );
       if (nextIndex > 0) {
         final rotated = [
@@ -64,16 +63,6 @@ List<Participant> participantsSorting({
 }
 
 extension SessionStateExtension on RoomState {
-  String? get nextParticipantIdentity {
-    if (talkingOrder.isEmpty) return null;
-    if (currentSpeaker == null) return talkingOrder.first;
-
-    final currentIndex = talkingOrder.indexOf(currentSpeaker!);
-    if (currentIndex == -1) return null;
-    if (currentIndex == talkingOrder.length - 1) return talkingOrder.first;
-    return talkingOrder[currentIndex + 1];
-  }
-
   /// Walk the talking order starting after [after], wrapping around.
   String? nextInOrder({
     required String after,
@@ -92,6 +81,10 @@ extension SessionStateExtension on RoomState {
     return rotated.where(onlineIds.contains).firstOrNull;
   }
 
+  /// The identity of the participant to be forced pass to.
+  ///
+  /// For example, in the list [Bob, Foo, Boo, Fob], if Bob is speaking and the Keeper wants to
+  /// force pass them, they would pass to Foo. If Foo is passing, the keeper would pass to Boo.
   String? nextParticipantForcePassIdentity({
     required Iterable<Participant> participants,
   }) {
