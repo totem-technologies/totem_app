@@ -394,87 +394,36 @@ class MoreOptions extends ConsumerWidget {
     final result = await showDialog<String>(
       context: context,
       useRootNavigator: false,
-      builder: (context) {
-        var loading = false;
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            Future<void> onSubmit() async {
-              if (!formKey.currentState!.validate()) return;
-              final message = controller.text.trim();
-              setDialogState(() => loading = true);
-              try {
-                await session.keeper.setPrompt(message);
-                if (context.mounted) {
-                  Navigator.of(context).pop(message);
-                }
-              } catch (error, stackTrace) {
-                setDialogState(() => loading = false);
-                if (context.mounted) {
-                  ErrorHandler.handleApiError(
-                    context,
-                    error,
-                    stackTrace: stackTrace,
-                    onRetry: onSubmit,
-                  );
-                }
+      builder: (context) => ConfirmationDialog(
+        title: 'Update Round Prompt',
+        content: 'Enter a prompt for this round',
+        confirmButtonText: 'Update',
+        type: ConfirmationDialogType.standard,
+        contentWidget: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: controller,
+            autofocus: true,
+            maxLines: 3,
+            minLines: 1,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter a prompt';
               }
-            }
-
-            return AlertDialog(
-              title: const Text('Set Round Prompt'),
-              content: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  spacing: 24,
-                  children: [
-                    TextFormField(
-                      controller: controller,
-                      decoration: const InputDecoration(
-                        hintText: 'Enter a prompt for this round',
-                      ),
-                      autofocus: true,
-                      maxLines: 3,
-                      minLines: 1,
-                      enabled: !loading,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter a prompt';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: loading ? null : onSubmit,
-                        child: loading
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text('Set'),
-                      ),
-                    ),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: loading
-                            ? null
-                            : () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+              return null;
+            },
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ),
+        onConfirm: () async {
+          if (!formKey.currentState!.validate()) return;
+          final message = controller.text.trim();
+          await session.keeper.setPrompt(message);
+          if (context.mounted) Navigator.of(context).pop(message);
+        },
+      ),
     );
     controller.dispose();
     if (result != null && result.isNotEmpty && context.mounted) {
@@ -539,95 +488,33 @@ class MoreOptions extends ConsumerWidget {
     SessionController session,
   ) async {
     final controller = TextEditingController();
-    final formKey = GlobalKey<FormState>();
     await showDialog<void>(
       context: context,
       useRootNavigator: false,
-      builder: (context) {
-        var loading = false;
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            Future<void> onSubmit() async {
-              setDialogState(() => loading = true);
-              try {
-                final prompt = controller.text.trim();
-                final success = await session.keeper.startSession(
-                  prompt: prompt.isEmpty ? null : prompt,
-                );
-                if (context.mounted) {
-                  if (success) {
-                    Navigator.of(context).pop();
-                  } else {
-                    setDialogState(() => loading = false);
-                  }
-                }
-              } catch (error, stackTrace) {
-                setDialogState(() => loading = false);
-                if (context.mounted) {
-                  ErrorHandler.handleApiError(
-                    context,
-                    error,
-                    stackTrace: stackTrace,
-                    onRetry: onSubmit,
-                  );
-                }
-              }
-            }
-
-            return AlertDialog(
-              title: const Text('Start Session'),
-              content: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  spacing: 24,
-                  children: [
-                    Text(
-                      'Are you sure you want to start the session?',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    TextFormField(
-                      controller: controller,
-                      decoration: const InputDecoration(
-                        hintText:
-                            'Optional: enter a prompt for the first round',
-                      ),
-                      autofocus: true,
-                      maxLines: 3,
-                      minLines: 1,
-                      enabled: !loading,
-                    ),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: loading ? null : onSubmit,
-                        child: loading
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text('Start Session'),
-                      ),
-                    ),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: loading
-                            ? null
-                            : () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+      builder: (context) => ConfirmationDialog(
+        title: 'Start Session',
+        content: 'Are you sure you want to start the session?',
+        confirmButtonText: 'Start Session',
+        type: ConfirmationDialogType.standard,
+        contentWidget: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Optional: enter a prompt for the first round',
+          ),
+          maxLines: 3,
+          minLines: 1,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        onConfirm: () async {
+          final prompt = controller.text.trim();
+          final success = await session.keeper.startSession(
+            prompt: prompt.isEmpty ? null : prompt,
+          );
+          if (success && context.mounted) Navigator.of(context).pop();
+        },
+      ),
     );
     controller.dispose();
   }
