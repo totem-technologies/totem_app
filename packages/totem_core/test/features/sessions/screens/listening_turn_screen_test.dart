@@ -343,6 +343,39 @@ void main() {
           equals(const ['user-3', 'user-1', 'user-2']),
         );
       });
+
+      testWidgets('places late-joining participant first when they are next', (
+        tester,
+      ) async {
+        // Simulates a late joiner (e.g. Gianni) who is assigned as nextSpeaker
+        // by the server but is not yet the next person in talkingOrder.
+        // The keeper is speaking, so they are excluded from the grid.
+        final participants = [
+          _mockRemote('user-1', 'Alice'),
+          _mockRemote('user-2', 'Bob'),
+          _mockRemote('gianni', 'Gianni'),
+          _mockRemote('keeper-1', 'Keeper'),
+        ];
+
+        final state = _buildState(
+          status: RoomStatus.active,
+          keeper: 'keeper-1',
+          currentSpeaker: 'keeper-1',
+          nextSpeaker: 'gianni',
+          talkingOrder: const ['keeper-1', 'user-1', 'user-2'],
+          participants: participants,
+        );
+
+        await pumpListeningTurn(tester, sessionState: state);
+
+        // Gianni should appear first because nextSpeaker points to him,
+        // even though talkingOrder's next-in-line after keeper-1 is user-1.
+        // The remaining participants follow in talking order (user-1, user-2).
+        expect(
+          _participantGridIdentities(tester),
+          equals(const ['gianni', 'user-1', 'user-2']),
+        );
+      });
     });
 
     group('waitingRoom status without keeper', () {

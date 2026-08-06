@@ -440,7 +440,7 @@ class MoreOptions extends ConsumerWidget {
     SessionController session,
     SessionRoomState state,
   ) async {
-    if (state.roomState.nextParticipantIdentity == null) return;
+    if (state.roomState.nextSpeaker == null) return;
 
     await showDialog<void>(
       context: context,
