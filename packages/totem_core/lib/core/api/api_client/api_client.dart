@@ -46,6 +46,7 @@ export 'models/room_state.dart';
 export 'models/room_state_status_detail.dart';
 export 'models/session_detail_schema.dart';
 export 'models/session_feedback_schema.dart';
+export 'models/set_prompt_event.dart';
 export 'models/space_schema.dart';
 export 'models/start_room_event.dart';
 export 'models/summary_spaces_schema.dart';

@@ -7,6 +7,7 @@ import 'end_room_event.dart';
 import 'force_pass_stick_event.dart';
 import 'pass_stick_event.dart';
 import 'reorder_event.dart';
+import 'set_prompt_event.dart';
 import 'start_room_event.dart';
 import 'unban_participant_event.dart';
 
@@ -22,6 +23,7 @@ sealed class EventRequestEvent {
       'force_pass_stick' => EventRequestEventForcePassStick.fromJson(json),
       'pass_stick' => EventRequestEventPassStick.fromJson(json),
       'reorder' => EventRequestEventReorder.fromJson(json),
+      'set_prompt' => EventRequestEventSetPrompt.fromJson(json),
       'start_room' => EventRequestEventStartRoom.fromJson(json),
       'unban_participant' => EventRequestEventUnbanParticipant.fromJson(json),
       _ => EventRequestEvent$Unknown(json),
@@ -261,6 +263,44 @@ final class EventRequestEventReorder extends EventRequestEvent {
   @override
   String toString() {
     return 'EventRequestEventReorder(reorderEvent: $reorderEvent)';
+  }
+}
+
+@immutable
+final class EventRequestEventSetPrompt extends EventRequestEvent {
+  const EventRequestEventSetPrompt(this.setPromptEvent);
+
+  factory EventRequestEventSetPrompt.fromJson(Map<String, dynamic> json) {
+    return EventRequestEventSetPrompt(SetPromptEvent.fromJson(json));
+  }
+
+  final SetPromptEvent setPromptEvent;
+
+  @override
+  String get type {
+    return 'set_prompt';
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {...setPromptEvent.toJson(), 'type': type};
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is EventRequestEventSetPrompt &&
+            setPromptEvent == other.setPromptEvent;
+  }
+
+  @override
+  int get hashCode {
+    return setPromptEvent.hashCode;
+  }
+
+  @override
+  String toString() {
+    return 'EventRequestEventSetPrompt(setPromptEvent: $setPromptEvent)';
   }
 }
 
