@@ -538,22 +538,98 @@ class MoreOptions extends ConsumerWidget {
     BuildContext context,
     SessionController session,
   ) async {
-    try {
-      await session.keeper.startSession();
-    } catch (error) {
-      if (!context.mounted) return;
-      await ErrorHandler.handleApiError(
-        context,
-        error,
-        onRetry: () async {
-          try {
-            await session.keeper.startSession();
-          } catch (e) {
-            // Error already handled by handleApiError
-          }
-        },
-      );
-    }
+    final controller = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    await showDialog<void>(
+      context: context,
+      useRootNavigator: false,
+      builder: (context) {
+        var loading = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> onSubmit() async {
+              setDialogState(() => loading = true);
+              try {
+                final prompt = controller.text.trim();
+                final success = await session.keeper.startSession(
+                  prompt: prompt.isEmpty ? null : prompt,
+                );
+                if (context.mounted) {
+                  if (success) {
+                    Navigator.of(context).pop();
+                  } else {
+                    setDialogState(() => loading = false);
+                  }
+                }
+              } catch (error, stackTrace) {
+                setDialogState(() => loading = false);
+                if (context.mounted) {
+                  ErrorHandler.handleApiError(
+                    context,
+                    error,
+                    stackTrace: stackTrace,
+                    onRetry: onSubmit,
+                  );
+                }
+              }
+            }
+
+            return AlertDialog(
+              title: const Text('Start Session'),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 24,
+                  children: [
+                    Text(
+                      'Are you sure you want to start the session?',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    TextFormField(
+                      controller: controller,
+                      decoration: const InputDecoration(
+                        hintText:
+                            'Optional: enter a prompt for the first round',
+                      ),
+                      autofocus: true,
+                      maxLines: 3,
+                      minLines: 1,
+                      enabled: !loading,
+                    ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: loading ? null : onSubmit,
+                        child: loading
+                            ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Start Session'),
+                      ),
+                    ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: loading
+                            ? null
+                            : () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+    controller.dispose();
   }
 
   static Future<void> _onEndSession(

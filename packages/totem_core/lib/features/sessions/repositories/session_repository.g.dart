@@ -756,7 +756,7 @@ final class StartSessionProvider
     with $FutureModifier<RoomState>, $FutureProvider<RoomState> {
   StartSessionProvider._({
     required StartSessionFamily super.from,
-    required (String, int) super.argument,
+    required (String, int, {String? prompt}) super.argument,
   }) : super(
          retry: null,
          name: r'startSessionProvider',
@@ -782,8 +782,8 @@ final class StartSessionProvider
 
   @override
   FutureOr<RoomState> create(Ref ref) {
-    final argument = this.argument as (String, int);
-    return startSession(ref, argument.$1, argument.$2);
+    final argument = this.argument as (String, int, {String? prompt});
+    return startSession(ref, argument.$1, argument.$2, prompt: argument.prompt);
   }
 
   @override
@@ -797,10 +797,14 @@ final class StartSessionProvider
   }
 }
 
-String _$startSessionHash() => r'4180b185f2f0e62b074962baa840947447032494';
+String _$startSessionHash() => r'41cf746d576c36437b5a04c970c5dbbeedee9e9a';
 
 final class StartSessionFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<RoomState>,
+          (String, int, {String? prompt})
+        > {
   StartSessionFamily._()
     : super(
         retry: null,
@@ -810,11 +814,14 @@ final class StartSessionFamily extends $Family
         isAutoDispose: true,
       );
 
-  StartSessionProvider call(String sessionSlug, int lastSeenVersion) =>
-      StartSessionProvider._(
-        argument: (sessionSlug, lastSeenVersion),
-        from: this,
-      );
+  StartSessionProvider call(
+    String sessionSlug,
+    int lastSeenVersion, {
+    String? prompt,
+  }) => StartSessionProvider._(
+    argument: (sessionSlug, lastSeenVersion, prompt: prompt),
+    from: this,
+  );
 
   @override
   String toString() => r'startSessionProvider';

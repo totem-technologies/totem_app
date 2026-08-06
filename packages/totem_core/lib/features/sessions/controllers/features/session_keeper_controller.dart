@@ -192,7 +192,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     logger.i('Removed participant $participantSlug successfully');
   }
 
-  Future<bool> startSession() async {
+  Future<bool> startSession({String? prompt}) async {
     if (!session.isCurrentUserKeeper()) return false;
     try {
       final roomState = await _run(
@@ -200,6 +200,7 @@ class SessionKeeperController extends _$SessionKeeperController {
           startSessionProvider(
             _eventSlug,
             _roomVersion,
+            prompt: prompt,
           ).future,
         ),
         errorMessage: 'Error starting session',
