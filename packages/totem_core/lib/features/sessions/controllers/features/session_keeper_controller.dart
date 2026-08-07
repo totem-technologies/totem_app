@@ -192,7 +192,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     logger.i('Removed participant $participantSlug successfully');
   }
 
-  Future<bool> startSession() async {
+  Future<bool> startSession({String? prompt}) async {
     if (!session.isCurrentUserKeeper()) return false;
     try {
       final roomState = await _run(
@@ -200,6 +200,7 @@ class SessionKeeperController extends _$SessionKeeperController {
           startSessionProvider(
             _eventSlug,
             _roomVersion,
+            prompt: prompt,
           ).future,
         ),
         errorMessage: 'Error starting session',
@@ -305,5 +306,21 @@ class SessionKeeperController extends _$SessionKeeperController {
       errorMessage: 'Error muting everyone',
       timeout: const Duration(seconds: 20),
     );
+  }
+
+  Future<void> setPrompt(String prompt) async {
+    if (!session.isCurrentUserKeeper()) return;
+    final roomState = await _run(
+      action: () => ref.read(
+        setPromptProvider(
+          _eventSlug,
+          _roomVersion,
+          prompt,
+        ).future,
+      ),
+      errorMessage: 'Error setting prompt',
+    );
+    session.applyRoomState(roomState);
+    logger.i('Set prompt successfully');
   }
 }

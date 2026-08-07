@@ -189,6 +189,19 @@ class MoreOptions extends ConsumerWidget {
                   );
                 },
               ),
+              if (state.roomState.status == mobile_api.RoomStatus.active)
+                MoreOptionsTile<void>(
+                  title: 'Set Prompt',
+                  icon: TotemIcons.edit,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _onSetPrompt(
+                      context,
+                      currentSession,
+                      state.roomState.roundMessage,
+                    );
+                  },
+                ),
               MoreOptionsTile<void>(
                 title: 'Mute everyone',
                 icon: TotemIcons.microphoneOff,
@@ -371,6 +384,55 @@ class MoreOptions extends ConsumerWidget {
   Future<void> _onMuteEveryone(SessionController session) =>
       session.keeper.muteEveryone();
 
+  Future<void> _onSetPrompt(
+    BuildContext context,
+    SessionController session,
+    String? currentPrompt,
+  ) async {
+    final controller = TextEditingController(text: currentPrompt);
+    final formKey = GlobalKey<FormState>();
+    final result = await showDialog<String>(
+      context: context,
+      useRootNavigator: false,
+      builder: (context) => ConfirmationDialog(
+        title: 'Update Round Prompt',
+        content: 'Enter a prompt for this round',
+        confirmButtonText: 'Update',
+        type: ConfirmationDialogType.standard,
+        contentWidget: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: controller,
+            autofocus: true,
+            maxLines: 3,
+            minLines: 1,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter a prompt';
+              }
+              return null;
+            },
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ),
+        onConfirm: () async {
+          if (!formKey.currentState!.validate()) return;
+          final message = controller.text.trim();
+          await session.keeper.setPrompt(message);
+          if (context.mounted) Navigator.of(context).pop(message);
+        },
+      ),
+    );
+    controller.dispose();
+    if (result != null && result.isNotEmpty && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Prompt set successfully')),
+      );
+    }
+  }
+
   @visibleForTesting
   Future<void> onForcePass(
     BuildContext context,
@@ -425,22 +487,36 @@ class MoreOptions extends ConsumerWidget {
     BuildContext context,
     SessionController session,
   ) async {
-    try {
-      await session.keeper.startSession();
-    } catch (error) {
-      if (!context.mounted) return;
-      await ErrorHandler.handleApiError(
-        context,
-        error,
-        onRetry: () async {
-          try {
-            await session.keeper.startSession();
-          } catch (e) {
-            // Error already handled by handleApiError
-          }
+    final controller = TextEditingController();
+    await showDialog<void>(
+      context: context,
+      useRootNavigator: false,
+      builder: (context) => ConfirmationDialog(
+        title: 'Start Session',
+        content: 'Are you sure you want to start the session?',
+        confirmButtonText: 'Start Session',
+        type: ConfirmationDialogType.standard,
+        contentWidget: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Optional: enter a prompt for the first round',
+          ),
+          maxLines: 3,
+          minLines: 1,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        onConfirm: () async {
+          final prompt = controller.text.trim();
+          final success = await session.keeper.startSession(
+            prompt: prompt.isEmpty ? null : prompt,
+          );
+          if (success && context.mounted) Navigator.of(context).pop();
         },
-      );
-    }
+      ),
+    );
+    controller.dispose();
   }
 
   static Future<void> _onEndSession(

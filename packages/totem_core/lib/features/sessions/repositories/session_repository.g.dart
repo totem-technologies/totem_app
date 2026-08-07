@@ -756,7 +756,7 @@ final class StartSessionProvider
     with $FutureModifier<RoomState>, $FutureProvider<RoomState> {
   StartSessionProvider._({
     required StartSessionFamily super.from,
-    required (String, int) super.argument,
+    required (String, int, {String? prompt}) super.argument,
   }) : super(
          retry: null,
          name: r'startSessionProvider',
@@ -782,8 +782,8 @@ final class StartSessionProvider
 
   @override
   FutureOr<RoomState> create(Ref ref) {
-    final argument = this.argument as (String, int);
-    return startSession(ref, argument.$1, argument.$2);
+    final argument = this.argument as (String, int, {String? prompt});
+    return startSession(ref, argument.$1, argument.$2, prompt: argument.prompt);
   }
 
   @override
@@ -797,10 +797,14 @@ final class StartSessionProvider
   }
 }
 
-String _$startSessionHash() => r'4180b185f2f0e62b074962baa840947447032494';
+String _$startSessionHash() => r'41cf746d576c36437b5a04c970c5dbbeedee9e9a';
 
 final class StartSessionFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int)> {
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<RoomState>,
+          (String, int, {String? prompt})
+        > {
   StartSessionFamily._()
     : super(
         retry: null,
@@ -810,11 +814,14 @@ final class StartSessionFamily extends $Family
         isAutoDispose: true,
       );
 
-  StartSessionProvider call(String sessionSlug, int lastSeenVersion) =>
-      StartSessionProvider._(
-        argument: (sessionSlug, lastSeenVersion),
-        from: this,
-      );
+  StartSessionProvider call(
+    String sessionSlug,
+    int lastSeenVersion, {
+    String? prompt,
+  }) => StartSessionProvider._(
+    argument: (sessionSlug, lastSeenVersion, prompt: prompt),
+    from: this,
+  );
 
   @override
   String toString() => r'startSessionProvider';
@@ -1055,6 +1062,86 @@ final class UnbanParticipantFamily extends $Family
 
   @override
   String toString() => r'unbanParticipantProvider';
+}
+
+@ProviderFor(setPrompt)
+final setPromptProvider = SetPromptFamily._();
+
+final class SetPromptProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<RoomState>,
+          RoomState,
+          FutureOr<RoomState>
+        >
+    with $FutureModifier<RoomState>, $FutureProvider<RoomState> {
+  SetPromptProvider._({
+    required SetPromptFamily super.from,
+    required (String, int, String) super.argument,
+  }) : super(
+         retry: null,
+         name: r'setPromptProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$setPromptHash();
+
+  @override
+  String toString() {
+    return r'setPromptProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<RoomState> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<RoomState> create(Ref ref) {
+    final argument = this.argument as (String, int, String);
+    return setPrompt(ref, argument.$1, argument.$2, argument.$3);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SetPromptProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$setPromptHash() => r'e317814882c42a63d9decc6e8d25a2279b19c508';
+
+final class SetPromptFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int, String)> {
+  SetPromptFamily._()
+    : super(
+        retry: null,
+        name: r'setPromptProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  SetPromptProvider call(
+    String sessionSlug,
+    int lastSeenVersion,
+    String prompt,
+  ) => SetPromptProvider._(
+    argument: (sessionSlug, lastSeenVersion, prompt),
+    from: this,
+  );
+
+  @override
+  String toString() => r'setPromptProvider';
 }
 
 @ProviderFor(sessionFeedback)

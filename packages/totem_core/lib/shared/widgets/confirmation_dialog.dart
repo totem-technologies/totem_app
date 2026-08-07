@@ -20,6 +20,7 @@ class ConfirmationDialog extends StatefulWidget {
     this.type = ConfirmationDialogType.destructive,
     this.showCancel = true,
     this.extraButtons = const [],
+    this.contentWidget,
     super.key,
   });
 
@@ -38,6 +39,10 @@ class ConfirmationDialog extends StatefulWidget {
   ///
   /// It is displayed below the confirm button and above the cancel button, if any.
   final List<ConfirmationDialogButton> extraButtons;
+
+  /// An optional widget rendered between the content text and the action
+  /// buttons. Use this for form fields or other custom content.
+  final Widget? contentWidget;
 
   @override
   State<ConfirmationDialog> createState() => ConfirmationDialogState();
@@ -108,8 +113,11 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                     Text(
                       widget.content,
                       textAlign: TextAlign.center,
-                      style: widget.contentStyle,
+                      style: widget.contentStyle?.copyWith(
+                        color: theme.colorScheme.onSurface,
+                      ),
                     ),
+                    if (widget.contentWidget != null) widget.contentWidget!,
                   ],
                 ),
 

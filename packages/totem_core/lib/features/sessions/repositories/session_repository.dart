@@ -259,13 +259,14 @@ Future<RoomState> reorderParticipants(
 Future<RoomState> startSession(
   Ref ref,
   String sessionSlug,
-  int lastSeenVersion,
-) {
+  int lastSeenVersion, {
+  String? prompt,
+}) {
   final apiService = ref.read(apiServiceProvider);
   return _postEvent(
     apiService: apiService,
     sessionSlug: sessionSlug,
-    event: const EventRequestEventStartRoom(StartRoomEvent()),
+    event: EventRequestEventStartRoom(StartRoomEvent(prompt: prompt)),
     lastSeenVersion: lastSeenVersion,
     operationName: 'start session',
   );
@@ -324,6 +325,23 @@ Future<RoomState> unbanParticipant(
     ),
     lastSeenVersion: lastSeenVersion,
     operationName: 'unban participant',
+  );
+}
+
+@riverpod
+Future<RoomState> setPrompt(
+  Ref ref,
+  String sessionSlug,
+  int lastSeenVersion,
+  String prompt,
+) {
+  final apiService = ref.read(apiServiceProvider);
+  return _postEvent(
+    apiService: apiService,
+    sessionSlug: sessionSlug,
+    event: EventRequestEventSetPrompt(SetPromptEvent(prompt: prompt)),
+    lastSeenVersion: lastSeenVersion,
+    operationName: 'set prompt',
   );
 }
 

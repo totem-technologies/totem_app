@@ -172,6 +172,9 @@ final class DefaultApi with ApiExecutor {
   ///
   /// Validate PIN and issue token pair.
   ///
+  /// Atomic like the web verify view: if anything throws after the PIN
+  /// validates, the rollback un-consumes it so the same code works on retry.
+  ///
   /// `POST /api/mobile/auth/validate-pin`
   Future<ApiResult<TokenResponse, ErrorResponse>> totemApiAuthValidatePin({
     required ValidatePinSchema body,
