@@ -158,8 +158,41 @@ class _NoOpSessionController extends sessions.SessionController {
   }
 
   @override
-  Future<void> join({session_state.SessionJoinMedia? joinMedia}) async {
+  Future<sessions.SessionJoinResult> join({
+    session_state.SessionJoinMedia? joinMedia,
+  }) async {
     lastJoinMedia = joinMedia;
+    return sessions.SessionJoinResult.success;
+  }
+}
+
+class _FailOnceSessionController extends sessions.SessionController {
+  static final joinMedia = <session_state.SessionJoinMedia?>[];
+  static int resetCount = 0;
+
+  static void reset() {
+    joinMedia.clear();
+    resetCount = 0;
+  }
+
+  @override
+  session_state.SessionRoomState build(session_state.SessionOptions options) {
+    return _createConnectedSessionState();
+  }
+
+  @override
+  Future<sessions.SessionJoinResult> join({
+    session_state.SessionJoinMedia? joinMedia,
+  }) async {
+    _FailOnceSessionController.joinMedia.add(joinMedia);
+    return _FailOnceSessionController.joinMedia.length > 1
+        ? sessions.SessionJoinResult.success
+        : sessions.SessionJoinResult.retryableFailure;
+  }
+
+  @override
+  Future<void> resetAfterFailedJoin() async {
+    resetCount++;
   }
 }
 
@@ -190,6 +223,7 @@ void main() {
     Exception? eventError,
     PreJoinPreviewTrackFactory? previewTrackFactory,
     bool useNoOpSessionController = false,
+    bool useFailOnceSessionController = false,
   }) async {
     final sessionEvent =
         event ??
@@ -227,6 +261,10 @@ void main() {
             sessions
                 .sessionControllerProvider(_createSessionOptions())
                 .overrideWith(_NoOpSessionController.new),
+          if (useFailOnceSessionController)
+            sessions
+                .sessionControllerProvider(_createSessionOptions())
+                .overrideWith(_FailOnceSessionController.new),
           eventProvider(sessionSlug).overrideWith((ref) async {
             if (eventError != null) {
               throw eventError;
@@ -585,6 +623,108 @@ void main() {
           verifyNever(audioTrack.dispose);
           expect(previewTracks.videoTracks, hasLength(1));
           expect(previewTracks.audioTracks, hasLength(1));
+        },
+      );
+
+      testWidgets(
+        'creates fresh preview tracks after a failed join transfer',
+        (tester) async {
+          final previewTracks = _PreviewTrackFactory();
+          final mediaController = PreJoinMediaController();
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                authControllerProvider.overrideWith(
+                  () => FakeAuthController(AuthState.unauthenticated()),
+                ),
+              ],
+              child: MaterialApp(
+                home: PrejoinSessionScreen(
+                  previewTrackFactory: previewTracks,
+                  mediaController: mediaController,
+                ),
+              ),
+            ),
+          );
+
+          await pumpUntilPreviewTracksReady(tester, previewTracks);
+          final firstMedia = await mediaController.takeForJoin();
+
+          final status = await mediaController.resetAfterFailedJoin();
+          await tester.pump();
+
+          expect(status.requiredPermissionsGranted, isTrue);
+          expect(previewTracks.videoTracks, hasLength(2));
+          expect(previewTracks.audioTracks, hasLength(2));
+
+          final secondMedia = await mediaController.takeForJoin();
+          expect(secondMedia.cameraTrack, same(previewTracks.videoTracks.last));
+          expect(
+            secondMedia.microphoneTrack,
+            same(previewTracks.audioTracks.last),
+          );
+          expect(secondMedia.cameraTrack, isNot(same(firstMedia.cameraTrack)));
+          expect(
+            secondMedia.microphoneTrack,
+            isNot(same(firstMedia.microphoneTrack)),
+          );
+          verifyNever(firstMedia.cameraTrack!.stop);
+          verifyNever(firstMedia.cameraTrack!.dispose);
+          verifyNever(firstMedia.microphoneTrack!.stop);
+          verifyNever(firstMedia.microphoneTrack!.dispose);
+        },
+      );
+
+      testWidgets(
+        'allows a second join attempt with fresh tracks after failure',
+        (tester) async {
+          final previewTracks = _PreviewTrackFactory();
+          _FailOnceSessionController.reset();
+
+          await pumpPreJoinScreen(
+            tester,
+            useFailOnceSessionController: true,
+            previewTrackFactory: previewTracks,
+          );
+          await pumpUntilPreviewTracksReady(tester, previewTracks);
+
+          Future<void> requestJoin() async {
+            final sliderFinder = find.byType(ActionSlider);
+            final buttonFinder = find.byType(ActionButton);
+            if (sliderFinder.evaluate().isNotEmpty) {
+              await tester.drag(
+                sliderFinder.first,
+                const Offset(600, 0),
+                warnIfMissed: false,
+              );
+            } else {
+              await tester.tap(buttonFinder.first);
+            }
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 250));
+            await tester.pump(const Duration(milliseconds: 250));
+          }
+
+          await requestJoin();
+
+          expect(_FailOnceSessionController.joinMedia, hasLength(1));
+          expect(_FailOnceSessionController.resetCount, 1);
+          expect(previewTracks.videoTracks, hasLength(2));
+          expect(previewTracks.audioTracks, hasLength(2));
+          expect(find.byType(ActionSliderButton), findsOneWidget);
+
+          await requestJoin();
+
+          expect(_FailOnceSessionController.joinMedia, hasLength(2));
+          expect(
+            _FailOnceSessionController.joinMedia.last?.cameraTrack,
+            same(previewTracks.videoTracks.last),
+          );
+          expect(
+            _FailOnceSessionController.joinMedia.last?.microphoneTrack,
+            same(previewTracks.audioTracks.last),
+          );
         },
       );
 

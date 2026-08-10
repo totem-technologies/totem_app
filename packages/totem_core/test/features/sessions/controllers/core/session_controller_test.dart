@@ -409,13 +409,14 @@ void main() {
           final room = _CountingRoom(localParticipant);
           controller.room = room;
 
-          await controller.join(
+          final joined = await controller.join(
             joinMedia: SessionJoinMedia(
               cameraTrack: cameraTrack,
               microphoneTrack: microphoneTrack,
             ),
           );
 
+          expect(joined, SessionJoinResult.success);
           expect(
             room.lastFastConnectOptions?.camera.track,
             same(cameraTrack),
@@ -429,11 +430,19 @@ void main() {
           verifyNever(microphoneTrack.stop);
           verifyNever(microphoneTrack.dispose);
           expect(localParticipant.getTrackPublications(), isEmpty);
+
+          await controller.disposeConnection();
+
+          expect(room.disposeCount, 1);
+          verifyNever(cameraTrack.stop);
+          verifyNever(cameraTrack.dispose);
+          verifyNever(microphoneTrack.stop);
+          verifyNever(microphoneTrack.dispose);
         },
       );
 
       test(
-        'join disposes pre-join tracks when setup fails before handoff',
+        'join retains pre-join tracks until teardown when setup fails',
         () async {
           const eventSlug = 'test-session';
           final container = _createContainerWithEventOverride(eventSlug);
@@ -473,14 +482,23 @@ void main() {
           );
           controller.room = room;
 
-          await controller.join(
+          final joined = await controller.join(
             joinMedia: SessionJoinMedia(
               cameraTrack: cameraTrack,
               microphoneTrack: microphoneTrack,
             ),
           );
 
+          expect(joined, SessionJoinResult.retryableFailure);
           expect(room.connectCount, 0);
+          verifyNever(cameraTrack.stop);
+          verifyNever(cameraTrack.dispose);
+          verifyNever(microphoneTrack.stop);
+          verifyNever(microphoneTrack.dispose);
+
+          await controller.resetAfterFailedJoin();
+
+          expect(controller.room, isNull);
           verify(cameraTrack.stop).called(1);
           verify(cameraTrack.dispose).called(1);
           verify(microphoneTrack.stop).called(1);

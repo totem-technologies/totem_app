@@ -82,6 +82,12 @@ enum SessionDisconnectedReason {
   other,
 }
 
+enum SessionJoinResult {
+  success,
+  retryableFailure,
+  fatalFailure,
+}
+
 @riverpod
 class SessionController extends _$SessionController {
   Room? _room;
@@ -92,6 +98,10 @@ class SessionController extends _$SessionController {
   }
 
   EventsListener<RoomEvent>? _listener;
+
+  // Tracks transferred out of the pre-join screen but not yet handed to
+  // LiveKit. Once handed to Room.connect, Room owns their teardown.
+  final List<LocalTrack> _ownedJoinMediaTracks = [];
 
   /// The sync timer periodically checks for changes in the room state
   /// and participants list, to keep the UI up to date.
@@ -379,20 +389,15 @@ class SessionController extends _$SessionController {
     await leave();
   }
 
-  Future<void> join({SessionJoinMedia? joinMedia}) async {
+  Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
+    _retainJoinMedia(joinMedia);
+
     if (room != null) {
       if (state.connectionState == RoomConnectionState.connected ||
           state.connectionState == RoomConnectionState.connecting) {
-        await _disposeOwnedJoinMedia(joinMedia);
-        return;
+        return SessionJoinResult.success;
       }
     }
-
-    // The controller owns these tracks until they are handed to Room.connect.
-    // After that call begins, FastConnect may publish them asynchronously even
-    // after Room.connect completes, so publication-list visibility cannot be
-    // used to decide whether they are safe to dispose.
-    var ownedJoinMedia = joinMedia;
 
     _dispatch(
       const ConnectionChanged(
@@ -442,26 +447,11 @@ class SessionController extends _$SessionController {
           : null;
 
       final initialCameraTrack = options.cameraEnabled
-          ? joinMedia?.cameraTrack
+          ? _ownedJoinTrack<LocalVideoTrack>()
           : null;
       final initialMicrophoneTrack = options.microphoneEnabled
-          ? joinMedia?.microphoneTrack
+          ? _ownedJoinTrack<LocalAudioTrack>()
           : null;
-
-      // A caller should normally only transfer enabled preview tracks, but
-      // dispose any track that is not actually being handed to FastConnect.
-      await _disposeOwnedJoinMedia(
-        SessionJoinMedia(
-          cameraTrack: options.cameraEnabled ? null : joinMedia?.cameraTrack,
-          microphoneTrack: options.microphoneEnabled
-              ? null
-              : joinMedia?.microphoneTrack,
-        ),
-      );
-      ownedJoinMedia = SessionJoinMedia(
-        cameraTrack: initialCameraTrack,
-        microphoneTrack: initialMicrophoneTrack,
-      );
 
       final fastConnectOptions = FastConnectOptions(
         microphone: initialMicrophoneTrack != null
@@ -482,8 +472,10 @@ class SessionController extends _$SessionController {
         fastConnectOptions: fastConnectOptions,
         connectOptions: connectOptions,
       );
-      ownedJoinMedia = null;
+      _releaseJoinTrackToRoom(initialCameraTrack);
+      _releaseJoinTrackToRoom(initialMicrophoneTrack);
       await connectFuture;
+      return SessionJoinResult.success;
     }
     // For ConnectException and MediaConnectException, we log the error but don't
     // necessarily want to show an error message to the user.
@@ -501,9 +493,11 @@ class SessionController extends _$SessionController {
           // This error can occur when the token is invalid or doesn't have the right permissions.
           // In this case, we want to show an error message to the user.
           _onError(error);
+          return SessionJoinResult.fatalFailure;
         case ConnectionErrorReason.Timeout:
-        // These errors can occur due to transient network issues or server problems.
-        // We can choose to retry the connection or show an error message.
+          // These errors can occur due to transient network issues or server problems.
+          // We can choose to retry the connection or show an error message.
+          return SessionJoinResult.retryableFailure;
       }
     } on MediaConnectException catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -513,6 +507,7 @@ class SessionController extends _$SessionController {
       );
       // We may want to catch this error in the future.
       // _onError(error);
+      return SessionJoinResult.retryableFailure;
     } on LiveKitException catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -520,29 +515,78 @@ class SessionController extends _$SessionController {
         message: 'Error connecting to LiveKit room',
       );
       _onError(error);
+      return SessionJoinResult.fatalFailure;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Unexpected error occurred',
       );
-    } finally {
-      await _disposeOwnedJoinMedia(ownedJoinMedia);
+      return SessionJoinResult.retryableFailure;
     }
   }
 
-  Future<void> _disposeOwnedJoinMedia(SessionJoinMedia? joinMedia) async {
+  /// Tears down a failed connection attempt while keeping the controller
+  /// available for another join from the pre-join screen.
+  Future<void> resetAfterFailedJoin() async {
+    _syncTimer?.cancel();
+    _syncTimer = null;
+    _statePollTimer?.cancel();
+    _statePollTimer = null;
+
+    if (ref.mounted) {
+      try {
+        await ref.read(sessionInfraControllerProvider.notifier).deactivate();
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to deactivate session infrastructure after join',
+        );
+      }
+    }
+
+    await disposeConnection();
+    if (ref.mounted) {
+      _dispatch(
+        const ConnectionChanged(
+          RoomConnectionState.disconnected,
+          SessionPhase.idle,
+          wasJoining: true,
+        ),
+      );
+    }
+  }
+
+  void _retainJoinMedia(SessionJoinMedia? joinMedia) {
     if (joinMedia == null || joinMedia.isEmpty) return;
 
-    final publishedTracks = _room?.localParticipant
-        ?.getTrackPublications()
-        .map((publication) => publication.track)
-        .whereType<LocalTrack>()
-        .toList();
+    for (final track in [joinMedia.cameraTrack, joinMedia.microphoneTrack]) {
+      if (track == null) continue;
+      if (_ownedJoinMediaTracks.any((owned) => identical(owned, track))) {
+        continue;
+      }
+      _ownedJoinMediaTracks.add(track);
+    }
+  }
 
-    Future<void> disposeIfUnpublished(LocalTrack? track) async {
-      if (track == null) return;
+  T? _ownedJoinTrack<T extends LocalTrack>() {
+    for (final track in _ownedJoinMediaTracks.reversed) {
+      if (track is T) return track;
+    }
+    return null;
+  }
 
+  void _releaseJoinTrackToRoom(LocalTrack? track) {
+    if (track == null) return;
+    _ownedJoinMediaTracks.removeWhere((owned) => identical(owned, track));
+  }
+
+  Future<void> _disposeRetainedJoinMedia() async {
+    final tracks = _ownedJoinMediaTracks.toList();
+    _ownedJoinMediaTracks.clear();
+
+    Future<void> disposeTrack(LocalTrack track) async {
       try {
         await track.stop();
         await track.dispose();
@@ -555,10 +599,7 @@ class SessionController extends _$SessionController {
       }
     }
 
-    await Future.wait([
-      disposeTrack(joinMedia.cameraTrack),
-      disposeTrack(joinMedia.microphoneTrack),
-    ]);
+    await Future.wait(tracks.map(disposeTrack));
   }
 
   Future<void> leave() async {
@@ -717,9 +758,11 @@ class SessionController extends _$SessionController {
     _listener = null;
 
     try {
-      _room?.dispose();
+      await _room?.dispose();
     } catch (_) {}
     _room = null;
+
+    await _disposeRetainedJoinMedia();
   }
 
   Future<void> _applyJoinMediaState() async {

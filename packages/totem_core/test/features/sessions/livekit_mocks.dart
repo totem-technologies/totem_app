@@ -316,6 +316,11 @@ class MockLocalVideoTrack extends Mock implements LocalVideoTrack {
   bool _isActive;
 
   @override
+  EventsListener<TrackEvent> createListener({bool synchronized = false}) {
+    return MockTrackEventsListener();
+  }
+
+  @override
   dynamic noSuchMethod(Invocation invocation) {
     final defaulted = _videoTrackDefaults(invocation);
     if (defaulted != null ||

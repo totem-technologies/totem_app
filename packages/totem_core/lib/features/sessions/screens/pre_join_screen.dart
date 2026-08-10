@@ -227,6 +227,20 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   // ===== Join flow =====
 
+  Future<void> _resetAfterFailedJoin(SessionController session) async {
+    // Release the failed Room first. Reopening getUserMedia before LiveKit has
+    // released the transferred tracks can reproduce Safari's dual-capture bug.
+    await session.resetAfterFailedJoin();
+    if (mounted) {
+      await _preJoinMediaController.resetAfterFailedJoin();
+    }
+
+    _hasRequestedJoin = false;
+    _isJoining = false;
+    _isLoading = false;
+    if (mounted) setState(() {});
+  }
+
   Future<void> _handleToken(
     JoinResponse response, {
     bool mayShowAlreadyPresentDialog = true,
@@ -268,6 +282,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   Future<void> _joinRoom({bool showAlreadyPresentDialog = true}) async {
+    SessionController? session;
+    var mediaTransferred = false;
+
     try {
       if (_isJoining) {
         return;
@@ -297,15 +314,33 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       // precache event data to speed up join process and avoid showing loading screen if the
       await ref.read(eventProvider(widget.sessionSlug).future);
 
-      final session = ref.read(
+      final currentSession = ref.read(
         sessionControllerProvider(_sessionOptions!).notifier,
-      )..preventAutoDispose();
+      );
+      session = currentSession;
+      currentSession.preventAutoDispose();
 
       final joinMedia = await _preJoinMediaController.takeForJoin();
-      await session.join(joinMedia: joinMedia);
+      mediaTransferred = true;
+      final joinResult = await currentSession.join(joinMedia: joinMedia);
+      if (joinResult == SessionJoinResult.retryableFailure) {
+        await _resetAfterFailedJoin(currentSession);
+        return;
+      }
 
       _isLoading = false;
     } catch (error, stackTrace) {
+      if (mediaTransferred && session != null) {
+        try {
+          await _resetAfterFailedJoin(session);
+        } catch (resetError, resetStackTrace) {
+          ErrorHandler.logError(
+            resetError,
+            stackTrace: resetStackTrace,
+            message: 'Failed to reset media after join failure',
+          );
+        }
+      }
       _hasRequestedJoin = _isLoading = false;
       _isJoining = false;
       if (mounted) {

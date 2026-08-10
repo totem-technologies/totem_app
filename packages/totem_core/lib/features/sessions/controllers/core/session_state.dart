@@ -213,11 +213,13 @@ class SessionOptions {
   int get hashCode => eventSlug.hashCode ^ token.hashCode;
 }
 
-/// Pre-join media whose ownership is transferred to the session join flow.
+/// Pre-join media whose ownership is transferred to the session controller.
 ///
 /// LiveKit can publish already-created preview tracks through FastConnect. This
 /// avoids opening a second camera and microphone while the pre-join preview is
-/// still active, which is particularly important for Safari.
+/// still active, which is particularly important for Safari. The controller
+/// retains tracks that have not reached LiveKit and disposes them during session
+/// teardown; tracks handed to LiveKit are disposed with the room.
 @immutable
 class SessionJoinMedia {
   const SessionJoinMedia({

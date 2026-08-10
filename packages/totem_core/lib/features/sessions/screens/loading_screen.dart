@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:audio_session/audio_session.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -62,17 +63,20 @@ class PreJoinMediaStatus {
 /// exposing the widget's State object.
 class PreJoinMediaController {
   Object? _owner;
-  Future<SessionJoinMedia> Function()? _takeForJoin;
-  Future<PreJoinMediaStatus> Function()? _retryFailedMedia;
+  AsyncValueGetter<SessionJoinMedia>? _takeForJoin;
+  AsyncValueGetter<PreJoinMediaStatus>? _retryFailedMedia;
+  AsyncValueGetter<PreJoinMediaStatus>? _resetAfterFailedJoin;
 
   void _attach({
     required Object owner,
-    required Future<SessionJoinMedia> Function() takeForJoin,
-    required Future<PreJoinMediaStatus> Function() retryFailedMedia,
+    required AsyncValueGetter<SessionJoinMedia> takeForJoin,
+    required AsyncValueGetter<PreJoinMediaStatus> retryFailedMedia,
+    required AsyncValueGetter<PreJoinMediaStatus> resetAfterFailedJoin,
   }) {
     _owner = owner;
     _takeForJoin = takeForJoin;
     _retryFailedMedia = retryFailedMedia;
+    _resetAfterFailedJoin = resetAfterFailedJoin;
   }
 
   void _detach(Object owner) {
@@ -80,6 +84,7 @@ class PreJoinMediaController {
       _owner = null;
       _takeForJoin = null;
       _retryFailedMedia = null;
+      _resetAfterFailedJoin = null;
     }
   }
 
@@ -97,6 +102,16 @@ class PreJoinMediaController {
       throw StateError('Pre-join media is not available');
     }
     return retryFailedMedia();
+  }
+
+  /// Releases the one-shot transfer state after the failed room has been
+  /// disposed and creates fresh preview tracks for another join attempt.
+  Future<PreJoinMediaStatus> resetAfterFailedJoin() {
+    final resetAfterFailedJoin = _resetAfterFailedJoin;
+    if (resetAfterFailedJoin == null) {
+      throw StateError('Pre-join media is not available');
+    }
+    return resetAfterFailedJoin();
   }
 }
 
@@ -260,6 +275,7 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
       owner: this,
       takeForJoin: _takeMediaForJoin,
       retryFailedMedia: _retryFailedMedia,
+      resetAfterFailedJoin: _resetAfterFailedJoin,
     );
     _mediaInitialization = _initializePreviewMedia();
     _detectHeadphones();
@@ -274,6 +290,7 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
         owner: this,
         takeForJoin: _takeMediaForJoin,
         retryFailedMedia: _retryFailedMedia,
+        resetAfterFailedJoin: _resetAfterFailedJoin,
       );
     }
   }
@@ -503,6 +520,40 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
     _mediaInitialization = retry();
     await _mediaInitialization;
     _notifyMediaPreferencesChanged();
+    return _mediaStatus;
+  }
+
+  Future<PreJoinMediaStatus> _resetAfterFailedJoin() async {
+    await _mediaInitialization;
+    await Future.wait([
+      ?_cameraOperation,
+      ?_microphoneOperation,
+    ]);
+
+    // The failed Session/Room teardown owns the transferred tracks. Drop all
+    // preview references without stopping them here, then acquire fresh media.
+    _previewVideoTrack = null;
+    _previewAudioTrack = null;
+    _transferredVideoTrack = null;
+    _transferredAudioTrack = null;
+    _mediaTransferred = false;
+
+    _cameraInitializationComplete = !_isCameraOn;
+    _microphoneInitializationComplete = !_isMicOn;
+    _cameraError = null;
+    _microphoneError = null;
+
+    Future<void> reinitialize() async {
+      // Keep capture requests sequential for cold-start Safari.
+      if (_isCameraOn) await _startCameraInitialization();
+      if (_isMicOn) await _startMicrophoneInitialization();
+    }
+
+    _mediaInitialization = reinitialize();
+    await _mediaInitialization;
+    _notifyMediaPreferencesChanged();
+    _notifyMediaStatusChanged();
+    if (mounted) setState(() {});
     return _mediaStatus;
   }
 
