@@ -95,7 +95,10 @@ class BackgroundActivityDialog extends StatelessWidget {
 ///
 /// Returns true if permissions were eventually granted, false if the
 /// user chose to go back without granting.
-Future<bool> showWebPermissionsDeniedDialog(BuildContext context) async {
+Future<bool> showWebPermissionsDeniedDialog(
+  BuildContext context, {
+  Future<bool> Function()? retryPermissions,
+}) async {
   final container = ProviderScope.containerOf(context, listen: false);
 
   if (!context.mounted) return false;
@@ -179,24 +182,32 @@ Future<bool> showWebPermissionsDeniedDialog(BuildContext context) async {
     return false;
   }
 
-  // Re-request permissions
-  final controller = container.read(
-    permissionsControllerProvider.notifier,
-  );
-  await controller.requestPermissions();
+  final permissionsGranted = await (() async {
+    if (retryPermissions != null) {
+      return retryPermissions();
+    }
+
+    // Native and legacy callers still use the permissions controller. The
+    // Session pre-join flow supplies [retryPermissions] on web so the real
+    // preview tracks request access without opening throwaway media streams.
+    final controller = container.read(
+      permissionsControllerProvider.notifier,
+    );
+    await controller.requestPermissions();
+    return (await controller.currentStatuses).requiredPermissionsGranted;
+  })();
 
   if (!context.mounted) return false;
 
-  final statuses = await controller.currentStatuses;
-
-  if (!context.mounted) return false;
-
-  if (statuses.requiredPermissionsGranted) {
+  if (permissionsGranted) {
     return true;
   }
 
   // Permissions still not granted - show dialog again.
-  return showWebPermissionsDeniedDialog(context);
+  return showWebPermissionsDeniedDialog(
+    context,
+    retryPermissions: retryPermissions,
+  );
 }
 
 Future<bool> showPermissionsRequestSheet(BuildContext context) async {

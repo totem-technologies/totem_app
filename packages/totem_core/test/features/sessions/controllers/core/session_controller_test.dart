@@ -116,6 +116,7 @@ class _CountingRoom implements Room {
   int connectCount = 0;
   int disconnectCount = 0;
   int disposeCount = 0;
+  FastConnectOptions? lastFastConnectOptions;
 
   @override
   LocalParticipant get localParticipant => participant;
@@ -134,6 +135,7 @@ class _CountingRoom implements Room {
     RoomOptions? roomOptions,
   }) async {
     connectCount++;
+    lastFastConnectOptions = fastConnectOptions;
   }
 
   @override
@@ -362,6 +364,71 @@ void main() {
         expect(room.prepareConnectionCount, 1);
         expect(room.connectCount, 1);
       });
+
+      test(
+        'join publishes the existing pre-join tracks with FastConnect',
+        () async {
+          const eventSlug = 'test-session';
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+
+          const options = SessionOptions(
+            eventSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: true,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final localParticipant = MockLocalParticipant();
+          when(() => localParticipant.setCameraEnabled(any<bool>())).thenAnswer(
+            (_) async => null,
+          );
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          final cameraTrack = MockLocalVideoTrack();
+          final microphoneTrack = MockLocalAudioTrack();
+          final cameraPublication = MockLocalTrackPublication(
+            videoTrack: cameraTrack,
+          );
+          localParticipant.localTrackPublications = [cameraPublication];
+
+          final room = _CountingRoom(localParticipant);
+          controller.room = room;
+
+          await controller.join(
+            joinMedia: SessionJoinMedia(
+              cameraTrack: cameraTrack,
+              microphoneTrack: microphoneTrack,
+            ),
+          );
+
+          expect(
+            room.lastFastConnectOptions?.camera.track,
+            same(cameraTrack),
+          );
+          expect(
+            room.lastFastConnectOptions?.microphone.track,
+            same(microphoneTrack),
+          );
+          verifyNever(cameraTrack.stop);
+          verifyNever(cameraTrack.dispose);
+          verify(microphoneTrack.stop).called(1);
+          verify(microphoneTrack.dispose).called(1);
+        },
+      );
     });
 
     group('Test-Visible Helpers', () {

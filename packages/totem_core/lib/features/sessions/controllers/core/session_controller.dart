@@ -379,10 +379,11 @@ class SessionController extends _$SessionController {
     await leave();
   }
 
-  Future<void> join() async {
+  Future<void> join({SessionJoinMedia? joinMedia}) async {
     if (room != null) {
       if (state.connectionState == RoomConnectionState.connected ||
           state.connectionState == RoomConnectionState.connecting) {
+        await _disposeUnpublishedJoinMedia(joinMedia);
         return;
       }
     }
@@ -394,33 +395,33 @@ class SessionController extends _$SessionController {
       ),
     );
 
-    await initializeConnection(
-      roomOptions: RoomOptions(
-        defaultCameraCaptureOptions: options.cameraOptions,
-        defaultAudioCaptureOptions: const AudioCaptureOptions(),
-        defaultAudioOutputOptions: AudioOutputOptions(
-          speakerOn: options.speakerEnabled,
-        ),
-        dynacast: true,
-        defaultVideoPublishOptions: defaultVideoPublishOptions,
-        adaptiveStream: true,
-      ),
-      url: AppConfig.instance.liveKitUrl,
-      token: options.token,
-    );
-
-    await ref
-        .read(sessionInfraControllerProvider.notifier)
-        .activate(event: event);
-
-    _syncTimer?.cancel();
-    _syncTimer = Timer.periodic(
-      SessionController.syncTimerDuration,
-      (_) => _onRoomChanges(),
-    );
-    _startStatePolling();
-
     try {
+      await initializeConnection(
+        roomOptions: RoomOptions(
+          defaultCameraCaptureOptions: options.cameraOptions,
+          defaultAudioCaptureOptions: const AudioCaptureOptions(),
+          defaultAudioOutputOptions: AudioOutputOptions(
+            speakerOn: options.speakerEnabled,
+          ),
+          dynacast: true,
+          defaultVideoPublishOptions: defaultVideoPublishOptions,
+          adaptiveStream: true,
+        ),
+        url: AppConfig.instance.liveKitUrl,
+        token: options.token,
+      );
+
+      await ref
+          .read(sessionInfraControllerProvider.notifier)
+          .activate(event: event);
+
+      _syncTimer?.cancel();
+      _syncTimer = Timer.periodic(
+        SessionController.syncTimerDuration,
+        (_) => _onRoomChanges(),
+      );
+      _startStatePolling();
+
       final connectOptions = defaultTargetPlatform == TargetPlatform.iOS
           ? const ConnectOptions(
               timeouts: Timeouts(
@@ -434,12 +435,23 @@ class SessionController extends _$SessionController {
             )
           : null;
 
+      final initialCameraTrack = options.cameraEnabled
+          ? joinMedia?.cameraTrack
+          : null;
+      final initialMicrophoneTrack = options.microphoneEnabled
+          ? joinMedia?.microphoneTrack
+          : null;
+
       await _connect(
         url: AppConfig.instance.liveKitUrl,
         token: options.token,
         fastConnectOptions: FastConnectOptions(
-          microphone: TrackOption(enabled: options.microphoneEnabled),
-          camera: TrackOption(enabled: options.cameraEnabled),
+          microphone: initialMicrophoneTrack != null
+              ? TrackOption(track: initialMicrophoneTrack)
+              : TrackOption(enabled: options.microphoneEnabled),
+          camera: initialCameraTrack != null
+              ? TrackOption(track: initialCameraTrack)
+              : TrackOption(enabled: options.cameraEnabled),
         ),
         connectOptions: connectOptions,
       );
@@ -485,7 +497,43 @@ class SessionController extends _$SessionController {
         stackTrace: stackTrace,
         message: 'Unexpected error occurred',
       );
+    } finally {
+      await _disposeUnpublishedJoinMedia(joinMedia);
     }
+  }
+
+  Future<void> _disposeUnpublishedJoinMedia(SessionJoinMedia? joinMedia) async {
+    if (joinMedia == null || joinMedia.isEmpty) return;
+
+    final publishedTracks = _room?.localParticipant
+        ?.getTrackPublications()
+        .map((publication) => publication.track)
+        .whereType<LocalTrack>()
+        .toList();
+
+    Future<void> disposeIfUnpublished(LocalTrack? track) async {
+      if (track == null) return;
+      if (publishedTracks?.any((published) => identical(published, track)) ??
+          false) {
+        return;
+      }
+
+      try {
+        await track.stop();
+        await track.dispose();
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to dispose unpublished pre-join media',
+        );
+      }
+    }
+
+    await Future.wait([
+      disposeIfUnpublished(joinMedia.cameraTrack),
+      disposeIfUnpublished(joinMedia.microphoneTrack),
+    ]);
   }
 
   Future<void> leave() async {
@@ -654,7 +702,7 @@ class SessionController extends _$SessionController {
     if (currentRoom == null) return;
 
     final cameraEnabled = options.cameraEnabled;
-    currentRoom.localParticipant?.setCameraEnabled(cameraEnabled);
+    await currentRoom.localParticipant?.setCameraEnabled(cameraEnabled);
 
     final shouldEnableMicrophone = () {
       if (state.roomState.status == RoomStatus.waitingRoom &&

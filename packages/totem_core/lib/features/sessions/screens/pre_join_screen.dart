@@ -80,8 +80,12 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   MediaPreferences _mediaPreferences = const MediaPreferences();
 
   final GlobalKey _loadingScreenKey = GlobalKey();
+  final PreJoinMediaController _preJoinMediaController =
+      PreJoinMediaController();
 
   bool _permissionsGranted = false;
+  bool _showingWebPermissionsDialog = false;
+  bool _reportedFullyDisplayed = false;
 
   @override
   void initState() {
@@ -101,6 +105,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 
   void _initializeAndCheckPermissions() {
+    if (kIsWeb || kIsWasm) {
+      // The actual pre-join tracks request web media access. Using
+      // permission_handler here would open and stop additional getUserMedia
+      // streams, which can leave a cold-started Safari capture in a bad state.
+      return;
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
 
@@ -114,14 +125,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       if (!mounted) return;
 
       if (!granted) {
-        if (kIsWeb || kIsWasm) {
-          // On web, show a message instead of popping to avoid
-          // "nothing to pop" crashes when this is the initial route.
-          final retryGranted = await showWebPermissionsDeniedDialog(context);
-          if (!mounted) return;
-          setState(() => _permissionsGranted = retryGranted);
-          return;
-        }
         context.pop();
         return;
       }
@@ -134,9 +137,57 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       }
 
       if (mounted) {
-        SentryDisplayWidget.of(context).reportFullyDisplayed();
+        _reportFullyDisplayed();
       }
     });
+  }
+
+  void _reportFullyDisplayed() {
+    if (_reportedFullyDisplayed || !mounted) return;
+    _reportedFullyDisplayed = true;
+    SentryDisplayWidget.of(context).reportFullyDisplayed();
+  }
+
+  void _onPreJoinMediaStatusChanged(PreJoinMediaStatus status) {
+    if (!(kIsWeb || kIsWasm) || !status.initializationComplete || !mounted) {
+      return;
+    }
+
+    final permissionsGranted = status.requiredPermissionsGranted;
+    if (_permissionsGranted != permissionsGranted) {
+      setState(() => _permissionsGranted = permissionsGranted);
+    }
+
+    if (permissionsGranted) {
+      _reportFullyDisplayed();
+    } else if (!_showingWebPermissionsDialog) {
+      _showingWebPermissionsDialog = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(_showWebPermissionsDialog());
+      });
+    }
+  }
+
+  Future<void> _showWebPermissionsDialog() async {
+    if (!mounted) {
+      _showingWebPermissionsDialog = false;
+      return;
+    }
+
+    final granted = await showWebPermissionsDeniedDialog(
+      context,
+      retryPermissions: () async {
+        final status = await _preJoinMediaController.retryFailedMedia();
+        return status.requiredPermissionsGranted;
+      },
+    );
+
+    _showingWebPermissionsDialog = false;
+    if (!mounted) return;
+    if (_permissionsGranted != granted) {
+      setState(() => _permissionsGranted = granted);
+    }
+    if (granted) _reportFullyDisplayed();
   }
 
   // ===== UI =====
@@ -145,9 +196,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     return PrejoinSessionScreen(
       key: _loadingScreenKey,
       previewTrackFactory: widget.previewTrackFactory,
+      mediaController: _preJoinMediaController,
       onMediaPreferencesChanged: (prefs) {
         _mediaPreferences = prefs;
       },
+      onMediaStatusChanged: _onPreJoinMediaStatusChanged,
       joinCard: JoinTransitionCard(
         margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
         keepActionLoadingOnSuccess: true,
@@ -248,7 +301,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         sessionControllerProvider(_sessionOptions!).notifier,
       )..preventAutoDispose();
 
-      await session.join();
+      final joinMedia = await _preJoinMediaController.takeForJoin();
+      await session.join(joinMedia: joinMedia);
 
       _isLoading = false;
     } catch (error, stackTrace) {

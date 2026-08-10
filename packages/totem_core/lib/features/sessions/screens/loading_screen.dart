@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -21,6 +23,81 @@ abstract class PreJoinPreviewTrackFactory {
   );
 
   Future<LocalAudioTrack?> createAudioTrack();
+}
+
+@immutable
+class PreJoinMediaStatus {
+  const PreJoinMediaStatus({
+    required this.cameraInitializationComplete,
+    required this.microphoneInitializationComplete,
+    required this.cameraPermissionGranted,
+    required this.microphonePermissionGranted,
+    this.cameraError,
+    this.microphoneError,
+  });
+
+  const PreJoinMediaStatus.initial()
+    : cameraInitializationComplete = false,
+      microphoneInitializationComplete = false,
+      cameraPermissionGranted = false,
+      microphonePermissionGranted = false,
+      cameraError = null,
+      microphoneError = null;
+
+  final bool cameraInitializationComplete;
+  final bool microphoneInitializationComplete;
+  final bool cameraPermissionGranted;
+  final bool microphonePermissionGranted;
+  final Object? cameraError;
+  final Object? microphoneError;
+
+  bool get initializationComplete =>
+      cameraInitializationComplete && microphoneInitializationComplete;
+
+  bool get requiredPermissionsGranted =>
+      cameraPermissionGranted && microphonePermissionGranted;
+}
+
+/// Coordinates the pre-join preview with the Session join flow without
+/// exposing the widget's State object.
+class PreJoinMediaController {
+  Object? _owner;
+  Future<SessionJoinMedia> Function()? _takeForJoin;
+  Future<PreJoinMediaStatus> Function()? _retryFailedMedia;
+
+  void _attach({
+    required Object owner,
+    required Future<SessionJoinMedia> Function() takeForJoin,
+    required Future<PreJoinMediaStatus> Function() retryFailedMedia,
+  }) {
+    _owner = owner;
+    _takeForJoin = takeForJoin;
+    _retryFailedMedia = retryFailedMedia;
+  }
+
+  void _detach(Object owner) {
+    if (identical(_owner, owner)) {
+      _owner = null;
+      _takeForJoin = null;
+      _retryFailedMedia = null;
+    }
+  }
+
+  Future<SessionJoinMedia> takeForJoin() {
+    final takeForJoin = _takeForJoin;
+    if (takeForJoin == null) {
+      throw StateError('Pre-join media is not available');
+    }
+    return takeForJoin();
+  }
+
+  Future<PreJoinMediaStatus> retryFailedMedia() {
+    final retryFailedMedia = _retryFailedMedia;
+    if (retryFailedMedia == null) {
+      throw StateError('Pre-join media is not available');
+    }
+    return retryFailedMedia();
+  }
 }
 
 class _LiveKitPreJoinPreviewTrackFactory extends PreJoinPreviewTrackFactory {
@@ -97,8 +174,10 @@ class PrejoinSessionScreen extends StatefulWidget {
   const PrejoinSessionScreen({
     this.joinCard,
     PreJoinPreviewTrackFactory? previewTrackFactory,
+    this.mediaController,
     this.locked = false,
     this.onMediaPreferencesChanged,
+    this.onMediaStatusChanged,
     super.key,
   }) : previewTrackFactory =
            previewTrackFactory ?? const _LiveKitPreJoinPreviewTrackFactory();
@@ -107,12 +186,17 @@ class PrejoinSessionScreen extends StatefulWidget {
 
   final PreJoinPreviewTrackFactory previewTrackFactory;
 
+  final PreJoinMediaController? mediaController;
+
   /// Whether the buttons should not perform any actions;
   final bool locked;
 
   /// Called whenever the user changes their media preferences (camera, mic,
   /// speaker, or camera options).
   final ValueChanged<MediaPreferences>? onMediaPreferencesChanged;
+
+  /// Called as the real preview tracks acquire camera and microphone access.
+  final ValueChanged<PreJoinMediaStatus>? onMediaStatusChanged;
 
   @override
   State<PrejoinSessionScreen> createState() => _PrejoinSessionScreenState();
@@ -121,10 +205,23 @@ class PrejoinSessionScreen extends StatefulWidget {
 class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
   // Preview media state
   LocalVideoTrack? _previewVideoTrack;
+  LocalVideoTrack? _transferredVideoTrack;
   var _isCameraOn = true;
 
   LocalAudioTrack? _previewAudioTrack;
+  LocalAudioTrack? _transferredAudioTrack;
   var _isMicOn = true;
+
+  Future<void>? _mediaInitialization;
+  Future<void>? _cameraOperation;
+  Future<void>? _microphoneOperation;
+  var _cameraInitializationComplete = false;
+  var _microphoneInitializationComplete = false;
+  var _cameraPermissionGranted = false;
+  var _microphonePermissionGranted = false;
+  Object? _cameraError;
+  Object? _microphoneError;
+  var _mediaTransferred = false;
 
   // Join configuration state
   CameraCaptureOptions _cameraOptions =
@@ -143,17 +240,48 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
     );
   }
 
+  PreJoinMediaStatus get _mediaStatus => PreJoinMediaStatus(
+    cameraInitializationComplete: _cameraInitializationComplete,
+    microphoneInitializationComplete: _microphoneInitializationComplete,
+    cameraPermissionGranted: _cameraPermissionGranted,
+    microphonePermissionGranted: _microphonePermissionGranted,
+    cameraError: _cameraError,
+    microphoneError: _microphoneError,
+  );
+
+  void _notifyMediaStatusChanged() {
+    widget.onMediaStatusChanged?.call(_mediaStatus);
+  }
+
   @override
   void initState() {
     super.initState();
-    _initializeLocalVideo();
-    _initializeLocalAudio();
+    widget.mediaController?._attach(
+      owner: this,
+      takeForJoin: _takeMediaForJoin,
+      retryFailedMedia: _retryFailedMedia,
+    );
+    _mediaInitialization = _initializePreviewMedia();
     _detectHeadphones();
   }
 
   @override
+  void didUpdateWidget(covariant PrejoinSessionScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.mediaController, widget.mediaController)) {
+      oldWidget.mediaController?._detach(this);
+      widget.mediaController?._attach(
+        owner: this,
+        takeForJoin: _takeMediaForJoin,
+        retryFailedMedia: _retryFailedMedia,
+      );
+    }
+  }
+
+  @override
   void dispose() {
-    _disposePreviewTracks();
+    widget.mediaController?._detach(this);
+    unawaited(_disposePreviewTracks());
     super.dispose();
   }
 
@@ -183,8 +311,44 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
 
   // ===== Preview Tracks =====
 
+  Future<void> _initializePreviewMedia() async {
+    // Initialize sequentially. In particular, Safari is sensitive to
+    // overlapping getUserMedia calls during a cold browser start.
+    await _startCameraInitialization();
+    await _startMicrophoneInitialization();
+  }
+
+  Future<void> _startCameraInitialization() {
+    return _queueCameraOperation(_initializeLocalVideo);
+  }
+
+  Future<LocalAudioTrack?> _startMicrophoneInitialization() {
+    final operation = _initializeLocalAudio();
+    _microphoneOperation = operation;
+    return operation;
+  }
+
+  Future<void> _stopCameraPreview() {
+    return _queueCameraOperation(_disposePreviewVideoTrack);
+  }
+
+  Future<void> _queueCameraOperation(Future<void> Function() operation) {
+    final previous = _cameraOperation;
+    final next = () async {
+      await previous;
+      await operation();
+    }();
+    _cameraOperation = next;
+    return next;
+  }
+
+  Future<void> _stopMicrophonePreview() {
+    return _microphoneOperation = _disposePreviewAudioTrack();
+  }
+
   Future<void> _initializeLocalVideo() async {
     await _disposePreviewVideoTrack();
+    _cameraPermissionGranted = false;
 
     try {
       final track = await widget.previewTrackFactory.createVideoTrack(
@@ -197,20 +361,26 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
       }
       _previewVideoTrack = track;
       await _previewVideoTrack?.start();
+      _cameraPermissionGranted = track != null;
+      _cameraError = null;
     } catch (error, stackTrace) {
       _isCameraOn = false;
+      _cameraError = error;
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Failed to create local video track',
       );
     } finally {
+      _cameraInitializationComplete = true;
+      _notifyMediaStatusChanged();
       if (mounted) setState(() {});
     }
   }
 
   Future<LocalAudioTrack?> _initializeLocalAudio() async {
     await _disposePreviewAudioTrack();
+    _microphonePermissionGranted = false;
 
     try {
       final track = await widget.previewTrackFactory.createAudioTrack();
@@ -222,30 +392,37 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
       _previewAudioTrack = track;
       await _previewAudioTrack?.enable();
       await _previewAudioTrack?.start();
+      _microphonePermissionGranted = track != null;
+      _microphoneError = null;
       return _previewAudioTrack;
     } catch (error, stackTrace) {
       _isMicOn = false;
+      _microphoneError = error;
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Failed to create local audio track',
       );
     } finally {
+      _microphoneInitializationComplete = true;
+      _notifyMediaStatusChanged();
       if (mounted) setState(() {});
     }
     return null;
   }
 
   Future<void> _disposePreviewVideoTrack() async {
-    if (_previewVideoTrack != null) {
+    final track = _previewVideoTrack;
+    if (track != null) {
+      if (identical(track, _transferredVideoTrack)) return;
       try {
-        await _previewVideoTrack?.stop();
+        await track.stop();
       } catch (e) {
         ErrorHandler.logError(e, message: 'Failed to stop preview track');
       }
 
       try {
-        await _previewVideoTrack?.dispose();
+        await track.dispose();
       } catch (e) {
         ErrorHandler.logError(e, message: 'Failed to dispose preview track');
       } finally {
@@ -255,14 +432,16 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
   }
 
   Future<void> _disposePreviewAudioTrack() async {
-    if (_previewAudioTrack != null) {
+    final track = _previewAudioTrack;
+    if (track != null) {
+      if (identical(track, _transferredAudioTrack)) return;
       try {
-        await _previewAudioTrack?.stop();
+        await track.stop();
       } catch (e) {
         ErrorHandler.logError(e, message: 'Failed to stop preview audio track');
       }
       try {
-        await _previewAudioTrack?.dispose();
+        await track.dispose();
       } catch (e) {
         ErrorHandler.logError(
           e,
@@ -281,6 +460,52 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
     ]);
   }
 
+  Future<SessionJoinMedia> _takeMediaForJoin() async {
+    if (_mediaTransferred) {
+      throw StateError('Pre-join media has already been transferred');
+    }
+
+    await _mediaInitialization;
+    await Future.wait([
+      ?_cameraOperation,
+      ?_microphoneOperation,
+    ]);
+
+    final cameraTrack = _isCameraOn ? _previewVideoTrack : null;
+    final microphoneTrack = _isMicOn ? _previewAudioTrack : null;
+    _transferredVideoTrack = cameraTrack;
+    _transferredAudioTrack = microphoneTrack;
+    _mediaTransferred = true;
+
+    return SessionJoinMedia(
+      cameraTrack: cameraTrack,
+      microphoneTrack: microphoneTrack,
+    );
+  }
+
+  Future<PreJoinMediaStatus> _retryFailedMedia() async {
+    await _mediaInitialization;
+    if (_mediaTransferred) return _mediaStatus;
+
+    Future<void> retry() async {
+      if (!_cameraPermissionGranted) {
+        _cameraInitializationComplete = false;
+        _isCameraOn = true;
+        await _startCameraInitialization();
+      }
+      if (!_microphonePermissionGranted) {
+        _microphoneInitializationComplete = false;
+        _isMicOn = true;
+        await _startMicrophoneInitialization();
+      }
+    }
+
+    _mediaInitialization = retry();
+    await _mediaInitialization;
+    _notifyMediaPreferencesChanged();
+    return _mediaStatus;
+  }
+
   // ===== Local controls =====
 
   bool _isTogglingCamera = false;
@@ -293,10 +518,10 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
       if (_isCameraOn) {
         setState(() => _isCameraOn = false);
         _notifyMediaPreferencesChanged();
-        await _disposePreviewVideoTrack();
+        await _stopCameraPreview();
         if (mounted) setState(() {});
       } else {
-        await _initializeLocalVideo();
+        await _startCameraInitialization();
         if (mounted) {
           setState(() => _isCameraOn = true);
           _notifyMediaPreferencesChanged();
@@ -318,10 +543,10 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
       _notifyMediaPreferencesChanged();
 
       if (_isMicOn) {
-        final track = await _initializeLocalAudio();
+        final track = await _startMicrophoneInitialization();
         await track?.unmute(stopOnMute: false);
       } else {
-        await _disposePreviewAudioTrack();
+        await _stopMicrophonePreview();
         if (mounted) setState(() {});
       }
     } finally {
@@ -401,7 +626,9 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
                           );
                         });
                         _notifyMediaPreferencesChanged();
-                        if (_isCameraOn) _initializeLocalVideo();
+                        if (_isCameraOn) {
+                          unawaited(_startCameraInitialization());
+                        }
                       },
                       onCameraDeviceSelected: (device) {
                         setState(() {
@@ -410,7 +637,9 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
                           );
                         });
                         _notifyMediaPreferencesChanged();
-                        if (_isCameraOn) _initializeLocalVideo();
+                        if (_isCameraOn) {
+                          unawaited(_startCameraInitialization());
+                        }
                       },
                     ),
                   ],

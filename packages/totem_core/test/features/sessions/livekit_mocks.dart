@@ -80,7 +80,10 @@ class MockLocalParticipant extends Mock implements LocalParticipant {
   List<LocalTrackPublication<LocalVideoTrack>> get videoTrackPublications => [];
 
   @override
-  List<LocalTrackPublication<LocalTrack>> getTrackPublications() => [];
+  List<LocalTrackPublication<LocalTrack>> getTrackPublications() =>
+      localTrackPublications;
+
+  List<LocalTrackPublication<LocalTrack>> localTrackPublications = [];
 
   final listener = _MockParticipantEventsListener();
 
@@ -235,10 +238,14 @@ class MockLocalTrackPublication extends Mock
   MockLocalTrackPublication({
     bool muted = false,
     bool isActive = true,
+    LocalVideoTrack? videoTrack,
   }) {
     when(
       () => track,
-    ).thenAnswer((_) => MockLocalVideoTrack(muted: muted, isActive: isActive));
+    ).thenAnswer(
+      (_) =>
+          videoTrack ?? MockLocalVideoTrack(muted: muted, isActive: isActive),
+    );
   }
 }
 

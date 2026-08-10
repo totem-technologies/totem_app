@@ -150,13 +150,17 @@ class _PreviewTrackFactory extends PreJoinPreviewTrackFactory {
 }
 
 class _NoOpSessionController extends sessions.SessionController {
+  static session_state.SessionJoinMedia? lastJoinMedia;
+
   @override
   session_state.SessionRoomState build(session_state.SessionOptions options) {
     return _createConnectedSessionState();
   }
 
   @override
-  Future<void> join() async {}
+  Future<void> join({session_state.SessionJoinMedia? joinMedia}) async {
+    lastJoinMedia = joinMedia;
+  }
 }
 
 void main() {
@@ -537,12 +541,65 @@ void main() {
       });
 
       testWidgets(
+        'transfers the existing preview tracks without disposing them',
+        (tester) async {
+          final previewTracks = _PreviewTrackFactory();
+          final mediaController = PreJoinMediaController();
+          final statuses = <PreJoinMediaStatus>[];
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                authControllerProvider.overrideWith(
+                  () => FakeAuthController(AuthState.unauthenticated()),
+                ),
+              ],
+              child: MaterialApp(
+                home: PrejoinSessionScreen(
+                  previewTrackFactory: previewTracks,
+                  mediaController: mediaController,
+                  onMediaStatusChanged: statuses.add,
+                ),
+              ),
+            ),
+          );
+
+          await pumpUntilPreviewTracksReady(tester, previewTracks);
+          await tester.pump();
+
+          final videoTrack = previewTracks.videoTracks.single;
+          final audioTrack = previewTracks.audioTracks.single;
+          final joinMedia = await mediaController.takeForJoin();
+
+          expect(joinMedia.cameraTrack, same(videoTrack));
+          expect(joinMedia.microphoneTrack, same(audioTrack));
+          expect(statuses.last.initializationComplete, isTrue);
+          expect(statuses.last.requiredPermissionsGranted, isTrue);
+
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+
+          verifyNever(videoTrack.stop);
+          verifyNever(videoTrack.dispose);
+          verifyNever(audioTrack.stop);
+          verifyNever(audioTrack.dispose);
+          expect(previewTracks.videoTracks, hasLength(1));
+          expect(previewTracks.audioTracks, hasLength(1));
+        },
+      );
+
+      testWidgets(
         'does not allow changing action bar items after join is requested',
         (tester) async {
+          final previewTracks = _PreviewTrackFactory();
+          _NoOpSessionController.lastJoinMedia = null;
+
           await pumpPreJoinScreen(
             tester,
             useNoOpSessionController: true,
+            previewTrackFactory: previewTracks,
           );
+          await pumpUntilPreviewTracksReady(tester, previewTracks);
 
           expect(
             tester
@@ -580,6 +637,15 @@ void main() {
             await tester.tap(buttonFinder.first);
           }
           await tester.pump();
+
+          expect(
+            _NoOpSessionController.lastJoinMedia?.cameraTrack,
+            same(previewTracks.videoTracks.single),
+          );
+          expect(
+            _NoOpSessionController.lastJoinMedia?.microphoneTrack,
+            same(previewTracks.audioTracks.single),
+          );
 
           expect(
             tester
