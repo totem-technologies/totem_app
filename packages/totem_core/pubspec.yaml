@@ -44,7 +44,7 @@ dependencies:
   livekit_client:
     git:
       url: https://github.com/livekit/client-sdk-flutter
-      ref: d3c53f20f1c0330449ef88cf8b3ec6114c5346bb
+      ref: 7485922364b260f05aea01c166062762933572cb
   # path: ../client-sdk-flutter
   # git:
   # url: https://github.com/livekit/client-sdk-flutter/
@@ -56,7 +56,7 @@ dependencies:
   audioplayers: ^6.7.0
   in_app_review: ^2.0.11
   battery_plus: ^7.0.0
-  permission_handler: ^12.0.2
+  permission_handler: ^13.0.0
   screen_protector: 1.5.1
 
   # UI & Utilities
