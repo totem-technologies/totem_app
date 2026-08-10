@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -124,6 +125,13 @@ class _CountingRoom implements Room {
 
   @override
   LocalParticipant get localParticipant => participant;
+
+  @override
+  UnmodifiableMapView<String, RemoteParticipant> get remoteParticipants =>
+      UnmodifiableMapView(const {});
+
+  @override
+  String? get metadata => null;
 
   @override
   Future<void> prepareConnection(String url, String? token) async {
@@ -321,6 +329,71 @@ void main() {
             controller.state.connectionState,
             RoomConnectionState.disconnected,
           );
+        },
+      );
+
+      test(
+        'camera setup failure does not skip initial microphone setup',
+        () async {
+          const eventSlug = 'test-session';
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+
+          const options = SessionOptions(
+            eventSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: true,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final localParticipant = MockLocalParticipant();
+          when(
+            () => localParticipant.setCameraEnabled(true),
+          ).thenThrow(StateError('camera failed'));
+          when(
+            () => localParticipant.setCameraEnabled(false),
+          ).thenAnswer((_) async => null);
+          when(localParticipant.isMicrophoneEnabled).thenReturn(false);
+          when(
+            () => localParticipant.setMicrophoneEnabled(true),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(false),
+          ).thenAnswer((_) async => null);
+
+          final room = _CountingRoom(localParticipant);
+          controller.room = room;
+          await controller.initializeConnection(
+            roomOptions: RoomOptions(
+              defaultCameraCaptureOptions: options.cameraOptions,
+              defaultAudioCaptureOptions: const AudioCaptureOptions(),
+              defaultAudioOutputOptions: AudioOutputOptions(
+                speakerOn: options.speakerEnabled,
+              ),
+            ),
+            url: 'wss://example.livekit.cloud',
+            token: options.token,
+          );
+
+          await room.listener.trigger(
+            RoomConnectedEvent(room: room, metadata: null),
+          );
+          await pumpEventQueue();
+
+          verify(() => localParticipant.setCameraEnabled(true)).called(1);
+          verify(() => localParticipant.setMicrophoneEnabled(true)).called(1);
         },
       );
 

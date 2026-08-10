@@ -257,7 +257,7 @@ class SessionController extends _$SessionController {
 
     _onRoomChanges();
 
-    _applyJoinMediaState();
+    unawaited(_applyJoinMediaState());
     _dispatch(
       const ConnectionChanged(
         RoomConnectionState.connected,
@@ -770,7 +770,15 @@ class SessionController extends _$SessionController {
     if (currentRoom == null) return;
 
     final cameraEnabled = options.cameraEnabled;
-    await currentRoom.localParticipant?.setCameraEnabled(cameraEnabled);
+    try {
+      await currentRoom.localParticipant?.setCameraEnabled(cameraEnabled);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to apply initial camera state',
+      );
+    }
 
     final shouldEnableMicrophone = () {
       if (state.roomState.status == RoomStatus.waitingRoom &&
@@ -786,10 +794,18 @@ class SessionController extends _$SessionController {
       return isCurrentUserKeeper() && options.microphoneEnabled;
     }();
 
-    if (shouldEnableMicrophone) {
-      await devices.enableMicrophone();
-    } else {
-      await devices.disableMicrophone();
+    try {
+      if (shouldEnableMicrophone) {
+        await devices.enableMicrophone();
+      } else {
+        await devices.disableMicrophone();
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to apply initial microphone state',
+      );
     }
   }
 
