@@ -331,8 +331,23 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
   Future<void> _initializePreviewMedia() async {
     // Initialize sequentially. In particular, Safari is sensitive to
     // overlapping getUserMedia calls during a cold browser start.
-    await _startCameraInitialization();
-    await _startMicrophoneInitialization();
+    if (_isCameraOn) {
+      await _startCameraInitialization();
+    } else {
+      _cameraInitializationComplete = true;
+      _cameraPermissionGranted = true;
+      _notifyMediaStatusChanged();
+    }
+
+    // Re-read the preference after camera initialization. The user may have
+    // disabled the microphone while the camera request was in flight.
+    if (_isMicOn) {
+      await _startMicrophoneInitialization();
+    } else {
+      _microphoneInitializationComplete = true;
+      _microphonePermissionGranted = true;
+      _notifyMediaStatusChanged();
+    }
   }
 
   Future<void> _startCameraInitialization() {
@@ -340,9 +355,7 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
   }
 
   Future<LocalAudioTrack?> _startMicrophoneInitialization() {
-    final operation = _initializeLocalAudio();
-    _microphoneOperation = operation;
-    return operation;
+    return _queueMicrophoneOperation(_initializeLocalAudio);
   }
 
   Future<void> _stopCameraPreview() {
@@ -360,7 +373,17 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
   }
 
   Future<void> _stopMicrophonePreview() {
-    return _microphoneOperation = _disposePreviewAudioTrack();
+    return _queueMicrophoneOperation(_disposePreviewAudioTrack);
+  }
+
+  Future<T> _queueMicrophoneOperation<T>(Future<T> Function() operation) {
+    final previous = _microphoneOperation;
+    final next = () async {
+      await previous;
+      return operation();
+    }();
+    _microphoneOperation = next;
+    return next;
   }
 
   Future<void> _initializeLocalVideo() async {
@@ -472,8 +495,8 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
 
   Future<void> _disposePreviewTracks() async {
     await Future.wait([
-      _disposePreviewVideoTrack(),
-      _disposePreviewAudioTrack(),
+      _stopCameraPreview(),
+      _stopMicrophonePreview(),
     ]);
   }
 

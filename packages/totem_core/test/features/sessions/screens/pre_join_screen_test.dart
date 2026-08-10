@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -146,6 +148,32 @@ class _PreviewTrackFactory extends PreJoinPreviewTrackFactory {
     when(track.createListener).thenReturn(MockTrackEventsListener());
     audioTracks.add(track);
     return track;
+  }
+}
+
+class _DelayedCameraPreviewTrackFactory extends _PreviewTrackFactory {
+  final cameraGate = Completer<void>();
+  bool cameraRequestStarted = false;
+
+  @override
+  Future<LocalVideoTrack?> createVideoTrack(
+    CameraCaptureOptions cameraOptions,
+  ) async {
+    cameraRequestStarted = true;
+    await cameraGate.future;
+    return super.createVideoTrack(cameraOptions);
+  }
+}
+
+class _DelayedMicrophonePreviewTrackFactory extends _PreviewTrackFactory {
+  final microphoneGate = Completer<void>();
+  bool microphoneRequestStarted = false;
+
+  @override
+  Future<LocalAudioTrack?> createAudioTrack() async {
+    microphoneRequestStarted = true;
+    await microphoneGate.future;
+    return super.createAudioTrack();
   }
 }
 
@@ -553,6 +581,93 @@ void main() {
           () => previewTracks.audioTracks.last.unmute(stopOnMute: false),
         ).called(1);
       });
+
+      testWidgets(
+        'does not acquire microphone when disabled during camera initialization',
+        (tester) async {
+          final previewTracks = _DelayedCameraPreviewTrackFactory();
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                authControllerProvider.overrideWith(
+                  () => FakeAuthController(AuthState.unauthenticated()),
+                ),
+              ],
+              child: MaterialApp(
+                home: PrejoinSessionScreen(
+                  previewTrackFactory: previewTracks,
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          expect(previewTracks.cameraRequestStarted, isTrue);
+          expect(previewTracks.audioTracks, isEmpty);
+
+          await tester.tap(find.byType(ActionBarMicButton));
+          await tester.pump();
+          previewTracks.cameraGate.complete();
+          for (var i = 0; i < 5; i++) {
+            await tester.pump();
+          }
+
+          expect(previewTracks.videoTracks, hasLength(1));
+          expect(previewTracks.audioTracks, isEmpty);
+          expect(
+            tester
+                .widget<ActionBarMicButton>(find.byType(ActionBarMicButton))
+                .audioTrack,
+            isNull,
+          );
+        },
+      );
+
+      testWidgets(
+        'microphone stop waits for in-flight initialization',
+        (tester) async {
+          final previewTracks = _DelayedMicrophonePreviewTrackFactory();
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                authControllerProvider.overrideWith(
+                  () => FakeAuthController(AuthState.unauthenticated()),
+                ),
+              ],
+              child: MaterialApp(
+                home: PrejoinSessionScreen(
+                  previewTrackFactory: previewTracks,
+                ),
+              ),
+            ),
+          );
+          for (var i = 0; i < 5; i++) {
+            await tester.pump();
+          }
+
+          expect(previewTracks.microphoneRequestStarted, isTrue);
+          expect(previewTracks.audioTracks, isEmpty);
+
+          await tester.tap(find.byType(ActionBarMicButton));
+          await tester.pump();
+          previewTracks.microphoneGate.complete();
+          for (var i = 0; i < 5; i++) {
+            await tester.pump();
+          }
+
+          final createdTrack = previewTracks.audioTracks.single;
+          verify(createdTrack.stop).called(1);
+          verify(createdTrack.dispose).called(1);
+          expect(
+            tester
+                .widget<ActionBarMicButton>(find.byType(ActionBarMicButton))
+                .audioTrack,
+            isNull,
+          );
+        },
+      );
 
       testWidgets('disposes preview tracks when the screen is removed', (
         tester,
