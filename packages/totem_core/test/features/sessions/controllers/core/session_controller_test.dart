@@ -107,9 +107,13 @@ class _CountingRoomEventsListener implements EventsListener<RoomEvent> {
 }
 
 class _CountingRoom implements Room {
-  _CountingRoom(this.participant);
+  _CountingRoom(
+    this.participant, {
+    this.prepareConnectionError,
+  });
 
   final MockLocalParticipant participant;
+  final Error? prepareConnectionError;
   final _CountingRoomEventsListener listener = _CountingRoomEventsListener();
 
   int prepareConnectionCount = 0;
@@ -124,6 +128,7 @@ class _CountingRoom implements Room {
   @override
   Future<void> prepareConnection(String url, String? token) async {
     prepareConnectionCount++;
+    if (prepareConnectionError case final error?) throw error;
   }
 
   @override
@@ -366,7 +371,7 @@ void main() {
       });
 
       test(
-        'join publishes the existing pre-join tracks with FastConnect',
+        'join transfers pre-join tracks without waiting for publications',
         () async {
           const eventSlug = 'test-session';
           final container = _createContainerWithEventOverride(eventSlug);
@@ -400,10 +405,6 @@ void main() {
           ).thenAnswer((_) async => null);
           final cameraTrack = MockLocalVideoTrack();
           final microphoneTrack = MockLocalAudioTrack();
-          final cameraPublication = MockLocalTrackPublication(
-            videoTrack: cameraTrack,
-          );
-          localParticipant.localTrackPublications = [cameraPublication];
 
           final room = _CountingRoom(localParticipant);
           controller.room = room;
@@ -425,6 +426,63 @@ void main() {
           );
           verifyNever(cameraTrack.stop);
           verifyNever(cameraTrack.dispose);
+          verifyNever(microphoneTrack.stop);
+          verifyNever(microphoneTrack.dispose);
+          expect(localParticipant.getTrackPublications(), isEmpty);
+        },
+      );
+
+      test(
+        'join disposes pre-join tracks when setup fails before handoff',
+        () async {
+          const eventSlug = 'test-session';
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+
+          const options = SessionOptions(
+            eventSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: true,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final cameraTrack = MockLocalVideoTrack();
+          final microphoneTrack = MockLocalAudioTrack();
+          final localParticipant = MockLocalParticipant();
+          when(() => localParticipant.setCameraEnabled(any<bool>())).thenAnswer(
+            (_) async => null,
+          );
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          final room = _CountingRoom(
+            localParticipant,
+            prepareConnectionError: StateError('prepare failed'),
+          );
+          controller.room = room;
+
+          await controller.join(
+            joinMedia: SessionJoinMedia(
+              cameraTrack: cameraTrack,
+              microphoneTrack: microphoneTrack,
+            ),
+          );
+
+          expect(room.connectCount, 0);
+          verify(cameraTrack.stop).called(1);
+          verify(cameraTrack.dispose).called(1);
           verify(microphoneTrack.stop).called(1);
           verify(microphoneTrack.dispose).called(1);
         },

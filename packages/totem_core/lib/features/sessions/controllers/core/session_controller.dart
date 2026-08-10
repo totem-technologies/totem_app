@@ -383,10 +383,16 @@ class SessionController extends _$SessionController {
     if (room != null) {
       if (state.connectionState == RoomConnectionState.connected ||
           state.connectionState == RoomConnectionState.connecting) {
-        await _disposeUnpublishedJoinMedia(joinMedia);
+        await _disposeOwnedJoinMedia(joinMedia);
         return;
       }
     }
+
+    // The controller owns these tracks until they are handed to Room.connect.
+    // After that call begins, FastConnect may publish them asynchronously even
+    // after Room.connect completes, so publication-list visibility cannot be
+    // used to decide whether they are safe to dispose.
+    var ownedJoinMedia = joinMedia;
 
     _dispatch(
       const ConnectionChanged(
@@ -442,19 +448,42 @@ class SessionController extends _$SessionController {
           ? joinMedia?.microphoneTrack
           : null;
 
-      await _connect(
+      // A caller should normally only transfer enabled preview tracks, but
+      // dispose any track that is not actually being handed to FastConnect.
+      await _disposeOwnedJoinMedia(
+        SessionJoinMedia(
+          cameraTrack: options.cameraEnabled ? null : joinMedia?.cameraTrack,
+          microphoneTrack: options.microphoneEnabled
+              ? null
+              : joinMedia?.microphoneTrack,
+        ),
+      );
+      ownedJoinMedia = SessionJoinMedia(
+        cameraTrack: initialCameraTrack,
+        microphoneTrack: initialMicrophoneTrack,
+      );
+
+      final fastConnectOptions = FastConnectOptions(
+        microphone: initialMicrophoneTrack != null
+            ? TrackOption(track: initialMicrophoneTrack)
+            : TrackOption(enabled: options.microphoneEnabled),
+        camera: initialCameraTrack != null
+            ? TrackOption(track: initialCameraTrack)
+            : TrackOption(enabled: options.cameraEnabled),
+      );
+
+      // Ownership transfers when the tracks are passed into Room.connect, not
+      // when LocalTrackPublication later becomes visible. LiveKit's
+      // EngineJoinResponseEvent handler performs FastConnect publication
+      // asynchronously.
+      final connectFuture = _connect(
         url: AppConfig.instance.liveKitUrl,
         token: options.token,
-        fastConnectOptions: FastConnectOptions(
-          microphone: initialMicrophoneTrack != null
-              ? TrackOption(track: initialMicrophoneTrack)
-              : TrackOption(enabled: options.microphoneEnabled),
-          camera: initialCameraTrack != null
-              ? TrackOption(track: initialCameraTrack)
-              : TrackOption(enabled: options.cameraEnabled),
-        ),
+        fastConnectOptions: fastConnectOptions,
         connectOptions: connectOptions,
       );
+      ownedJoinMedia = null;
+      await connectFuture;
     }
     // For ConnectException and MediaConnectException, we log the error but don't
     // necessarily want to show an error message to the user.
@@ -498,11 +527,11 @@ class SessionController extends _$SessionController {
         message: 'Unexpected error occurred',
       );
     } finally {
-      await _disposeUnpublishedJoinMedia(joinMedia);
+      await _disposeOwnedJoinMedia(ownedJoinMedia);
     }
   }
 
-  Future<void> _disposeUnpublishedJoinMedia(SessionJoinMedia? joinMedia) async {
+  Future<void> _disposeOwnedJoinMedia(SessionJoinMedia? joinMedia) async {
     if (joinMedia == null || joinMedia.isEmpty) return;
 
     final publishedTracks = _room?.localParticipant
@@ -513,10 +542,6 @@ class SessionController extends _$SessionController {
 
     Future<void> disposeIfUnpublished(LocalTrack? track) async {
       if (track == null) return;
-      if (publishedTracks?.any((published) => identical(published, track)) ??
-          false) {
-        return;
-      }
 
       try {
         await track.stop();
@@ -525,14 +550,14 @@ class SessionController extends _$SessionController {
         ErrorHandler.logError(
           error,
           stackTrace: stackTrace,
-          message: 'Failed to dispose unpublished pre-join media',
+          message: 'Failed to dispose owned pre-join media',
         );
       }
     }
 
     await Future.wait([
-      disposeIfUnpublished(joinMedia.cameraTrack),
-      disposeIfUnpublished(joinMedia.microphoneTrack),
+      disposeTrack(joinMedia.cameraTrack),
+      disposeTrack(joinMedia.microphoneTrack),
     ]);
   }
 
