@@ -269,7 +269,7 @@ void main() {
         expect(controller.room, isNull);
       });
 
-      test('leave waits for retained pre-join media disposal', () async {
+      test('failed join waits for retained pre-join media disposal', () async {
         const eventSlug = 'test-session';
         final container = _createContainerWithEventOverride(eventSlug);
         addTearDown(container.dispose);
@@ -314,33 +314,33 @@ void main() {
           return true;
         });
 
-        final joinResult = await controller.join(
-          joinMedia: SessionJoinMedia(
-            cameraTrack: cameraTrack,
-            microphoneTrack: microphoneTrack,
-          ),
-        );
-        expect(joinResult, SessionJoinResult.retryableFailure);
-
-        var leaveCompleted = false;
-        final leaveFuture = controller.leave().whenComplete(
-          () => leaveCompleted = true,
-        );
+        var joinCompleted = false;
+        final joinFuture = controller
+            .join(
+              joinMedia: SessionJoinMedia(
+                cameraTrack: cameraTrack,
+                microphoneTrack: microphoneTrack,
+              ),
+            )
+            .whenComplete(
+              () => joinCompleted = true,
+            );
         await pumpEventQueue();
 
-        expect(leaveCompleted, isFalse);
+        expect(joinCompleted, isFalse);
         verify(cameraTrack.stop).called(1);
         verify(cameraTrack.dispose).called(1);
+        verify(microphoneTrack.stop).called(1);
+        verify(microphoneTrack.dispose).called(1);
 
         cameraDisposalGate.complete();
-        await leaveFuture;
+        expect(await joinFuture, SessionJoinResult.retryableFailure);
+        expect(joinCompleted, isTrue);
 
-        expect(leaveCompleted, isTrue);
+        await controller.leave();
         expect(controller.room, isNull);
         expect(room.disconnectCount, 1);
         expect(room.disposeCount, 1);
-        verify(microphoneTrack.stop).called(1);
-        verify(microphoneTrack.dispose).called(1);
       });
 
       test(
@@ -410,7 +410,7 @@ void main() {
       );
 
       test(
-        'camera setup failure does not skip initial microphone setup',
+        'FastConnect remains the sole initial media enablement path',
         () async {
           const eventSlug = 'test-session';
           final container = _createContainerWithEventOverride(eventSlug);
@@ -436,18 +436,12 @@ void main() {
             sessionControllerProvider(options).notifier,
           );
           final localParticipant = MockLocalParticipant();
-          when(
-            () => localParticipant.setCameraEnabled(true),
-          ).thenThrow(StateError('camera failed'));
-          when(
-            () => localParticipant.setCameraEnabled(false),
-          ).thenAnswer((_) async => null);
           when(localParticipant.isMicrophoneEnabled).thenReturn(false);
           when(
-            () => localParticipant.setMicrophoneEnabled(true),
+            () => localParticipant.setCameraEnabled(any<bool>()),
           ).thenAnswer((_) async => null);
           when(
-            () => localParticipant.setMicrophoneEnabled(false),
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
           ).thenAnswer((_) async => null);
 
           final room = _CountingRoom(localParticipant);
@@ -469,8 +463,105 @@ void main() {
           );
           await pumpEventQueue();
 
-          verify(() => localParticipant.setCameraEnabled(true)).called(1);
-          verify(() => localParticipant.setMicrophoneEnabled(true)).called(1);
+          verifyNever(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          );
+          verifyNever(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          );
+        },
+      );
+
+      test(
+        'applies a microphone restriction after FastConnect publishes',
+        () async {
+          const eventSlug = 'test-session';
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+
+          const options = SessionOptions(
+            eventSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: true,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final localParticipant = MockLocalParticipant();
+          var microphoneEnabled = false;
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            localParticipant.isMicrophoneEnabled,
+          ).thenAnswer((_) => microphoneEnabled);
+          when(
+            () => localParticipant.setMicrophoneEnabled(false),
+          ).thenAnswer((_) async {
+            microphoneEnabled = false;
+            return null;
+          });
+
+          final room = _CountingRoom(localParticipant);
+          controller.room = room;
+          expect(await controller.join(), SessionJoinResult.success);
+
+          controller.applyRoomState(
+            const RoomState(
+              keeper: 'keeper',
+              nextSpeaker: '',
+              currentSpeaker: 'another-participant',
+              status: RoomStatus.active,
+              turnState: TurnState.idle,
+              sessionSlug: eventSlug,
+              statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+              talkingOrder: [],
+              version: 1,
+              roundNumber: 1,
+            ),
+          );
+
+          await room.listener.trigger(
+            RoomConnectedEvent(room: room, metadata: null),
+          );
+          await pumpEventQueue();
+
+          // RoomConnected can arrive before FastConnect has registered its
+          // publication. Enforce the mute when publication completes without
+          // ever issuing a second enable operation.
+          microphoneEnabled = true;
+          final publication = MockLocalTrackPublication();
+          when(
+            () => publication.source,
+          ).thenReturn(TrackSource.microphone);
+          await room.listener.trigger(
+            LocalTrackPublishedEvent(
+              participant: localParticipant,
+              publication: publication,
+            ),
+          );
+          await pumpEventQueue();
+
+          verify(
+            () => localParticipant.setMicrophoneEnabled(false),
+          ).called(1);
+          verifyNever(
+            () => localParticipant.setMicrophoneEnabled(true),
+          );
+          verifyNever(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          );
         },
       );
 
@@ -653,7 +744,7 @@ void main() {
       );
 
       test(
-        'join retains pre-join tracks until teardown when setup fails',
+        'join disposes pre-join tracks before returning a setup failure',
         () async {
           const eventSlug = 'test-session';
           final container = _createContainerWithEventOverride(eventSlug);
@@ -702,18 +793,16 @@ void main() {
 
           expect(joined, SessionJoinResult.retryableFailure);
           expect(room.connectCount, 0);
-          verifyNever(cameraTrack.stop);
-          verifyNever(cameraTrack.dispose);
-          verifyNever(microphoneTrack.stop);
-          verifyNever(microphoneTrack.dispose);
-
-          await controller.resetAfterFailedJoin();
-
-          expect(controller.room, isNull);
           verify(cameraTrack.stop).called(1);
           verify(cameraTrack.dispose).called(1);
           verify(microphoneTrack.stop).called(1);
           verify(microphoneTrack.dispose).called(1);
+
+          await controller.resetAfterFailedJoin();
+
+          expect(controller.room, isNull);
+          verifyNoMoreInteractions(cameraTrack);
+          verifyNoMoreInteractions(microphoneTrack);
         },
       );
 
@@ -746,7 +835,7 @@ void main() {
             ),
           ]) {
         test(
-          'join retains tracks when ${testCase.name} throws',
+          'join disposes tracks when ${testCase.name} throws',
           () async {
             const eventSlug = 'test-session';
             final container = _createContainerWithEventOverride(eventSlug);
@@ -803,10 +892,10 @@ void main() {
               room.lastFastConnectOptions?.microphone.track,
               same(microphoneTrack),
             );
-            verifyNever(cameraTrack.stop);
-            verifyNever(cameraTrack.dispose);
-            verifyNever(microphoneTrack.stop);
-            verifyNever(microphoneTrack.dispose);
+            verify(cameraTrack.stop).called(1);
+            verify(cameraTrack.dispose).called(1);
+            verify(microphoneTrack.stop).called(1);
+            verify(microphoneTrack.dispose).called(1);
 
             if (testCase.retryable) {
               await controller.resetAfterFailedJoin();
@@ -815,10 +904,8 @@ void main() {
             }
 
             expect(room.disposeCount, 1);
-            verify(cameraTrack.stop).called(1);
-            verify(cameraTrack.dispose).called(1);
-            verify(microphoneTrack.stop).called(1);
-            verify(microphoneTrack.dispose).called(1);
+            verifyNoMoreInteractions(cameraTrack);
+            verifyNoMoreInteractions(microphoneTrack);
           },
         );
       }

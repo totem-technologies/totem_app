@@ -99,6 +99,7 @@ class SessionController extends _$SessionController {
   }
 
   EventsListener<RoomEvent>? _listener;
+  bool _awaitingInitialMicrophonePublication = false;
 
   final JoinMediaOwner _joinMediaOwner = JoinMediaOwner();
 
@@ -469,13 +470,19 @@ class SessionController extends _$SessionController {
       // LocalTrackPublication may not be visible yet: LiveKit's
       // EngineJoinResponseEvent handler performs FastConnect publication
       // asynchronously. If connect throws, retain ownership so failed-join
-      // teardown can stop the raw capture before a preview retry opens another.
-      await _connect(
-        url: AppConfig.instance.liveKitUrl,
-        token: options.token,
-        fastConnectOptions: fastConnectOptions,
-        connectOptions: connectOptions,
-      );
+      // cleanup below can stop the raw capture before join returns.
+      _awaitingInitialMicrophonePublication = options.microphoneEnabled;
+      try {
+        await _connect(
+          url: AppConfig.instance.liveKitUrl,
+          token: options.token,
+          fastConnectOptions: fastConnectOptions,
+          connectOptions: connectOptions,
+        );
+      } catch (_) {
+        _awaitingInitialMicrophonePublication = false;
+        rethrow;
+      }
       _joinMediaOwner
         ..releaseToRoom(initialCameraTrack)
         ..releaseToRoom(initialMicrophoneTrack);
@@ -527,6 +534,12 @@ class SessionController extends _$SessionController {
         message: 'Unexpected error occurred',
       );
       return SessionJoinResult.retryableFailure;
+    } finally {
+      // Successful FastConnect tracks were removed from the owner above, so
+      // this only disposes media that LiveKit did not accept. In particular,
+      // fatal failures keep rendering the Session error UI and never run the
+      // retry reset path, so join itself must release their live capture.
+      await retainedJoinMedia.dispose();
     }
   }
 
@@ -657,6 +670,16 @@ class SessionController extends _$SessionController {
       ..on<DataReceivedEvent>((data) {
         if (ref.mounted) messaging.handleDataReceived(data);
       })
+      ..on<LocalTrackPublishedEvent>((event) {
+        if (!_awaitingInitialMicrophonePublication ||
+            event.participant != room.localParticipant ||
+            event.publication.source != TrackSource.microphone) {
+          return;
+        }
+
+        _awaitingInitialMicrophonePublication = false;
+        unawaited(_applyJoinMediaState());
+      })
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
       ..on<ParticipantConnectedEvent>(_onParticipantConnected);
 
@@ -711,6 +734,7 @@ class SessionController extends _$SessionController {
 
   @visibleForTesting
   Future<void> disposeConnection() async {
+    _awaitingInitialMicrophonePublication = false;
     await _disableLocalMediaTracks();
 
     try {
@@ -732,16 +756,11 @@ class SessionController extends _$SessionController {
     final currentRoom = room;
     if (currentRoom == null) return;
 
-    final cameraEnabled = options.cameraEnabled;
-    try {
-      await currentRoom.localParticipant?.setCameraEnabled(cameraEnabled);
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to apply initial camera state',
-      );
-    }
+    // FastConnect is the sole owner of initial capture enablement. Its
+    // publication continues asynchronously after Room.connect completes, so
+    // enabling either source here can open a second getUserMedia capture before
+    // the first publication is registered. Camera needs no post-connect policy
+    // adjustment: FastConnect already received options.cameraEnabled.
 
     final shouldEnableMicrophone = () {
       if (state.roomState.status == RoomStatus.waitingRoom &&
@@ -757,18 +776,16 @@ class SessionController extends _$SessionController {
       return isCurrentUserKeeper() && options.microphoneEnabled;
     }();
 
-    try {
-      if (shouldEnableMicrophone) {
-        await devices.enableMicrophone();
-      } else {
+    if (!shouldEnableMicrophone) {
+      try {
         await devices.disableMicrophone();
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to apply initial microphone state',
+        );
       }
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to apply initial microphone state',
-      );
     }
   }
 
