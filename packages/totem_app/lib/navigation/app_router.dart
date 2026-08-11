@@ -10,7 +10,7 @@ import 'package:totem_app/widgets/offline_indicator.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_core/features/messages/models/conversation.dart';
-import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
+import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
 import 'package:totem_core/shared/logger.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';

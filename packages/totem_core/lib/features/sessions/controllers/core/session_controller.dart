@@ -14,6 +14,7 @@ import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/core/services/repository_utils.dart';
+import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_events.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_reducer.dart';
@@ -99,9 +100,7 @@ class SessionController extends _$SessionController {
 
   EventsListener<RoomEvent>? _listener;
 
-  // Tracks transferred out of the pre-join screen but not yet handed to
-  // LiveKit. Once handed to Room.connect, Room owns their teardown.
-  final List<LocalTrack> _ownedJoinMediaTracks = [];
+  final JoinMediaOwner _joinMediaOwner = JoinMediaOwner();
 
   /// The sync timer periodically checks for changes in the room state
   /// and participants list, to keep the UI up to date.
@@ -390,7 +389,7 @@ class SessionController extends _$SessionController {
   }
 
   Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
-    final newlyRetainedJoinMedia = _retainJoinMedia(joinMedia);
+    final retainedJoinMedia = _joinMediaOwner.retain(joinMedia);
 
     if (room != null) {
       if (state.connectionState == RoomConnectionState.connected ||
@@ -398,7 +397,7 @@ class SessionController extends _$SessionController {
         // The caller transferred ownership, but this no-op join will never hand
         // these tracks to LiveKit. Release only the media supplied by this call;
         // tracks retained by an in-flight join must remain alive.
-        await _disposeOwnedJoinMedia(newlyRetainedJoinMedia);
+        await retainedJoinMedia.dispose();
         return SessionJoinResult.success;
       }
     }
@@ -451,10 +450,10 @@ class SessionController extends _$SessionController {
           : null;
 
       final initialCameraTrack = options.cameraEnabled
-          ? _ownedJoinTrack<LocalVideoTrack>()
+          ? _joinMediaOwner.track<LocalVideoTrack>()
           : null;
       final initialMicrophoneTrack = options.microphoneEnabled
-          ? _ownedJoinTrack<LocalAudioTrack>()
+          ? _joinMediaOwner.track<LocalAudioTrack>()
           : null;
 
       final fastConnectOptions = FastConnectOptions(
@@ -477,8 +476,9 @@ class SessionController extends _$SessionController {
         fastConnectOptions: fastConnectOptions,
         connectOptions: connectOptions,
       );
-      _releaseJoinTrackToRoom(initialCameraTrack);
-      _releaseJoinTrackToRoom(initialMicrophoneTrack);
+      _joinMediaOwner
+        ..releaseToRoom(initialCameraTrack)
+        ..releaseToRoom(initialMicrophoneTrack);
       return SessionJoinResult.success;
     }
     // For ConnectException and MediaConnectException, we log the error but don't
@@ -560,67 +560,6 @@ class SessionController extends _$SessionController {
         ),
       );
     }
-  }
-
-  List<LocalTrack> _retainJoinMedia(SessionJoinMedia? joinMedia) {
-    if (joinMedia == null || joinMedia.isEmpty) return const [];
-
-    final retainedTracks = <LocalTrack>[];
-
-    for (final track in [joinMedia.cameraTrack, joinMedia.microphoneTrack]) {
-      if (track == null) continue;
-      if (_ownedJoinMediaTracks.any((owned) => identical(owned, track))) {
-        continue;
-      }
-      _ownedJoinMediaTracks.add(track);
-      retainedTracks.add(track);
-    }
-
-    return retainedTracks;
-  }
-
-  T? _ownedJoinTrack<T extends LocalTrack>() {
-    for (final track in _ownedJoinMediaTracks.reversed) {
-      if (track is T) return track;
-    }
-    return null;
-  }
-
-  void _releaseJoinTrackToRoom(LocalTrack? track) {
-    if (track == null) return;
-    _ownedJoinMediaTracks.removeWhere((owned) => identical(owned, track));
-  }
-
-  Future<void> _disposeRetainedJoinMedia() async {
-    await _disposeOwnedJoinMedia(_ownedJoinMediaTracks.toList());
-  }
-
-  Future<void> _disposeOwnedJoinMedia(Iterable<LocalTrack> tracks) async {
-    final ownedTracks = <LocalTrack>[];
-    for (final track in tracks) {
-      final wasOwned = _ownedJoinMediaTracks.any(
-        (owned) => identical(owned, track),
-      );
-      if (!wasOwned) continue;
-
-      _ownedJoinMediaTracks.removeWhere((owned) => identical(owned, track));
-      ownedTracks.add(track);
-    }
-
-    Future<void> disposeTrack(LocalTrack track) async {
-      try {
-        await track.stop();
-        await track.dispose();
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Failed to dispose owned pre-join media',
-        );
-      }
-    }
-
-    await Future.wait(ownedTracks.map(disposeTrack));
   }
 
   Future<void> leave() async {
@@ -786,7 +725,7 @@ class SessionController extends _$SessionController {
     } catch (_) {}
     _room = null;
 
-    await _disposeRetainedJoinMedia();
+    await _joinMediaOwner.disposeAll();
   }
 
   Future<void> _applyJoinMediaState() async {

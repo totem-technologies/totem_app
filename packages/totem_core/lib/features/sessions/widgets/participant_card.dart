@@ -9,7 +9,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_core/features/sessions/screens/loading_screen.dart';
+import 'package:totem_core/features/sessions/widgets/loading_video_placeholder.dart';
 import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
 import 'package:totem_core/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
