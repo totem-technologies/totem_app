@@ -17,6 +17,7 @@ enum PreJoinJoinOutcome {
   confirmationRequired,
   joined,
   retryableFailure,
+  permissionsDenied,
   ignored,
 }
 

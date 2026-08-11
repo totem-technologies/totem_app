@@ -13,21 +13,21 @@ import '../livekit_mocks.dart';
 const _sessionSlug = 'pre-join-media-test';
 
 class _PreviewTrackFactory extends PreJoinPreviewTrackFactory {
-  final videoTracks = <MockLocalVideoTrack>[];
-  final audioTracks = <MockLocalAudioTrack>[];
+  final videoTracks = <MockPreJoinLocalVideoTrack>[];
+  final audioTracks = <MockPreJoinLocalAudioTrack>[];
 
   @override
   Future<LocalVideoTrack?> createVideoTrack(
     CameraCaptureOptions cameraOptions,
   ) async {
-    final track = MockLocalVideoTrack();
+    final track = MockPreJoinLocalVideoTrack();
     videoTracks.add(track);
     return track;
   }
 
   @override
   Future<LocalAudioTrack?> createAudioTrack() async {
-    final track = MockLocalAudioTrack();
+    final track = MockPreJoinLocalAudioTrack();
     audioTracks.add(track);
     return track;
   }
@@ -151,6 +151,50 @@ void main() {
     expect(state.camera.phase, PreJoinCapturePhase.permissionDenied);
     expect(state.canJoinOnWeb, isFalse);
   });
+
+  test(
+    'camera permission revocation invalidates ready preview media',
+    () async {
+      final factory = _PreviewTrackFactory();
+      final container = _createContainer(factory);
+      addTearDown(container.dispose);
+      await _waitUntilInitialized(container);
+
+      factory.videoTracks.single.mockMediaStreamTrack.onEnded?.call();
+
+      final state = container.read(
+        preJoinMediaControllerProvider(_sessionSlug),
+      );
+      expect(state.camera.phase, PreJoinCapturePhase.permissionDenied);
+      expect(state.camera.track, isNull);
+      expect(state.canJoinOnWeb, isFalse);
+      await expectLater(
+        container
+            .read(preJoinMediaControllerProvider(_sessionSlug).notifier)
+            .takeForJoin(),
+        throwsA(isA<PreJoinMediaPermissionDeniedException>()),
+      );
+    },
+  );
+
+  test(
+    'microphone permission revocation invalidates ready preview media',
+    () async {
+      final factory = _PreviewTrackFactory();
+      final container = _createContainer(factory);
+      addTearDown(container.dispose);
+      await _waitUntilInitialized(container);
+
+      factory.audioTracks.single.mockMediaStreamTrack.onEnded?.call();
+
+      final state = container.read(
+        preJoinMediaControllerProvider(_sessionSlug),
+      );
+      expect(state.microphone.phase, PreJoinCapturePhase.permissionDenied);
+      expect(state.microphone.track, isNull);
+      expect(state.canJoinOnWeb, isFalse);
+    },
+  );
 
   test('camera and microphone capture are initialized sequentially', () async {
     final factory = _DelayedCameraFactory();

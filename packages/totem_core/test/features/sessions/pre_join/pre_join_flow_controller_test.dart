@@ -88,21 +88,21 @@ const _sessionState = SessionRoomState(
 );
 
 class _TrackFactory extends PreJoinPreviewTrackFactory {
-  final videoTracks = <MockLocalVideoTrack>[];
-  final audioTracks = <MockLocalAudioTrack>[];
+  final videoTracks = <MockPreJoinLocalVideoTrack>[];
+  final audioTracks = <MockPreJoinLocalAudioTrack>[];
 
   @override
   Future<LocalVideoTrack?> createVideoTrack(
     CameraCaptureOptions cameraOptions,
   ) async {
-    final track = MockLocalVideoTrack();
+    final track = MockPreJoinLocalVideoTrack();
     videoTracks.add(track);
     return track;
   }
 
   @override
   Future<LocalAudioTrack?> createAudioTrack() async {
-    final track = MockLocalAudioTrack();
+    final track = MockPreJoinLocalAudioTrack();
     audioTracks.add(track);
     return track;
   }
@@ -231,6 +231,30 @@ void main() {
     expect(
       _SuccessfulSessionController.receivedMedia?.microphoneTrack,
       factory.audioTracks.single,
+    );
+  });
+
+  test('permission revocation prevents joining with stale tracks', () async {
+    final factory = _TrackFactory();
+    _SuccessfulSessionController.receivedMedia = null;
+    final container = _container(
+      factory: factory,
+      response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+      sessionController: _SuccessfulSessionController.new,
+    );
+    addTearDown(container.dispose);
+    await _waitForMedia(container);
+
+    factory.videoTracks.single.mockMediaStreamTrack.onEnded?.call();
+    final outcome = await container
+        .read(preJoinFlowControllerProvider(_slug).notifier)
+        .requestJoin();
+
+    expect(outcome, PreJoinJoinOutcome.permissionsDenied);
+    expect(_SuccessfulSessionController.receivedMedia, isNull);
+    expect(
+      container.read(preJoinFlowControllerProvider(_slug)).phase,
+      PreJoinFlowPhase.idle,
     );
   });
 

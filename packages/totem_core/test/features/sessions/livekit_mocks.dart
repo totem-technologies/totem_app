@@ -200,7 +200,14 @@ class MockTrackUnmutedEvent extends Mock implements TrackUnmutedEvent {}
 
 class MockTrackEvent extends Mock implements TrackEvent {}
 
-class MockMediaStreamTrack extends Mock implements webrtc.MediaStreamTrack {}
+class MockMediaStreamTrack extends Mock implements webrtc.MediaStreamTrack {
+  MockMediaStreamTrack() {
+    when(getSettings).thenReturn({});
+  }
+
+  @override
+  webrtc.StreamTrackCallback? onEnded;
+}
 
 class _MockParticipantEventsListener extends Mock
     implements EventsListener<ParticipantEvent> {
@@ -353,6 +360,20 @@ class MockLocalAudioTrack extends Mock implements LocalAudioTrack {
 
   bool _muted;
   bool _isActive;
+}
+
+class MockPreJoinLocalVideoTrack extends MockLocalVideoTrack {
+  final mockMediaStreamTrack = MockMediaStreamTrack();
+
+  @override
+  webrtc.MediaStreamTrack get mediaStreamTrack => mockMediaStreamTrack;
+}
+
+class MockPreJoinLocalAudioTrack extends MockLocalAudioTrack {
+  final mockMediaStreamTrack = MockMediaStreamTrack();
+
+  @override
+  webrtc.MediaStreamTrack get mediaStreamTrack => mockMediaStreamTrack;
 }
 
 class MockTrackEventsListener extends Mock

@@ -38,6 +38,10 @@ final preJoinPreviewTrackFactoryProvider = Provider<PreJoinPreviewTrackFactory>(
   (_) => const LiveKitPreJoinPreviewTrackFactory(),
 );
 
+class PreJoinMediaPermissionDeniedException implements Exception {
+  const PreJoinMediaPermissionDeniedException();
+}
+
 /// A serial operation queue whose tail is guaranteed not to throw.
 ///
 /// Capture APIs must not overlap on cold-start Safari. Keeping failures out of
@@ -180,6 +184,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
         );
       } else {
         _cameraTrack = track;
+        _observeUnexpectedTrackEnd(track, isCamera: true);
         _setCamera(
           PreJoinCaptureState(
             phase: PreJoinCapturePhase.ready,
@@ -257,6 +262,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
         ),
       );
       _microphoneTrack = track;
+      _observeUnexpectedTrackEnd(track, isCamera: false);
       return track;
     } catch (error, stackTrace) {
       await _disposeTrack(track, 'microphone');
@@ -455,6 +461,9 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     }
     await _initialization;
     await _captureOperations.pending;
+    if (!state.canJoinOnWeb) {
+      throw const PreJoinMediaPermissionDeniedException();
+    }
 
     final cameraTrack = state.preferences.isCameraOn && state.camera.isReady
         ? state.camera.track
@@ -479,6 +488,60 @@ class PreJoinMediaController extends _$PreJoinMediaController {
 
   void _setMicrophone(PreJoinCaptureState<LocalAudioTrack> microphone) {
     if (ref.mounted) state = state.copyWith(microphone: microphone);
+  }
+
+  void _observeUnexpectedTrackEnd(LocalTrack track, {required bool isCamera}) {
+    try {
+      final mediaStreamTrack = track.mediaStreamTrack;
+      final liveKitOnEnded = mediaStreamTrack.onEnded;
+      mediaStreamTrack.onEnded = () {
+        liveKitOnEnded?.call();
+        _handleUnexpectedTrackEnd(track, isCamera: isCamera);
+      };
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to observe pre-join media track state',
+      );
+    }
+  }
+
+  void _handleUnexpectedTrackEnd(LocalTrack track, {required bool isCamera}) {
+    if (!ref.mounted || state.transferred) return;
+
+    if (isCamera) {
+      if (!identical(_cameraTrack, track) || !state.preferences.isCameraOn) {
+        return;
+      }
+      _cameraTrack = null;
+      state = state.copyWith(
+        preferences: state.preferences.copyWith(isCameraOn: false),
+        camera: const PreJoinCaptureState(
+          phase: PreJoinCapturePhase.permissionDenied,
+        ),
+      );
+    } else {
+      if (!identical(_microphoneTrack, track) || !state.preferences.isMicOn) {
+        return;
+      }
+      _microphoneTrack = null;
+      state = state.copyWith(
+        preferences: state.preferences.copyWith(isMicOn: false),
+        microphone: const PreJoinCaptureState(
+          phase: PreJoinCapturePhase.permissionDenied,
+        ),
+      );
+    }
+
+    // The browser has already ended capture. Dispose the LiveKit wrapper on
+    // the same queue as every other media operation without delaying the state
+    // update that disables Join.
+    unawaited(
+      _captureOperations.schedule(
+        () => _disposeTrack(track, isCamera ? 'camera' : 'microphone'),
+      ),
+    );
   }
 
   Future<void> _disposeCameraTrack() async {

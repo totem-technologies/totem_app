@@ -37,6 +37,17 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         return PreJoinJoinOutcome.confirmationRequired;
       }
 
+      final mediaController = ref.read(
+        preJoinMediaControllerProvider(sessionSlug).notifier,
+      );
+      final currentMedia = ref.read(
+        preJoinMediaControllerProvider(sessionSlug),
+      );
+      if (!currentMedia.canJoinOnWeb) {
+        state = state.copyWith(phase: PreJoinFlowPhase.idle);
+        return PreJoinJoinOutcome.permissionsDenied;
+      }
+
       final preferences = ref
           .read(preJoinMediaControllerProvider(sessionSlug))
           .preferences;
@@ -59,9 +70,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       );
       session = currentSession;
       currentSession.preventAutoDispose();
-      final joinMedia = await ref
-          .read(preJoinMediaControllerProvider(sessionSlug).notifier)
-          .takeForJoin();
+      final joinMedia = await mediaController.takeForJoin();
       mediaTransferred = true;
 
       final result = await currentSession.join(joinMedia: joinMedia);
@@ -73,6 +82,14 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       // Fatal failures are rendered by the session error UI, as before.
       state = state.copyWith(phase: PreJoinFlowPhase.joined);
       return PreJoinJoinOutcome.joined;
+    } on PreJoinMediaPermissionDeniedException {
+      if (ref.mounted) {
+        state = state.copyWith(
+          phase: PreJoinFlowPhase.idle,
+          clearSessionOptions: true,
+        );
+      }
+      return PreJoinJoinOutcome.permissionsDenied;
     } catch (error, stackTrace) {
       if (mediaTransferred && session != null) {
         try {

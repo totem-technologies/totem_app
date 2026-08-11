@@ -150,6 +150,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     if (!mounted) return false;
     if (outcome == PreJoinJoinOutcome.confirmationRequired) {
       await _promptAlreadyPresent();
+    } else if (outcome == PreJoinJoinOutcome.permissionsDenied) {
+      _handleWebMediaState(
+        ref.read(preJoinMediaControllerProvider(widget.sessionSlug)),
+      );
     }
     return ref.read(preJoinFlowControllerProvider(widget.sessionSlug)).phase ==
         PreJoinFlowPhase.joined;

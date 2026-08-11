@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 
 Future<void> showBackgroundActivityDialog(BuildContext context) async {
@@ -107,68 +108,16 @@ Future<bool> showWebPermissionsDeniedDialog(
     context: context,
     barrierDismissible: false,
     builder: (context) {
-      final theme = Theme.of(context);
-      return AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
-        ),
-        contentPadding: const EdgeInsets.all(24),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const TotemIcon(
-              TotemIcons.lock,
-              size: 45,
-              color: AppTheme.mauve,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Permissions Required',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Totem needs access to your camera and microphone '
-              'for live sessions. Please allow these permissions '
-              'in your browser settings and try again.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  textStyle: const TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                child: const Text(
-                  'Try Again',
-                  softWrap: false,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Go Back'),
-              ),
-            ),
-          ],
-        ),
+      return ConfirmationDialog(
+        icon: TotemIcons.lock,
+        title: 'Permissions Required',
+        content:
+            'Totem needs access to your camera and microphone to join this session. '
+            'Please grant permissions and try again.',
+        confirmButtonText: 'Try again',
+        onConfirm: () async {
+          Navigator.of(context).pop(true);
+        },
       );
     },
   );
@@ -251,9 +200,7 @@ Future<bool> showPermissionsRequestSheet(BuildContext context) async {
           borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
         ),
         builder: (context) {
-          return const SafeArea(
-            child: PermissionsRequestSheet(),
-          );
+          return const SafeArea(child: PermissionsRequestSheet());
         },
       ) ??
       false;
