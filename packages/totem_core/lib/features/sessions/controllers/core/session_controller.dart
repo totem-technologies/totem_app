@@ -462,11 +462,12 @@ class SessionController extends _$SessionController {
             : TrackOption(enabled: options.cameraEnabled),
       );
 
-      // Ownership transfers when the tracks are passed into Room.connect, not
-      // when LocalTrackPublication later becomes visible. LiveKit's
+      // A successful Room.connect transfers ownership even though the
+      // LocalTrackPublication may not be visible yet: LiveKit's
       // EngineJoinResponseEvent handler performs FastConnect publication
-      // asynchronously.
-      final connectFuture = _connect(
+      // asynchronously. If connect throws, retain ownership so failed-join
+      // teardown can stop the raw capture before a preview retry opens another.
+      await _connect(
         url: AppConfig.instance.liveKitUrl,
         token: options.token,
         fastConnectOptions: fastConnectOptions,
@@ -474,7 +475,6 @@ class SessionController extends _$SessionController {
       );
       _releaseJoinTrackToRoom(initialCameraTrack);
       _releaseJoinTrackToRoom(initialMicrophoneTrack);
-      await connectFuture;
       return SessionJoinResult.success;
     }
     // For ConnectException and MediaConnectException, we log the error but don't

@@ -111,10 +111,12 @@ class _CountingRoom implements Room {
   _CountingRoom(
     this.participant, {
     this.prepareConnectionError,
+    this.connectError,
   });
 
   final MockLocalParticipant participant;
   final Error? prepareConnectionError;
+  final LiveKitException? connectError;
   final _CountingRoomEventsListener listener = _CountingRoomEventsListener();
 
   int prepareConnectionCount = 0;
@@ -149,6 +151,7 @@ class _CountingRoom implements Room {
   }) async {
     connectCount++;
     lastFastConnectOptions = fastConnectOptions;
+    if (connectError case final error?) throw error;
   }
 
   @override
@@ -578,6 +581,112 @@ void main() {
           verify(microphoneTrack.dispose).called(1);
         },
       );
+
+      for (final testCase
+          in <
+            ({
+              String name,
+              ConnectException error,
+              SessionJoinResult result,
+              bool retryable,
+            })
+          >[
+            (
+              name: 'retryable connect timeout',
+              error: ConnectException(
+                'connect timed out',
+                reason: ConnectionErrorReason.Timeout,
+              ),
+              result: SessionJoinResult.retryableFailure,
+              retryable: true,
+            ),
+            (
+              name: 'fatal connect failure',
+              error: ConnectException(
+                'connect forbidden',
+                reason: ConnectionErrorReason.NotAllowed,
+              ),
+              result: SessionJoinResult.fatalFailure,
+              retryable: false,
+            ),
+          ]) {
+        test(
+          'join retains tracks when ${testCase.name} throws',
+          () async {
+            const eventSlug = 'test-session';
+            final container = _createContainerWithEventOverride(eventSlug);
+            addTearDown(container.dispose);
+
+            const options = SessionOptions(
+              eventSlug: eventSlug,
+              token: 'test-token',
+              cameraEnabled: true,
+              microphoneEnabled: true,
+              cameraOptions: SessionController.defaultCameraCaptureOptions,
+              speakerEnabled: true,
+            );
+
+            final sub = container.listen(
+              sessionControllerProvider(options),
+              (_, _) {},
+              fireImmediately: true,
+            );
+            addTearDown(sub.close);
+
+            final controller = container.read(
+              sessionControllerProvider(options).notifier,
+            );
+            final cameraTrack = MockLocalVideoTrack();
+            final microphoneTrack = MockLocalAudioTrack();
+            final localParticipant = MockLocalParticipant();
+            when(
+              () => localParticipant.setCameraEnabled(any<bool>()),
+            ).thenAnswer((_) async => null);
+            when(
+              () => localParticipant.setMicrophoneEnabled(any<bool>()),
+            ).thenAnswer((_) async => null);
+            final room = _CountingRoom(
+              localParticipant,
+              connectError: testCase.error,
+            );
+            controller.room = room;
+
+            final result = await controller.join(
+              joinMedia: SessionJoinMedia(
+                cameraTrack: cameraTrack,
+                microphoneTrack: microphoneTrack,
+              ),
+            );
+
+            expect(result, testCase.result);
+            expect(room.connectCount, 1);
+            expect(
+              room.lastFastConnectOptions?.camera.track,
+              same(cameraTrack),
+            );
+            expect(
+              room.lastFastConnectOptions?.microphone.track,
+              same(microphoneTrack),
+            );
+            verifyNever(cameraTrack.stop);
+            verifyNever(cameraTrack.dispose);
+            verifyNever(microphoneTrack.stop);
+            verifyNever(microphoneTrack.dispose);
+
+            if (testCase.retryable) {
+              await controller.resetAfterFailedJoin();
+            } else {
+              await controller.disposeConnection();
+            }
+
+            expect(room.disposeCount, 1);
+            verify(cameraTrack.stop).called(1);
+            verify(cameraTrack.dispose).called(1);
+            verify(microphoneTrack.stop).called(1);
+            verify(microphoneTrack.dispose).called(1);
+          },
+        );
+      }
     });
 
     group('Test-Visible Helpers', () {
