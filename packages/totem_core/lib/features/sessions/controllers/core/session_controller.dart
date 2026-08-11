@@ -392,15 +392,18 @@ class SessionController extends _$SessionController {
   Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
     final retainedJoinMedia = _joinMediaOwner.retain(joinMedia);
 
-    if (room != null) {
-      if (state.connectionState == RoomConnectionState.connected ||
-          state.connectionState == RoomConnectionState.connecting) {
-        // The caller transferred ownership, but this no-op join will never hand
-        // these tracks to LiveKit. Release only the media supplied by this call;
-        // tracks retained by an in-flight join must remain alive.
-        await retainedJoinMedia.dispose();
-        return SessionJoinResult.success;
+    if (state.connectionState == RoomConnectionState.connected ||
+        state.connectionState == RoomConnectionState.connecting) {
+      // The caller transferred ownership, but this no-op join will never hand
+      // these tracks to LiveKit. Release only the media supplied by this call;
+      // tracks retained by an in-flight join must remain alive. Connection
+      // state becomes connecting before initializeConnection assigns _room, so
+      // the state machine itself must be the re-entrancy guard.
+      if (retainedJoinMedia.hasOwnedTracks) {
+        _detachJoinMediaPreview(joinMedia);
       }
+      await retainedJoinMedia.dispose();
+      return SessionJoinResult.success;
     }
 
     _dispatch(
@@ -486,6 +489,10 @@ class SessionController extends _$SessionController {
       _joinMediaOwner
         ..releaseToRoom(initialCameraTrack)
         ..releaseToRoom(initialMicrophoneTrack);
+      // Residual SDK limitation: Room.connect can succeed before FastConnect
+      // publication finishes. If that later asynchronous publication fails,
+      // LiveKit exposes no completion/error future through which ownership can
+      // be reclaimed, so the raw track can remain live until browser cleanup.
       return SessionJoinResult.success;
     }
     // For ConnectException and MediaConnectException, we log the error but don't
@@ -539,7 +546,22 @@ class SessionController extends _$SessionController {
       // this only disposes media that LiveKit did not accept. In particular,
       // fatal failures keep rendering the Session error UI and never run the
       // retry reset path, so join itself must release their live capture.
+      if (retainedJoinMedia.hasOwnedTracks) {
+        _detachJoinMediaPreview(joinMedia);
+      }
       await retainedJoinMedia.dispose();
+    }
+  }
+
+  void _detachJoinMediaPreview(SessionJoinMedia? joinMedia) {
+    try {
+      joinMedia?.onBeforeDispose?.call();
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to detach pre-join media before disposal',
+      );
     }
   }
 

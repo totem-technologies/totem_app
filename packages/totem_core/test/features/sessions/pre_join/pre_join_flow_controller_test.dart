@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
@@ -121,6 +123,8 @@ class _SuccessfulSessionController extends SessionController {
 
 class _RetryableSessionController extends SessionController {
   static int resets = 0;
+  static Completer<void>? resetStarted;
+  static Completer<void>? resetGate;
 
   @override
   SessionRoomState build(SessionOptions options) => _sessionState;
@@ -130,7 +134,11 @@ class _RetryableSessionController extends SessionController {
       SessionJoinResult.retryableFailure;
 
   @override
-  Future<void> resetAfterFailedJoin() async => resets++;
+  Future<void> resetAfterFailedJoin() async {
+    resets++;
+    resetStarted?.complete();
+    await resetGate?.future;
+  }
 }
 
 ProviderContainer _container({
@@ -193,6 +201,10 @@ void main() {
         container.read(preJoinFlowControllerProvider(_slug)).phase,
         PreJoinFlowPhase.idle,
       );
+      expect(
+        container.read(preJoinFlowControllerProvider(_slug)).sessionOptions,
+        isNull,
+      );
     },
   );
 
@@ -227,6 +239,10 @@ void main() {
     () async {
       final factory = _TrackFactory();
       _RetryableSessionController.resets = 0;
+      final resetStarted = Completer<void>();
+      final resetGate = Completer<void>();
+      _RetryableSessionController.resetStarted = resetStarted;
+      _RetryableSessionController.resetGate = resetGate;
       final container = _container(
         factory: factory,
         response: const JoinResponse(token: 'token', isAlreadyPresent: false),
@@ -235,9 +251,22 @@ void main() {
       addTearDown(container.dispose);
       await _waitForMedia(container);
 
-      final outcome = await container
+      final outcomeFuture = container
           .read(preJoinFlowControllerProvider(_slug).notifier)
           .requestJoin();
+      await resetStarted.future;
+
+      final detached = container.read(
+        preJoinMediaControllerProvider(_slug),
+      );
+      expect(detached.transferred, isTrue);
+      expect(detached.camera.track, isNull);
+      expect(detached.microphone.track, isNull);
+      expect(factory.videoTracks, hasLength(1));
+      expect(factory.audioTracks, hasLength(1));
+
+      resetGate.complete();
+      final outcome = await outcomeFuture;
 
       expect(outcome, PreJoinJoinOutcome.retryableFailure);
       expect(_RetryableSessionController.resets, 1);
@@ -247,6 +276,8 @@ void main() {
         container.read(preJoinFlowControllerProvider(_slug)).phase,
         PreJoinFlowPhase.idle,
       );
+      _RetryableSessionController.resetStarted = null;
+      _RetryableSessionController.resetGate = null;
     },
   );
 }

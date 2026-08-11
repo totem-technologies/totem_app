@@ -173,6 +173,28 @@ class _CountingRoom implements Room {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class _DelayedInitializeSessionController extends SessionController {
+  final initializationStarted = Completer<void>();
+  final initializationGate = Completer<void>();
+  late Room initializedRoom;
+  int initializationCount = 0;
+
+  @override
+  Future<Room> initializeConnection({
+    required RoomOptions roomOptions,
+    required String url,
+    required String token,
+  }) async {
+    initializationCount++;
+    if (!initializationStarted.isCompleted) {
+      initializationStarted.complete();
+    }
+    await initializationGate.future;
+    room = initializedRoom;
+    return initializedRoom;
+  }
+}
+
 void main() {
   setUpAll(() {
     setupAppConfig(
@@ -612,6 +634,103 @@ void main() {
       });
 
       test(
+        'join is guarded while connecting before room initialization',
+        () async {
+          const eventSlug = 'test-session';
+          const options = SessionOptions(
+            eventSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: true,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          final container = ProviderContainer(
+            overrides: [
+              eventProvider(eventSlug).overrideWithValue(
+                AsyncData(_createSessionEvent(eventSlug)),
+              ),
+              sessionControllerProvider(options).overrideWith(
+                _DelayedInitializeSessionController.new,
+              ),
+            ],
+          );
+          addTearDown(container.dispose);
+
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+
+          final controller =
+              container.read(
+                    sessionControllerProvider(options).notifier,
+                  )
+                  as _DelayedInitializeSessionController;
+          final localParticipant = MockLocalParticipant();
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          final room = _CountingRoom(localParticipant);
+          controller.initializedRoom = room;
+
+          final firstCameraTrack = MockLocalVideoTrack();
+          final firstMicrophoneTrack = MockLocalAudioTrack();
+          final firstJoin = controller.join(
+            joinMedia: SessionJoinMedia(
+              cameraTrack: firstCameraTrack,
+              microphoneTrack: firstMicrophoneTrack,
+            ),
+          );
+          await controller.initializationStarted.future;
+
+          expect(controller.room, isNull);
+          expect(
+            controller.state.connectionState,
+            RoomConnectionState.connecting,
+          );
+
+          final secondCameraTrack = MockLocalVideoTrack();
+          final secondMicrophoneTrack = MockLocalAudioTrack();
+          final secondResult = await controller.join(
+            joinMedia: SessionJoinMedia(
+              cameraTrack: secondCameraTrack,
+              microphoneTrack: secondMicrophoneTrack,
+            ),
+          );
+
+          expect(secondResult, SessionJoinResult.success);
+          expect(controller.initializationCount, 1);
+          expect(room.connectCount, 0);
+          verify(secondCameraTrack.stop).called(1);
+          verify(secondCameraTrack.dispose).called(1);
+          verify(secondMicrophoneTrack.stop).called(1);
+          verify(secondMicrophoneTrack.dispose).called(1);
+
+          controller.initializationGate.complete();
+          expect(await firstJoin, SessionJoinResult.success);
+          expect(room.connectCount, 1);
+          expect(
+            room.lastFastConnectOptions?.camera.track,
+            same(firstCameraTrack),
+          );
+          expect(
+            room.lastFastConnectOptions?.microphone.track,
+            same(firstMicrophoneTrack),
+          );
+          verifyNever(firstCameraTrack.stop);
+          verifyNever(firstCameraTrack.dispose);
+          verifyNever(firstMicrophoneTrack.stop);
+          verifyNever(firstMicrophoneTrack.dispose);
+        },
+      );
+
+      test(
         'join disposes newly transferred media when already connecting',
         () async {
           const eventSlug = 'test-session';
@@ -862,6 +981,11 @@ void main() {
             );
             final cameraTrack = MockLocalVideoTrack();
             final microphoneTrack = MockLocalAudioTrack();
+            var previewAttached = true;
+            when(cameraTrack.stop).thenAnswer((_) async {
+              expect(previewAttached, isFalse);
+              return true;
+            });
             final localParticipant = MockLocalParticipant();
             when(
               () => localParticipant.setCameraEnabled(any<bool>()),
@@ -879,10 +1003,12 @@ void main() {
               joinMedia: SessionJoinMedia(
                 cameraTrack: cameraTrack,
                 microphoneTrack: microphoneTrack,
+                onBeforeDispose: () => previewAttached = false,
               ),
             );
 
             expect(result, testCase.result);
+            expect(previewAttached, isFalse);
             expect(room.connectCount, 1);
             expect(
               room.lastFastConnectOptions?.camera.track,

@@ -198,7 +198,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     return PreJoinView(
       key: _preJoinViewKey,
       mediaState: media,
-      locked: flow.phase != PreJoinFlowPhase.idle,
+      locked:
+          flow.phase != PreJoinFlowPhase.idle || !media.initializationComplete,
       onToggleCamera: mediaController.toggleCamera,
       onToggleMicrophone: mediaController.toggleMicrophone,
       onToggleSpeaker: mediaController.toggleSpeaker,

@@ -71,8 +71,7 @@ class PreJoinMediaOperationQueue {
 
 @riverpod
 class PreJoinMediaController extends _$PreJoinMediaController {
-  final _cameraOperations = PreJoinMediaOperationQueue();
-  final _microphoneOperations = PreJoinMediaOperationQueue();
+  final _captureOperations = PreJoinMediaOperationQueue();
 
   Future<void>? _initialization;
   LocalVideoTrack? _cameraTrack;
@@ -91,10 +90,10 @@ class PreJoinMediaController extends _$PreJoinMediaController {
   }
 
   Future<void> initialize() async {
-    // Keep the two getUserMedia requests sequential. Safari is sensitive to
-    // overlapping capture requests during a cold browser start.
+    // Serialize every getUserMedia path. Safari is sensitive to overlapping
+    // capture requests during a cold browser start, including user toggles.
     if (state.preferences.isCameraOn) {
-      await _cameraOperations.schedule(_initializeCamera);
+      await _captureOperations.schedule(_initializeCamera);
     } else {
       _setCamera(
         const PreJoinCaptureState(phase: PreJoinCapturePhase.disabled),
@@ -104,8 +103,11 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     // Preferences may change while camera initialization is in flight.
     if (!ref.mounted) return;
     if (state.preferences.isMicOn) {
-      await _microphoneOperations.schedule(_initializeMicrophone);
-    } else {
+      if (!state.microphone.isReady) {
+        await _captureOperations.schedule(_initializeMicrophone);
+      }
+    } else if (state.microphone.phase == PreJoinCapturePhase.uninitialized ||
+        state.microphone.phase == PreJoinCapturePhase.initializing) {
       _setMicrophone(
         const PreJoinCaptureState(phase: PreJoinCapturePhase.disabled),
       );
@@ -290,7 +292,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
             phase: PreJoinCapturePhase.disabled,
           ),
         );
-        await _cameraOperations.schedule(
+        await _captureOperations.schedule(
           () => identical(track, _transferredVideoTrack)
               ? Future<void>.value()
               : _disposeTrack(track, 'camera'),
@@ -299,7 +301,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
         state = state.copyWith(
           preferences: state.preferences.copyWith(isCameraOn: true),
         );
-        await _cameraOperations.schedule(_initializeCamera);
+        await _captureOperations.schedule(_initializeCamera);
       }
     } finally {
       _togglingCamera = false;
@@ -319,7 +321,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
             phase: PreJoinCapturePhase.disabled,
           ),
         );
-        await _microphoneOperations.schedule(
+        await _captureOperations.schedule(
           () => identical(track, _transferredAudioTrack)
               ? Future<void>.value()
               : _disposeTrack(track, 'microphone'),
@@ -328,10 +330,10 @@ class PreJoinMediaController extends _$PreJoinMediaController {
         state = state.copyWith(
           preferences: state.preferences.copyWith(isMicOn: true),
         );
-        final track = await _microphoneOperations.schedule(
-          _initializeMicrophone,
-        );
-        await track?.unmute(stopOnMute: false);
+        await _captureOperations.schedule(() async {
+          final track = await _initializeMicrophone();
+          await track?.unmute(stopOnMute: false);
+        });
       }
     } finally {
       _togglingMicrophone = false;
@@ -365,7 +367,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
       preferences: state.preferences.copyWith(cameraOptions: options),
     );
     if (state.preferences.isCameraOn) {
-      unawaited(_cameraOperations.schedule(_initializeCamera));
+      unawaited(_captureOperations.schedule(_initializeCamera));
     }
   }
 
@@ -379,14 +381,14 @@ class PreJoinMediaController extends _$PreJoinMediaController {
         state = state.copyWith(
           preferences: state.preferences.copyWith(isCameraOn: true),
         );
-        await _cameraOperations.schedule(_initializeCamera);
+        await _captureOperations.schedule(_initializeCamera);
       }
       if (state.microphone.phase == PreJoinCapturePhase.unavailable ||
           state.microphone.phase == PreJoinCapturePhase.permissionDenied) {
         state = state.copyWith(
           preferences: state.preferences.copyWith(isMicOn: true),
         );
-        await _microphoneOperations.schedule(_initializeMicrophone);
+        await _captureOperations.schedule(_initializeMicrophone);
       }
     }
 
@@ -396,14 +398,12 @@ class PreJoinMediaController extends _$PreJoinMediaController {
   }
 
   Future<PreJoinMediaState> resetAfterFailedJoin() async {
+    detachTransferredTracks();
     await _initialization;
-    await Future.wait([
-      ?_cameraOperations.pending,
-      ?_microphoneOperations.pending,
-    ]);
+    await _captureOperations.pending;
 
-    // Failed-room teardown owns the transferred tracks. Drop references only
-    // after that teardown has completed, then acquire one fresh capture pair.
+    // Failed-room teardown owned the transferred tracks. Clear the handoff
+    // markers after teardown, then acquire one fresh capture pair.
     _transferredVideoTrack = null;
     _transferredAudioTrack = null;
     _cameraTrack = null;
@@ -426,15 +426,35 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     return state;
   }
 
+  /// Removes transferred tracks from the render state without disposing them.
+  ///
+  /// The Session owns these tracks after [takeForJoin]. Detaching synchronously
+  /// lets it stop failed media without a renderer observing that teardown.
+  void detachTransferredTracks() {
+    if (!ref.mounted || !state.transferred) return;
+
+    _cameraTrack = null;
+    _microphoneTrack = null;
+    state = state.copyWith(
+      camera: PreJoinCaptureState(
+        phase: state.preferences.isCameraOn
+            ? PreJoinCapturePhase.uninitialized
+            : PreJoinCapturePhase.disabled,
+      ),
+      microphone: PreJoinCaptureState(
+        phase: state.preferences.isMicOn
+            ? PreJoinCapturePhase.uninitialized
+            : PreJoinCapturePhase.disabled,
+      ),
+    );
+  }
+
   Future<SessionJoinMedia> takeForJoin() async {
     if (state.transferred) {
       throw StateError('Pre-join media has already been transferred');
     }
     await _initialization;
-    await Future.wait([
-      ?_cameraOperations.pending,
-      ?_microphoneOperations.pending,
-    ]);
+    await _captureOperations.pending;
 
     final cameraTrack = state.preferences.isCameraOn && state.camera.isReady
         ? state.camera.track
@@ -449,6 +469,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     return SessionJoinMedia(
       cameraTrack: cameraTrack,
       microphoneTrack: microphoneTrack,
+      onBeforeDispose: detachTransferredTracks,
     );
   }
 
@@ -512,7 +533,10 @@ class PreJoinMediaController extends _$PreJoinMediaController {
 
 bool _isWebMediaPermissionDenied(Object? error) {
   if (error == null) return false;
-  final description = error.toString().toLowerCase();
+  final description = switch (error) {
+    TrackCreateException(:final message) => message.toLowerCase(),
+    _ => error.toString().toLowerCase(),
+  };
   return description.contains('notallowederror') ||
       description.contains('permissiondeniederror') ||
       description.contains('permissiondismissederror') ||

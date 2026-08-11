@@ -78,5 +78,7 @@ class JoinMediaReceipt {
   final JoinMediaOwner _owner;
   final List<LocalTrack> _tracks;
 
+  bool get hasOwnedTracks => _tracks.any(_owner._contains);
+
   Future<void> dispose() => _owner._dispose(_tracks);
 }

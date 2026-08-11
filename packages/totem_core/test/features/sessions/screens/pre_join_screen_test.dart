@@ -20,6 +20,8 @@ import 'package:totem_core/features/sessions/repositories/session_repository.dar
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/shared/router.dart';
 
@@ -42,6 +44,18 @@ class _TrackFactory extends PreJoinPreviewTrackFactory {
     final track = MockLocalAudioTrack();
     when(track.createListener).thenReturn(MockTrackEventsListener());
     return track;
+  }
+}
+
+class _DelayedTrackFactory extends _TrackFactory {
+  final cameraGate = Completer<void>();
+
+  @override
+  Future<LocalVideoTrack?> createVideoTrack(
+    CameraCaptureOptions cameraOptions,
+  ) async {
+    await cameraGate.future;
+    return super.createVideoTrack(cameraOptions);
   }
 }
 
@@ -167,6 +181,7 @@ void main() {
     bool alreadyPresent = false,
     bool successfulJoin = false,
     bool pendingJoin = false,
+    PreJoinPreviewTrackFactory? trackFactory,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -174,7 +189,9 @@ void main() {
           authControllerProvider.overrideWith(
             () => FakeAuthController(AuthState.unauthenticated()),
           ),
-          preJoinPreviewTrackFactoryProvider.overrideWithValue(_TrackFactory()),
+          preJoinPreviewTrackFactoryProvider.overrideWithValue(
+            trackFactory ?? _TrackFactory(),
+          ),
           sessionTokenProvider(_slug).overrideWith((_) async {
             if (tokenError != null) throw tokenError;
             return JoinResponse(
@@ -215,6 +232,49 @@ void main() {
     expect(find.byType(ActionBar), findsOneWidget);
     expect(find.byType(ActionSliderButton), findsOneWidget);
     expect(find.text('Welcome'), findsOneWidget);
+  });
+
+  testWidgets('locks media toggles during initial capture', (tester) async {
+    final factory = _DelayedTrackFactory();
+    await pumpScreen(
+      tester,
+      successfulJoin: true,
+      trackFactory: factory,
+    );
+
+    expect(
+      tester
+          .widget<ActionBarMicButton>(find.byType(ActionBarMicButton))
+          .onToggle,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<ActionBarCameraSwitcherButton>(
+            find.byType(ActionBarCameraSwitcherButton),
+          )
+          .onToggle,
+      isNull,
+    );
+
+    factory.cameraGate.complete();
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      tester
+          .widget<ActionBarMicButton>(find.byType(ActionBarMicButton))
+          .onToggle,
+      isNotNull,
+    );
+    expect(
+      tester
+          .widget<ActionBarCameraSwitcherButton>(
+            find.byType(ActionBarCameraSwitcherButton),
+          )
+          .onToggle,
+      isNotNull,
+    );
   });
 
   testWidgets('renders token failures through the session error screen', (

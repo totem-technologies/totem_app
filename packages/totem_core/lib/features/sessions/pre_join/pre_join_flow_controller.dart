@@ -84,11 +84,17 @@ class PreJoinFlowController extends _$PreJoinFlowController {
             message: 'Failed to reset media after join failure',
           );
           if (ref.mounted) {
-            state = state.copyWith(phase: PreJoinFlowPhase.idle);
+            state = state.copyWith(
+              phase: PreJoinFlowPhase.idle,
+              clearSessionOptions: true,
+            );
           }
         }
       } else if (ref.mounted) {
-        state = state.copyWith(phase: PreJoinFlowPhase.idle);
+        state = state.copyWith(
+          phase: PreJoinFlowPhase.idle,
+          clearSessionOptions: true,
+        );
       }
       ErrorHandler.logError(
         error,
@@ -102,13 +108,21 @@ class PreJoinFlowController extends _$PreJoinFlowController {
   }
 
   Future<void> _resetAfterFailedJoin(SessionController session) async {
-    // LiveKit must release transferred captures before the preview opens fresh
-    // tracks. Reversing this order recreates Safari's dual-capture failure.
+    // Detach renderers first, then let LiveKit release the transferred capture.
+    // Fresh tracks must still wait for teardown to avoid Safari dual-capture.
+    ref
+        .read(preJoinMediaControllerProvider(sessionSlug).notifier)
+        .detachTransferredTracks();
     await session.resetAfterFailedJoin();
     if (!ref.mounted) return;
     await ref
         .read(preJoinMediaControllerProvider(sessionSlug).notifier)
         .resetAfterFailedJoin();
-    if (ref.mounted) state = state.copyWith(phase: PreJoinFlowPhase.idle);
+    if (ref.mounted) {
+      state = state.copyWith(
+        phase: PreJoinFlowPhase.idle,
+        clearSessionOptions: true,
+      );
+    }
   }
 }

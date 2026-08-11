@@ -131,11 +131,14 @@ class PreJoinFlowState {
   PreJoinFlowState copyWith({
     PreJoinFlowPhase? phase,
     SessionOptions? sessionOptions,
+    bool clearSessionOptions = false,
     bool? nativePermissionsGranted,
   }) {
     return PreJoinFlowState(
       phase: phase ?? this.phase,
-      sessionOptions: sessionOptions ?? this.sessionOptions,
+      sessionOptions: clearSessionOptions
+          ? null
+          : sessionOptions ?? this.sessionOptions,
       nativePermissionsGranted:
           nativePermissionsGranted ?? this.nativePermissionsGranted,
     );

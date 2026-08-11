@@ -66,6 +66,13 @@ class _UnavailableCameraFactory extends _PreviewTrackFactory {
   ) => throw Exception('NotFoundError: no camera is available');
 }
 
+class _PermissionDeniedCameraFactory extends _PreviewTrackFactory {
+  @override
+  Future<LocalVideoTrack?> createVideoTrack(
+    CameraCaptureOptions cameraOptions,
+  ) => throw TrackCreateException('NotAllowedError: permission denied');
+}
+
 Future<PreJoinMediaState> _waitUntilInitialized(
   ProviderContainer container,
 ) async {
@@ -135,6 +142,16 @@ void main() {
     expect(state.canJoinOnWeb, isFalse);
   });
 
+  test('typed track creation permission errors are classified', () async {
+    final container = _createContainer(_PermissionDeniedCameraFactory());
+    addTearDown(container.dispose);
+
+    final state = await _waitUntilInitialized(container);
+
+    expect(state.camera.phase, PreJoinCapturePhase.permissionDenied);
+    expect(state.canJoinOnWeb, isFalse);
+  });
+
   test('camera and microphone capture are initialized sequentially', () async {
     final factory = _DelayedCameraFactory();
     final container = _createContainer(factory);
@@ -165,6 +182,34 @@ void main() {
 
     expect(factory.audioTracks, isEmpty);
     expect(state.microphone.phase, PreJoinCapturePhase.disabled);
+  });
+
+  test('microphone toggles share the in-flight camera capture queue', () async {
+    final factory = _DelayedCameraFactory();
+    final container = _createContainer(factory);
+    addTearDown(container.dispose);
+    await Future<void>.delayed(Duration.zero);
+
+    final controller = container.read(
+      preJoinMediaControllerProvider(_sessionSlug).notifier,
+    );
+    var toggleCompleted = false;
+    final toggleOff = controller.toggleMicrophone().whenComplete(
+      () => toggleCompleted = true,
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(toggleCompleted, isFalse);
+    expect(factory.audioTracks, isEmpty);
+
+    factory.gate.complete();
+    await toggleOff;
+    await controller.toggleMicrophone();
+    final state = await _waitUntilInitialized(container);
+
+    expect(factory.videoTracks, hasLength(1));
+    expect(factory.audioTracks, hasLength(1));
+    expect(state.microphone.isReady, isTrue);
   });
 
   test('microphone stop waits for in-flight initialization', () async {
@@ -216,6 +261,37 @@ void main() {
       verifyNever(factory.videoTracks.single.dispose);
       verifyNever(factory.audioTracks.single.stop);
       verifyNever(factory.audioTracks.single.dispose);
+    },
+  );
+
+  test(
+    'detaching transferred tracks clears render state synchronously',
+    () async {
+      final factory = _PreviewTrackFactory();
+      final container = _createContainer(factory);
+      await _waitUntilInitialized(container);
+      final controller = container.read(
+        preJoinMediaControllerProvider(_sessionSlug).notifier,
+      );
+      final media = await controller.takeForJoin();
+
+      controller.detachTransferredTracks();
+
+      final detached = container.read(
+        preJoinMediaControllerProvider(_sessionSlug),
+      );
+      expect(detached.transferred, isTrue);
+      expect(detached.camera.track, isNull);
+      expect(detached.camera.phase, PreJoinCapturePhase.uninitialized);
+      expect(detached.microphone.track, isNull);
+      expect(detached.microphone.phase, PreJoinCapturePhase.uninitialized);
+
+      container.dispose();
+      await Future<void>.delayed(Duration.zero);
+      verifyNever(media.cameraTrack!.stop);
+      verifyNever(media.cameraTrack!.dispose);
+      verifyNever(media.microphoneTrack!.stop);
+      verifyNever(media.microphoneTrack!.dispose);
     },
   );
 
