@@ -182,7 +182,7 @@ class SessionController extends _$SessionController {
         .watch(eventProvider(options.eventSlug))
         .whenData((event) => this.event = event);
 
-    ref.onDispose(_cleanUp);
+    ref.onDispose(() => unawaited(_cleanUp()));
 
     final initialRoomState = RoomState(
       keeper: event?.space.author.slug ?? '',
@@ -390,11 +390,15 @@ class SessionController extends _$SessionController {
   }
 
   Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
-    _retainJoinMedia(joinMedia);
+    final newlyRetainedJoinMedia = _retainJoinMedia(joinMedia);
 
     if (room != null) {
       if (state.connectionState == RoomConnectionState.connected ||
           state.connectionState == RoomConnectionState.connecting) {
+        // The caller transferred ownership, but this no-op join will never hand
+        // these tracks to LiveKit. Release only the media supplied by this call;
+        // tracks retained by an in-flight join must remain alive.
+        await _disposeOwnedJoinMedia(newlyRetainedJoinMedia);
         return SessionJoinResult.success;
       }
     }
@@ -558,8 +562,10 @@ class SessionController extends _$SessionController {
     }
   }
 
-  void _retainJoinMedia(SessionJoinMedia? joinMedia) {
-    if (joinMedia == null || joinMedia.isEmpty) return;
+  List<LocalTrack> _retainJoinMedia(SessionJoinMedia? joinMedia) {
+    if (joinMedia == null || joinMedia.isEmpty) return const [];
+
+    final retainedTracks = <LocalTrack>[];
 
     for (final track in [joinMedia.cameraTrack, joinMedia.microphoneTrack]) {
       if (track == null) continue;
@@ -567,7 +573,10 @@ class SessionController extends _$SessionController {
         continue;
       }
       _ownedJoinMediaTracks.add(track);
+      retainedTracks.add(track);
     }
+
+    return retainedTracks;
   }
 
   T? _ownedJoinTrack<T extends LocalTrack>() {
@@ -583,8 +592,20 @@ class SessionController extends _$SessionController {
   }
 
   Future<void> _disposeRetainedJoinMedia() async {
-    final tracks = _ownedJoinMediaTracks.toList();
-    _ownedJoinMediaTracks.clear();
+    await _disposeOwnedJoinMedia(_ownedJoinMediaTracks.toList());
+  }
+
+  Future<void> _disposeOwnedJoinMedia(Iterable<LocalTrack> tracks) async {
+    final ownedTracks = <LocalTrack>[];
+    for (final track in tracks) {
+      final wasOwned = _ownedJoinMediaTracks.any(
+        (owned) => identical(owned, track),
+      );
+      if (!wasOwned) continue;
+
+      _ownedJoinMediaTracks.removeWhere((owned) => identical(owned, track));
+      ownedTracks.add(track);
+    }
 
     Future<void> disposeTrack(LocalTrack track) async {
       try {
@@ -599,15 +620,18 @@ class SessionController extends _$SessionController {
       }
     }
 
-    await Future.wait(tracks.map(disposeTrack));
+    await Future.wait(ownedTracks.map(disposeTrack));
   }
 
   Future<void> leave() async {
-    await _disconnect();
-    _cleanUp();
+    try {
+      await _disconnect();
+    } finally {
+      await _cleanUp();
+    }
   }
 
-  void _cleanUp() {
+  Future<void> _cleanUp() async {
     logger.d('Disposing SessionService and closing connections.');
 
     if (ref.mounted) {
@@ -644,7 +668,7 @@ class SessionController extends _$SessionController {
     _statePollTimer?.cancel();
     _statePollTimer = null;
 
-    disposeConnection();
+    await disposeConnection();
   }
 
   @visibleForTesting

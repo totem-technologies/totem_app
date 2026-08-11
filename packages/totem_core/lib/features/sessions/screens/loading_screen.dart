@@ -26,6 +26,36 @@ abstract class PreJoinPreviewTrackFactory {
   Future<LocalAudioTrack?> createAudioTrack();
 }
 
+/// Serializes pre-join media work without allowing one failed operation to
+/// poison the queue tail awaited by later operations or by the join flow.
+@visibleForTesting
+class PreJoinMediaOperationQueue {
+  Future<void>? _tail;
+
+  Future<void>? get pending => _tail;
+
+  Future<T> schedule<T>(Future<T> Function() operation) {
+    final previous = _tail;
+    final result = () async {
+      try {
+        await previous;
+      } catch (_) {
+        // Keep progressing even if a previously stored operation predates the
+        // non-throwing queue-tail guarantee below.
+      }
+      return operation();
+    }();
+
+    // Return the original result so its caller still observes failures, but
+    // retain a non-throwing tail for future operations and join/reset waits.
+    _tail = result.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    return result;
+  }
+}
+
 @immutable
 class PreJoinMediaStatus {
   const PreJoinMediaStatus({
@@ -228,8 +258,8 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
   var _isMicOn = true;
 
   Future<void>? _mediaInitialization;
-  Future<void>? _cameraOperation;
-  Future<void>? _microphoneOperation;
+  final _cameraOperations = PreJoinMediaOperationQueue();
+  final _microphoneOperations = PreJoinMediaOperationQueue();
   var _cameraInitializationComplete = false;
   var _microphoneInitializationComplete = false;
   var _cameraPermissionGranted = false;
@@ -363,13 +393,7 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
   }
 
   Future<void> _queueCameraOperation(Future<void> Function() operation) {
-    final previous = _cameraOperation;
-    final next = () async {
-      await previous;
-      await operation();
-    }();
-    _cameraOperation = next;
-    return next;
+    return _cameraOperations.schedule(operation);
   }
 
   Future<void> _stopMicrophonePreview() {
@@ -377,13 +401,7 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
   }
 
   Future<T> _queueMicrophoneOperation<T>(Future<T> Function() operation) {
-    final previous = _microphoneOperation;
-    final next = () async {
-      await previous;
-      return operation();
-    }();
-    _microphoneOperation = next;
-    return next;
+    return _microphoneOperations.schedule(operation);
   }
 
   Future<void> _initializeLocalVideo() async {
@@ -507,8 +525,8 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
 
     await _mediaInitialization;
     await Future.wait([
-      ?_cameraOperation,
-      ?_microphoneOperation,
+      ?_cameraOperations.pending,
+      ?_microphoneOperations.pending,
     ]);
 
     final cameraTrack = _isCameraOn ? _previewVideoTrack : null;
@@ -549,8 +567,8 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
   Future<PreJoinMediaStatus> _resetAfterFailedJoin() async {
     await _mediaInitialization;
     await Future.wait([
-      ?_cameraOperation,
-      ?_microphoneOperation,
+      ?_cameraOperations.pending,
+      ?_microphoneOperations.pending,
     ]);
 
     // The failed Session/Room teardown owns the transferred tracks. Drop all

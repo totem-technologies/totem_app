@@ -367,6 +367,32 @@ void main() {
     return capturedContext!;
   }
 
+  group('PreJoinMediaOperationQueue', () {
+    test(
+      'continues after a failed operation without hiding its error',
+      () async {
+        final queue = PreJoinMediaOperationQueue();
+
+        final failedOperation = queue.schedule<void>(
+          () async => throw StateError('media operation failed'),
+        );
+
+        await expectLater(failedOperation, throwsStateError);
+        await expectLater(queue.pending, completes);
+
+        var nextOperationRan = false;
+        final result = await queue.schedule<int>(() async {
+          nextOperationRan = true;
+          return 42;
+        });
+
+        expect(nextOperationRan, isTrue);
+        expect(result, 42);
+        await expectLater(queue.pending, completes);
+      },
+    );
+  });
+
   group('PreJoinScreen', () {
     group('renders', () {
       testWidgets('renders the pre-join controls', (tester) async {

@@ -269,6 +269,80 @@ void main() {
         expect(controller.room, isNull);
       });
 
+      test('leave waits for retained pre-join media disposal', () async {
+        const eventSlug = 'test-session';
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+
+        const options = SessionOptions(
+          eventSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: true,
+          microphoneEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        final localParticipant = MockLocalParticipant();
+        when(
+          () => localParticipant.setCameraEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setMicrophoneEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+        final room = _CountingRoom(
+          localParticipant,
+          prepareConnectionError: StateError('prepare failed'),
+        );
+        controller.room = room;
+
+        final cameraTrack = MockLocalVideoTrack();
+        final microphoneTrack = MockLocalAudioTrack();
+        final cameraDisposalGate = Completer<void>();
+        when(cameraTrack.dispose).thenAnswer((_) async {
+          await cameraDisposalGate.future;
+          return true;
+        });
+
+        final joinResult = await controller.join(
+          joinMedia: SessionJoinMedia(
+            cameraTrack: cameraTrack,
+            microphoneTrack: microphoneTrack,
+          ),
+        );
+        expect(joinResult, SessionJoinResult.retryableFailure);
+
+        var leaveCompleted = false;
+        final leaveFuture = controller.leave().whenComplete(
+          () => leaveCompleted = true,
+        );
+        await pumpEventQueue();
+
+        expect(leaveCompleted, isFalse);
+        verify(cameraTrack.stop).called(1);
+        verify(cameraTrack.dispose).called(1);
+
+        cameraDisposalGate.complete();
+        await leaveFuture;
+
+        expect(leaveCompleted, isTrue);
+        expect(controller.room, isNull);
+        expect(room.disconnectCount, 1);
+        expect(room.disposeCount, 1);
+        verify(microphoneTrack.stop).called(1);
+        verify(microphoneTrack.dispose).called(1);
+      });
+
       test(
         'transient join disconnect keeps room available for retry',
         () async {
@@ -445,6 +519,67 @@ void main() {
         expect(room.prepareConnectionCount, 1);
         expect(room.connectCount, 1);
       });
+
+      test(
+        'join disposes newly transferred media when already connecting',
+        () async {
+          const eventSlug = 'test-session';
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+
+          const options = SessionOptions(
+            eventSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: true,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final localParticipant = MockLocalParticipant();
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          final room = _CountingRoom(localParticipant);
+          controller.room = room;
+
+          await controller.join();
+
+          final cameraTrack = MockLocalVideoTrack();
+          final microphoneTrack = MockLocalAudioTrack();
+          final result = await controller.join(
+            joinMedia: SessionJoinMedia(
+              cameraTrack: cameraTrack,
+              microphoneTrack: microphoneTrack,
+            ),
+          );
+
+          expect(result, SessionJoinResult.success);
+          expect(room.connectCount, 1);
+          verify(cameraTrack.stop).called(1);
+          verify(cameraTrack.dispose).called(1);
+          verify(microphoneTrack.stop).called(1);
+          verify(microphoneTrack.dispose).called(1);
+
+          await controller.disposeConnection();
+
+          verifyNoMoreInteractions(cameraTrack);
+          verifyNoMoreInteractions(microphoneTrack);
+        },
+      );
 
       test(
         'join transfers pre-join tracks without waiting for publications',
