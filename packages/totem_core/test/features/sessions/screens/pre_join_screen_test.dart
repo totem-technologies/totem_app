@@ -177,6 +177,15 @@ class _DelayedMicrophonePreviewTrackFactory extends _PreviewTrackFactory {
   }
 }
 
+class _UnavailableCameraPreviewTrackFactory extends _PreviewTrackFactory {
+  @override
+  Future<LocalVideoTrack?> createVideoTrack(
+    CameraCaptureOptions cameraOptions,
+  ) async {
+    throw Exception('NotFoundError: no camera is available');
+  }
+}
+
 class _NoOpSessionController extends sessions.SessionController {
   static session_state.SessionJoinMedia? lastJoinMedia;
 
@@ -393,6 +402,39 @@ void main() {
     );
   });
 
+  group('PreJoinMediaStatus', () {
+    for (final cameraError in [
+      'NotFoundError: no camera',
+      'NotReadableError: camera is busy',
+      'OverconstrainedError: stale deviceId',
+    ]) {
+      test('allows a microphone-only web join for $cameraError', () {
+        final status = PreJoinMediaStatus(
+          cameraInitializationComplete: true,
+          microphoneInitializationComplete: true,
+          cameraPermissionGranted: false,
+          microphonePermissionGranted: true,
+          cameraError: cameraError,
+        );
+
+        expect(status.requiredPermissionsGranted, isFalse);
+        expect(status.canJoinOnWeb, isTrue);
+      });
+    }
+
+    test('blocks a web join when camera permission was explicitly denied', () {
+      const status = PreJoinMediaStatus(
+        cameraInitializationComplete: true,
+        microphoneInitializationComplete: true,
+        cameraPermissionGranted: false,
+        microphonePermissionGranted: true,
+        cameraError: 'NotAllowedError: permission denied',
+      );
+
+      expect(status.canJoinOnWeb, isFalse);
+    });
+  });
+
   group('PreJoinScreen', () {
     group('renders', () {
       testWidgets('renders the pre-join controls', (tester) async {
@@ -538,6 +580,50 @@ void main() {
     });
 
     group('preview controls', () {
+      testWidgets(
+        'falls back to microphone-only when the camera is unavailable',
+        (tester) async {
+          final previewTracks = _UnavailableCameraPreviewTrackFactory();
+          final mediaController = PreJoinMediaController();
+          final preferences = <MediaPreferences>[];
+          final statuses = <PreJoinMediaStatus>[];
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                authControllerProvider.overrideWith(
+                  () => FakeAuthController(AuthState.unauthenticated()),
+                ),
+              ],
+              child: MaterialApp(
+                home: PrejoinSessionScreen(
+                  previewTrackFactory: previewTracks,
+                  mediaController: mediaController,
+                  onMediaPreferencesChanged: preferences.add,
+                  onMediaStatusChanged: statuses.add,
+                ),
+              ),
+            ),
+          );
+
+          for (var i = 0; i < 10; i++) {
+            await tester.pump();
+          }
+
+          expect(previewTracks.audioTracks, hasLength(1));
+          expect(preferences.last.isCameraOn, isFalse);
+          expect(preferences.last.isMicOn, isTrue);
+          expect(statuses.last.canJoinOnWeb, isTrue);
+
+          final joinMedia = await mediaController.takeForJoin();
+          expect(joinMedia.cameraTrack, isNull);
+          expect(
+            joinMedia.microphoneTrack,
+            same(previewTracks.audioTracks.single),
+          );
+        },
+      );
+
       testWidgets('toggles the camera preview state', (tester) async {
         final previewTracks = _PreviewTrackFactory();
 

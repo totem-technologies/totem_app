@@ -87,6 +87,25 @@ class PreJoinMediaStatus {
 
   bool get requiredPermissionsGranted =>
       cameraPermissionGranted && microphonePermissionGranted;
+
+  /// Web joins require a working microphone, but can proceed camera-off when
+  /// camera capture failed for a reason other than an explicit permission
+  /// denial (for example, no camera, a busy device, or stale constraints).
+  bool get canJoinOnWeb =>
+      initializationComplete &&
+      microphonePermissionGranted &&
+      (cameraPermissionGranted || !_isWebMediaPermissionDenied(cameraError));
+}
+
+bool _isWebMediaPermissionDenied(Object? error) {
+  if (error == null) return false;
+
+  final description = error.toString().toLowerCase();
+  return description.contains('notallowederror') ||
+      description.contains('permissiondeniederror') ||
+      description.contains('permissiondismissederror') ||
+      description.contains('permission denied') ||
+      description.contains('securityerror');
 }
 
 /// Coordinates the pre-join preview with the Session join flow without
@@ -421,9 +440,14 @@ class _PrejoinSessionScreenState extends State<PrejoinSessionScreen> {
       await _previewVideoTrack?.start();
       _cameraPermissionGranted = track != null;
       _cameraError = null;
+      if (track == null) {
+        _isCameraOn = false;
+        _notifyMediaPreferencesChanged();
+      }
     } catch (error, stackTrace) {
       _isCameraOn = false;
       _cameraError = error;
+      _notifyMediaPreferencesChanged();
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,

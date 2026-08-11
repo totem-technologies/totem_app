@@ -153,7 +153,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       return;
     }
 
-    final permissionsGranted = status.requiredPermissionsGranted;
+    final permissionsGranted = status.canJoinOnWeb;
     if (_permissionsGranted != permissionsGranted) {
       setState(() => _permissionsGranted = permissionsGranted);
     }
@@ -178,7 +178,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       context,
       retryPermissions: () async {
         final status = await _preJoinMediaController.retryFailedMedia();
-        return status.requiredPermissionsGranted;
+        return status.canJoinOnWeb;
       },
     );
 
