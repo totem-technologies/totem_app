@@ -88,9 +88,47 @@ class PreJoinMediaController extends _$PreJoinMediaController {
   @override
   PreJoinMediaState build(String sessionSlug) {
     ref.onDispose(() => unawaited(_disposeOwnedTracks()));
-    _initialization = Future<void>.microtask(initialize);
+    _initialization = Future<void>.microtask(
+      () => _guardInitialization(initialize),
+    );
     unawaited(_detectHeadphones());
     return const PreJoinMediaState();
+  }
+
+  Future<void> _guardInitialization(
+    Future<void> Function() operation,
+  ) async {
+    try {
+      await operation();
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to initialize pre-join media',
+      );
+      if (!ref.mounted) return;
+
+      final cameraIncomplete = !state.camera.initializationComplete;
+      final microphoneIncomplete = !state.microphone.initializationComplete;
+      state = state.copyWith(
+        preferences: state.preferences.copyWith(
+          isCameraOn: !cameraIncomplete && state.preferences.isCameraOn,
+          isMicOn: !microphoneIncomplete && state.preferences.isMicOn,
+        ),
+        camera: cameraIncomplete
+            ? PreJoinCaptureState(
+                phase: PreJoinCapturePhase.unavailable,
+                error: error,
+              )
+            : state.camera,
+        microphone: microphoneIncomplete
+            ? PreJoinCaptureState(
+                phase: PreJoinCapturePhase.unavailable,
+                error: error,
+              )
+            : state.microphone,
+      );
+    }
   }
 
   Future<void> initialize() async {
@@ -398,7 +436,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
       }
     }
 
-    _initialization = retry();
+    _initialization = _guardInitialization(retry);
     await _initialization;
     return state;
   }
@@ -427,7 +465,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
             : PreJoinCapturePhase.disabled,
       ),
     );
-    _initialization = initialize();
+    _initialization = _guardInitialization(initialize);
     await _initialization;
     return state;
   }

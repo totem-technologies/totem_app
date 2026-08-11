@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
@@ -88,7 +89,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       final granted = await showPermissionsRequestSheet(context);
       if (!mounted) return;
       if (!granted) {
-        context.pop();
+        if (context.canPop()) context.pop();
         return;
       }
 
@@ -128,18 +129,28 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       _showingWebPermissionsDialog = false;
       return;
     }
-    final granted = await showWebPermissionsDeniedDialog(
-      context,
-      retryPermissions: () async {
-        final media = await ref
-            .read(
-              preJoinMediaControllerProvider(widget.sessionSlug).notifier,
-            )
-            .retryFailedMedia();
-        return media.canJoinOnWeb;
-      },
-    );
-    _showingWebPermissionsDialog = false;
+    var granted = false;
+    try {
+      granted = await showWebPermissionsDeniedDialog(
+        context,
+        retryPermissions: () async {
+          final media = await ref
+              .read(
+                preJoinMediaControllerProvider(widget.sessionSlug).notifier,
+              )
+              .retryFailedMedia();
+          return media.canJoinOnWeb;
+        },
+      );
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to show or retry the web permissions dialog',
+      );
+    } finally {
+      _showingWebPermissionsDialog = false;
+    }
     if (granted && mounted) _reportFullyDisplayed();
   }
 

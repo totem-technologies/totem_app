@@ -73,6 +73,13 @@ class _PermissionDeniedCameraFactory extends _PreviewTrackFactory {
   ) => throw TrackCreateException('NotAllowedError: permission denied');
 }
 
+class _ThrowingInitializationController extends PreJoinMediaController {
+  @override
+  Future<void> initialize() async {
+    throw StateError('unexpected initialization failure');
+  }
+}
+
 Future<PreJoinMediaState> _waitUntilInitialized(
   ProviderContainer container,
 ) async {
@@ -86,9 +93,18 @@ Future<PreJoinMediaState> _waitUntilInitialized(
   throw StateError('Pre-join media did not initialize');
 }
 
-ProviderContainer _createContainer(PreJoinPreviewTrackFactory factory) {
+ProviderContainer _createContainer(
+  PreJoinPreviewTrackFactory factory, {
+  PreJoinMediaController Function()? controller,
+}) {
   return ProviderContainer(
-    overrides: [preJoinPreviewTrackFactoryProvider.overrideWithValue(factory)],
+    overrides: [
+      preJoinPreviewTrackFactoryProvider.overrideWithValue(factory),
+      if (controller != null)
+        preJoinMediaControllerProvider(
+          _sessionSlug,
+        ).overrideWith(controller),
+    ],
   )..listen(
     preJoinMediaControllerProvider(_sessionSlug),
     (_, _) {},
@@ -109,6 +125,26 @@ void main() {
     await expectLater(failed, throwsStateError);
     await expectLater(queue.pending, completes);
     expect(await queue.schedule(() async => 42), 42);
+  });
+
+  test('failed initial future does not poison media retry', () async {
+    final factory = _PreviewTrackFactory();
+    final container = _createContainer(
+      factory,
+      controller: _ThrowingInitializationController.new,
+    );
+    addTearDown(container.dispose);
+
+    final failedState = await _waitUntilInitialized(container);
+    expect(failedState.camera.phase, PreJoinCapturePhase.unavailable);
+    expect(failedState.microphone.phase, PreJoinCapturePhase.unavailable);
+
+    final recoveredState = await container
+        .read(preJoinMediaControllerProvider(_sessionSlug).notifier)
+        .retryFailedMedia();
+
+    expect(recoveredState.camera.isReady, isTrue);
+    expect(recoveredState.microphone.isReady, isTrue);
   });
 
   test('camera unavailable still allows a microphone-only web join', () async {
