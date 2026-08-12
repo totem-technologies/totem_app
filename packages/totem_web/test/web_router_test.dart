@@ -14,7 +14,7 @@ import 'package:totem_core/core/api/api_client/models/user_schema.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
-import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
+import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_web/core/navigation/web_router.dart';
 

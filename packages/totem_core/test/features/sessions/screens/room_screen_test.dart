@@ -475,7 +475,6 @@ void main() {
           duration: 10,
         ),
       );
-      when(() => session.join()).thenAnswer((_) async {});
     });
 
     testWidgets('renders loading screen for RoomScreen.loading', (

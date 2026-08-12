@@ -80,7 +80,10 @@ class MockLocalParticipant extends Mock implements LocalParticipant {
   List<LocalTrackPublication<LocalVideoTrack>> get videoTrackPublications => [];
 
   @override
-  List<LocalTrackPublication<LocalTrack>> getTrackPublications() => [];
+  List<LocalTrackPublication<LocalTrack>> getTrackPublications() =>
+      localTrackPublications;
+
+  List<LocalTrackPublication<LocalTrack>> localTrackPublications = [];
 
   final listener = _MockParticipantEventsListener();
 
@@ -197,7 +200,14 @@ class MockTrackUnmutedEvent extends Mock implements TrackUnmutedEvent {}
 
 class MockTrackEvent extends Mock implements TrackEvent {}
 
-class MockMediaStreamTrack extends Mock implements webrtc.MediaStreamTrack {}
+class MockMediaStreamTrack extends Mock implements webrtc.MediaStreamTrack {
+  MockMediaStreamTrack() {
+    when(getSettings).thenReturn({});
+  }
+
+  @override
+  webrtc.StreamTrackCallback? onEnded;
+}
 
 class _MockParticipantEventsListener extends Mock
     implements EventsListener<ParticipantEvent> {
@@ -235,10 +245,14 @@ class MockLocalTrackPublication extends Mock
   MockLocalTrackPublication({
     bool muted = false,
     bool isActive = true,
+    LocalVideoTrack? videoTrack,
   }) {
     when(
       () => track,
-    ).thenAnswer((_) => MockLocalVideoTrack(muted: muted, isActive: isActive));
+    ).thenAnswer(
+      (_) =>
+          videoTrack ?? MockLocalVideoTrack(muted: muted, isActive: isActive),
+    );
   }
 }
 
@@ -309,6 +323,11 @@ class MockLocalVideoTrack extends Mock implements LocalVideoTrack {
   bool _isActive;
 
   @override
+  EventsListener<TrackEvent> createListener({bool synchronized = false}) {
+    return MockTrackEventsListener();
+  }
+
+  @override
   dynamic noSuchMethod(Invocation invocation) {
     final defaulted = _videoTrackDefaults(invocation);
     if (defaulted != null ||
@@ -341,6 +360,20 @@ class MockLocalAudioTrack extends Mock implements LocalAudioTrack {
 
   bool _muted;
   bool _isActive;
+}
+
+class MockPreJoinLocalVideoTrack extends MockLocalVideoTrack {
+  final mockMediaStreamTrack = MockMediaStreamTrack();
+
+  @override
+  webrtc.MediaStreamTrack get mediaStreamTrack => mockMediaStreamTrack;
+}
+
+class MockPreJoinLocalAudioTrack extends MockLocalAudioTrack {
+  final mockMediaStreamTrack = MockMediaStreamTrack();
+
+  @override
+  webrtc.MediaStreamTrack get mediaStreamTrack => mockMediaStreamTrack;
 }
 
 class MockTrackEventsListener extends Mock

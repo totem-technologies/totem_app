@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 
 Future<void> showBackgroundActivityDialog(BuildContext context) async {
@@ -95,7 +96,10 @@ class BackgroundActivityDialog extends StatelessWidget {
 ///
 /// Returns true if permissions were eventually granted, false if the
 /// user chose to go back without granting.
-Future<bool> showWebPermissionsDeniedDialog(BuildContext context) async {
+Future<bool> showWebPermissionsDeniedDialog(
+  BuildContext context, {
+  Future<bool> Function()? retryPermissions,
+}) async {
   final container = ProviderScope.containerOf(context, listen: false);
 
   if (!context.mounted) return false;
@@ -104,68 +108,16 @@ Future<bool> showWebPermissionsDeniedDialog(BuildContext context) async {
     context: context,
     barrierDismissible: false,
     builder: (context) {
-      final theme = Theme.of(context);
-      return AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
-        ),
-        contentPadding: const EdgeInsets.all(24),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const TotemIcon(
-              TotemIcons.lock,
-              size: 45,
-              color: AppTheme.mauve,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Permissions Required',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Totem needs access to your camera and microphone '
-              'for live sessions. Please allow these permissions '
-              'in your browser settings and try again.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  textStyle: const TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                child: const Text(
-                  'Try Again',
-                  softWrap: false,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Go Back'),
-              ),
-            ),
-          ],
-        ),
+      return ConfirmationDialog(
+        icon: TotemIcons.lock,
+        title: 'Permissions Required',
+        content:
+            'Totem needs access to your camera and microphone to join this session. '
+            'Please grant permissions and try again.',
+        confirmButtonText: 'Try again',
+        onConfirm: () async {
+          Navigator.of(context).pop(true);
+        },
       );
     },
   );
@@ -179,24 +131,32 @@ Future<bool> showWebPermissionsDeniedDialog(BuildContext context) async {
     return false;
   }
 
-  // Re-request permissions
-  final controller = container.read(
-    permissionsControllerProvider.notifier,
-  );
-  await controller.requestPermissions();
+  final permissionsGranted = await (() async {
+    if (retryPermissions != null) {
+      return retryPermissions();
+    }
+
+    // Native and legacy callers still use the permissions controller. The
+    // Session pre-join flow supplies [retryPermissions] on web so the real
+    // preview tracks request access without opening throwaway media streams.
+    final controller = container.read(
+      permissionsControllerProvider.notifier,
+    );
+    await controller.requestPermissions();
+    return (await controller.currentStatuses).requiredPermissionsGranted;
+  })();
 
   if (!context.mounted) return false;
 
-  final statuses = await controller.currentStatuses;
-
-  if (!context.mounted) return false;
-
-  if (statuses.requiredPermissionsGranted) {
+  if (permissionsGranted) {
     return true;
   }
 
   // Permissions still not granted - show dialog again.
-  return showWebPermissionsDeniedDialog(context);
+  return showWebPermissionsDeniedDialog(
+    context,
+    retryPermissions: retryPermissions,
+  );
 }
 
 Future<bool> showPermissionsRequestSheet(BuildContext context) async {
@@ -240,9 +200,7 @@ Future<bool> showPermissionsRequestSheet(BuildContext context) async {
           borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
         ),
         builder: (context) {
-          return const SafeArea(
-            child: PermissionsRequestSheet(),
-          );
+          return const SafeArea(child: PermissionsRequestSheet());
         },
       ) ??
       false;
