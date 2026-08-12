@@ -238,20 +238,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     final flow = ref.watch(preJoinFlowControllerProvider(widget.sessionSlug));
     _joined = flow.phase == PreJoinFlowPhase.joined;
 
-    ref
-      ..listen(preJoinMediaControllerProvider(widget.sessionSlug), (_, next) {
-        _handleWebMediaState(next);
-      })
-      ..listen(sessionTokenProvider(widget.sessionSlug), (_, next) {
-        if (next case AsyncData(:final value)
-            when value.isAlreadyPresent &&
-                flow.phase == PreJoinFlowPhase.idle &&
-                !_showingAlreadyPresentDialog) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            unawaited(_promptAlreadyPresent());
-          });
-        }
-      });
+    ref.listen(preJoinMediaControllerProvider(widget.sessionSlug), (_, next) {
+      _handleWebMediaState(next);
+    });
 
     if (tokenData.hasError) {
       return _buildErrorScreen(tokenData.error, session: sessionData.value);
