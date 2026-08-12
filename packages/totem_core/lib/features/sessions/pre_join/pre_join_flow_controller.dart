@@ -43,7 +43,10 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       final currentMedia = ref.read(
         preJoinMediaControllerProvider(sessionSlug),
       );
-      if (!currentMedia.canJoinOnWeb) {
+      final requireUsableMedia = ref.read(
+        preJoinRequiresUsableMediaProvider,
+      );
+      if (requireUsableMedia && !currentMedia.canJoinOnWeb) {
         state = state.copyWith(phase: PreJoinFlowPhase.idle);
         return PreJoinJoinOutcome.permissionsDenied;
       }
@@ -70,7 +73,9 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       );
       session = currentSession;
       currentSession.preventAutoDispose();
-      final joinMedia = await mediaController.takeForJoin();
+      final joinMedia = await mediaController.takeForJoin(
+        requireUsableMedia: requireUsableMedia,
+      );
       mediaTransferred = true;
 
       final result = await currentSession.join(joinMedia: joinMedia);

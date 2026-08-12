@@ -108,6 +108,17 @@ class _TrackFactory extends PreJoinPreviewTrackFactory {
   }
 }
 
+class _UnavailableTrackFactory extends PreJoinPreviewTrackFactory {
+  @override
+  Future<LocalVideoTrack?> createVideoTrack(
+    CameraCaptureOptions cameraOptions,
+  ) => throw Exception('NotFoundError: no camera is available');
+
+  @override
+  Future<LocalAudioTrack?> createAudioTrack() =>
+      throw Exception('Audio engine returned error code: -9001');
+}
+
 class _SuccessfulSessionController extends SessionController {
   static SessionJoinMedia? receivedMedia;
 
@@ -145,10 +156,14 @@ ProviderContainer _container({
   required PreJoinPreviewTrackFactory factory,
   required JoinResponse response,
   required SessionController Function() sessionController,
+  bool requireUsableMedia = false,
 }) {
   return ProviderContainer(
       overrides: [
         preJoinPreviewTrackFactoryProvider.overrideWithValue(factory),
+        preJoinRequiresUsableMediaProvider.overrideWithValue(
+          requireUsableMedia,
+        ),
         sessionTokenProvider(_slug).overrideWith((_) async => response),
         eventProvider(_slug).overrideWith((_) async => _event()),
         sessionControllerProvider(_options).overrideWith(sessionController),
@@ -241,6 +256,7 @@ void main() {
       factory: factory,
       response: const JoinResponse(token: 'token', isAlreadyPresent: false),
       sessionController: _SuccessfulSessionController.new,
+      requireUsableMedia: true,
     );
     addTearDown(container.dispose);
     await _waitForMedia(container);
@@ -256,6 +272,31 @@ void main() {
       container.read(preJoinFlowControllerProvider(_slug)).phase,
       PreJoinFlowPhase.idle,
     );
+  });
+
+  test('native join succeeds when no camera or microphone exists', () async {
+    _SuccessfulSessionController.receivedMedia = null;
+    final container = _container(
+      factory: _UnavailableTrackFactory(),
+      response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+      sessionController: _SuccessfulSessionController.new,
+    );
+    addTearDown(container.dispose);
+    await _waitForMedia(container);
+
+    final mediaState = container.read(
+      preJoinMediaControllerProvider(_slug),
+    );
+    expect(mediaState.camera.phase, PreJoinCapturePhase.unavailable);
+    expect(mediaState.microphone.phase, PreJoinCapturePhase.unavailable);
+
+    final outcome = await container
+        .read(preJoinFlowControllerProvider(_slug).notifier)
+        .requestJoin();
+
+    expect(outcome, PreJoinJoinOutcome.joined);
+    expect(_SuccessfulSessionController.receivedMedia?.cameraTrack, isNull);
+    expect(_SuccessfulSessionController.receivedMedia?.microphoneTrack, isNull);
   });
 
   test(

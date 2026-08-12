@@ -207,7 +207,7 @@ void main() {
       await expectLater(
         container
             .read(preJoinMediaControllerProvider(_sessionSlug).notifier)
-            .takeForJoin(),
+            .takeForJoin(requireUsableMedia: true),
         throwsA(isA<PreJoinMediaPermissionDeniedException>()),
       );
     },

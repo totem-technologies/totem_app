@@ -38,6 +38,16 @@ final preJoinPreviewTrackFactoryProvider = Provider<PreJoinPreviewTrackFactory>(
   (_) => const LiveKitPreJoinPreviewTrackFactory(),
 );
 
+// TODO(totem): Investigate whether this is still required.
+/// Whether the current platform requires a usable media provider for pre-join.
+///
+///   On web and wasm, the user shouldn't be able to join if they denied permissions.
+///
+///   On mobile, the user can join without media, for example, the iPhone simulator.
+final preJoinRequiresUsableMediaProvider = Provider<bool>(
+  (_) => kIsWeb || kIsWasm,
+);
+
 class PreJoinMediaPermissionDeniedException implements Exception {
   const PreJoinMediaPermissionDeniedException();
 }
@@ -493,13 +503,15 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     );
   }
 
-  Future<SessionJoinMedia> takeForJoin() async {
+  Future<SessionJoinMedia> takeForJoin({
+    bool requireUsableMedia = false,
+  }) async {
     if (state.transferred) {
       throw StateError('Pre-join media has already been transferred');
     }
     await _initialization;
     await _captureOperations.pending;
-    if (!state.canJoinOnWeb) {
+    if (requireUsableMedia && !state.canJoinOnWeb) {
       throw const PreJoinMediaPermissionDeniedException();
     }
 
