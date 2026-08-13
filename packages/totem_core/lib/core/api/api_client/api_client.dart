@@ -50,6 +50,7 @@ export 'models/set_prompt_event.dart';
 export 'models/space_schema.dart';
 export 'models/start_room_event.dart';
 export 'models/summary_spaces_schema.dart';
+export 'models/switch_session_schema.dart';
 export 'models/token_response.dart';
 export 'models/unban_participant_event.dart';
 export 'models/update_current_user_image_request.dart';

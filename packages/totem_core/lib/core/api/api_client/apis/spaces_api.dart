@@ -9,6 +9,7 @@ import '../models/session_detail_schema.dart';
 import '../models/session_feedback_schema.dart';
 import '../models/space_schema.dart';
 import '../models/summary_spaces_schema.dart';
+import '../models/switch_session_schema.dart';
 
 /// SpacesApi operations.
 ///
@@ -347,7 +348,7 @@ final class SpacesApi with ApiExecutor {
   /// Rsvp Confirm
   ///
   /// `POST /api/mobile/protected/spaces/rsvp/{event_slug}`
-  Future<ApiResult<SessionDetailSchema, Never>>
+  Future<ApiResult<SessionDetailSchema, SessionDetailSchema>>
   totemSpacesMobileApiRsvpConfirm({
     required String eventSlug,
     RequestOptions? options,
@@ -365,6 +366,11 @@ final class SpacesApi with ApiExecutor {
     return execute(
       request,
       onSuccess: (response) {
+        return SessionDetailSchema.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>,
+        );
+      },
+      onError: (response) {
         return SessionDetailSchema.fromJson(
           jsonDecode(response.body) as Map<String, dynamic>,
         );
@@ -392,6 +398,42 @@ final class SpacesApi with ApiExecutor {
     return execute(
       request,
       onSuccess: (response) {
+        return SessionDetailSchema.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>,
+        );
+      },
+    );
+  }
+
+  /// Rsvp Switch
+  ///
+  /// `POST /api/mobile/protected/spaces/rsvp/{event_slug}/switch`
+  Future<ApiResult<SessionDetailSchema, SessionDetailSchema>>
+  totemSpacesMobileApiRsvpSwitch({
+    required String eventSlug,
+    required SwitchSessionSchema body,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+    headers['Content-Type'] = 'application/json';
+
+    final request = ApiRequest(
+      method: 'POST',
+      path:
+          '/api/mobile/protected/spaces/rsvp/${Uri.encodeComponent(eventSlug)}/switch',
+      headers: headers,
+      body: jsonEncode(body.toJson()),
+      options: options,
+    );
+
+    return execute(
+      request,
+      onSuccess: (response) {
+        return SessionDetailSchema.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>,
+        );
+      },
+      onError: (response) {
         return SessionDetailSchema.fromJson(
           jsonDecode(response.body) as Map<String, dynamic>,
         );
