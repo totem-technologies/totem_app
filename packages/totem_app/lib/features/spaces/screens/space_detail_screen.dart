@@ -37,6 +37,7 @@ import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../widgets/conflicting_sessions_dialog.dart';
 import '../widgets/info_text.dart';
 
 enum SpaceJoinCardState {
@@ -636,9 +637,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     try {
       final attending = await ref.read(rsvpConfirmProvider(event.slug).future);
       if (attending) {
-        if (mounted) setState(() => _attending = true);
-        await _attendingPopup(event);
-        await _refresh(event);
+        await _onAttendSuccess(event);
       } else {
         if (mounted) {
           _notificationController.showError(
@@ -648,6 +647,17 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
             message: 'Please try again later',
           );
         }
+      }
+    } on RsvpConflictException catch (conflict) {
+      if (!mounted) return;
+      final switched = await showConflictingSessionsDialog(
+        context,
+        conflict.conflictingSession,
+        event,
+        () => _switchSession(event, conflict.conflictingSession),
+      );
+      if (switched == true) {
+        await _onAttendSuccess(event);
       }
     } catch (e, st) {
       ErrorHandler.logError(e, stackTrace: st, message: 'Failed to attend');
@@ -662,6 +672,31 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<bool> _switchSession(
+    SessionDetailSchema newSession,
+    SessionDetailSchema conflictingSession,
+  ) async {
+    final attending = await ref.read(
+      rsvpForceConfirmProvider(newSession.slug, conflictingSession.slug).future,
+    );
+    if (!attending && mounted) {
+      _notificationController.showError(
+        context,
+        icon: TotemIcons.spaces,
+        title: 'Failed to switch sessions',
+        message: 'Please try again later',
+      );
+    }
+    return attending;
+  }
+
+  Future<void> _onAttendSuccess(SessionDetailSchema event) async {
+    if (!mounted) return;
+    setState(() => _attending = true);
+    await _attendingPopup(event);
+    await _refresh(event);
   }
 
   Future<void> _attendingPopup(SessionDetailSchema event) async {

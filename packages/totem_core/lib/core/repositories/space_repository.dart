@@ -11,6 +11,8 @@ import 'package:totem_core/shared/logger.dart';
 
 part 'space_repository.g.dart';
 
+Duration? _noRetry(int retryCount, Object error) => null;
+
 @Riverpod(keepAlive: true)
 Future<List<MobileSpaceDetailSchema>> listSpaces(Ref ref) async {
   final mobileApiService = ref.read(apiServiceProvider);
@@ -210,7 +212,7 @@ Future<SummarySpacesSchema> spacesSummary(Ref ref) async {
   }
 }
 
-@riverpod
+@Riverpod(retry: _noRetry)
 Future<bool> rsvpConfirm(Ref ref, String eventSlug) async {
   final mobileApiService = ref.read(apiServiceProvider);
 
@@ -222,6 +224,21 @@ Future<bool> rsvpConfirm(Ref ref, String eventSlug) async {
       operationName: 'confirm RSVP for $eventSlug',
     );
     return session.attending;
+  } on ApiError<SessionDetailSchema, SessionDetailSchema> catch (
+    error,
+    stackTrace
+  ) {
+    final conflictingSession = error.error;
+    if (conflictingSession != null) {
+      throw RsvpConflictException(conflictingSession);
+    }
+
+    ErrorHandler.logError(
+      error,
+      stackTrace: stackTrace,
+      message: 'Failed to confirm RSVP for $eventSlug',
+    );
+    return false;
   } catch (e, stackTrace) {
     ErrorHandler.logError(
       e,
@@ -230,6 +247,14 @@ Future<bool> rsvpConfirm(Ref ref, String eventSlug) async {
     );
     return false;
   }
+}
+
+/// Indicates that an RSVP could not be confirmed because the user is already
+/// attending another session at the same time.
+final class RsvpConflictException implements Exception {
+  const RsvpConflictException(this.conflictingSession);
+
+  final SessionDetailSchema conflictingSession;
 }
 
 @riverpod
@@ -249,6 +274,35 @@ Future<bool> rsvpCancel(Ref ref, String eventSlug) async {
       e,
       stackTrace: stackTrace,
       message: 'Failed to cancel RSVP for $eventSlug',
+    );
+    return false;
+  }
+}
+
+@riverpod
+Future<bool> rsvpForceConfirm(
+  Ref ref,
+  String eventSlug,
+  String conflictingSessionSlug,
+) async {
+  final mobileApiService = ref.read(apiServiceProvider);
+
+  try {
+    final session = await RepositoryUtils.handleApiCall<SessionDetailSchema>(
+      apiCall: () => mobileApiService.spaces.totemSpacesMobileApiRsvpSwitch(
+        eventSlug: eventSlug,
+        body: SwitchSessionSchema(
+          conflictingSessionSlug: conflictingSessionSlug,
+        ),
+      ),
+      operationName: 'switch RSVP to $eventSlug',
+    );
+    return session.attending;
+  } catch (e, stackTrace) {
+    ErrorHandler.logError(
+      e,
+      stackTrace: stackTrace,
+      message: 'Failed to switch RSVP to $eventSlug',
     );
     return false;
   }

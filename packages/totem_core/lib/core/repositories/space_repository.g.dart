@@ -643,7 +643,7 @@ final class RsvpConfirmProvider
     required RsvpConfirmFamily super.from,
     required String super.argument,
   }) : super(
-         retry: null,
+         retry: _noRetry,
          name: r'rsvpConfirmProvider',
          isAutoDispose: true,
          dependencies: null,
@@ -682,13 +682,13 @@ final class RsvpConfirmProvider
   }
 }
 
-String _$rsvpConfirmHash() => r'48911a8c95ee89dc9336d648c0e7738d1f5eee8a';
+String _$rsvpConfirmHash() => r'68376e24d71874a34972387edbffafeee8f573b5';
 
 final class RsvpConfirmFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
   RsvpConfirmFamily._()
     : super(
-        retry: null,
+        retry: _noRetry,
         name: r'rsvpConfirmProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
@@ -769,4 +769,78 @@ final class RsvpCancelFamily extends $Family
 
   @override
   String toString() => r'rsvpCancelProvider';
+}
+
+@ProviderFor(rsvpForceConfirm)
+final rsvpForceConfirmProvider = RsvpForceConfirmFamily._();
+
+final class RsvpForceConfirmProvider
+    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
+    with $FutureModifier<bool>, $FutureProvider<bool> {
+  RsvpForceConfirmProvider._({
+    required RsvpForceConfirmFamily super.from,
+    required (String, String) super.argument,
+  }) : super(
+         retry: null,
+         name: r'rsvpForceConfirmProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$rsvpForceConfirmHash();
+
+  @override
+  String toString() {
+    return r'rsvpForceConfirmProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<bool> create(Ref ref) {
+    final argument = this.argument as (String, String);
+    return rsvpForceConfirm(ref, argument.$1, argument.$2);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is RsvpForceConfirmProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$rsvpForceConfirmHash() => r'2f13da620ee07fada49090312129a83f5a2a8fea';
+
+final class RsvpForceConfirmFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<bool>, (String, String)> {
+  RsvpForceConfirmFamily._()
+    : super(
+        retry: null,
+        name: r'rsvpForceConfirmProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  RsvpForceConfirmProvider call(
+    String eventSlug,
+    String conflictingSessionSlug,
+  ) => RsvpForceConfirmProvider._(
+    argument: (eventSlug, conflictingSessionSlug),
+    from: this,
+  );
+
+  @override
+  String toString() => r'rsvpForceConfirmProvider';
 }
