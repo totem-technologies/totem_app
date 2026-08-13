@@ -12,7 +12,6 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camer
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_chat_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
-import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_speaker_button.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
 typedef ActionBarButtonToggleCallback =
