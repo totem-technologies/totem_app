@@ -21,6 +21,7 @@ class ConfirmationDialog extends StatefulWidget {
     this.showCancel = true,
     this.extraButtons = const [],
     this.contentWidget,
+    this.scrollable = false,
     super.key,
   });
 
@@ -43,6 +44,9 @@ class ConfirmationDialog extends StatefulWidget {
   /// An optional widget rendered between the content text and the action
   /// buttons. Use this for form fields or other custom content.
   final Widget? contentWidget;
+
+  /// Whether the dialog content should scroll when the viewport is too short.
+  final bool scrollable;
 
   @override
   State<ConfirmationDialog> createState() => ConfirmationDialogState();
@@ -71,6 +75,7 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
             _ => const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
           };
           return AlertDialog(
+            scrollable: widget.scrollable,
             constraints: const BoxConstraints(maxWidth: 480),
             contentPadding: contentPadding,
             content: Column(
@@ -107,7 +112,9 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                         style:
                             (theme.dialogTheme.titleTextStyle ??
                                     theme.textTheme.titleLarge)
-                                ?.copyWith(color: theme.colorScheme.onSurface),
+                                ?.copyWith(
+                                  color: theme.colorScheme.onSurface,
+                                ),
                       ),
                     ),
                     Text(

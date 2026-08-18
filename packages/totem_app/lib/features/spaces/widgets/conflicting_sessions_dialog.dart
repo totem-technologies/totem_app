@@ -45,18 +45,10 @@ class ConflictingSessionsDialog extends StatelessWidget {
       icon: TotemIcons.calendar,
       iconSize: 32,
       type: ConfirmationDialogType.standard,
-      contentWidget: Column(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 6,
-        children: [
-          for (final session in conflict.conflictingSessions)
-            _SessionCard(session: session, type: _SessionCardType.existing),
-          const RotatedBox(
-            quarterTurns: 1,
-            child: TotemIcon(TotemIcons.arrowBack, size: 18),
-          ),
-          _SessionCard(session: newSession, type: _SessionCardType.newSession),
-        ],
+      scrollable: true,
+      contentWidget: _SessionCardsLayout(
+        existingSessions: conflict.conflictingSessions,
+        newSession: newSession,
       ),
       confirmButtonText: 'Switch Sessions',
       onConfirm: () async {
@@ -71,18 +63,76 @@ class ConflictingSessionsDialog extends StatelessWidget {
 
 enum _SessionCardType { existing, newSession }
 
+class _SessionCardsLayout extends StatelessWidget {
+  const _SessionCardsLayout({
+    required this.existingSessions,
+    required this.newSession,
+  });
+
+  static const _minimumColumnViewportHeight = 600.0;
+
+  final List<SessionDetailSchema> existingSessions;
+  final SessionDetailSchema newSession;
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final usableHeight =
+        mediaQuery.size.height -
+        mediaQuery.padding.vertical -
+        mediaQuery.viewInsets.vertical;
+    final horizontal =
+        mediaQuery.orientation == Orientation.landscape ||
+        usableHeight < _minimumColumnViewportHeight;
+
+    Widget card(SessionDetailSchema session, _SessionCardType type) {
+      final child = _SessionCard(
+        session: session,
+        type: type,
+        compact: horizontal,
+      );
+      return horizontal ? Expanded(child: child) : child;
+    }
+
+    return Flex(
+      key: ValueKey(
+        horizontal
+            ? 'conflicting-sessions-horizontal-layout'
+            : 'conflicting-sessions-vertical-layout',
+      ),
+      direction: horizontal ? Axis.horizontal : Axis.vertical,
+      mainAxisSize: horizontal ? MainAxisSize.max : MainAxisSize.min,
+      spacing: 6,
+      children: [
+        for (final session in existingSessions)
+          card(session, _SessionCardType.existing),
+        RotatedBox(
+          quarterTurns: horizontal ? 2 : -1,
+          child: const TotemIcon(TotemIcons.arrowBack, size: 18),
+        ),
+        card(newSession, _SessionCardType.newSession),
+      ],
+    );
+  }
+}
+
 class _SessionCard extends StatelessWidget {
-  const _SessionCard({required this.session, required this.type});
+  const _SessionCard({
+    required this.session,
+    required this.type,
+    required this.compact,
+  });
 
   final SessionDetailSchema session;
   final _SessionCardType type;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final imageUrl = session.space.imageLink;
     return Container(
-      height: 60,
+      height: 100,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         color: const Color(0xFFFAEEFF),
@@ -91,7 +141,7 @@ class _SessionCard extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 90,
+            width: compact ? 60 : 100,
             height: double.infinity,
             // TODO(totem): Create a TotemSpaceImage widget.
             // This code is reflected in a lot of places in the codebase. This can be extracted and remove boilerplates
@@ -115,25 +165,34 @@ class _SessionCard extends StatelessWidget {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsetsDirectional.symmetric(horizontal: 8),
+              padding: EdgeInsetsDirectional.symmetric(
+                horizontal: compact ? 6 : 10,
+              ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
-                spacing: 1,
+                spacing: 4,
                 children: [
                   Text(switch (type) {
-                    _SessionCardType.existing => 'Your existing session:',
-                    _SessionCardType.newSession => 'New session:',
+                    _SessionCardType.existing => 'Your current session',
+                    _SessionCardType.newSession => 'New session',
                   }, style: theme.textTheme.labelSmall),
                   Text(
                     session.title,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelLarge,
+                    softWrap: false,
+                    overflow: TextOverflow.fade,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   Text(
-                    formatShortDate(session.start),
+                    '${formatSessionDate(session.start)} '
+                    '${formatSessionTime(session.start)}',
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.fade,
                     style: theme.textTheme.labelSmall,
                   ),
                 ],

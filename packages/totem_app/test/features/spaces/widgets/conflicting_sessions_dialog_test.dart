@@ -109,10 +109,54 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Your existing session:'), findsOneWidget);
+    expect(find.text('Your current session'), findsOneWidget);
     expect(find.text('Existing Session'), findsOneWidget);
-    expect(find.text('New session:'), findsOneWidget);
+    expect(find.text('New session'), findsOneWidget);
     expect(find.text('New Session'), findsOneWidget);
+  });
+
+  testWidgets('lays out session cards as a column in portrait', (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await showConflict(tester, onSwitch: () async => true);
+
+    final layout = find.byKey(
+      const ValueKey('conflicting-sessions-vertical-layout'),
+    );
+    expect(layout, findsOneWidget);
+    final arrow = tester.widget<RotatedBox>(
+      find.descendant(of: layout, matching: find.byType(RotatedBox)),
+    );
+    expect(arrow.quarterTurns, -1);
+    expect(
+      tester.getCenter(find.text('Existing Session')).dy,
+      lessThan(tester.getCenter(find.text('New Session')).dy),
+    );
+  });
+
+  testWidgets('lays out session cards as a row in landscape', (tester) async {
+    tester.view.physicalSize = const Size(800, 400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await showConflict(tester, onSwitch: () async => true);
+
+    final layout = find.byKey(
+      const ValueKey('conflicting-sessions-horizontal-layout'),
+    );
+    expect(layout, findsOneWidget);
+    final arrow = tester.widget<RotatedBox>(
+      find.descendant(of: layout, matching: find.byType(RotatedBox)),
+    );
+    expect(arrow.quarterTurns, 2);
+    expect(
+      tester.getCenter(find.text('Existing Session')).dx,
+      lessThan(tester.getCenter(find.text('New Session')).dx),
+    );
   });
 
   testWidgets('switches sessions and closes only after success', (
