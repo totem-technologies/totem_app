@@ -237,6 +237,12 @@ void main() {
       slug: 'current-session',
       title: 'Current Session',
       space: space,
+      attending: true,
+    );
+    final refreshedCurrentSession = _session(
+      slug: 'current-session',
+      title: 'Current Session',
+      space: space,
       attending: false,
     );
     final container = ProviderContainer(
@@ -248,7 +254,7 @@ void main() {
         }),
         eventProvider(currentSession.slug).overrideWith((_) async {
           eventLoads++;
-          return currentSession;
+          return eventLoads == 1 ? currentSession : refreshedCurrentSession;
         }),
         spacesSummaryProvider.overrideWith((_) async {
           summaryLoads++;
@@ -287,6 +293,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect((spaceLoads, eventLoads, summaryLoads), (1, 1, 1));
+    expect(find.byTooltip('Give up your spot'), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.text('Upcoming Session'),
@@ -302,5 +309,6 @@ void main() {
     await container.read(spacesSummaryProvider.future);
 
     expect((spaceLoads, eventLoads, summaryLoads), (2, 2, 2));
+    expect(find.text('Attend'), findsOneWidget);
   });
 }

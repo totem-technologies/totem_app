@@ -502,14 +502,25 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   bool _attending = false;
   bool _loading = false;
   bool _joined = false;
-  bool _initialized = false;
+  String? _syncedEventSlug;
+  bool? _syncedAttending;
+  DateTime? _syncedStart;
   String _currentTimeago = '';
   Timer? _timer;
 
-  void _initFromEvent(SessionDetailSchema event) {
-    if (_initialized) return;
-    _initialized = true;
+  void _syncFromEvent(SessionDetailSchema event) {
+    final eventChanged = _syncedEventSlug != event.slug;
+    final attendanceChanged = _syncedAttending != event.attending;
+    final startChanged = _syncedStart != event.start;
+    if (!eventChanged && !attendanceChanged && !startChanged) return;
+
+    _syncedEventSlug = event.slug;
+    _syncedAttending = event.attending;
+    _syncedStart = event.start;
     _attending = event.attending;
+    if (eventChanged) _joined = false;
+
+    if (!eventChanged && !startChanged) return;
     _currentTimeago = timeago.format(event.start, allowFromNow: true);
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -554,7 +565,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
       symbol: r'USD $',
     );
 
-    widget.eventAsync?.whenData(_initFromEvent);
+    widget.eventAsync?.whenData(_syncFromEvent);
 
     return Container(
       decoration: BoxDecoration(
@@ -774,8 +785,6 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
 
   Future<void> _refresh(SessionDetailSchema session) async {
     if (!mounted) return;
-    _initialized =
-        false; // allow _initFromEvent to re-run with fresh start time
     ref.invalidate(spacesSummaryProvider);
     // ignore: unused_result
     await ref.refresh(eventProvider(session.slug).future);
