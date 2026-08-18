@@ -13,7 +13,7 @@ final class _RecordingApiClient implements ApiClient {
 
   final ApiResponse response;
   ApiRequest? request;
-  var requestCount = 0;
+  int requestCount = 0;
 
   @override
   Uri get baseUrl => Uri.parse('https://example.com');

@@ -113,6 +113,20 @@ void main() {
     expect(find.text('Existing Session'), findsOneWidget);
     expect(find.text('New session'), findsOneWidget);
     expect(find.text('New Session'), findsOneWidget);
+
+    final description = tester.widget<Text>(
+      find.text(
+        'To join New Session, you’ll need to give up your spot in Existing Session.',
+      ),
+    );
+    final spans = (description.textSpan! as TextSpan).children!
+        .whereType<TextSpan>();
+    for (final sessionName in ['New Session', 'Existing Session']) {
+      expect(
+        spans.singleWhere((span) => span.text == sessionName).style?.fontWeight,
+        FontWeight.w600,
+      );
+    }
   });
 
   testWidgets('lays out session cards as a column in portrait', (tester) async {

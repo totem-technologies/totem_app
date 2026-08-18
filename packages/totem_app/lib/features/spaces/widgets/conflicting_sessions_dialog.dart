@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/network.dart';
@@ -38,18 +39,34 @@ class ConflictingSessionsDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final conflictingSessionTitles = conflict.conflictingSessions
+        .map((session) => session.title)
+        .join(', ');
     return ConfirmationDialog(
-      title: 'You have another session at this time.',
-      content:
-          'To join ${newSession.title}, you’ll need to give up your spot in ${conflict.conflictingSessions.map((e) => e.title).join(', ')}.',
       icon: TotemIcons.calendar,
       iconSize: 32,
       type: ConfirmationDialogType.standard,
-      scrollable: true,
+      title: 'You have a session at this time.',
+      contentSpan: TextSpan(
+        children: [
+          const TextSpan(text: 'To join '),
+          TextSpan(
+            text: newSession.title,
+            style: TextStyle(fontWeight: FontWeight.w500),
+          ),
+          const TextSpan(text: ', you’ll need to give up your spot in '),
+          TextSpan(
+            text: conflictingSessionTitles,
+            style: TextStyle(fontWeight: FontWeight.w500),
+          ),
+          const TextSpan(text: '.'),
+        ],
+      ),
       contentWidget: _SessionCardsLayout(
         existingSessions: conflict.conflictingSessions,
         newSession: newSession,
       ),
+      scrollable: true,
       confirmButtonText: 'Switch Sessions',
       onConfirm: () async {
         final switched = await onSwitch();
@@ -135,7 +152,10 @@ class _SessionCard extends StatelessWidget {
       height: 100,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFFFAEEFF),
+        color: switch (type) {
+          _SessionCardType.existing => AppTheme.cream,
+          _SessionCardType.newSession => const Color(0xFFFAEEFF),
+        },
       ),
       clipBehavior: Clip.hardEdge,
       child: Row(
@@ -180,15 +200,14 @@ class _SessionCard extends StatelessWidget {
                   }, style: theme.textTheme.labelSmall),
                   Text(
                     session.title,
-                    maxLines: 1,
-                    softWrap: false,
+                    maxLines: 2,
                     overflow: TextOverflow.fade,
                     style: theme.textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
-                    '${formatSessionDate(session.start)} '
+                    '${formatSessionDate(session.start)} · '
                     '${formatSessionTime(session.start)}',
                     maxLines: 1,
                     softWrap: false,
