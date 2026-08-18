@@ -178,6 +178,7 @@ class ListeningTurnScreen extends ConsumerWidget {
                   ],
                 ),
               );
+            case ViewportKind.mediumSmall:
             case ViewportKind.mediumPlus:
               return Padding(
                 padding: const EdgeInsetsDirectional.only(
@@ -278,6 +279,7 @@ class _ListeningTurnGrid extends ConsumerWidget {
                 } else {
                   crossAxisCount = 4;
                 }
+              case ViewportKind.mediumSmall:
               case ViewportKind.mediumPlus:
                 if (itemCount <= 2) {
                   crossAxisCount = 1;
@@ -333,6 +335,7 @@ class _ListeningTurnGrid extends ConsumerWidget {
                 },
               ),
             );
+          case ViewportKind.mediumSmall:
           case ViewportKind.mediumPlus:
             final speaker = showSpeakingNowParticipant
                 ? participants.firstWhereOrNull(

@@ -145,6 +145,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
                     ],
                   ),
                 );
+              case ViewportKind.mediumSmall:
               case ViewportKind.mediumPlus:
                 return Padding(
                   padding: const EdgeInsetsDirectional.only(

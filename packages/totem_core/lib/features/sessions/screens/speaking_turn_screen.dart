@@ -185,6 +185,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                 ),
               ],
             );
+          case ViewportKind.mediumSmall:
           case ViewportKind.mediumPlus:
             return Padding(
               padding: const EdgeInsetsDirectional.only(
@@ -278,6 +279,7 @@ class _SpeakingTurnGrid extends ConsumerWidget {
                     .round()
                     .clamp(1, maxPerLineCount);
               case ViewportKind.smallLandscape:
+              case ViewportKind.mediumSmall:
               case ViewportKind.mediumPlus:
                 if (itemCount <= 2) {
                   crossAxisCount = 2;
@@ -335,6 +337,7 @@ class _SpeakingTurnGrid extends ConsumerWidget {
                 },
               ),
             );
+          case ViewportKind.mediumSmall:
           case ViewportKind.mediumPlus:
             return AdaptiveCallLayout(
               participants: [
