@@ -139,7 +139,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('You have another session at this time.'), findsOneWidget);
+    expect(find.text('You have a session at this time.'), findsOneWidget);
     expect(find.text('Existing Session'), findsOneWidget);
     expect(find.text('New Session'), findsAtLeastNWidgets(1));
     expect(find.text('Switch Sessions'), findsOneWidget);

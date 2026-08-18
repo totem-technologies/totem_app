@@ -1,9 +1,8 @@
 import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/core/services/cache_service.dart';
 import 'package:totem_core/core/services/repository_utils.dart';
@@ -12,6 +11,14 @@ import 'package:totem_core/shared/logger.dart';
 part 'space_repository.g.dart';
 
 Duration? _noRetry(int retryCount, Object error) => null;
+
+bool _isRecoverableNetworkFailure(Object error) =>
+    error is AppNetworkException ||
+    (error is ApiError && error.statusCode >= 500);
+
+bool _isRsvpConflict(Object error) =>
+    error is ApiError<SessionDetailSchema, SessionConflictSchema> &&
+    error.error != null;
 
 @Riverpod(keepAlive: true)
 Future<List<MobileSpaceDetailSchema>> listSpaces(Ref ref) async {
@@ -22,13 +29,15 @@ Future<List<MobileSpaceDetailSchema>> listSpaces(Ref ref) async {
     final response = await RepositoryUtils.handleApiCall(
       apiCall: () => mobileApiService.spaces.totemSpacesMobileApiListSpaces(),
       operationName: 'list spaces',
+      retryOnNetworkError: true,
     );
     final spaces = response.items;
 
     cache.saveSpaces(spaces);
 
     return spaces;
-  } on DioException catch (_) {
+  } catch (error) {
+    if (!_isRecoverableNetworkFailure(error)) rethrow;
     final cachedSpaces = await cache.getSpaces();
     if (cachedSpaces != null) {
       return cachedSpaces;
@@ -46,6 +55,8 @@ Future<SessionDetailSchema> event(Ref ref, String eventSlug) async {
       eventSlug: eventSlug,
     ),
     operationName: 'get event detail',
+    retryOnNetworkError: true,
+    diagnostics: {'event_slug': eventSlug},
   );
 }
 
@@ -57,6 +68,8 @@ Future<MobileSpaceDetailSchema> space(Ref ref, String spaceSlug) async {
       spaceSlug: spaceSlug,
     ),
     operationName: 'get space detail',
+    retryOnNetworkError: true,
+    diagnostics: {'space_slug': spaceSlug},
   );
 }
 
@@ -69,10 +82,12 @@ Future<List<SpaceSchema>> listSubscribedSpaces(Ref ref) async {
       apiCall: () =>
           mobileApiService.spaces.totemSpacesMobileApiListSubscriptions(),
       operationName: 'list subscribed spaces',
+      retryOnNetworkError: true,
     );
     cache.saveSubscribedSpaces(spaces);
     return spaces;
-  } on DioException catch (_) {
+  } catch (error) {
+    if (!_isRecoverableNetworkFailure(error)) rethrow;
     final cachedSpaces = await cache.getSubscribedSpaces();
     if (cachedSpaces != null) {
       return cachedSpaces;
@@ -90,6 +105,7 @@ Future<bool> subscribeToSpace(Ref ref, String spaceSlug) async {
       spaceSlug: spaceSlug,
     ),
     operationName: 'subscribe to space',
+    diagnostics: {'space_slug': spaceSlug},
   );
 }
 
@@ -102,6 +118,7 @@ Future<bool> unsubscribeFromSpace(Ref ref, String spaceSlug) async {
           spaceSlug: spaceSlug,
         ),
     operationName: 'unsubscribe from space',
+    diagnostics: {'space_slug': spaceSlug},
   );
 
   if (ref.mounted) {
@@ -123,6 +140,8 @@ Future<List<MobileSpaceDetailSchema>> listSpacesByKeeper(
       slug: keeperSlug,
     ),
     operationName: 'list spaces by keeper',
+    retryOnNetworkError: true,
+    diagnostics: {'keeper_slug': keeperSlug},
   );
 }
 
@@ -137,10 +156,12 @@ Future<List<SessionDetailSchema>> listSessionsHistory(Ref ref) async {
           apiCall: () =>
               mobileApiService.spaces.totemSpacesMobileApiGetSessionsHistory(),
           operationName: 'list sessions history',
+          retryOnNetworkError: true,
         );
     cache.saveSessionsHistory(sessions);
     return sessions;
-  } on DioException catch (_) {
+  } catch (error) {
+    if (!_isRecoverableNetworkFailure(error)) rethrow;
     final cachedSessions = await cache.getSessionsHistory();
     if (cachedSessions != null) {
       return cachedSessions;
@@ -178,6 +199,10 @@ Future<List<SessionDetailSchema>> getRecommendedSessions(
     operationName: 'get recommended sessions',
     maxRetries: 0,
     timeout: const Duration(seconds: 5),
+    diagnostics: {
+      if (topics != null)
+        'topics': topics.map((topic) => topic.slug).toList(growable: false),
+    },
   );
 }
 
@@ -191,20 +216,17 @@ Future<SummarySpacesSchema> spacesSummary(Ref ref) async {
       apiCall: () =>
           mobileApiService.spaces.totemSpacesMobileApiGetSpacesSummary(),
       operationName: 'get spaces summary',
+      retryOnNetworkError: true,
     );
 
     cache.saveSpacesSummary(summary);
 
     return summary;
-  } on DioException catch (e, stackTrace) {
+  } catch (error) {
+    if (!_isRecoverableNetworkFailure(error)) rethrow;
     final cachedSummary = await cache.getSpacesSummary();
     if (cachedSummary != null) {
-      logger.w('Using cached spaces summary due to error', error: e);
-      ErrorHandler.logError(
-        e,
-        stackTrace: stackTrace,
-        message: 'Failed to fetch spaces summary, using cache',
-      );
+      logger.w('Using cached spaces summary due to error', error: error);
       return cachedSummary;
     } else {
       rethrow;
@@ -222,29 +244,18 @@ Future<bool> rsvpConfirm(Ref ref, String eventSlug) async {
         eventSlug: eventSlug,
       ),
       operationName: 'confirm RSVP for $eventSlug',
+      diagnostics: {'event_slug': eventSlug},
+      shouldReport: (error) => !_isRsvpConflict(error),
     );
     return session.attending;
-  } on ApiError<SessionDetailSchema, SessionConflictSchema> catch (
-    error,
-    stackTrace
-  ) {
+  } on ApiError<SessionDetailSchema, SessionConflictSchema> catch (error) {
     final conflictingSession = error.error;
     if (conflictingSession != null) {
       throw RsvpConflictException(conflictingSession);
     }
 
-    ErrorHandler.logError(
-      error,
-      stackTrace: stackTrace,
-      message: 'Failed to confirm RSVP for $eventSlug',
-    );
     return false;
-  } catch (e, stackTrace) {
-    ErrorHandler.logError(
-      e,
-      stackTrace: stackTrace,
-      message: 'Failed to confirm RSVP for $eventSlug',
-    );
+  } catch (_) {
     return false;
   }
 }
@@ -267,14 +278,10 @@ Future<bool> rsvpCancel(Ref ref, String eventSlug) async {
         eventSlug: eventSlug,
       ),
       operationName: 'cancel RSVP for $eventSlug',
+      diagnostics: {'event_slug': eventSlug},
     );
     return session.attending;
-  } catch (e, stackTrace) {
-    ErrorHandler.logError(
-      e,
-      stackTrace: stackTrace,
-      message: 'Failed to cancel RSVP for $eventSlug',
-    );
+  } catch (_) {
     return false;
   }
 }
@@ -297,14 +304,13 @@ Future<bool> rsvpForceConfirm(
             ),
           ),
       operationName: 'switch RSVP to $eventSlug',
+      diagnostics: {
+        'event_slug': eventSlug,
+        'conflicting_session_slugs': conflictingSessionSlugs,
+      },
     );
     return session.attending;
-  } catch (e, stackTrace) {
-    ErrorHandler.logError(
-      e,
-      stackTrace: stackTrace,
-      message: 'Failed to switch RSVP to $eventSlug',
-    );
+  } catch (_) {
     return false;
   }
 }

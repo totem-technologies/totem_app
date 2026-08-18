@@ -39,6 +39,12 @@ void addSharedApiInterceptors(Dio dio) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onError: (error, handler) {
+        // A preceding interceptor may already have classified this failure.
+        // Preserve that exception instance so RepositoryUtils can avoid
+        // reporting the same failure again at another layer.
+        if (error.error is AppException) {
+          return handler.next(error);
+        }
         final appException = _handleDioError(error);
 
         return handler.reject(

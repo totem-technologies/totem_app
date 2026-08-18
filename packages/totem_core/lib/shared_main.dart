@@ -9,6 +9,7 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/observer_service.dart';
@@ -66,10 +67,13 @@ Future<void> sharedMain(
 }
 
 /// Riverpod retries failed providers by default (exponential backoff, up to
-/// 10 attempts). A 4xx is a definitive answer — e.g. joining a session that
-/// isn't joinable — so repeating the request only hammers the API and keeps
-/// the UI cycling. 5xx and network-level failures keep the default retry.
+/// 10 attempts). RepositoryUtils owns API retries, so a terminal, reported
+/// repository failure must not start another retry loop at the provider layer.
+/// A 4xx is also a definitive response and must never be retried.
 Duration? _retryPolicy(int retryCount, Object error) {
+  // RepositoryUtils owns retries and reports only the terminal failure. Do not
+  // start a second retry loop at the provider layer for the same failure.
+  if (ErrorHandler.wasReported(error) || error is AppException) return null;
   if (error is ApiError && error.statusCode < 500) return null;
   return ProviderContainer.defaultRetry(retryCount, error);
 }

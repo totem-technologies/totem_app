@@ -31,6 +31,7 @@ Future<RoomState> _postEvent({
   var version = lastSeenVersion;
 
   for (var attempt = 0; attempt < _maxStaleVersionAttempts; attempt++) {
+    final isLastStateAttempt = attempt >= _maxStaleVersionAttempts - 1;
     try {
       return await RepositoryUtils.handleApiCall<RoomState>(
         apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
@@ -43,6 +44,20 @@ Future<RoomState> _postEvent({
         operationName: operationName,
         retryOnNetworkError: true,
         timeout: timeout,
+        diagnostics: {
+          'session_slug': sessionSlug,
+          'event': event.runtimeType.toString(),
+          'last_seen_version': version,
+          'state_attempt': attempt + 1,
+          'total_state_attempts': _maxStaleVersionAttempts,
+        },
+        shouldReport: (error) {
+          if (error is! ApiError<RoomState, RoomErrorResponse>) return true;
+          final code = error.error?.code;
+          if (_isInvalidTransitionError(code)) return false;
+          if (_isStaleVersionError(code)) return isLastStateAttempt;
+          return true;
+        },
       );
     } on ApiError<RoomState, RoomErrorResponse> catch (error) {
       final code = error.error?.code;
@@ -56,6 +71,7 @@ Future<RoomState> _postEvent({
           operationName: 'refresh room state',
           retryOnNetworkError: true,
           timeout: timeout,
+          diagnostics: {'session_slug': sessionSlug},
         );
 
         return RepositoryUtils.handleApiCall<RoomState>(
@@ -69,6 +85,11 @@ Future<RoomState> _postEvent({
           operationName: operationName,
           retryOnNetworkError: true,
           timeout: timeout,
+          diagnostics: {
+            'session_slug': sessionSlug,
+            'event': event.runtimeType.toString(),
+            'last_seen_version': roomState.version,
+          },
         );
       }
 
@@ -77,8 +98,7 @@ Future<RoomState> _postEvent({
         rethrow;
       }
 
-      final isLastAttempt = attempt >= _maxStaleVersionAttempts - 1;
-      if (isLastAttempt) {
+      if (isLastStateAttempt) {
         rethrow;
       }
 
@@ -88,6 +108,7 @@ Future<RoomState> _postEvent({
         operationName: 'refresh room state',
         retryOnNetworkError: true,
         timeout: timeout,
+        diagnostics: {'session_slug': sessionSlug},
       );
       version = roomState.version;
     }
@@ -97,16 +118,15 @@ Future<RoomState> _postEvent({
 }
 
 @riverpod
-Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) async {
+Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) {
   final apiService = ref.read(apiServiceProvider);
-  try {
-    final response = await apiService.rooms
-        .totemRoomsApiJoinRoom(sessionSlug: sessionSlug)
-        .timeout(_shortTimeoutDuration);
-    return response.dataOrThrow;
-  } catch (error) {
-    rethrow;
-  }
+  return RepositoryUtils.handleApiCall<JoinResponse>(
+    apiCall: () =>
+        apiService.rooms.totemRoomsApiJoinRoom(sessionSlug: sessionSlug),
+    operationName: 'join session',
+    timeout: _shortTimeoutDuration,
+    diagnostics: {'session_slug': sessionSlug},
+  );
 }
 
 @riverpod
