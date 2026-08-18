@@ -358,6 +358,16 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                           _UpcomingSessionsSection(
                             space: space,
                             currentEventSlug: effectiveEventSlug,
+                            onRefresh: () {
+                              if (!mounted) return;
+                              ref.invalidate(spacesSummaryProvider);
+                              ref.invalidate(spaceProvider(widget.slug));
+                              if (effectiveEventSlug != null) {
+                                ref.invalidate(
+                                  eventProvider(effectiveEventSlug),
+                                );
+                              }
+                            },
                           ),
 
                           const SizedBox(height: 24),
@@ -680,6 +690,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
         conflict.conflictingSessions.map((e) => e.slug).toList(),
       ).future,
     );
+    _refresh(newSession);
     if (!attending && mounted) {
       _notificationController.showError(
         context,
@@ -747,25 +758,28 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     }
   }
 
-  void _joinLivekit(SessionDetailSchema event) {
-    logger.d('Joining livekit session: ${event.slug}');
+  void _joinLivekit(SessionDetailSchema session) {
+    logger.d('Joining livekit session: ${session.slug}');
     if (mounted) setState(() => _joined = true);
-    context.go(RouteNames.session(event.slug));
+    context.go(RouteNames.session(session.slug));
   }
 
-  Future<void> _joinGoogleMeet(SessionDetailSchema event) async {
+  Future<void> _joinGoogleMeet(SessionDetailSchema session) async {
     setState(() => _joined = true);
     await launchUrl(
-      Uri.parse(getFullUrl(event.calLink)),
+      Uri.parse(getFullUrl(session.calLink)),
       mode: LaunchMode.externalApplication,
     );
   }
 
-  Future<void> _refresh(SessionDetailSchema event) async {
+  Future<void> _refresh(SessionDetailSchema session) async {
+    if (!mounted) return;
     _initialized =
         false; // allow _initFromEvent to re-run with fresh start time
+    ref.invalidate(spacesSummaryProvider);
     // ignore: unused_result
-    await ref.refresh(eventProvider(event.slug).future);
+    await ref.refresh(eventProvider(session.slug).future);
+    if (!mounted) return;
     // ignore: unused_result
     await ref.refresh(spaceProvider(space.slug).future);
   }
@@ -959,10 +973,12 @@ class _UpcomingSessionsSection extends StatelessWidget {
   const _UpcomingSessionsSection({
     required this.space,
     required this.currentEventSlug,
+    required this.onRefresh,
   });
 
   final MobileSpaceDetailSchema space;
   final String? currentEventSlug;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -988,7 +1004,11 @@ class _UpcomingSessionsSection extends StatelessWidget {
             ),
           ),
           for (final session in upcomingSessions)
-            _UpcomingSessionCard(space: space, session: session),
+            _UpcomingSessionCard(
+              space: space,
+              session: session,
+              onRefresh: onRefresh,
+            ),
         ],
       ),
     );
@@ -1000,17 +1020,26 @@ class _UpcomingSessionsSection extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────
 
 class _UpcomingSessionCard extends StatelessWidget {
-  const _UpcomingSessionCard({required this.space, required this.session});
+  const _UpcomingSessionCard({
+    required this.space,
+    required this.session,
+    required this.onRefresh,
+  });
 
   final MobileSpaceDetailSchema space;
   final NextSessionSchema session;
+  final VoidCallback onRefresh;
+
+  Future<void> _openSession(BuildContext context) async {
+    await context.push(RouteNames.spaceSession(space.slug, session.slug));
+    if (context.mounted) onRefresh();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return GestureDetector(
-      onTap: () =>
-          context.push(RouteNames.spaceSession(space.slug, session.slug)),
+      onTap: () => _openSession(context),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -1120,9 +1149,7 @@ class _UpcomingSessionCard extends StatelessWidget {
                             ),
                           ),
                           OutlinedButton(
-                            onPressed: () => context.push(
-                              RouteNames.spaceSession(space.slug, session.slug),
-                            ),
+                            onPressed: () => _openSession(context),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppTheme.mauve,
                               side: const BorderSide(color: AppTheme.mauve),

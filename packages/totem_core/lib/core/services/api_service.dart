@@ -33,7 +33,7 @@ final apiServiceProvider = Provider<ClientApi>((ref) {
   );
 }, name: 'Totem API Service Provider');
 
-final _dio = Dio();
+final _dio = Dio(BaseOptions(responseType: ResponseType.json));
 
 void addSharedApiInterceptors(Dio dio) {
   dio.interceptors.add(

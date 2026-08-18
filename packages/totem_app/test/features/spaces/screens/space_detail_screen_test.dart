@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
@@ -34,7 +35,11 @@ final class _FakeAuthController extends AuthController {
   UserSchema? get user => null;
 }
 
-MobileSpaceDetailSchema _space(String slug, String title) {
+MobileSpaceDetailSchema _space(
+  String slug,
+  String title, {
+  List<NextSessionSchema> nextEvents = const [],
+}) {
   return MobileSpaceDetailSchema(
     slug: slug,
     title: title,
@@ -50,7 +55,7 @@ MobileSpaceDetailSchema _space(String slug, String title) {
     subscribers: 1,
     recurring: null,
     price: 0,
-    nextEvents: const [],
+    nextEvents: nextEvents,
   );
 }
 
@@ -83,6 +88,12 @@ SessionDetailSchema _session({
     meetingProvider: MeetingProviderEnum.livekit,
   );
 }
+
+const _emptySummary = SummarySpacesSchema(
+  upcoming: [],
+  forYou: [],
+  explore: [],
+);
 
 void main() {
   setUpAll(() {
@@ -143,5 +154,153 @@ void main() {
     expect(find.text('Existing Session'), findsOneWidget);
     expect(find.text('New Session'), findsAtLeastNWidgets(1));
     expect(find.text('Switch Sessions'), findsOneWidget);
+  });
+
+  testWidgets('invalidates the spaces summary after a successful RSVP', (
+    tester,
+  ) async {
+    var summaryLoads = 0;
+    final space = _space('new-space', 'New Space');
+    final session = _session(
+      slug: 'new-session',
+      title: 'New Session',
+      space: space,
+      attending: false,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        authControllerProvider.overrideWith(_FakeAuthController.new),
+        spaceProvider(space.slug).overrideWith((_) async => space),
+        eventProvider(session.slug).overrideWith((_) async => session),
+        rsvpConfirmProvider(session.slug).overrideWith((_) async => true),
+        spacesSummaryProvider.overrideWith((_) async {
+          summaryLoads++;
+          return _emptySummary;
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(spacesSummaryProvider.future);
+    expect(summaryLoads, 1);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: SpaceDetailScreen(slug: space.slug, sessionSlug: session.slug),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Attend'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text("You're going!"), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
+    await container.read(spacesSummaryProvider.future);
+
+    expect(summaryLoads, 2);
+  });
+
+  testWidgets('refreshes the current state after returning from a session', (
+    tester,
+  ) async {
+    var spaceLoads = 0;
+    var eventLoads = 0;
+    var summaryLoads = 0;
+    final upcomingSession = NextSessionSchema(
+      slug: 'upcoming-session',
+      start: DateTime.now().add(const Duration(days: 14)),
+      link: '/sessions/upcoming-session',
+      title: 'Upcoming Session',
+      seatsLeft: 4,
+      duration: 60,
+      meetingProvider: MeetingProviderEnum.livekit,
+      calLink: '/calendar/upcoming-session',
+      attending: false,
+      cancelled: false,
+      open: true,
+      joinable: false,
+    );
+    final space = _space(
+      'new-space',
+      'New Space',
+      nextEvents: [upcomingSession],
+    );
+    final currentSession = _session(
+      slug: 'current-session',
+      title: 'Current Session',
+      space: space,
+      attending: false,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        authControllerProvider.overrideWith(_FakeAuthController.new),
+        spaceProvider(space.slug).overrideWith((_) async {
+          spaceLoads++;
+          return space;
+        }),
+        eventProvider(currentSession.slug).overrideWith((_) async {
+          eventLoads++;
+          return currentSession;
+        }),
+        spacesSummaryProvider.overrideWith((_) async {
+          summaryLoads++;
+          return _emptySummary;
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => SpaceDetailScreen(
+            slug: space.slug,
+            sessionSlug: currentSession.slug,
+          ),
+        ),
+        GoRoute(
+          path: '/spaces/:spaceSlug/session/:eventSlug',
+          builder: (_, _) => const Scaffold(body: Text('Other session')),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await container.read(spacesSummaryProvider.future);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(
+          theme: AppTheme.lightTheme,
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect((spaceLoads, eventLoads, summaryLoads), (1, 1, 1));
+
+    await tester.scrollUntilVisible(
+      find.text('Upcoming Session'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Upcoming Session'));
+    await tester.pumpAndSettle();
+    expect(find.text('Other session'), findsOneWidget);
+
+    router.pop();
+    await tester.pumpAndSettle();
+    await container.read(spacesSummaryProvider.future);
+
+    expect((spaceLoads, eventLoads, summaryLoads), (2, 2, 2));
   });
 }

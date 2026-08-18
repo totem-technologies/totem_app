@@ -16,9 +16,10 @@ bool _isRecoverableNetworkFailure(Object error) =>
     error is AppNetworkException ||
     (error is ApiError && error.statusCode >= 500);
 
-bool _isRsvpConflict(Object error) =>
-    error is ApiError<SessionDetailSchema, SessionConflictSchema> &&
-    error.error != null;
+bool _isExpectedRsvpConfirmConflict(Object error) =>
+    error is ApiError<dynamic, dynamic> &&
+    error.statusCode == 409 &&
+    error.error is SessionConflictSchema;
 
 @Riverpod(keepAlive: true)
 Future<List<MobileSpaceDetailSchema>> listSpaces(Ref ref) async {
@@ -245,13 +246,15 @@ Future<bool> rsvpConfirm(Ref ref, String eventSlug) async {
       ),
       operationName: 'confirm RSVP for $eventSlug',
       diagnostics: {'event_slug': eventSlug},
-      shouldReport: (error) => !_isRsvpConflict(error),
+      // A conflict is an expected response only for the initial RSVP request.
+      // Resolve-conflicts and all other calls retain the default reporting.
+      shouldReport: (error) => !_isExpectedRsvpConfirmConflict(error),
     );
     return session.attending;
   } on ApiError<SessionDetailSchema, SessionConflictSchema> catch (error) {
     final conflictingSession = error.error;
-    if (conflictingSession != null) {
-      throw RsvpConflictException(conflictingSession);
+    if (error.statusCode == 409 && conflictingSession != null) {
+      throw RsvpConflictException(conflictingSession, cause: error);
     }
 
     return false;
@@ -263,9 +266,10 @@ Future<bool> rsvpConfirm(Ref ref, String eventSlug) async {
 /// Indicates that an RSVP could not be confirmed because the user is already
 /// attending another session at the same time.
 final class RsvpConflictException implements Exception {
-  const RsvpConflictException(this.conflict);
+  const RsvpConflictException(this.conflict, {this.cause});
 
   final SessionConflictSchema conflict;
+  final Object? cause;
 }
 
 @riverpod

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
@@ -9,6 +10,7 @@ import 'package:totem_core/core/services/calendar_service.dart';
 import 'package:totem_core/shared/network.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confetti.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -75,7 +77,7 @@ class AttendingDialog extends StatefulWidget {
   });
 
   final String eventSlug;
-  final VoidCallback onAddToCalendar;
+  final AsyncCallback onAddToCalendar;
 
   @override
   State<AttendingDialog> createState() => _AttendingDialogState();
@@ -189,11 +191,12 @@ class _AttendingDialogState extends State<AttendingDialog> {
               ),
               textAlign: TextAlign.center,
             ),
-            ElevatedButton(
-              onPressed: () {
+            ConfirmationDialogButton.elevated(
+              onConfirm: () async {
                 if (!_addedToCalendar) {
-                  widget.onAddToCalendar();
-                  setState(() => _addedToCalendar = true);
+                  await widget.onAddToCalendar();
+                  _addedToCalendar = true;
+                  if (mounted) setState(() {});
                 } else {
                   Navigator.of(context).pop();
                 }

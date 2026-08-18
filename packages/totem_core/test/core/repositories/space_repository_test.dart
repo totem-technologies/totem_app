@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/api_service.dart';
 
@@ -123,7 +124,7 @@ void main() {
       );
     });
 
-    test('exposes the existing session when RSVP conflicts', () async {
+    test('treats RSVP confirm 409 as an unreported conflict', () async {
       final client = _RecordingApiClient(
         ApiResponse(
           statusCode: 409,
@@ -144,20 +145,21 @@ void main() {
       final container = _containerFor(client);
       addTearDown(container.dispose);
 
-      await expectLater(
-        container.read(rsvpConfirmProvider('new-session').future),
-        throwsA(
-          isA<RsvpConflictException>().having(
-            (error) => error.conflict.conflictingSessions.firstOrNull?.slug,
-            'conflicting session slug',
-            'existing-session',
-          ),
-        ),
-      );
+      try {
+        await container.read(rsvpConfirmProvider('new-session').future);
+        fail('Expected an RSVP conflict');
+      } on RsvpConflictException catch (error) {
+        expect(
+          error.conflict.conflictingSessions.firstOrNull?.slug,
+          'existing-session',
+        );
+        expect(error.cause, isA<ApiError<dynamic, dynamic>>());
+        expect(ErrorHandler.wasReported(error.cause!), isFalse);
+      }
       expect(client.requestCount, 1);
     });
 
-    test('switches from the conflicting session to the new session', () async {
+    test('resolves the conflict successfully with status 200', () async {
       final client = _RecordingApiClient(
         ApiResponse(
           statusCode: 200,
@@ -195,6 +197,63 @@ void main() {
         <String, dynamic>{
           'conflicting_session_slugs': <String>['existing-session'],
         },
+      );
+    });
+
+    test('does not classify a non-409 RSVP error as a conflict', () async {
+      final client = _RecordingApiClient(
+        ApiResponse(
+          statusCode: 400,
+          body: jsonEncode(
+            <String, dynamic>{
+              'message': 'Invalid RSVP request',
+              'conflicting_sessions': <Map<String, dynamic>>[
+                _sessionJson(
+                  slug: 'existing-session',
+                  title: 'Existing Session',
+                  attending: true,
+                ),
+              ],
+            },
+          ),
+        ),
+      );
+      final container = _containerFor(client);
+      addTearDown(container.dispose);
+
+      final attending = await container.read(
+        rsvpConfirmProvider('new-session').future,
+      );
+
+      expect(attending, isFalse);
+      expect(client.requestCount, 1);
+    });
+
+    test('gives up an existing spot', () async {
+      final client = _RecordingApiClient(
+        ApiResponse(
+          statusCode: 200,
+          body: jsonEncode(
+            _sessionJson(
+              slug: 'existing-session',
+              title: 'Existing Session',
+              attending: false,
+            ),
+          ),
+        ),
+      );
+      final container = _containerFor(client);
+      addTearDown(container.dispose);
+
+      final attending = await container.read(
+        rsvpCancelProvider('existing-session').future,
+      );
+
+      expect(attending, isFalse);
+      expect(client.request?.method, 'DELETE');
+      expect(
+        client.request?.path,
+        '/api/mobile/protected/spaces/rsvp/existing-session',
       );
     });
   });
