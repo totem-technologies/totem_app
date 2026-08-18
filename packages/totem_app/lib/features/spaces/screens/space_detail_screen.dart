@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:totem_app/features/spaces/widgets/attending_dialog.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
@@ -16,7 +16,6 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
-import 'package:totem_core/core/services/calendar_service.dart';
 import 'package:totem_core/features/keeper/screens/meet_user_card.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/date.dart';
@@ -611,7 +610,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
                   loading: _loading,
                   onAttend: () => _attend(event),
                   onGiveUpSpot: () => _giveUpSpot(event),
-                  onAddToCalendar: () => _addToCalendar(event),
+                  onAddToCalendar: () => addSessionToCalendar(context, event),
                   onJoinLivekit: () => _joinLivekit(event),
                   onJoinGoogleMeet: () => _joinGoogleMeet(event),
                   onExplore: () =>
@@ -659,8 +658,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
       if (switched == true) {
         await _onAttendSuccess(event);
       }
-    } catch (e, st) {
-      ErrorHandler.logError(e, stackTrace: st, message: 'Failed to attend');
+    } catch (_) {
       if (mounted) {
         _notificationController.showError(
           context,
@@ -698,55 +696,8 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   Future<void> _onAttendSuccess(SessionDetailSchema event) async {
     if (!mounted) return;
     setState(() => _attending = true);
-    await _attendingPopup(event);
+    await showAttendingDialog(context, event);
     await _refresh(event);
-  }
-
-  Future<void> _attendingPopup(SessionDetailSchema event) async {
-    await showDialog<void>(
-      context: context,
-      builder: (_) => AttendingDialog(
-        eventSlug: event.slug,
-        onAddToCalendar: () => _addToCalendar(event),
-      ),
-    );
-    if (mounted) ConfettiController.showConfetti(context);
-  }
-
-  Future<void> _addToCalendar(SessionDetailSchema event) async {
-    final calendarEvent = AppCalendarEvent(
-      title: '[TOTEM] ${event.title} - ${space.title}',
-      description: space.shortDescription,
-      location: getFullUrl(event.calLink),
-      start: event.start.toLocal(),
-      end: event.start.add(Duration(minutes: event.duration)).toLocal(),
-      reminderMinutesBefore: 10,
-    );
-    try {
-      final success = await CalendarService.addToCalendar(calendarEvent);
-      if (!success && mounted) {
-        _notificationController.showError(
-          context,
-          icon: TotemIcons.calendar,
-          title: 'Failed to add event to calendar',
-          message: 'Please try again later',
-        );
-      }
-    } catch (e, st) {
-      ErrorHandler.logError(
-        e,
-        stackTrace: st,
-        message: 'Failed to add to calendar',
-      );
-      if (mounted) {
-        _notificationController.showError(
-          context,
-          icon: TotemIcons.calendar,
-          title: 'Failed to add event to calendar',
-          message: 'Please try again later',
-        );
-      }
-    }
   }
 
   Future<void> _giveUpSpot(SessionDetailSchema event) async {
@@ -786,12 +737,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
           );
         }
       }
-    } catch (e, st) {
-      ErrorHandler.logError(
-        e,
-        stackTrace: st,
-        message: 'Failed to give up spot',
-      );
+    } catch (_) {
       if (mounted) {
         _notificationController.showError(
           context,
@@ -1340,173 +1286,6 @@ class AboutSpaceSheet extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Attending confirmation dialog
-// ─────────────────────────────────────────────────────────────
-
-class AttendingDialog extends StatefulWidget {
-  const AttendingDialog({
-    required this.onAddToCalendar,
-    required this.eventSlug,
-    super.key,
-  });
-
-  final String eventSlug;
-  final VoidCallback onAddToCalendar;
-
-  @override
-  State<AttendingDialog> createState() => _AttendingDialogState();
-}
-
-class _AttendingDialogState extends State<AttendingDialog> {
-  var _addedToCalendar = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Dialog(
-      child: Padding(
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: 14,
-          vertical: 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 10,
-          children: [
-            Row(
-              children: [
-                Builder(
-                  builder: (context) {
-                    return Container(
-                      height: 30,
-                      width: 30,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                      ),
-                      child: IconButton(
-                        padding: EdgeInsetsDirectional.zero,
-                        iconSize: 18,
-                        color: AppTheme.gray,
-                        onPressed: () async {
-                          final box = context.findRenderObject() as RenderBox?;
-                          await SharePlus.instance.share(
-                            ShareParams(
-                              uri: Uri.parse(AppConfig.instance.apiUrl)
-                                  .resolve('/spaces/event/${widget.eventSlug}')
-                                  .resolve('?utm_source=app&utm_medium=share'),
-                              sharePositionOrigin: box != null
-                                  ? box.localToGlobal(Offset.zero) & box.size
-                                  : null,
-                            ),
-                          );
-                        },
-                        icon: Icon(Icons.adaptive.share),
-                      ),
-                    );
-                  },
-                ),
-                const Spacer(),
-                Container(
-                  height: 30,
-                  width: 30,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                  ),
-                  child: IconButton(
-                    padding: EdgeInsetsDirectional.zero,
-                    iconSize: 18,
-                    color: AppTheme.gray,
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                  ),
-                ),
-              ],
-            ),
-            const TotemIcon(
-              TotemIcons.greenCheckbox,
-              size: 95,
-              color: Color(0xFF98BD44),
-            ),
-            Text(
-              "You're going!",
-              style: theme.textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const Text.rich(
-              TextSpan(
-                children: <TextSpan>[
-                  TextSpan(
-                    text:
-                        "We'll send you a notification before the session "
-                        'starts.',
-                  ),
-                  TextSpan(text: '\n\n'),
-                  TextSpan(
-                    text:
-                        'When you join, you\u2019ll be in a Space where we take '
-                        'turns speaking while holding the virtual Totem \u2014 '
-                        'feel free to share when it\u2019s your turn, or simply '
-                        'listen if you prefer.',
-                  ),
-                  TextSpan(text: '\n\n'),
-                  TextSpan(
-                    text: 'Totem is better with friends!',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  TextSpan(
-                    text:
-                        " Share this link with your friends and they'll be "
-                        'able to join as well.',
-                  ),
-                ],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (!_addedToCalendar) {
-                  widget.onAddToCalendar();
-                  setState(() => _addedToCalendar = true);
-                } else {
-                  Navigator.of(context).pop();
-                }
-              },
-              child: Text(_addedToCalendar ? 'Added!' : 'Add to Calendar'),
-            ),
-            Text.rich(
-              TextSpan(
-                children: [
-                  const TextSpan(text: 'In the meantime, review our '),
-                  TextSpan(
-                    text: 'Community Guidelines',
-                    style: const TextStyle(
-                      decoration: TextDecoration.underline,
-                    ),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () => launchUrl(
-                        AppConfig.instance.communityGuidelinesUrl,
-                        mode: LaunchMode.externalApplication,
-                      ),
-                  ),
-                  const TextSpan(
-                    text: ' to learn more about how to participate.',
-                  ),
-                ],
-              ),
-              style: theme.textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
