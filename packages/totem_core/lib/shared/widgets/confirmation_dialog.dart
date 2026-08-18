@@ -9,10 +9,11 @@ enum ConfirmationDialogType { destructive, standard }
 
 class ConfirmationDialog extends StatefulWidget {
   const ConfirmationDialog({
-    required this.content,
     required this.confirmButtonText,
     required this.onConfirm,
     this.contentStyle,
+    this.content,
+    this.contentSpan,
     this.title = 'Are you sure?',
     this.icon,
     this.iconWidget,
@@ -23,13 +24,20 @@ class ConfirmationDialog extends StatefulWidget {
     this.contentWidget,
     this.scrollable = false,
     super.key,
-  });
+  }) : assert(
+         content != null || contentSpan != null,
+         'Either content or contentSpan must be provided',
+       );
 
   final TotemIconData? icon;
   final Widget? iconWidget;
   final double iconSize;
   final String title;
-  final String content;
+  final String? content;
+
+  /// Optional rich content. When set, this is rendered instead of [content].
+  final InlineSpan? contentSpan;
+
   final TextStyle? contentStyle;
   final String confirmButtonText;
   final AsyncCallback onConfirm;
@@ -114,16 +122,26 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                                     theme.textTheme.titleLarge)
                                 ?.copyWith(
                                   color: theme.colorScheme.onSurface,
+                                  fontSize: 18,
                                 ),
                       ),
                     ),
-                    Text(
-                      widget.content,
-                      textAlign: TextAlign.center,
-                      style: widget.contentStyle?.copyWith(
-                        color: theme.colorScheme.onSurface,
+                    if (widget.contentSpan case final contentSpan?)
+                      Text.rich(
+                        contentSpan,
+                        textAlign: TextAlign.center,
+                        style: widget.contentStyle?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      )
+                    else if (widget.content != null)
+                      Text(
+                        widget.content!,
+                        textAlign: TextAlign.center,
+                        style: widget.contentStyle?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                        ),
                       ),
-                    ),
                     if (widget.contentWidget != null) widget.contentWidget!,
                   ],
                 ),
@@ -131,7 +149,7 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  spacing: 12,
+                  spacing: 10,
                   children: [
                     ConfirmationDialogButton.elevated(
                       onBusyChanged: _onBusyChanged,
@@ -155,14 +173,13 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                       ),
                     ),
                     if (widget.showCancel)
-                      OutlinedButton(
+                      ConfirmationDialogButton.outlined(
                         autofocus: switch (widget.type) {
                           ConfirmationDialogType.destructive => true,
                           _ => false,
                         },
-                        onPressed: _anyButtonBusy
-                            ? null
-                            : () => Navigator.of(context).pop(),
+                        disabled: _anyButtonBusy,
+                        onConfirm: () async => Navigator.of(context).pop(),
                         child: const Text(
                           'Cancel',
                           textAlign: TextAlign.center,
@@ -302,6 +319,8 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: backgroundColor),
           foregroundColor: backgroundColor,
+          maximumSize: const Size(double.infinity, 52),
+          minimumSize: const Size(20, 42),
         ),
         child: child,
       );
@@ -312,6 +331,8 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,
+          maximumSize: const Size(double.infinity, 52),
+          minimumSize: const Size(20, 42),
         ),
         child: child,
       );
