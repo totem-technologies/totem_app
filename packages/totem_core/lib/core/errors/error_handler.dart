@@ -25,15 +25,19 @@ class ErrorHandler {
   /// Errors often cross API, repository, provider, and presentation layers.
   /// Keeping the reporting marker on the exception prevents each layer from
   /// creating a separate Sentry event while preserving the original stack.
+  /// Scalar values, records, and null cannot be Expando keys, so they bypass
+  /// identity deduplication and are reported on every call.
   /// Returns whether this call was the first report for [error].
   static bool logError(
-    Object error, {
+    Object? error, {
     StackTrace? stackTrace,
     String? message,
     Map<String, Object?>? diagnostics,
   }) {
-    if (_reportedErrors[error] ?? false) return false;
-    _reportedErrors[error] = true;
+    if (_supportsIdentityTracking(error)) {
+      if (_reportedErrors[error!] ?? false) return false;
+      _reportedErrors[error] = true;
+    }
 
     if (kDebugMode) {
       logger.e(
@@ -62,7 +66,20 @@ class ErrorHandler {
   }
 
   /// Whether this exact exception has already crossed a reporting boundary.
-  static bool wasReported(Object error) => _reportedErrors[error] ?? false;
+  ///
+  /// Values unsupported by [Expando] have no trackable identity and therefore
+  /// always return false.
+  static bool wasReported(Object? error) {
+    if (!_supportsIdentityTracking(error)) return false;
+    return _reportedErrors[error!] ?? false;
+  }
+
+  static bool _supportsIdentityTracking(Object? error) =>
+      error != null &&
+      error is! String &&
+      error is! num &&
+      error is! bool &&
+      error is! Record;
 
   static void logFlutterError(FlutterErrorDetails details) {
     logError(

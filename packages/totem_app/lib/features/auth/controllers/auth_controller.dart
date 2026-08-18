@@ -305,7 +305,7 @@ class MobileAuthController extends AuthController {
         message: '🔑 Failed to store tokens locally',
       );
       // Optionally rethrow or handle the error as needed
-      throw const AppAuthException('Failed to store tokens');
+      throw AppAuthException('Failed to store tokens');
     }
   }
 

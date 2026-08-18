@@ -328,5 +328,55 @@ void main() {
       expect(ErrorHandler.logError(error), isFalse);
       expect(ErrorHandler.wasReported(error), isTrue);
     });
+
+    test('reports separate factory exception occurrences independently', () {
+      final factories = <String, Object Function()>{
+        'network timeout': AppNetworkException.timeout,
+        'no connection': AppNetworkException.noConnection,
+        'unauthenticated': AppAuthException.unauthenticated,
+        'token expired': AppAuthException.tokenExpired,
+        'invalid credentials': AppAuthException.invalidCredentials,
+        'magic link expired': AppAuthException.magicLinkExpired,
+        'invalid PIN': AppAuthException.invalidPin,
+        'PIN attempts exceeded': AppAuthException.pinAttemptsExceeded,
+        'auth timeout': AppAuthException.timeout,
+        'invalid format': AppDataException.invalidFormat,
+        'missing data': AppDataException.missingData,
+        'feature unavailable': AppFeatureException.notAvailable,
+        'permission denied': AppFeatureException.permissionDenied,
+        'video connection failed': VideoSessionException.connectionFailed,
+        'media permission denied': VideoSessionException.mediaPermissionDenied,
+        'session ended': VideoSessionException.sessionEnded,
+      };
+
+      for (final MapEntry(key: name, value: create) in factories.entries) {
+        final first = create();
+        final second = create();
+
+        expect(identical(first, second), isFalse, reason: name);
+        expect(ErrorHandler.logError(first), isTrue, reason: name);
+        expect(ErrorHandler.logError(first), isFalse, reason: name);
+        expect(ErrorHandler.wasReported(second), isFalse, reason: name);
+        expect(ErrorHandler.logError(second), isTrue, reason: name);
+      }
+    });
+
+    test('safely reports values unsupported as Expando keys', () {
+      final errors = <Object?>[
+        'message',
+        42,
+        3.14,
+        true,
+        (code: 'failure'),
+        null,
+      ];
+
+      for (final error in errors) {
+        expect(ErrorHandler.wasReported(error), isFalse);
+        expect(ErrorHandler.logError(error), isTrue);
+        expect(ErrorHandler.wasReported(error), isFalse);
+        expect(ErrorHandler.logError(error), isTrue);
+      }
+    });
   });
 }
