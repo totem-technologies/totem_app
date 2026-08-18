@@ -138,7 +138,7 @@ final class ClientSecurity {
         const ApiSecurityRequirement({'JWTAuth': []}),
         const ApiSecurityRequirement({'SessionAuth': []}),
       ];
-  static final totemSpacesMobileApiRsvpSwitchRequirements =
+  static final totemSpacesMobileApiRsvpResolveConflictsRequirements =
       <ApiSecurityRequirement>[
         const ApiSecurityRequirement({'JWTAuth': []}),
         const ApiSecurityRequirement({'SessionAuth': []}),

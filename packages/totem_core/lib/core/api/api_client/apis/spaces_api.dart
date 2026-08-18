@@ -5,11 +5,12 @@ import 'dart:convert';
 import 'package:degenerate_runtime/degenerate_runtime.dart';
 import '../models/mobile_space_detail_schema.dart';
 import '../models/paged_mobile_space_detail_schema.dart';
+import '../models/resolve_conflicts_schema.dart';
+import '../models/session_conflict_schema.dart';
 import '../models/session_detail_schema.dart';
 import '../models/session_feedback_schema.dart';
 import '../models/space_schema.dart';
 import '../models/summary_spaces_schema.dart';
-import '../models/switch_session_schema.dart';
 
 /// SpacesApi operations.
 ///
@@ -348,7 +349,7 @@ final class SpacesApi with ApiExecutor {
   /// Rsvp Confirm
   ///
   /// `POST /api/mobile/protected/spaces/rsvp/{event_slug}`
-  Future<ApiResult<SessionDetailSchema, SessionDetailSchema>>
+  Future<ApiResult<SessionDetailSchema, SessionConflictSchema>>
   totemSpacesMobileApiRsvpConfirm({
     required String eventSlug,
     RequestOptions? options,
@@ -371,7 +372,7 @@ final class SpacesApi with ApiExecutor {
         );
       },
       onError: (response) {
-        return SessionDetailSchema.fromJson(
+        return SessionConflictSchema.fromJson(
           jsonDecode(response.body) as Map<String, dynamic>,
         );
       },
@@ -405,13 +406,13 @@ final class SpacesApi with ApiExecutor {
     );
   }
 
-  /// Rsvp Switch
+  /// Rsvp Resolve Conflicts
   ///
-  /// `POST /api/mobile/protected/spaces/rsvp/{event_slug}/switch`
-  Future<ApiResult<SessionDetailSchema, SessionDetailSchema>>
-  totemSpacesMobileApiRsvpSwitch({
+  /// `POST /api/mobile/protected/spaces/rsvp/{event_slug}/resolve-conflicts`
+  Future<ApiResult<SessionDetailSchema, SessionConflictSchema>>
+  totemSpacesMobileApiRsvpResolveConflicts({
     required String eventSlug,
-    required SwitchSessionSchema body,
+    required ResolveConflictsSchema body,
     RequestOptions? options,
   }) async {
     final headers = <String, String>{...apiConfig.defaultHeaders};
@@ -420,7 +421,7 @@ final class SpacesApi with ApiExecutor {
     final request = ApiRequest(
       method: 'POST',
       path:
-          '/api/mobile/protected/spaces/rsvp/${Uri.encodeComponent(eventSlug)}/switch',
+          '/api/mobile/protected/spaces/rsvp/${Uri.encodeComponent(eventSlug)}/resolve-conflicts',
       headers: headers,
       body: jsonEncode(body.toJson()),
       options: options,
@@ -434,7 +435,7 @@ final class SpacesApi with ApiExecutor {
         );
       },
       onError: (response) {
-        return SessionDetailSchema.fromJson(
+        return SessionConflictSchema.fromJson(
           jsonDecode(response.body) as Map<String, dynamic>,
         );
       },
