@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
@@ -18,7 +17,6 @@ import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/calendar_service.dart';
 import 'package:totem_core/features/keeper/screens/meet_user_card.dart';
-import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/extensions.dart';
 import 'package:totem_core/shared/html.dart';
@@ -34,6 +32,7 @@ import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
+import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -151,7 +150,14 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                         ),
                         flexibleSpace: FlexibleSpaceBar(
                           collapseMode: CollapseMode.parallax,
-                          background: _SpaceHeaderImage(space: space),
+                          background: SizedBox.expand(
+                            child: TotemImage(
+                              imageUrl: space.imageLink,
+                              loadingPlaceholder: ColoredBox(
+                                color: Colors.black.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ),
                         ),
                         leading: CircleIconButton(
                           margin: const EdgeInsetsDirectional.only(start: 20),
@@ -433,42 +439,6 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
       },
       loading: () => const LoadingScreen(),
       error: (err, stack) => ErrorScreen(error: err, showHomeButton: true),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Header image (no text overlay)
-// ─────────────────────────────────────────────────────────────
-
-class _SpaceHeaderImage extends StatelessWidget {
-  const _SpaceHeaderImage({required this.space});
-
-  final MobileSpaceDetailSchema space;
-
-  @override
-  Widget build(BuildContext context) {
-    if (space.imageLink != null && space.imageLink!.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: getFullUrl(space.imageLink!),
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        placeholder: (context, url) =>
-            ColoredBox(color: Colors.black.withValues(alpha: 0.5)),
-        errorWidget: (context, url, error) => Image.asset(
-          TotemImageAssets.genericBackground,
-          fit: BoxFit.cover,
-          package: 'totem_core',
-        ),
-      );
-    }
-    return Image.asset(
-      TotemImageAssets.genericBackground,
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: double.infinity,
-      package: 'totem_core',
     );
   }
 }
@@ -1042,24 +1012,12 @@ class _UpcomingSessionCard extends StatelessWidget {
               SizedBox(
                 height: double.infinity,
                 width: 130,
-                child: (space.imageLink != null && space.imageLink!.isNotEmpty)
-                    ? CachedNetworkImage(
-                        imageUrl: getFullUrl(space.imageLink!),
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => ColoredBox(
-                          color: Colors.black.withValues(alpha: 0.3),
-                        ),
-                        errorWidget: (context, url, error) => Image.asset(
-                          TotemImageAssets.genericBackground,
-                          fit: BoxFit.cover,
-                          package: 'totem_core',
-                        ),
-                      )
-                    : Image.asset(
-                        TotemImageAssets.genericBackground,
-                        fit: BoxFit.cover,
-                        package: 'totem_core',
-                      ),
+                child: TotemImage(
+                  imageUrl: space.imageLink,
+                  loadingPlaceholder: ColoredBox(
+                    color: Colors.black.withValues(alpha: 0.3),
+                  ),
+                ),
               ),
 
               // ── Info ───────────────────────────────────────────

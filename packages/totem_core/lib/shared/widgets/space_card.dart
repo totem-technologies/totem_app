@@ -1,16 +1,14 @@
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/extensions.dart';
-import 'package:totem_core/shared/network.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';
 import 'package:totem_core/shared/widgets/space_gradient_mask.dart';
+import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 const _textShadows = [
@@ -140,28 +138,12 @@ class SpaceCard extends StatelessWidget {
                 children: [
                   Positioned.fill(
                     child: ImageGradientMask(
-                      child:
-                          (space.imageLink != null &&
-                              space.imageLink!.isNotEmpty)
-                          ? CachedNetworkImage(
-                              imageUrl: getFullUrl(space.imageLink!),
-                              fit: BoxFit.cover,
-                              placeholder: (context, url) => ColoredBox(
-                                color: Colors.black.withValues(alpha: 0.75),
-                              ),
-                              errorWidget: (context, url, error) {
-                                return Image.asset(
-                                  TotemImageAssets.genericBackground,
-                                  fit: BoxFit.cover,
-                                  package: 'totem_core',
-                                );
-                              },
-                            )
-                          : Image.asset(
-                              TotemImageAssets.genericBackground,
-                              fit: BoxFit.cover,
-                              package: 'totem_core',
-                            ),
+                      child: TotemImage(
+                        imageUrl: space.imageLink,
+                        loadingPlaceholder: ColoredBox(
+                          color: Colors.black.withValues(alpha: 0.75),
+                        ),
+                      ),
                     ),
                   ),
                   PositionedDirectional(
@@ -354,24 +336,12 @@ class SmallSpaceCard extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: ImageGradientMask(
-                child: (space.imageLink != null && space.imageLink!.isNotEmpty)
-                    ? CachedNetworkImage(
-                        imageUrl: getFullUrl(space.imageLink!),
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: Colors.black.withValues(alpha: 0.6),
-                        ),
-                        errorWidget: (context, url, error) => Image.asset(
-                          TotemImageAssets.genericBackground,
-                          fit: BoxFit.cover,
-                          package: 'totem_core',
-                        ),
-                      )
-                    : Image.asset(
-                        TotemImageAssets.genericBackground,
-                        fit: BoxFit.cover,
-                        package: 'totem_core',
-                      ),
+                child: TotemImage(
+                  imageUrl: space.imageLink,
+                  loadingPlaceholder: ColoredBox(
+                    color: Colors.black.withValues(alpha: 0.6),
+                  ),
+                ),
               ),
             ),
           ),

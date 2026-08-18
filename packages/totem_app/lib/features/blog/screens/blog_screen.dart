@@ -16,6 +16,7 @@ import 'package:totem_core/shared/utils.dart';
 import 'package:totem_core/shared/widgets/circle_icon_button.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
+import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 import '../repositories/blog_repository.dart';
@@ -167,9 +168,8 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                           SelectionContainer.disabled(
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(16),
-                              child: CachedNetworkImage(
+                              child: TotemImage(
                                 imageUrl: blog.headerImageUrl!,
-                                fit: BoxFit.cover,
                                 memCacheWidth: ((screenWidth - 40) * pixelRatio)
                                     .round(),
                               ),

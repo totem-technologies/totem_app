@@ -1,14 +1,12 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/models/upcoming_session_data.dart';
-import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/date.dart';
-import 'package:totem_core/shared/network.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 class SessionCard extends StatelessWidget {
@@ -92,22 +90,7 @@ class _SessionImage extends StatelessWidget {
       width: double.infinity,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: height),
-        child: (imageUrl != null && imageUrl!.isNotEmpty)
-            ? CachedNetworkImage(
-                imageUrl: getFullUrl(imageUrl!),
-                fit: BoxFit.cover,
-                placeholder: (_, _) => Container(color: Colors.grey.shade200),
-                errorWidget: (_, _, _) => Image.asset(
-                  TotemImageAssets.genericBackground,
-                  fit: BoxFit.cover,
-                  package: 'totem_core',
-                ),
-              )
-            : Image.asset(
-                TotemImageAssets.genericBackground,
-                fit: BoxFit.cover,
-                package: 'totem_core',
-              ),
+        child: TotemImage(imageUrl: imageUrl),
       ),
     );
   }

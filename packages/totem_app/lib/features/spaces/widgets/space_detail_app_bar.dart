@@ -1,12 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/shared/assets.dart';
-import 'package:totem_core/shared/network.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/space_gradient_mask.dart';
+import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 class SpaceDetailAppBar extends StatelessWidget {
@@ -20,7 +18,6 @@ class SpaceDetailAppBar extends StatelessWidget {
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.widthOf(context);
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-
     return GestureDetector(
       onTap: () async {
         await Scrollable.ensureVisible(
@@ -38,27 +35,13 @@ class SpaceDetailAppBar extends StatelessWidget {
               ),
               child: ImageGradientMask(
                 gradientHeight: 200,
-                child: (space.imageLink != null && space.imageLink!.isNotEmpty)
-                    ? CachedNetworkImage(
-                        imageUrl: getFullUrl(space.imageLink ?? ''),
-                        fit: BoxFit.cover,
-                        memCacheWidth: (screenWidth * pixelRatio).round(),
-                        errorWidget: (context, url, error) {
-                          return Image.asset(
-                            TotemImageAssets.genericBackground,
-                            fit: BoxFit.cover,
-                            package: 'totem_core',
-                          );
-                        },
-                        placeholder: (context, url) => ColoredBox(
-                          color: Colors.black.withValues(alpha: 0.75),
-                        ),
-                      )
-                    : Image.asset(
-                        TotemImageAssets.genericBackground,
-                        fit: BoxFit.cover,
-                        package: 'totem_core',
-                      ),
+                child: TotemImage(
+                  imageUrl: space.imageLink,
+                  memCacheWidth: (screenWidth * pixelRatio).round(),
+                  loadingPlaceholder: ColoredBox(
+                    color: Colors.black.withValues(alpha: 0.75),
+                  ),
+                ),
               ),
             ),
           ),

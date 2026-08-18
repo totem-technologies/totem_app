@@ -7,6 +7,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/network.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 import 'badge.dart';
@@ -89,24 +90,16 @@ class FeaturedBlogPost extends StatelessWidget {
                     );
                   },
                   blendMode: BlendMode.darken,
-                  child: CachedNetworkImage(
-                    imageUrl: image ?? '',
-                    fit: BoxFit.cover,
-                    memCacheWidth: (screenWidth * pixelRatio).round(),
-                    memCacheHeight: (345 * pixelRatio).round(),
-                    placeholder: (context, url) => Container(
+                  child: TotemImage(
+                    imageUrl: image,
+                    loadingPlaceholder: Container(
                       color: Colors.grey[300],
                       child: const Center(
                         child: CircularProgressIndicator.adaptive(),
                       ),
                     ),
-                    errorWidget: (context, url, error) {
-                      return Image.asset(
-                        TotemImageAssets.genericBackground,
-                        fit: BoxFit.cover,
-                        package: 'totem_core',
-                      );
-                    },
+                    memCacheWidth: (screenWidth * pixelRatio).round(),
+                    memCacheHeight: (345 * pixelRatio).round(),
                   ),
                 ),
                 PositionedDirectional(

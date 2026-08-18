@@ -6,8 +6,8 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/date.dart';
-import 'package:totem_core/shared/network.dart';
 import 'package:totem_core/shared/utils.dart';
+import 'package:totem_core/shared/widgets/totem_image.dart';
 
 class SuggestedSpaceCard extends StatelessWidget {
   const SuggestedSpaceCard({required this.session, super.key});
@@ -138,6 +138,7 @@ class SuggestedSpaceCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Row(
+                      spacing: 4,
                       children: [
                         Container(
                           height: 25,
@@ -147,33 +148,14 @@ class SuggestedSpaceCard extends StatelessWidget {
                             border: Border.all(color: Colors.white, width: 1.5),
                           ),
                           child: ClipOval(
-                            child: () {
-                              final profileImage =
-                                  session.space.author.profileImage;
-                              if (profileImage != null &&
-                                  profileImage.isNotEmpty) {
-                                return CachedNetworkImage(
-                                  imageUrl: getFullUrl(profileImage),
-                                  fit: BoxFit.cover,
-                                  width: 25,
-                                  height: 25,
-                                  placeholder: (_, _) => const Icon(
-                                    Icons.person,
-                                    color: Colors.white,
-                                    size: 25,
-                                  ),
-                                  errorWidget: (_, _, _) => Container(
-                                    color: theme.colorScheme.primary,
-                                    alignment: AlignmentDirectional.center,
-                                    child: const Icon(
-                                      Icons.person,
-                                      color: Colors.white,
-                                      size: 14,
-                                    ),
-                                  ),
-                                );
-                              }
-                              return Container(
+                            child: TotemImage(
+                              imageUrl: session.space.author.profileImage,
+                              loadingPlaceholder: const Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 25,
+                              ),
+                              errorWidget: Container(
                                 color: theme.colorScheme.primary,
                                 alignment: AlignmentDirectional.center,
                                 child: const Icon(
@@ -181,11 +163,10 @@ class SuggestedSpaceCard extends StatelessWidget {
                                   color: Colors.white,
                                   size: 14,
                                 ),
-                              );
-                            }(),
+                              ),
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 4),
                         RichText(
                           text: TextSpan(
                             style: theme.textTheme.bodySmall?.copyWith(
