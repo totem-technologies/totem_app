@@ -116,7 +116,12 @@ void main() {
           spaceProvider(newSpace.slug).overrideWith((_) async => newSpace),
           eventProvider(newSession.slug).overrideWith((_) async => newSession),
           rsvpConfirmProvider(newSession.slug).overrideWith(
-            (_) async => throw RsvpConflictException(existingSession),
+            (_) async => throw RsvpConflictException(
+              SessionConflictSchema(
+                message: 'Conflict',
+                conflictingSessions: [existingSession],
+              ),
+            ),
           ),
         ],
         child: MaterialApp(

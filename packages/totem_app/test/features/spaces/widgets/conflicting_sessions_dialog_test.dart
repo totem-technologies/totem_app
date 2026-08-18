@@ -86,7 +86,10 @@ void main() {
     unawaited(
       showConflictingSessionsDialog(
         hostKey.currentContext!,
-        existingSession,
+        SessionConflictSchema(
+          message: 'Conflict',
+          conflictingSessions: [existingSession],
+        ),
         newSession,
         onSwitch,
       ).then((result) => onResult?.call(result)),

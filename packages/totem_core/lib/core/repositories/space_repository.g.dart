@@ -682,7 +682,7 @@ final class RsvpConfirmProvider
   }
 }
 
-String _$rsvpConfirmHash() => r'68376e24d71874a34972387edbffafeee8f573b5';
+String _$rsvpConfirmHash() => r'd4dd7597db20a5fe2ca50bb0cec670a65c522da6';
 
 final class RsvpConfirmFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
@@ -779,7 +779,7 @@ final class RsvpForceConfirmProvider
     with $FutureModifier<bool>, $FutureProvider<bool> {
   RsvpForceConfirmProvider._({
     required RsvpForceConfirmFamily super.from,
-    required (String, String) super.argument,
+    required (String, List<String>) super.argument,
   }) : super(
          retry: null,
          name: r'rsvpForceConfirmProvider',
@@ -805,7 +805,7 @@ final class RsvpForceConfirmProvider
 
   @override
   FutureOr<bool> create(Ref ref) {
-    final argument = this.argument as (String, String);
+    final argument = this.argument as (String, List<String>);
     return rsvpForceConfirm(ref, argument.$1, argument.$2);
   }
 
@@ -820,10 +820,10 @@ final class RsvpForceConfirmProvider
   }
 }
 
-String _$rsvpForceConfirmHash() => r'2f13da620ee07fada49090312129a83f5a2a8fea';
+String _$rsvpForceConfirmHash() => r'de7b55a9618a9f5650cc4823a7dddebc82dbbd67';
 
 final class RsvpForceConfirmFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<bool>, (String, String)> {
+    with $FunctionalFamilyOverride<FutureOr<bool>, (String, List<String>)> {
   RsvpForceConfirmFamily._()
     : super(
         retry: null,
@@ -835,9 +835,9 @@ final class RsvpForceConfirmFamily extends $Family
 
   RsvpForceConfirmProvider call(
     String eventSlug,
-    String conflictingSessionSlug,
+    List<String> conflictingSessionSlugs,
   ) => RsvpForceConfirmProvider._(
-    argument: (eventSlug, conflictingSessionSlug),
+    argument: (eventSlug, conflictingSessionSlugs),
     from: this,
   );
 

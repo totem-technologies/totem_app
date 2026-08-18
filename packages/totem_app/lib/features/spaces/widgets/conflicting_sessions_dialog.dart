@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:totem_core/core/api/api_client/models/session_detail_schema.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/network.dart';
@@ -9,14 +10,14 @@ import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 Future<bool?> showConflictingSessionsDialog(
   BuildContext context,
-  SessionDetailSchema existingSession,
+  SessionConflictSchema conflict,
   SessionDetailSchema newSession,
-  Future<bool> Function() onSwitch,
+  AsyncValueGetter<bool> onSwitch,
 ) async {
   return showDialog<bool>(
     context: context,
     builder: (context) => ConflictingSessionsDialog(
-      existingSession: existingSession,
+      conflict: conflict,
       newSession: newSession,
       onSwitch: onSwitch,
     ),
@@ -24,13 +25,13 @@ Future<bool?> showConflictingSessionsDialog(
 }
 
 class ConflictingSessionsDialog extends StatelessWidget {
-  final SessionDetailSchema existingSession;
+  final SessionConflictSchema conflict;
   final SessionDetailSchema newSession;
-  final Future<bool> Function() onSwitch;
+  final AsyncValueGetter<bool> onSwitch;
 
   const ConflictingSessionsDialog({
     super.key,
-    required this.existingSession,
+    required this.conflict,
     required this.newSession,
     required this.onSwitch,
   });
@@ -40,7 +41,7 @@ class ConflictingSessionsDialog extends StatelessWidget {
     return ConfirmationDialog(
       title: 'You have another session at this time.',
       content:
-          'To join ${newSession.title}, you’ll need to give up your spot in ${existingSession.title}.',
+          'To join ${newSession.title}, you’ll need to give up your spot in ${conflict.conflictingSessions.map((e) => e.title).join(', ')}.',
       icon: TotemIcons.calendar,
       iconSize: 32,
       type: ConfirmationDialogType.standard,
@@ -48,10 +49,8 @@ class ConflictingSessionsDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         spacing: 6,
         children: [
-          _SessionCard(
-            session: existingSession,
-            type: _SessionCardType.existing,
-          ),
+          for (final session in conflict.conflictingSessions)
+            _SessionCard(session: session, type: _SessionCardType.existing),
           const RotatedBox(
             quarterTurns: 1,
             child: TotemIcon(TotemIcons.arrowBack, size: 18),

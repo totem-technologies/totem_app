@@ -648,13 +648,13 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
           );
         }
       }
-    } on RsvpConflictException catch (conflict) {
+    } on RsvpConflictException catch (error) {
       if (!mounted) return;
       final switched = await showConflictingSessionsDialog(
         context,
-        conflict.conflictingSession,
+        error.conflict,
         event,
-        () => _switchSession(event, conflict.conflictingSession),
+        () => _switchSession(event, error.conflict),
       );
       if (switched == true) {
         await _onAttendSuccess(event);
@@ -676,10 +676,13 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
 
   Future<bool> _switchSession(
     SessionDetailSchema newSession,
-    SessionDetailSchema conflictingSession,
+    SessionConflictSchema conflict,
   ) async {
     final attending = await ref.read(
-      rsvpForceConfirmProvider(newSession.slug, conflictingSession.slug).future,
+      rsvpForceConfirmProvider(
+        newSession.slug,
+        conflict.conflictingSessions.map((e) => e.slug).toList(),
+      ).future,
     );
     if (!attending && mounted) {
       _notificationController.showError(

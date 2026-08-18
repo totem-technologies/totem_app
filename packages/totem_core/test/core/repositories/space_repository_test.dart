@@ -128,11 +128,16 @@ void main() {
         ApiResponse(
           statusCode: 409,
           body: jsonEncode(
-            _sessionJson(
-              slug: 'existing-session',
-              title: 'Existing Session',
-              attending: true,
-            ),
+            <String, dynamic>{
+              'message': 'The session overlaps an existing RSVP',
+              'conflicting_sessions': <Map<String, dynamic>>[
+                _sessionJson(
+                  slug: 'existing-session',
+                  title: 'Existing Session',
+                  attending: true,
+                ),
+              ],
+            },
           ),
         ),
       );
@@ -143,7 +148,7 @@ void main() {
         container.read(rsvpConfirmProvider('new-session').future),
         throwsA(
           isA<RsvpConflictException>().having(
-            (error) => error.conflictingSession.slug,
+            (error) => error.conflict.conflictingSessions.firstOrNull?.slug,
             'conflicting session slug',
             'existing-session',
           ),
@@ -171,7 +176,7 @@ void main() {
       final attending = await container.read(
         rsvpForceConfirmProvider(
           'new-session',
-          'existing-session',
+          ['existing-session'],
         ).future,
       );
 
@@ -179,7 +184,7 @@ void main() {
       expect(client.request?.method, 'POST');
       expect(
         client.request?.path,
-        '/api/mobile/protected/spaces/rsvp/new-session/switch',
+        '/api/mobile/protected/spaces/rsvp/new-session/resolve-conflicts',
       );
       final requestBody = client.request?.body;
       if (requestBody is! String) {
@@ -187,7 +192,9 @@ void main() {
       }
       expect(
         jsonDecode(requestBody),
-        <String, dynamic>{'conflicting_session_slug': 'existing-session'},
+        <String, dynamic>{
+          'conflicting_session_slugs': <String>['existing-session'],
+        },
       );
     });
   });

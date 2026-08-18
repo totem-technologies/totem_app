@@ -224,7 +224,7 @@ Future<bool> rsvpConfirm(Ref ref, String eventSlug) async {
       operationName: 'confirm RSVP for $eventSlug',
     );
     return session.attending;
-  } on ApiError<SessionDetailSchema, SessionDetailSchema> catch (
+  } on ApiError<SessionDetailSchema, SessionConflictSchema> catch (
     error,
     stackTrace
   ) {
@@ -252,9 +252,9 @@ Future<bool> rsvpConfirm(Ref ref, String eventSlug) async {
 /// Indicates that an RSVP could not be confirmed because the user is already
 /// attending another session at the same time.
 final class RsvpConflictException implements Exception {
-  const RsvpConflictException(this.conflictingSession);
+  const RsvpConflictException(this.conflict);
 
-  final SessionDetailSchema conflictingSession;
+  final SessionConflictSchema conflict;
 }
 
 @riverpod
@@ -283,18 +283,19 @@ Future<bool> rsvpCancel(Ref ref, String eventSlug) async {
 Future<bool> rsvpForceConfirm(
   Ref ref,
   String eventSlug,
-  String conflictingSessionSlug,
+  List<String> conflictingSessionSlugs,
 ) async {
   final mobileApiService = ref.read(apiServiceProvider);
 
   try {
     final session = await RepositoryUtils.handleApiCall<SessionDetailSchema>(
-      apiCall: () => mobileApiService.spaces.totemSpacesMobileApiRsvpSwitch(
-        eventSlug: eventSlug,
-        body: SwitchSessionSchema(
-          conflictingSessionSlug: conflictingSessionSlug,
-        ),
-      ),
+      apiCall: () =>
+          mobileApiService.spaces.totemSpacesMobileApiRsvpResolveConflicts(
+            eventSlug: eventSlug,
+            body: ResolveConflictsSchema(
+              conflictingSessionSlugs: conflictingSessionSlugs,
+            ),
+          ),
       operationName: 'switch RSVP to $eventSlug',
     );
     return session.attending;
