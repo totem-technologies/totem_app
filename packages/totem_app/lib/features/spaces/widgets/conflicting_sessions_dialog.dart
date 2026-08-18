@@ -39,9 +39,6 @@ class ConflictingSessionsDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final conflictingSessionTitles = conflict.conflictingSessions
-        .map((session) => session.title)
-        .join(', ');
     return ConfirmationDialog(
       icon: TotemIcons.calendar,
       iconSize: 32,
@@ -55,10 +52,7 @@ class ConflictingSessionsDialog extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.w500),
           ),
           const TextSpan(text: ', you’ll need to give up your spot in '),
-          TextSpan(
-            text: conflictingSessionTitles,
-            style: TextStyle(fontWeight: FontWeight.w500),
-          ),
+          ..._sessionTitleListSpans(conflict.conflictingSessions),
           const TextSpan(text: '.'),
         ],
       ),
@@ -78,6 +72,25 @@ class ConflictingSessionsDialog extends StatelessWidget {
   }
 }
 
+List<InlineSpan> _sessionTitleListSpans(List<SessionDetailSchema> sessions) {
+  return [
+    for (var index = 0; index < sessions.length; index++) ...[
+      if (index > 0)
+        TextSpan(
+          text: switch ((index, sessions.length)) {
+            (1, 2) => ' and ',
+            (_, final length) when index == length - 1 => ', and ',
+            _ => ', ',
+          },
+        ),
+      TextSpan(
+        text: sessions[index].title,
+        style: const TextStyle(fontWeight: FontWeight.w500),
+      ),
+    ],
+  ];
+}
+
 enum _SessionCardType { existing, newSession }
 
 class _SessionCardsLayout extends StatelessWidget {
@@ -93,14 +106,14 @@ class _SessionCardsLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
     final usableHeight =
-        mediaQuery.size.height -
-        mediaQuery.padding.vertical -
-        mediaQuery.viewInsets.vertical;
+        MediaQuery.sizeOf(context).height -
+        MediaQuery.paddingOf(context).vertical -
+        MediaQuery.viewInsetsOf(context).vertical;
     final horizontal =
-        mediaQuery.orientation == Orientation.landscape ||
+        MediaQuery.orientationOf(context) == Orientation.landscape ||
         usableHeight < _minimumColumnViewportHeight;
+    final textDirection = Directionality.of(context);
 
     Widget card(SessionDetailSchema session, _SessionCardType type) {
       final child = _SessionCard(
@@ -124,7 +137,11 @@ class _SessionCardsLayout extends StatelessWidget {
         for (final session in existingSessions)
           card(session, _SessionCardType.existing),
         RotatedBox(
-          quarterTurns: horizontal ? 2 : -1,
+          quarterTurns: horizontal
+              ? textDirection == TextDirection.ltr
+                    ? 2
+                    : 0
+              : -1,
           child: const TotemIcon(TotemIcons.arrowBack, size: 18),
         ),
         card(newSession, _SessionCardType.newSession),
@@ -148,77 +165,79 @@ class _SessionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final imageUrl = session.space.imageLink;
-    return Container(
-      height: 100,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: switch (type) {
-          _SessionCardType.existing => AppTheme.cream,
-          _SessionCardType.newSession => const Color(0xFFFAEEFF),
-        },
-      ),
-      clipBehavior: Clip.hardEdge,
-      child: Row(
-        children: [
-          SizedBox(
-            width: compact ? 60 : 100,
-            height: double.infinity,
-            // TODO(totem): Create a TotemSpaceImage widget.
-            // This code is reflected in a lot of places in the codebase. This can be extracted and remove boilerplates
-            child: imageUrl != null && imageUrl.isNotEmpty
-                ? CachedNetworkImage(
-                    imageUrl: getFullUrl(imageUrl),
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) =>
-                        Container(color: Colors.grey.shade200),
-                    errorWidget: (context, url, error) => Image.asset(
+    return IntrinsicHeight(
+      child: Container(
+        constraints: BoxConstraints(minHeight: 100),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: switch (type) {
+            _SessionCardType.existing => AppTheme.cream,
+            _SessionCardType.newSession => const Color(0xFFFAEEFF),
+          },
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: Row(
+          children: [
+            SizedBox(
+              width: compact ? 60 : 100,
+              height: double.infinity,
+              // TODO(totem): Create a TotemSpaceImage widget.
+              // This code is reflected in a lot of places in the codebase. This can be extracted and remove boilerplates
+              child: imageUrl != null && imageUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: getFullUrl(imageUrl),
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) =>
+                          Container(color: Colors.grey.shade200),
+                      errorWidget: (context, url, error) => Image.asset(
+                        TotemImageAssets.genericBackground,
+                        fit: BoxFit.cover,
+                        package: 'totem_core',
+                      ),
+                    )
+                  : Image.asset(
                       TotemImageAssets.genericBackground,
                       fit: BoxFit.cover,
                       package: 'totem_core',
                     ),
-                  )
-                : Image.asset(
-                    TotemImageAssets.genericBackground,
-                    fit: BoxFit.cover,
-                    package: 'totem_core',
-                  ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsetsDirectional.symmetric(
-                horizontal: compact ? 6 : 10,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                spacing: 4,
-                children: [
-                  Text(switch (type) {
-                    _SessionCardType.existing => 'Your current session',
-                    _SessionCardType.newSession => 'New session',
-                  }, style: theme.textTheme.labelSmall),
-                  Text(
-                    session.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.fade,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
+            ),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsetsDirectional.symmetric(
+                  horizontal: compact ? 6 : 10,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 4,
+                  children: [
+                    Text(switch (type) {
+                      _SessionCardType.existing => 'Your current session',
+                      _SessionCardType.newSession => 'New session',
+                    }, style: theme.textTheme.labelSmall),
+                    Text(
+                      session.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.fade,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  Text(
-                    '${formatSessionDate(session.start)} · '
-                    '${formatSessionTime(session.start)}',
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.fade,
-                    style: theme.textTheme.labelSmall,
-                  ),
-                ],
+                    Text(
+                      '${formatSessionDate(session.start)} · '
+                      '${formatSessionTime(session.start, session.userTimezone)}',
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.fade,
+                      style: theme.textTheme.labelSmall,
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

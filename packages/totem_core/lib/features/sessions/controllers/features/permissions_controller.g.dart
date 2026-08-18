@@ -34,7 +34,7 @@ final class PermissionsControllerProvider
 }
 
 String _$permissionsControllerHash() =>
-    r'fbff38bb9e7b192cc28e6360e65098629a40dda9';
+    r'27f02cd4f14adf05c98de974a402ba533c37def5';
 
 abstract class _$PermissionsController
     extends $AsyncNotifier<PermissionsState> {

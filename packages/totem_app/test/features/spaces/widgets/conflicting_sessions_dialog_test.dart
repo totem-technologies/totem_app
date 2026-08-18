@@ -75,10 +75,14 @@ void main() {
     WidgetTester tester, {
     required Future<bool> Function() onSwitch,
     ValueChanged<bool?>? onResult,
+    List<SessionDetailSchema>? conflictingSessions,
+    TextDirection textDirection = TextDirection.ltr,
   }) async {
     final hostKey = GlobalKey();
     await tester.pumpWidget(
       MaterialApp(
+        builder: (context, child) =>
+            Directionality(textDirection: textDirection, child: child!),
         home: Scaffold(body: SizedBox(key: hostKey)),
       ),
     );
@@ -88,7 +92,7 @@ void main() {
         hostKey.currentContext!,
         SessionConflictSchema(
           message: 'Conflict',
-          conflictingSessions: [existingSession],
+          conflictingSessions: conflictingSessions ?? [existingSession],
         ),
         newSession,
         onSwitch,
@@ -102,7 +106,7 @@ void main() {
   ) async {
     await showConflict(tester, onSwitch: () async => true);
 
-    expect(find.text('You have another session at this time.'), findsOneWidget);
+    expect(find.text('You have a session at this time.'), findsOneWidget);
     expect(
       find.text(
         'To join New Session, you’ll need to give up your spot in Existing Session.',
@@ -124,9 +128,46 @@ void main() {
     for (final sessionName in ['New Session', 'Existing Session']) {
       expect(
         spans.singleWhere((span) => span.text == sessionName).style?.fontWeight,
-        FontWeight.w600,
+        FontWeight.w500,
       );
     }
+  });
+
+  testWidgets('formats three conflicting session names as a natural list', (
+    tester,
+  ) async {
+    final start = existingSession.start;
+    await showConflict(
+      tester,
+      onSwitch: () async => true,
+      conflictingSessions: [
+        existingSession,
+        _session(slug: 'second-session', title: 'Second Session', start: start),
+        _session(slug: 'third-session', title: 'Third Session', start: start),
+      ],
+    );
+
+    const description =
+        'To join New Session, you’ll need to give up your spot in '
+        'Existing Session, Second Session, and Third Session.';
+    expect(find.text(description), findsOneWidget);
+
+    final text = tester.widget<Text>(find.text(description));
+    final spans = (text.textSpan! as TextSpan).children!.whereType<TextSpan>();
+    for (final sessionName in [
+      'Existing Session',
+      'Second Session',
+      'Third Session',
+    ]) {
+      expect(
+        spans.singleWhere((span) => span.text == sessionName).style?.fontWeight,
+        FontWeight.w500,
+      );
+    }
+    expect(
+      spans.singleWhere((span) => span.text == ', and ').style?.fontWeight,
+      isNull,
+    );
   });
 
   testWidgets('lays out session cards as a column in portrait', (tester) async {
@@ -173,6 +214,33 @@ void main() {
     );
   });
 
+  testWidgets('points the horizontal arrow toward the new session in RTL', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await showConflict(
+      tester,
+      onSwitch: () async => true,
+      textDirection: TextDirection.rtl,
+    );
+
+    final layout = find.byKey(
+      const ValueKey('conflicting-sessions-horizontal-layout'),
+    );
+    final arrow = tester.widget<RotatedBox>(
+      find.descendant(of: layout, matching: find.byType(RotatedBox)),
+    );
+    expect(arrow.quarterTurns, 0);
+    expect(
+      tester.getCenter(find.text('Existing Session')).dx,
+      greaterThan(tester.getCenter(find.text('New Session')).dx),
+    );
+  });
+
   testWidgets('switches sessions and closes only after success', (
     tester,
   ) async {
@@ -192,7 +260,7 @@ void main() {
 
     expect(switchCalls, 1);
     expect(dialogResult, isTrue);
-    expect(find.text('You have another session at this time.'), findsNothing);
+    expect(find.text('You have a session at this time.'), findsNothing);
   });
 
   testWidgets('keeps the dialog open when switching fails', (tester) async {
@@ -201,6 +269,6 @@ void main() {
     await tester.tap(find.text('Switch Sessions'));
     await tester.pumpAndSettle();
 
-    expect(find.text('You have another session at this time.'), findsOneWidget);
+    expect(find.text('You have a session at this time.'), findsOneWidget);
   });
 }
