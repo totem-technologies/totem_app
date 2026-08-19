@@ -169,7 +169,7 @@ final class CurrentSessionStateProvider
 }
 
 String _$currentSessionStateHash() =>
-    r'e7a486704dfcdc004ffb74dc9a1df2c0582941f7';
+    r'1d34a46c72f69f4787351561fbe8d56ed0be095f';
 
 /// The connection state of the current session.
 

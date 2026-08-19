@@ -6,7 +6,8 @@ enum ViewportKind {
   mediumSmall,
   mediumPlus;
 
-  bool get isLarge => this == smallLandscape || this == mediumPlus;
+  bool get isLarge =>
+      this == smallLandscape || this == mediumPlus || this == mediumSmall;
 }
 
 typedef ViewportResolverBuilder =

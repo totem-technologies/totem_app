@@ -180,7 +180,7 @@ class SessionController extends _$SessionController {
   SessionRoomState build(SessionOptions options) {
     ref
         .watch(sessionProvider(options.sessionSlug))
-        .whenData((event) => this.session = event);
+        .whenData((event) => session = event);
 
     ref.onDispose(() => unawaited(_cleanUp()));
 

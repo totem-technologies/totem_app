@@ -107,7 +107,7 @@ final class SessionProvider
   }
 }
 
-String _$sessionHash() => r'9bedba187c88f3ddaa3dbd70d4df6ce35f785daa';
+String _$sessionHash() => r'170ad9527cc2dbc46266747a97a3458403936099';
 
 final class SessionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<SessionDetailSchema>, String> {
@@ -120,8 +120,8 @@ final class SessionFamily extends $Family
         isAutoDispose: true,
       );
 
-  SessionProvider call(String eventSlug) =>
-      SessionProvider._(argument: eventSlug, from: this);
+  SessionProvider call(String sessionSlug) =>
+      SessionProvider._(argument: sessionSlug, from: this);
 
   @override
   String toString() => r'sessionProvider';
@@ -682,7 +682,7 @@ final class RsvpConfirmProvider
   }
 }
 
-String _$rsvpConfirmHash() => r'48911a8c95ee89dc9336d648c0e7738d1f5eee8a';
+String _$rsvpConfirmHash() => r'7e1d200c128d34a64e0eda98739a79109a50a296';
 
 final class RsvpConfirmFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
@@ -695,8 +695,8 @@ final class RsvpConfirmFamily extends $Family
         isAutoDispose: true,
       );
 
-  RsvpConfirmProvider call(String eventSlug) =>
-      RsvpConfirmProvider._(argument: eventSlug, from: this);
+  RsvpConfirmProvider call(String sessionSlug) =>
+      RsvpConfirmProvider._(argument: sessionSlug, from: this);
 
   @override
   String toString() => r'rsvpConfirmProvider';
@@ -751,7 +751,7 @@ final class RsvpCancelProvider
   }
 }
 
-String _$rsvpCancelHash() => r'7930d78f34c7cb6a4fb83fb079ff42e5c2a39eef';
+String _$rsvpCancelHash() => r'ed1dfbf5cfaf13a77581d98e77c67a9e04069c1b';
 
 final class RsvpCancelFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
@@ -764,8 +764,8 @@ final class RsvpCancelFamily extends $Family
         isAutoDispose: true,
       );
 
-  RsvpCancelProvider call(String eventSlug) =>
-      RsvpCancelProvider._(argument: eventSlug, from: this);
+  RsvpCancelProvider call(String sessionSlug) =>
+      RsvpCancelProvider._(argument: sessionSlug, from: this);
 
   @override
   String toString() => r'rsvpCancelProvider';

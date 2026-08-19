@@ -702,7 +702,7 @@ class _NextSessionsSection extends ConsumerWidget {
       }).toList();
     } else if (recommended.hasValue && recommended.value!.isNotEmpty) {
       headerText = 'You may enjoy these spaces';
-      cards = recommended.value!.take(2).map((recSession) {
+      cards = recommended.value!.take(count).map((recSession) {
         return ConstrainedBox(
           constraints: BoxConstraints(
             maxHeight: MediaQuery.textScalerOf(context).scale(140),
