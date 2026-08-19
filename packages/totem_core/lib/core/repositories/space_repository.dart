@@ -37,7 +37,7 @@ Future<List<MobileSpaceDetailSchema>> listSpaces(Ref ref) async {
 }
 
 @riverpod
-Future<SessionDetailSchema> event(Ref ref, String eventSlug) async {
+Future<SessionDetailSchema> session(Ref ref, String eventSlug) async {
   final mobileApiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<SessionDetailSchema>(
     apiCall: () => mobileApiService.spaces.totemSpacesMobileApiGetSessionDetail(

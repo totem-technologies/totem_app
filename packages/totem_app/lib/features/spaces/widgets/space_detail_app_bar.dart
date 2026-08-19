@@ -8,10 +8,10 @@ import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 class SpaceDetailAppBar extends StatelessWidget {
-  const SpaceDetailAppBar({required this.space, this.event, super.key});
+  const SpaceDetailAppBar({required this.space, this.session, super.key});
 
   final MobileSpaceDetailSchema space;
-  final AsyncValue<SessionDetailSchema>? event;
+  final AsyncValue<SessionDetailSchema>? session;
 
   @override
   Widget build(BuildContext context) {
@@ -57,11 +57,10 @@ class SpaceDetailAppBar extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        // Only show event title if we have an event
-                        if (event != null)
-                          event!.when(
-                            data: (event) => Text(
-                              event.title,
+                        if (session != null)
+                          session!.when(
+                            data: (session) => Text(
+                              session.title,
                               style: theme.textTheme.headlineLarge?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,

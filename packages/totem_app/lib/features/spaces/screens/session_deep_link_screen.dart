@@ -5,19 +5,19 @@ import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 
-class EventDeepLinkScreen extends ConsumerWidget {
-  const EventDeepLinkScreen({required this.eventSlug, super.key});
-  final String eventSlug;
+class SessionDeepLinkScreen extends ConsumerWidget {
+  const SessionDeepLinkScreen({required this.sessionSlug, super.key});
+  final String sessionSlug;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final eventAsync = ref.watch(eventProvider(eventSlug));
+    final sessionAsync = ref.watch(sessionProvider(sessionSlug));
 
     ref.listen(
-      eventProvider(eventSlug),
+      sessionProvider(sessionSlug),
       (previous, next) {
         if (next case AsyncData(:final value)) {
-          context.go(RouteNames.spaceSession(value.space.slug, eventSlug));
+          context.go(RouteNames.spaceSession(value.space.slug, sessionSlug));
         }
       },
       onError: (error, stack) {
@@ -25,7 +25,7 @@ class EventDeepLinkScreen extends ConsumerWidget {
       },
     );
 
-    return eventAsync.when(
+    return sessionAsync.when(
       data: (_) => const Scaffold(
         body: Center(child: CircularProgressIndicator.adaptive()),
       ),

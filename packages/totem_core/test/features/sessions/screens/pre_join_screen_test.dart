@@ -60,7 +60,7 @@ class _DelayedTrackFactory extends _TrackFactory {
 }
 
 const _options = SessionOptions(
-  eventSlug: _slug,
+  sessionSlug: _slug,
   token: 'token',
   cameraEnabled: true,
   microphoneEnabled: true,
@@ -199,7 +199,7 @@ void main() {
               isAlreadyPresent: alreadyPresent,
             );
           }),
-          eventProvider(_slug).overrideWith((_) async => _event()),
+          sessionProvider(_slug).overrideWith((_) async => _event()),
           if (successfulJoin) ...[
             preJoinFlowControllerProvider(
               _slug,

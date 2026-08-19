@@ -262,7 +262,7 @@ class SessionActionBar extends ConsumerWidget {
           onPressed: () => showOptionsSheet(
             context,
             ref.read(currentSessionStateProvider)!,
-            session.event!,
+            session.session!,
           ),
           icon: const TotemIcon(
             TotemIcons.more,

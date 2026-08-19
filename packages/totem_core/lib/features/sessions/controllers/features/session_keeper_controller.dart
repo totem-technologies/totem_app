@@ -5,8 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
-import 'package:totem_core/features/sessions/controllers/core/session_controller.dart'
-    hide session;
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/shared/logger.dart';
 
@@ -24,7 +23,7 @@ class SessionKeeperController extends _$SessionKeeperController {
 
   SessionRoomState get _state => session.state;
 
-  String get _eventSlug => session.options.eventSlug;
+  String get _sessionSlug => session.options.sessionSlug;
 
   int get _roomVersion => _state.roomState.version;
 
@@ -98,7 +97,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     final roomState = await _run(
       action: () => ref.read(
         passTotemProvider(
-          _eventSlug,
+          _sessionSlug,
           _roomVersion,
           roundMessage: roundMessage,
         ).future,
@@ -128,7 +127,7 @@ class SessionKeeperController extends _$SessionKeeperController {
       final roomState = await _run(
         action: () => ref.read(
           acceptTotemProvider(
-            _eventSlug,
+            _sessionSlug,
             _roomVersion,
           ).future,
         ),
@@ -151,7 +150,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     final roomState = await _run(
       action: () => ref.read(
         reorderParticipantsProvider(
-          _eventSlug,
+          _sessionSlug,
           newOrder,
           _roomVersion,
         ).future,
@@ -167,7 +166,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     final roomState = await _run(
       action: () => ref.read(
         forcePassTotemProvider(
-          _eventSlug,
+          _sessionSlug,
           _roomVersion,
         ).future,
       ),
@@ -182,7 +181,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     await _run<void>(
       action: () => ref.read(
         removeParticipantProvider(
-          _eventSlug,
+          _sessionSlug,
           participantSlug,
         ).future,
       ),
@@ -198,7 +197,7 @@ class SessionKeeperController extends _$SessionKeeperController {
       final roomState = await _run(
         action: () => ref.read(
           startSessionProvider(
-            _eventSlug,
+            _sessionSlug,
             _roomVersion,
             prompt: prompt,
           ).future,
@@ -219,7 +218,7 @@ class SessionKeeperController extends _$SessionKeeperController {
       final roomState = await _run(
         action: () => ref.read(
           endSessionProvider(
-            _eventSlug,
+            _sessionSlug,
             _roomVersion,
           ).future,
         ),
@@ -238,7 +237,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     final roomState = await _run(
       action: () => ref.read(
         banParticipantProvider(
-          _eventSlug,
+          _sessionSlug,
           participantSlug,
           _roomVersion,
         ).future,
@@ -257,7 +256,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     final roomState = await _run(
       action: () => ref.read(
         unbanParticipantProvider(
-          _eventSlug,
+          _sessionSlug,
           participantSlug,
           _roomVersion,
         ).future,
@@ -274,7 +273,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     await _run<void>(
       action: () => ref.read(
         disableParticipantCameraProvider(
-          _eventSlug,
+          _sessionSlug,
           participantSlug,
         ).future,
       ),
@@ -289,7 +288,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     await _run<void>(
       action: () => ref.read(
         muteParticipantProvider(
-          _eventSlug,
+          _sessionSlug,
           participantSlug,
         ).future,
       ),
@@ -302,7 +301,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   Future<void> muteEveryone() async {
     if (!session.isCurrentUserKeeper()) return;
     await _run<void>(
-      action: () => ref.read(muteEveryoneProvider(_eventSlug).future),
+      action: () => ref.read(muteEveryoneProvider(_sessionSlug).future),
       errorMessage: 'Error muting everyone',
       timeout: const Duration(seconds: 20),
     );
@@ -313,7 +312,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     final roomState = await _run(
       action: () => ref.read(
         setPromptProvider(
-          _eventSlug,
+          _sessionSlug,
           _roomVersion,
           prompt,
         ).future,

@@ -185,7 +185,7 @@ class SessionTurnState {
 @immutable
 class SessionOptions {
   const SessionOptions({
-    required this.eventSlug,
+    required this.sessionSlug,
     required this.token,
     required this.cameraEnabled,
     required this.microphoneEnabled,
@@ -193,7 +193,7 @@ class SessionOptions {
     required this.cameraOptions,
   });
 
-  final String eventSlug;
+  final String sessionSlug;
   final String token;
   final bool cameraEnabled;
   final bool microphoneEnabled;
@@ -205,12 +205,12 @@ class SessionOptions {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is SessionOptions &&
-        other.eventSlug == eventSlug &&
+        other.sessionSlug == sessionSlug &&
         other.token == token;
   }
 
   @override
-  int get hashCode => eventSlug.hashCode ^ token.hashCode;
+  int get hashCode => sessionSlug.hashCode ^ token.hashCode;
 }
 
 /// Pre-join media whose ownership is transferred to the session controller.

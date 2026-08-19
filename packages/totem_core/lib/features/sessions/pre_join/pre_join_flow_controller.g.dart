@@ -59,7 +59,7 @@ final class PreJoinFlowControllerProvider
 }
 
 String _$preJoinFlowControllerHash() =>
-    r'9ffea09ae82d7aa66c6d4590808820390da06ced';
+    r'a0e80344d1cacc1a6378d9503a7d6cdf8008e491';
 
 final class PreJoinFlowControllerFamily extends $Family
     with

@@ -57,7 +57,7 @@ SessionDetailSchema _createSessionEvent(String eventSlug) {
 ProviderContainer _createContainerWithEventOverride(String eventSlug) {
   return ProviderContainer(
     overrides: [
-      eventProvider(eventSlug).overrideWithValue(
+      sessionProvider(eventSlug).overrideWithValue(
         AsyncData(_createSessionEvent(eventSlug)),
       ),
     ],
@@ -213,7 +213,7 @@ void main() {
           addTearDown(container.dispose);
 
           const options = SessionOptions(
-            eventSlug: eventSlug,
+            sessionSlug: eventSlug,
             token: 'test-token',
             cameraEnabled: true,
             microphoneEnabled: true,
@@ -255,7 +255,7 @@ void main() {
         addTearDown(container.dispose);
 
         const options = SessionOptions(
-          eventSlug: eventSlug,
+          sessionSlug: eventSlug,
           token: 'test-token',
           cameraEnabled: true,
           microphoneEnabled: true,
@@ -297,7 +297,7 @@ void main() {
         addTearDown(container.dispose);
 
         const options = SessionOptions(
-          eventSlug: eventSlug,
+          sessionSlug: eventSlug,
           token: 'test-token',
           cameraEnabled: true,
           microphoneEnabled: true,
@@ -373,7 +373,7 @@ void main() {
           addTearDown(container.dispose);
 
           const options = SessionOptions(
-            eventSlug: eventSlug,
+            sessionSlug: eventSlug,
             token: 'test-token',
             cameraEnabled: true,
             microphoneEnabled: true,
@@ -439,7 +439,7 @@ void main() {
           addTearDown(container.dispose);
 
           const options = SessionOptions(
-            eventSlug: eventSlug,
+            sessionSlug: eventSlug,
             token: 'test-token',
             cameraEnabled: true,
             microphoneEnabled: true,
@@ -502,7 +502,7 @@ void main() {
           addTearDown(container.dispose);
 
           const options = SessionOptions(
-            eventSlug: eventSlug,
+            sessionSlug: eventSlug,
             token: 'test-token',
             cameraEnabled: true,
             microphoneEnabled: true,
@@ -593,7 +593,7 @@ void main() {
         addTearDown(container.dispose);
 
         const options = SessionOptions(
-          eventSlug: eventSlug,
+          sessionSlug: eventSlug,
           token: 'test-token',
           cameraEnabled: true,
           microphoneEnabled: true,
@@ -638,7 +638,7 @@ void main() {
         () async {
           const eventSlug = 'test-session';
           const options = SessionOptions(
-            eventSlug: eventSlug,
+            sessionSlug: eventSlug,
             token: 'test-token',
             cameraEnabled: true,
             microphoneEnabled: true,
@@ -647,7 +647,7 @@ void main() {
           );
           final container = ProviderContainer(
             overrides: [
-              eventProvider(eventSlug).overrideWithValue(
+              sessionProvider(eventSlug).overrideWithValue(
                 AsyncData(_createSessionEvent(eventSlug)),
               ),
               sessionControllerProvider(options).overrideWith(
@@ -738,7 +738,7 @@ void main() {
           addTearDown(container.dispose);
 
           const options = SessionOptions(
-            eventSlug: eventSlug,
+            sessionSlug: eventSlug,
             token: 'test-token',
             cameraEnabled: true,
             microphoneEnabled: true,
@@ -799,7 +799,7 @@ void main() {
           addTearDown(container.dispose);
 
           const options = SessionOptions(
-            eventSlug: eventSlug,
+            sessionSlug: eventSlug,
             token: 'test-token',
             cameraEnabled: true,
             microphoneEnabled: true,
@@ -870,7 +870,7 @@ void main() {
           addTearDown(container.dispose);
 
           const options = SessionOptions(
-            eventSlug: eventSlug,
+            sessionSlug: eventSlug,
             token: 'test-token',
             cameraEnabled: true,
             microphoneEnabled: true,
@@ -961,7 +961,7 @@ void main() {
             addTearDown(container.dispose);
 
             const options = SessionOptions(
-              eventSlug: eventSlug,
+              sessionSlug: eventSlug,
               token: 'test-token',
               cameraEnabled: true,
               microphoneEnabled: true,
@@ -1040,7 +1040,7 @@ void main() {
     group('Test-Visible Helpers', () {
       const eventSlug = 'test-session';
       const options = SessionOptions(
-        eventSlug: eventSlug,
+        sessionSlug: eventSlug,
         token: 'test-token',
         cameraEnabled: true,
         microphoneEnabled: true,
@@ -1132,7 +1132,7 @@ void main() {
     group('Public State API', () {
       const eventSlug = 'test-session';
       const options = SessionOptions(
-        eventSlug: eventSlug,
+        sessionSlug: eventSlug,
         token: 'test-token',
         cameraEnabled: true,
         microphoneEnabled: true,

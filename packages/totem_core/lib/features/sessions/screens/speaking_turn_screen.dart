@@ -22,9 +22,9 @@ import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class SpeakingTurnScreen extends ConsumerStatefulWidget {
-  const SpeakingTurnScreen({required this.event, super.key});
+  const SpeakingTurnScreen({required this.session, super.key});
 
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
 
   @override
   ConsumerState<SpeakingTurnScreen> createState() => _SpeakingTurnState();
@@ -84,7 +84,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
     final body = ViewportResolver(
       builder: (context, viewportKind) {
         final participantGrid = _SpeakingTurnGrid(
-          event: widget.event,
+          session: widget.session,
           viewportKind: viewportKind,
         );
 
@@ -235,13 +235,13 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
 /// When in a large screen, the grid is an adaptive layout.
 class _SpeakingTurnGrid extends ConsumerWidget {
   const _SpeakingTurnGrid({
-    required this.event,
+    required this.session,
     required this.viewportKind,
     this.maxPerLineCount = 10,
     this.gap = 6,
   });
 
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
   final int maxPerLineCount;
   final double gap;
   final ViewportKind viewportKind;
@@ -323,7 +323,7 @@ class _SpeakingTurnGrid extends ConsumerWidget {
                               child: ParticipantCard(
                                 key: ValueKey(participant.sid),
                                 participant: participant,
-                                session: event,
+                                session: session,
                                 participantIdentity: participant.identity,
                               ),
                             );
@@ -345,7 +345,7 @@ class _SpeakingTurnGrid extends ConsumerWidget {
                   ParticipantCard(
                     key: ValueKey(participant.sid),
                     participant: participant,
-                    session: event,
+                    session: session,
                     participantIdentity: participant.identity,
                   ),
               ],

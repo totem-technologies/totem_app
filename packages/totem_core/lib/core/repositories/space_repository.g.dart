@@ -50,10 +50,10 @@ final class ListSpacesProvider
 
 String _$listSpacesHash() => r'63f19dfce6d8287d36960edc160fa4d7d94d47ec';
 
-@ProviderFor(event)
-final eventProvider = EventFamily._();
+@ProviderFor(session)
+final sessionProvider = SessionFamily._();
 
-final class EventProvider
+final class SessionProvider
     extends
         $FunctionalProvider<
           AsyncValue<SessionDetailSchema>,
@@ -63,23 +63,23 @@ final class EventProvider
     with
         $FutureModifier<SessionDetailSchema>,
         $FutureProvider<SessionDetailSchema> {
-  EventProvider._({
-    required EventFamily super.from,
+  SessionProvider._({
+    required SessionFamily super.from,
     required String super.argument,
   }) : super(
          retry: null,
-         name: r'eventProvider',
+         name: r'sessionProvider',
          isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
 
   @override
-  String debugGetCreateSourceHash() => _$eventHash();
+  String debugGetCreateSourceHash() => _$sessionHash();
 
   @override
   String toString() {
-    return r'eventProvider'
+    return r'sessionProvider'
         ''
         '($argument)';
   }
@@ -93,12 +93,12 @@ final class EventProvider
   @override
   FutureOr<SessionDetailSchema> create(Ref ref) {
     final argument = this.argument as String;
-    return event(ref, argument);
+    return session(ref, argument);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is EventProvider && other.argument == argument;
+    return other is SessionProvider && other.argument == argument;
   }
 
   @override
@@ -107,24 +107,24 @@ final class EventProvider
   }
 }
 
-String _$eventHash() => r'e64ef9d64a2a06a33f6efcef305ae8d23740305d';
+String _$sessionHash() => r'9bedba187c88f3ddaa3dbd70d4df6ce35f785daa';
 
-final class EventFamily extends $Family
+final class SessionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<SessionDetailSchema>, String> {
-  EventFamily._()
+  SessionFamily._()
     : super(
         retry: null,
-        name: r'eventProvider',
+        name: r'sessionProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
         isAutoDispose: true,
       );
 
-  EventProvider call(String eventSlug) =>
-      EventProvider._(argument: eventSlug, from: this);
+  SessionProvider call(String eventSlug) =>
+      SessionProvider._(argument: eventSlug, from: this);
 
   @override
-  String toString() => r'eventProvider';
+  String toString() => r'sessionProvider';
 }
 
 @ProviderFor(space)
