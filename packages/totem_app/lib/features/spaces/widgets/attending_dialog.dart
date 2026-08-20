@@ -34,7 +34,7 @@ Future<void> addSessionToCalendar(
       notificationController.showError(
         context,
         icon: TotemIcons.calendar,
-        title: 'Failed to add event to calendar',
+        title: 'Failed to add session to calendar',
         message: 'Please try again later',
       );
     }
@@ -48,7 +48,7 @@ Future<void> addSessionToCalendar(
       notificationController.showError(
         context,
         icon: TotemIcons.calendar,
-        title: 'Failed to add event to calendar',
+        title: 'Failed to add session to calendar',
         message: 'Please try again later',
       );
     }
@@ -57,13 +57,13 @@ Future<void> addSessionToCalendar(
 
 Future<void> showAttendingDialog(
   BuildContext context,
-  SessionDetailSchema event,
+  SessionDetailSchema session,
 ) async {
   await showDialog<void>(
     context: context,
     builder: (context) => AttendingDialog(
-      eventSlug: event.slug,
-      onAddToCalendar: () => addSessionToCalendar(context, event),
+      sessionSlug: session.slug,
+      onAddToCalendar: () => addSessionToCalendar(context, session),
     ),
   );
   if (context.mounted) ConfettiController.showConfetti(context);
@@ -72,11 +72,11 @@ Future<void> showAttendingDialog(
 class AttendingDialog extends StatefulWidget {
   const AttendingDialog({
     required this.onAddToCalendar,
-    required this.eventSlug,
+    required this.sessionSlug,
     super.key,
   });
 
-  final String eventSlug;
+  final String sessionSlug;
   final AsyncCallback onAddToCalendar;
 
   @override
@@ -120,7 +120,9 @@ class _AttendingDialogState extends State<AttendingDialog> {
                           await SharePlus.instance.share(
                             ShareParams(
                               uri: Uri.parse(AppConfig.instance.apiUrl)
-                                  .resolve('/spaces/event/${widget.eventSlug}')
+                                  .resolve(
+                                    '/spaces/event/${widget.sessionSlug}',
+                                  )
                                   .resolve('?utm_source=app&utm_medium=share'),
                               sharePositionOrigin: box != null
                                   ? box.localToGlobal(Offset.zero) & box.size
