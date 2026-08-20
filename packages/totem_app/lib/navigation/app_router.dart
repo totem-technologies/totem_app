@@ -85,7 +85,7 @@ class BottomNavScaffold extends ConsumerWidget {
           bottomNavigationBar: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const JoinOngoingSessionCard(),
+              SafeArea(bottom: false, child: const JoinOngoingSessionCard()),
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(30),
