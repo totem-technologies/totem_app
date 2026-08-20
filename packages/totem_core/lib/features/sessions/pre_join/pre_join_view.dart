@@ -9,6 +9,7 @@ import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/circle_icon_button.dart';
+import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class PreJoinView extends StatelessWidget {
   const PreJoinView({
@@ -19,13 +20,13 @@ class PreJoinView extends StatelessWidget {
     required this.onToggleSpeaker,
     required this.onCameraPositionChanged,
     required this.onCameraDeviceSelected,
-    this.joinCard,
+    required this.joinCard,
     super.key,
   });
 
   final PreJoinMediaState mediaState;
   final bool locked;
-  final Widget? joinCard;
+  final Widget joinCard;
   final AsyncCallback onToggleCamera;
   final AsyncCallback onToggleMicrophone;
   final VoidCallback onToggleSpeaker;
@@ -35,13 +36,42 @@ class PreJoinView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final preferences = mediaState.preferences;
+    final cameraPreview = Container(
+      margin: const EdgeInsetsDirectional.symmetric(
+        horizontal: 40,
+      ),
+      alignment: AlignmentDirectional.center,
+      child: Semantics(
+        label:
+            'Your video preview, camera ${preferences.isCameraOn ? 'on' : 'off'}',
+        image: true,
+        child: LocalParticipantCard(
+          isCameraOn: preferences.isCameraOn,
+          audioTrack: mediaState.microphone.track,
+          videoTrack: mediaState.camera.track,
+        ),
+      ),
+    );
+    final actionBar = PrejoinActionBar(
+      locked: locked,
+      previewAudioTrack: mediaState.microphone.track,
+      onToggleMic: onToggleMicrophone,
+      isSpeakerOn: preferences.isSpeakerOn,
+      onToggleSpeaker: onToggleSpeaker,
+      isCameraOn: preferences.isCameraOn,
+      onToggleCamera: onToggleCamera,
+      cameraPosition: preferences.cameraOptions.cameraPosition,
+      selectedCameraDeviceId: preferences.cameraOptions.deviceId,
+      onCameraPositionChanged: onCameraPositionChanged,
+      onCameraDeviceSelected: onCameraDeviceSelected,
+    );
     return RoomBackground(
+      overlayStyle: SystemUiOverlayStyle.dark,
       child: SafeArea(
         child: Scaffold(
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            systemOverlayStyle: SystemUiOverlayStyle.dark,
             leading: CircleIconButton(
               margin: const EdgeInsetsDirectional.only(start: 20, top: 20),
               icon: TotemIcons.arrowBack,
@@ -52,43 +82,32 @@ class PreJoinView extends StatelessWidget {
           extendBodyBehindAppBar: false,
           body: Padding(
             padding: const EdgeInsetsDirectional.all(20),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              spacing: 18,
-              children: [
-                Expanded(
-                  child: Container(
-                    margin: const EdgeInsetsDirectional.symmetric(
-                      horizontal: 40,
-                    ),
-                    alignment: AlignmentDirectional.center,
-                    child: Semantics(
-                      label:
-                          'Your video preview, camera ${preferences.isCameraOn ? 'on' : 'off'}',
-                      image: true,
-                      child: LocalParticipantCard(
-                        isCameraOn: preferences.isCameraOn,
-                        audioTrack: mediaState.microphone.track,
-                        videoTrack: mediaState.camera.track,
+            child: ViewportResolver(
+              builder: (context, viewportKind) {
+                return switch (viewportKind) {
+                  ViewportKind.smallLandscape => Row(
+                    spacing: 18,
+                    children: [
+                      Expanded(child: cameraPreview),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        spacing: 18,
+                        children: [joinCard, actionBar],
                       ),
-                    ),
+                    ],
                   ),
-                ),
-                joinCard ?? const SizedBox(),
-                PrejoinActionBar(
-                  locked: locked,
-                  previewAudioTrack: mediaState.microphone.track,
-                  onToggleMic: onToggleMicrophone,
-                  isSpeakerOn: preferences.isSpeakerOn,
-                  onToggleSpeaker: onToggleSpeaker,
-                  isCameraOn: preferences.isCameraOn,
-                  onToggleCamera: onToggleCamera,
-                  cameraPosition: preferences.cameraOptions.cameraPosition,
-                  selectedCameraDeviceId: preferences.cameraOptions.deviceId,
-                  onCameraPositionChanged: onCameraPositionChanged,
-                  onCameraDeviceSelected: onCameraDeviceSelected,
-                ),
-              ],
+
+                  _ => Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    spacing: 18,
+                    children: [
+                      Expanded(child: cameraPreview),
+                      joinCard,
+                      actionBar,
+                    ],
+                  ),
+                };
+              },
             ),
           ),
         ),
