@@ -9,7 +9,7 @@ class SessionTitle extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final session = ref.watch(currentSessionProvider);
-    final title = session?.event?.title ?? session?.room?.name;
+    final title = session?.session?.title ?? session?.room?.name;
     if (title == null) return const SizedBox.shrink();
     return Align(
       alignment: AlignmentDirectional.centerStart,

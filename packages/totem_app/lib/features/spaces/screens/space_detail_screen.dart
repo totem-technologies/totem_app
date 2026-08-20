@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,7 +17,6 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/features/keeper/screens/meet_user_card.dart';
-import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/extensions.dart';
 import 'package:totem_core/shared/html.dart';
@@ -31,6 +31,7 @@ import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
+import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -63,7 +64,7 @@ class SpaceDetailScreen extends ConsumerStatefulWidget {
 class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
   final _scrollController = ScrollController();
   bool _appBarCollapsed = false;
-  String? _selectedEventSlug;
+  String? _selectedSessionSlug;
 
   @override
   void initState() {
@@ -93,8 +94,8 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
     ref.sentryReportFullyDisplayed(spaceProvider(widget.slug));
 
     // Determine if we have a valid session slug to watch
-    final String? effectiveEventSlug =
-        _selectedEventSlug ??
+    final String? effectiveSessionSlug =
+        _selectedSessionSlug ??
         widget.sessionSlug ??
         spaceAsync.maybeWhen(
           skipLoadingOnRefresh: false,
@@ -103,12 +104,12 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
           orElse: () => null,
         );
 
-    // Only watch event provider if we have a valid slug
-    final bool hasValidEventSlug =
-        effectiveEventSlug != null && effectiveEventSlug.isNotEmpty;
+    // Only watch session provider if we have a valid slug
+    final bool hasValidSessionSlug =
+        effectiveSessionSlug != null && effectiveSessionSlug.isNotEmpty;
 
-    final AsyncValue<SessionDetailSchema>? eventAsync = hasValidEventSlug
-        ? ref.watch(eventProvider(effectiveEventSlug))
+    final AsyncValue<SessionDetailSchema>? sessionAsync = hasValidSessionSlug
+        ? ref.watch(sessionProvider(effectiveSessionSlug))
         : null;
 
     return spaceAsync.when(
@@ -122,8 +123,8 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                   controller: _scrollController,
                   headerSliverBuilder: (context, _) {
                     final collapsedTitle =
-                        eventAsync?.maybeWhen(
-                          data: (event) => event.title,
+                        sessionAsync?.maybeWhen(
+                          data: (session) => session.title,
                           orElse: () => null,
                         ) ??
                         space.title;
@@ -149,7 +150,14 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                         ),
                         flexibleSpace: FlexibleSpaceBar(
                           collapseMode: CollapseMode.parallax,
-                          background: _SpaceHeaderImage(space: space),
+                          background: SizedBox.expand(
+                            child: TotemImage(
+                              imageUrl: space.imageLink,
+                              loadingPlaceholder: ColoredBox(
+                                color: Colors.black.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ),
                         ),
                         leading: CircleIconButton(
                           margin: const EdgeInsetsDirectional.only(start: 20),
@@ -203,8 +211,10 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                     onRefresh: () {
                       return Future.wait([
                         ref.refresh(spaceProvider(widget.slug).future),
-                        if (hasValidEventSlug)
-                          ref.refresh(eventProvider(effectiveEventSlug).future),
+                        if (hasValidSessionSlug)
+                          ref.refresh(
+                            sessionProvider(effectiveSessionSlug).future,
+                          ),
                       ]);
                     },
                     child: SafeArea(
@@ -228,7 +238,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                               children: [
                                 // Space title — shown as a label only when
                                 // a session title will appear below it
-                                if (eventAsync != null &&
+                                if (sessionAsync != null &&
                                     space.title.trim().isNotEmpty)
                                   Text(
                                     space.title,
@@ -243,8 +253,8 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
 
                                 // Session title (or space title when no session)
                                 Text(
-                                  eventAsync?.maybeWhen(
-                                        data: (event) => event.title,
+                                  sessionAsync?.maybeWhen(
+                                        data: (session) => session.title,
                                         orElse: () => null,
                                       ) ??
                                       space.title,
@@ -298,14 +308,14 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                             ),
                             child: _SessionInfoCard(
                               space: space,
-                              eventAsync: eventAsync,
+                              sessionAsync: sessionAsync,
                             ),
                           ),
 
                           const SizedBox(height: 24),
 
                           // ── About this Session ─────────────────────────
-                          if (eventAsync != null)
+                          if (sessionAsync != null)
                             Padding(
                               padding: const EdgeInsetsDirectional.symmetric(
                                 horizontal: 20,
@@ -325,9 +335,9 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                           fontSize: 14,
                                         ),
                                   ),
-                                  eventAsync.when(
-                                    data: (event) => Html(
-                                      data: event.content,
+                                  sessionAsync.when(
+                                    data: (session) => Html(
+                                      data: session.content,
                                       shrinkWrap: true,
                                       style: {
                                         ...AppTheme.compactHtmlStyle,
@@ -357,14 +367,14 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                           // ── Upcoming Similar Sessions ──────────────────
                           _UpcomingSessionsSection(
                             space: space,
-                            currentEventSlug: effectiveEventSlug,
+                            effectiveSessionSlug: effectiveSessionSlug,
                             onRefresh: () {
                               if (!mounted) return;
                               ref.invalidate(spacesSummaryProvider);
                               ref.invalidate(spaceProvider(widget.slug));
-                              if (effectiveEventSlug != null) {
+                              if (effectiveSessionSlug != null) {
                                 ref.invalidate(
-                                  eventProvider(effectiveEventSlug),
+                                  sessionProvider(effectiveSessionSlug),
                                 );
                               }
                             },
@@ -446,50 +456,14 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Header image (no text overlay)
-// ─────────────────────────────────────────────────────────────
-
-class _SpaceHeaderImage extends StatelessWidget {
-  const _SpaceHeaderImage({required this.space});
-
-  final MobileSpaceDetailSchema space;
-
-  @override
-  Widget build(BuildContext context) {
-    if (space.imageLink != null && space.imageLink!.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: getFullUrl(space.imageLink!),
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        placeholder: (context, url) =>
-            ColoredBox(color: Colors.black.withValues(alpha: 0.5)),
-        errorWidget: (context, url, error) => Image.asset(
-          TotemImageAssets.genericBackground,
-          fit: BoxFit.cover,
-          package: 'totem_core',
-        ),
-      );
-    }
-    return Image.asset(
-      TotemImageAssets.genericBackground,
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: double.infinity,
-      package: 'totem_core',
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
 // Session info card — state-aware attend button
 // ─────────────────────────────────────────────────────────────
 
 class _SessionInfoCard extends ConsumerStatefulWidget {
-  const _SessionInfoCard({required this.space, required this.eventAsync});
+  const _SessionInfoCard({required this.space, required this.sessionAsync});
 
   final MobileSpaceDetailSchema space;
-  final AsyncValue<SessionDetailSchema>? eventAsync;
+  final AsyncValue<SessionDetailSchema>? sessionAsync;
 
   @override
   ConsumerState<_SessionInfoCard> createState() => _SessionInfoCardState();
@@ -502,30 +476,30 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   bool _attending = false;
   bool _loading = false;
   bool _joined = false;
-  String? _syncedEventSlug;
+  String? _syncedSessionSlug;
   bool? _syncedAttending;
   DateTime? _syncedStart;
   String _currentTimeago = '';
   Timer? _timer;
 
-  void _syncFromEvent(SessionDetailSchema event) {
-    final eventChanged = _syncedEventSlug != event.slug;
-    final attendanceChanged = _syncedAttending != event.attending;
-    final startChanged = _syncedStart != event.start;
-    if (!eventChanged && !attendanceChanged && !startChanged) return;
+  void _syncFromSession(SessionDetailSchema session) {
+    final sessionChanged = _syncedSessionSlug != session.slug;
+    final attendanceChanged = _syncedAttending != session.attending;
+    final startChanged = _syncedStart != session.start;
+    if (!sessionChanged && !attendanceChanged && !startChanged) return;
 
-    _syncedEventSlug = event.slug;
-    _syncedAttending = event.attending;
-    _syncedStart = event.start;
-    _attending = event.attending;
-    if (eventChanged) _joined = false;
+    _syncedSessionSlug = session.slug;
+    _syncedAttending = session.attending;
+    _syncedStart = session.start;
+    _attending = session.attending;
+    if (sessionChanged) _joined = false;
 
-    if (!eventChanged && !startChanged) return;
-    _currentTimeago = timeago.format(event.start, allowFromNow: true);
+    if (!sessionChanged && !startChanged) return;
+    _currentTimeago = timeago.format(session.start, allowFromNow: true);
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
-      final next = timeago.format(event.start, allowFromNow: true);
+      final next = timeago.format(session.start, allowFromNow: true);
       if (_currentTimeago != next) setState(() => _currentTimeago = next);
     });
   }
@@ -537,22 +511,22 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   }
 
   SpaceJoinCardState _computeState(
-    SessionDetailSchema event,
+    SessionDetailSchema session,
     UserSchema? user,
   ) {
     final ended =
-        event.ended ||
-        event.start
-            .add(Duration(minutes: event.duration))
+        session.ended ||
+        session.start
+            .add(Duration(minutes: session.duration))
             .isBefore(DateTime.now());
-    return switch (event) {
-      _ when event.cancelled => SpaceJoinCardState.cancelled,
+    return switch (session) {
+      _ when session.cancelled => SpaceJoinCardState.cancelled,
       _ when ended => SpaceJoinCardState.ended,
-      _ when _joined || (event.canJoinNow(user) && event.joinable) =>
+      _ when _joined || (session.canJoinNow(user) && session.joinable) =>
         SpaceJoinCardState.joinable,
       _ when _attending => SpaceJoinCardState.attending,
-      _ when event.seatsLeft <= 0 => SpaceJoinCardState.full,
-      _ when !event.open => SpaceJoinCardState.closed,
+      _ when session.seatsLeft <= 0 => SpaceJoinCardState.full,
+      _ when !session.open => SpaceJoinCardState.closed,
       _ => SpaceJoinCardState.notJoined,
     };
   }
@@ -565,7 +539,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
       symbol: r'USD $',
     );
 
-    widget.eventAsync?.whenData(_syncFromEvent);
+    widget.sessionAsync?.whenData(_syncFromSession);
 
     return Container(
       decoration: BoxDecoration(
@@ -586,16 +560,16 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
                 const TotemIcon(TotemIcons.subscribers),
                 Text('${space.subscribers} subscribers'),
               ),
-              if (widget.eventAsync != null)
-                ...widget.eventAsync!.maybeWhen(
-                  data: (event) => [
+              if (widget.sessionAsync != null)
+                ...widget.sessionAsync!.maybeWhen(
+                  data: (session) => [
                     CompactInfoText(
                       const TotemIcon(TotemIcons.clockCircle),
-                      Text('${event.duration} min'),
+                      Text('${session.duration} min'),
                     ),
                     CompactInfoText(
                       const TotemIcon(TotemIcons.seats),
-                      SeatsLeftText(seatsLeft: event.seatsLeft),
+                      SeatsLeftText(seatsLeft: session.seatsLeft),
                     ),
                   ],
                   orElse: () => <Widget>[],
@@ -617,21 +591,21 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
           ),
 
           // ── Date / Attend row ────────────────────────────────
-          if (widget.eventAsync != null) ...[
+          if (widget.sessionAsync != null) ...[
             const SizedBox(height: 17),
-            widget.eventAsync!.when(
-              data: (event) {
-                final state = _computeState(event, user);
+            widget.sessionAsync!.when(
+              data: (session) {
+                final state = _computeState(session, user);
                 return _DateAttendRow(
-                  event: event,
+                  session: session,
                   state: state,
                   currentTimeago: _currentTimeago,
                   loading: _loading,
-                  onAttend: () => _attend(event),
-                  onGiveUpSpot: () => _giveUpSpot(event),
-                  onAddToCalendar: () => addSessionToCalendar(context, event),
-                  onJoinLivekit: () => _joinLivekit(event),
-                  onJoinGoogleMeet: () => _joinGoogleMeet(event),
+                  onAttend: () => _attend(session),
+                  onGiveUpSpot: () => _giveUpSpot(session),
+                  onAddToCalendar: () => addSessionToCalendar(context, session),
+                  onJoinLivekit: () => _joinLivekit(session),
+                  onJoinGoogleMeet: () => _joinGoogleMeet(session),
                   onExplore: () =>
                       TotemRouter.instance.toHome(HomeRoutes.spaces),
                 );
@@ -647,15 +621,17 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
 
   // ── Actions ──────────────────────────────────────────────────
 
-  Future<void> _attend(SessionDetailSchema event) async {
+  Future<void> _attend(SessionDetailSchema session) async {
     if (_attending || _loading || !mounted) {
       return;
     }
     setState(() => _loading = true);
     try {
-      final attending = await ref.read(rsvpConfirmProvider(event.slug).future);
+      final attending = await ref.read(
+        rsvpConfirmProvider(session.slug).future,
+      );
       if (attending) {
-        await _onAttendSuccess(event);
+        await _onAttendSuccess(session);
       } else {
         if (mounted) {
           _notificationController.showError(
@@ -671,11 +647,11 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
       final switched = await showConflictingSessionsDialog(
         context,
         error.conflict,
-        event,
-        () => _switchSession(event, error.conflict),
+        session,
+        () => _switchSession(session, error.conflict),
       );
       if (switched == true) {
-        await _onAttendSuccess(event);
+        await _onAttendSuccess(session);
       }
     } catch (_) {
       if (mounted) {
@@ -713,14 +689,14 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     return attending;
   }
 
-  Future<void> _onAttendSuccess(SessionDetailSchema event) async {
+  Future<void> _onAttendSuccess(SessionDetailSchema session) async {
     if (!mounted) return;
     setState(() => _attending = true);
-    await showAttendingDialog(context, event);
-    await _refresh(event);
+    await showAttendingDialog(context, session);
+    await _refresh(session);
   }
 
-  Future<void> _giveUpSpot(SessionDetailSchema event) async {
+  Future<void> _giveUpSpot(SessionDetailSchema session) async {
     final giveUp = await showDialog<bool>(
       context: context,
       builder: (_) => ConfirmationDialog(
@@ -732,7 +708,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     if (giveUp == null || !giveUp || !mounted) return;
     setState(() => _loading = true);
     try {
-      final attending = await ref.read(rsvpCancelProvider(event.slug).future);
+      final attending = await ref.read(rsvpCancelProvider(session.slug).future);
       if (mounted) setState(() => _loading = false);
 
       if (!attending) {
@@ -746,7 +722,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
             message: 'You can always attend again if a spot opens up.',
           );
         }
-        await _refresh(event);
+        await _refresh(session);
       } else {
         if (mounted) {
           _notificationController.showError(
@@ -787,7 +763,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     if (!mounted) return;
     ref.invalidate(spacesSummaryProvider);
     // ignore: unused_result
-    await ref.refresh(eventProvider(session.slug).future);
+    await ref.refresh(sessionProvider(session.slug).future);
     if (!mounted) return;
     // ignore: unused_result
     await ref.refresh(spaceProvider(space.slug).future);
@@ -800,7 +776,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
 
 class _DateAttendRow extends StatelessWidget {
   const _DateAttendRow({
-    required this.event,
+    required this.session,
     required this.state,
     required this.currentTimeago,
     required this.loading,
@@ -812,7 +788,7 @@ class _DateAttendRow extends StatelessWidget {
     required this.onExplore,
   });
 
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
   final SpaceJoinCardState state;
   final String currentTimeago;
   final bool loading;
@@ -834,11 +810,11 @@ class _DateAttendRow extends StatelessWidget {
       SpaceJoinCardState.closed => 'Registration closed',
       SpaceJoinCardState.full => 'Session full',
       SpaceJoinCardState.attending ||
-      SpaceJoinCardState.notJoined => formatSessionDate(event.start),
+      SpaceJoinCardState.notJoined => formatSessionDate(session.start),
     };
     final timeLabel = switch (state) {
       SpaceJoinCardState.attending || SpaceJoinCardState.notJoined =>
-        formatSessionTime(event.start, event.userTimezone),
+        formatSessionTime(session.start, session.userTimezone),
       SpaceJoinCardState.joinable => currentTimeago,
       _ => 'Explore upcoming sessions',
     };
@@ -932,7 +908,7 @@ class _DateAttendRow extends StatelessWidget {
       SpaceJoinCardState.closed ||
       SpaceJoinCardState.full => onExplore(),
       SpaceJoinCardState.joinable =>
-        event.meetingProvider == MeetingProviderEnum.livekit
+        session.meetingProvider == MeetingProviderEnum.livekit
             ? onJoinLivekit()
             : onJoinGoogleMeet(),
       SpaceJoinCardState.notJoined => onAttend(),
@@ -981,19 +957,19 @@ class _DateAttendRow extends StatelessWidget {
 class _UpcomingSessionsSection extends StatelessWidget {
   const _UpcomingSessionsSection({
     required this.space,
-    required this.currentEventSlug,
     required this.onRefresh,
+    required this.currentSessionSlug,
   });
 
   final MobileSpaceDetailSchema space;
-  final String? currentEventSlug;
+  final String? currentSessionSlug;
   final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final upcomingSessions = space.nextEvents
-        .where((e) => e.slug != currentEventSlug)
+        .where((e) => e.slug != currentSessionSlug)
         .toList();
 
     if (upcomingSessions.isEmpty) return const SizedBox.shrink();
@@ -1062,24 +1038,12 @@ class _UpcomingSessionCard extends StatelessWidget {
               SizedBox(
                 height: double.infinity,
                 width: 130,
-                child: (space.imageLink != null && space.imageLink!.isNotEmpty)
-                    ? CachedNetworkImage(
-                        imageUrl: getFullUrl(space.imageLink!),
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => ColoredBox(
-                          color: Colors.black.withValues(alpha: 0.3),
-                        ),
-                        errorWidget: (context, url, error) => Image.asset(
-                          TotemImageAssets.genericBackground,
-                          fit: BoxFit.cover,
-                          package: 'totem_core',
-                        ),
-                      )
-                    : Image.asset(
-                        TotemImageAssets.genericBackground,
-                        fit: BoxFit.cover,
-                        package: 'totem_core',
-                      ),
+                child: TotemImage(
+                  imageUrl: space.imageLink,
+                  loadingPlaceholder: ColoredBox(
+                    color: Colors.black.withValues(alpha: 0.3),
+                  ),
+                ),
               ),
 
               // ── Info ───────────────────────────────────────────

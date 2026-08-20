@@ -157,7 +157,7 @@ void main() {
           sessionTokenProvider(
             slug,
           ).overrideWith((ref) async => throw Exception('test')),
-          eventProvider(
+          sessionProvider(
             slug,
           ).overrideWith((ref) async => throw Exception('test')),
         ],
@@ -195,7 +195,7 @@ void main() {
           sessionTokenProvider(
             slug,
           ).overrideWith((ref) async => throw Exception('test')),
-          eventProvider(
+          sessionProvider(
             slug,
           ).overrideWith((ref) async => throw Exception('test')),
         ],

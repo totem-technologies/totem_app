@@ -49,15 +49,15 @@ Future<List<MobileSpaceDetailSchema>> listSpaces(Ref ref) async {
 }
 
 @riverpod
-Future<SessionDetailSchema> event(Ref ref, String eventSlug) async {
+Future<SessionDetailSchema> session(Ref ref, String sessionSlug) async {
   final mobileApiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<SessionDetailSchema>(
     apiCall: () => mobileApiService.spaces.totemSpacesMobileApiGetSessionDetail(
-      eventSlug: eventSlug,
+      eventSlug: sessionSlug,
     ),
     operationName: 'get event detail',
     retryOnNetworkError: true,
-    diagnostics: {'event_slug': eventSlug},
+    diagnostics: {'event_slug': sessionSlug},
   );
 }
 
@@ -236,16 +236,16 @@ Future<SummarySpacesSchema> spacesSummary(Ref ref) async {
 }
 
 @Riverpod(retry: _noRetry)
-Future<bool> rsvpConfirm(Ref ref, String eventSlug) async {
+Future<bool> rsvpConfirm(Ref ref, String sessionSlug) async {
   final mobileApiService = ref.read(apiServiceProvider);
 
   try {
     final session = await RepositoryUtils.handleApiCall<SessionDetailSchema>(
       apiCall: () => mobileApiService.spaces.totemSpacesMobileApiRsvpConfirm(
-        eventSlug: eventSlug,
+        eventSlug: sessionSlug,
       ),
-      operationName: 'confirm RSVP for $eventSlug',
-      diagnostics: {'event_slug': eventSlug},
+      operationName: 'confirm RSVP for $sessionSlug',
+      diagnostics: {'event_slug': sessionSlug},
       // A conflict is an expected response only for the initial RSVP request.
       // Resolve-conflicts and all other calls retain the default reporting.
       shouldReport: (error) => !_isExpectedRsvpConfirmConflict(error),
@@ -273,16 +273,16 @@ final class RsvpConflictException implements Exception {
 }
 
 @riverpod
-Future<bool> rsvpCancel(Ref ref, String eventSlug) async {
+Future<bool> rsvpCancel(Ref ref, String sessionSlug) async {
   final mobileApiService = ref.read(apiServiceProvider);
 
   try {
     final session = await RepositoryUtils.handleApiCall<SessionDetailSchema>(
       apiCall: () => mobileApiService.spaces.totemSpacesMobileApiRsvpCancel(
-        eventSlug: eventSlug,
+        eventSlug: sessionSlug,
       ),
-      operationName: 'cancel RSVP for $eventSlug',
-      diagnostics: {'event_slug': eventSlug},
+      operationName: 'cancel RSVP for $sessionSlug',
+      diagnostics: {'event_slug': sessionSlug},
     );
     return session.attending;
   } catch (_) {
@@ -293,7 +293,7 @@ Future<bool> rsvpCancel(Ref ref, String eventSlug) async {
 @riverpod
 Future<bool> rsvpForceConfirm(
   Ref ref,
-  String eventSlug,
+  String sessionSlug,
   List<String> conflictingSessionSlugs,
 ) async {
   final mobileApiService = ref.read(apiServiceProvider);
@@ -302,14 +302,14 @@ Future<bool> rsvpForceConfirm(
     final session = await RepositoryUtils.handleApiCall<SessionDetailSchema>(
       apiCall: () =>
           mobileApiService.spaces.totemSpacesMobileApiRsvpResolveConflicts(
-            eventSlug: eventSlug,
+            eventSlug: sessionSlug,
             body: ResolveConflictsSchema(
               conflictingSessionSlugs: conflictingSessionSlugs,
             ),
           ),
-      operationName: 'switch RSVP to $eventSlug',
+      operationName: 'switch RSVP to $sessionSlug',
       diagnostics: {
-        'event_slug': eventSlug,
+        'event_slug': sessionSlug,
         'conflicting_session_slugs': conflictingSessionSlugs,
       },
     );

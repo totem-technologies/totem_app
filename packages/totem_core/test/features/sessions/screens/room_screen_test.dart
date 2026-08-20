@@ -212,7 +212,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
 class _MutableRoomScreenHarness {
   const _MutableRoomScreenHarness({
     required this.container,
-    required this.eventProvider,
+    required this.sessionProvider,
     required this.roomScreenProvider,
     required this.connectionStateProvider,
     required this.roomStatusProvider,
@@ -221,7 +221,7 @@ class _MutableRoomScreenHarness {
 
   final ProviderContainer container;
   final NotifierProvider<_SessionEventOverrideNotifier, SessionDetailSchema?>
-  eventProvider;
+  sessionProvider;
   final NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>
   roomScreenProvider;
   final NotifierProvider<_ConnectionStateOverrideNotifier, RoomConnectionState>
@@ -432,7 +432,7 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
 
   return _MutableRoomScreenHarness(
     container: container,
-    eventProvider: eventStateProvider,
+    sessionProvider: eventStateProvider,
     roomScreenProvider: roomScreenStateProvider,
     connectionStateProvider: connectionStateStateProvider,
     roomStatusProvider: roomStatusStateProvider,
@@ -469,7 +469,7 @@ void main() {
       when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
       when(() => devices.localVideoTrack).thenReturn(null);
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
-      when(() => session.event).thenReturn(
+      when(() => session.session).thenReturn(
         _createSessionEvent(
           start: DateTime.now().subtract(const Duration(minutes: 5)),
           duration: 10,
@@ -868,7 +868,7 @@ void main() {
         duration: 10,
       );
 
-      harness.container.read(harness.eventProvider.notifier).set(eventB);
+      harness.container.read(harness.sessionProvider.notifier).set(eventB);
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
@@ -933,7 +933,7 @@ void main() {
       when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
       when(() => devices.localVideoTrack).thenReturn(null);
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
-      when(() => session.event).thenReturn(
+      when(() => session.session).thenReturn(
         _createSessionEvent(
           start: DateTime.now().subtract(const Duration(minutes: 5)),
           duration: 10,

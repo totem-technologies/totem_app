@@ -236,7 +236,7 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: SpeakingTurnScreen(event: _createTestSession()),
+            body: SpeakingTurnScreen(session: _createTestSession()),
           ),
         ),
       ),

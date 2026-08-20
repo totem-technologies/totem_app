@@ -6,7 +6,7 @@ import 'package:totem_core/core/config/theme.dart';
 
 void main() {
   // Helper function to create a NextSessionSchema with default values
-  NextSessionSchema createEvent({
+  NextSessionSchema createSession({
     required DateTime start,
     String? title,
     bool attending = false,
@@ -33,15 +33,15 @@ void main() {
   // Helper function to wrap the SessionsCalendar widget with proper constraints
   // This ensures the calendar has enough space to render without overflow
   Widget wrapCalendar({
-    required List<NextSessionSchema> events,
-    void Function(DateTime, List<NextSessionSchema>)? onEventDayTap,
+    required List<NextSessionSchema> sessions,
+    void Function(DateTime, List<NextSessionSchema>)? onSessionsDayTap,
   }) {
     return MaterialApp(
       home: Scaffold(
         body: SingleChildScrollView(
           child: SessionsCalendar(
-            nextEvents: events,
-            onEventDayTap: onEventDayTap,
+            nextSessions: sessions,
+            onSessionDayTap: onSessionsDayTap,
           ),
         ),
       ),
@@ -52,7 +52,7 @@ void main() {
     testWidgets(
       'should initialize with current month when no events provided',
       (tester) async {
-        await tester.pumpWidget(wrapCalendar(events: const []));
+        await tester.pumpWidget(wrapCalendar(sessions: const []));
 
         expect(find.textContaining(RegExp(r'\w+ \d{4}')), findsOneWidget);
       },
@@ -63,9 +63,9 @@ void main() {
       (tester) async {
         // Create an event in a specific month (e.g., March 2025)
         final eventDate = DateTime(2025, 3, 15);
-        final events = [createEvent(start: eventDate)];
+        final events = [createSession(start: eventDate)];
 
-        await tester.pumpWidget(wrapCalendar(events: events));
+        await tester.pumpWidget(wrapCalendar(sessions: events));
 
         // Check that March 2025 is displayed
         expect(find.text('March 2025'), findsOneWidget);
@@ -76,11 +76,11 @@ void main() {
       tester,
     ) async {
       // Create events in different months
-      final firstEvent = createEvent(start: DateTime(2025, 5, 10));
-      final secondEvent = createEvent(start: DateTime(2025, 6, 20));
+      final firstEvent = createSession(start: DateTime(2025, 5, 10));
+      final secondEvent = createSession(start: DateTime(2025, 6, 20));
       final events = [firstEvent, secondEvent];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Should display May 2025 (first event's month)
       expect(find.text('May 2025'), findsOneWidget);
@@ -92,9 +92,9 @@ void main() {
       tester,
     ) async {
       final eventDate = DateTime(2025, 6, 15);
-      final events = [createEvent(start: eventDate)];
+      final events = [createSession(start: eventDate)];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Verify initial month
       expect(find.text('June 2025'), findsOneWidget);
@@ -113,9 +113,9 @@ void main() {
       tester,
     ) async {
       final eventDate = DateTime(2025, 6, 15);
-      final events = [createEvent(start: eventDate)];
+      final events = [createSession(start: eventDate)];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Verify initial month
       expect(find.text('June 2025'), findsOneWidget);
@@ -134,9 +134,9 @@ void main() {
       tester,
     ) async {
       final eventDate = DateTime(2025, 1, 15);
-      final events = [createEvent(start: eventDate)];
+      final events = [createSession(start: eventDate)];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Start in January 2025
       expect(find.text('January 2025'), findsOneWidget);
@@ -158,9 +158,9 @@ void main() {
       tester,
     ) async {
       final eventDate = DateTime(2025, 6, 15);
-      final events = [createEvent(start: eventDate)];
+      final events = [createSession(start: eventDate)];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Calendar should have 35 cells (5 rows x 7 columns)
       // We can verify by checking for GridView with 35 items
@@ -169,7 +169,7 @@ void main() {
     });
 
     testWidgets('should display day abbreviations correctly', (tester) async {
-      await tester.pumpWidget(wrapCalendar(events: const []));
+      await tester.pumpWidget(wrapCalendar(sessions: const []));
 
       // Check for day abbreviations: S, M, T, W, T, F, S
       expect(find.text('S'), findsNWidgets(2)); // Two S's (Sunday, Saturday)
@@ -185,9 +185,9 @@ void main() {
         // June 2025 starts on a Sunday (June 1, 2025 is a Sunday)
         // So we should see May days at the end
         final eventDate = DateTime(2025, 6, 15);
-        final events = [createEvent(start: eventDate)];
+        final events = [createSession(start: eventDate)];
 
-        await tester.pumpWidget(wrapCalendar(events: events));
+        await tester.pumpWidget(wrapCalendar(sessions: events));
 
         // June 1, 2025 is a Sunday, so the first day should be June 1
         // We can verify by checking that day 1 is visible
@@ -202,9 +202,9 @@ void main() {
       (tester) async {
         // Create an event that is not open and user is not attending
         final eventDate = DateTime(2025, 6, 15);
-        final events = [createEvent(start: eventDate)];
+        final events = [createSession(start: eventDate)];
 
-        await tester.pumpWidget(wrapCalendar(events: events));
+        await tester.pumpWidget(wrapCalendar(sessions: events));
 
         // Find the day cell for June 15
         final day15 = find.text('15');
@@ -227,9 +227,9 @@ void main() {
     ) async {
       // Create an event that is open but user is not attending
       final eventDate = DateTime(2025, 6, 15);
-      final events = [createEvent(start: eventDate, open: true)];
+      final events = [createSession(start: eventDate, open: true)];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Find the day cell for June 15
       final day15 = find.text('15');
@@ -253,10 +253,10 @@ void main() {
         // Create an event where user is attending
         final eventDate = DateTime(2025, 6, 15);
         final events = [
-          createEvent(start: eventDate, open: true, attending: true),
+          createSession(start: eventDate, open: true, attending: true),
         ];
 
-        await tester.pumpWidget(wrapCalendar(events: events));
+        await tester.pumpWidget(wrapCalendar(sessions: events));
 
         // Find the day cell for June 15
         final day15 = find.text('15');
@@ -277,9 +277,9 @@ void main() {
     testWidgets('should not highlight day without event', (tester) async {
       // Create an event on a different day
       final eventDate = DateTime(2025, 6, 15);
-      final events = [createEvent(start: eventDate)];
+      final events = [createSession(start: eventDate)];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Find a day without an event (e.g., June 20)
       final day20 = find.text('20');
@@ -301,11 +301,11 @@ void main() {
       // Create multiple events on the same day
       final eventDate = DateTime(2025, 6, 15);
       final events = [
-        createEvent(start: eventDate),
-        createEvent(start: eventDate, open: true),
+        createSession(start: eventDate),
+        createSession(start: eventDate, open: true),
       ];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // The day should still be highlighted (as an event day)
       final day15 = find.text('15');
@@ -316,10 +316,10 @@ void main() {
       // Create an event where user is attending (should show mauve filled)
       final eventDate = DateTime(2025, 6, 15);
       final events = [
-        createEvent(start: eventDate, open: true, attending: true),
+        createSession(start: eventDate, open: true, attending: true),
       ];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Should show mauve filled (attending), not mauve border (open)
       final day15 = find.text('15');
@@ -341,12 +341,12 @@ void main() {
       List<NextSessionSchema>? tappedEvents;
 
       final eventDate = DateTime(2025, 6, 15);
-      final events = [createEvent(start: eventDate)];
+      final events = [createSession(start: eventDate)];
 
       await tester.pumpWidget(
         wrapCalendar(
-          events: events,
-          onEventDayTap: (day, eventList) {
+          sessions: events,
+          onSessionsDayTap: (day, eventList) {
             tappedDay = day;
             tappedEvents = eventList;
           },
@@ -374,12 +374,12 @@ void main() {
       bool callbackCalled = false;
 
       final eventDate = DateTime(2025, 6, 15);
-      final events = [createEvent(start: eventDate)];
+      final events = [createSession(start: eventDate)];
 
       await tester.pumpWidget(
         wrapCalendar(
-          events: events,
-          onEventDayTap: (day, eventList) {
+          sessions: events,
+          onSessionsDayTap: (day, eventList) {
             callbackCalled = true;
           },
         ),
@@ -396,9 +396,9 @@ void main() {
 
     testWidgets('should handle null onEventDayTap gracefully', (tester) async {
       final eventDate = DateTime(2025, 6, 15);
-      final events = [createEvent(start: eventDate)];
+      final events = [createSession(start: eventDate)];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Tap on the event day - should not crash
       final day15 = find.text('15');
@@ -416,14 +416,14 @@ void main() {
 
       final eventDate = DateTime(2025, 6, 15);
       final events = [
-        createEvent(start: eventDate, title: 'Event 1'),
-        createEvent(start: eventDate, title: 'Event 2'),
+        createSession(start: eventDate, title: 'Event 1'),
+        createSession(start: eventDate, title: 'Event 2'),
       ];
 
       await tester.pumpWidget(
         wrapCalendar(
-          events: events,
-          onEventDayTap: (day, eventList) {
+          sessions: events,
+          onSessionsDayTap: (day, eventList) {
             tappedEvents = eventList;
           },
         ),
@@ -445,9 +445,9 @@ void main() {
       tester,
     ) async {
       final eventDate = DateTime(2025, 6, 15);
-      final events = [createEvent(start: eventDate)];
+      final events = [createSession(start: eventDate)];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Find a day in the current month without an event
       final day20 = find.text('20');
@@ -460,9 +460,9 @@ void main() {
     ) async {
       // Use a month that has days from previous/next month visible
       final eventDate = DateTime(2025, 6, 15);
-      final events = [createEvent(start: eventDate)];
+      final events = [createSession(start: eventDate)];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // June 2025 starts on Sunday, so we should see May days
       // Find a day that's likely from previous month (last few days of May)
@@ -475,9 +475,9 @@ void main() {
       'should render event day text with white color when attending',
       (tester) async {
         final eventDate = DateTime(2025, 6, 15);
-        final events = [createEvent(start: eventDate, attending: true)];
+        final events = [createSession(start: eventDate, attending: true)];
 
-        await tester.pumpWidget(wrapCalendar(events: events));
+        await tester.pumpWidget(wrapCalendar(sessions: events));
 
         final day15 = find.text('15');
         final text = tester.widget<Text>(day15);
@@ -489,9 +489,9 @@ void main() {
       tester,
     ) async {
       final eventDate = DateTime(2025, 6, 15);
-      final events = [createEvent(start: eventDate, open: true)];
+      final events = [createSession(start: eventDate, open: true)];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       final day15 = find.text('15');
       final text = tester.widget<Text>(day15);
@@ -503,9 +503,9 @@ void main() {
       tester,
     ) async {
       final eventDate = DateTime(2025, 6, 15);
-      final events = [createEvent(start: eventDate)];
+      final events = [createSession(start: eventDate)];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       final day15 = find.text('15');
       final text = tester.widget<Text>(day15);
@@ -520,12 +520,12 @@ void main() {
       // Create events on the same day but different times
       final baseDate = DateTime(2025, 6, 15);
       final events = [
-        createEvent(start: baseDate.copyWith(hour: 10)),
-        createEvent(start: baseDate.copyWith(hour: 14)),
-        createEvent(start: baseDate.copyWith(hour: 18)),
+        createSession(start: baseDate.copyWith(hour: 10)),
+        createSession(start: baseDate.copyWith(hour: 14)),
+        createSession(start: baseDate.copyWith(hour: 18)),
       ];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // All events should be recognized for the same day
       final day15 = find.text('15');
@@ -539,7 +539,7 @@ void main() {
     });
 
     testWidgets('should handle empty events list', (tester) async {
-      await tester.pumpWidget(wrapCalendar(events: const []));
+      await tester.pumpWidget(wrapCalendar(sessions: const []));
 
       // Should render without errors
       expect(find.byType(SessionsCalendar), findsOneWidget);
@@ -550,12 +550,12 @@ void main() {
       tester,
     ) async {
       final events = [
-        createEvent(start: DateTime(2025, 5, 10)),
-        createEvent(start: DateTime(2025, 6, 15)),
-        createEvent(start: DateTime(2025, 7, 20)),
+        createSession(start: DateTime(2025, 5, 10)),
+        createSession(start: DateTime(2025, 6, 15)),
+        createSession(start: DateTime(2025, 7, 20)),
       ];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Should start on May (first event)
       expect(find.text('May 2025'), findsOneWidget);
@@ -577,11 +577,11 @@ void main() {
       // Create events with same date but different times
       final baseDate = DateTime(2025, 6, 15);
       final events = [
-        createEvent(start: baseDate.copyWith(hour: 0, minute: 0)),
-        createEvent(start: baseDate.copyWith(hour: 23, minute: 59)),
+        createSession(start: baseDate.copyWith(hour: 0, minute: 0)),
+        createSession(start: baseDate.copyWith(hour: 23, minute: 59)),
       ];
 
-      await tester.pumpWidget(wrapCalendar(events: events));
+      await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Both should be recognized as the same day
       final day15 = find.text('15');

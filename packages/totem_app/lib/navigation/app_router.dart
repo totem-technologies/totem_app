@@ -28,7 +28,7 @@ import '../features/messages/screens/messages_screen.dart';
 import '../features/messages/screens/thread_screen.dart';
 import '../features/profile/screens/profile_details_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
-import '../features/spaces/screens/event_deep_link_screen.dart';
+import '../features/spaces/screens/session_deep_link_screen.dart';
 import '../features/spaces/screens/session_history.dart';
 import '../features/spaces/screens/space_detail_screen.dart';
 import '../features/spaces/screens/spaces_discovery_screen.dart';
@@ -85,7 +85,7 @@ class BottomNavScaffold extends ConsumerWidget {
           bottomNavigationBar: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const JoinOngoingSessionCard(),
+              SafeArea(bottom: false, child: const JoinOngoingSessionCard()),
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(30),
@@ -462,24 +462,27 @@ class AppTotemRouter extends TotemRouter {
         ),
 
         GoRoute(
-          path: RouteNames.spaceEvent(':eventSlug'),
-          name: RouteNames.spaceEvent(':eventSlug'),
+          path: RouteNames.spaceEvent(':sessionSlug'),
+          name: RouteNames.spaceEvent(':sessionSlug'),
           builder: (context, state) {
-            final eventSlug = state.pathParameters['eventSlug'] ?? '';
+            final sessionSlug = state.pathParameters['sessionSlug'] ?? '';
             return SentryDisplayWidget(
-              child: EventDeepLinkScreen(eventSlug: eventSlug),
+              child: SessionDeepLinkScreen(sessionSlug: sessionSlug),
             );
           },
         ),
 
         GoRoute(
-          path: RouteNames.spaceSession(':spaceSlug', ':eventSlug'),
-          name: RouteNames.spaceSession(':spaceSlug', ':eventSlug'),
+          path: RouteNames.spaceSession(':spaceSlug', ':sessionSlug'),
+          name: RouteNames.spaceSession(':spaceSlug', ':sessionSlug'),
           builder: (context, state) {
             final spaceSlug = state.pathParameters['spaceSlug'] ?? '';
-            final eventSlug = state.pathParameters['eventSlug'];
+            final sessionSlug = state.pathParameters['sessionSlug'];
             return SentryDisplayWidget(
-              child: SpaceDetailScreen(slug: spaceSlug, sessionSlug: eventSlug),
+              child: SpaceDetailScreen(
+                slug: spaceSlug,
+                sessionSlug: sessionSlug,
+              ),
             );
           },
         ),

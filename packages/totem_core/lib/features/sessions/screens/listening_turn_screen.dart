@@ -15,9 +15,9 @@ import 'package:totem_core/features/sessions/widgets/session_text.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class ListeningTurnScreen extends ConsumerWidget {
-  const ListeningTurnScreen({required this.event, super.key});
+  const ListeningTurnScreen({required this.session, super.key});
 
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -87,7 +87,7 @@ class ListeningTurnScreen extends ConsumerWidget {
           }();
 
           final participantGrid = _ListeningTurnGrid(
-            event: event,
+            session: session,
             speakingNow: activeSpeaker?.identity,
           );
 
@@ -178,6 +178,7 @@ class ListeningTurnScreen extends ConsumerWidget {
                   ],
                 ),
               );
+            case ViewportKind.mediumSmall:
             case ViewportKind.mediumPlus:
               return Padding(
                 padding: const EdgeInsetsDirectional.only(
@@ -193,7 +194,7 @@ class ListeningTurnScreen extends ConsumerWidget {
                     Expanded(
                       child: Center(
                         child: _ListeningTurnGrid(
-                          event: event,
+                          session: session,
                           speakingNow: activeSpeaker?.identity,
                           showSpeakingNowParticipant: true,
                           gap: 20,
@@ -225,13 +226,13 @@ class ListeningTurnScreen extends ConsumerWidget {
 
 class _ListeningTurnGrid extends ConsumerWidget {
   const _ListeningTurnGrid({
-    required this.event,
+    required this.session,
     required this.speakingNow,
     this.showSpeakingNowParticipant = false,
     this.gap = 10,
   });
 
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
   final String? speakingNow;
   final bool showSpeakingNowParticipant;
   final double gap;
@@ -278,6 +279,7 @@ class _ListeningTurnGrid extends ConsumerWidget {
                 } else {
                   crossAxisCount = 4;
                 }
+              case ViewportKind.mediumSmall:
               case ViewportKind.mediumPlus:
                 if (itemCount <= 2) {
                   crossAxisCount = 1;
@@ -319,7 +321,7 @@ class _ListeningTurnGrid extends ConsumerWidget {
                               child: ParticipantCard(
                                 key: ValueKey(participant.sid),
                                 participant: participant,
-                                session: event,
+                                session: session,
                                 participantIdentity: participant.identity,
                               ),
                             );
@@ -333,6 +335,7 @@ class _ListeningTurnGrid extends ConsumerWidget {
                 },
               ),
             );
+          case ViewportKind.mediumSmall:
           case ViewportKind.mediumPlus:
             final speaker = showSpeakingNowParticipant
                 ? participants.firstWhereOrNull(
@@ -346,7 +349,7 @@ class _ListeningTurnGrid extends ConsumerWidget {
                   : ParticipantCard(
                       key: ValueKey(speaker.sid),
                       participant: speaker,
-                      session: event,
+                      session: session,
                       participantIdentity: speaker.identity,
                     ),
               participants: [
@@ -356,7 +359,7 @@ class _ListeningTurnGrid extends ConsumerWidget {
                   ParticipantCard(
                     key: ValueKey(participant.sid),
                     participant: participant,
-                    session: event,
+                    session: session,
                     participantIdentity: participant.identity,
                   ),
               ],

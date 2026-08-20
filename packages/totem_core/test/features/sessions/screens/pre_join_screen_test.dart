@@ -60,7 +60,7 @@ class _DelayedTrackFactory extends _TrackFactory {
 }
 
 const _options = SessionOptions(
-  eventSlug: _slug,
+  sessionSlug: _slug,
   token: 'token',
   cameraEnabled: true,
   microphoneEnabled: true,
@@ -199,7 +199,7 @@ void main() {
               isAlreadyPresent: alreadyPresent,
             );
           }),
-          eventProvider(_slug).overrideWith((_) async => _event()),
+          sessionProvider(_slug).overrideWith((_) async => _event()),
           if (successfulJoin) ...[
             preJoinFlowControllerProvider(
               _slug,
@@ -325,14 +325,35 @@ void main() {
     expect(await joinFuture, isTrue);
   });
 
-  testWidgets('shows replacement confirmation for an existing session', (
+  testWidgets('shows replacement confirmation only after joining', (
     tester,
   ) async {
-    await pumpScreen(tester, alreadyPresent: true);
+    await pumpScreen(
+      tester,
+      alreadyPresent: true,
+      successfulJoin: true,
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text("You're Already in This Session"), findsNothing);
+
+    final join = tester.widget<ActionSliderButton>(
+      find.byType(ActionSliderButton),
+    );
+    final joinFuture = join.onActionCompleted();
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text("You're Already in This Session"), findsOneWidget);
     expect(find.text('Join Here'), findsOneWidget);
+
+    await tester.tap(find.text('Join Here'));
+    await tester.pump();
+    expect(await joinFuture, isTrue);
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text("You're Already in This Session"), findsNothing);
+    expect(find.byType(VideoSessionScreen), findsOneWidget);
   });
 
   testWidgets('already-present dialog returns true on confirm', (tester) async {

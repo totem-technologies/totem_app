@@ -157,7 +157,7 @@ void main() {
       when(() => participant.isMicrophoneEnabled()).thenReturn(false);
 
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
-      when(() => session.event).thenReturn(_createSessionEvent());
+      when(() => session.session).thenReturn(_createSessionEvent());
     });
 
     Future<void> pumpSessionActionBar(

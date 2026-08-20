@@ -191,6 +191,12 @@ class _SessionDisconnectedScreenState
                   isBanned: isBanned,
                   onRefreshHome: _refreshHome,
                 ),
+                ViewportKind.mediumSmall => _MediumSmallLayout(
+                  session: widget.session,
+                  reason: sessionReason,
+                  isBanned: isBanned,
+                  onRefreshHome: _refreshHome,
+                ),
                 ViewportKind.mediumPlus => _MediumPlusLayout(
                   session: widget.session,
                   reason: sessionReason,
@@ -290,13 +296,14 @@ class _LandscapeLayout extends StatelessWidget {
               ],
             ),
           ),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              spacing: 20,
-              children: [
-                if (!isBanned)
-                  Flexible(
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            spacing: 20,
+            children: [
+              if (!isBanned)
+                Flexible(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 400),
                     child: _NextSessionsSection(
                       session: session,
                       isBanned: isBanned,
@@ -304,15 +311,94 @@ class _LandscapeLayout extends StatelessWidget {
                       onRefreshHome: onRefreshHome,
                     ),
                   ),
-                _ActionButtons(
-                  isBanned: isBanned,
-                  onRefreshHome: onRefreshHome,
                 ),
-              ],
-            ),
+              _ActionButtons(
+                isBanned: isBanned,
+                onRefreshHome: onRefreshHome,
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MediumSmallLayout extends StatelessWidget {
+  const _MediumSmallLayout({
+    required this.session,
+    required this.reason,
+    required this.isBanned,
+    required this.onRefreshHome,
+  });
+  final SessionDetailSchema? session;
+  final SessionDisconnectedReason reason;
+  final bool isBanned;
+  final VoidCallback onRefreshHome;
+
+  Widget _wrapConstrained(Widget child) {
+    return FractionallySizedBox(widthFactor: 0.75, child: child);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      spacing: 10,
+      children: [
+        const ListTile(
+          contentPadding: EdgeInsetsDirectional.symmetric(horizontal: 40),
+          leading: TotemLogo(color: Colors.white, size: 24),
+          shape: Border(bottom: BorderSide(color: Color(0x14FFFFFF))),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: FractionallySizedBox(
+                    widthFactor: 0.75,
+                    child: Column(
+                      spacing: 30,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _wrapConstrained(_MediumStatusIcon(reason: reason)),
+                        _wrapConstrained(_SessionHeader(reason: reason)),
+                        _wrapConstrained(_SessionSubheader(reason: reason)),
+                        const Divider(color: Color(0x0FFFFFFF)),
+                        if (session != null &&
+                            reason == SessionDisconnectedReason.keeperEnded)
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 500),
+                            child: _InteractiveFeedbackWidget(
+                              session: session!,
+                            ),
+                          ),
+                        _ActionButtons(
+                          isBanned: isBanned,
+                          onRefreshHome: onRefreshHome,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (!isBanned)
+                  Flexible(
+                    child: _NextSessionsSection(
+                      session: session,
+                      isBanned: isBanned,
+                      direction: Axis.vertical,
+                      onRefreshHome: onRefreshHome,
+                      count: 3,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 40),
+      ],
     );
   }
 }
@@ -350,7 +436,7 @@ class _MediumPlusLayout extends StatelessWidget {
               spacing: 30,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _wrapConstrained(_MediumPlusStatusIcon(reason: reason)),
+                _wrapConstrained(_MediumStatusIcon(reason: reason)),
                 _wrapConstrained(_SessionHeader(reason: reason)),
                 _wrapConstrained(_SessionSubheader(reason: reason)),
                 const Divider(color: Color(0x0FFFFFFF)),
@@ -562,10 +648,12 @@ class _NextSessionsSection extends ConsumerWidget {
     required this.isBanned,
     required this.direction,
     required this.onRefreshHome,
+    this.count = 2,
   });
   final SessionDetailSchema? session;
   final bool isBanned;
   final Axis direction;
+  final int count;
   final VoidCallback onRefreshHome;
 
   @override
@@ -576,7 +664,7 @@ class _NextSessionsSection extends ConsumerWidget {
     final nextSessions =
         effectiveSession?.space.nextEvents
             .where((e) => e.slug != effectiveSession.slug)
-            .take(2)
+            .take(count)
             .toList() ??
         const [];
 
@@ -615,7 +703,7 @@ class _NextSessionsSection extends ConsumerWidget {
       }).toList();
     } else if (recommended.hasValue && recommended.value!.isNotEmpty) {
       headerText = 'You may enjoy these spaces';
-      cards = recommended.value!.take(2).map((recSession) {
+      cards = recommended.value!.take(count).map((recSession) {
         return ConstrainedBox(
           constraints: BoxConstraints(
             maxHeight: MediaQuery.textScalerOf(context).scale(140),
@@ -714,8 +802,8 @@ class _ActionButtons extends StatelessWidget {
   }
 }
 
-class _MediumPlusStatusIcon extends StatelessWidget {
-  const _MediumPlusStatusIcon({required this.reason});
+class _MediumStatusIcon extends StatelessWidget {
+  const _MediumStatusIcon({required this.reason});
   final SessionDisconnectedReason reason;
 
   @override

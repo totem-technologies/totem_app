@@ -112,7 +112,7 @@ class SessionController extends _$SessionController {
   static const _statePollInterval = Duration(seconds: 15);
 
   String? _lastMetadata;
-  SessionDetailSchema? event;
+  SessionDetailSchema? session;
   static const SessionStateReducer _stateReducer = SessionStateReducer();
 
   /// The capture framerate caps both the local self-view and the published
@@ -179,18 +179,18 @@ class SessionController extends _$SessionController {
   @override
   SessionRoomState build(SessionOptions options) {
     ref
-        .watch(eventProvider(options.eventSlug))
-        .whenData((event) => this.event = event);
+        .watch(sessionProvider(options.sessionSlug))
+        .whenData((event) => session = event);
 
     ref.onDispose(() => unawaited(_cleanUp()));
 
     final initialRoomState = RoomState(
-      keeper: event?.space.author.slug ?? '',
+      keeper: session?.space.author.slug ?? '',
       nextSpeaker: '',
       currentSpeaker: '',
       status: RoomStatus.waitingRoom,
       turnState: TurnState.idle,
-      sessionSlug: options.eventSlug,
+      sessionSlug: options.sessionSlug,
       statusDetail: const RoomStateStatusDetailWaitingRoom(
         WaitingRoomDetail(),
       ),
@@ -347,7 +347,7 @@ class SessionController extends _$SessionController {
 
       final roomState = await RepositoryUtils.handleApiCall<RoomState>(
         apiCall: () => apiService.rooms.totemRoomsApiGetState(
-          sessionSlug: options.eventSlug,
+          sessionSlug: options.sessionSlug,
         ),
         operationName: 'poll room state',
       );
@@ -431,7 +431,7 @@ class SessionController extends _$SessionController {
 
       await ref
           .read(sessionInfraControllerProvider.notifier)
-          .activate(event: event);
+          .activate(event: session);
 
       _syncTimer?.cancel();
       _syncTimer = Timer.periodic(
@@ -618,9 +618,9 @@ class SessionController extends _$SessionController {
       try {
         ref.read(emojiReactionsProvider.notifier).clear();
       } catch (_) {}
-      if (event != null) {
+      if (session != null) {
         try {
-          ref.invalidate(spaceProvider(event!.space.slug));
+          ref.invalidate(spaceProvider(session!.space.slug));
         } catch (_) {}
       }
       try {
@@ -870,9 +870,4 @@ class SessionController extends _$SessionController {
       lastMetadata: lastMetadata,
     );
   }
-}
-
-@riverpod
-SessionRoomState session(Ref ref, SessionOptions options) {
-  return ref.watch(sessionControllerProvider(options));
 }

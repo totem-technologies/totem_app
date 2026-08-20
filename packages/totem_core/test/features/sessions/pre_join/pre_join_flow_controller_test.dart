@@ -56,7 +56,7 @@ SessionDetailSchema _event() => SessionDetailSchema(
 );
 
 const _options = SessionOptions(
-  eventSlug: _slug,
+  sessionSlug: _slug,
   token: 'token',
   cameraEnabled: true,
   microphoneEnabled: true,
@@ -165,7 +165,7 @@ ProviderContainer _container({
           requireUsableMedia,
         ),
         sessionTokenProvider(_slug).overrideWith((_) async => response),
-        eventProvider(_slug).overrideWith((_) async => _event()),
+        sessionProvider(_slug).overrideWith((_) async => _event()),
         sessionControllerProvider(_options).overrideWith(sessionController),
       ],
     )

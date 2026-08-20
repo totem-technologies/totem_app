@@ -252,7 +252,7 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: ListeningTurnScreen(event: _createTestSession()),
+            body: ListeningTurnScreen(session: _createTestSession()),
           ),
         ),
       ),

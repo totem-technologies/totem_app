@@ -12,7 +12,6 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camer
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_chat_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
-import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_speaker_button.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
 typedef ActionBarButtonToggleCallback =
@@ -191,12 +190,12 @@ class _PrejoinActionBarState extends State<PrejoinActionBar> {
           audioTrack: widget.previewAudioTrack,
           onToggle: !widget.locked ? (v) async => widget.onToggleMic() : null,
         ),
-        ActionBarSpeakerButton(
-          isSpeakerOn: widget.isSpeakerOn,
-          onSpeakerToggled: widget.locked
-              ? null
-              : (v) => widget.onToggleSpeaker(),
-        ),
+        // ActionBarSpeakerButton(
+        //   isSpeakerOn: widget.isSpeakerOn,
+        //   onSpeakerToggled: widget.locked
+        //       ? null
+        //       : (v) => widget.onToggleSpeaker(),
+        // ),
         ActionBarCameraSwitcherButton(
           isCameraOn: widget.isCameraOn,
           onToggle: widget.locked ? null : widget.onToggleCamera,
@@ -263,7 +262,7 @@ class SessionActionBar extends ConsumerWidget {
           onPressed: () => showOptionsSheet(
             context,
             ref.read(currentSessionStateProvider)!,
-            session.event!,
+            session.session!,
           ),
           icon: const TotemIcon(
             TotemIcons.more,

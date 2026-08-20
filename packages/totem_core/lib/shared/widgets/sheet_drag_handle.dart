@@ -27,7 +27,7 @@ class SheetDragHandle extends StatelessWidget {
                 ),
               ),
             );
-          case ViewportKind.mediumPlus:
+          case ViewportKind.mediumPlus || ViewportKind.mediumSmall:
             return SizedBox(height: margin.vertical / 2);
         }
       },
