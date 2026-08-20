@@ -60,7 +60,7 @@ class PermissionsController extends _$PermissionsController {
   @override
   Future<PermissionsState> build() async {
     try {
-      return currentStatuses;
+      return await currentStatuses;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,

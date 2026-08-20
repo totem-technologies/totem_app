@@ -33,6 +33,7 @@ Future<T?> showResponsiveModal<T>({
         clipBehavior: Clip.hardEdge,
         builder: bottomSheetBuilder,
       );
+    case ViewportKind.mediumSmall:
     case ViewportKind.mediumPlus:
       return showDialog<T>(
         context: context,

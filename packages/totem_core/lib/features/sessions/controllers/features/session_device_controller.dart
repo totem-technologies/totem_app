@@ -100,7 +100,7 @@ class SessionDeviceController extends _$SessionDeviceController {
     return _currentState();
   }
 
-  Room? get _room => this.session.room;
+  Room? get _room => session.room;
 
   StreamSubscription<void>? _becomingNoisySubscription;
   StreamSubscription<audio.AudioDevicesChangedEvent>?
@@ -358,8 +358,8 @@ class SessionDeviceController extends _$SessionDeviceController {
   Future<void> enableMicrophone() async {
     final room = _room;
     if (room?.localParticipant?.isMicrophoneEnabled() ?? false) return;
-    if (this.session.state.roomState.status == RoomStatus.active &&
-        !this.session.state.hasKeeper) {
+    if (session.state.roomState.status == RoomStatus.active &&
+        !session.state.hasKeeper) {
       return;
     }
 

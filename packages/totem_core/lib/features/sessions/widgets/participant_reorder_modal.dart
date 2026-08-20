@@ -151,6 +151,7 @@ class _ParticipantReorderWidgetState
                               isKeeper: true,
                               onTap: () {
                                 switch (viewportKind) {
+                                  case ViewportKind.mediumSmall:
                                   case ViewportKind.mediumPlus:
                                     setState(() {
                                       if (_selectedIdentity == keeperSlug) {
@@ -225,6 +226,7 @@ class _ParticipantReorderWidgetState
                                 isKeeper: false,
                                 onTap: () {
                                   switch (viewportKind) {
+                                    case ViewportKind.mediumSmall:
                                     case ViewportKind.mediumPlus:
                                       setState(() {
                                         if (_selectedIdentity ==

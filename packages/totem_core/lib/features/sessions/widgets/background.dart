@@ -65,18 +65,12 @@ class _RoomBackgroundState extends State<RoomBackground> {
       value: widget.overlayStyle,
       child: ViewportResolver(
         builder: (context, viewportKind) {
-          final waitingDecoration = BoxDecoration(
+          const waitingDecoration = BoxDecoration(
             gradient: LinearGradient(
               colors: gradientColors,
-              begin: switch (viewportKind) {
-                ViewportKind.smallLandscape => AlignmentDirectional.centerStart,
-                _ => AlignmentDirectional.topCenter,
-              },
-              end: switch (viewportKind) {
-                ViewportKind.smallLandscape => AlignmentDirectional.centerEnd,
-                _ => AlignmentDirectional.bottomCenter,
-              },
-              stops: const [0.5, 1],
+              begin: AlignmentDirectional.topCenter,
+              end: AlignmentDirectional.bottomCenter,
+              stops: [0.5, 1],
             ),
           );
 

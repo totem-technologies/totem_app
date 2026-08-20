@@ -55,7 +55,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
           .read(preJoinMediaControllerProvider(sessionSlug))
           .preferences;
       final options = SessionOptions(
-        eventSlug: sessionSlug,
+        sessionSlug: sessionSlug,
         token: response.token,
         cameraEnabled: preferences.isCameraOn,
         microphoneEnabled: preferences.isMicOn,
@@ -66,7 +66,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
 
       // Precache event data before connection so the session screen can render
       // without adding another loading transition.
-      await ref.read(eventProvider(sessionSlug).future);
+      await ref.read(sessionProvider(sessionSlug).future);
 
       final currentSession = ref.read(
         sessionControllerProvider(options).notifier,

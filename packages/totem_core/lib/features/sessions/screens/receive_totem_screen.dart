@@ -84,7 +84,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
                 aspectRatio: 16 / 21,
                 child: ParticipantCard(
                   participant: session!.room!.localParticipant!,
-                  session: session.event,
+                  session: session.session,
                   participantIdentity: session.room!.localParticipant!.identity,
                 ),
               ),
@@ -145,6 +145,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
                     ],
                   ),
                 );
+              case ViewportKind.mediumSmall:
               case ViewportKind.mediumPlus:
                 return Padding(
                   padding: const EdgeInsetsDirectional.only(

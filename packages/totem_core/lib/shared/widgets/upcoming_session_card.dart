@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,14 +6,13 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/models/upcoming_session_data.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
-import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/date.dart';
-import 'package:totem_core/shared/network.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:totem_core/shared/widgets/session_metadata.dart';
+import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 /// A card widget displaying an upcoming session with its details.
@@ -114,7 +112,11 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
               child: Row(
                 children: [
                   // Left: Session image with rounded left corners only
-                  _buildThumbnail(),
+                  SizedBox(
+                    width: UpcomingSessionCard._imageWidth,
+                    height: double.infinity,
+                    child: TotemImage(imageUrl: widget.data.imageUrl),
+                  ),
 
                   // Right: Content area
                   Expanded(
@@ -144,32 +146,6 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildThumbnail() {
-    final imageUrl = widget.data.imageUrl;
-
-    return SizedBox(
-      width: UpcomingSessionCard._imageWidth,
-      height: double.infinity,
-      child: imageUrl != null && imageUrl.isNotEmpty
-          ? CachedNetworkImage(
-              imageUrl: getFullUrl(imageUrl),
-              fit: BoxFit.cover,
-              placeholder: (context, url) =>
-                  Container(color: Colors.grey.shade200),
-              errorWidget: (context, url, error) => Image.asset(
-                TotemImageAssets.genericBackground,
-                fit: BoxFit.cover,
-                package: 'totem_core',
-              ),
-            )
-          : Image.asset(
-              TotemImageAssets.genericBackground,
-              fit: BoxFit.cover,
-              package: 'totem_core',
-            ),
     );
   }
 

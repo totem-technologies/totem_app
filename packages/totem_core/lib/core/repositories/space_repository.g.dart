@@ -50,10 +50,10 @@ final class ListSpacesProvider
 
 String _$listSpacesHash() => r'63f19dfce6d8287d36960edc160fa4d7d94d47ec';
 
-@ProviderFor(event)
-final eventProvider = EventFamily._();
+@ProviderFor(session)
+final sessionProvider = SessionFamily._();
 
-final class EventProvider
+final class SessionProvider
     extends
         $FunctionalProvider<
           AsyncValue<SessionDetailSchema>,
@@ -63,23 +63,23 @@ final class EventProvider
     with
         $FutureModifier<SessionDetailSchema>,
         $FutureProvider<SessionDetailSchema> {
-  EventProvider._({
-    required EventFamily super.from,
+  SessionProvider._({
+    required SessionFamily super.from,
     required String super.argument,
   }) : super(
          retry: null,
-         name: r'eventProvider',
+         name: r'sessionProvider',
          isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
 
   @override
-  String debugGetCreateSourceHash() => _$eventHash();
+  String debugGetCreateSourceHash() => _$sessionHash();
 
   @override
   String toString() {
-    return r'eventProvider'
+    return r'sessionProvider'
         ''
         '($argument)';
   }
@@ -93,12 +93,12 @@ final class EventProvider
   @override
   FutureOr<SessionDetailSchema> create(Ref ref) {
     final argument = this.argument as String;
-    return event(ref, argument);
+    return session(ref, argument);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is EventProvider && other.argument == argument;
+    return other is SessionProvider && other.argument == argument;
   }
 
   @override
@@ -107,24 +107,24 @@ final class EventProvider
   }
 }
 
-String _$eventHash() => r'e64ef9d64a2a06a33f6efcef305ae8d23740305d';
+String _$sessionHash() => r'170ad9527cc2dbc46266747a97a3458403936099';
 
-final class EventFamily extends $Family
+final class SessionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<SessionDetailSchema>, String> {
-  EventFamily._()
+  SessionFamily._()
     : super(
         retry: null,
-        name: r'eventProvider',
+        name: r'sessionProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
         isAutoDispose: true,
       );
 
-  EventProvider call(String eventSlug) =>
-      EventProvider._(argument: eventSlug, from: this);
+  SessionProvider call(String sessionSlug) =>
+      SessionProvider._(argument: sessionSlug, from: this);
 
   @override
-  String toString() => r'eventProvider';
+  String toString() => r'sessionProvider';
 }
 
 @ProviderFor(space)
@@ -682,7 +682,7 @@ final class RsvpConfirmProvider
   }
 }
 
-String _$rsvpConfirmHash() => r'48911a8c95ee89dc9336d648c0e7738d1f5eee8a';
+String _$rsvpConfirmHash() => r'7e1d200c128d34a64e0eda98739a79109a50a296';
 
 final class RsvpConfirmFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
@@ -695,8 +695,8 @@ final class RsvpConfirmFamily extends $Family
         isAutoDispose: true,
       );
 
-  RsvpConfirmProvider call(String eventSlug) =>
-      RsvpConfirmProvider._(argument: eventSlug, from: this);
+  RsvpConfirmProvider call(String sessionSlug) =>
+      RsvpConfirmProvider._(argument: sessionSlug, from: this);
 
   @override
   String toString() => r'rsvpConfirmProvider';
@@ -751,7 +751,7 @@ final class RsvpCancelProvider
   }
 }
 
-String _$rsvpCancelHash() => r'7930d78f34c7cb6a4fb83fb079ff42e5c2a39eef';
+String _$rsvpCancelHash() => r'ed1dfbf5cfaf13a77581d98e77c67a9e04069c1b';
 
 final class RsvpCancelFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
@@ -764,8 +764,8 @@ final class RsvpCancelFamily extends $Family
         isAutoDispose: true,
       );
 
-  RsvpCancelProvider call(String eventSlug) =>
-      RsvpCancelProvider._(argument: eventSlug, from: this);
+  RsvpCancelProvider call(String sessionSlug) =>
+      RsvpCancelProvider._(argument: sessionSlug, from: this);
 
   @override
   String toString() => r'rsvpCancelProvider';

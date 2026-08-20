@@ -187,7 +187,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     final _ = await ref.refresh(
       sessionTokenProvider(widget.sessionSlug).future,
     );
-    final _ = await ref.refresh(eventProvider(widget.sessionSlug).future);
+    final _ = await ref.refresh(sessionProvider(widget.sessionSlug).future);
   }
 
   Widget _buildErrorScreen(Object? error, {SessionDetailSchema? session}) {
@@ -233,25 +233,14 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   @override
   Widget build(BuildContext context) {
     final tokenData = ref.watch(sessionTokenProvider(widget.sessionSlug));
-    final sessionData = ref.watch(eventProvider(widget.sessionSlug));
+    final sessionData = ref.watch(sessionProvider(widget.sessionSlug));
     final media = ref.watch(preJoinMediaControllerProvider(widget.sessionSlug));
     final flow = ref.watch(preJoinFlowControllerProvider(widget.sessionSlug));
     _joined = flow.phase == PreJoinFlowPhase.joined;
 
-    ref
-      ..listen(preJoinMediaControllerProvider(widget.sessionSlug), (_, next) {
-        _handleWebMediaState(next);
-      })
-      ..listen(sessionTokenProvider(widget.sessionSlug), (_, next) {
-        if (next case AsyncData(:final value)
-            when value.isAlreadyPresent &&
-                flow.phase == PreJoinFlowPhase.idle &&
-                !_showingAlreadyPresentDialog) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            unawaited(_promptAlreadyPresent());
-          });
-        }
-      });
+    ref.listen(preJoinMediaControllerProvider(widget.sessionSlug), (_, next) {
+      _handleWebMediaState(next);
+    });
 
     if (tokenData.hasError) {
       return _buildErrorScreen(tokenData.error, session: sessionData.value);

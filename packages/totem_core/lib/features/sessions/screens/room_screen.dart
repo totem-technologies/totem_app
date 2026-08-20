@@ -568,12 +568,12 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       case RoomScreen.passing:
         return Builder(
           builder: (context) {
-            return SpeakingTurnScreen(event: session.event!);
+            return SpeakingTurnScreen(session: session.session!);
           },
         );
       case RoomScreen.listening:
         return ListeningTurnScreen(
-          event: session.event!,
+          session: session.session!,
         );
     }
   }

@@ -171,7 +171,8 @@ Future<void> presentEmojiReaction(
             final double startX = switch (viewportKind) {
               ViewportKind.smallPortrait => position.dx + box.size.width * 0.15,
               ViewportKind.smallLandscape => position.dx + box.size.width * 0.4,
-              ViewportKind.mediumPlus => position.dx + box.size.width * 0.075,
+              ViewportKind.mediumPlus ||
+              ViewportKind.mediumSmall => position.dx + box.size.width * 0.075,
             };
             final double startY = switch (viewportKind) {
               ViewportKind.smallPortrait =>
@@ -179,7 +180,8 @@ Future<void> presentEmojiReaction(
                     ? position.dy + box.size.height / 2
                     : position.dy + box.size.height / 12,
               ViewportKind.smallLandscape => position.dy + box.size.height / 4,
-              ViewportKind.mediumPlus => position.dy + box.size.height / 16,
+              ViewportKind.mediumPlus ||
+              ViewportKind.mediumSmall => position.dy + box.size.height / 16,
             };
             return Stack(
               children: [

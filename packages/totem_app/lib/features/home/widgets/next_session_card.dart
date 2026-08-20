@@ -1,14 +1,12 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/date.dart';
-import 'package:totem_core/shared/network.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/session_metadata.dart';
+import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 /// A card widget displaying the user's next session with vertical layout.
@@ -55,7 +53,10 @@ class NextSessionCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildImage(),
+                AspectRatio(
+                  aspectRatio: _imageAspectRatio,
+                  child: TotemImage(imageUrl: session.space.imageLink),
+                ),
                 Padding(
                   padding: const EdgeInsetsDirectional.all(_contentPadding),
                   child: Column(
@@ -80,31 +81,6 @@ class NextSessionCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildImage() {
-    final imageUrl = session.space.imageLink;
-
-    return AspectRatio(
-      aspectRatio: _imageAspectRatio,
-      child: imageUrl != null && imageUrl.isNotEmpty
-          ? CachedNetworkImage(
-              imageUrl: getFullUrl(imageUrl),
-              fit: BoxFit.cover,
-              placeholder: (context, url) =>
-                  Container(color: Colors.grey.shade200),
-              errorWidget: (context, url, error) => Image.asset(
-                TotemImageAssets.genericBackground,
-                fit: BoxFit.cover,
-                package: 'totem_core',
-              ),
-            )
-          : Image.asset(
-              TotemImageAssets.genericBackground,
-              fit: BoxFit.cover,
-              package: 'totem_core',
-            ),
     );
   }
 

@@ -286,7 +286,8 @@ class _ActionBarCameraSwitcherButtonOverlayState
               setState(() {});
               widget.onCameraPositionChanged(cameraPosition);
             },
-            child: Padding(
+            child: Container(
+              constraints: const BoxConstraints(maxHeight: 40, maxWidth: 260),
               padding: const EdgeInsetsDirectional.all(8.0),
               child: Stack(
                 alignment: AlignmentDirectional.center,
@@ -316,6 +317,7 @@ class _ActionBarCameraSwitcherButtonOverlayState
                           color: Colors.white,
                         ),
                     child: const Row(
+                      mainAxisSize: MainAxisSize.min,
                       spacing: buttonsSpacing,
                       children: [
                         SizedBox(

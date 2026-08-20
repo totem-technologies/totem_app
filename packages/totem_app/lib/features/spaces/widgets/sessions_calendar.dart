@@ -6,20 +6,20 @@ import 'package:totem_core/core/config/theme.dart';
 
 class SessionsCalendar extends StatefulWidget {
   const SessionsCalendar({
-    required this.nextEvents,
-    this.onEventDayTap,
+    required this.nextSessions,
+    this.onSessionDayTap,
     super.key,
   });
 
-  /// List of upcoming events to highlight on the calendar
-  /// The calendar will automatically start on the month of the first event,
-  /// or the current month if no events are available
-  final List<NextSessionSchema> nextEvents;
+  /// List of upcoming sessions to highlight on the calendar
+  /// The calendar will automatically start on the month of the first session,
+  /// or the current month if no sessions are available
+  final List<NextSessionSchema> nextSessions;
 
-  /// Optional callback when an event day is tapped
-  /// Provides the list of events for that day and the day's DateTime
-  final void Function(DateTime day, List<NextSessionSchema> events)?
-  onEventDayTap;
+  /// Optional callback when a session day is tapped
+  /// Provides the list of sessions for that day and the day's DateTime
+  final void Function(DateTime day, List<NextSessionSchema> sessions)?
+  onSessionDayTap;
 
   @override
   State<SessionsCalendar> createState() => _SessionsCalendarState();
@@ -33,9 +33,12 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
   @override
   void initState() {
     super.initState();
-    final firstEvent = widget.nextEvents.firstOrNull;
-    if (firstEvent != null) {
-      _currentMonth = DateTime(firstEvent.start.year, firstEvent.start.month);
+    final firstSession = widget.nextSessions.firstOrNull;
+    if (firstSession != null) {
+      _currentMonth = DateTime(
+        firstSession.start.year,
+        firstSession.start.month,
+      );
     } else {
       _currentMonth = DateTime.now();
     }
@@ -118,50 +121,50 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
     return DateTime(date.year, date.month, date.day);
   }
 
-  // Compares only year/month/day (ignoring time) to determine if it's an event day
-  bool _isEventDay(DateTime? day) {
+  // Compares only year/month/day (ignoring time) to determine if it's an session day
+  bool _isSessionDay(DateTime? day) {
     if (day == null) return false;
 
     final dayDate = _normalizeDate(day);
 
-    return widget.nextEvents.any((event) {
-      final eventDate = _normalizeDate(event.start);
-      return dayDate == eventDate;
+    return widget.nextSessions.any((session) {
+      final sessionDate = _normalizeDate(session.start);
+      return dayDate == sessionDate;
     });
   }
 
-  // Compares only year/month/day (ignoring time) to determine if it's an open event day
-  bool _isEventOpen(DateTime? day) {
+  // Compares only year/month/day (ignoring time) to determine if it's an open session day
+  bool _isSessionOpen(DateTime? day) {
     if (day == null) return false;
 
     final dayDate = _normalizeDate(day);
 
-    return widget.nextEvents.any((event) {
-      final eventDate = _normalizeDate(event.start);
-      return dayDate == eventDate && event.open;
+    return widget.nextSessions.any((session) {
+      final sessionDate = _normalizeDate(session.start);
+      return dayDate == sessionDate && session.open;
     });
   }
 
-  // Compares only year/month/day (ignoring time) to determine if it's an attended event day
+  // Compares only year/month/day (ignoring time) to determine if it's an attended session day
   bool _isUserAttending(DateTime? day) {
     if (day == null) return false;
 
     final dayDate = _normalizeDate(day);
 
-    return widget.nextEvents.any((event) {
-      final eventDate = _normalizeDate(event.start);
-      return dayDate == eventDate && event.attending;
+    return widget.nextSessions.any((session) {
+      final sessionDate = _normalizeDate(session.start);
+      return dayDate == sessionDate && session.attending;
     });
   }
 
-  List<NextSessionSchema> _getEventsForDay(DateTime? day) {
+  List<NextSessionSchema> _getSessionsForDay(DateTime? day) {
     if (day == null) return [];
 
     final dayDate = _normalizeDate(day);
 
-    return widget.nextEvents.where((event) {
-      final eventDate = _normalizeDate(event.start);
-      return dayDate == eventDate;
+    return widget.nextSessions.where((session) {
+      final sessionDate = _normalizeDate(session.start);
+      return dayDate == sessionDate;
     }).toList();
   }
 
@@ -185,27 +188,27 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
 
     final baseLabel = '$ordinal of $monthName';
 
-    if (!_isEventDay(day)) {
+    if (!_isSessionDay(day)) {
       if (!isCurrentMonth) {
         return '$baseLabel, not in current month';
       }
-      return '$baseLabel, no event scheduled';
+      return '$baseLabel, no session scheduled';
     }
 
-    final events = _getEventsForDay(day);
-    final event = events.first;
+    final sessions = _getSessionsForDay(day);
+    final session = sessions.first;
 
     String statusLabel;
     if (_isUserAttending(day)) {
-      statusLabel = 'attending event';
-    } else if (_isEventOpen(day)) {
-      statusLabel = 'open event';
+      statusLabel = 'attending session';
+    } else if (_isSessionOpen(day)) {
+      statusLabel = 'open session';
     } else {
-      statusLabel = 'event';
+      statusLabel = 'session';
     }
 
-    if (event.title != null && event.title!.isNotEmpty) {
-      return '$baseLabel, $statusLabel: ${event.title}';
+    if (session.title != null && session.title!.isNotEmpty) {
+      return '$baseLabel, $statusLabel: ${session.title}';
     }
 
     return '$baseLabel, $statusLabel';
@@ -216,13 +219,13 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
       return const SizedBox.shrink();
     }
 
-    final isEventDay = _isEventDay(day);
+    final isSessionDay = _isSessionDay(day);
 
-    final eventsForDay = _getEventsForDay(day);
+    final sessionsForDay = _getSessionsForDay(day);
 
     Widget dayCellContent;
 
-    if (!isEventDay) {
+    if (!isSessionDay) {
       dayCellContent = Center(
         child: Text(
           '${day.day}',
@@ -244,7 +247,7 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
           ),
         ),
       );
-    } else if (_isEventOpen(day)) {
+    } else if (_isSessionOpen(day)) {
       dayCellContent = DecoratedBox(
         decoration: BoxDecoration(
           border: Border.all(color: AppTheme.mauve, width: 2),
@@ -278,10 +281,10 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
 
     final Widget accessibleDayCell = Semantics(
       label: _getDaySemanticLabel(day, isCurrentMonth),
-      button: isEventDay && widget.onEventDayTap != null,
-      onTap: isEventDay && widget.onEventDayTap != null
+      button: isSessionDay && widget.onSessionDayTap != null,
+      onTap: isSessionDay && widget.onSessionDayTap != null
           ? () {
-              widget.onEventDayTap!(day, eventsForDay);
+              widget.onSessionDayTap!(day, sessionsForDay);
             }
           : null,
       child: Container(
@@ -292,10 +295,10 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
       ),
     );
 
-    if (isEventDay && widget.onEventDayTap != null) {
+    if (isSessionDay && widget.onSessionDayTap != null) {
       return GestureDetector(
         onTap: () {
-          widget.onEventDayTap!(day, eventsForDay);
+          widget.onSessionDayTap!(day, sessionsForDay);
         },
         child: accessibleDayCell,
       );

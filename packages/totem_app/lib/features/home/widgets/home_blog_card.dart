@@ -1,11 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/shared/network.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 import '../../blog/widgets/badge.dart';
@@ -136,38 +135,29 @@ class _BlogImage extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          _buildImage(),
+          TotemImage(
+            imageUrl: imageUrl,
+            loadingPlaceholder: ColoredBox(
+              color: Colors.grey.shade200,
+              child: const Center(child: CircularProgressIndicator.adaptive()),
+            ),
+            errorWidget: const ColoredBox(
+              color: AppTheme.cream,
+              child: Center(
+                child: Icon(
+                  Icons.article_outlined,
+                  size: 48,
+                  color: AppTheme.gray,
+                ),
+              ),
+            ),
+          ),
           PositionedDirectional(
             top: 12,
             start: 12,
             child: BlogPostCardBadge(text: '$readTime min read'),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildImage() {
-    if (imageUrl != null && imageUrl!.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: getFullUrl(imageUrl!),
-        fit: BoxFit.cover,
-        placeholder: (_, _) => ColoredBox(
-          color: Colors.grey.shade200,
-          child: const Center(child: CircularProgressIndicator.adaptive()),
-        ),
-        errorWidget: (_, _, _) => const ColoredBox(
-          color: AppTheme.cream,
-          child: Center(
-            child: Icon(Icons.article_outlined, size: 48, color: AppTheme.gray),
-          ),
-        ),
-      );
-    }
-    return const ColoredBox(
-      color: AppTheme.cream,
-      child: Center(
-        child: Icon(Icons.article_outlined, size: 48, color: AppTheme.gray),
       ),
     );
   }

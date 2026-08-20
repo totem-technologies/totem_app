@@ -37,11 +37,11 @@ Future<List<MobileSpaceDetailSchema>> listSpaces(Ref ref) async {
 }
 
 @riverpod
-Future<SessionDetailSchema> event(Ref ref, String eventSlug) async {
+Future<SessionDetailSchema> session(Ref ref, String sessionSlug) async {
   final mobileApiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<SessionDetailSchema>(
     apiCall: () => mobileApiService.spaces.totemSpacesMobileApiGetSessionDetail(
-      eventSlug: eventSlug,
+      eventSlug: sessionSlug,
     ),
     operationName: 'get event detail',
   );
@@ -211,44 +211,44 @@ Future<SummarySpacesSchema> spacesSummary(Ref ref) async {
 }
 
 @riverpod
-Future<bool> rsvpConfirm(Ref ref, String eventSlug) async {
+Future<bool> rsvpConfirm(Ref ref, String sessionSlug) async {
   final mobileApiService = ref.read(apiServiceProvider);
 
   try {
     final session = await RepositoryUtils.handleApiCall<SessionDetailSchema>(
       apiCall: () => mobileApiService.spaces.totemSpacesMobileApiRsvpConfirm(
-        eventSlug: eventSlug,
+        eventSlug: sessionSlug,
       ),
-      operationName: 'confirm RSVP for $eventSlug',
+      operationName: 'confirm RSVP for $sessionSlug',
     );
     return session.attending;
   } catch (e, stackTrace) {
     ErrorHandler.logError(
       e,
       stackTrace: stackTrace,
-      message: 'Failed to confirm RSVP for $eventSlug',
+      message: 'Failed to confirm RSVP for $sessionSlug',
     );
     return false;
   }
 }
 
 @riverpod
-Future<bool> rsvpCancel(Ref ref, String eventSlug) async {
+Future<bool> rsvpCancel(Ref ref, String sessionSlug) async {
   final mobileApiService = ref.read(apiServiceProvider);
 
   try {
     final session = await RepositoryUtils.handleApiCall<SessionDetailSchema>(
       apiCall: () => mobileApiService.spaces.totemSpacesMobileApiRsvpCancel(
-        eventSlug: eventSlug,
+        eventSlug: sessionSlug,
       ),
-      operationName: 'cancel RSVP for $eventSlug',
+      operationName: 'cancel RSVP for $sessionSlug',
     );
     return session.attending;
   } catch (e, stackTrace) {
     ErrorHandler.logError(
       e,
       stackTrace: stackTrace,
-      message: 'Failed to cancel RSVP for $eventSlug',
+      message: 'Failed to cancel RSVP for $sessionSlug',
     );
     return false;
   }

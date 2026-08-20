@@ -48,7 +48,7 @@ void main() {
       expect(resolvedKind, ViewportKind.smallLandscape);
     });
 
-    testWidgets('returns mediumPlus for tablets in portrait', (tester) async {
+    testWidgets('returns mediumSmall for tablets in portrait', (tester) async {
       ViewportKind? resolvedKind;
 
       await tester.pumpWidget(
@@ -67,10 +67,10 @@ void main() {
         ),
       );
 
-      expect(resolvedKind, ViewportKind.mediumPlus);
+      expect(resolvedKind, ViewportKind.mediumSmall);
     });
 
-    testWidgets('returns mediumPlus for tablets in landscape', (tester) async {
+    testWidgets('returns mediumSmall for tablets in landscape', (tester) async {
       ViewportKind? resolvedKind;
 
       await tester.pumpWidget(
@@ -78,6 +78,50 @@ void main() {
           home: MediaQuery(
             data: const MediaQueryData(
               size: Size(1024, 800),
+            ),
+            child: ViewportResolver(
+              builder: (context, kind) {
+                resolvedKind = kind;
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(resolvedKind, ViewportKind.mediumSmall);
+    });
+
+    testWidgets('returns mediumPlus above 900 in portrait', (tester) async {
+      ViewportKind? resolvedKind;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(
+              size: Size(1024, 1366),
+            ),
+            child: ViewportResolver(
+              builder: (context, kind) {
+                resolvedKind = kind;
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(resolvedKind, ViewportKind.mediumPlus);
+    });
+
+    testWidgets('returns mediumPlus above 900 in landscape', (tester) async {
+      ViewportKind? resolvedKind;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(
+              size: Size(1366, 1024),
             ),
             child: ViewportResolver(
               builder: (context, kind) {

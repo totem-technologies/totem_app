@@ -150,7 +150,7 @@ class SessionInfraController extends _$SessionInfraController {
 
         if (Platform.isAndroid &&
             !await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
-          return FlutterForegroundTask.requestIgnoreBatteryOptimization();
+          return await FlutterForegroundTask.requestIgnoreBatteryOptimization();
         }
       }
     } catch (error, stackTrace) {

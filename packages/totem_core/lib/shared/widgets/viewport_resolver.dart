@@ -3,9 +3,11 @@ import 'package:flutter/widgets.dart';
 enum ViewportKind {
   smallPortrait,
   smallLandscape,
+  mediumSmall,
   mediumPlus;
 
-  bool get isLarge => this == smallLandscape || this == mediumPlus;
+  bool get isLarge =>
+      this == smallLandscape || this == mediumPlus || this == mediumSmall;
 }
 
 typedef ViewportResolverBuilder =
@@ -28,6 +30,8 @@ class ViewportResolver extends StatelessWidget {
         Orientation.portrait => ViewportKind.smallPortrait,
         Orientation.landscape => ViewportKind.smallLandscape,
       };
+    } else if (shortestSide <= 900) {
+      return ViewportKind.mediumSmall;
     } else {
       return ViewportKind.mediumPlus;
     }

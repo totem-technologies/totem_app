@@ -1,9 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 class BlogDetailAppBar extends StatelessWidget {
@@ -29,18 +28,10 @@ class BlogDetailAppBar extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(
                 bottom: Radius.circular(25),
               ),
-              child: CachedNetworkImage(
-                imageUrl: post.headerImageUrl!,
-                fit: BoxFit.cover,
+              child: TotemImage(
+                imageUrl: post.headerImageUrl,
                 color: Colors.black38,
                 colorBlendMode: BlendMode.darken,
-                errorWidget: (context, url, error) {
-                  return Image.asset(
-                    TotemImageAssets.genericBackground,
-                    fit: BoxFit.cover,
-                    package: 'totem_core',
-                  );
-                },
               ),
             ),
           ),

@@ -50,7 +50,7 @@ class WebTotemRouter extends TotemRouter {
             final slug = state.pathParameters['slug'] ?? '';
             return Consumer(
               builder: (context, ref, child) {
-                ref.listen(eventProvider(slug), (prev, next) {
+                ref.listen(sessionProvider(slug), (prev, next) {
                   next.maybeWhen(
                     data: (data) {
                       if (data.title.isNotEmpty) {

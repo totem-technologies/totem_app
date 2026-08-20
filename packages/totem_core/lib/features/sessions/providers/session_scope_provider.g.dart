@@ -169,7 +169,7 @@ final class CurrentSessionStateProvider
 }
 
 String _$currentSessionStateHash() =>
-    r'e7a486704dfcdc004ffb74dc9a1df2c0582941f7';
+    r'1d34a46c72f69f4787351561fbe8d56ed0be095f';
 
 /// The connection state of the current session.
 
@@ -1146,12 +1146,12 @@ final class SpeakingNextParticipantProvider
 String _$speakingNextParticipantHash() =>
     r'aedb4a4c2543eebe2de4ba45925a7e45857d7319';
 
-/// Active session event payload.
+/// Active session payload.
 
 @ProviderFor(currentSessionEvent)
 final currentSessionEventProvider = CurrentSessionEventProvider._();
 
-/// Active session event payload.
+/// Active session payload.
 
 final class CurrentSessionEventProvider
     extends
@@ -1161,7 +1161,7 @@ final class CurrentSessionEventProvider
           SessionDetailSchema?
         >
     with $Provider<SessionDetailSchema?> {
-  /// Active session event payload.
+  /// Active session payload.
   CurrentSessionEventProvider._()
     : super(
         from: null,
@@ -1204,7 +1204,7 @@ final class CurrentSessionEventProvider
 }
 
 String _$currentSessionEventHash() =>
-    r'3eb0b74e1d2b4d19a926d97a972a4fb2e0f9a13e';
+    r'd09dbffa79ec5ad5b824df13d619717a32fe6192';
 
 /// Whether the signed-in user is keeper for the current session.
 

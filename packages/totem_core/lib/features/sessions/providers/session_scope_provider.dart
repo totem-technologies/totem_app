@@ -48,7 +48,7 @@ SessionController? currentSession(Ref ref) {
 SessionRoomState? currentSessionState(Ref ref) {
   final options = ref.watch(sessionScopeProvider);
   if (options == null) return null;
-  return ref.watch(sessionProvider(options));
+  return ref.watch(sessionControllerProvider(options));
 }
 
 // ===== Granular Selectors =====
@@ -256,11 +256,11 @@ Participant? speakingNextParticipant(Ref ref) {
   );
 }
 
-/// Active session event payload.
+/// Active session payload.
 @Riverpod(dependencies: [currentSession])
 SessionDetailSchema? currentSessionEvent(Ref ref) {
   return ref.watch(
-    currentSessionProvider.select((s) => s?.event),
+    currentSessionProvider.select((s) => s?.session),
   );
 }
 
