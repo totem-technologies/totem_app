@@ -25,6 +25,7 @@ import 'package:totem_core/shared/widgets/user_feedback.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+// TODO(totem): This should live at the state resolver
 /// Resolves the [SessionDisconnectedReason] from the given
 /// [disconnectReason] and [sessionState].
 @visibleForTesting

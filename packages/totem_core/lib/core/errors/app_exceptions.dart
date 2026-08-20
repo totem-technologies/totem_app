@@ -1,6 +1,10 @@
 /// Base class for all custom app exceptions
+///
+/// Exception instances must remain non-const because error reporting
+/// deduplicates by identity. Canonicalized const exceptions would cause
+/// separate failures to be mistaken for the same occurrence.
 abstract class AppException implements Exception {
-  const AppException(this.message, {this.code, this.details});
+  AppException(this.message, {this.code, this.details});
   final String message;
   final String? code;
   final dynamic details;
@@ -13,17 +17,17 @@ abstract class AppException implements Exception {
 
 /// Network-related exceptions (connectivity, timeouts, etc.)
 class AppNetworkException extends AppException {
-  const AppNetworkException(super.message, {super.code, super.details});
+  AppNetworkException(super.message, {super.code, super.details});
 
   factory AppNetworkException.noConnection() {
-    return const AppNetworkException(
+    return AppNetworkException(
       'No internet connection available',
       code: 'NO_CONNECTION',
     );
   }
 
   factory AppNetworkException.timeout() {
-    return const AppNetworkException('Request timed out', code: 'TIMEOUT');
+    return AppNetworkException('Request timed out', code: 'TIMEOUT');
   }
 
   factory AppNetworkException.serverError(int? statusCode, {dynamic details}) {
@@ -37,48 +41,48 @@ class AppNetworkException extends AppException {
 
 /// Authentication-related exceptions
 class AppAuthException extends AppException {
-  const AppAuthException(super.message, {super.code, super.details});
+  AppAuthException(super.message, {super.code, super.details});
 
   factory AppAuthException.unauthenticated() {
-    return const AppAuthException(
+    return AppAuthException(
       'User is not authenticated',
       code: 'UNAUTHENTICATED',
     );
   }
 
   factory AppAuthException.tokenExpired() {
-    return const AppAuthException(
+    return AppAuthException(
       'Authentication token has expired',
       code: 'TOKEN_EXPIRED',
     );
   }
 
   factory AppAuthException.invalidCredentials() {
-    return const AppAuthException(
+    return AppAuthException(
       'Invalid credentials provided',
       code: 'INVALID_CREDENTIALS',
     );
   }
 
   factory AppAuthException.magicLinkExpired() {
-    return const AppAuthException(
+    return AppAuthException(
       'Magic link has expired',
       code: 'MAGIC_LINK_EXPIRED',
     );
   }
 
   factory AppAuthException.invalidPin() {
-    return const AppAuthException('Invalid PIN provided', code: 'INVALID_PIN');
+    return AppAuthException('Invalid PIN provided', code: 'INVALID_PIN');
   }
 
   factory AppAuthException.pinAttemptsExceeded() {
-    return const AppAuthException(
+    return AppAuthException(
       'Maximum PIN attempts exceeded',
       code: 'PIN_ATTEMPTS_EXCEEDED',
     );
   }
   factory AppAuthException.timeout() {
-    return const AppAuthException(
+    return AppAuthException(
       'Timeout during authentication process',
       code: 'AUTH_TIMEOUT',
     );
@@ -87,17 +91,17 @@ class AppAuthException extends AppException {
 
 /// Data-related exceptions (parsing, validation, etc.)
 class AppDataException extends AppException {
-  const AppDataException(super.message, {super.code, super.details});
+  AppDataException(super.message, {super.code, super.details});
 
   factory AppDataException.invalidFormat() {
-    return const AppDataException(
+    return AppDataException(
       'Data is in an invalid format',
       code: 'INVALID_FORMAT',
     );
   }
 
   factory AppDataException.missingData() {
-    return const AppDataException(
+    return AppDataException(
       'Required data is missing',
       code: 'MISSING_DATA',
     );
@@ -114,17 +118,17 @@ class AppDataException extends AppException {
 
 /// Feature-specific exceptions
 class AppFeatureException extends AppException {
-  const AppFeatureException(super.message, {super.code, super.details});
+  AppFeatureException(super.message, {super.code, super.details});
 
   factory AppFeatureException.notAvailable() {
-    return const AppFeatureException(
+    return AppFeatureException(
       'This feature is not available',
       code: 'FEATURE_UNAVAILABLE',
     );
   }
 
   factory AppFeatureException.permissionDenied() {
-    return const AppFeatureException(
+    return AppFeatureException(
       'Permission denied for this feature',
       code: 'PERMISSION_DENIED',
     );
@@ -133,24 +137,24 @@ class AppFeatureException extends AppException {
 
 /// Video-session specific exceptions
 class VideoSessionException extends AppException {
-  const VideoSessionException(super.message, {super.code, super.details});
+  VideoSessionException(super.message, {super.code, super.details});
 
   factory VideoSessionException.connectionFailed() {
-    return const VideoSessionException(
+    return VideoSessionException(
       'Failed to connect to video session',
       code: 'VIDEO_CONNECTION_FAILED',
     );
   }
 
   factory VideoSessionException.mediaPermissionDenied() {
-    return const VideoSessionException(
+    return VideoSessionException(
       'Media permission denied',
       code: 'MEDIA_PERMISSION_DENIED',
     );
   }
 
   factory VideoSessionException.sessionEnded() {
-    return const VideoSessionException(
+    return VideoSessionException(
       'Video session has ended',
       code: 'SESSION_ENDED',
     );

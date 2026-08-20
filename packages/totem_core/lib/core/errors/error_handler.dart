@@ -16,13 +16,38 @@ import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 class ErrorHandler {
   const ErrorHandler._();
 
-  static void logError(
-    dynamic error, {
+  static final Expando<bool> _reportedErrors = Expando<bool>(
+    'totem.reportedErrors',
+  );
+
+  /// Reports [error] at most once for this exception instance.
+  ///
+  /// Errors often cross API, repository, provider, and presentation layers.
+  /// Keeping the reporting marker on the exception prevents each layer from
+  /// creating a separate Sentry event while preserving the original stack.
+  /// Scalar values, records, and null cannot be Expando keys, so they bypass
+  /// identity deduplication and are reported on every call.
+  /// Returns whether this call was the first report for [error].
+  static bool logError(
+    Object? error, {
     StackTrace? stackTrace,
     String? message,
+    Map<String, Object?>? diagnostics,
   }) {
+    if (_supportsIdentityTracking(error)) {
+      if (_reportedErrors[error!] ?? false) return false;
+      _reportedErrors[error] = true;
+    }
+
     if (kDebugMode) {
-      logger.e(message, error: error, stackTrace: stackTrace);
+      logger.e(
+        message,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      if (diagnostics != null && diagnostics.isNotEmpty) {
+        logger.d('Error diagnostics: $diagnostics');
+      }
     }
 
     if (AppConfig.instance.sentryDsn != null &&
@@ -31,9 +56,30 @@ class ErrorHandler {
         error,
         stackTrace: stackTrace,
         message: message != null ? SentryMessage(message) : null,
+        withScope: diagnostics == null || diagnostics.isEmpty
+            ? null
+            : (scope) => scope.setContexts('diagnostics', diagnostics),
       );
     }
+
+    return true;
   }
+
+  /// Whether this exact exception has already crossed a reporting boundary.
+  ///
+  /// Values unsupported by [Expando] have no trackable identity and therefore
+  /// always return false.
+  static bool wasReported(Object? error) {
+    if (!_supportsIdentityTracking(error)) return false;
+    return _reportedErrors[error!] ?? false;
+  }
+
+  static bool _supportsIdentityTracking(Object? error) =>
+      error != null &&
+      error is! String &&
+      error is! num &&
+      error is! bool &&
+      error is! Record;
 
   static void logFlutterError(FlutterErrorDetails details) {
     logError(

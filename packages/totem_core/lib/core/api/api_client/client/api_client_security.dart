@@ -138,6 +138,11 @@ final class ClientSecurity {
         const ApiSecurityRequirement({'JWTAuth': []}),
         const ApiSecurityRequirement({'SessionAuth': []}),
       ];
+  static final totemSpacesMobileApiRsvpResolveConflictsRequirements =
+      <ApiSecurityRequirement>[
+        const ApiSecurityRequirement({'JWTAuth': []}),
+        const ApiSecurityRequirement({'SessionAuth': []}),
+      ];
   static final totemBlogMobileApiListPostsRequirements =
       <ApiSecurityRequirement>[
         const ApiSecurityRequirement({'JWTAuth': []}),

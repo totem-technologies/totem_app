@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,14 +7,13 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:totem_app/features/spaces/widgets/attending_dialog.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
-import 'package:totem_core/core/services/calendar_service.dart';
 import 'package:totem_core/features/keeper/screens/meet_user_card.dart';
 import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/extensions.dart';
@@ -27,7 +25,6 @@ import 'package:totem_core/shared/routing.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';
 import 'package:totem_core/shared/widgets/circle_icon_button.dart';
-import 'package:totem_core/shared/widgets/confetti.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
@@ -36,6 +33,7 @@ import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../widgets/conflicting_sessions_dialog.dart';
 import '../widgets/info_text.dart';
 
 enum SpaceJoinCardState {
@@ -368,6 +366,16 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                           _UpcomingSessionsSection(
                             space: space,
                             currentSessionSlug: effectiveSessionSlug,
+                            onRefresh: () {
+                              if (!mounted) return;
+                              ref.invalidate(spacesSummaryProvider);
+                              ref.invalidate(spaceProvider(widget.slug));
+                              if (effectiveSessionSlug != null) {
+                                ref.invalidate(
+                                  sessionProvider(effectiveSessionSlug),
+                                );
+                              }
+                            },
                           ),
 
                           const SizedBox(height: 24),
@@ -466,14 +474,25 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   bool _attending = false;
   bool _loading = false;
   bool _joined = false;
-  bool _initialized = false;
+  String? _syncedSessionSlug;
+  bool? _syncedAttending;
+  DateTime? _syncedStart;
   String _currentTimeago = '';
   Timer? _timer;
 
-  void _initFromSession(SessionDetailSchema session) {
-    if (_initialized) return;
-    _initialized = true;
+  void _syncFromSession(SessionDetailSchema session) {
+    final sessionChanged = _syncedSessionSlug != session.slug;
+    final attendanceChanged = _syncedAttending != session.attending;
+    final startChanged = _syncedStart != session.start;
+    if (!sessionChanged && !attendanceChanged && !startChanged) return;
+
+    _syncedSessionSlug = session.slug;
+    _syncedAttending = session.attending;
+    _syncedStart = session.start;
     _attending = session.attending;
+    if (sessionChanged) _joined = false;
+
+    if (!sessionChanged && !startChanged) return;
     _currentTimeago = timeago.format(session.start, allowFromNow: true);
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -518,7 +537,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
       symbol: r'USD $',
     );
 
-    widget.sessionAsync?.whenData(_initFromSession);
+    widget.sessionAsync?.whenData(_syncFromSession);
 
     return Container(
       decoration: BoxDecoration(
@@ -582,7 +601,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
                   loading: _loading,
                   onAttend: () => _attend(session),
                   onGiveUpSpot: () => _giveUpSpot(session),
-                  onAddToCalendar: () => _addToCalendar(session),
+                  onAddToCalendar: () => addSessionToCalendar(context, session),
                   onJoinLivekit: () => _joinLivekit(session),
                   onJoinGoogleMeet: () => _joinGoogleMeet(session),
                   onExplore: () =>
@@ -610,9 +629,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
         rsvpConfirmProvider(session.slug).future,
       );
       if (attending) {
-        if (mounted) setState(() => _attending = true);
-        await _attendingPopup(session);
-        await _refresh(session);
+        await _onAttendSuccess(session);
       } else {
         if (mounted) {
           _notificationController.showError(
@@ -623,8 +640,18 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
           );
         }
       }
-    } catch (e, st) {
-      ErrorHandler.logError(e, stackTrace: st, message: 'Failed to attend');
+    } on RsvpConflictException catch (error) {
+      if (!mounted) return;
+      final switched = await showConflictingSessionsDialog(
+        context,
+        error.conflict,
+        session,
+        () => _switchSession(session, error.conflict),
+      );
+      if (switched == true) {
+        await _onAttendSuccess(session);
+      }
+    } catch (_) {
       if (mounted) {
         _notificationController.showError(
           context,
@@ -638,51 +665,33 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     }
   }
 
-  Future<void> _attendingPopup(SessionDetailSchema session) async {
-    await showDialog<void>(
-      context: context,
-      builder: (_) => AttendingDialog(
-        sessionSlug: session.slug,
-        onAddToCalendar: () => _addToCalendar(session),
-      ),
+  Future<bool> _switchSession(
+    SessionDetailSchema newSession,
+    SessionConflictSchema conflict,
+  ) async {
+    final attending = await ref.read(
+      rsvpForceConfirmProvider(
+        newSession.slug,
+        conflict.conflictingSessions.map((e) => e.slug).toList(),
+      ).future,
     );
-    if (mounted) ConfettiController.showConfetti(context);
+    _refresh(newSession);
+    if (!attending && mounted) {
+      _notificationController.showError(
+        context,
+        icon: TotemIcons.spaces,
+        title: 'Failed to switch sessions',
+        message: 'Please try again later',
+      );
+    }
+    return attending;
   }
 
-  Future<void> _addToCalendar(SessionDetailSchema session) async {
-    final calendarEvent = AppCalendarEvent(
-      title: '[TOTEM] ${session.title} - ${space.title}',
-      description: space.shortDescription,
-      location: getFullUrl(session.calLink),
-      start: session.start.toLocal(),
-      end: session.start.add(Duration(minutes: session.duration)).toLocal(),
-      reminderMinutesBefore: 10,
-    );
-    try {
-      final success = await CalendarService.addToCalendar(calendarEvent);
-      if (!success && mounted) {
-        _notificationController.showError(
-          context,
-          icon: TotemIcons.calendar,
-          title: 'Failed to add session to calendar',
-          message: 'Please try again later',
-        );
-      }
-    } catch (e, st) {
-      ErrorHandler.logError(
-        e,
-        stackTrace: st,
-        message: 'Failed to add to calendar',
-      );
-      if (mounted) {
-        _notificationController.showError(
-          context,
-          icon: TotemIcons.calendar,
-          title: 'Failed to add session to calendar',
-          message: 'Please try again later',
-        );
-      }
-    }
+  Future<void> _onAttendSuccess(SessionDetailSchema session) async {
+    if (!mounted) return;
+    setState(() => _attending = true);
+    await showAttendingDialog(context, session);
+    await _refresh(session);
   }
 
   Future<void> _giveUpSpot(SessionDetailSchema session) async {
@@ -722,12 +731,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
           );
         }
       }
-    } catch (e, st) {
-      ErrorHandler.logError(
-        e,
-        stackTrace: st,
-        message: 'Failed to give up spot',
-      );
+    } catch (_) {
       if (mounted) {
         _notificationController.showError(
           context,
@@ -754,10 +758,11 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   }
 
   Future<void> _refresh(SessionDetailSchema session) async {
-    _initialized =
-        false; // allow _initFromSession to re-run with fresh start time
+    if (!mounted) return;
+    ref.invalidate(spacesSummaryProvider);
     // ignore: unused_result
     await ref.refresh(sessionProvider(session.slug).future);
+    if (!mounted) return;
     // ignore: unused_result
     await ref.refresh(spaceProvider(space.slug).future);
   }
@@ -950,11 +955,13 @@ class _DateAttendRow extends StatelessWidget {
 class _UpcomingSessionsSection extends StatelessWidget {
   const _UpcomingSessionsSection({
     required this.space,
+    required this.onRefresh,
     required this.currentSessionSlug,
   });
 
   final MobileSpaceDetailSchema space;
   final String? currentSessionSlug;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -980,7 +987,11 @@ class _UpcomingSessionsSection extends StatelessWidget {
             ),
           ),
           for (final session in upcomingSessions)
-            _UpcomingSessionCard(space: space, session: session),
+            _UpcomingSessionCard(
+              space: space,
+              session: session,
+              onRefresh: onRefresh,
+            ),
         ],
       ),
     );
@@ -992,17 +1003,26 @@ class _UpcomingSessionsSection extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────
 
 class _UpcomingSessionCard extends StatelessWidget {
-  const _UpcomingSessionCard({required this.space, required this.session});
+  const _UpcomingSessionCard({
+    required this.space,
+    required this.session,
+    required this.onRefresh,
+  });
 
   final MobileSpaceDetailSchema space;
   final NextSessionSchema session;
+  final VoidCallback onRefresh;
+
+  Future<void> _openSession(BuildContext context) async {
+    await context.push(RouteNames.spaceSession(space.slug, session.slug));
+    if (context.mounted) onRefresh();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return GestureDetector(
-      onTap: () =>
-          context.push(RouteNames.spaceSession(space.slug, session.slug)),
+      onTap: () => _openSession(context),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -1100,9 +1120,7 @@ class _UpcomingSessionCard extends StatelessWidget {
                             ),
                           ),
                           OutlinedButton(
-                            onPressed: () => context.push(
-                              RouteNames.spaceSession(space.slug, session.slug),
-                            ),
+                            onPressed: () => _openSession(context),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppTheme.mauve,
                               side: const BorderSide(color: AppTheme.mauve),
@@ -1264,175 +1282,6 @@ class AboutSpaceSheet extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Attending confirmation dialog
-// ─────────────────────────────────────────────────────────────
-
-class AttendingDialog extends StatefulWidget {
-  const AttendingDialog({
-    required this.onAddToCalendar,
-    required this.sessionSlug,
-    super.key,
-  });
-
-  final String sessionSlug;
-  final VoidCallback onAddToCalendar;
-
-  @override
-  State<AttendingDialog> createState() => _AttendingDialogState();
-}
-
-class _AttendingDialogState extends State<AttendingDialog> {
-  var _addedToCalendar = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Dialog(
-      child: Padding(
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: 14,
-          vertical: 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 10,
-          children: [
-            Row(
-              children: [
-                Builder(
-                  builder: (context) {
-                    return Container(
-                      height: 30,
-                      width: 30,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                      ),
-                      child: IconButton(
-                        padding: EdgeInsetsDirectional.zero,
-                        iconSize: 18,
-                        color: AppTheme.gray,
-                        onPressed: () async {
-                          final box = context.findRenderObject() as RenderBox?;
-                          await SharePlus.instance.share(
-                            ShareParams(
-                              uri: Uri.parse(AppConfig.instance.apiUrl)
-                                  .resolve(
-                                    '/spaces/event/${widget.sessionSlug}',
-                                  )
-                                  .resolve('?utm_source=app&utm_medium=share'),
-                              sharePositionOrigin: box != null
-                                  ? box.localToGlobal(Offset.zero) & box.size
-                                  : null,
-                            ),
-                          );
-                        },
-                        icon: Icon(Icons.adaptive.share),
-                      ),
-                    );
-                  },
-                ),
-                const Spacer(),
-                Container(
-                  height: 30,
-                  width: 30,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                  ),
-                  child: IconButton(
-                    padding: EdgeInsetsDirectional.zero,
-                    iconSize: 18,
-                    color: AppTheme.gray,
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                  ),
-                ),
-              ],
-            ),
-            const TotemIcon(
-              TotemIcons.greenCheckbox,
-              size: 95,
-              color: Color(0xFF98BD44),
-            ),
-            Text(
-              "You're going!",
-              style: theme.textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const Text.rich(
-              TextSpan(
-                children: <TextSpan>[
-                  TextSpan(
-                    text:
-                        "We'll send you a notification before the session "
-                        'starts.',
-                  ),
-                  TextSpan(text: '\n\n'),
-                  TextSpan(
-                    text:
-                        'When you join, you\u2019ll be in a Space where we take '
-                        'turns speaking while holding the virtual Totem \u2014 '
-                        'feel free to share when it\u2019s your turn, or simply '
-                        'listen if you prefer.',
-                  ),
-                  TextSpan(text: '\n\n'),
-                  TextSpan(
-                    text: 'Totem is better with friends!',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  TextSpan(
-                    text:
-                        " Share this link with your friends and they'll be "
-                        'able to join as well.',
-                  ),
-                ],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (!_addedToCalendar) {
-                  widget.onAddToCalendar();
-                  setState(() => _addedToCalendar = true);
-                } else {
-                  Navigator.of(context).pop();
-                }
-              },
-              child: Text(_addedToCalendar ? 'Added!' : 'Add to Calendar'),
-            ),
-            Text.rich(
-              TextSpan(
-                children: [
-                  const TextSpan(text: 'In the meantime, review our '),
-                  TextSpan(
-                    text: 'Community Guidelines',
-                    style: const TextStyle(
-                      decoration: TextDecoration.underline,
-                    ),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () => launchUrl(
-                        AppConfig.instance.communityGuidelinesUrl,
-                        mode: LaunchMode.externalApplication,
-                      ),
-                  ),
-                  const TextSpan(
-                    text: ' to learn more about how to participate.',
-                  ),
-                ],
-              ),
-              style: theme.textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

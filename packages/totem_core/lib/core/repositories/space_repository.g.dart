@@ -48,7 +48,7 @@ final class ListSpacesProvider
   }
 }
 
-String _$listSpacesHash() => r'63f19dfce6d8287d36960edc160fa4d7d94d47ec';
+String _$listSpacesHash() => r'04640fc59fcd0f514dc454e14441d0c2d24b6906';
 
 @ProviderFor(session)
 final sessionProvider = SessionFamily._();
@@ -107,7 +107,7 @@ final class SessionProvider
   }
 }
 
-String _$sessionHash() => r'170ad9527cc2dbc46266747a97a3458403936099';
+String _$sessionHash() => r'25b3e427ca9703490eb7d3511af9ac7d0044b346';
 
 final class SessionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<SessionDetailSchema>, String> {
@@ -184,7 +184,7 @@ final class SpaceProvider
   }
 }
 
-String _$spaceHash() => r'd61e7bf8c85954adfe7179af3e48669111520973';
+String _$spaceHash() => r'ccaebcce5b8ab82c6ff9505b422f17bdb7ef0dd3';
 
 final class SpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<MobileSpaceDetailSchema>, String> {
@@ -244,7 +244,7 @@ final class ListSubscribedSpacesProvider
 }
 
 String _$listSubscribedSpacesHash() =>
-    r'e15985b63d0902c38cbee847f155514463c53099';
+    r'fb3688c7eb419bc4142ed03b31fb4cc0e4f74fba';
 
 @ProviderFor(subscribeToSpace)
 final subscribeToSpaceProvider = SubscribeToSpaceFamily._();
@@ -295,7 +295,7 @@ final class SubscribeToSpaceProvider
   }
 }
 
-String _$subscribeToSpaceHash() => r'09438933983ffbc805c16ef37e295e4a2e0d11a2';
+String _$subscribeToSpaceHash() => r'ecf0b8a817fda6f5b376dcece6b9675bf0ce4a10';
 
 final class SubscribeToSpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
@@ -365,7 +365,7 @@ final class UnsubscribeFromSpaceProvider
 }
 
 String _$unsubscribeFromSpaceHash() =>
-    r'd4a8f234d2e5c8ae2b9d097bb54eb322e750bfbc';
+    r'0a36eeab5f3fabce3447068d758b22450a70c624';
 
 final class UnsubscribeFromSpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
@@ -443,7 +443,7 @@ final class ListSpacesByKeeperProvider
 }
 
 String _$listSpacesByKeeperHash() =>
-    r'c7d80fd554c7d10b2450e79673c4b0a02d2d88ab';
+    r'1c487eb346577b71acdde85ac7156c252d6a1026';
 
 final class ListSpacesByKeeperFamily extends $Family
     with
@@ -507,7 +507,7 @@ final class ListSessionsHistoryProvider
 }
 
 String _$listSessionsHistoryHash() =>
-    r'41db6d52a55c20a4b1acbe16a002491126115686';
+    r'8811a6e37f71c7d0ce9685e88c33cca191a09bad';
 
 @ProviderFor(getRecommendedSessions)
 final getRecommendedSessionsProvider = GetRecommendedSessionsFamily._();
@@ -568,7 +568,7 @@ final class GetRecommendedSessionsProvider
 }
 
 String _$getRecommendedSessionsHash() =>
-    r'42beae718659f05e3502cc191774e7b27303752f';
+    r'a87a738df5ab6a6c9d075c4d1d74fbef7d35d032';
 
 final class GetRecommendedSessionsFamily extends $Family
     with
@@ -631,7 +631,7 @@ final class SpacesSummaryProvider
   }
 }
 
-String _$spacesSummaryHash() => r'b0f88538b69531c9f2f60ba4e5f97f546d382d3f';
+String _$spacesSummaryHash() => r'a7405178005b5bea4f7fd4fe784810203d501655';
 
 @ProviderFor(rsvpConfirm)
 final rsvpConfirmProvider = RsvpConfirmFamily._();
@@ -643,7 +643,7 @@ final class RsvpConfirmProvider
     required RsvpConfirmFamily super.from,
     required String super.argument,
   }) : super(
-         retry: null,
+         retry: _noRetry,
          name: r'rsvpConfirmProvider',
          isAutoDispose: true,
          dependencies: null,
@@ -682,13 +682,13 @@ final class RsvpConfirmProvider
   }
 }
 
-String _$rsvpConfirmHash() => r'7e1d200c128d34a64e0eda98739a79109a50a296';
+String _$rsvpConfirmHash() => r'2f925b0b3ee833a4cbcf010e508d62ed626cf267';
 
 final class RsvpConfirmFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
   RsvpConfirmFamily._()
     : super(
-        retry: null,
+        retry: _noRetry,
         name: r'rsvpConfirmProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
@@ -751,7 +751,7 @@ final class RsvpCancelProvider
   }
 }
 
-String _$rsvpCancelHash() => r'ed1dfbf5cfaf13a77581d98e77c67a9e04069c1b';
+String _$rsvpCancelHash() => r'660625f95950ee9787f003518f344c3b29d2c5cd';
 
 final class RsvpCancelFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
@@ -769,4 +769,78 @@ final class RsvpCancelFamily extends $Family
 
   @override
   String toString() => r'rsvpCancelProvider';
+}
+
+@ProviderFor(rsvpForceConfirm)
+final rsvpForceConfirmProvider = RsvpForceConfirmFamily._();
+
+final class RsvpForceConfirmProvider
+    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
+    with $FutureModifier<bool>, $FutureProvider<bool> {
+  RsvpForceConfirmProvider._({
+    required RsvpForceConfirmFamily super.from,
+    required (String, List<String>) super.argument,
+  }) : super(
+         retry: null,
+         name: r'rsvpForceConfirmProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$rsvpForceConfirmHash();
+
+  @override
+  String toString() {
+    return r'rsvpForceConfirmProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<bool> create(Ref ref) {
+    final argument = this.argument as (String, List<String>);
+    return rsvpForceConfirm(ref, argument.$1, argument.$2);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is RsvpForceConfirmProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$rsvpForceConfirmHash() => r'01796e9ec4ce56e74a9d71ae076be2ecefe7dd47';
+
+final class RsvpForceConfirmFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<bool>, (String, List<String>)> {
+  RsvpForceConfirmFamily._()
+    : super(
+        retry: null,
+        name: r'rsvpForceConfirmProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  RsvpForceConfirmProvider call(
+    String sessionSlug,
+    List<String> conflictingSessionSlugs,
+  ) => RsvpForceConfirmProvider._(
+    argument: (sessionSlug, conflictingSessionSlugs),
+    from: this,
+  );
+
+  @override
+  String toString() => r'rsvpForceConfirmProvider';
 }

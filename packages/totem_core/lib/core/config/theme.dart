@@ -326,7 +326,7 @@ class AppTheme {
 
     // --- Dialog Theme ---
     dialogTheme: DialogThemeData(
-      backgroundColor: const Color(0xFFF3F1E9),
+      backgroundColor: AppTheme.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       titleTextStyle: const TextStyle(
         fontFamily: fontFamilySans,
