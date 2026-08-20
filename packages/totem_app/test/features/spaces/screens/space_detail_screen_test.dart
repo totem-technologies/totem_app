@@ -125,7 +125,9 @@ void main() {
         overrides: [
           authControllerProvider.overrideWith(_FakeAuthController.new),
           spaceProvider(newSpace.slug).overrideWith((_) async => newSpace),
-          eventProvider(newSession.slug).overrideWith((_) async => newSession),
+          sessionProvider(
+            newSession.slug,
+          ).overrideWith((_) async => newSession),
           rsvpConfirmProvider(newSession.slug).overrideWith(
             (_) async => throw RsvpConflictException(
               SessionConflictSchema(
@@ -171,7 +173,7 @@ void main() {
       overrides: [
         authControllerProvider.overrideWith(_FakeAuthController.new),
         spaceProvider(space.slug).overrideWith((_) async => space),
-        eventProvider(session.slug).overrideWith((_) async => session),
+        sessionProvider(session.slug).overrideWith((_) async => session),
         rsvpConfirmProvider(session.slug).overrideWith((_) async => true),
         spacesSummaryProvider.overrideWith((_) async {
           summaryLoads++;
@@ -252,7 +254,7 @@ void main() {
           spaceLoads++;
           return space;
         }),
-        eventProvider(currentSession.slug).overrideWith((_) async {
+        sessionProvider(currentSession.slug).overrideWith((_) async {
           eventLoads++;
           return eventLoads == 1 ? currentSession : refreshedCurrentSession;
         }),

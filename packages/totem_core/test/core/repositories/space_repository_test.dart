@@ -154,7 +154,7 @@ void main() {
           'existing-session',
         );
         expect(error.cause, isA<ApiError<dynamic, dynamic>>());
-        expect(ErrorHandler.wasReported(error.cause!), isFalse);
+        expect(ErrorHandler.wasReported(error.cause), isFalse);
       }
       expect(client.requestCount, 1);
     });

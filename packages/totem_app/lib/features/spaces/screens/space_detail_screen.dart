@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -367,7 +365,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                           // ── Upcoming Similar Sessions ──────────────────
                           _UpcomingSessionsSection(
                             space: space,
-                            effectiveSessionSlug: effectiveSessionSlug,
+                            currentSessionSlug: effectiveSessionSlug,
                             onRefresh: () {
                               if (!mounted) return;
                               ref.invalidate(spacesSummaryProvider);
