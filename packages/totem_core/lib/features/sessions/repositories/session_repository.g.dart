@@ -84,6 +84,80 @@ final class SessionTokenFamily extends $Family
   String toString() => r'sessionTokenProvider';
 }
 
+@ProviderFor(roomState)
+final roomStateProvider = RoomStateFamily._();
+
+final class RoomStateProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<RoomState>,
+          RoomState,
+          FutureOr<RoomState>
+        >
+    with $FutureModifier<RoomState>, $FutureProvider<RoomState> {
+  RoomStateProvider._({
+    required RoomStateFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'roomStateProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$roomStateHash();
+
+  @override
+  String toString() {
+    return r'roomStateProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<RoomState> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<RoomState> create(Ref ref) {
+    final argument = this.argument as String;
+    return roomState(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is RoomStateProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$roomStateHash() => r'8ec2bae31c6007e08ae19bda65a964d9fac0f0ec';
+
+final class RoomStateFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<RoomState>, String> {
+  RoomStateFamily._()
+    : super(
+        retry: null,
+        name: r'roomStateProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  RoomStateProvider call(String sessionSlug) =>
+      RoomStateProvider._(argument: sessionSlug, from: this);
+
+  @override
+  String toString() => r'roomStateProvider';
+}
+
 @ProviderFor(removeParticipant)
 final removeParticipantProvider = RemoveParticipantFamily._();
 
