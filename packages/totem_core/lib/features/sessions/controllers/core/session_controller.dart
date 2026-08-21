@@ -372,6 +372,7 @@ class SessionController extends _$SessionController {
   }
 
   void _onParticipantDisconnected(ParticipantDisconnectedEvent event) {
+    if (isCurrentUserKeeper()) _pollServerState();
     _updateParticipantsList();
   }
 
