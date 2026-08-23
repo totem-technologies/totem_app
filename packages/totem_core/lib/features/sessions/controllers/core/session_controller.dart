@@ -12,8 +12,6 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
-import 'package:totem_core/core/services/api_service.dart';
-import 'package:totem_core/core/services/repository_utils.dart';
 import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_events.dart';
