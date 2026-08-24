@@ -23,6 +23,9 @@ class AppTheme {
   static const Color green = Color(0xFF19F554);
   static const Color paleGreen = Color(0xFF98BD44);
 
+  static const Color errorColor = Color(0xFFFF545C);
+  static const Color successColor = paleGreen;
+
   // --- Shadows ---
   static const List<BoxShadow> cardShadow = [
     BoxShadow(
