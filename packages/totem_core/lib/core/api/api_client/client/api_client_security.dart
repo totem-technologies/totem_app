@@ -160,6 +160,11 @@ final class ClientSecurity {
     const ApiSecurityRequirement({'JWTAuth': []}),
     const ApiSecurityRequirement({'SessionAuth': []}),
   ];
+  static final totemRoomsApiReconcileRoomRequirements =
+      <ApiSecurityRequirement>[
+        const ApiSecurityRequirement({'JWTAuth': []}),
+        const ApiSecurityRequirement({'SessionAuth': []}),
+      ];
   static final totemRoomsApiJoinRoomRequirements = <ApiSecurityRequirement>[
     const ApiSecurityRequirement({'JWTAuth': []}),
     const ApiSecurityRequirement({'SessionAuth': []}),

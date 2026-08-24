@@ -137,10 +137,15 @@ Future<RoomState> roomState(
 }) async {
   final apiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<RoomState>(
-    apiCall: () => apiService.rooms.totemRoomsApiGetState(
-      sessionSlug: sessionSlug,
-      attemptReconcile: attemptReconcile,
-    ),
+    apiCall: () {
+      if (attemptReconcile) {
+        return apiService.rooms.totemRoomsApiReconcileRoom(
+          sessionSlug: sessionSlug,
+        );
+      } else {
+        return apiService.rooms.totemRoomsApiGetState(sessionSlug: sessionSlug);
+      }
+    },
     operationName: 'get room state',
     timeout: _shortTimeoutDuration,
     diagnostics: {'session_slug': sessionSlug},

@@ -64,17 +64,8 @@ final class RoomsApi with ApiExecutor {
   /// `GET /api/mobile/protected/rooms/{session_slug}/state`
   Future<ApiResult<RoomState, RoomErrorResponse>> totemRoomsApiGetState({
     required String sessionSlug,
-    bool? attemptReconcile,
     RequestOptions? options,
   }) async {
-    final queryParameters = <String, String>{
-      ...apiConfig.defaultQueryParameters,
-    };
-    final queryParametersList = <ApiQueryParameter>[];
-    if (attemptReconcile != null) {
-      queryParameters['attempt_reconcile'] = attemptReconcile.toString();
-    }
-
     final headers = <String, String>{...apiConfig.defaultHeaders};
 
     final request = ApiRequest(
@@ -82,8 +73,40 @@ final class RoomsApi with ApiExecutor {
       path:
           '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/state',
       headers: headers,
-      queryParameters: queryParameters,
-      queryParametersList: queryParametersList,
+      options: options,
+    );
+
+    return execute(
+      request,
+      onSuccess: (response) {
+        return RoomState.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>,
+        );
+      },
+      onError: (response) {
+        return RoomErrorResponse.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>,
+        );
+      },
+    );
+  }
+
+  /// Reconcile room state
+  ///
+  /// Keeper-only command that reconciles room state with connected LiveKit participants and broadcasts the resulting state.
+  ///
+  /// `POST /api/mobile/protected/rooms/{session_slug}/state/reconcile`
+  Future<ApiResult<RoomState, RoomErrorResponse>> totemRoomsApiReconcileRoom({
+    required String sessionSlug,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+
+    final request = ApiRequest(
+      method: 'POST',
+      path:
+          '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/state/reconcile',
+      headers: headers,
       options: options,
     );
 
