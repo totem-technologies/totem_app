@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +11,7 @@ import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
+import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
@@ -19,6 +23,7 @@ import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
@@ -1020,6 +1025,101 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Audio route changed'), findsNothing);
+    });
+  });
+
+  group('VideoRoomScreen - offline notification lifecycle', () {
+    testWidgets(
+      'shows a persistent notification on connectivity loss and dismisses it '
+      'on reconnection',
+      (tester) async {
+        final connectivityChanges =
+            StreamController<List<ConnectivityResult>>();
+        addTearDown(connectivityChanges.close);
+
+        await _pumpRoomScreenWithMutableState(
+          tester,
+          event: _createSessionEvent(
+            start: DateTime.now().subtract(const Duration(minutes: 1)),
+            duration: 10,
+          ),
+          connectionState: RoomConnectionState.connected,
+          roomStatus: RoomStatus.active,
+          extraOverrides: [
+            isOfflineProvider.overrideWith((ref) async => false),
+            connectivityStreamProvider.overrideWith(
+              (ref) => connectivityChanges.stream,
+            ),
+          ],
+        );
+
+        connectivityChanges.add(const [ConnectivityResult.none]);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(NotificationBanner), findsOneWidget);
+        expect(find.text("You're offline"), findsOneWidget);
+        expect(
+          find.text('Check your Wi-Fi or mobile data to continue.'),
+          findsOneWidget,
+        );
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is TotemIcon && widget.icon == TotemIcons.wifiOff,
+          ),
+          findsOneWidget,
+        );
+
+        await tester.pump(const Duration(seconds: 5));
+        expect(find.byType(NotificationBanner), findsOneWidget);
+
+        connectivityChanges.add(const [ConnectivityResult.none]);
+        await tester.pumpAndSettle();
+        expect(find.byType(NotificationBanner), findsOneWidget);
+
+        connectivityChanges.add(const [ConnectivityResult.wifi]);
+        await tester.pumpAndSettle();
+        expect(find.byType(NotificationBanner), findsNothing);
+
+        connectivityChanges.add(const [ConnectivityResult.none]);
+        await tester.pumpAndSettle();
+        expect(find.byType(NotificationBanner), findsOneWidget);
+      },
+    );
+
+    testWidgets('does not notify when the session starts offline', (
+      tester,
+    ) async {
+      final connectivityChanges = StreamController<List<ConnectivityResult>>();
+      addTearDown(connectivityChanges.close);
+
+      await _pumpRoomScreenWithMutableState(
+        tester,
+        event: _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 1)),
+          duration: 10,
+        ),
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+        extraOverrides: [
+          isOfflineProvider.overrideWith((ref) async => true),
+          connectivityStreamProvider.overrideWith(
+            (ref) => connectivityChanges.stream,
+          ),
+        ],
+      );
+
+      connectivityChanges.add(const [ConnectivityResult.none]);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NotificationBanner), findsNothing);
+
+      connectivityChanges.add(const [ConnectivityResult.mobile]);
+      await tester.pump();
+      connectivityChanges.add(const [ConnectivityResult.none]);
+      await tester.pumpAndSettle();
+
+      expect(find.text("You're offline"), findsOneWidget);
     });
   });
 

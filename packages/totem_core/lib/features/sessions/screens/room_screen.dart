@@ -11,6 +11,7 @@ import 'package:livekit_client/livekit_client.dart'
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/core/services/screen_protection_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
@@ -52,9 +53,11 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   final _notificationController = NotificationController();
 
   NotificationRequest? _closeKeeperLeftNotification;
+  NotificationRequest? _offlineNotification;
   Timer? _timeRemainingWarningTimer;
   String? _timeRemainingWarningSessionSlug;
   bool _hasShownTimeRemainingWarning = false;
+  bool? _isOffline;
   bool? _lastKeeperDisconnectedState;
   RoomStatus? _lastKeeperDisconnectedRoomStatus;
 
@@ -64,6 +67,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _listenToBatteryChanges();
     _warmEmojiGlyphs();
+    unawaited(_initializeConnectivityStatus());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyScreenCapturePolicy();
     });
@@ -145,6 +149,48 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
       recorder.endRecording().dispose();
     });
+  }
+
+  Future<void> _initializeConnectivityStatus() async {
+    try {
+      final isOffline = await ref.read(isOfflineProvider.future);
+      if (!mounted || _isOffline != null) return;
+      _isOffline = isOffline;
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error checking initial session connectivity',
+      );
+    }
+  }
+
+  void _onConnectivityChanged(List<ConnectivityResult> results) {
+    final wasOffline = _isOffline;
+    final isOffline =
+        results.isEmpty || results.contains(ConnectivityResult.none);
+    _isOffline = isOffline;
+
+    if (!isOffline) {
+      _dismissOfflineNotification();
+      return;
+    }
+
+    if (!mounted || wasOffline != false || _offlineNotification != null) {
+      return;
+    }
+
+    _offlineNotification = _notificationController.showPermanent(
+      context,
+      icon: TotemIcons.wifiOff,
+      title: "You're offline",
+      message: 'Check your Wi-Fi or mobile data to continue.',
+    );
+  }
+
+  void _dismissOfflineNotification() {
+    _offlineNotification?.dismissActive();
+    _offlineNotification = null;
   }
 
   void _dismissKeeperLeftNotification() {
@@ -430,6 +476,13 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
               next == RoomConnectionState.error) {
             _clearTimeRemainingWarningTimer();
           }
+        },
+      )
+      ..listen(
+        connectivityStreamProvider,
+        (previous, next) {
+          if (!next.hasValue) return;
+          _onConnectivityChanged(next.value!);
         },
       );
 

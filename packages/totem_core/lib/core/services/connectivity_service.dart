@@ -1,6 +1,9 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+export 'package:connectivity_plus/connectivity_plus.dart'
+    show ConnectivityResult;
+
 part 'connectivity_service.g.dart';
 
 @riverpod
