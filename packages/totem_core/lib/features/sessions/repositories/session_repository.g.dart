@@ -97,7 +97,7 @@ final class RoomStateProvider
     with $FutureModifier<RoomState>, $FutureProvider<RoomState> {
   RoomStateProvider._({
     required RoomStateFamily super.from,
-    required String super.argument,
+    required (String, {bool attemptReconcile}) super.argument,
   }) : super(
          retry: null,
          name: r'roomStateProvider',
@@ -113,7 +113,7 @@ final class RoomStateProvider
   String toString() {
     return r'roomStateProvider'
         ''
-        '($argument)';
+        '$argument';
   }
 
   @$internal
@@ -123,8 +123,12 @@ final class RoomStateProvider
 
   @override
   FutureOr<RoomState> create(Ref ref) {
-    final argument = this.argument as String;
-    return roomState(ref, argument);
+    final argument = this.argument as (String, {bool attemptReconcile});
+    return roomState(
+      ref,
+      argument.$1,
+      attemptReconcile: argument.attemptReconcile,
+    );
   }
 
   @override
@@ -138,10 +142,14 @@ final class RoomStateProvider
   }
 }
 
-String _$roomStateHash() => r'8ec2bae31c6007e08ae19bda65a964d9fac0f0ec';
+String _$roomStateHash() => r'98f214604a0ddcf4a461aa236fefbbf110c6809b';
 
 final class RoomStateFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<RoomState>, String> {
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<RoomState>,
+          (String, {bool attemptReconcile})
+        > {
   RoomStateFamily._()
     : super(
         retry: null,
@@ -151,8 +159,11 @@ final class RoomStateFamily extends $Family
         isAutoDispose: true,
       );
 
-  RoomStateProvider call(String sessionSlug) =>
-      RoomStateProvider._(argument: sessionSlug, from: this);
+  RoomStateProvider call(String sessionSlug, {bool attemptReconcile = false}) =>
+      RoomStateProvider._(
+        argument: (sessionSlug, attemptReconcile: attemptReconcile),
+        from: this,
+      );
 
   @override
   String toString() => r'roomStateProvider';

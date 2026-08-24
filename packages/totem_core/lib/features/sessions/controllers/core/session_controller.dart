@@ -337,13 +337,16 @@ class SessionController extends _$SessionController {
     }
   }
 
-  Future<void> _pollServerState() async {
+  Future<void> _pollServerState({bool attemptReconcile = false}) async {
     if (!ref.mounted) return;
     if (state.connectionState != RoomConnectionState.connected) return;
 
     try {
       final roomState = await ref.read(
-        roomStateProvider(options.sessionSlug).future,
+        roomStateProvider(
+          options.sessionSlug,
+          attemptReconcile: attemptReconcile,
+        ).future,
       );
       if (!ref.mounted) return;
 
@@ -369,12 +372,20 @@ class SessionController extends _$SessionController {
     });
   }
 
+  /// Attempts to reconcile the local state with the server state.
+  void _attemptReconcile() {
+    if (!isCurrentUserKeeper()) return;
+    if (state.roomState.status == RoomStatus.ended) return;
+    _pollServerState(attemptReconcile: true);
+  }
+
   void _onParticipantDisconnected(ParticipantDisconnectedEvent event) {
-    if (isCurrentUserKeeper()) _pollServerState();
+    _attemptReconcile();
     _updateParticipantsList();
   }
 
   void _onParticipantConnected(ParticipantConnectedEvent event) {
+    _attemptReconcile();
     _updateParticipantsList();
   }
 

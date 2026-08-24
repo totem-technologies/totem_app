@@ -64,8 +64,17 @@ final class RoomsApi with ApiExecutor {
   /// `GET /api/mobile/protected/rooms/{session_slug}/state`
   Future<ApiResult<RoomState, RoomErrorResponse>> totemRoomsApiGetState({
     required String sessionSlug,
+    bool? attemptReconcile,
     RequestOptions? options,
   }) async {
+    final queryParameters = <String, String>{
+      ...apiConfig.defaultQueryParameters,
+    };
+    final queryParametersList = <ApiQueryParameter>[];
+    if (attemptReconcile != null) {
+      queryParameters['attempt_reconcile'] = attemptReconcile.toString();
+    }
+
     final headers = <String, String>{...apiConfig.defaultHeaders};
 
     final request = ApiRequest(
@@ -73,6 +82,8 @@ final class RoomsApi with ApiExecutor {
       path:
           '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/state',
       headers: headers,
+      queryParameters: queryParameters,
+      queryParametersList: queryParametersList,
       options: options,
     );
 

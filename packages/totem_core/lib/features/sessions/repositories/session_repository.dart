@@ -130,11 +130,17 @@ Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) {
 }
 
 @riverpod
-Future<RoomState> roomState(Ref ref, String sessionSlug) async {
+Future<RoomState> roomState(
+  Ref ref,
+  String sessionSlug, {
+  bool attemptReconcile = false,
+}) async {
   final apiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<RoomState>(
-    apiCall: () =>
-        apiService.rooms.totemRoomsApiGetState(sessionSlug: sessionSlug),
+    apiCall: () => apiService.rooms.totemRoomsApiGetState(
+      sessionSlug: sessionSlug,
+      attemptReconcile: attemptReconcile,
+    ),
     operationName: 'get room state',
     timeout: _shortTimeoutDuration,
     diagnostics: {'session_slug': sessionSlug},
