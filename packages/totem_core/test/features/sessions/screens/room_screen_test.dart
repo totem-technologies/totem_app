@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -537,6 +536,35 @@ void main() {
       );
 
       expect(find.byType(SessionErrorScreen), findsOneWidget);
+    });
+
+    testWidgets('renders offline error screen for a network disconnection', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.disconnected,
+        connectionState: RoomConnectionState.disconnected,
+        disconnectReason: DisconnectReason.reconnectAttemptsExceeded,
+      );
+
+      expect(find.byType(SessionErrorScreen), findsOneWidget);
+      expect(find.byType(SessionDisconnectedScreen), findsNothing);
+      expect(find.text("You're Offline"), findsOneWidget);
+      expect(
+        find.text(
+          'Video sessions require an active internet connection.\n'
+          'Check your Wi-Fi or mobile data, then tap below to rejoin.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('renders receive totem screen for RoomScreen.receiving', (

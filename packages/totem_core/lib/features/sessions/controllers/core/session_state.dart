@@ -367,3 +367,10 @@ bool isTransientJoinDisconnectReason(DisconnectReason? reason) {
       reason == DisconnectReason.clientInitiated ||
       reason == DisconnectReason.signalingConnectionFailure;
 }
+
+/// Returns true when LiveKit reports a client-side internet disconnection.
+bool isInternetDisconnectReason(DisconnectReason? reason) {
+  return reason == DisconnectReason.disconnected ||
+      reason == DisconnectReason.signalingConnectionFailure ||
+      reason == DisconnectReason.reconnectAttemptsExceeded;
+}

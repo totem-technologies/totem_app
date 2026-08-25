@@ -155,7 +155,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     try {
       final isOffline = await ref.read(isOfflineProvider.future);
       if (!mounted || _isOffline != null) return;
-      _isOffline = isOffline;
+      setState(() => _isOffline = isOffline);
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -166,17 +166,21 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   }
 
   void _onConnectivityChanged(List<ConnectivityResult> results) {
+    if (!mounted) return;
+
     final wasOffline = _isOffline;
     final isOffline =
         results.isEmpty || results.contains(ConnectivityResult.none);
-    _isOffline = isOffline;
+    if (wasOffline != isOffline) {
+      setState(() => _isOffline = isOffline);
+    }
 
     if (!isOffline) {
       _dismissOfflineNotification();
       return;
     }
 
-    if (!mounted || wasOffline != false || _offlineNotification != null) {
+    if (wasOffline != false || _offlineNotification != null) {
       return;
     }
 
@@ -605,12 +609,27 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     SessionDetailSchema sessionEvent,
     DisconnectReason? disconnectReason,
   ) {
+    final isInternetDisconnect =
+        _isOffline == true || isInternetDisconnectReason(disconnectReason);
+    final disconnectionError = disconnectReason == null
+        ? null
+        : RoomDisconnectionError(disconnectReason);
+
     switch (screen) {
       case RoomScreen.error:
-        return SessionErrorScreen(onRetry: session.join);
+        return SessionErrorScreen(
+          onRetry: session.join,
+          error: disconnectionError,
+        );
       case RoomScreen.loading:
         return widget.loadingScreen;
       case RoomScreen.disconnected:
+        if (isInternetDisconnect) {
+          return SessionErrorScreen(
+            onRetry: session.join,
+            error: disconnectionError,
+          );
+        }
         return SessionDisconnectedScreen(
           session: sessionEvent,
           disconnectReason: disconnectReason,
