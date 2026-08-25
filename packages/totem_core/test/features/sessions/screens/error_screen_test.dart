@@ -19,7 +19,7 @@ void main() {
     AsyncCallback? onRetry,
     Object? error,
     bool initiallyOffline = false,
-    Stream<List<ConnectivityResult>>? connectivityStream,
+    Stream<bool>? connectivityStream,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -31,11 +31,8 @@ void main() {
           spacesSummaryProvider.overrideWith(
             (ref) => throw UnimplementedError(),
           ),
-          isOfflineProvider.overrideWith((ref) async => initiallyOffline),
-          connectivityStreamProvider.overrideWith(
-            (ref) =>
-                connectivityStream ??
-                const Stream<List<ConnectivityResult>>.empty(),
+          isOfflineProvider.overrideWith(
+            (ref) => connectivityStream ?? Stream.value(initiallyOffline),
           ),
         ],
         child: MaterialApp(
@@ -200,8 +197,7 @@ void main() {
       testWidgets('reacts to connectivity changes while visible', (
         tester,
       ) async {
-        final connectivityChanges =
-            StreamController<List<ConnectivityResult>>();
+        final connectivityChanges = StreamController<bool>();
         addTearDown(connectivityChanges.close);
 
         await pumpErrorScreen(
@@ -211,11 +207,11 @@ void main() {
         );
         expect(find.text('Something went wrong'), findsOneWidget);
 
-        connectivityChanges.add(const [ConnectivityResult.none]);
+        connectivityChanges.add(true);
         await tester.pumpAndSettle();
         expect(find.text("You're Offline"), findsOneWidget);
 
-        connectivityChanges.add(const [ConnectivityResult.wifi]);
+        connectivityChanges.add(false);
         await tester.pumpAndSettle();
         expect(find.text('Something went wrong'), findsOneWidget);
       });

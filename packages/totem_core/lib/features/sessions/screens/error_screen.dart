@@ -77,11 +77,7 @@ class SessionErrorScreen extends ConsumerWidget {
       }
     }
 
-    final connectivity = ref.watch(connectivityStreamProvider);
-    final initialIsOffline = ref.watch(isOfflineProvider);
-    final isOfflineFromProvider = connectivity.hasValue
-        ? isOfflineConnectivity(connectivity.value!)
-        : initialIsOffline.value ?? false;
+    final isOfflineFromProvider = ref.watch(isOfflineProvider).value ?? false;
     final isOfflineFromError =
         resolvedError is RoomDisconnectionError &&
         isInternetDisconnectReason(resolvedError.reason);

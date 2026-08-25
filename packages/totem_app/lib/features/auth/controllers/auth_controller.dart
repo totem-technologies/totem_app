@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 // ignore: depend_on_referenced_packages
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -214,8 +213,7 @@ class MobileAuthController extends AuthController {
     _setState(AuthState.loading());
 
     try {
-      final connectivityResult = await Connectivity().checkConnectivity();
-      final isOffline = isOfflineConnectivity(connectivityResult);
+      final isOffline = await checkIsOffline(ref.read(connectivityProvider));
 
       final accessToken = await _secureStorage.read(
         key: AppConsts.accessTokenKey,

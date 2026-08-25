@@ -194,9 +194,8 @@ void main() {
           preJoinPreviewTrackFactoryProvider.overrideWithValue(
             trackFactory ?? _TrackFactory(),
           ),
-          isOfflineProvider.overrideWith((ref) async => initiallyOffline),
-          connectivityStreamProvider.overrideWith(
-            (ref) => const Stream<List<ConnectivityResult>>.empty(),
+          isOfflineProvider.overrideWith(
+            (ref) => Stream.value(initiallyOffline),
           ),
           sessionTokenProvider(_slug).overrideWith((_) async {
             if (tokenError != null) throw tokenError;

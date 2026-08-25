@@ -2,12 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
-import 'package:totem_core/shared/logger.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
 enum ConnectivityStatus { offline, online, recentlyReconnected }
@@ -79,129 +77,65 @@ class OfflineIndicatorPage extends ConsumerStatefulWidget {
 
 class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
   ConnectivityStatus _status = ConnectivityStatus.online;
-  late final AppLifecycleListener _appLifecycleListener;
   Timer? _reconnectedTimer;
-  bool? _tickerModeEnabled;
-  bool _initialCheckCompleted = false;
-  int _connectivityRevision = 0;
 
   @override
   void initState() {
     super.initState();
-    _appLifecycleListener = AppLifecycleListener(
-      onResume: () => unawaited(_refreshConnectivity()),
-    );
-    unawaited(_refreshConnectivity(isInitialCheck: true));
+    ref.listenManual(isOfflineProvider, (_, next) {
+      final isOffline = next.value;
+      if (isOffline != null) _updateConnectivityStatus(isOffline);
+    }, fireImmediately: true);
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    final tickerModeEnabled = TickerMode.valuesOf(context).enabled;
-    if (tickerModeEnabled && _tickerModeEnabled == false) {
-      unawaited(_refreshConnectivity());
-    }
-    _tickerModeEnabled = tickerModeEnabled;
-  }
-
-  Future<void> _refreshConnectivity({bool isInitialCheck = false}) async {
-    final revision = ++_connectivityRevision;
-    try {
-      final isOffline = await ref.refresh(isOfflineProvider.future);
-      if (!mounted || revision != _connectivityRevision) return;
-
-      _updateConnectivityStatus(isOffline, isInitialCheck: isInitialCheck);
-    } finally {
-      if (isInitialCheck) _initialCheckCompleted = true;
-    }
-  }
-
-  void _updateConnectivityStatus(
-    bool isNowOffline, {
-    bool isInitialCheck = false,
-  }) {
-    final bool wasOffline = _status == ConnectivityStatus.offline;
-
-    if (mounted) {
-      if (isNowOffline) {
-        _reconnectedTimer?.cancel();
-        _reconnectedTimer = null;
-        setState(() {
-          _status = ConnectivityStatus.offline;
-        });
-      } else {
-        if (wasOffline && !isInitialCheck) {
-          _resyncData();
-          setState(() {
-            _status = ConnectivityStatus.recentlyReconnected;
-          });
-          _reconnectedTimer?.cancel();
-          _reconnectedTimer = Timer(const Duration(seconds: 3), () {
-            _reconnectedTimer = null;
-            if (mounted && _status == ConnectivityStatus.recentlyReconnected) {
-              setState(() {
-                _status = ConnectivityStatus.online;
-              });
-            }
-          });
-        } else if (_status != ConnectivityStatus.recentlyReconnected) {
-          setState(() {
-            _status = ConnectivityStatus.online;
-          });
-        }
+  void _updateConnectivityStatus(bool isOffline) {
+    if (isOffline) {
+      _reconnectedTimer?.cancel();
+      _reconnectedTimer = null;
+      if (_status != ConnectivityStatus.offline) {
+        setState(() => _status = ConnectivityStatus.offline);
       }
+      return;
     }
+
+    if (_status != ConnectivityStatus.offline) return;
+
+    _resyncData();
+    setState(() => _status = ConnectivityStatus.recentlyReconnected);
+    _reconnectedTimer = Timer(const Duration(seconds: 3), () {
+      _reconnectedTimer = null;
+      if (mounted && _status == ConnectivityStatus.recentlyReconnected) {
+        setState(() => _status = ConnectivityStatus.online);
+      }
+    });
   }
 
   void _resyncData() {
-    void smartRefresh(
-      //
-      // ignore: strict_raw_type, invalid_use_of_internal_member
-      $FunctionalProvider<AsyncValue, dynamic, dynamic> provider,
-    ) {
-      // Workaround for the riverpod typing inconsistency
-      if (!ref.read(provider).hasValue) {
-        logger.i('Refreshing $provider due to reconnection');
-        ref.invalidate(provider);
-      } else {
-        // ref.refresh(provider);
-      }
+    if (!ref.read(listSpacesProvider).hasValue) {
+      ref.invalidate(listSpacesProvider);
     }
-
-    smartRefresh(listSpacesProvider);
-    smartRefresh(spacesSummaryProvider);
-    smartRefresh(listBlogPostsProvider);
-    smartRefresh(listSubscribedSpacesProvider);
-    smartRefresh(listSessionsHistoryProvider);
+    if (!ref.read(spacesSummaryProvider).hasValue) {
+      ref.invalidate(spacesSummaryProvider);
+    }
+    if (!ref.read(listBlogPostsProvider).hasValue) {
+      ref.invalidate(listBlogPostsProvider);
+    }
+    if (!ref.read(listSubscribedSpacesProvider).hasValue) {
+      ref.invalidate(listSubscribedSpacesProvider);
+    }
+    if (!ref.read(listSessionsHistoryProvider).hasValue) {
+      ref.invalidate(listSessionsHistoryProvider);
+    }
   }
 
   @override
   void dispose() {
-    _appLifecycleListener.dispose();
     _reconnectedTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(connectivityStreamProvider, (previous, next) {
-      if (next.hasValue) {
-        final result = next.value!;
-        final isOffline = isOfflineConnectivity(result);
-        if (isOffline == (_status == ConnectivityStatus.offline)) {
-          if (!_initialCheckCompleted) ++_connectivityRevision;
-          return;
-        }
-
-        ++_connectivityRevision;
-        _updateConnectivityStatus(
-          isOffline,
-          isInitialCheck: !_initialCheckCompleted,
-        );
-      }
-    });
-
     final shouldShow = _status != ConnectivityStatus.online;
 
     return SafeArea(

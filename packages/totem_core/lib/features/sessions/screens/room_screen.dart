@@ -57,7 +57,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   Timer? _timeRemainingWarningTimer;
   String? _timeRemainingWarningSessionSlug;
   bool _hasShownTimeRemainingWarning = false;
-  bool? _isOffline;
+  bool? _lastIsOffline;
   bool? _lastKeeperDisconnectedState;
   RoomStatus? _lastKeeperDisconnectedRoomStatus;
 
@@ -67,7 +67,6 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _listenToBatteryChanges();
     _warmEmojiGlyphs();
-    unawaited(_initializeConnectivityStatus());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyScreenCapturePolicy();
     });
@@ -151,20 +150,11 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     });
   }
 
-  Future<void> _initializeConnectivityStatus() async {
-    final isOffline = await ref.read(isOfflineProvider.future);
-    if (!mounted || _isOffline != null) return;
-    setState(() => _isOffline = isOffline);
-  }
-
-  void _onConnectivityChanged(List<ConnectivityResult> results) {
+  void _onConnectivityChanged(bool isOffline) {
     if (!mounted) return;
 
-    final wasOffline = _isOffline;
-    final isOffline = isOfflineConnectivity(results);
-    if (wasOffline != isOffline) {
-      setState(() => _isOffline = isOffline);
-    }
+    final wasOffline = _lastIsOffline;
+    _lastIsOffline = isOffline;
 
     if (!isOffline) {
       _dismissOfflineNotification();
@@ -479,7 +469,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         },
       )
       ..listen(
-        connectivityStreamProvider,
+        isOfflineProvider,
         (previous, next) {
           if (!next.hasValue) return;
           _onConnectivityChanged(next.value!);
@@ -519,6 +509,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       return widget.loadingScreen;
     }
 
+    final isOffline = ref.watch(isOfflineProvider).value ?? _lastIsOffline;
+
     if (currentSessionEvent.ended || roomStatus == RoomStatus.ended) {
       return SessionDisconnectedScreen(
         session: currentSessionEvent,
@@ -551,6 +543,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
                         currentRoomScreen,
                         currentSessionEvent,
                         disconnectReason,
+                        isOffline: isOffline ?? false,
                       ),
                     ),
                   ),
@@ -603,11 +596,12 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     SessionController session,
     RoomScreen screen,
     SessionDetailSchema sessionEvent,
-    DisconnectReason? disconnectReason,
-  ) {
+    DisconnectReason? disconnectReason, {
+    required bool isOffline,
+  }) {
     final isInternetDisconnect =
         isInternetDisconnectReason(disconnectReason) ||
-        (_isOffline == true &&
+        (isOffline &&
             canOfflineStateOverrideDisconnectReason(disconnectReason));
     final disconnectionError = disconnectReason == null
         ? null
