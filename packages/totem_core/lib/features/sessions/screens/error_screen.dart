@@ -119,65 +119,83 @@ class SessionErrorScreen extends ConsumerWidget {
             ),
           ),
           extendBodyBehindAppBar: true,
-          body: Padding(
-            padding: const EdgeInsetsDirectional.all(40),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              spacing: 20,
-              children: [
-                const Spacer(),
-                Container(
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Color(0x1F987AA5),
-                  ),
-                  padding: const EdgeInsetsDirectional.all(30),
-                  child: TotemIcon(
-                    isOffline ? TotemIcons.wifiOff : TotemIcons.errorOutlined,
-                    size: 48,
-                    color: AppTheme.grey,
-                  ),
-                ),
-                Text(
-                  title,
-                  style: theme.textTheme.headlineMedium,
-                  textAlign: TextAlign.center,
-                ),
-                Text(subtitle, textAlign: TextAlign.center),
-                const Spacer(),
-                if (canRetry && onRetry != null)
-                  SizedBox(
-                    width: double.infinity,
-                    child: Column(
-                      spacing: 4,
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        ConfirmationDialogButton.elevated(
-                          onConfirm: () async => onRetry?.call(),
-                          disabled: onRetry == null,
-                          child: const Text('Try Joining Again'),
-                        ),
-                        InkWell(
-                          onTap: pop,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsetsDirectional.symmetric(
-                              horizontal: 20.0,
-                              vertical: 8,
+          body: CustomScrollView(
+            physics: const ClampingScrollPhysics(),
+            slivers: [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.all(40),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    spacing: 20,
+                    children: [
+                      const SizedBox.shrink(),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: 20,
+                        children: [
+                          Container(
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(0x1F987AA5),
                             ),
-                            child: Text(
-                              'Go back to Session Details',
-                              style: theme.textTheme.bodySmall,
-                              textAlign: TextAlign.center,
+                            padding: const EdgeInsetsDirectional.all(30),
+                            child: TotemIcon(
+                              isOffline
+                                  ? TotemIcons.wifiOff
+                                  : TotemIcons.errorOutlined,
+                              size: 48,
+                              color: AppTheme.grey,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                          Text(
+                            title,
+                            style: theme.textTheme.headlineMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                          Text(subtitle, textAlign: TextAlign.center),
+                        ],
+                      ),
+                      if (canRetry && onRetry != null)
+                        SizedBox(
+                          width: double.infinity,
+                          child: Column(
+                            spacing: 4,
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              ConfirmationDialogButton.elevated(
+                                onConfirm: () async => onRetry?.call(),
+                                disabled: onRetry == null,
+                                child: const Text('Try Joining Again'),
+                              ),
+                              InkWell(
+                                onTap: pop,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsetsDirectional.symmetric(
+                                        horizontal: 20.0,
+                                        vertical: 8,
+                                      ),
+                                  child: Text(
+                                    'Go back to Session Details',
+                                    style: theme.textTheme.bodySmall,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        const SizedBox.shrink(),
+                    ],
                   ),
-              ],
-            ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

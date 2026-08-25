@@ -11,6 +11,7 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 void main() {
   Future<void> pumpErrorScreen(
@@ -50,6 +51,85 @@ void main() {
   }
 
   group('RoomErrorScreen', () {
+    group('layout', () {
+      testWidgets('keeps the portrait layout fitted without scrolling', (
+        tester,
+      ) async {
+        tester.view
+          ..physicalSize = const Size(390, 844)
+          ..devicePixelRatio = 1;
+        addTearDown(() {
+          tester.view
+            ..resetPhysicalSize()
+            ..resetDevicePixelRatio();
+        });
+
+        await pumpErrorScreen(
+          tester,
+          onRetry: () async {},
+          initiallyOffline: true,
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(CustomScrollView), findsOneWidget);
+        expect(
+          tester
+              .state<ScrollableState>(find.byType(Scrollable))
+              .position
+              .maxScrollExtent,
+          0,
+        );
+
+        await tester.drag(
+          find.byType(CustomScrollView),
+          const Offset(0, -100),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          tester
+              .state<ScrollableState>(find.byType(Scrollable))
+              .position
+              .pixels,
+          0,
+        );
+      });
+
+      testWidgets('scrolls instead of overflowing in short landscape', (
+        tester,
+      ) async {
+        tester.view
+          ..physicalSize = const Size(844, 390)
+          ..devicePixelRatio = 1;
+        addTearDown(() {
+          tester.view
+            ..resetPhysicalSize()
+            ..resetDevicePixelRatio();
+        });
+
+        await pumpErrorScreen(
+          tester,
+          onRetry: () async {},
+          initiallyOffline: true,
+        );
+
+        expect(tester.takeException(), isNull);
+        final scrollable = tester.state<ScrollableState>(
+          find.byType(Scrollable),
+        );
+        expect(scrollable.position.maxScrollExtent, greaterThan(0));
+
+        await tester.drag(
+          find.byType(CustomScrollView),
+          const Offset(0, -100),
+        );
+        await tester.pumpAndSettle();
+
+        expect(scrollable.position.pixels, greaterThan(0));
+        expect(find.text('Go back to Session Details'), findsOneWidget);
+      });
+    });
+
     group('generic error (no RoomErrorResponse)', () {
       testWidgets('shows default title and subtitle', (tester) async {
         await pumpErrorScreen(tester, onRetry: () async {});
@@ -70,14 +150,14 @@ void main() {
         await pumpErrorScreen(tester, onRetry: () async {});
 
         expect(find.text('Try Joining Again'), findsOneWidget);
-        expect(find.byType(OutlinedButton), findsOneWidget);
+        expect(find.byType(ConfirmationDialogButton), findsOneWidget);
       });
 
       testWidgets('hides retry button when onRetry is null', (tester) async {
         await pumpErrorScreen(tester);
 
         expect(find.text('Try Joining Again'), findsNothing);
-        expect(find.byType(OutlinedButton), findsNothing);
+        expect(find.byType(ConfirmationDialogButton), findsNothing);
       });
 
       testWidgets('retry button invokes onRetry callback', (tester) async {
