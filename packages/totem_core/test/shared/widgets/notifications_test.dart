@@ -479,6 +479,30 @@ void main() {
       expect(find.text('Never built'), findsNothing);
     });
 
+    testWidgets(
+      'dismissImmediately removes a mounted banner without animating',
+      (
+        tester,
+      ) async {
+        final context = await pumpHost(tester);
+        final controller = NotificationController();
+
+        final request = controller.showPermanent(
+          context,
+          icon: TotemIcons.chat,
+          title: 'Remove now',
+          message: 'Must not overlap the next screen',
+        );
+        await tester.pump();
+        expect(find.text('Remove now'), findsOneWidget);
+
+        request.dismissImmediately();
+        await tester.pump();
+
+        expect(find.text('Remove now'), findsNothing);
+      },
+    );
+
     testWidgets('showTimed drops the banner while the app is hidden', (
       tester,
     ) async {

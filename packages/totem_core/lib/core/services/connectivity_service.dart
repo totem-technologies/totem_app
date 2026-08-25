@@ -18,8 +18,12 @@ Stream<List<ConnectivityResult>> connectivityStream(Ref ref) {
 
 @riverpod
 Future<bool> isOffline(Ref ref) async {
-  final connectivityResult = await ref
-      .read(connectivityProvider)
-      .checkConnectivity();
-  return connectivityResult.contains(ConnectivityResult.none);
+  try {
+    final connectivityResult = await ref
+        .read(connectivityProvider)
+        .checkConnectivity();
+    return connectivityResult.contains(ConnectivityResult.none);
+  } catch (_) {
+    return false;
+  }
 }

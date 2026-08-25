@@ -22,10 +22,7 @@ class _StatusBanner extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
       width: double.infinity,
-      margin: const EdgeInsetsDirectional.symmetric(
-        horizontal: 20,
-        // vertical: 8,
-      ),
+      margin: const EdgeInsetsDirectional.symmetric(horizontal: 20),
       padding: const EdgeInsetsDirectional.symmetric(
         vertical: 10,
         horizontal: 20,
@@ -53,7 +50,7 @@ class _StatusBanner extends StatelessWidget {
           Expanded(
             child: Text(
               switch (status) {
-                ConnectivityStatus.offline => 'You’re Offline',
+                ConnectivityStatus.offline => "You're Offline",
                 ConnectivityStatus.online ||
                 ConnectivityStatus.recentlyReconnected => "You're back online",
               },
@@ -124,6 +121,8 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
 
     if (mounted) {
       if (isNowOffline) {
+        _reconnectedTimer?.cancel();
+        _reconnectedTimer = null;
         setState(() {
           _status = ConnectivityStatus.offline;
         });
@@ -135,7 +134,8 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
           });
           _reconnectedTimer?.cancel();
           _reconnectedTimer = Timer(const Duration(seconds: 3), () {
-            if (mounted) {
+            _reconnectedTimer = null;
+            if (mounted && _status == ConnectivityStatus.recentlyReconnected) {
               setState(() {
                 _status = ConnectivityStatus.online;
               });
@@ -201,10 +201,7 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
     final shouldShow = _status != ConnectivityStatus.online;
 
     return SafeArea(
-      left: shouldShow,
       top: shouldShow,
-      right: shouldShow,
-      bottom: shouldShow,
       child: Column(
         children: [
           AnimatedSwitcher(
@@ -216,7 +213,11 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
               );
             },
             child: shouldShow
-                ? _StatusBanner(status: _status)
+                ? SafeArea(
+                    top: false,
+                    bottom: false,
+                    child: _StatusBanner(status: _status),
+                  )
                 : const SizedBox.shrink(key: ValueKey('online')),
           ),
           Expanded(child: widget.child),

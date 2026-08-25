@@ -146,6 +146,16 @@ class NotificationRequest {
     close();
   }
 
+  void dismissImmediately() {
+    if (_isClosed || _isDismissing) return;
+
+    _isDismissing = true;
+    if (_isShown) {
+      overlayEntry.remove();
+    }
+    close();
+  }
+
   void close() {
     if (_isClosed) return;
 

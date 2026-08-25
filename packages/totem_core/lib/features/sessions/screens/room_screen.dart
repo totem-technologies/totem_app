@@ -152,17 +152,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   }
 
   Future<void> _initializeConnectivityStatus() async {
-    try {
-      final isOffline = await ref.read(isOfflineProvider.future);
-      if (!mounted || _isOffline != null) return;
-      setState(() => _isOffline = isOffline);
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error checking initial session connectivity',
-      );
-    }
+    final isOffline = await ref.read(isOfflineProvider.future);
+    if (!mounted || _isOffline != null) return;
+    setState(() => _isOffline = isOffline);
   }
 
   void _onConnectivityChanged(List<ConnectivityResult> results) {
@@ -187,13 +179,17 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     _offlineNotification = _notificationController.showPermanent(
       context,
       icon: TotemIcons.wifiOff,
-      title: "You're offline",
+      title: "You're Offline",
       message: 'Check your Wi-Fi or mobile data to continue.',
     );
   }
 
-  void _dismissOfflineNotification() {
-    _offlineNotification?.dismissActive();
+  void _dismissOfflineNotification({bool immediately = false}) {
+    if (immediately) {
+      _offlineNotification?.dismissImmediately();
+    } else {
+      _offlineNotification?.dismissActive();
+    }
     _offlineNotification = null;
   }
 
@@ -449,6 +445,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
           if (next == RoomScreen.disconnected || next == RoomScreen.error) {
             _clearTimeRemainingWarningTimer();
+            _dismissOfflineNotification(immediately: true);
           }
         },
       )
@@ -610,7 +607,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     DisconnectReason? disconnectReason,
   ) {
     final isInternetDisconnect =
-        _isOffline == true || isInternetDisconnectReason(disconnectReason);
+        isInternetDisconnectReason(disconnectReason) ||
+        (_isOffline == true &&
+            canOfflineStateOverrideDisconnectReason(disconnectReason));
     final disconnectionError = disconnectReason == null
         ? null
         : RoomDisconnectionError(disconnectReason);

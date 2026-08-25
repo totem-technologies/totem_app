@@ -146,7 +146,7 @@ class SessionErrorScreen extends ConsumerWidget {
                                   ? TotemIcons.wifiOff
                                   : TotemIcons.errorOutlined,
                               size: 48,
-                              color: AppTheme.grey,
+                              color: AppTheme.gray,
                             ),
                           ),
                           Text(

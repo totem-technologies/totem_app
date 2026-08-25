@@ -35,7 +35,7 @@ void main() {
     initialConnectivity.complete(true);
     await tester.pumpAndSettle();
 
-    expect(find.text('You’re Offline'), findsNothing);
+    expect(find.text("You're Offline"), findsNothing);
     expect(find.text("You're back online"), findsNothing);
   });
 
@@ -60,13 +60,50 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('You’re Offline'), findsOneWidget);
+    expect(find.text("You're Offline"), findsOneWidget);
 
     connectivityChanges.add(const [ConnectivityResult.wifi]);
     await tester.pumpAndSettle();
 
-    expect(find.text('You’re Offline'), findsNothing);
+    expect(find.text("You're Offline"), findsNothing);
     expect(find.text("You're back online"), findsOneWidget);
+  });
+
+  testWidgets('stays offline when connectivity drops during reconnection', (
+    tester,
+  ) async {
+    final connectivityChanges =
+        StreamController<List<ConnectivityResult>>.broadcast();
+    addTearDown(connectivityChanges.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          isOfflineProvider.overrideWith((ref) async => true),
+          connectivityStreamProvider.overrideWith(
+            (ref) => connectivityChanges.stream,
+          ),
+        ],
+        child: const MaterialApp(
+          home: OfflineIndicatorPage(child: Scaffold(body: SizedBox.expand())),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    connectivityChanges.add(const [ConnectivityResult.wifi]);
+    await tester.pumpAndSettle();
+    expect(find.text("You're back online"), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    connectivityChanges.add(const [ConnectivityResult.none]);
+    await tester.pumpAndSettle();
+    expect(find.text("You're Offline"), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 3));
+
+    expect(find.text("You're Offline"), findsOneWidget);
+    expect(find.text("You're back online"), findsNothing);
   });
 
   testWidgets('does not show reconnected while connectivity initializes', (
@@ -94,13 +131,13 @@ void main() {
 
     connectivityChanges.add(const [ConnectivityResult.none]);
     await tester.pumpAndSettle();
-    expect(find.text('You’re Offline'), findsOneWidget);
+    expect(find.text("You're Offline"), findsOneWidget);
 
     connectivityChanges.add(const [ConnectivityResult.wifi]);
     await tester.pumpAndSettle();
 
     expect(find.text("You're back online"), findsNothing);
-    expect(find.text('You’re Offline'), findsNothing);
+    expect(find.text("You're Offline"), findsNothing);
 
     initialConnectivity.complete(false);
     await tester.pumpAndSettle();
@@ -159,10 +196,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('You’re Offline'), findsNothing);
+    expect(find.text("You're Offline"), findsNothing);
     connectivityChanges.add(const [ConnectivityResult.none]);
     await tester.pumpAndSettle();
-    expect(find.text('You’re Offline'), findsOneWidget);
+    expect(find.text("You're Offline"), findsOneWidget);
 
     await tester.tap(find.text('Open route'));
     await tester.pumpAndSettle();
@@ -174,7 +211,7 @@ void main() {
     resumedConnectivity.complete(false);
     await tester.pumpAndSettle();
 
-    expect(find.text('You’re Offline'), findsNothing);
+    expect(find.text("You're Offline"), findsNothing);
     expect(find.text("You're back online"), findsOneWidget);
   });
 }

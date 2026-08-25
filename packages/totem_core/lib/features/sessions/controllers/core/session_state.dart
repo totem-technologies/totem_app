@@ -370,7 +370,27 @@ bool isTransientJoinDisconnectReason(DisconnectReason? reason) {
 
 /// Returns true when LiveKit reports a client-side internet disconnection.
 bool isInternetDisconnectReason(DisconnectReason? reason) {
-  return reason == DisconnectReason.disconnected ||
-      reason == DisconnectReason.signalingConnectionFailure ||
+  return reason == DisconnectReason.signalingConnectionFailure ||
       reason == DisconnectReason.reconnectAttemptsExceeded;
+}
+
+/// Returns whether a confirmed offline state may take precedence over the
+/// LiveKit disconnect reason.
+///
+/// Explicit server-side and user-initiated reasons must keep their dedicated
+/// disconnected-screen messaging. Ambiguous client-side failures may still be
+/// presented as internet failures when connectivity independently reports that
+/// the device is offline.
+bool canOfflineStateOverrideDisconnectReason(DisconnectReason? reason) {
+  return switch (reason) {
+    null ||
+    DisconnectReason.unknown ||
+    DisconnectReason.joinFailure ||
+    DisconnectReason.disconnected ||
+    DisconnectReason.signalingConnectionFailure ||
+    DisconnectReason.reconnectAttemptsExceeded ||
+    DisconnectReason.signalClose ||
+    DisconnectReason.mediaFailure => true,
+    _ => false,
+  };
 }
