@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -84,25 +83,44 @@ class OfflineIndicatorPage extends ConsumerStatefulWidget {
 class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
   ConnectivityStatus _status = ConnectivityStatus.online;
   Timer? _reconnectedTimer;
+  bool? _tickerModeEnabled;
+  bool _initialCheckCompleted = false;
+  int _connectivityRevision = 0;
 
   @override
   void initState() {
     super.initState();
-    _checkInitialConnectivity();
+    unawaited(_refreshConnectivity(isInitialCheck: true));
   }
 
-  Future<void> _checkInitialConnectivity() async {
-    final result = await ref.read(connectivityProvider).checkConnectivity();
-    _updateConnectivityStatus(result, isInitialCheck: true);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final tickerModeEnabled = TickerMode.valuesOf(context).enabled;
+    if (tickerModeEnabled && _tickerModeEnabled == false) {
+      unawaited(_refreshConnectivity());
+    }
+    _tickerModeEnabled = tickerModeEnabled;
+  }
+
+  Future<void> _refreshConnectivity({bool isInitialCheck = false}) async {
+    final revision = ++_connectivityRevision;
+    try {
+      final isOffline = await ref.refresh(isOfflineProvider.future);
+      if (!mounted || revision != _connectivityRevision) return;
+
+      _updateConnectivityStatus(isOffline, isInitialCheck: isInitialCheck);
+    } finally {
+      if (isInitialCheck) _initialCheckCompleted = true;
+    }
   }
 
   void _updateConnectivityStatus(
-    List<ConnectivityResult> result, {
+    bool isNowOffline, {
     bool isInitialCheck = false,
   }) {
     final bool wasOffline = _status == ConnectivityStatus.offline;
-    final bool isNowOffline =
-        result.isEmpty || result.contains(ConnectivityResult.none);
 
     if (mounted) {
       if (isNowOffline) {
@@ -164,7 +182,19 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
   Widget build(BuildContext context) {
     ref.listen(connectivityStreamProvider, (previous, next) {
       if (next.hasValue) {
-        _updateConnectivityStatus(next.value!);
+        final result = next.value!;
+        final isOffline =
+            result.isEmpty || result.contains(ConnectivityResult.none);
+        if (isOffline == (_status == ConnectivityStatus.offline)) {
+          if (!_initialCheckCompleted) ++_connectivityRevision;
+          return;
+        }
+
+        ++_connectivityRevision;
+        _updateConnectivityStatus(
+          isOffline,
+          isInitialCheck: !_initialCheckCompleted,
+        );
       }
     });
 
