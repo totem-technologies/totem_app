@@ -214,4 +214,40 @@ void main() {
     expect(find.text("You're Offline"), findsNothing);
     expect(find.text("You're back online"), findsOneWidget);
   });
+
+  testWidgets('refreshes connectivity when the app resumes', (tester) async {
+    var connectivityChecks = 0;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          isOfflineProvider.overrideWith((ref) async {
+            return connectivityChecks++ > 0;
+          }),
+          connectivityStreamProvider.overrideWith(
+            (ref) => const Stream<List<ConnectivityResult>>.empty(),
+          ),
+        ],
+        child: const MaterialApp(
+          home: OfflineIndicatorPage(child: Scaffold(body: SizedBox.expand())),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(connectivityChecks, 1);
+    expect(find.text("You're Offline"), findsNothing);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(connectivityChecks, 2);
+    expect(find.text("You're Offline"), findsOneWidget);
+  });
 }

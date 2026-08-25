@@ -79,6 +79,7 @@ class OfflineIndicatorPage extends ConsumerStatefulWidget {
 
 class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
   ConnectivityStatus _status = ConnectivityStatus.online;
+  late final AppLifecycleListener _appLifecycleListener;
   Timer? _reconnectedTimer;
   bool? _tickerModeEnabled;
   bool _initialCheckCompleted = false;
@@ -87,6 +88,9 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
   @override
   void initState() {
     super.initState();
+    _appLifecycleListener = AppLifecycleListener(
+      onResume: () => unawaited(_refreshConnectivity()),
+    );
     unawaited(_refreshConnectivity(isInitialCheck: true));
   }
 
@@ -174,6 +178,7 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
 
   @override
   void dispose() {
+    _appLifecycleListener.dispose();
     _reconnectedTimer?.cancel();
     super.dispose();
   }

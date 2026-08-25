@@ -136,9 +136,9 @@ class SessionErrorScreen extends ConsumerWidget {
                         spacing: 20,
                         children: [
                           Container(
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Color(0x1F987AA5),
+                              color: AppTheme.mauve.withValues(alpha: 0.12),
                             ),
                             padding: const EdgeInsetsDirectional.all(30),
                             child: TotemIcon(
