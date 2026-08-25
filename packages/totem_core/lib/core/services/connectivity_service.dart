@@ -10,6 +10,8 @@ export 'package:connectivity_plus/connectivity_plus.dart'
 
 part 'connectivity_service.g.dart';
 
+const _initialOfflineConfirmationDelay = Duration(milliseconds: 500);
+
 bool isOfflineConnectivity(List<ConnectivityResult> results) {
   return results.isEmpty || results.contains(ConnectivityResult.none);
 }
@@ -40,6 +42,7 @@ Connectivity connectivity(Ref ref) {
 Stream<bool> isOffline(Ref ref) {
   final connectivity = ref.watch(connectivityProvider);
   final controller = StreamController<bool>();
+  Timer? initialOfflineConfirmationTimer;
   Object? activeCheck;
   bool? lastValue;
   var disposed = false;
@@ -50,6 +53,27 @@ Stream<bool> isOffline(Ref ref) {
     controller.add(value);
   }
 
+  Future<void> confirmInitialOffline() async {
+    initialOfflineConfirmationTimer = null;
+    final isOffline = await _readOfflineStatus(connectivity);
+    if (disposed || lastValue != null) return;
+    emit(isOffline ?? true);
+  }
+
+  void emitStatus(bool value) {
+    if (lastValue != null || !value) {
+      initialOfflineConfirmationTimer?.cancel();
+      initialOfflineConfirmationTimer = null;
+      emit(value);
+      return;
+    }
+
+    initialOfflineConfirmationTimer ??= Timer(
+      _initialOfflineConfirmationDelay,
+      () => unawaited(confirmInitialOffline()),
+    );
+  }
+
   Future<void> refresh() async {
     final check = Object();
     activeCheck = check;
@@ -57,7 +81,7 @@ Stream<bool> isOffline(Ref ref) {
     final isOffline = await _readOfflineStatus(connectivity);
     if (!identical(activeCheck, check)) return;
     if (isOffline != null) {
-      emit(isOffline);
+      emitStatus(isOffline);
     } else if (lastValue == null) {
       emit(false);
     }
@@ -66,7 +90,7 @@ Stream<bool> isOffline(Ref ref) {
   final subscription = connectivity.onConnectivityChanged.listen(
     (result) {
       activeCheck = null;
-      emit(isOfflineConnectivity(result));
+      emitStatus(isOfflineConnectivity(result));
     },
     onError: (Object error, StackTrace stackTrace) {
       if (disposed) return;
@@ -84,6 +108,7 @@ Stream<bool> isOffline(Ref ref) {
 
   ref.onDispose(() {
     disposed = true;
+    initialOfflineConfirmationTimer?.cancel();
     lifecycleListener.dispose();
     unawaited(subscription.cancel());
     unawaited(controller.close());

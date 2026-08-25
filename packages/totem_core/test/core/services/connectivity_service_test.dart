@@ -44,6 +44,77 @@ void main() {
   });
 
   group('isOfflineProvider', () {
+    testWidgets('filters a transient initial offline result', (tester) async {
+      final connectivity = _MockConnectivity();
+      final changes = StreamController<List<ConnectivityResult>>();
+      final initialCheck = Completer<List<ConnectivityResult>>();
+      var checks = 0;
+      addTearDown(changes.close);
+      when(connectivity.checkConnectivity).thenAnswer((_) {
+        if (checks++ == 0) return initialCheck.future;
+        return Future.value(const [ConnectivityResult.wifi]);
+      });
+      when(
+        () => connectivity.onConnectivityChanged,
+      ).thenAnswer((_) => changes.stream);
+
+      final container = ProviderContainer(
+        overrides: [connectivityProvider.overrideWithValue(connectivity)],
+      );
+      addTearDown(container.dispose);
+      final values = <bool>[];
+      final subscription = container.listen(
+        isOfflineProvider,
+        (_, next) => next.whenData(values.add),
+        fireImmediately: true,
+      );
+      addTearDown(subscription.close);
+
+      changes.add(const [ConnectivityResult.none]);
+      await tester.pump();
+      expect(values, isEmpty);
+
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
+
+      expect(values, [false]);
+      initialCheck.complete(const [ConnectivityResult.wifi]);
+      await tester.pump();
+      expect(values, [false]);
+    });
+
+    testWidgets('publishes a confirmed initial offline result', (tester) async {
+      final connectivity = _MockConnectivity();
+      final changes = StreamController<List<ConnectivityResult>>();
+      addTearDown(changes.close);
+      when(
+        connectivity.checkConnectivity,
+      ).thenAnswer((_) async => const [ConnectivityResult.none]);
+      when(
+        () => connectivity.onConnectivityChanged,
+      ).thenAnswer((_) => changes.stream);
+
+      final container = ProviderContainer(
+        overrides: [connectivityProvider.overrideWithValue(connectivity)],
+      );
+      addTearDown(container.dispose);
+      final values = <bool>[];
+      final subscription = container.listen(
+        isOfflineProvider,
+        (_, next) => next.whenData(values.add),
+        fireImmediately: true,
+      );
+      addTearDown(subscription.close);
+
+      await tester.pump();
+      expect(values, isEmpty);
+
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
+
+      expect(values, [true]);
+    });
+
     test('combines the current check and distinct stream changes', () async {
       final connectivity = _MockConnectivity();
       final changes = StreamController<List<ConnectivityResult>>();
@@ -78,7 +149,7 @@ void main() {
       expect(values, [false, true, false]);
     });
 
-    test('ignores a stale check after a stream update', () async {
+    test('ignores a stale check after a newer stream update', () async {
       final connectivity = _MockConnectivity();
       final changes = StreamController<List<ConnectivityResult>>();
       final currentCheck = Completer<List<ConnectivityResult>>();
@@ -101,13 +172,13 @@ void main() {
       );
       addTearDown(subscription.close);
 
-      changes.add(const [ConnectivityResult.none]);
+      changes.add(const [ConnectivityResult.wifi]);
       await pumpEventQueue();
-      expect(container.read(isOfflineProvider).value, isTrue);
+      expect(container.read(isOfflineProvider).value, isFalse);
 
-      currentCheck.complete(const [ConnectivityResult.wifi]);
+      currentCheck.complete(const [ConnectivityResult.none]);
       await pumpEventQueue();
-      expect(container.read(isOfflineProvider).value, isTrue);
+      expect(container.read(isOfflineProvider).value, isFalse);
     });
 
     testWidgets('refreshes the current status when the app resumes', (
