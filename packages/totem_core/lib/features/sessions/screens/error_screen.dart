@@ -97,6 +97,11 @@ class SessionErrorScreen extends ConsumerWidget {
     const canRetry = true;
 
     final theme = Theme.of(context);
+
+    void pop() {
+      TotemRouter.instance.popOrHome(context);
+    }
+
     return RoomBackground(
       child: SafeArea(
         child: Scaffold(
@@ -110,7 +115,7 @@ class SessionErrorScreen extends ConsumerWidget {
               tooltip: MaterialLocalizations.of(
                 context,
               ).backButtonTooltip,
-              onPressed: () => TotemRouter.instance.popOrHome(context),
+              onPressed: pop,
             ),
           ),
           extendBodyBehindAppBar: true,
@@ -143,25 +148,32 @@ class SessionErrorScreen extends ConsumerWidget {
                 if (canRetry && onRetry != null)
                   SizedBox(
                     width: double.infinity,
-                    child: ConfirmationDialogButton.elevated(
-                      onConfirm: () async => onRetry?.call(),
-                      disabled: onRetry == null,
-                      // style: OutlinedButton.styleFrom(
-                      //   minimumSize: const Size(120, 50),
-                      //   padding: const EdgeInsetsDirectional.symmetric(
-                      //     horizontal: 20,
-                      //     vertical: 8,
-                      //   ),
-                      //   backgroundColor: theme.colorScheme.primary,
-                      //   foregroundColor: theme.colorScheme.onPrimary,
-                      //   shape: RoundedRectangleBorder(
-                      //     borderRadius: BorderRadius.circular(20),
-                      //     side: BorderSide(
-                      //       color: theme.colorScheme.onPrimary,
-                      //     ),
-                      //   ),
-                      // ),
-                      child: const Text('Try Joining Again'),
+                    child: Column(
+                      spacing: 4,
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        ConfirmationDialogButton.elevated(
+                          onConfirm: () async => onRetry?.call(),
+                          disabled: onRetry == null,
+                          child: const Text('Try Joining Again'),
+                        ),
+                        InkWell(
+                          onTap: pop,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsetsDirectional.symmetric(
+                              horizontal: 20.0,
+                              vertical: 8,
+                            ),
+                            child: Text(
+                              'Go back to Session Details',
+                              style: theme.textTheme.bodySmall,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
               ],
