@@ -188,8 +188,7 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
     ref.listen(connectivityStreamProvider, (previous, next) {
       if (next.hasValue) {
         final result = next.value!;
-        final isOffline =
-            result.isEmpty || result.contains(ConnectivityResult.none);
+        final isOffline = isOfflineConnectivity(result);
         if (isOffline == (_status == ConnectivityStatus.offline)) {
           if (!_initialCheckCompleted) ++_connectivityRevision;
           return;
@@ -207,6 +206,9 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
 
     return SafeArea(
       top: shouldShow,
+      bottom: false,
+      left: false,
+      right: false,
       child: Column(
         children: [
           AnimatedSwitcher(
@@ -219,6 +221,7 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
             },
             child: shouldShow
                 ? SafeArea(
+                    key: ValueKey(_status),
                     top: false,
                     bottom: false,
                     child: _StatusBanner(status: _status),

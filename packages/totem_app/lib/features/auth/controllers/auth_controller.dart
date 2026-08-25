@@ -15,6 +15,7 @@ import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/cache_service.dart';
+import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/core/services/local_storage_service.dart';
 import 'package:totem_core/core/services/secure_storage.dart';
 import 'package:totem_core/shared/logger.dart';
@@ -214,7 +215,7 @@ class MobileAuthController extends AuthController {
 
     try {
       final connectivityResult = await Connectivity().checkConnectivity();
-      final isOffline = connectivityResult.contains(ConnectivityResult.none);
+      final isOffline = isOfflineConnectivity(connectivityResult);
 
       final accessToken = await _secureStorage.read(
         key: AppConsts.accessTokenKey,

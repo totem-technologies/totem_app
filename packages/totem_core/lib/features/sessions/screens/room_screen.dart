@@ -161,8 +161,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     if (!mounted) return;
 
     final wasOffline = _isOffline;
-    final isOffline =
-        results.isEmpty || results.contains(ConnectivityResult.none);
+    final isOffline = isOfflineConnectivity(results);
     if (wasOffline != isOffline) {
       setState(() => _isOffline = isOffline);
     }

@@ -7,7 +7,6 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
-import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/circle_icon_button.dart';
@@ -81,8 +80,7 @@ class SessionErrorScreen extends ConsumerWidget {
     final connectivity = ref.watch(connectivityStreamProvider);
     final initialIsOffline = ref.watch(isOfflineProvider);
     final isOfflineFromProvider = connectivity.hasValue
-        ? connectivity.value!.isEmpty ||
-              connectivity.value!.contains(ConnectivityResult.none)
+        ? isOfflineConnectivity(connectivity.value!)
         : initialIsOffline.value ?? false;
     final isOfflineFromError =
         resolvedError is RoomDisconnectionError &&
@@ -102,101 +100,101 @@ class SessionErrorScreen extends ConsumerWidget {
       TotemRouter.instance.popOrHome(context);
     }
 
-    return RoomBackground(
-      child: SafeArea(
-        child: Scaffold(
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            systemOverlayStyle: SystemUiOverlayStyle.dark,
-            leading: CircleIconButton(
-              margin: const EdgeInsetsDirectional.only(start: 20, top: 20),
-              icon: TotemIcons.arrowBack,
-              tooltip: MaterialLocalizations.of(
-                context,
-              ).backButtonTooltip,
-              onPressed: pop,
-            ),
-          ),
-          extendBodyBehindAppBar: true,
-          body: CustomScrollView(
-            physics: const ClampingScrollPhysics(),
-            slivers: [
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.all(40),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    spacing: 20,
-                    children: [
-                      const SizedBox.shrink(),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        spacing: 20,
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppTheme.mauve.withValues(alpha: 0.12),
-                            ),
-                            padding: const EdgeInsetsDirectional.all(30),
-                            child: TotemIcon(
-                              isOffline
-                                  ? TotemIcons.wifiOff
-                                  : TotemIcons.errorOutlined,
-                              size: 48,
-                              color: AppTheme.gray,
-                            ),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        leading: CircleIconButton(
+          margin: const EdgeInsetsDirectional.only(start: 20, top: 20),
+          icon: TotemIcons.arrowBack,
+          tooltip: MaterialLocalizations.of(
+            context,
+          ).backButtonTooltip,
+          onPressed: pop,
+        ),
+      ),
+      extendBodyBehindAppBar: true,
+      body: SafeArea(
+        top: false,
+        // uses a sliver to avoid overflow in landscape
+        child: CustomScrollView(
+          physics: const ClampingScrollPhysics(),
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.all(40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  spacing: 20,
+                  children: [
+                    const SizedBox.shrink(),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 20,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppTheme.mauve.withValues(alpha: 0.12),
                           ),
-                          Text(
-                            title,
-                            style: theme.textTheme.headlineMedium,
-                            textAlign: TextAlign.center,
+                          padding: const EdgeInsetsDirectional.all(30),
+                          child: TotemIcon(
+                            isOffline
+                                ? TotemIcons.wifiOff
+                                : TotemIcons.errorOutlined,
+                            size: 48,
+                            color: AppTheme.gray,
                           ),
-                          Text(subtitle, textAlign: TextAlign.center),
-                        ],
-                      ),
-                      if (canRetry && onRetry != null)
-                        SizedBox(
-                          width: double.infinity,
-                          child: Column(
-                            spacing: 4,
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              ConfirmationDialogButton.elevated(
-                                onConfirm: () async => onRetry?.call(),
-                                disabled: onRetry == null,
-                                child: const Text('Try Joining Again'),
-                              ),
-                              InkWell(
-                                onTap: pop,
-                                borderRadius: BorderRadius.circular(12),
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsetsDirectional.symmetric(
-                                        horizontal: 20.0,
-                                        vertical: 8,
-                                      ),
-                                  child: Text(
-                                    'Go back to Session Details',
-                                    style: theme.textTheme.bodySmall,
-                                    textAlign: TextAlign.center,
-                                  ),
+                        ),
+                        Text(
+                          title,
+                          style: theme.textTheme.headlineMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        Text(subtitle, textAlign: TextAlign.center),
+                      ],
+                    ),
+                    if (canRetry && onRetry != null)
+                      SizedBox(
+                        width: double.infinity,
+                        child: Column(
+                          spacing: 4,
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            ConfirmationDialogButton.elevated(
+                              onConfirm: () async => onRetry?.call(),
+                              disabled: onRetry == null,
+                              child: const Text('Try Joining Again'),
+                            ),
+                            InkWell(
+                              onTap: pop,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsetsDirectional.symmetric(
+                                  horizontal: 20.0,
+                                  vertical: 8,
+                                ),
+                                child: Text(
+                                  'Go back to Session Details',
+                                  style: theme.textTheme.bodySmall,
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
-                            ],
-                          ),
-                        )
-                      else
-                        const SizedBox.shrink(),
-                    ],
-                  ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      const SizedBox.shrink(),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

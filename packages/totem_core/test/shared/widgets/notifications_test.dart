@@ -291,6 +291,48 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Duplicate'), findsNothing);
     });
+
+    testWidgets(
+      'duplicate requested during dismissal is shown after it closes',
+      (tester) async {
+        final context = await pumpHost(tester);
+        final controller = NotificationController();
+
+        final first = controller.showPermanent(
+          context,
+          icon: TotemIcons.pause,
+          title: 'Flaky connection',
+          message: 'Connection dropped',
+        );
+        final duplicate = controller.showPermanent(
+          context,
+          icon: TotemIcons.pause,
+          title: 'Flaky connection',
+          message: 'Connection dropped',
+        );
+
+        expect(identical(duplicate, first), isTrue);
+        await tester.pump();
+
+        first.dismissActive();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        final replacement = controller.showPermanent(
+          context,
+          icon: TotemIcons.pause,
+          title: 'Flaky connection',
+          message: 'Connection dropped',
+        );
+
+        expect(identical(replacement, first), isFalse);
+        await tester.pumpAndSettle();
+        expect(find.text('Flaky connection'), findsOneWidget);
+
+        replacement.dismissActive();
+        await tester.pumpAndSettle();
+        expect(find.text('Flaky connection'), findsNothing);
+      },
+    );
   });
 
   group('NotificationController', () {

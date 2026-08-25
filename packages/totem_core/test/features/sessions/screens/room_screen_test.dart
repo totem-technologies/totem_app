@@ -1220,6 +1220,44 @@ void main() {
       expect(find.text("You're Offline"), findsOneWidget);
     });
 
+    testWidgets(
+      'shows the offline notification again when connectivity drops during '
+      'dismissal',
+      (tester) async {
+        final connectivityChanges =
+            StreamController<List<ConnectivityResult>>();
+        addTearDown(connectivityChanges.close);
+
+        await _pumpRoomScreenWithMutableState(
+          tester,
+          event: _createSessionEvent(
+            start: DateTime.now().subtract(const Duration(minutes: 1)),
+            duration: 10,
+          ),
+          connectionState: RoomConnectionState.connected,
+          roomStatus: RoomStatus.active,
+          extraOverrides: [
+            isOfflineProvider.overrideWith((ref) async => false),
+            connectivityStreamProvider.overrideWith(
+              (ref) => connectivityChanges.stream,
+            ),
+          ],
+        );
+
+        connectivityChanges.add(const [ConnectivityResult.none]);
+        await tester.pumpAndSettle();
+        expect(find.text("You're Offline"), findsOneWidget);
+
+        connectivityChanges.add(const [ConnectivityResult.wifi]);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        connectivityChanges.add(const [ConnectivityResult.none]);
+        await tester.pumpAndSettle();
+
+        expect(find.text("You're Offline"), findsOneWidget);
+      },
+    );
+
     testWidgets('dismisses the offline notification on disconnected screen', (
       tester,
     ) async {

@@ -188,28 +188,38 @@ class NotificationController {
   // Queue management
   // ---------------------------------------------------------------------------
 
-  bool _hasDuplicate(Object? dedupeKey) {
-    if (dedupeKey == null) return false;
+  NotificationRequest? _findDuplicate(Object? dedupeKey) {
+    if (dedupeKey == null) return null;
 
-    if (_activeRequest?.dedupeKey == dedupeKey) {
-      return true;
+    final activeRequest = _activeRequest;
+    if (activeRequest != null &&
+        !activeRequest._isDismissing &&
+        activeRequest.dedupeKey == dedupeKey) {
+      return activeRequest;
     }
 
-    return _queue.any((request) => request.dedupeKey == dedupeKey);
+    for (final request in _queue) {
+      if (request.dedupeKey == dedupeKey) return request;
+    }
+
+    return null;
   }
 
-  void _enqueue(NotificationRequest request) {
+  NotificationRequest _enqueue(NotificationRequest request) {
     if (_blocked) {
       request.cancelQueued();
-      return;
+      return request;
     }
 
-    if (_hasDuplicate(request.dedupeKey)) {
-      return;
+    final duplicate = _findDuplicate(request.dedupeKey);
+    if (duplicate != null) {
+      request.cancelQueued();
+      return duplicate;
     }
 
     _queue.add(request);
     _pumpQueue();
+    return request;
   }
 
   void _pumpQueue() {
@@ -322,9 +332,7 @@ class NotificationController {
       return request;
     }
 
-    _enqueue(request);
-
-    return request;
+    return _enqueue(request);
   }
 
   /// Shows a standard notification banner that auto-dismisses after
