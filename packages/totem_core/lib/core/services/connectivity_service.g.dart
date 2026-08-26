@@ -21,7 +21,7 @@ final class ConnectivityProvider
         argument: null,
         retry: null,
         name: r'connectivityProvider',
-        isAutoDispose: false,
+        isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -48,7 +48,7 @@ final class ConnectivityProvider
   }
 }
 
-String _$connectivityHash() => r'15246627d0ae599bcd01382c80d3d25b9e9b4e18';
+String _$connectivityHash() => r'6d67af0ea4110f6ee0246dd332f90f8901380eda';
 
 @ProviderFor(isOffline)
 final isOfflineProvider = IsOfflineProvider._();

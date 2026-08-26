@@ -34,15 +34,14 @@ Future<bool> checkIsOffline(Connectivity connectivity) async {
   return await _readOfflineStatus(connectivity) ?? false;
 }
 
-@Riverpod(keepAlive: true)
+@riverpod
 Connectivity connectivity(Ref ref) {
   return Connectivity();
 }
 
 @Riverpod(keepAlive: true)
 Stream<bool> isOffline(Ref ref) {
-  // final connectivity = ref.watch(connectivityProvider);
-  final connectivity = Connectivity();
+  final connectivity = ref.watch(connectivityProvider);
   final controller = StreamController<bool>();
   Timer? offlineConfirmationTimer;
   Object? offlineConfirmation;
