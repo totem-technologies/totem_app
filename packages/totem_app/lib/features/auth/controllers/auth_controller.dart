@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 // ignore: depend_on_referenced_packages
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -15,6 +14,7 @@ import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/cache_service.dart';
+import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/core/services/local_storage_service.dart';
 import 'package:totem_core/core/services/secure_storage.dart';
 import 'package:totem_core/shared/logger.dart';
@@ -213,8 +213,7 @@ class MobileAuthController extends AuthController {
     _setState(AuthState.loading());
 
     try {
-      final connectivityResult = await Connectivity().checkConnectivity();
-      final isOffline = connectivityResult.contains(ConnectivityResult.none);
+      final isOffline = await checkIsOffline(ref.read(connectivityProvider));
 
       final accessToken = await _secureStorage.read(
         key: AppConsts.accessTokenKey,

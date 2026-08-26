@@ -11,6 +11,7 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
@@ -181,6 +182,7 @@ void main() {
     bool alreadyPresent = false,
     bool successfulJoin = false,
     bool pendingJoin = false,
+    bool initiallyOffline = false,
     PreJoinPreviewTrackFactory? trackFactory,
   }) async {
     await tester.pumpWidget(
@@ -191,6 +193,9 @@ void main() {
           ),
           preJoinPreviewTrackFactoryProvider.overrideWithValue(
             trackFactory ?? _TrackFactory(),
+          ),
+          isOfflineProvider.overrideWith(
+            (ref) => Stream.value(initiallyOffline),
           ),
           sessionTokenProvider(_slug).overrideWith((_) async {
             if (tokenError != null) throw tokenError;
@@ -283,7 +288,27 @@ void main() {
     await pumpScreen(tester, tokenError: Exception('token failed'));
 
     expect(find.byType(SessionErrorScreen), findsOneWidget);
-    expect(find.text('Retry'), findsOneWidget);
+    expect(find.text('Try Joining Again'), findsOneWidget);
+  });
+
+  testWidgets('renders offline error when internet prevents joining', (
+    tester,
+  ) async {
+    await pumpScreen(
+      tester,
+      tokenError: Exception('token failed'),
+      initiallyOffline: true,
+    );
+
+    expect(find.byType(SessionErrorScreen), findsOneWidget);
+    expect(find.text("You're Offline"), findsOneWidget);
+    expect(
+      find.text(
+        'Video sessions require an active internet connection.\n'
+        'Check your Wi-Fi or mobile data, then tap below to rejoin.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('successful join transitions to VideoSessionScreen', (

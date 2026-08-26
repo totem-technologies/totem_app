@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +10,7 @@ import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
+import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
@@ -19,6 +22,7 @@ import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
@@ -357,6 +361,7 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
   bool hasKeeperDisconnected = false,
   RoomScreen roomScreen = RoomScreen.listening,
   List<Object?> extraOverrides = const [],
+  Future<void> Function(ProviderContainer container)? beforeMount,
 }) async {
   final eventStateProvider =
       NotifierProvider<_SessionEventOverrideNotifier, SessionDetailSchema?>(
@@ -379,56 +384,68 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
         () => _KeeperDisconnectedOverrideNotifier(hasKeeperDisconnected),
       );
 
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        authControllerProvider.overrideWith(
-          () => FakeAuthController(
-            AuthState.authenticated(
-              user: UserSchema(
-                profileAvatarType: ProfileAvatarTypeEnum.im,
-                circleCount: 0,
-                email: 'test@totem.org',
-                name: 'Test User',
-                slug: 'user-1',
-                dateCreated: DateTime(2024),
-              ),
-            ),
+  final overrides = <Object?>[
+    authControllerProvider.overrideWith(
+      () => FakeAuthController(
+        AuthState.authenticated(
+          user: UserSchema(
+            profileAvatarType: ProfileAvatarTypeEnum.im,
+            circleCount: 0,
+            email: 'test@totem.org',
+            name: 'Test User',
+            slug: 'user-1',
+            dateCreated: DateTime(2024),
           ),
-        ),
-        currentSessionProvider.overrideWith((ref) => null),
-        currentSessionEventProvider.overrideWith(
-          (ref) => ref.watch(eventStateProvider),
-        ),
-        resolveCurrentScreenProvider.overrideWith(
-          (ref) => ref.watch(roomScreenStateProvider),
-        ),
-        connectionStateProvider.overrideWith(
-          (ref) => ref.watch(connectionStateStateProvider),
-        ),
-        roomStatusProvider.overrideWith(
-          (ref) => ref.watch(roomStatusStateProvider),
-        ),
-        hasKeeperDisconnectedProvider.overrideWith(
-          (ref) => ref.watch(hasKeeperDisconnectedStateProvider),
-        ),
-        disconnectionReasonProvider.overrideWith((ref) => null),
-        ...extraOverrides.cast(),
-      ],
-      child: const MaterialApp(
-        home: VideoSessionScreen(
-          sessionSlug: 'test-session',
-          loadingScreen: SizedBox.shrink(),
         ),
       ),
     ),
+    currentSessionProvider.overrideWith((ref) => null),
+    currentSessionEventProvider.overrideWith(
+      (ref) => ref.watch(eventStateProvider),
+    ),
+    resolveCurrentScreenProvider.overrideWith(
+      (ref) => ref.watch(roomScreenStateProvider),
+    ),
+    connectionStateProvider.overrideWith(
+      (ref) => ref.watch(connectionStateStateProvider),
+    ),
+    roomStatusProvider.overrideWith(
+      (ref) => ref.watch(roomStatusStateProvider),
+    ),
+    hasKeeperDisconnectedProvider.overrideWith(
+      (ref) => ref.watch(hasKeeperDisconnectedStateProvider),
+    ),
+    disconnectionReasonProvider.overrideWith((ref) => null),
+    ...extraOverrides,
+  ];
+  const child = MaterialApp(
+    home: VideoSessionScreen(
+      sessionSlug: 'test-session',
+      loadingScreen: SizedBox.shrink(),
+    ),
   );
-  await tester.pumpAndSettle();
 
-  final container = ProviderScope.containerOf(
-    tester.element(find.byType(VideoSessionScreen)),
-    listen: false,
-  );
+  late final ProviderContainer container;
+  if (beforeMount case final beforeMount?) {
+    container = ProviderContainer(overrides: overrides.cast());
+    addTearDown(container.dispose);
+    await beforeMount(container);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(container: container, child: child),
+    );
+  } else {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: overrides.cast(),
+        child: child,
+      ),
+    );
+    container = ProviderScope.containerOf(
+      tester.element(find.byType(VideoSessionScreen)),
+      listen: false,
+    );
+  }
+  await tester.pumpAndSettle();
 
   return _MutableRoomScreenHarness(
     container: container,
@@ -460,6 +477,12 @@ void main() {
       final localParticipant = _buildMockParticipant('user-1');
 
       when(() => session.room).thenReturn(FakeRoom(localParticipant));
+      when(
+        () => localParticipant.setCameraEnabled(false),
+      ).thenAnswer((_) async => null);
+      when(
+        () => localParticipant.setMicrophoneEnabled(false),
+      ).thenAnswer((_) async => null);
       when(() => session.devices).thenReturn(devices);
       when(() => devices.isCameraEnabled).thenReturn(false);
       when(() => devices.isMicrophoneEnabled).thenReturn(false);
@@ -533,6 +556,93 @@ void main() {
 
       expect(find.byType(SessionErrorScreen), findsOneWidget);
     });
+
+    testWidgets('renders offline error screen for a network disconnection', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.disconnected,
+        connectionState: RoomConnectionState.disconnected,
+        disconnectReason: DisconnectReason.reconnectAttemptsExceeded,
+      );
+
+      expect(find.byType(SessionErrorScreen), findsOneWidget);
+      expect(find.byType(SessionDisconnectedScreen), findsNothing);
+      expect(find.text("You're Offline"), findsOneWidget);
+      expect(
+        find.text(
+          'Video sessions require an active internet connection.\n'
+          'Check your Wi-Fi or mobile data, then tap below to rejoin.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'does not infer internet loss from a generic disconnected reason',
+      (tester) async {
+        final event = _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 5)),
+          duration: 10,
+        );
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: event,
+          screen: RoomScreen.disconnected,
+          connectionState: RoomConnectionState.disconnected,
+          disconnectReason: DisconnectReason.disconnected,
+          extraOverrides: [
+            isOfflineProvider.overrideWith((ref) => Stream.value(false)),
+          ],
+        );
+
+        expect(find.byType(SessionDisconnectedScreen), findsOneWidget);
+        expect(find.byType(SessionErrorScreen), findsNothing);
+        await tester.pump(const Duration(seconds: 3));
+      },
+    );
+
+    for (final reason in [
+      DisconnectReason.clientInitiated,
+      DisconnectReason.duplicateIdentity,
+      DisconnectReason.participantRemoved,
+      DisconnectReason.roomDeleted,
+    ]) {
+      testWidgets('preserves $reason messaging while device is offline', (
+        tester,
+      ) async {
+        final event = _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 5)),
+          duration: 10,
+        );
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: event,
+          screen: RoomScreen.disconnected,
+          connectionState: RoomConnectionState.disconnected,
+          disconnectReason: reason,
+          extraOverrides: [
+            isOfflineProvider.overrideWith((ref) => Stream.value(true)),
+          ],
+        );
+
+        expect(find.byType(SessionDisconnectedScreen), findsOneWidget);
+        expect(find.byType(SessionErrorScreen), findsNothing);
+        await tester.pump(const Duration(seconds: 3));
+      });
+    }
 
     testWidgets('renders receive totem screen for RoomScreen.receiving', (
       tester,
@@ -1020,6 +1130,217 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Audio route changed'), findsNothing);
+    });
+  });
+
+  group('VideoRoomScreen - offline notification lifecycle', () {
+    testWidgets(
+      'notifies when cached connectivity changes from online to offline',
+      (tester) async {
+        final connectivityChanges = StreamController<bool>();
+        addTearDown(connectivityChanges.close);
+
+        await _pumpRoomScreenWithMutableState(
+          tester,
+          event: _createSessionEvent(
+            start: DateTime.now().subtract(const Duration(minutes: 1)),
+            duration: 10,
+          ),
+          connectionState: RoomConnectionState.connected,
+          roomStatus: RoomStatus.active,
+          extraOverrides: [
+            isOfflineProvider.overrideWith(
+              (ref) => connectivityChanges.stream,
+            ),
+          ],
+          beforeMount: (container) async {
+            final subscription = container.listen(
+              isOfflineProvider,
+              (_, _) {},
+              fireImmediately: true,
+            );
+            await container.pump();
+            connectivityChanges.add(false);
+            await container.pump();
+            expect(container.read(isOfflineProvider).value, isFalse);
+            subscription.close();
+          },
+        );
+
+        connectivityChanges.add(true);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.byType(NotificationBanner), findsOneWidget);
+        expect(find.text("You're Offline"), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'shows a persistent notification on connectivity loss and dismisses it '
+      'on reconnection',
+      (tester) async {
+        final connectivityChanges = StreamController<bool>();
+        addTearDown(connectivityChanges.close);
+
+        await _pumpRoomScreenWithMutableState(
+          tester,
+          event: _createSessionEvent(
+            start: DateTime.now().subtract(const Duration(minutes: 1)),
+            duration: 10,
+          ),
+          connectionState: RoomConnectionState.connected,
+          roomStatus: RoomStatus.active,
+          extraOverrides: [
+            isOfflineProvider.overrideWith(
+              (ref) => connectivityChanges.stream,
+            ),
+          ],
+        );
+
+        connectivityChanges.add(false);
+        await tester.pump();
+        connectivityChanges.add(true);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(NotificationBanner), findsOneWidget);
+        expect(find.text("You're Offline"), findsOneWidget);
+        expect(
+          find.text('Check your Wi-Fi or mobile data to continue.'),
+          findsOneWidget,
+        );
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is TotemIcon && widget.icon == TotemIcons.wifiOff,
+          ),
+          findsOneWidget,
+        );
+
+        await tester.pump(const Duration(seconds: 5));
+        expect(find.byType(NotificationBanner), findsOneWidget);
+
+        connectivityChanges.add(true);
+        await tester.pumpAndSettle();
+        expect(find.byType(NotificationBanner), findsOneWidget);
+
+        connectivityChanges.add(false);
+        await tester.pumpAndSettle();
+        expect(find.byType(NotificationBanner), findsNothing);
+
+        connectivityChanges.add(true);
+        await tester.pumpAndSettle();
+        expect(find.byType(NotificationBanner), findsOneWidget);
+      },
+    );
+
+    testWidgets('does not notify when the session starts offline', (
+      tester,
+    ) async {
+      final connectivityChanges = StreamController<bool>();
+      addTearDown(connectivityChanges.close);
+
+      await _pumpRoomScreenWithMutableState(
+        tester,
+        event: _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 1)),
+          duration: 10,
+        ),
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+        extraOverrides: [
+          isOfflineProvider.overrideWith(
+            (ref) => connectivityChanges.stream,
+          ),
+        ],
+      );
+
+      connectivityChanges.add(true);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NotificationBanner), findsNothing);
+
+      connectivityChanges.add(false);
+      await tester.pump();
+      connectivityChanges.add(true);
+      await tester.pumpAndSettle();
+
+      expect(find.text("You're Offline"), findsOneWidget);
+    });
+
+    testWidgets(
+      'shows the offline notification again when connectivity drops during '
+      'dismissal',
+      (tester) async {
+        final connectivityChanges = StreamController<bool>();
+        addTearDown(connectivityChanges.close);
+
+        await _pumpRoomScreenWithMutableState(
+          tester,
+          event: _createSessionEvent(
+            start: DateTime.now().subtract(const Duration(minutes: 1)),
+            duration: 10,
+          ),
+          connectionState: RoomConnectionState.connected,
+          roomStatus: RoomStatus.active,
+          extraOverrides: [
+            isOfflineProvider.overrideWith(
+              (ref) => connectivityChanges.stream,
+            ),
+          ],
+        );
+
+        connectivityChanges.add(false);
+        await tester.pump();
+        connectivityChanges.add(true);
+        await tester.pumpAndSettle();
+        expect(find.text("You're Offline"), findsOneWidget);
+
+        connectivityChanges.add(false);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        connectivityChanges.add(true);
+        await tester.pumpAndSettle();
+
+        expect(find.text("You're Offline"), findsOneWidget);
+      },
+    );
+
+    testWidgets('dismisses the offline notification on disconnected screen', (
+      tester,
+    ) async {
+      final connectivityChanges = StreamController<bool>();
+      addTearDown(connectivityChanges.close);
+
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: _createSessionEvent(
+          start: DateTime.now().subtract(const Duration(minutes: 1)),
+          duration: 10,
+        ),
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+        extraOverrides: [
+          isOfflineProvider.overrideWith(
+            (ref) => connectivityChanges.stream,
+          ),
+        ],
+      );
+
+      connectivityChanges.add(false);
+      await tester.pump();
+      connectivityChanges.add(true);
+      await tester.pumpAndSettle();
+      expect(find.text("You're Offline"), findsOneWidget);
+
+      harness.container
+          .read(harness.roomScreenProvider.notifier)
+          .set(RoomScreen.disconnected);
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(NotificationBanner), findsNothing);
+      expect(find.text("You're Offline"), findsNothing);
     });
   });
 

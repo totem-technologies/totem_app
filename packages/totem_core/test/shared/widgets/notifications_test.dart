@@ -291,6 +291,48 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Duplicate'), findsNothing);
     });
+
+    testWidgets(
+      'duplicate requested during dismissal is shown after it closes',
+      (tester) async {
+        final context = await pumpHost(tester);
+        final controller = NotificationController();
+
+        final first = controller.showPermanent(
+          context,
+          icon: TotemIcons.pause,
+          title: 'Flaky connection',
+          message: 'Connection dropped',
+        );
+        final duplicate = controller.showPermanent(
+          context,
+          icon: TotemIcons.pause,
+          title: 'Flaky connection',
+          message: 'Connection dropped',
+        );
+
+        expect(identical(duplicate, first), isTrue);
+        await tester.pump();
+
+        first.dismissActive();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        final replacement = controller.showPermanent(
+          context,
+          icon: TotemIcons.pause,
+          title: 'Flaky connection',
+          message: 'Connection dropped',
+        );
+
+        expect(identical(replacement, first), isFalse);
+        await tester.pumpAndSettle();
+        expect(find.text('Flaky connection'), findsOneWidget);
+
+        replacement.dismissActive();
+        await tester.pumpAndSettle();
+        expect(find.text('Flaky connection'), findsNothing);
+      },
+    );
   });
 
   group('NotificationController', () {
@@ -478,6 +520,30 @@ void main() {
       await tester.pump();
       expect(find.text('Never built'), findsNothing);
     });
+
+    testWidgets(
+      'dismissImmediately removes a mounted banner without animating',
+      (
+        tester,
+      ) async {
+        final context = await pumpHost(tester);
+        final controller = NotificationController();
+
+        final request = controller.showPermanent(
+          context,
+          icon: TotemIcons.chat,
+          title: 'Remove now',
+          message: 'Must not overlap the next screen',
+        );
+        await tester.pump();
+        expect(find.text('Remove now'), findsOneWidget);
+
+        request.dismissImmediately();
+        await tester.pump();
+
+        expect(find.text('Remove now'), findsNothing);
+      },
+    );
 
     testWidgets('showTimed drops the banner while the app is hidden', (
       tester,

@@ -11,6 +11,7 @@ import 'package:livekit_client/livekit_client.dart'
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/core/services/screen_protection_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
@@ -52,9 +53,11 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   final _notificationController = NotificationController();
 
   NotificationRequest? _closeKeeperLeftNotification;
+  NotificationRequest? _offlineNotification;
   Timer? _timeRemainingWarningTimer;
   String? _timeRemainingWarningSessionSlug;
   bool _hasShownTimeRemainingWarning = false;
+  bool? _lastIsOffline;
   bool? _lastKeeperDisconnectedState;
   RoomStatus? _lastKeeperDisconnectedRoomStatus;
 
@@ -145,6 +148,38 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
       recorder.endRecording().dispose();
     });
+  }
+
+  void _onConnectivityChanged(bool isOffline, {bool? wasOffline}) {
+    if (!mounted) return;
+
+    final previousIsOffline = wasOffline ?? _lastIsOffline;
+    _lastIsOffline = isOffline;
+
+    if (!isOffline) {
+      _dismissOfflineNotification();
+      return;
+    }
+
+    if (previousIsOffline != false || _offlineNotification != null) {
+      return;
+    }
+
+    _offlineNotification = _notificationController.showPermanent(
+      context,
+      icon: TotemIcons.wifiOff,
+      title: "You're Offline",
+      message: 'Check your Wi-Fi or mobile data to continue.',
+    );
+  }
+
+  void _dismissOfflineNotification({bool immediately = false}) {
+    if (immediately) {
+      _offlineNotification?.dismissImmediately();
+    } else {
+      _offlineNotification?.dismissActive();
+    }
+    _offlineNotification = null;
   }
 
   void _dismissKeeperLeftNotification() {
@@ -399,6 +434,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
           if (next == RoomScreen.disconnected || next == RoomScreen.error) {
             _clearTimeRemainingWarningTimer();
+            _dismissOfflineNotification(immediately: true);
           }
         },
       )
@@ -430,6 +466,16 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
               next == RoomConnectionState.error) {
             _clearTimeRemainingWarningTimer();
           }
+        },
+      )
+      ..listen(
+        isOfflineProvider,
+        (previous, next) {
+          if (!next.hasValue) return;
+          _onConnectivityChanged(
+            next.value!,
+            wasOffline: previous?.value,
+          );
         },
       );
 
@@ -466,6 +512,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       return widget.loadingScreen;
     }
 
+    final isOffline = ref.watch(isOfflineProvider).value ?? _lastIsOffline;
+
     if (currentSessionEvent.ended || roomStatus == RoomStatus.ended) {
       return SessionDisconnectedScreen(
         session: currentSessionEvent,
@@ -498,6 +546,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
                         currentRoomScreen,
                         currentSessionEvent,
                         disconnectReason,
+                        isOffline: isOffline ?? false,
                       ),
                     ),
                   ),
@@ -550,14 +599,32 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     SessionController session,
     RoomScreen screen,
     SessionDetailSchema sessionEvent,
-    DisconnectReason? disconnectReason,
-  ) {
+    DisconnectReason? disconnectReason, {
+    required bool isOffline,
+  }) {
+    final isInternetDisconnect =
+        isInternetDisconnectReason(disconnectReason) ||
+        (isOffline &&
+            canOfflineStateOverrideDisconnectReason(disconnectReason));
+    final disconnectionError = disconnectReason == null
+        ? null
+        : RoomDisconnectionError(disconnectReason);
+
     switch (screen) {
       case RoomScreen.error:
-        return SessionErrorScreen(onRetry: session.join);
+        return SessionErrorScreen(
+          onRetry: session.join,
+          error: disconnectionError,
+        );
       case RoomScreen.loading:
         return widget.loadingScreen;
       case RoomScreen.disconnected:
+        if (isInternetDisconnect) {
+          return SessionErrorScreen(
+            onRetry: session.join,
+            error: disconnectionError,
+          );
+        }
         return SessionDisconnectedScreen(
           session: sessionEvent,
           disconnectReason: disconnectReason,

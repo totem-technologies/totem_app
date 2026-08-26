@@ -1,17 +1,26 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/circle_icon_button.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
-class SessionErrorScreen extends StatelessWidget {
-  const SessionErrorScreen({this.onRetry, this.error, this.session, super.key});
+class SessionErrorScreen extends ConsumerWidget {
+  const SessionErrorScreen({
+    this.onRetry,
+    this.error,
+    this.session,
+    super.key,
+  });
 
-  final VoidCallback? onRetry;
+  final AsyncCallback? onRetry;
   final Object? error;
 
   /// The session detail, when available. Forwarded to
@@ -20,13 +29,7 @@ class SessionErrorScreen extends StatelessWidget {
   final SessionDetailSchema? session;
 
   @override
-  Widget build(BuildContext context) {
-    const title = 'Something went wrong';
-    const subtitle =
-        "We couldn't connect you to this session. "
-        'Please check your internet connection or try again.';
-    const canRetry = true;
-
+  Widget build(BuildContext context, WidgetRef ref) {
     // API failures arrive wrapped: the structured body lives in ApiError.error.
     var resolvedError = error;
     if (resolvedError is ApiError && resolvedError.error is RoomErrorResponse) {
@@ -73,8 +76,27 @@ class SessionErrorScreen extends StatelessWidget {
           break;
       }
     }
+
+    final isOfflineFromProvider = ref.watch(isOfflineProvider).value ?? false;
+    final isOfflineFromError =
+        resolvedError is RoomDisconnectionError &&
+        isInternetDisconnectReason(resolvedError.reason);
+    final isOffline = isOfflineFromProvider || isOfflineFromError;
+    final title = isOffline ? "You're Offline" : 'Something went wrong';
+    final subtitle = isOffline
+        ? 'Video sessions require an active internet connection.\n'
+              'Check your Wi-Fi or mobile data, then tap below to rejoin.'
+        : "We couldn't connect you to this session. "
+              'Please check your internet connection or try again.';
+
     final theme = Theme.of(context);
+
+    void pop() {
+      TotemRouter.instance.popOrHome(context);
+    }
+
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -85,52 +107,89 @@ class SessionErrorScreen extends StatelessWidget {
           tooltip: MaterialLocalizations.of(
             context,
           ).backButtonTooltip,
-          onPressed: () => TotemRouter.instance.popOrHome(context),
+          onPressed: pop,
         ),
       ),
       extendBodyBehindAppBar: true,
-      body: SizedBox.expand(
-        child: Padding(
-          padding: const EdgeInsetsDirectional.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            spacing: 20,
-            children: [
-              const Spacer(),
-              TotemIcon(
-                TotemIcons.errorOutlined,
-                size: 100,
-                color: theme.textTheme.headlineMedium?.color,
-              ),
-              Text(
-                title,
-                style: theme.textTheme.headlineMedium,
-                textAlign: TextAlign.center,
-              ),
-              const Text(subtitle, textAlign: TextAlign.center),
-              const Spacer(),
-              if (canRetry && onRetry != null)
-                OutlinedButton(
-                  onPressed: onRetry,
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(120, 50),
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: 20,
-                      vertical: 8,
+      body: SafeArea(
+        top: false,
+        // uses a sliver to avoid overflow in landscape
+        child: CustomScrollView(
+          physics: const ClampingScrollPhysics(),
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.all(40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  spacing: 20,
+                  children: [
+                    const SizedBox.shrink(),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 20,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppTheme.mauve.withValues(alpha: 0.12),
+                          ),
+                          padding: const EdgeInsetsDirectional.all(30),
+                          child: TotemIcon(
+                            isOffline
+                                ? TotemIcons.wifiOff
+                                : TotemIcons.errorOutlined,
+                            size: 48,
+                            color: AppTheme.gray,
+                          ),
+                        ),
+                        Text(
+                          title,
+                          style: theme.textTheme.headlineMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        Text(subtitle, textAlign: TextAlign.center),
+                      ],
                     ),
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: theme.colorScheme.onPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: BorderSide(
-                        color: theme.colorScheme.onPrimary,
-                      ),
-                    ),
-                  ),
-                  child: const Text('Retry'),
+                    if (onRetry != null)
+                      SizedBox(
+                        width: double.infinity,
+                        child: Column(
+                          spacing: 4,
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            ConfirmationDialogButton.elevated(
+                              onConfirm: () async => onRetry?.call(),
+                              disabled: onRetry == null,
+                              child: const Text('Try Joining Again'),
+                            ),
+                            InkWell(
+                              onTap: pop,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsetsDirectional.symmetric(
+                                  horizontal: 20.0,
+                                  vertical: 8,
+                                ),
+                                child: Text(
+                                  'Go back to Session Details',
+                                  style: theme.textTheme.bodySmall,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      const SizedBox.shrink(),
+                  ],
                 ),
-            ],
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );
