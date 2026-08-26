@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
@@ -491,6 +493,10 @@ void main() {
       when(() => devices.selectedAudioDeviceId).thenReturn(null);
       when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
       when(() => devices.localVideoTrack).thenReturn(null);
+      when(() => devices.enableMicrophone()).thenAnswer((_) async {});
+      when(() => devices.disableMicrophone()).thenAnswer((_) async {});
+      when(() => devices.enableCamera()).thenAnswer((_) async {});
+      when(() => devices.disableCamera()).thenAnswer((_) async {});
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
       when(() => session.session).thenReturn(
         _createSessionEvent(
@@ -713,6 +719,57 @@ void main() {
 
       expect(find.byType(ListeningTurnScreen), findsOneWidget);
     });
+
+    testWidgets(
+      'disables session shortcuts while a dialog is open on the room navigator',
+      (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+        try {
+          var enableMicrophoneCallCount = 0;
+          when(() => devices.enableMicrophone()).thenAnswer((_) async {
+            enableMicrophoneCallCount += 1;
+          });
+
+          final event = _createSessionEvent(
+            start: DateTime.now().subtract(const Duration(minutes: 5)),
+            duration: 10,
+          );
+
+          await _pumpRoomScreenForResolvedScreen(
+            tester,
+            session: session,
+            event: event,
+            screen: RoomScreen.listening,
+          );
+
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+          await tester.pump();
+          expect(enableMicrophoneCallCount, 1);
+
+          final context = tester.element(find.byType(ListeningTurnScreen));
+          unawaited(
+            showDialog<void>(
+              context: context,
+              useRootNavigator: false,
+              builder: (context) => const AlertDialog(
+                title: Text('Dialog'),
+                content: Text('Session shortcut blocker'),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text('Dialog'), findsOneWidget);
+
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+          await tester.pump();
+
+          expect(enableMicrophoneCallCount, 1);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      },
+    );
   });
 
   group('VideoRoomScreen - 5 minute warning', () {

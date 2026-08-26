@@ -523,6 +523,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     }
 
     return SessionKeyboardShortcuts(
+      navigatorKey: _roomNavigatorKey,
       child: RoomBackground(
         status: roomStatus,
         child: Navigator(

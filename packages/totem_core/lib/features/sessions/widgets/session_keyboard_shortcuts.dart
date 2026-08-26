@@ -11,10 +11,12 @@ import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 class SessionKeyboardShortcuts extends ConsumerStatefulWidget {
   const SessionKeyboardShortcuts({
     required this.child,
+    this.navigatorKey,
     super.key,
   });
 
   final Widget child;
+  final GlobalKey<NavigatorState>? navigatorKey;
 
   @override
   ConsumerState<SessionKeyboardShortcuts> createState() =>
@@ -59,7 +61,9 @@ class _SessionKeyboardShortcutsState
     if (event is! KeyDownEvent) {
       return false;
     }
-    if (_hasModifierPressed() || _hasEditableFocus()) {
+    if (_hasModifierPressed() ||
+        _hasEditableFocus() ||
+        _hasBlockingNavigatorRoute()) {
       return false;
     }
 
@@ -116,6 +120,10 @@ class _SessionKeyboardShortcutsState
 
     return focusedContext.widget is EditableText ||
         focusedContext.findAncestorWidgetOfExactType<EditableText>() != null;
+  }
+
+  bool _hasBlockingNavigatorRoute() {
+    return widget.navigatorKey?.currentState?.canPop() ?? false;
   }
 
   Future<void> _toggleCamera(SessionController session) async {
