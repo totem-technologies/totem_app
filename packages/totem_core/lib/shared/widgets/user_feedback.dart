@@ -183,6 +183,8 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
                     },
                     textInputAction: TextInputAction.newline,
                     textCapitalization: TextCapitalization.sentences,
+                    onFieldSubmitted: (_) =>
+                        _loading ? null : _onSubmitFeedback,
                   ),
                   const SizedBox(height: 24),
 
