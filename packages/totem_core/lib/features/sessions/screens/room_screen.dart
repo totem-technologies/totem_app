@@ -26,6 +26,7 @@ import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
@@ -521,45 +522,47 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       );
     }
 
-    return RoomBackground(
-      status: roomStatus,
-      child: Navigator(
-        key: _roomNavigatorKey,
-        clipBehavior: Clip.none,
-        onDidRemovePage: (page) => {},
-        pages: [
-          MaterialPage(
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: RepaintBoundary(
-                    child: PopScope(
-                      canPop: false,
-                      onPopInvokedWithResult: (didPop, result) async {
-                        await _handleBackNavigation(
+    return SessionKeyboardShortcuts(
+      child: RoomBackground(
+        status: roomStatus,
+        child: Navigator(
+          key: _roomNavigatorKey,
+          clipBehavior: Clip.none,
+          onDidRemovePage: (page) => {},
+          pages: [
+            MaterialPage(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: RepaintBoundary(
+                      child: PopScope(
+                        canPop: false,
+                        onPopInvokedWithResult: (didPop, result) async {
+                          await _handleBackNavigation(
+                            currentSession,
+                            connectionState,
+                          );
+                        },
+                        child: _buildBody(
                           currentSession,
-                          connectionState,
-                        );
-                      },
-                      child: _buildBody(
-                        currentSession,
-                        currentRoomScreen,
-                        currentSessionEvent,
-                        disconnectReason,
-                        isOffline: isOffline ?? false,
+                          currentRoomScreen,
+                          currentSessionEvent,
+                          disconnectReason,
+                          isOffline: isOffline ?? false,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Overlay(key: EmojiReactions.emojiOverlayKey),
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Overlay(key: EmojiReactions.emojiOverlayKey),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
