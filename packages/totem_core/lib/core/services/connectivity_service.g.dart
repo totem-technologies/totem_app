@@ -81,4 +81,4 @@ final class IsOfflineProvider
   }
 }
 
-String _$isOfflineHash() => r'6228afb127684e7999d99ad4a13d84ef1c1cde60';
+String _$isOfflineHash() => r'dfbd17e0611ec37f07f484da63f2dcee30b4d4d9';

@@ -10,7 +10,7 @@ export 'package:connectivity_plus/connectivity_plus.dart'
 
 part 'connectivity_service.g.dart';
 
-const _initialOfflineConfirmationDelay = Duration(milliseconds: 500);
+const _offlineConfirmationDelay = Duration(milliseconds: 500);
 
 bool isOfflineConnectivity(List<ConnectivityResult> results) {
   return results.isEmpty || results.contains(ConnectivityResult.none);
@@ -42,7 +42,8 @@ Connectivity connectivity(Ref ref) {
 Stream<bool> isOffline(Ref ref) {
   final connectivity = ref.watch(connectivityProvider);
   final controller = StreamController<bool>();
-  Timer? initialOfflineConfirmationTimer;
+  Timer? offlineConfirmationTimer;
+  Object? offlineConfirmation;
   Object? activeCheck;
   bool? lastValue;
   var disposed = false;
@@ -53,24 +54,37 @@ Stream<bool> isOffline(Ref ref) {
     controller.add(value);
   }
 
-  Future<void> confirmInitialOffline() async {
-    initialOfflineConfirmationTimer = null;
+  void cancelOfflineConfirmation() {
+    offlineConfirmation = null;
+    offlineConfirmationTimer?.cancel();
+    offlineConfirmationTimer = null;
+  }
+
+  Future<void> confirmOffline(Object confirmation) async {
+    if (!identical(offlineConfirmation, confirmation)) return;
+    offlineConfirmationTimer = null;
+
     final isOffline = await _readOfflineStatus(connectivity);
-    if (disposed || lastValue != null) return;
+    if (disposed || !identical(offlineConfirmation, confirmation)) return;
+
+    offlineConfirmation = null;
     emit(isOffline ?? true);
   }
 
   void emitStatus(bool value) {
-    if (lastValue != null || !value) {
-      initialOfflineConfirmationTimer?.cancel();
-      initialOfflineConfirmationTimer = null;
+    if (!value) {
+      cancelOfflineConfirmation();
       emit(value);
       return;
     }
 
-    initialOfflineConfirmationTimer ??= Timer(
-      _initialOfflineConfirmationDelay,
-      () => unawaited(confirmInitialOffline()),
+    if (lastValue == true || offlineConfirmation != null) return;
+
+    final confirmation = Object();
+    offlineConfirmation = confirmation;
+    offlineConfirmationTimer = Timer(
+      _offlineConfirmationDelay,
+      () => unawaited(confirmOffline(confirmation)),
     );
   }
 
@@ -83,7 +97,7 @@ Stream<bool> isOffline(Ref ref) {
     if (isOffline != null) {
       emitStatus(isOffline);
     } else if (lastValue == null) {
-      emit(false);
+      emitStatus(false);
     }
   }
 
@@ -108,7 +122,7 @@ Stream<bool> isOffline(Ref ref) {
 
   ref.onDispose(() {
     disposed = true;
-    initialOfflineConfirmationTimer?.cancel();
+    cancelOfflineConfirmation();
     lifecycleListener.dispose();
     unawaited(subscription.cancel());
     unawaited(controller.close());

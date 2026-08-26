@@ -115,7 +115,53 @@ void main() {
       expect(values, [true]);
     });
 
-    test('combines the current check and distinct stream changes', () async {
+    testWidgets('combines confirmed, distinct connectivity changes', (
+      tester,
+    ) async {
+      final connectivity = _MockConnectivity();
+      final changes = StreamController<List<ConnectivityResult>>();
+      var currentConnectivity = const [ConnectivityResult.wifi];
+      addTearDown(changes.close);
+      when(
+        connectivity.checkConnectivity,
+      ).thenAnswer((_) async => currentConnectivity);
+      when(
+        () => connectivity.onConnectivityChanged,
+      ).thenAnswer((_) => changes.stream);
+
+      final container = ProviderContainer(
+        overrides: [connectivityProvider.overrideWithValue(connectivity)],
+      );
+      addTearDown(container.dispose);
+      final values = <bool>[];
+      final subscription = container.listen(
+        isOfflineProvider,
+        (_, next) => next.whenData(values.add),
+        fireImmediately: true,
+      );
+      addTearDown(subscription.close);
+
+      await container.read(isOfflineProvider.future);
+      currentConnectivity = const [ConnectivityResult.none];
+      changes.add(const [ConnectivityResult.none]);
+      await tester.pump();
+      expect(values, [false]);
+
+      changes.add(const []);
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
+      expect(values, [false, true]);
+
+      currentConnectivity = const [ConnectivityResult.mobile];
+      changes.add(const [ConnectivityResult.mobile]);
+      await tester.pump();
+
+      expect(values, [false, true, false]);
+    });
+
+    testWidgets('filters a transient offline result after initialization', (
+      tester,
+    ) async {
       final connectivity = _MockConnectivity();
       final changes = StreamController<List<ConnectivityResult>>();
       addTearDown(changes.close);
@@ -138,15 +184,56 @@ void main() {
       );
       addTearDown(subscription.close);
 
-      await container.read(isOfflineProvider.future);
-      changes.add(const [ConnectivityResult.none]);
-      await pumpEventQueue();
-      changes.add(const []);
-      await pumpEventQueue();
-      changes.add(const [ConnectivityResult.mobile]);
-      await pumpEventQueue();
+      expect(await container.read(isOfflineProvider.future), isFalse);
 
-      expect(values, [false, true, false]);
+      changes.add(const [ConnectivityResult.none]);
+      await tester.pump();
+      changes.add(const [ConnectivityResult.wifi]);
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(values, [false]);
+    });
+
+    testWidgets('ignores a stale offline confirmation after reconnecting', (
+      tester,
+    ) async {
+      final connectivity = _MockConnectivity();
+      final changes = StreamController<List<ConnectivityResult>>();
+      final confirmation = Completer<List<ConnectivityResult>>();
+      var checks = 0;
+      addTearDown(changes.close);
+      when(connectivity.checkConnectivity).thenAnswer((_) {
+        if (checks++ == 0) {
+          return Future.value(const [ConnectivityResult.wifi]);
+        }
+        return confirmation.future;
+      });
+      when(
+        () => connectivity.onConnectivityChanged,
+      ).thenAnswer((_) => changes.stream);
+
+      final container = ProviderContainer(
+        overrides: [connectivityProvider.overrideWithValue(connectivity)],
+      );
+      addTearDown(container.dispose);
+      final values = <bool>[];
+      final subscription = container.listen(
+        isOfflineProvider,
+        (_, next) => next.whenData(values.add),
+        fireImmediately: true,
+      );
+      addTearDown(subscription.close);
+
+      expect(await container.read(isOfflineProvider.future), isFalse);
+
+      changes.add(const [ConnectivityResult.none]);
+      await tester.pump(const Duration(milliseconds: 500));
+      changes.add(const [ConnectivityResult.wifi]);
+      await tester.pump();
+      confirmation.complete(const [ConnectivityResult.none]);
+      await tester.pump();
+
+      expect(values, [false]);
     });
 
     test('ignores a stale check after a newer stream update', () async {
@@ -220,6 +307,12 @@ void main() {
       await tester.pump();
 
       expect(checks, 2);
+      expect(container.read(isOfflineProvider).value, isFalse);
+
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
+
+      expect(checks, 3);
       expect(container.read(isOfflineProvider).value, isTrue);
     });
   });
