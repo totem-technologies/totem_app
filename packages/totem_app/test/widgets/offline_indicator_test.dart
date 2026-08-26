@@ -7,13 +7,15 @@ import 'package:totem_app/widgets/offline_indicator.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
 
 void main() {
-  Future<void> pumpIndicator(WidgetTester tester, Stream<bool> connectivity) {
+  Future<void> pumpIndicator(
+    WidgetTester tester,
+    Stream<bool> connectivity, {
+    Widget child = const Scaffold(body: SizedBox.expand()),
+  }) {
     return tester.pumpWidget(
       ProviderScope(
         overrides: [isOfflineProvider.overrideWith((ref) => connectivity)],
-        child: const MaterialApp(
-          home: OfflineIndicatorPage(child: Scaffold(body: SizedBox.expand())),
-        ),
+        child: MaterialApp(home: OfflineIndicatorPage(child: child)),
       ),
     );
   }
@@ -65,5 +67,35 @@ void main() {
 
     expect(find.text("You're Offline"), findsOneWidget);
     expect(find.text("You're back online"), findsNothing);
+  });
+
+  testWidgets('collapses the status-bar inset with the banner', (tester) async {
+    const contentKey = ValueKey('content');
+    tester.view.padding = const FakeViewPadding(top: 24);
+    addTearDown(tester.view.resetPadding);
+
+    final connectivity = StreamController<bool>();
+    addTearDown(connectivity.close);
+    await pumpIndicator(
+      tester,
+      connectivity.stream,
+      child: const ColoredBox(key: contentKey, color: Colors.transparent),
+    );
+
+    connectivity.add(true);
+    await tester.pumpAndSettle();
+    connectivity.add(false);
+    await tester.pumpAndSettle();
+
+    final contentTopBeforeCollapse = tester.getTopLeft(find.byKey(contentKey));
+    await tester.pump(const Duration(seconds: 3));
+
+    expect(tester.getTopLeft(find.byKey(contentKey)), contentTopBeforeCollapse);
+
+    await tester.pump(const Duration(milliseconds: 175));
+    expect(
+      tester.getTopLeft(find.byKey(contentKey)).dy,
+      lessThan(contentTopBeforeCollapse.dy),
+    );
   });
 }

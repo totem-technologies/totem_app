@@ -88,7 +88,6 @@ class SessionErrorScreen extends ConsumerWidget {
               'Check your Wi-Fi or mobile data, then tap below to rejoin.'
         : "We couldn't connect you to this session. "
               'Please check your internet connection or try again.';
-    const canRetry = true;
 
     final theme = Theme.of(context);
 
@@ -153,7 +152,7 @@ class SessionErrorScreen extends ConsumerWidget {
                         Text(subtitle, textAlign: TextAlign.center),
                       ],
                     ),
-                    if (canRetry && onRetry != null)
+                    if (onRetry != null)
                       SizedBox(
                         width: double.infinity,
                         child: Column(

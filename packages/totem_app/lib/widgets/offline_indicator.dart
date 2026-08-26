@@ -139,10 +139,10 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
     final shouldShow = _status != ConnectivityStatus.online;
 
     return SafeArea(
-      top: shouldShow,
-      bottom: false,
+      top: true,
       left: false,
       right: false,
+      bottom: false,
       child: Column(
         children: [
           AnimatedSwitcher(
@@ -154,12 +154,7 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
               );
             },
             child: shouldShow
-                ? SafeArea(
-                    key: ValueKey(_status),
-                    top: false,
-                    bottom: false,
-                    child: _StatusBanner(status: _status),
-                  )
+                ? _StatusBanner(status: _status)
                 : const SizedBox.shrink(key: ValueKey('online')),
           ),
           Expanded(child: widget.child),
