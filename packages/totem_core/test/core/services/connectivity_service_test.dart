@@ -315,5 +315,64 @@ void main() {
       expect(checks, 3);
       expect(container.read(isOfflineProvider).value, isTrue);
     });
+
+    testWidgets(
+      'publishes an online resume check after a stale offline event',
+      (tester) async {
+        final connectivity = _MockConnectivity();
+        final changes = StreamController<List<ConnectivityResult>>();
+        final resumedCheck = Completer<List<ConnectivityResult>>();
+        var checks = 0;
+        addTearDown(changes.close);
+        when(connectivity.checkConnectivity).thenAnswer((_) {
+          checks++;
+          if (checks < 3) {
+            return Future.value(const [ConnectivityResult.none]);
+          }
+          return resumedCheck.future;
+        });
+        when(
+          () => connectivity.onConnectivityChanged,
+        ).thenAnswer((_) => changes.stream);
+
+        final container = ProviderContainer(
+          overrides: [connectivityProvider.overrideWithValue(connectivity)],
+        );
+        addTearDown(container.dispose);
+        final subscription = container.listen(
+          isOfflineProvider,
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(subscription.close);
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pump();
+        expect(container.read(isOfflineProvider).value, isTrue);
+
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        expect(checks, 3);
+
+        changes.add(const [ConnectivityResult.none]);
+        await tester.pump();
+        resumedCheck.complete(const [ConnectivityResult.wifi]);
+        await tester.pump();
+
+        expect(container.read(isOfflineProvider).value, isFalse);
+      },
+    );
   });
 }

@@ -21,7 +21,7 @@ final class ConnectivityProvider
         argument: null,
         retry: null,
         name: r'connectivityProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -48,7 +48,7 @@ final class ConnectivityProvider
   }
 }
 
-String _$connectivityHash() => r'6d67af0ea4110f6ee0246dd332f90f8901380eda';
+String _$connectivityHash() => r'15246627d0ae599bcd01382c80d3d25b9e9b4e18';
 
 @ProviderFor(isOffline)
 final isOfflineProvider = IsOfflineProvider._();
@@ -81,4 +81,4 @@ final class IsOfflineProvider
   }
 }
 
-String _$isOfflineHash() => r'dfbd17e0611ec37f07f484da63f2dcee30b4d4d9';
+String _$isOfflineHash() => r'cc412eb5c129c993a57b3c0becf9b05c8d71b8f6';

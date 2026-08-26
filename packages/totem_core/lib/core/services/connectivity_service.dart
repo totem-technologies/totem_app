@@ -13,7 +13,8 @@ part 'connectivity_service.g.dart';
 const _offlineConfirmationDelay = Duration(milliseconds: 500);
 
 bool isOfflineConnectivity(List<ConnectivityResult> results) {
-  return results.isEmpty || results.contains(ConnectivityResult.none);
+  return results.isEmpty ||
+      results.every((result) => result == ConnectivityResult.none);
 }
 
 Future<bool?> _readOfflineStatus(Connectivity connectivity) async {
@@ -33,14 +34,15 @@ Future<bool> checkIsOffline(Connectivity connectivity) async {
   return await _readOfflineStatus(connectivity) ?? false;
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 Connectivity connectivity(Ref ref) {
   return Connectivity();
 }
 
 @Riverpod(keepAlive: true)
 Stream<bool> isOffline(Ref ref) {
-  final connectivity = ref.watch(connectivityProvider);
+  // final connectivity = ref.watch(connectivityProvider);
+  final connectivity = Connectivity();
   final controller = StreamController<bool>();
   Timer? offlineConfirmationTimer;
   Object? offlineConfirmation;
@@ -103,8 +105,11 @@ Stream<bool> isOffline(Ref ref) {
 
   final subscription = connectivity.onConnectivityChanged.listen(
     (result) {
-      activeCheck = null;
-      emitStatus(isOfflineConnectivity(result));
+      final isOffline = isOfflineConnectivity(result);
+      // Duplicate events can contain cached state while a resume check is
+      // running. Only a real state transition should supersede that check.
+      if (isOffline != lastValue) activeCheck = null;
+      emitStatus(isOffline);
     },
     onError: (Object error, StackTrace stackTrace) {
       if (disposed) return;
