@@ -150,10 +150,10 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     });
   }
 
-  void _onConnectivityChanged(bool isOffline) {
+  void _onConnectivityChanged(bool isOffline, {bool? wasOffline}) {
     if (!mounted) return;
 
-    final wasOffline = _lastIsOffline;
+    final previousIsOffline = wasOffline ?? _lastIsOffline;
     _lastIsOffline = isOffline;
 
     if (!isOffline) {
@@ -161,7 +161,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       return;
     }
 
-    if (wasOffline != false || _offlineNotification != null) {
+    if (previousIsOffline != false || _offlineNotification != null) {
       return;
     }
 
@@ -472,7 +472,10 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         isOfflineProvider,
         (previous, next) {
           if (!next.hasValue) return;
-          _onConnectivityChanged(next.value!);
+          _onConnectivityChanged(
+            next.value!,
+            wasOffline: previous?.value,
+          );
         },
       );
 

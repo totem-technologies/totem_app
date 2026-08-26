@@ -361,6 +361,7 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
   bool hasKeeperDisconnected = false,
   RoomScreen roomScreen = RoomScreen.listening,
   List<Object?> extraOverrides = const [],
+  Future<void> Function(ProviderContainer container)? beforeMount,
 }) async {
   final eventStateProvider =
       NotifierProvider<_SessionEventOverrideNotifier, SessionDetailSchema?>(
@@ -383,56 +384,68 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
         () => _KeeperDisconnectedOverrideNotifier(hasKeeperDisconnected),
       );
 
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        authControllerProvider.overrideWith(
-          () => FakeAuthController(
-            AuthState.authenticated(
-              user: UserSchema(
-                profileAvatarType: ProfileAvatarTypeEnum.im,
-                circleCount: 0,
-                email: 'test@totem.org',
-                name: 'Test User',
-                slug: 'user-1',
-                dateCreated: DateTime(2024),
-              ),
-            ),
+  final overrides = <Object?>[
+    authControllerProvider.overrideWith(
+      () => FakeAuthController(
+        AuthState.authenticated(
+          user: UserSchema(
+            profileAvatarType: ProfileAvatarTypeEnum.im,
+            circleCount: 0,
+            email: 'test@totem.org',
+            name: 'Test User',
+            slug: 'user-1',
+            dateCreated: DateTime(2024),
           ),
-        ),
-        currentSessionProvider.overrideWith((ref) => null),
-        currentSessionEventProvider.overrideWith(
-          (ref) => ref.watch(eventStateProvider),
-        ),
-        resolveCurrentScreenProvider.overrideWith(
-          (ref) => ref.watch(roomScreenStateProvider),
-        ),
-        connectionStateProvider.overrideWith(
-          (ref) => ref.watch(connectionStateStateProvider),
-        ),
-        roomStatusProvider.overrideWith(
-          (ref) => ref.watch(roomStatusStateProvider),
-        ),
-        hasKeeperDisconnectedProvider.overrideWith(
-          (ref) => ref.watch(hasKeeperDisconnectedStateProvider),
-        ),
-        disconnectionReasonProvider.overrideWith((ref) => null),
-        ...extraOverrides.cast(),
-      ],
-      child: const MaterialApp(
-        home: VideoSessionScreen(
-          sessionSlug: 'test-session',
-          loadingScreen: SizedBox.shrink(),
         ),
       ),
     ),
+    currentSessionProvider.overrideWith((ref) => null),
+    currentSessionEventProvider.overrideWith(
+      (ref) => ref.watch(eventStateProvider),
+    ),
+    resolveCurrentScreenProvider.overrideWith(
+      (ref) => ref.watch(roomScreenStateProvider),
+    ),
+    connectionStateProvider.overrideWith(
+      (ref) => ref.watch(connectionStateStateProvider),
+    ),
+    roomStatusProvider.overrideWith(
+      (ref) => ref.watch(roomStatusStateProvider),
+    ),
+    hasKeeperDisconnectedProvider.overrideWith(
+      (ref) => ref.watch(hasKeeperDisconnectedStateProvider),
+    ),
+    disconnectionReasonProvider.overrideWith((ref) => null),
+    ...extraOverrides,
+  ];
+  const child = MaterialApp(
+    home: VideoSessionScreen(
+      sessionSlug: 'test-session',
+      loadingScreen: SizedBox.shrink(),
+    ),
   );
-  await tester.pumpAndSettle();
 
-  final container = ProviderScope.containerOf(
-    tester.element(find.byType(VideoSessionScreen)),
-    listen: false,
-  );
+  late final ProviderContainer container;
+  if (beforeMount case final beforeMount?) {
+    container = ProviderContainer(overrides: overrides.cast());
+    addTearDown(container.dispose);
+    await beforeMount(container);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(container: container, child: child),
+    );
+  } else {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: overrides.cast(),
+        child: child,
+      ),
+    );
+    container = ProviderScope.containerOf(
+      tester.element(find.byType(VideoSessionScreen)),
+      listen: false,
+    );
+  }
+  await tester.pumpAndSettle();
 
   return _MutableRoomScreenHarness(
     container: container,
@@ -1121,6 +1134,48 @@ void main() {
   });
 
   group('VideoRoomScreen - offline notification lifecycle', () {
+    testWidgets(
+      'notifies when cached connectivity changes from online to offline',
+      (tester) async {
+        final connectivityChanges = StreamController<bool>();
+        addTearDown(connectivityChanges.close);
+
+        await _pumpRoomScreenWithMutableState(
+          tester,
+          event: _createSessionEvent(
+            start: DateTime.now().subtract(const Duration(minutes: 1)),
+            duration: 10,
+          ),
+          connectionState: RoomConnectionState.connected,
+          roomStatus: RoomStatus.active,
+          extraOverrides: [
+            isOfflineProvider.overrideWith(
+              (ref) => connectivityChanges.stream,
+            ),
+          ],
+          beforeMount: (container) async {
+            final subscription = container.listen(
+              isOfflineProvider,
+              (_, _) {},
+              fireImmediately: true,
+            );
+            await container.pump();
+            connectivityChanges.add(false);
+            await container.pump();
+            expect(container.read(isOfflineProvider).value, isFalse);
+            subscription.close();
+          },
+        );
+
+        connectivityChanges.add(true);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.byType(NotificationBanner), findsOneWidget);
+        expect(find.text("You're Offline"), findsOneWidget);
+      },
+    );
+
     testWidgets(
       'shows a persistent notification on connectivity loss and dismisses it '
       'on reconnection',
