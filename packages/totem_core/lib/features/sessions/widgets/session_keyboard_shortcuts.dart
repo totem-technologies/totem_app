@@ -12,11 +12,13 @@ class SessionKeyboardShortcuts extends ConsumerStatefulWidget {
   const SessionKeyboardShortcuts({
     required this.child,
     this.navigatorKey,
+    this.enableEmojiReactions = true,
     super.key,
   });
 
   final Widget child;
   final GlobalKey<NavigatorState>? navigatorKey;
+  final bool enableEmojiReactions;
 
   @override
   ConsumerState<SessionKeyboardShortcuts> createState() =>
@@ -158,7 +160,8 @@ class _SessionKeyboardShortcutsState
     }
   }
 
-  String? _reactionForKey(LogicalKeyboardKey logicalKey) {
+  Emoji? _reactionForKey(LogicalKeyboardKey logicalKey) {
+    if (!widget.enableEmojiReactions) return null;
     return switch (logicalKey) {
       LogicalKeyboardKey.keyA => EmojiBar.defaultEmojis[0],
       LogicalKeyboardKey.keyS => EmojiBar.defaultEmojis[1],

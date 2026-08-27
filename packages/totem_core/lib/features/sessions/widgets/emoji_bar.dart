@@ -6,6 +6,8 @@ import 'package:flutter/semantics.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
+typedef Emoji = String;
+
 class EmojiBarOverlay extends StatefulWidget {
   const EmojiBarOverlay({
     required this.buttonKey,
@@ -15,7 +17,7 @@ class EmojiBarOverlay extends StatefulWidget {
   });
 
   final GlobalKey buttonKey;
-  final ValueChanged<String> onEmojiSelected;
+  final ValueChanged<Emoji> onEmojiSelected;
   final VoidCallback onDismissed;
 
   @override
@@ -96,8 +98,8 @@ class EmojiBar extends StatelessWidget {
     super.key,
   });
 
-  final List<String> emojis;
-  final ValueChanged<String> onEmojiSelected;
+  final List<Emoji> emojis;
+  final ValueChanged<Emoji> onEmojiSelected;
 
   static const defaultEmojis = ['🫶', '💖', '😢', '🔥', '👏', '🎉'];
 
@@ -142,7 +144,7 @@ class EmojiBar extends StatelessWidget {
 
 Future<void> presentEmojiReaction(
   BuildContext context,
-  String emoji, {
+  Emoji emoji, {
   GlobalKey<OverlayState>? overlayKey,
   bool isInListeningTurnScreen = false,
 }) async {
@@ -244,7 +246,7 @@ class RisingEmoji extends StatefulWidget {
     super.key,
   });
 
-  final String emoji;
+  final Emoji emoji;
   final double startX;
   final double startY;
   final VoidCallback onCompleted;

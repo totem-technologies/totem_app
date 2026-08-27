@@ -524,6 +524,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
     return SessionKeyboardShortcuts(
       navigatorKey: _roomNavigatorKey,
+      enableEmojiReactions: currentRoomScreen == RoomScreen.listening,
       child: RoomBackground(
         status: roomStatus,
         child: Navigator(
