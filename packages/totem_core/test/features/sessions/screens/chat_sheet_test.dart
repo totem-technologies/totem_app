@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -10,9 +11,11 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
+import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
+import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
 
 class MockSessionMessagingController extends Mock
@@ -118,6 +121,7 @@ void main() {
     required List<SessionChatMessage> messages,
     required SessionController session,
     required AuthState authState,
+    RoomScreen currentScreen = RoomScreen.listening,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -133,10 +137,13 @@ void main() {
             _createSessionState(messages: messages),
           ),
           isCurrentUserKeeperProvider.overrideWith((ref) => isKeeper),
+          resolveCurrentScreenProvider.overrideWith((ref) => currentScreen),
         ],
         child: const MaterialApp(
-          home: Scaffold(
-            body: SessionChatMessages(),
+          home: SessionKeyboardShortcuts(
+            child: Scaffold(
+              body: SessionChatMessages(),
+            ),
           ),
         ),
       ),
@@ -151,6 +158,7 @@ void main() {
     required List<SessionChatMessage> messages,
     required SessionController session,
     required AuthState authState,
+    RoomScreen currentScreen = RoomScreen.listening,
   }) async {
     final messagesProvider =
         NotifierProvider<_TestMessagesNotifier, List<SessionChatMessage>>(
@@ -171,13 +179,16 @@ void main() {
             _createSessionState(messages: messages),
           ),
           isCurrentUserKeeperProvider.overrideWith((ref) => isKeeper),
+          resolveCurrentScreenProvider.overrideWith((ref) => currentScreen),
           sessionMessagesProvider.overrideWith(
             (ref) => ref.watch(messagesProvider),
           ),
         ],
         child: const MaterialApp(
-          home: Scaffold(
-            body: SessionChatMessages(),
+          home: SessionKeyboardShortcuts(
+            child: Scaffold(
+              body: SessionChatMessages(),
+            ),
           ),
         ),
       ),
@@ -199,13 +210,32 @@ void main() {
   group('SessionChatSheet', () {
     late MockSessionController session;
     late MockSessionMessagingController messaging;
+    late MockSessionDeviceController devices;
 
     setUp(() {
       session = MockSessionController();
       messaging = MockSessionMessagingController();
+      devices = MockSessionDeviceController();
       when(() => session.messaging).thenReturn(messaging);
+      when(() => session.devices).thenReturn(devices);
       when(() => messaging.sendMessage(any())).thenAnswer((_) async {});
+      when(() => messaging.sendReaction(any())).thenAnswer((_) async {});
+      when(() => devices.enableMicrophone()).thenAnswer((_) async {});
+      when(() => devices.disableMicrophone()).thenAnswer((_) async {});
+      when(() => devices.enableCamera()).thenAnswer((_) async {});
+      when(() => devices.disableCamera()).thenAnswer((_) async {});
+      when(() => devices.isMicrophoneEnabled).thenReturn(false);
+      when(() => devices.isCameraEnabled).thenReturn(false);
     });
+
+    Future<void> runOnDesktop(Future<void> Function() body) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        await body();
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    }
 
     testWidgets('shows the keeper hint and no composer for non-keeper', (
       tester,
@@ -404,6 +434,31 @@ void main() {
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }
+    });
+
+    testWidgets('typing in the composer disables session shortcuts', (
+      tester,
+    ) async {
+      await runOnDesktop(() async {
+        await pumpChatSheet(
+          tester,
+          isKeeper: true,
+          messages: const [],
+          session: session,
+          authState: AuthState.unauthenticated(),
+        );
+
+        await tester.tap(find.byType(TextField));
+        await tester.pumpAndSettle();
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+        await tester.pump();
+
+        verifyNever(() => devices.enableMicrophone());
+        verifyNever(() => messaging.sendReaction(any()));
+      });
     });
   });
 }

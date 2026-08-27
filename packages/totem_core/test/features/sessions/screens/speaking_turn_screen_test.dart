@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
@@ -13,12 +15,14 @@ import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
+import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../setup.dart';
@@ -28,6 +32,9 @@ import '../livekit_mocks.dart';
 
 class MockSessionKeeperController extends Mock
     implements SessionKeeperController {}
+
+class MockSessionMessagingController extends Mock
+    implements SessionMessagingController {}
 
 class _TestSessionCuesService extends SessionCuesService {
   int swipePulseCount = 0;
@@ -155,6 +162,7 @@ void main() {
   late MockSessionController session;
   late MockSessionKeeperController keeper;
   late MockSessionDeviceController devices;
+  late MockSessionMessagingController messaging;
   late MockLocalParticipant localParticipant;
   late FakeRoom room;
 
@@ -168,12 +176,14 @@ void main() {
     session = MockSessionController();
     keeper = MockSessionKeeperController();
     devices = MockSessionDeviceController();
+    messaging = MockSessionMessagingController();
     localParticipant = MockLocalParticipant('user-1');
     room = FakeRoom(localParticipant);
 
     when(() => session.room).thenReturn(room);
     when(() => session.keeper).thenReturn(keeper);
     when(() => session.devices).thenReturn(devices);
+    when(() => session.messaging).thenReturn(messaging);
     when(() => session.isCurrentUserKeeper()).thenReturn(true);
     when(() => devices.isCameraEnabled).thenReturn(false);
     when(() => devices.isMicrophoneEnabled).thenReturn(false);
@@ -185,6 +195,7 @@ void main() {
     when(() => devices.disableMicrophone()).thenAnswer((_) async {});
     when(() => devices.enableCamera()).thenAnswer((_) async {});
     when(() => devices.disableCamera()).thenAnswer((_) async {});
+    when(() => messaging.sendReaction(any())).thenAnswer((_) async {});
 
     when(
       () =>
@@ -235,8 +246,10 @@ void main() {
           selfViewSettingsProvider.overrideWith(SelfViewSettings.new),
         ],
         child: MaterialApp(
-          home: Scaffold(
-            body: SpeakingTurnScreen(session: _createTestSession()),
+          home: SessionKeyboardShortcuts(
+            child: Scaffold(
+              body: SpeakingTurnScreen(session: _createTestSession()),
+            ),
           ),
         ),
       ),
@@ -246,6 +259,15 @@ void main() {
   }
 
   group('SpeakingTurn', () {
+    Future<void> runOnDesktop(Future<void> Function() body) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        await body();
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    }
+
     testWidgets('renders the participant grid for room sizes up to 12', (
       tester,
     ) async {
@@ -327,6 +349,35 @@ void main() {
       await tester.tap(find.bySemanticsLabel('Camera off'));
       await tester.pump();
       verify(() => devices.enableCamera()).called(1);
+    });
+
+    testWidgets('disables shortcuts while the prompt field is focused', (
+      tester,
+    ) async {
+      await runOnDesktop(() async {
+        final state = _buildState(
+          keeper: 'user-1',
+          currentSpeaker: 'user-1',
+          nextSpeaker: 'user-2',
+        );
+
+        await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+        await tester.pump();
+        verify(() => devices.enableMicrophone()).called(1);
+
+        await tester.tap(find.byType(TextField));
+        await tester.pumpAndSettle();
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyX);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+        await tester.pump();
+
+        verifyNever(() => devices.enableCamera());
+        verifyNever(() => messaging.sendReaction(any()));
+      });
     });
 
     testWidgets('passes the Totem with a trimmed round message', (

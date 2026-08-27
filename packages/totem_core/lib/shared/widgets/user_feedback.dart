@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
@@ -93,6 +94,25 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
     }
   }
 
+  Map<ShortcutActivator, Intent> get _submitShortcutActivators {
+    return switch (Theme.of(context).platform) {
+      TargetPlatform.macOS => const {
+        SingleActivator(LogicalKeyboardKey.enter, meta: true): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.numpadEnter, meta: true):
+            ActivateIntent(),
+      },
+      TargetPlatform.windows || TargetPlatform.linux => const {
+        SingleActivator(LogicalKeyboardKey.enter, control: true):
+            ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.numpadEnter, control: true):
+            ActivateIntent(),
+      },
+      TargetPlatform.android ||
+      TargetPlatform.iOS ||
+      TargetPlatform.fuchsia => const {},
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -162,27 +182,46 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
                   ),
                   const SizedBox(height: 32),
 
-                  TextFormField(
-                    controller: _feedbackController,
-                    maxLines: 6,
-                    minLines: 4,
-                    enabled: !_loading,
-                    decoration: const InputDecoration(
-                      hintText:
-                          'Share your thoughts, suggestions, or report issues...',
+                  Shortcuts(
+                    shortcuts: _submitShortcutActivators,
+                    child: Actions(
+                      actions: {
+                        ActivateIntent: CallbackAction<ActivateIntent>(
+                          onInvoke: (_) {
+                            if (!_loading) {
+                              _onSubmitFeedback();
+                            }
+                            return null;
+                          },
+                        ),
+                      },
+                      child: TextFormField(
+                        controller: _feedbackController,
+                        maxLines: 6,
+                        minLines: 4,
+                        enabled: !_loading,
+                        decoration: const InputDecoration(
+                          hintText:
+                              'Share your thoughts, suggestions, or report issues...',
+                        ),
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter your feedback';
+                          }
+                          if (value.trim().length < 8) {
+                            return 'Please provide more detailed feedback (at least 8 characters)';
+                          }
+                          return null;
+                        },
+                        textInputAction: TextInputAction.newline,
+                        textCapitalization: TextCapitalization.sentences,
+                        onFieldSubmitted: (_) =>
+                            _loading ? null : _onSubmitFeedback(),
+                      ),
                     ),
-                    style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your feedback';
-                      }
-                      if (value.trim().length < 8) {
-                        return 'Please provide more detailed feedback (at least 8 characters)';
-                      }
-                      return null;
-                    },
-                    textInputAction: TextInputAction.newline,
-                    textCapitalization: TextCapitalization.sentences,
                   ),
                   const SizedBox(height: 24),
 
