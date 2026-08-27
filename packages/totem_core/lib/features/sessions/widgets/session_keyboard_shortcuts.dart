@@ -126,22 +126,36 @@ class _SessionKeyboardShortcutsState
     return widget.navigatorKey?.currentState?.canPop() ?? false;
   }
 
-  Future<void> _toggleCamera(SessionController session) async {
-    if (session.devices.isCameraEnabled) {
-      await session.devices.disableCamera();
-      return;
-    }
+  bool _isTogglingCamera = false;
 
-    await session.devices.enableCamera();
+  Future<void> _toggleCamera(SessionController session) async {
+    if (_isTogglingCamera) return;
+    _isTogglingCamera = true;
+    try {
+      if (session.devices.isCameraEnabled) {
+        await session.devices.disableCamera();
+      } else {
+        await session.devices.enableCamera();
+      }
+    } finally {
+      _isTogglingCamera = false;
+    }
   }
 
-  Future<void> _toggleMicrophone(SessionController session) async {
-    if (session.devices.isMicrophoneEnabled) {
-      await session.devices.disableMicrophone();
-      return;
-    }
+  bool _isTogglingMicrophone = false;
 
-    await session.devices.enableMicrophone();
+  Future<void> _toggleMicrophone(SessionController session) async {
+    if (_isTogglingMicrophone) return;
+    _isTogglingMicrophone = true;
+    try {
+      if (session.devices.isMicrophoneEnabled) {
+        await session.devices.disableMicrophone();
+      } else {
+        await session.devices.enableMicrophone();
+      }
+    } finally {
+      _isTogglingMicrophone = false;
+    }
   }
 
   String? _reactionForKey(LogicalKeyboardKey logicalKey) {
