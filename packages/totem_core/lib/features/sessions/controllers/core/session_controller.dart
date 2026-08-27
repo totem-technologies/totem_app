@@ -12,8 +12,6 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
-import 'package:totem_core/core/services/api_service.dart';
-import 'package:totem_core/core/services/repository_utils.dart';
 import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_events.dart';
@@ -26,6 +24,7 @@ import 'package:totem_core/features/sessions/controllers/utils.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart'
     show sessionScopeProvider;
+import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/shared/logger.dart';
 
 export 'package:totem_core/features/sessions/controllers/core/session_state.dart';
@@ -338,20 +337,17 @@ class SessionController extends _$SessionController {
     }
   }
 
-  Future<void> _pollServerState() async {
+  Future<void> _pollServerState({bool attemptReconcile = false}) async {
     if (!ref.mounted) return;
     if (state.connectionState != RoomConnectionState.connected) return;
 
     try {
-      final apiService = ref.read(apiServiceProvider);
-
-      final roomState = await RepositoryUtils.handleApiCall<RoomState>(
-        apiCall: () => apiService.rooms.totemRoomsApiGetState(
-          sessionSlug: options.sessionSlug,
-        ),
-        operationName: 'poll room state',
+      final roomState = await ref.read(
+        roomStateProvider(
+          options.sessionSlug,
+          attemptReconcile: attemptReconcile,
+        ).future,
       );
-
       if (!ref.mounted) return;
 
       // Protects against out-of-order application from overlapping polls
@@ -376,11 +372,20 @@ class SessionController extends _$SessionController {
     });
   }
 
+  /// Attempts to reconcile the local state with the server state.
+  void _attemptReconcile() {
+    if (!isCurrentUserKeeper()) return;
+    if (state.roomState.status == RoomStatus.ended) return;
+    _pollServerState(attemptReconcile: true);
+  }
+
   void _onParticipantDisconnected(ParticipantDisconnectedEvent event) {
+    _attemptReconcile();
     _updateParticipantsList();
   }
 
   void _onParticipantConnected(ParticipantConnectedEvent event) {
+    _attemptReconcile();
     _updateParticipantsList();
   }
 

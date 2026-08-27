@@ -84,6 +84,91 @@ final class SessionTokenFamily extends $Family
   String toString() => r'sessionTokenProvider';
 }
 
+@ProviderFor(roomState)
+final roomStateProvider = RoomStateFamily._();
+
+final class RoomStateProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<RoomState>,
+          RoomState,
+          FutureOr<RoomState>
+        >
+    with $FutureModifier<RoomState>, $FutureProvider<RoomState> {
+  RoomStateProvider._({
+    required RoomStateFamily super.from,
+    required (String, {bool attemptReconcile}) super.argument,
+  }) : super(
+         retry: null,
+         name: r'roomStateProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$roomStateHash();
+
+  @override
+  String toString() {
+    return r'roomStateProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<RoomState> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<RoomState> create(Ref ref) {
+    final argument = this.argument as (String, {bool attemptReconcile});
+    return roomState(
+      ref,
+      argument.$1,
+      attemptReconcile: argument.attemptReconcile,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is RoomStateProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$roomStateHash() => r'98f214604a0ddcf4a461aa236fefbbf110c6809b';
+
+final class RoomStateFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<RoomState>,
+          (String, {bool attemptReconcile})
+        > {
+  RoomStateFamily._()
+    : super(
+        retry: null,
+        name: r'roomStateProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  RoomStateProvider call(String sessionSlug, {bool attemptReconcile = false}) =>
+      RoomStateProvider._(
+        argument: (sessionSlug, attemptReconcile: attemptReconcile),
+        from: this,
+      );
+
+  @override
+  String toString() => r'roomStateProvider';
+}
+
 @ProviderFor(removeParticipant)
 final removeParticipantProvider = RemoveParticipantFamily._();
 

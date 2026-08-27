@@ -91,6 +91,40 @@ final class RoomsApi with ApiExecutor {
     );
   }
 
+  /// Reconcile room state
+  ///
+  /// Keeper-only command that reconciles room state with connected LiveKit participants and broadcasts the resulting state.
+  ///
+  /// `POST /api/mobile/protected/rooms/{session_slug}/state/reconcile`
+  Future<ApiResult<RoomState, RoomErrorResponse>> totemRoomsApiReconcileRoom({
+    required String sessionSlug,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+
+    final request = ApiRequest(
+      method: 'POST',
+      path:
+          '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/state/reconcile',
+      headers: headers,
+      options: options,
+    );
+
+    return execute(
+      request,
+      onSuccess: (response) {
+        return RoomState.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>,
+        );
+      },
+      onError: (response) {
+        return RoomErrorResponse.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>,
+        );
+      },
+    );
+  }
+
   /// Join a session room
   ///
   /// Returns a LiveKit access token. Creates the Room if needed.
