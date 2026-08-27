@@ -271,7 +271,12 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
                     end: 20,
                   ),
                   child: TextField(
-                    autofocus: true,
+                    autofocus: switch (defaultTargetPlatform) {
+                      TargetPlatform.android ||
+                      TargetPlatform.iOS ||
+                      TargetPlatform.fuchsia => false,
+                      _ => true,
+                    },
                     controller: _messageController,
                     onSubmitted: (_) => send(),
                     textInputAction: TextInputAction.send,

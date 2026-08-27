@@ -321,7 +321,7 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
           side: BorderSide(color: backgroundColor),
           foregroundColor: backgroundColor,
           maximumSize: const Size(double.infinity, 52),
-          minimumSize: const Size(20, 42),
+          minimumSize: const Size(20, 52),
         ),
         child: child,
       );
@@ -332,8 +332,8 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,
-          maximumSize: const Size(double.infinity, 52),
-          minimumSize: const Size(20, 42),
+          maximumSize: Size.infinite,
+          minimumSize: const Size(20, 52),
         ),
         child: child,
       );
