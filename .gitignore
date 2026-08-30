@@ -40,6 +40,12 @@ config/**/*.local.env
 .pub/
 build/
 
+# Workspace-root Flutter stubs. The real platform projects live in
+# packages/totem_app/{android,ios}. Running flutter from the repo root
+# (the `_` pub workspace) can drop these generated folders here.
+/android/
+/ios/
+
 # Symbolication related
 app.*.symbols
 

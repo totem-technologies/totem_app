@@ -11,6 +11,7 @@ import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/loading_video_placeholder.dart';
 import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
+import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
 import 'package:totem_core/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -36,6 +37,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
     final amKeeper = session.isKeeper(currentUserSlug);
 
     final theme = Theme.of(context);
+    final overlay = ParticipantOverlayMetrics.of(context);
     final speakerVideoBorderRadius = switch (MediaQuery.orientationOf(
       context,
     )) {
@@ -149,35 +151,14 @@ class FeaturedParticipantCard extends ConsumerWidget {
                           if (amKeeper &&
                               session.roomState.status == RoomStatus.active)
                             const _ElapsedTimer(),
-                          Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.black54,
-                              boxShadow: kElevationToShadow[6],
-                            ),
-                            child: SpeakingIndicatorOrEmoji(
-                              participant: activeSpeaker,
-                              backgroundColor: Colors.transparent,
-                            ),
+                          SpeakingIndicatorOrEmoji(
+                            participant: activeSpeaker,
                           ),
                           if (amKeeper &&
                               currentUserSlug != activeSpeaker.identity)
-                            Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.black54,
-                                boxShadow: kElevationToShadow[6],
-                              ),
-                              padding: const EdgeInsetsDirectional.all(3),
-                              child: ParticipantControlButton(
-                                overlayPadding: -28,
-                                participant: activeSpeaker,
-                                backgroundColor: Colors.transparent,
-                              ),
+                            ParticipantControlButton(
+                              overlayPadding: -overlay.badgeSize - 8,
+                              participant: activeSpeaker,
                             ),
                           Flexible(
                             child: SmartNameText(
@@ -299,7 +280,8 @@ class ParticipantCard extends ConsumerWidget {
     final amKeeper = session?.isKeeper(currentUserSlug) ?? false;
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
 
-    const overlayPadding = 10.0;
+    final overlay = ParticipantOverlayMetrics.of(context);
+    final overlayPadding = overlay.cornerInset;
     final isKeeper = session?.isKeeper(participant.identity) ?? false;
     final isSpeaking = participant.identity == session?.speakingNow;
 
@@ -348,17 +330,17 @@ class ParticipantCard extends ConsumerWidget {
                 top: overlayPadding,
                 end: overlayPadding,
                 child: Container(
-                  width: 20,
-                  height: 20,
+                  width: overlay.badgeSize,
+                  height: overlay.badgeSize,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.black54,
                     boxShadow: kElevationToShadow[6],
                   ),
-                  padding: const EdgeInsetsDirectional.all(4),
-                  child: const TotemIconLogo(
+                  padding: EdgeInsetsDirectional.all(overlay.badgePadding),
+                  child: TotemIconLogo(
                     color: AppTheme.white,
-                    size: 16,
+                    size: overlay.iconSize,
                   ),
                 ),
               ),

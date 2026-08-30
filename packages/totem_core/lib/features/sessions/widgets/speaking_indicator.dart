@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
+import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
 class SpeakingIndicatorAudioTrack extends StatelessWidget {
@@ -11,6 +12,7 @@ class SpeakingIndicatorAudioTrack extends StatelessWidget {
     this.participant,
     this.foregroundColor = Colors.white,
     this.barCount = 3,
+    this.iconSize,
     super.key,
   });
 
@@ -20,6 +22,8 @@ class SpeakingIndicatorAudioTrack extends StatelessWidget {
   final Color? foregroundColor;
   final int barCount;
 
+  final double? iconSize;
+
   @override
   Widget build(BuildContext context) {
     return _SpeakingIndicatorCore(
@@ -27,6 +31,7 @@ class SpeakingIndicatorAudioTrack extends StatelessWidget {
       participant: participant,
       foregroundColor: foregroundColor,
       barCount: barCount,
+      iconSize: iconSize,
     );
   }
 }
@@ -36,6 +41,7 @@ class SpeakingIndicator extends StatelessWidget {
     required this.participant,
     this.foregroundColor = Colors.white,
     this.barCount = 3,
+    this.iconSize,
     super.key,
   });
 
@@ -43,12 +49,15 @@ class SpeakingIndicator extends StatelessWidget {
   final Color foregroundColor;
   final int barCount;
 
+  final double? iconSize;
+
   @override
   Widget build(BuildContext context) {
     return _SpeakingIndicatorCore(
       participant: participant,
       foregroundColor: foregroundColor,
       barCount: barCount,
+      iconSize: iconSize,
     );
   }
 }
@@ -59,12 +68,14 @@ class _SpeakingIndicatorCore extends StatefulWidget {
     required this.barCount,
     this.audioTrack,
     this.participant,
+    this.iconSize,
   });
 
   final AudioTrack? audioTrack;
   final Participant? participant;
   final Color? foregroundColor;
   final int barCount;
+  final double? iconSize;
 
   @override
   State<_SpeakingIndicatorCore> createState() => _SpeakingIndicatorCoreState();
@@ -179,7 +190,7 @@ class _SpeakingIndicatorCoreState extends State<_SpeakingIndicatorCore> {
 
     return TotemIcon(
       TotemIcons.microphoneOff,
-      size: 20,
+      size: widget.iconSize ?? ParticipantOverlayMetrics.of(context).iconSize,
       color: widget.foregroundColor,
     );
   }
@@ -197,6 +208,8 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final metrics = ParticipantOverlayMetrics.of(context);
+
     return Consumer(
       builder: (context, ref, child) {
         final emojis = ref.watch(
@@ -210,8 +223,8 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
               ? MediaQuery.withNoTextScaling(
                   child: Container(
                     key: ValueKey(emojis.first),
-                    width: 20,
-                    height: 20,
+                    width: metrics.badgeSize,
+                    height: metrics.badgeSize,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white,
@@ -219,8 +232,8 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
                     alignment: AlignmentDirectional.center,
                     child: Text(
                       emojis.first,
-                      style: const TextStyle(
-                        fontSize: 10,
+                      style: TextStyle(
+                        fontSize: metrics.emojiFontSize,
                         textBaseline: TextBaseline.ideographic,
                       ),
                       textAlign: TextAlign.center,
@@ -231,15 +244,18 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
         );
       },
       child: Container(
-        width: 20,
-        height: 20,
+        width: metrics.badgeSize,
+        height: metrics.badgeSize,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: backgroundColor,
         ),
-        padding: const EdgeInsetsDirectional.all(2),
+        padding: EdgeInsetsDirectional.all(metrics.badgePadding),
         alignment: AlignmentDirectional.center,
-        child: SpeakingIndicator(participant: participant),
+        child: SpeakingIndicator(
+          participant: participant,
+          iconSize: metrics.iconSize,
+        ),
       ),
     );
   }

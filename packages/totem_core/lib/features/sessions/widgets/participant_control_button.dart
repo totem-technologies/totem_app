@@ -4,6 +4,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
@@ -65,6 +66,8 @@ class _ParticipantControlButtonState
 
   @override
   Widget build(BuildContext context) {
+    final metrics = ParticipantOverlayMetrics.of(context);
+
     return MenuAnchor(
       controller: _menuController,
       clipBehavior: Clip.hardEdge,
@@ -97,17 +100,17 @@ class _ParticipantControlButtonState
         );
       },
       child: Container(
-        width: 20,
-        height: 20,
+        width: metrics.badgeSize,
+        height: metrics.badgeSize,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: widget.backgroundColor,
         ),
-        padding: const EdgeInsetsDirectional.all(2),
+        padding: EdgeInsetsDirectional.all(metrics.badgePadding),
         alignment: AlignmentDirectional.center,
-        child: const TotemIcon(
+        child: TotemIcon(
           TotemIcons.moreVertical,
-          size: 16,
+          size: metrics.iconSize,
           color: Colors.white,
         ),
       ),

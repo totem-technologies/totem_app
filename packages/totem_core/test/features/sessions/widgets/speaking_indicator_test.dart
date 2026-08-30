@@ -7,6 +7,7 @@ import 'package:livekit_client/livekit_client.dart'
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
+import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
@@ -46,15 +47,32 @@ void main() {
     WidgetTester tester, {
     required Widget child,
     List<Object?> overrides = const [],
+    Size? viewSize,
   }) async {
+    Widget body = child;
+    if (viewSize != null) {
+      body = MediaQuery(
+        data: MediaQueryData(size: viewSize),
+        child: child,
+      );
+    }
     await tester.pumpWidget(
       ProviderScope(
         overrides: overrides.cast(),
         child: MaterialApp(
           home: Scaffold(
-            body: child,
+            body: body,
           ),
         ),
+      ),
+    );
+  }
+
+  TotemIcon overlayMuteIcon(WidgetTester tester) {
+    return tester.widget<TotemIcon>(
+      find.descendant(
+        of: find.byType(SpeakingIndicatorOrEmoji),
+        matching: find.byType(TotemIcon),
       ),
     );
   }
@@ -237,6 +255,137 @@ void main() {
 
       expect(find.text('🔥'), findsNothing);
       expect(find.byType(TotemIcon), findsOneWidget);
+    });
+
+    testWidgets('uses compact overlay sizes on phone-sized windows', (
+      tester,
+    ) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(400, 800),
+        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+      );
+
+      expect(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+        const Size(20, 20),
+      );
+      expect(overlayMuteIcon(tester).size, 16);
+    });
+
+    testWidgets('uses compact overlay sizes in phone landscape', (
+      tester,
+    ) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(800, 400),
+        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+      );
+
+      expect(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+        const Size(20, 20),
+      );
+      expect(overlayMuteIcon(tester).size, 16);
+    });
+
+    testWidgets('uses comfortable overlay sizes on desktop-class windows', (
+      tester,
+    ) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(1200, 900),
+        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+      );
+
+      expect(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+        const Size(40, 40),
+      );
+      expect(overlayMuteIcon(tester).size, 22);
+    });
+
+    testWidgets('renders a larger emoji glyph on desktop-class windows', (
+      tester,
+    ) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(1200, 900),
+        overrides: [
+          participantEmojisProvider(
+            remoteParticipant.identity,
+          ).overrideWith((ref) => ['🔥']),
+        ],
+        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+        const Size(40, 40),
+      );
+      expect(tester.widget<Text>(find.text('🔥')).style?.fontSize, 20);
+    });
+
+    testWidgets('keeps the compact emoji glyph on phone-sized windows', (
+      tester,
+    ) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(400, 800),
+        overrides: [
+          participantEmojisProvider(
+            remoteParticipant.identity,
+          ).overrideWith((ref) => ['🔥']),
+        ],
+        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+        const Size(20, 20),
+      );
+      expect(tester.widget<Text>(find.text('🔥')).style?.fontSize, 10);
+    });
+  });
+
+  group('ParticipantOverlayMetrics', () {
+    Future<ParticipantOverlayMetrics> metricsFor(
+      WidgetTester tester,
+      Size size,
+    ) async {
+      late ParticipantOverlayMetrics metrics;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(size: size),
+            child: Builder(
+              builder: (context) {
+                metrics = ParticipantOverlayMetrics.of(context);
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+      return metrics;
+    }
+
+    testWidgets('is compact at the 600px phone breakpoint', (tester) async {
+      expect(
+        await metricsFor(tester, const Size(800, 600)),
+        ParticipantOverlayMetrics.compact,
+      );
+    });
+
+    testWidgets('is comfortable above 600px shortest side', (tester) async {
+      expect(
+        await metricsFor(tester, const Size(1200, 900)),
+        ParticipantOverlayMetrics.comfortable,
+      );
     });
   });
 }
