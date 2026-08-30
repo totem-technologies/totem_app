@@ -36,8 +36,8 @@ void main(List<String> args) async {
     exit(0);
   }
 
-  // Run dart format check on the files
-  final formatResult = await Process.run('dart', [
+  // Use this process's Dart, not PATH `dart` (often an older SDK).
+  final formatResult = await Process.run(Platform.resolvedExecutable, [
     'format',
     '--set-exit-if-changed',
     ...stagedFiles,
