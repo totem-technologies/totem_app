@@ -46,7 +46,12 @@ void main() {
       ProviderScope(
         overrides: overrides.cast(),
         child: MaterialApp(
-          home: Scaffold(body: child),
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.bottomCenter,
+              child: child,
+            ),
+          ),
         ),
       ),
     );

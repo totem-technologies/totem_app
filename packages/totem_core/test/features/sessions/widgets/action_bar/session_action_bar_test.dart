@@ -118,7 +118,12 @@ void main() {
       ProviderScope(
         overrides: overrides.cast(),
         child: MaterialApp(
-          home: Scaffold(body: child),
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.bottomCenter,
+              child: child,
+            ),
+          ),
         ),
       ),
     );
@@ -217,8 +222,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(ActionBar), findsOneWidget);
-      expect(find.byType(ActionBarButton), findsNWidgets(4));
-      expect(find.byType(IconButton), findsOneWidget);
+      expect(find.byType(ActionBarButton), findsNWidgets(5));
       expect(find.byType(SessionActionBarCameraButton), findsOneWidget);
     });
 
@@ -227,8 +231,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(ActionBar), findsOneWidget);
-      expect(find.byType(ActionBarButton), findsNWidgets(3));
-      expect(find.byType(IconButton), findsOneWidget);
+      expect(find.byType(ActionBarButton), findsNWidgets(4));
     });
 
     testWidgets('shows emoji button on listening screen', (tester) async {
@@ -291,7 +294,13 @@ void main() {
       await pumpSessionActionBar(tester, screen: RoomScreen.listening);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(IconButton));
+      await tester.tap(
+        find.bySemanticsLabel(
+          MaterialLocalizations.of(
+            tester.element(find.byType(SessionActionBar)),
+          ).moreButtonTooltip,
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byType(MoreOptions), findsOneWidget);

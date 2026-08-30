@@ -17,56 +17,214 @@ import 'package:totem_core/shared/totem_icons.dart';
 typedef ActionBarButtonToggleCallback =
     Future<void> Function(bool shouldEnable);
 
-class ActionBarButton extends StatelessWidget {
+// Below this width, five 78px buttons overflow a phone.
+const double _kCompactWidth = 456;
+
+/// ghost = idle, muted = media off, emphasized = open sheet.
+/// Keep muted and emphasized distinct — camera-off is not "sheet open".
+enum ActionBarButtonRole {
+  ghost,
+  muted,
+  emphasized;
+
+  static ActionBarButtonRole media({required bool enabled}) {
+    return enabled ? ghost : muted;
+  }
+
+  static ActionBarButtonRole sheet({required bool open}) {
+    return open ? emphasized : ghost;
+  }
+}
+
+@immutable
+class _ActionBarMetrics {
+  const _ActionBarMetrics({
+    required this.buttonSize,
+    required this.iconSize,
+    required this.gap,
+    required this.horizontalPadding,
+    required this.verticalPadding,
+  });
+
+  static const comfortable = _ActionBarMetrics(
+    buttonSize: 78,
+    iconSize: 39,
+    gap: 10,
+    horizontalPadding: 13,
+    verticalPadding: 13,
+  );
+
+  static const compact = _ActionBarMetrics(
+    buttonSize: 48,
+    iconSize: 24,
+    gap: 6,
+    horizontalPadding: 8,
+    verticalPadding: 8,
+  );
+
+  final double buttonSize;
+  final double iconSize;
+  final double gap;
+  final double horizontalPadding;
+  final double verticalPadding;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _ActionBarMetrics &&
+        buttonSize == other.buttonSize &&
+        iconSize == other.iconSize &&
+        gap == other.gap &&
+        horizontalPadding == other.horizontalPadding &&
+        verticalPadding == other.verticalPadding;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    buttonSize,
+    iconSize,
+    gap,
+    horizontalPadding,
+    verticalPadding,
+  );
+}
+
+class _ActionBarScope extends InheritedWidget {
+  const _ActionBarScope({
+    required this.metrics,
+    required super.child,
+  });
+
+  final _ActionBarMetrics metrics;
+
+  static _ActionBarMetrics of(BuildContext context) {
+    return context
+            .dependOnInheritedWidgetOfExactType<_ActionBarScope>()
+            ?.metrics ??
+        _ActionBarMetrics.comfortable;
+  }
+
+  @override
+  bool updateShouldNotify(_ActionBarScope oldWidget) {
+    return metrics != oldWidget.metrics;
+  }
+}
+
+class ActionBarButton extends StatefulWidget {
   const ActionBarButton({
     required this.child,
     required this.onPressed,
     this.semanticsLabel,
     this.square = true,
-    this.active = false,
+    this.role = ActionBarButtonRole.ghost,
     this.semanticsHint,
     super.key,
   });
 
   final Widget child;
   final VoidCallback? onPressed;
-  final bool active;
+
+  final ActionBarButtonRole role;
   final bool square;
 
   final String? semanticsLabel;
   final String? semanticsHint;
 
   @override
+  State<ActionBarButton> createState() => _ActionBarButtonState();
+}
+
+class _ActionBarButtonState extends State<ActionBarButton> {
+  var _hovered = false;
+  var _pressed = false;
+
+  bool get _enabled => widget.onPressed != null;
+
+  void _setHovered(bool value) {
+    if (_hovered == value) return;
+    setState(() => _hovered = value);
+  }
+
+  void _setPressed(bool value) {
+    if (_pressed == value) return;
+    setState(() => _pressed = value);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final foregroundColor = active ? AppTheme.mauve : AppTheme.white;
+    final metrics = _ActionBarScope.of(context);
+    final size = metrics.buttonSize;
+    final role = widget.role;
+
+    // Don't wash muted/emphasized fills — those colors already mean something.
+    final showIdleWash =
+        role == ActionBarButtonRole.ghost && _enabled && (_hovered || _pressed);
+
+    final Color background;
+    final Color foreground;
+    switch (role) {
+      case ActionBarButtonRole.muted:
+        background = AppTheme.pinkTint;
+        foreground = AppTheme.cream;
+      case ActionBarButtonRole.emphasized:
+        background = AppTheme.cream;
+        foreground = AppTheme.slate;
+      case ActionBarButtonRole.ghost:
+        background = showIdleWash
+            ? AppTheme.white.withValues(alpha: 0.16)
+            : AppTheme.transparent;
+        foreground = AppTheme.cream;
+    }
+
     return Semantics(
       button: true,
-      label: semanticsLabel,
-      hint: semanticsHint,
-      enabled: onPressed != null,
-      excludeSemantics: semanticsLabel != null,
-      child: GestureDetector(
-        onTap: onPressed,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-          decoration: BoxDecoration(
-            color: active ? AppTheme.white : AppTheme.mauve,
-            borderRadius: BorderRadius.circular(25),
-          ),
-          child: Center(
-            child: IconTheme.merge(
-              data: IconThemeData(
-                color: foregroundColor,
-              ),
-              child: DefaultTextStyle.merge(
-                style: TextStyle(
-                  color: foregroundColor,
+      label: widget.semanticsLabel,
+      hint: widget.semanticsHint,
+      enabled: _enabled,
+      excludeSemantics: widget.semanticsLabel != null,
+      child: MouseRegion(
+        cursor: _enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        onEnter: (_) => _setHovered(true),
+        onExit: (_) {
+          _setHovered(false);
+          _setPressed(false);
+        },
+        child: GestureDetector(
+          // Unfilled ghost circles still need a hit target.
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onPressed,
+          onTapDown: _enabled ? (_) => _setPressed(true) : null,
+          onTapUp: _enabled ? (_) => _setPressed(false) : null,
+          onTapCancel: _enabled ? () => _setPressed(false) : null,
+          child: AnimatedScale(
+            scale: _pressed ? 0.96 : 1,
+            duration: const Duration(milliseconds: 120),
+            curve: Curves.easeOutCubic,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 160),
+              opacity: _enabled ? 1 : 0.4,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  color: background,
+                  shape: BoxShape.circle,
                 ),
-                child: SizedBox.square(
-                  dimension: square ? 24 : null,
-                  child: child,
+                child: Center(
+                  child: IconTheme.merge(
+                    data: IconThemeData(
+                      color: foreground,
+                      size: metrics.iconSize,
+                    ),
+                    child: DefaultTextStyle.merge(
+                      style: TextStyle(color: foreground),
+                      child: SizedBox.square(
+                        dimension: widget.square ? metrics.iconSize : null,
+                        child: widget.child,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -84,34 +242,52 @@ class ActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.25),
-          borderRadius: BorderRadius.circular(30),
-        ),
-        margin: const EdgeInsetsDirectional.only(bottom: 20),
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: 10,
-          vertical: 10,
-        ),
-        child: AnimatedSize(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeInOut,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 20,
-            children: [
-              for (final child in children) child,
-            ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final metrics = constraints.maxWidth < _kCompactWidth
+            ? _ActionBarMetrics.compact
+            : _ActionBarMetrics.comfortable;
+
+        return _ActionBarScope(
+          metrics: metrics,
+          child: RepaintBoundary(
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(bottom: 20),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppTheme.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: AppTheme.white.withValues(alpha: 0.16),
+                    width: 1.5,
+                  ),
+                ),
+                child: Padding(
+                  padding: EdgeInsetsDirectional.symmetric(
+                    horizontal: metrics.horizontalPadding,
+                    vertical: metrics.verticalPadding,
+                  ),
+                  child: AnimatedSize(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeInOut,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: metrics.gap,
+                      children: [
+                        for (final child in children) child,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
-/// The action bar displayed in the pre join screen.
 class PrejoinActionBar extends StatefulWidget {
   const PrejoinActionBar({
     required this.locked,
@@ -250,28 +426,7 @@ class SessionActionBar extends ConsumerWidget {
     );
 
     const chatButton = ActionBarChatButton();
-
-    final moreButton = ConstrainedBox(
-      constraints: const BoxConstraints(
-        maxWidth: 40,
-        maxHeight: 40,
-      ),
-      child: ExcludeFocus(
-        child: IconButton(
-          padding: EdgeInsetsDirectional.zero,
-          onPressed: () => showOptionsSheet(
-            context,
-            ref.read(currentSessionStateProvider)!,
-            session.session!,
-          ),
-          icon: const TotemIcon(
-            TotemIcons.more,
-            color: Colors.white,
-          ),
-          tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
-        ),
-      ),
-    );
+    const moreButton = _ActionBarMoreButton();
 
     switch (currentScreen) {
       case RoomScreen.error:
@@ -291,15 +446,6 @@ class SessionActionBar extends ConsumerWidget {
         );
       case RoomScreen.speaking:
       case RoomScreen.passing:
-        return ActionBar(
-          key: SessionActionBar.actionBarKey,
-          children: [
-            microphoneButton,
-            cameraButton,
-            chatButton,
-            moreButton,
-          ],
-        );
       case RoomScreen.receiving:
         return ActionBar(
           key: SessionActionBar.actionBarKey,
@@ -311,5 +457,37 @@ class SessionActionBar extends ConsumerWidget {
           ],
         );
     }
+  }
+}
+
+class _ActionBarMoreButton extends ConsumerStatefulWidget {
+  const _ActionBarMoreButton();
+
+  @override
+  ConsumerState<_ActionBarMoreButton> createState() =>
+      _ActionBarMoreButtonState();
+}
+
+class _ActionBarMoreButtonState extends ConsumerState<_ActionBarMoreButton> {
+  var _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeFocus(
+      child: ActionBarButton(
+        semanticsLabel: MaterialLocalizations.of(context).moreButtonTooltip,
+        role: ActionBarButtonRole.sheet(open: _open),
+        onPressed: () async {
+          final session = ref.read(currentSessionProvider);
+          final state = ref.read(currentSessionStateProvider);
+          if (session?.session == null || state == null) return;
+
+          setState(() => _open = true);
+          await showOptionsSheet(context, state, session!.session!);
+          if (mounted) setState(() => _open = false);
+        },
+        child: const TotemIcon(TotemIcons.more),
+      ),
+    );
   }
 }

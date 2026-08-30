@@ -45,7 +45,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
     );
     return ActionBarButton(
       semanticsLabel: 'Chat',
-      active: _chatSheetOpen,
+      role: ActionBarButtonRole.sheet(open: _chatSheetOpen),
       onPressed: () async {
         if (!mounted) return;
         _notification?.dismissActive();
