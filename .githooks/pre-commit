@@ -5,6 +5,5 @@
 
 set -u
 
-# Match Makefile: a PATH `dart` is often 3.9 and cannot compile this
-# workspace (sdk: ^3.11.3). FVM uses the SDK from .fvmrc.
-fvm dart scripts/check_format.dart
+# Run the format check script
+dart scripts/check_format.dart

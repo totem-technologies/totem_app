@@ -4,17 +4,10 @@ APP_DIR := packages/totem_app
 CORE_DIR := packages/totem_core
 WEB_DIR := packages/totem_web
 
-# Pin every dart/flutter invocation to the SDK in .fvmrc (Flutter 3.44.2 /
-# Dart 3.12). A global `dart` on PATH is often 3.9, which cannot compile this
-# workspace (`sdk: ^3.11.3`) and fails with:
-#   language version 3.11 ... highest supported is 3.9
-DART := fvm dart
-FLUTTER := fvm flutter
-
 clean:
 	@echo "Cleaning build artifacts..."
-	cd $(CORE_DIR) && $(FLUTTER) clean
-	cd $(APP_DIR) && $(FLUTTER) clean
+	cd $(CORE_DIR) && flutter clean
+	cd $(APP_DIR) && flutter clean
 	rm -rf $(APP_DIR)/build/
 	rm -rf $(APP_DIR)/.dart_tool/build/
 	rm -rf ~/.gradle/caches/*
@@ -25,24 +18,24 @@ clean:
 	rm -rf $(APP_DIR)/ios/Flutter/Flutter.framework
 	rm -rf $(APP_DIR)/ios/Flutter/App.framework
 # 	rm -rf ~/Library/Developer/Xcode/DerivedData/*
-	cd $(WEB_DIR) && $(FLUTTER) clean
+	cd $(WEB_DIR) && flutter clean
 
 # Compose packages/*/.env from the layered sources in config/ for a flavor.
 # This is the single source of truth for runtime config; see config/README.md.
 # A deploy overwrites .env with the deployed flavor, so run `make env-dev` to
 # get back to your local development config.
 env-dev:
-	$(DART) scripts/setup_env.dart development
+	dart scripts/setup_env.dart development
 
 env-staging:
-	$(DART) scripts/setup_env.dart staging
+	dart scripts/setup_env.dart staging
 
 env-prod:
-	$(DART) scripts/setup_env.dart production
+	dart scripts/setup_env.dart production
 
 run: env-dev
 	@echo "Running app..."
-	cd $(APP_DIR) && $(FLUTTER) run
+	cd $(APP_DIR) && flutter run
 
 # ASSET_BASE is empty in dev: the splash assets in web/index.html use the
 # {{ASSET_BASE}} placeholder, so define it (to "") here or the token leaks into
@@ -50,84 +43,84 @@ run: env-dev
 # against the dev server's "/" base href.
 run-chrome: env-dev
 	@echo "Running app in Chrome..."
-	cd $(WEB_DIR) && $(FLUTTER) run -d chrome --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"
+	cd $(WEB_DIR) && flutter run -d chrome --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"
 
 run-web: env-dev
 	@echo "Running app in Web Server..."
-	cd $(WEB_DIR) && $(FLUTTER) run -d web-server --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
+	cd $(WEB_DIR) && flutter run -d web-server --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
 
 # Build the web app the way it deploys: mounted at /room/, assets fetched from
 # a separate origin (here the local serve-web "CDN" on :5173). The `development`
 # flavor maps to that local CDN and composes the development .env.
 build-web-release: env-dev
 	@echo "Building web app..."
-	$(DART) scripts/web_build.dart
+	dart scripts/web_build.dart
 	@echo "Built $(WEB_DIR)/build/web — serve it with: make serve-web"
 
 # Serve the built bundle with CORS headers so an HTML document on another origin
 # (e.g. Django at :8000) can fetch these assets via ASSET_BASE. Plain
 # `python3 -m http.server` can't set headers, so use the helper script.
 serve-web:
-	$(DART) scripts/serve_web.dart 5173 $(WEB_DIR)/build/web
+	dart scripts/serve_web.dart 5173 $(WEB_DIR)/build/web
 
 # Build with the staging worker as ASSET_BASE and deploy it to Cloudflare.
 # Requires wrangler auth (bunx wrangler login, or CLOUDFLARE_API_TOKEN +
 # CLOUDFLARE_ACCOUNT_ID).
 deploy-web-staging: env-staging
 	@echo "Building web app (staging)"
-	$(DART) scripts/web_build.dart
+	dart scripts/web_build.dart
 	cd $(WEB_DIR) && bunx wrangler deploy --env staging
 
 deploy-web-production: env-prod
 	@echo "Building web app (production)"
-	$(DART) scripts/web_build.dart
+	dart scripts/web_build.dart
 	cd $(WEB_DIR) && bunx wrangler deploy --env production
 
 build-runner:
 	@echo "Running build_runner for code generation..."
-	cd $(CORE_DIR) && $(DART) run build_runner build --delete-conflicting-outputs
-	cd $(APP_DIR) && $(DART) run build_runner build --delete-conflicting-outputs
-# 	cd $(WEB_DIR) && $(DART) run build_runner build --delete-conflicting-outputs
+	cd $(CORE_DIR) && dart run build_runner build --delete-conflicting-outputs
+	cd $(APP_DIR) && dart run build_runner build --delete-conflicting-outputs
+# 	cd $(WEB_DIR) && dart run build_runner build --delete-conflicting-outputs
 
 build-runner-watch:
 	@echo "Running build_runner in watch mode..."
-	cd $(APP_DIR) && $(DART) run build_runner watch --delete-conflicting-outputs
+	cd $(APP_DIR) && dart run build_runner watch --delete-conflicting-outputs
 
 install:
 	@echo "Getting dependencies..."
-	$(FLUTTER) pub get
+	flutter pub get
 
 test:
 	@echo "Running tests..."
-	cd $(APP_DIR) && $(FLUTTER) test
-	cd $(CORE_DIR) && $(FLUTTER) test
-	cd $(WEB_DIR) && $(FLUTTER) test --platform chrome
+	cd $(APP_DIR) && flutter test
+	cd $(CORE_DIR) && flutter test
+	cd $(WEB_DIR) && flutter test --platform chrome
 
 test-app:
 	@echo "Running app tests..."
-	cd $(APP_DIR) && $(FLUTTER) test
+	cd $(APP_DIR) && flutter test
 
 test-web:
 	@echo "Running web tests..."
-	cd $(WEB_DIR) && $(FLUTTER) test --platform chrome
+	cd $(WEB_DIR) && flutter test --platform chrome
 
 test-core:
 	@echo "Running core tests..."
-	cd $(CORE_DIR) && $(FLUTTER) test
+	cd $(CORE_DIR) && flutter test
 
 lint:
 	@echo "Running linter..."
-	cd $(APP_DIR) && $(FLUTTER) analyze
-	cd $(CORE_DIR) && $(FLUTTER) analyze
-	cd $(WEB_DIR) && $(FLUTTER) analyze
+	cd $(APP_DIR) && flutter analyze
+	cd $(CORE_DIR) && flutter analyze
+	cd $(WEB_DIR) && flutter analyze
 
 format:
 	@echo "Formatting code..."
-	$(DART) format .
+	dart format .
 
 generate_api_models:
-	# cd $(CORE_DIR) && curl -L https://totem.local/api/mobile/openapi.json | $(DART) run degenerate -i - -o lib/core/api --verbose --clean; $(DART) format .
-	cd $(CORE_DIR) && curl -L https://totem.org/api/mobile/openapi.json | $(DART) run degenerate -i - -o lib/core/api --verbose --clean; $(DART) format .
+	# cd $(CORE_DIR) && curl -L https://totem.local/api/mobile/openapi.json | dart run degenerate -i - -o lib/core/api --verbose --clean; dart format .
+	cd $(CORE_DIR) && curl -L https://totem.org/api/mobile/openapi.json | dart run degenerate -i - -o lib/core/api --verbose --clean; dart format .
 
 githooks:
 	@echo "Setting up git hooks..."
@@ -135,7 +128,7 @@ githooks:
 	@echo "Git hooks installed successfully!"
 
 flutterfire:
-	$(DART) pub global activate flutterfire_cli
+	dart pub global activate flutterfire_cli
 	@command -v flutterfire >/dev/null 2>&1 || { echo "Error: flutterfire CLI not found. Install with: dart pub global activate flutterfire_cli"; exit 1; }
 	@test -d $(APP_DIR) || { echo "Error: $(APP_DIR) not found."; exit 1; }
 	@test -d $(WEB_DIR) || { echo "Error: $(WEB_DIR) not found."; exit 1; }
@@ -146,4 +139,4 @@ flutterfire:
 
 release:
 	@echo "Creating release..."
-	$(DART) scripts/release.dart
+	dart scripts/release.dart
